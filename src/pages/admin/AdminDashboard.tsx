@@ -1,0 +1,1936 @@
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { useNavigate } from 'react-router-dom';
+import { AuthModal } from '../../components/AuthModal';
+import { 
+  Settings, Users, BarChart3, Database, Shield, LayoutDashboard, 
+  Book, ToggleLeft, Volume2, Save, Search, Plus, Trash2, Edit2, FileText,
+  Eye, Image as ImageIcon, Crop as CropIcon, X, Upload, ShoppingBag, CreditCard,
+  Clock, CheckCircle, XCircle
+} from 'lucide-react';
+import { db } from '../../lib/firebase';
+import { collection, getDocs, doc, updateDoc, deleteDoc, addDoc, onSnapshot, query, orderBy, setDoc } from 'firebase/firestore';
+import { useAuth } from '../../contexts/AuthContext';
+import { TipTapEditor } from '../../components/TipTapEditor';
+// import SimpleEditor from 'react-simple-code-editor';
+// import Prism from 'prismjs';
+// import 'prismjs/components/prism-javascript';
+// import 'prismjs/components/prism-css';
+// import 'prismjs/components/prism-markup';
+// import 'prismjs/themes/prism-tomorrow.css';
+import ReactCrop, { type Crop } from 'react-image-crop';
+import 'react-image-crop/dist/ReactCrop.css';
+
+import { AdminStoreManager } from '../../components/AdminStoreManager';
+
+type AdminTab = 'overview' | 'users' | 'payments' | 'community' | 'features' | 'ruqyah' | 'content' | 'notifications' | 'settings' | 'articles' | 'store';
+
+interface Article {
+  id: string;
+  title: string;
+  hook?: string;
+  thumbnail: string;
+  content: string;
+  type: 'richtext' | 'code';
+  status?: string;
+  publishDate?: string;
+  isPremium?: boolean;
+  createdAt: number;
+}
+
+interface Term {
+  id: string;
+  word: string;
+  definition: string;
+  category: string;
+}
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  isBanned: boolean;
+  mysteryToolsDisabled: boolean;
+  isTrusted: boolean;
+}
+
+interface RuqyahAudio {
+  id: string;
+  title: string;
+  url: string;
+  duration: string;
+  isActive: boolean;
+}
+
+interface CommunityPost {
+  id: string;
+  author: string;
+  content: string;
+  status: 'pending' | 'approved' | 'rejected';
+}
+
+interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  date: string;
+}
+
+export const AdminDashboard: React.FC = () => {
+  const [activeTab, setActiveTab] = useState<AdminTab>('overview');
+  
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+  
+  // Settings State
+  const [audioEnabled, setAudioEnabled] = useState(false);
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
+
+  // Content State (Mocking Lexique Content Management)
+  const [lexiqueTerms, setLexiqueTerms] = useState<Term[]>([]);
+  const [newTerm, setNewTerm] = useState<any>({ 
+    word_fr: '', definition_fr: '', 
+    word_en: '', definition_en: '', 
+    word_ha: '', definition_ha: '', 
+    category: 'Général' 
+  });
+
+  // Users State
+  const [users, setUsers] = useState<User[]>([]);
+
+  // Manual Payments state
+  const [manualPayments, setManualPayments] = useState<any[]>([]);
+  const [selectedProofPayment, setSelectedProofPayment] = useState<any>(null);
+  const [paymentsFilter, setPaymentsFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+
+  // Ruqyah Audio State
+  const [ruqyahAudios, setRuqyahAudios] = useState<RuqyahAudio[]>([]);
+  const [newAudio, setNewAudio] = useState<any>({ 
+    title_fr: '', title_en: '', title_ha: '', 
+    url: '', duration: '' 
+  });
+
+  // Community State
+  const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>([]);
+
+  // Features State
+  const [featureToggles, setFeatureToggles] = useState<any>({});
+
+  // Notifications State
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [newNotification, setNewNotification] = useState<any>({ 
+    title_fr: '', message_fr: '',
+    title_en: '', message_en: '',
+    title_ha: '', message_ha: ''
+  });
+
+  // Articles State
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [editingArticle, setEditingArticle] = useState<Article | null>(null);
+  const [newArticle, setNewArticle] = useState<Partial<Article>>({
+    title: '', hook: '', thumbnail: '', content: '', type: 'richtext'
+  });
+  const [showPreview, setShowPreview] = useState(false);
+  const [draftSavedMessage, setDraftSavedMessage] = useState('');
+  
+  // Crop state
+  const [imgSrc, setImgSrc] = useState('');
+  const [crop, setCrop] = useState<Crop>();
+  const [completedCrop, setCompletedCrop] = useState<any>(null);
+  const imageRef = React.useRef<HTMLImageElement>(null);
+
+  useEffect(() => {
+    // Load draft on mount
+    const draft = localStorage.getItem('asrarhub_article_draft');
+    if (draft) {
+      try {
+        const parsed = JSON.parse(draft);
+        if (parsed.title || parsed.content) {
+          setNewArticle(parsed);
+        }
+      } catch (e) {}
+    }
+  }, []);
+
+  useEffect(() => {
+    // Auto-save draft
+    if (activeTab === 'articles' && (newArticle.title || newArticle.content) && !editingArticle) {
+      const timer = setTimeout(() => {
+        localStorage.setItem('asrarhub_article_draft', JSON.stringify(newArticle));
+        setDraftSavedMessage(`Brouillon sauvegardé à ${new Date().toLocaleTimeString()}`);
+        setTimeout(() => setDraftSavedMessage(''), 3000);
+      }, 2000);
+      return () => clearTimeout(timer);
+    } else if (activeTab === 'articles' && !newArticle.title && !newArticle.content) {
+       localStorage.removeItem('asrarhub_article_draft');
+    }
+  }, [newArticle, activeTab, editingArticle]);
+
+  const onSelectFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      const reader = new FileReader();
+      reader.addEventListener('load', () => setImgSrc(reader.result?.toString() || ''));
+      reader.readAsDataURL(e.target.files[0]);
+    }
+  };
+
+  const handleCropComplete = () => {
+    if (imageRef.current && completedCrop?.width && completedCrop?.height) {
+      const canvas = document.createElement('canvas');
+      const scaleX = imageRef.current.naturalWidth / imageRef.current.width;
+      const scaleY = imageRef.current.naturalHeight / imageRef.current.height;
+      
+      const pixelRatio = window.devicePixelRatio || 1;
+      const destWidth = completedCrop.width * scaleX;
+      const destHeight = completedCrop.height * scaleY;
+      
+      // Keep within reasonable limits to avoid Firestore 1MB limit
+      const MAX_WIDTH = 1200;
+      let finalWidth = destWidth;
+      let finalHeight = destHeight;
+      if (finalWidth > MAX_WIDTH) {
+         finalHeight = (MAX_WIDTH / finalWidth) * finalHeight;
+         finalWidth = MAX_WIDTH;
+      }
+
+      canvas.width = finalWidth;
+      canvas.height = finalHeight;
+      
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(
+          imageRef.current,
+          completedCrop.x * scaleX,
+          completedCrop.y * scaleY,
+          completedCrop.width * scaleX,
+          completedCrop.height * scaleY,
+          0,
+          0,
+          finalWidth,
+          finalHeight
+        );
+        const base64Image = canvas.toDataURL('image/jpeg', 0.8);
+        setNewArticle({ ...newArticle, thumbnail: base64Image });
+        setImgSrc('');
+        setCrop(undefined);
+      }
+    }
+  };
+
+  const [activeLangTab, setActiveLangTab] = useState<'fr' | 'en' | 'ha'>('fr');
+
+  // Mock Stats
+  const stats = [
+    { title: 'Utilisateurs Actifs', value: users.length.toString(), change: '+12%', icon: Users, color: 'text-blue-500', bg: 'bg-blue-50 dark:bg-blue-900/20' },
+    { title: 'Outils Utilisés (7j)', value: '8,432', change: '+5%', icon: BarChart3, color: 'text-emerald-500', bg: 'bg-emerald-50 dark:bg-emerald-900/20' },
+    { title: 'Articles Publiés', value: articles.length.toString(), change: '+1', icon: FileText, color: 'text-orange-500', bg: 'bg-orange-50 dark:bg-orange-900/20' },
+  ];
+
+  useEffect(() => {
+    // Load settings
+    const isAudioEnabled = localStorage.getItem('admin_ruqyah_audio_enabled') === 'true';
+    setAudioEnabled(isAudioEnabled);
+    
+    const unsubscribeUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
+      setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
+    }, (error) => console.error("Admin Users error", error));
+
+    const unsubscribeLexique = onSnapshot(collection(db, 'lexique_terms'), (snapshot) => {
+      setLexiqueTerms(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Term)));
+    }, (error) => console.error("Admin Lexique error", error));
+
+    const unsubscribeAudios = onSnapshot(collection(db, 'ruqyah_audios'), (snapshot) => {
+      setRuqyahAudios(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as RuqyahAudio)));
+    }, (error) => console.error("Admin Audios error", error));
+
+    const unsubscribePosts = onSnapshot(query(collection(db, 'community_posts'), orderBy('createdAt', 'desc')), (snapshot) => {
+      setCommunityPosts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CommunityPost)));
+    }, (error) => console.error("Admin Posts error", error));
+
+    const unsubscribeNotifs = onSnapshot(query(collection(db, 'notifications'), orderBy('createdAt', 'desc')), (snapshot) => {
+      setNotifications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification)));
+    }, (error) => console.error("Admin Notifs error", error));
+
+    const unsubscribeArticles = onSnapshot(query(collection(db, 'articles'), orderBy('createdAt', 'desc')), (snapshot) => {
+      setArticles(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Article)));
+    }, (error) => console.error("Admin Articles error", error));
+
+    const unsubscribeManualPayments = onSnapshot(collection(db, 'manual_payments'), (snapshot) => {
+      const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      list.sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
+      setManualPayments(list);
+    }, (error) => console.error("Admin Manual Payments error", error));
+
+    const unsubscribeFeatures = onSnapshot(doc(db, 'settings', 'features'), (docSnap) => {
+      if (docSnap.exists()) {
+        setFeatureToggles(docSnap.data());
+      } else {
+        setFeatureToggles({});
+      }
+    }, (error) => console.error("Admin Features error", error));
+
+    return () => {
+      unsubscribeUsers();
+      unsubscribeLexique();
+      unsubscribeAudios();
+      unsubscribePosts();
+      unsubscribeNotifs();
+      unsubscribeArticles();
+      unsubscribeManualPayments();
+      unsubscribeFeatures();
+    };
+  }, []);
+
+  const toggleAudio = () => {
+    const newVal = !audioEnabled;
+    setAudioEnabled(newVal);
+    localStorage.setItem('admin_ruqyah_audio_enabled', String(newVal));
+  };
+
+  const handleAddTerm = async () => {
+    if (!newTerm.word_fr || !newTerm.definition_fr) return;
+    try {
+      await addDoc(collection(db, 'lexique_terms'), {
+        word: newTerm.word_fr,
+        word_fr: newTerm.word_fr,
+        word_en: newTerm.word_en,
+        word_ha: newTerm.word_ha,
+        definition: newTerm.definition_fr,
+        definition_fr: newTerm.definition_fr,
+        definition_en: newTerm.definition_en,
+        definition_ha: newTerm.definition_ha,
+        category: newTerm.category || 'Général'
+      });
+      setNewTerm({ 
+        word_fr: '', definition_fr: '', 
+        word_en: '', definition_en: '', 
+        word_ha: '', definition_ha: '', 
+        category: 'Général' 
+      });
+    } catch (error) {
+      console.error("Error adding term", error);
+    }
+  };
+
+  const handleDeleteTerm = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'lexique_terms', id));
+    } catch (error) {
+      console.error("Error deleting term", error);
+    }
+  };
+
+  const handleToggleUserBan = async (id: string) => {
+    const user = users.find(u => u.id === id);
+    if (!user) return;
+    try {
+      await updateDoc(doc(db, 'users', id), { isBanned: !user.isBanned });
+    } catch (error) {
+      console.error("Error updating user", error);
+    }
+  };
+
+  const handleApproveManualPayment = async (payment: any) => {
+    try {
+      let months = 3;
+      if (payment.planId === 'premium_6m') months = 6;
+      if (payment.planId === 'premium_12m') months = 12;
+
+      const premiumUntil = new Date();
+      premiumUntil.setMonth(premiumUntil.getMonth() + months);
+
+      // 1. Update user to premium
+      await updateDoc(doc(db, 'users', payment.userId), {
+        subscriptionTier: 'premium',
+        premiumUntil: premiumUntil
+      });
+
+      // 2. Mark payment as approved
+      await updateDoc(doc(db, 'manual_payments', payment.id), {
+        status: 'approved'
+      });
+
+      showToast(`Paiement de ${payment.senderName} approuvé ! Abonnement Premium de ${months} mois activé.`, 'success');
+    } catch (error) {
+      console.error("Error approving manual payment:", error);
+      showToast("Une erreur est survenue lors de l'approbation.", 'error');
+    }
+  };
+
+  const handleRejectManualPayment = async (payment: any) => {
+    try {
+      await updateDoc(doc(db, 'manual_payments', payment.id), {
+        status: 'rejected'
+      });
+      showToast(`Paiement de ${payment.senderName} a été marqué comme rejeté.`, 'info');
+    } catch (error) {
+      console.error("Error rejecting manual payment:", error);
+      showToast("Une erreur est survenue lors du rejet.", 'error');
+    }
+  };
+
+  const handleToggleMysteryTools = async (id: string) => {
+    const user = users.find(u => u.id === id);
+    if (!user) return;
+    try {
+      await updateDoc(doc(db, 'users', id), { mysteryToolsDisabled: !user.mysteryToolsDisabled });
+    } catch (error) {
+      console.error("Error updating user", error);
+    }
+  };
+
+  const handleToggleUserTrusted = async (id: string) => {
+    const user = users.find(u => u.id === id);
+    if (!user) return;
+    try {
+      await updateDoc(doc(db, 'users', id), { isTrusted: !user.isTrusted });
+    } catch (error) {
+      console.error("Error updating user", error);
+    }
+  };
+
+  const handleAddAudio = async () => {
+    if (!newAudio.title_fr || !newAudio.url) return;
+    try {
+      await addDoc(collection(db, 'ruqyah_audios'), {
+        title: newAudio.title_fr,
+        title_fr: newAudio.title_fr,
+        title_en: newAudio.title_en,
+        title_ha: newAudio.title_ha,
+        url: newAudio.url,
+        duration: newAudio.duration || 'Inconnue',
+        isActive: true
+      });
+      setNewAudio({ 
+        title_fr: '', title_en: '', title_ha: '', 
+        url: '', duration: '' 
+      });
+    } catch (error) {
+      console.error("Error adding audio", error);
+    }
+  };
+
+  const handleDeleteAudio = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'ruqyah_audios', id));
+    } catch (error) {
+      console.error("Error deleting audio", error);
+    }
+  };
+
+  const handleToggleAudioActive = async (id: string) => {
+    const audio = ruqyahAudios.find(a => a.id === id);
+    if (!audio) return;
+    try {
+      await updateDoc(doc(db, 'ruqyah_audios', id), { isActive: !audio.isActive });
+    } catch (error) {
+      console.error("Error updating audio", error);
+    }
+  };
+
+  const handleUpdatePostStatus = async (id: string, status: 'pending' | 'approved' | 'rejected') => {
+    try {
+      await updateDoc(doc(db, 'community_posts', id), { status });
+    } catch (error) {
+      console.error("Error updating post", error);
+    }
+  };
+
+  const handleDeletePost = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'community_posts', id));
+    } catch (error) {
+      console.error("Error deleting post", error);
+    }
+  };
+
+  const handleAddNotification = async () => {
+    if (!newNotification.title_fr || !newNotification.message_fr) return;
+    try {
+      await addDoc(collection(db, 'notifications'), {
+        title: newNotification.title_fr,
+        title_fr: newNotification.title_fr,
+        title_en: newNotification.title_en,
+        title_ha: newNotification.title_ha,
+        message: newNotification.message_fr,
+        message_fr: newNotification.message_fr,
+        message_en: newNotification.message_en,
+        message_ha: newNotification.message_ha,
+        date: new Date().toISOString(),
+        createdAt: new Date()
+      });
+      setNewNotification({ 
+        title_fr: '', message_fr: '',
+        title_en: '', message_en: '',
+        title_ha: '', message_ha: ''
+      });
+    } catch (error) {
+      console.error("Error adding notification", error);
+    }
+  };
+
+  const handleDeleteNotification = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'notifications', id));
+    } catch (error) {
+      console.error("Error deleting notification", error);
+    }
+  };
+
+  const handleExportData = () => {
+    const allData = {
+      users,
+      lexiqueTerms,
+      ruqyahAudios,
+      communityPosts,
+      notifications,
+      articles,
+      settings: {
+        audioEnabled,
+        maintenanceMode
+      }
+    };
+    const blob = new Blob([JSON.stringify(allData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `backup_admin_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleSaveArticle = async () => {
+    try {
+      console.log("Saving article:", newArticle);
+      const isContentEmpty = !newArticle.content || newArticle.content === '<p></p>' || newArticle.content.trim() === '';
+      if (!newArticle.title || isContentEmpty) {
+        showToast("Titre et contenu requis.", "error");
+        return;
+      }
+      
+      if (editingArticle) {
+        await updateDoc(doc(db, 'articles', editingArticle.id), {
+          title: newArticle.title,
+          hook: newArticle.hook || '',
+          hook_en: (newArticle as any).hook_en || '',
+          hook_ha: (newArticle as any).hook_ha || '',
+          title_en: (newArticle as any).title_en || '',
+          title_ha: (newArticle as any).title_ha || '',
+          thumbnail: newArticle.thumbnail || '',
+          content: newArticle.content,
+          content_en: (newArticle as any).content_en || '',
+          content_ha: (newArticle as any).content_ha || '',
+          benefits: (newArticle as any).benefits || [],
+          type: newArticle.type || 'richtext',
+          status: newArticle.status || 'Draft',
+          publishDate: newArticle.publishDate || '',
+          isPremium: newArticle.isPremium || false
+        });
+        setEditingArticle(null);
+        showToast("Article mis à jour avec succès !");
+      } else {
+        await addDoc(collection(db, 'articles'), {
+          title: newArticle.title,
+          hook: newArticle.hook || '',
+          hook_en: (newArticle as any).hook_en || '',
+          hook_ha: (newArticle as any).hook_ha || '',
+          title_en: (newArticle as any).title_en || '',
+          title_ha: (newArticle as any).title_ha || '',
+          thumbnail: newArticle.thumbnail || '',
+          content: newArticle.content,
+          content_en: (newArticle as any).content_en || '',
+          content_ha: (newArticle as any).content_ha || '',
+          benefits: (newArticle as any).benefits || [],
+          type: newArticle.type || 'richtext',
+          status: newArticle.status || 'Draft',
+          publishDate: newArticle.publishDate || '',
+          isPremium: newArticle.isPremium || false,
+          createdAt: Date.now()
+        });
+        showToast("Article publié avec succès !");
+      }
+      setNewArticle({ title: '', hook: '', thumbnail: '', content: '', type: 'richtext', status: 'Draft', publishDate: '', benefits: [] } as any);
+      localStorage.removeItem('asrarhub_article_draft');
+    } catch (error: any) {
+      console.error("Error saving article:", error);
+      showToast(`Erreur : ${error?.message || "Erreur lors de la publication de l'article."}`, "error");
+    }
+  };
+
+  const handleDeleteArticle = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'articles', id));
+      showToast("Article supprimé.");
+    } catch (error) {
+      console.error("Error deleting article", error);
+      showToast("Erreur lors de la suppression.", "error");
+    }
+  };
+
+  const handleDeleteAllArticles = async () => {
+    if (!window.confirm("Êtes-vous sûr de vouloir supprimer TOUS les articles ? Cette action est irréversible.")) return;
+    try {
+      const promises = articles.map(article => deleteDoc(doc(db, 'articles', article.id)));
+      await Promise.all(promises);
+      showToast("Tous les articles ont été supprimés.");
+    } catch (error) {
+      console.error("Error deleting all articles", error);
+      showToast("Erreur lors de la suppression.", "error");
+    }
+  };
+
+  const editArticle = (article: Article) => {
+    setEditingArticle(article);
+    setNewArticle({ 
+      title: article.title, 
+      hook: (article as any).hook,
+      title_en: (article as any).title_en,
+      title_ha: (article as any).title_ha,
+      thumbnail: article.thumbnail, 
+      content: article.content, 
+      content_en: (article as any).content_en,
+      content_ha: (article as any).content_ha,
+      benefits: (article as any).benefits || [],
+      type: article.type,
+      status: article.status || 'Draft',
+      publishDate: article.publishDate || '',
+      isPremium: (article as any).isPremium || false
+    });
+    setActiveTab('articles');
+  };
+
+  const renderTabNavigation = () => (
+    <div className="flex overflow-x-auto pb-4 mb-6 hide-scrollbar gap-2">
+      {[
+        { id: 'overview', label: 'Vue d\'ensemble', icon: LayoutDashboard },
+        { id: 'users', label: 'Utilisateurs', icon: Users },
+        { id: 'payments', label: 'Paiements Directs', icon: CreditCard },
+        { id: 'articles', label: 'Articles', icon: FileText },
+        { id: 'store', label: 'Boutique', icon: ShoppingBag },
+        { id: 'community', label: 'Communauté', icon: Users },
+        { id: 'notifications', label: 'Notifications', icon: Volume2 },
+        { id: 'features', label: 'Fonctionnalités', icon: ToggleLeft },
+        { id: 'ruqyah', label: 'Audio Ruqyah', icon: Volume2 },
+        { id: 'content', label: 'CMS (Lexique)', icon: Database },
+        { id: 'settings', label: 'Paramètres', icon: Settings },
+      ].map((tab) => (
+        <button
+          key={tab.id}
+          onClick={() => setActiveTab(tab.id as AdminTab)}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors ${
+            activeTab === tab.id
+              ? 'bg-emerald-600 text-white shadow-md'
+              : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700'
+          }`}
+        >
+          <tab.icon size={18} />
+          {tab.label}
+        </button>
+      ))}
+    </div>
+  );
+
+  const renderOverview = () => (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {stats.map((stat, idx) => (
+          <div key={idx} className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+            <div className="flex items-center gap-3 mb-4">
+              <div className={`p-3 rounded-xl ${stat.bg} ${stat.color}`}>
+                <stat.icon size={24} />
+              </div>
+              <h3 className="font-semibold text-gray-600 dark:text-gray-400 text-sm">{stat.title}</h3>
+            </div>
+            <div className="flex items-end gap-3">
+              <span className="text-3xl font-bold text-gray-900 dark:text-white">{stat.value}</span>
+              <span className="text-emerald-500 text-sm font-medium mb-1">{stat.change}</span>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+          <h3 className="font-bold text-gray-900 dark:text-white mb-4">Engagement par Outil (Popularité)</h3>
+          <div className="space-y-3">
+            {[
+              { name: 'Ruqyah', percentage: 85, color: 'bg-emerald-500' },
+              { name: 'Calculateur Abjad', percentage: 65, color: 'bg-blue-500' },
+              { name: 'Daily Dhikr', percentage: 55, color: 'bg-purple-500' },
+              { name: 'Journal des Rêves', percentage: 40, color: 'bg-amber-500' }
+            ].map(tool => (
+              <div key={tool.name} className="flex flex-col gap-1">
+                <div className="flex justify-between text-xs font-semibold text-gray-600 dark:text-gray-400">
+                  <span>{tool.name}</span>
+                  <span>{tool.percentage}%</span>
+                </div>
+                <div className="h-2 w-full bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
+                  <div className={`h-full ${tool.color} rounded-full`} style={{ width: `${tool.percentage}%` }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+          <h3 className="font-bold text-gray-900 dark:text-white mb-4">Temps d'Utilisation Moyen</h3>
+          <div className="flex items-center justify-center h-40">
+            <div className="text-center">
+              <p className="text-5xl font-bold text-gray-900 dark:text-white mb-2">14<span className="text-2xl text-gray-400">m</span></p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">par session en moyenne</p>
+              <div className="mt-4 flex gap-2 justify-center text-xs text-gray-500">
+                <span className="px-2 py-1 bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded-lg">Méditation: 8m</span>
+                <span className="px-2 py-1 bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded-lg">Outils: 6m</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+        <h3 className="font-bold text-gray-900 dark:text-white mb-4">Activité Récente (Mock)</h3>
+        <div className="space-y-4">
+          {[
+            "Un nouvel utilisateur s'est inscrit",
+            "Mise à jour du Lexique par admin",
+            "Nouveau record de Dhikr quotidien",
+            "Utilisation de l'outil Abjad en hausse"
+          ].map((activity, idx) => (
+            <div key={idx} className="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-300 p-3 bg-gray-50 dark:bg-gray-750 rounded-xl border border-gray-100 dark:border-gray-700">
+              <div className="w-2 h-2 rounded-full bg-emerald-500" />
+              {activity}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderUsers = () => (
+    <div className="space-y-6">
+      <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+        <h3 className="font-bold text-gray-900 dark:text-white mb-6">Gestion des Utilisateurs</h3>
+        <div className="space-y-4">
+          {users.map((user) => (
+            <div key={user.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4">
+              <div>
+                <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  {user.name}
+                  {user.isBanned && <span className="bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400 text-[10px] uppercase font-bold px-2 py-0.5 rounded-full">Banni</span>}
+                  {user.isTrusted && <span className="bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400 text-[10px] uppercase font-bold px-2 py-0.5 rounded-full">De Confiance</span>}
+                </h4>
+                <p className="text-sm text-gray-500 mt-1">{user.email}</p>
+              </div>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <button
+                  onClick={() => handleToggleUserTrusted(user.id)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
+                    user.isTrusted 
+                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'
+                      : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                  }`}
+                >
+                  {user.isTrusted ? 'Retirer Confiance' : 'Rendre Confiance'}
+                </button>
+                <button
+                  onClick={() => handleToggleMysteryTools(user.id)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
+                    user.mysteryToolsDisabled 
+                      ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400'
+                      : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                  }`}
+                >
+                  {user.mysteryToolsDisabled ? 'Activer Outils Mystères' : 'Désactiver Outils Mystères'}
+                </button>
+                <button
+                  onClick={() => handleToggleUserBan(user.id)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
+                    user.isBanned 
+                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'
+                      : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400'
+                  }`}
+                >
+                  {user.isBanned ? 'Débannir' : 'Bannir'}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderPayments = () => {
+    const filteredPayments = manualPayments.filter(p => {
+      if (paymentsFilter === 'all') return true;
+      return p.status === paymentsFilter;
+    });
+
+    const pendingCount = manualPayments.filter(p => p.status === 'pending').length;
+    const approvedCount = manualPayments.filter(p => p.status === 'approved').length;
+    const rejectedCount = manualPayments.filter(p => p.status === 'rejected').length;
+
+    return (
+      <div className="space-y-6">
+        {/* Stats and filters */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/30 rounded-2xl p-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-amber-700 dark:text-amber-400">En attente d'approbation</p>
+              <h4 className="text-2xl font-black text-amber-800 dark:text-amber-300 mt-1">{pendingCount}</h4>
+            </div>
+            <Clock className="text-amber-500" size={28} />
+          </div>
+
+          <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/30 rounded-2xl p-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-emerald-700 dark:text-emerald-400">Paiements validés</p>
+              <h4 className="text-2xl font-black text-emerald-800 dark:text-emerald-300 mt-1">{approvedCount}</h4>
+            </div>
+            <CheckCircle className="text-emerald-500" size={28} />
+          </div>
+
+          <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-gray-500">Demandes rejetées</p>
+              <h4 className="text-2xl font-black text-gray-800 dark:text-white mt-1">{rejectedCount}</h4>
+            </div>
+            <XCircle className="text-gray-400" size={28} />
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
+            <h3 className="font-bold text-gray-900 dark:text-white">Suivi des Paiements Directs</h3>
+            
+            {/* Filter buttons */}
+            <div className="flex flex-wrap gap-1 bg-gray-50 dark:bg-gray-900 p-1 rounded-xl border border-gray-100 dark:border-gray-850">
+              {(['all', 'pending', 'approved', 'rejected'] as const).map((filter) => {
+                const label = filter === 'all' ? 'Tous' : filter === 'pending' ? 'En Attente' : filter === 'approved' ? 'Approuvés' : 'Rejetés';
+                return (
+                  <button
+                    key={filter}
+                    onClick={() => setPaymentsFilter(filter)}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                      paymentsFilter === filter
+                        ? 'bg-emerald-600 text-white shadow-sm'
+                        : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
+                    }`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {filteredPayments.length === 0 ? (
+            <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+              <CreditCard className="mx-auto mb-3 opacity-30 text-gray-400" size={40} />
+              <p className="font-medium text-sm">Aucune demande trouvée avec ce statut.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* Responsive grid / card representation for payments */}
+              {filteredPayments.map((p) => (
+                <div key={p.id} className="p-5 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                  <div className="space-y-1 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-black text-sm text-gray-900 dark:text-white">{p.senderName}</span>
+                      <span className="text-xs text-gray-400">•</span>
+                      <span className="text-xs text-gray-500">{p.userEmail}</span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 dark:text-gray-400">
+                      <span className="font-bold text-emerald-600 dark:text-emerald-400">{p.planName}</span>
+                      <span>•</span>
+                      <span className="font-mono bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 rounded font-bold">{p.amount} {p.currency}</span>
+                      {p.transactionRef && (
+                        <>
+                          <span>•</span>
+                          <span>Réf : <strong className="font-mono">{p.transactionRef}</strong></span>
+                        </>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-gray-400">
+                      Soumis le : {new Date(p.createdAt).toLocaleString('fr-FR', {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end border-t md:border-t-0 pt-3 md:pt-0">
+                    {/* View proof image button */}
+                    {p.proofImage ? (
+                      <button
+                        onClick={() => setSelectedProofPayment(p)}
+                        className="px-3 py-2 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900 text-emerald-700 dark:text-emerald-400 rounded-xl text-xs font-bold flex items-center gap-1.5 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-all"
+                      >
+                        <Eye size={14} /> Voir le reçu
+                      </button>
+                    ) : (
+                      <span className="text-xs text-gray-400 italic">Sans image de reçu</span>
+                    )}
+
+                    <div className="flex items-center gap-2">
+                      {p.status === 'pending' ? (
+                        <>
+                          <button
+                            onClick={() => handleRejectManualPayment(p)}
+                            className="px-3 py-2 bg-red-50 hover:bg-red-100 dark:bg-red-950/20 dark:hover:bg-red-950/40 border border-red-200 dark:border-red-900/50 text-red-700 dark:text-red-400 rounded-xl text-xs font-bold transition-all"
+                          >
+                            Rejeter
+                          </button>
+                          <button
+                            onClick={() => handleApproveManualPayment(p)}
+                            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-md rounded-xl text-xs font-bold transition-all"
+                          >
+                            Approuver
+                          </button>
+                        </>
+                      ) : (
+                        <span className={`px-2.5 py-1.5 rounded-xl text-xs font-bold border ${
+                          p.status === 'approved' 
+                            ? 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-950/20 dark:border-emerald-900 dark:text-emerald-400'
+                            : 'bg-red-50 border-red-200 text-red-800 dark:bg-red-950/20 dark:border-red-900 dark:text-red-400'
+                        }`}>
+                          {p.status === 'approved' ? 'Approuvé' : 'Rejeté'}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* High res receipt preview Modal */}
+        {selectedProofPayment && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+            <div className="bg-white dark:bg-gray-900 rounded-3xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden shadow-2xl">
+              <div className="p-4 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gray-50 dark:bg-gray-800/50">
+                <div>
+                  <h4 className="font-bold text-gray-900 dark:text-white">Reçu de {selectedProofPayment.senderName}</h4>
+                  <p className="text-xs text-gray-500 mt-0.5">{selectedProofPayment.planName} ({selectedProofPayment.amount} {selectedProofPayment.currency})</p>
+                </div>
+                <button
+                  onClick={() => setSelectedProofPayment(null)}
+                  className="p-1.5 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors text-gray-500 dark:text-gray-400"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-4 bg-gray-100 dark:bg-gray-950 flex items-center justify-center min-h-[300px]">
+                <img 
+                  src={selectedProofPayment.proofImage} 
+                  alt="Preuve de paiement" 
+                  className="max-w-full max-h-[60vh] object-contain rounded-xl shadow-md border" 
+                />
+              </div>
+              {selectedProofPayment.status === 'pending' && (
+                <div className="p-4 border-t border-gray-100 dark:border-gray-800 flex gap-3 bg-gray-50 dark:bg-gray-800/50">
+                  <button
+                    onClick={() => {
+                      handleRejectManualPayment(selectedProofPayment);
+                      setSelectedProofPayment(null);
+                    }}
+                    className="flex-1 py-2.5 bg-red-50 hover:bg-red-100 dark:bg-red-950/20 dark:hover:bg-red-950/40 border border-red-200 dark:border-red-900 text-red-700 dark:text-red-400 rounded-xl text-xs font-bold transition-all"
+                  >
+                    Rejeter
+                  </button>
+                  <button
+                    onClick={() => {
+                      handleApproveManualPayment(selectedProofPayment);
+                      setSelectedProofPayment(null);
+                    }}
+                    className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md transition-all"
+                  >
+                    Approuver et activer
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderLanguageTabs = () => (
+    <div className="flex gap-2 mb-4 border-b border-gray-200 dark:border-gray-700 pb-2">
+      {[
+        { id: 'fr', label: 'Français' },
+        { id: 'en', label: 'English' },
+        { id: 'ha', label: 'Hausa' }
+      ].map(lang => (
+        <button
+          key={lang.id}
+          onClick={() => setActiveLangTab(lang.id as any)}
+          className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
+            activeLangTab === lang.id
+              ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'
+              : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'
+          }`}
+        >
+          {lang.label}
+        </button>
+      ))}
+    </div>
+  );
+
+  const renderRuqyah = () => (
+    <div className="space-y-6">
+      <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+        <h3 className="font-bold text-gray-900 dark:text-white mb-4">Publier un Audio Ruqyah</h3>
+        {renderLanguageTabs()}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+          <input
+            type="text"
+            placeholder={`Titre de l'audio (${activeLangTab.toUpperCase()})`}
+            value={newAudio[`title_${activeLangTab}`] || ''}
+            onChange={(e) => setNewAudio({...newAudio, [`title_${activeLangTab}`]: e.target.value})}
+            className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
+          />
+          <input
+            type="text"
+            placeholder="URL (ex: https://...)"
+            value={newAudio.url}
+            onChange={(e) => setNewAudio({...newAudio, url: e.target.value})}
+            className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
+          />
+        </div>
+        <div className="mb-4 w-full sm:w-1/2">
+          <input
+            type="text"
+            placeholder="Durée (ex: 45:00)"
+            value={newAudio.duration}
+            onChange={(e) => setNewAudio({...newAudio, duration: e.target.value})}
+            className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
+          />
+        </div>
+        <button
+          onClick={handleAddAudio}
+          disabled={!newAudio.title_fr || !newAudio.url}
+          className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white px-6 py-2 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-colors w-full sm:w-auto"
+        >
+          <Plus size={18} /> Publier l'audio
+        </button>
+      </div>
+
+      <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+        <h3 className="font-bold text-gray-900 dark:text-white mb-4">Audios Publiés</h3>
+        <div className="space-y-4">
+          {ruqyahAudios.map((audio) => (
+            <div key={audio.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4">
+              <div>
+                <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  {audio.title}
+                  {!audio.isActive && <span className="bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-400 text-[10px] uppercase font-bold px-2 py-0.5 rounded-full">Inactif</span>}
+                </h4>
+                <p className="text-sm text-gray-500 mt-1">{audio.duration} - {audio.url}</p>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => handleToggleAudioActive(audio.id)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
+                    audio.isActive 
+                      ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400 hover:bg-amber-200'
+                      : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400 hover:bg-emerald-200'
+                  }`}
+                >
+                  {audio.isActive ? 'Désactiver' : 'Activer'}
+                </button>
+                <button
+                  onClick={() => handleDeleteAudio(audio.id)}
+                  className="p-1.5 text-gray-400 hover:text-red-500 transition-colors rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600"
+                  title="Supprimer"
+                >
+                  <Trash2 size={18} />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  const handleToggleFeature = async (featureId: string, currentValue: boolean | string) => {
+    try {
+      // If it's a boolean (from toggle switch), invert it. If it's a string (from select), use it directly.
+      const newValue = typeof currentValue === 'boolean' ? !currentValue : currentValue;
+      await setDoc(doc(db, 'settings', 'features'), {
+        [featureId]: newValue
+      }, { merge: true });
+      showToast(`Fonctionnalité mise à jour : ${newValue}`);
+    } catch (error) {
+      console.error("Error toggling feature", error);
+      showToast("Erreur lors de la mise à jour.", "error");
+    }
+  };
+
+  const ALL_USER_TOOLS = [
+    { id: 'explore', label: 'Explore', desc: 'Dashboard explorer (Secrets, Lexique, etc)' },
+    { id: 'store', label: 'Store (Boutique)', desc: 'Boutique en ligne' },
+    { id: 'community', label: 'Communauté', desc: 'Forum communautaire' },
+    { id: 'journal', label: 'Journal Intime', desc: 'Notes personnelles' },
+    { id: 'faq', label: 'FAQ / Assistant', desc: 'Assistant IA spirituel' },
+    { id: 'quizz', label: 'Quiz', desc: 'Test de connaissances' },
+    { id: 'lexique', label: 'Lexique', desc: 'Lexique des termes' },
+    { id: 'calendar', label: 'Calendrier', desc: 'Calendrier Hégirien' },
+    { id: 'ruqyah', label: 'Module Ruqyah', desc: 'Accès aux versets de protection et guérison' },
+    { id: 'abjad', label: 'Calculateur Abjad', desc: 'Outil de numérologie arabe' },
+    { id: 'dreams', label: 'Journal des Rêves', desc: 'Fonctionnalité de suivi et interprétation' },
+    { id: 'zakat', label: 'Calculateur Zakat', desc: 'Module de calcul des aumônes' },
+    { id: 'asma', label: 'Noms Divins Personnels', desc: 'Découvrez vos noms divins correspondants au poids mystique' },
+    { id: '99names', label: 'Les 99 Noms d\'Allah', desc: 'Les Noms Sublimes (Asma al-Husna)' },
+    { id: 'awfaq', label: 'Awfaq Advanced', desc: 'Générateur de carrés magiques' },
+    { id: 'daily-dhikr', label: 'Daily Dhikr Tracker', desc: 'Suivi quotidien des invocations' },
+    { id: 'elemental', label: 'Elemental Analyzer', desc: 'Analyse des 4 éléments' },
+    { id: 'faraid', label: 'Faraid Calculator', desc: 'Calcul de l\'héritage islamique' },
+    { id: 'geomancy', label: 'Geomancy', desc: 'Outil de géomancie (Ilm al-Raml)' },
+    { id: 'grand-oaths', label: 'Grand Oaths', desc: 'Grands serments spirituels' },
+    { id: 'ilm-jafar', label: 'Ilm Jafar', desc: 'Science des lettres et des nombres' },
+    { id: 'istikhara', label: 'Istikhara', desc: 'Outil de consultation' },
+    { id: 'khatim', label: 'Khatim Generator', desc: 'Générateur de sceaux' },
+    { id: 'khouddam', label: 'Khouddam Extractor', desc: 'Extraction des serviteurs spirituels' },
+    { id: 'lunar-mansions', label: 'Lunar Mansions', desc: 'Les demeures lunaires' },
+    { id: 'personal-wird', label: 'Personal Wird', desc: 'Générateur de Wird personnel' },
+    { id: 'planetary', label: 'Planetary Hours', desc: 'Heures planétaires' },
+    { id: 'quran', label: 'Quran Full', desc: 'Explorateur du Coran' },
+    { id: 'quranic-faal', label: 'Quranic Faal', desc: 'Tirage de sorts coraniques' },
+    { id: 'rouhaniyya', label: 'Rouhaniyya Extractor', desc: 'Extraction spirituelle' },
+    { id: 'letters', label: 'Science of Letters', desc: 'Science des lettres (Ilm al-Huruf)' },
+    { id: 'sirr', label: 'Sirr Al Asrar', desc: 'Le secret des secrets' },
+    { id: 'spiritual-compatibility', label: 'Spiritual Compatibility', desc: 'Compatibilité spirituelle' },
+    { id: 'taksir', label: 'Taksir', desc: 'Brisement des lettres' },
+    { id: 'talsam', label: 'Talsam', desc: 'Générateur de talismans' },
+    { id: 'tasbih', label: 'Tasbih', desc: 'Chapelet virtuel' },
+    { id: 'zairja', label: 'Zairja', desc: 'Machine divinatoire' },
+    { id: 'halaqat', label: 'Halaqat', desc: 'Cercles d\'étude' }
+  ];
+
+  const renderFeatures = () => (
+    <div className="space-y-6">
+      <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+        <h3 className="font-bold text-gray-900 dark:text-white mb-6">Gestion des Outils Utilisateur</h3>
+        <p className="text-sm text-gray-500 mb-6">
+          Gérez l'accès aux différents outils de l'application. Vous pouvez les activer, les désactiver ou les mettre en maintenance.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {ALL_USER_TOOLS.map((tool) => {
+            const status = featureToggles[`tool_${tool.id}`] || 'active';
+            return (
+              <div key={tool.id} className="flex flex-col p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-3">
+                <div>
+                  <h4 className="font-bold text-gray-900 dark:text-white">{tool.label}</h4>
+                  <p className="text-xs text-gray-500 mt-1">{tool.desc}</p>
+                </div>
+                <div className="flex items-center gap-2 mt-auto">
+                  <select
+                    value={status}
+                    onChange={(e) => handleToggleFeature(`tool_${tool.id}`, e.target.value)}
+                    className={`text-xs font-semibold px-3 py-1.5 rounded-lg border-0 cursor-pointer ${
+                      status === 'active' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400' :
+                      status === 'premium' ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-400' :
+                      status === 'maintenance' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400' :
+                      'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400'
+                    }`}
+                  >
+                    <option value="active">Actif</option>
+                    <option value="premium">Premium</option>
+                    <option value="maintenance">Maintenance</option>
+                    <option value="inactive">Inactif</option>
+                  </select>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      
+      <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+        <h3 className="font-bold text-gray-900 dark:text-white mb-6">Gestion des Accès Admin</h3>
+        <div className="space-y-4">
+          {[
+            { id: 'admin_users', label: 'Gestion Utilisateurs' },
+            { id: 'admin_articles', label: 'Gestion Articles' },
+            { id: 'admin_community', label: 'Modération Communauté' },
+            { id: 'admin_notifications', label: 'Envoi Notifications' },
+            { id: 'admin_ruqyah', label: 'Gestion Audios Ruqyah' },
+            { id: 'admin_lexique', label: 'Gestion Lexique' }
+          ].map((tool) => {
+             const active = featureToggles[`admin_tool_${tool.id}`] !== false; // Active by default
+             return (
+              <div key={tool.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4">
+                <div>
+                  <h4 className="font-bold text-gray-900 dark:text-white">{tool.label}</h4>
+                </div>
+                <button
+                  onClick={() => handleToggleFeature(`admin_tool_${tool.id}`, active)}
+                  className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors ${
+                    active ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
+                  }`}
+                >
+                  <div
+                    className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${
+                      active ? 'translate-x-6' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderContent = () => (
+    <div className="space-y-6">
+      <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+        <h3 className="font-bold text-gray-900 dark:text-white mb-4">Ajouter au Lexique</h3>
+        {renderLanguageTabs()}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+          <input
+            type="text"
+            placeholder={`Mot / Terme (${activeLangTab.toUpperCase()})`}
+            value={newTerm[`word_${activeLangTab}`] || ''}
+            onChange={(e) => setNewTerm({...newTerm, [`word_${activeLangTab}`]: e.target.value})}
+            className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
+          />
+          <input
+            type="text"
+            placeholder="Catégorie (ex: Prière, Pratique)"
+            value={newTerm.category}
+            onChange={(e) => setNewTerm({...newTerm, category: e.target.value})}
+            className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
+          />
+        </div>
+        <textarea
+          placeholder={`Définition (${activeLangTab.toUpperCase()})`}
+          value={newTerm[`definition_${activeLangTab}`] || ''}
+          onChange={(e) => setNewTerm({...newTerm, [`definition_${activeLangTab}`]: e.target.value})}
+          className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 h-24 resize-none mb-4"
+        />
+        <button
+          onClick={handleAddTerm}
+          disabled={!newTerm.word_fr || !newTerm.definition_fr}
+          className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white px-6 py-2 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-colors w-full sm:w-auto"
+        >
+          <Plus size={18} /> Ajouter le terme
+        </button>
+      </div>
+
+      <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+        <h3 className="font-bold text-gray-900 dark:text-white mb-4">Termes du Lexique ({lexiqueTerms.length})</h3>
+        <div className="space-y-3">
+          {lexiqueTerms.map((term) => (
+            <div key={term.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-xl gap-4">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <h4 className="font-bold text-gray-900 dark:text-white">{term.word}</h4>
+                  <span className="text-[10px] uppercase tracking-wider font-bold bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded-full">
+                    {term.category}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-1">{term.definition}</p>
+              </div>
+              <button
+                onClick={() => handleDeleteTerm(term.id)}
+                className="p-2 text-gray-400 hover:text-red-500 transition-colors rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 self-end sm:self-auto"
+                title="Supprimer"
+              >
+                <Trash2 size={18} />
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderArticles = () => (
+    <div className="space-y-6">
+      <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="font-bold text-gray-900 dark:text-white">
+            {editingArticle ? "Éditer l'Article" : "Nouvel Article"}
+          </h3>
+          {draftSavedMessage && (
+            <span className="text-xs text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-1 rounded-md">
+              {draftSavedMessage}
+            </span>
+          )}
+        </div>
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <select
+              value={newArticle.status || 'Draft'}
+              onChange={(e) => setNewArticle({ ...newArticle, status: e.target.value })}
+              className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
+            >
+              <option value="Draft">Brouillon</option>
+              <option value="Published">Publié</option>
+              <option value="Archived">Archivé</option>
+            </select>
+            
+            <input
+              type="date"
+              value={newArticle.publishDate || ''}
+              onChange={(e) => setNewArticle({ ...newArticle, publishDate: e.target.value })}
+              className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
+              title="Date de planification"
+            />
+          </div>
+
+          <div className="flex items-center gap-3 bg-violet-50 dark:bg-violet-900/10 p-3 rounded-xl border border-violet-100 dark:border-violet-800/30">
+            <input 
+              type="checkbox" 
+              id="isPremiumArticle" 
+              checked={newArticle.isPremium || false}
+              onChange={(e) => setNewArticle({ ...newArticle, isPremium: e.target.checked })}
+              className="w-5 h-5 text-violet-600 rounded focus:ring-violet-500"
+            />
+            <label htmlFor="isPremiumArticle" className="text-sm font-bold text-gray-900 dark:text-white cursor-pointer">
+              Article Premium (Réservé aux abonnés)
+            </label>
+          </div>
+
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Nouvel Article</h2>
+            <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
+              {['fr', 'en', 'ha'].map(lang => (
+                <button
+                  key={lang}
+                  onClick={() => setActiveLangTab(lang as any)}
+                  className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
+                    activeLangTab === lang 
+                      ? 'bg-white dark:bg-gray-700 text-emerald-600 dark:text-emerald-400 shadow-sm' 
+                      : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'
+                  }`}
+                >
+                  {lang.toUpperCase()}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <input
+            type="text"
+            placeholder={`Titre de l'article (${activeLangTab.toUpperCase()})`}
+            value={(activeLangTab === 'fr' ? newArticle.title : (newArticle as any)[`title_${activeLangTab}`]) || ''}
+            onChange={(e) => {
+              if (activeLangTab === 'fr') setNewArticle({ ...newArticle, title: e.target.value });
+              else setNewArticle({ ...newArticle, [`title_${activeLangTab}`]: e.target.value });
+            }}
+            className="w-full mb-4 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
+          />
+
+          <textarea
+            placeholder={`Accroche / Extrait (Hook) (${activeLangTab.toUpperCase()})`}
+            value={(activeLangTab === 'fr' ? (newArticle as any).hook : (newArticle as any)[`hook_${activeLangTab}`]) || ''}
+            onChange={(e) => {
+              if (activeLangTab === 'fr') setNewArticle({ ...newArticle, hook: e.target.value } as any);
+              else setNewArticle({ ...newArticle, [`hook_${activeLangTab}`]: e.target.value } as any);
+            }}
+            className="w-full mb-4 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 h-20 resize-none"
+          />
+
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Image de couverture (Thumbnail)
+            </label>
+            <div className="flex items-center gap-4">
+              <label className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-xl cursor-pointer text-sm font-semibold transition-colors">
+                <Upload size={16} />
+                Télécharger une image
+                <input type="file" accept="image/*" onChange={onSelectFile} className="hidden" />
+              </label>
+              {newArticle.thumbnail && !imgSrc && (
+                <div className="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
+                  <img src={newArticle.thumbnail} alt="Thumbnail preview" className="w-full h-full object-cover" />
+                  <button onClick={() => setNewArticle({ ...newArticle, thumbnail: '' })} className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600">
+                    <X size={12} />
+                  </button>
+                </div>
+              )}
+            </div>
+            {imgSrc && (
+              <div className="mt-4 p-4 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900">
+                <p className="text-xs text-gray-500 mb-2">Recadrez votre image puis validez</p>
+                <ReactCrop crop={crop} onChange={(_, percentCrop) => setCrop(percentCrop)} onComplete={(c) => setCompletedCrop(c)}>
+                  <img ref={imageRef} src={imgSrc} alt="Crop preview" style={{ maxHeight: '300px' }} />
+                </ReactCrop>
+                <div className="flex gap-2 mt-4">
+                  <button onClick={handleCropComplete} className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-semibold flex items-center gap-2">
+                    <CropIcon size={16} /> Valider le recadrage
+                  </button>
+                  <button onClick={() => { setImgSrc(''); setCrop(undefined); }} className="px-4 py-2 bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300 rounded-xl text-sm font-semibold">
+                    Annuler
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+          
+          <div className="flex gap-4 mb-2">
+            <button
+              onClick={() => setNewArticle({ ...newArticle, type: 'richtext' })}
+              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 ${
+                newArticle.type === 'richtext' ? 'bg-emerald-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
+              }`}
+            >
+              <FileText size={16} /> Éditeur de Texte
+            </button>
+            <button
+              onClick={() => setNewArticle({ ...newArticle, type: 'code' })}
+              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 ${
+                newArticle.type === 'code' ? 'bg-emerald-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
+              }`}
+            >
+              <LayoutDashboard size={16} /> Éditeur de Code
+            </button>
+          </div>
+
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden min-h-[300px]">
+            {newArticle.type === 'richtext' ? (
+              <TipTapEditor 
+                value={(activeLangTab === 'fr' ? newArticle.content : (newArticle as any)[`content_${activeLangTab}`]) || ''} 
+                onChange={(val: any) => {
+                  if (activeLangTab === 'fr') setNewArticle({ ...newArticle, content: val });
+                  else setNewArticle({ ...newArticle, [`content_${activeLangTab}`]: val });
+                }} 
+                className="h-full"
+              />
+            ) : (
+              <textarea
+                value={(activeLangTab === 'fr' ? newArticle.content : (newArticle as any)[`content_${activeLangTab}`]) || ''}
+                onChange={(e) => {
+                  if (activeLangTab === 'fr') setNewArticle({ ...newArticle, content: e.target.value });
+                  else setNewArticle({ ...newArticle, [`content_${activeLangTab}`]: e.target.value });
+                }}
+                className="w-full h-full min-h-[300px] p-4 bg-[#2d2d2d] text-[#f8f8f2] font-mono text-sm resize-none focus:outline-none"
+                placeholder="Entrez votre code HTML/Markdown ici..."
+              />
+            )}
+          </div>
+
+          <div className="mt-8 bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-6 border border-gray-100 dark:border-gray-700">
+            <h3 className="font-bold text-gray-900 dark:text-white mb-4">Recettes et Bienfaits (Benefits)</h3>
+            <div className="space-y-3 mb-4">
+              {((newArticle as any).benefits || []).map((benefit: any, idx: number) => (
+                <div key={idx} className="flex items-center gap-3 bg-white dark:bg-gray-700 p-3 rounded-xl shadow-sm border border-gray-100 dark:border-gray-600">
+                  <select 
+                    value={benefit.icon || 'Star'} 
+                    onChange={(e) => {
+                      const newBenefits = [...((newArticle as any).benefits || [])];
+                      newBenefits[idx].icon = e.target.value;
+                      setNewArticle({ ...newArticle, benefits: newBenefits } as any);
+                    }}
+                    className="bg-gray-50 dark:bg-gray-800 border-none rounded-lg text-sm text-gray-700 dark:text-gray-300 p-2"
+                  >
+                    <option value="Star">Étoile</option>
+                    <option value="Sparkles">Étincelles</option>
+                    <option value="Heart">Coeur</option>
+                    <option value="Shield">Bouclier</option>
+                    <option value="BookOpen">Livre</option>
+                    <option value="Droplets">Gouttes</option>
+                    <option value="Users">Groupe</option>
+                  </select>
+                  <input 
+                    type="text" 
+                    value={benefit.text}
+                    onChange={(e) => {
+                      const newBenefits = [...((newArticle as any).benefits || [])];
+                      newBenefits[idx].text = e.target.value;
+                      setNewArticle({ ...newArticle, benefits: newBenefits } as any);
+                    }}
+                    placeholder="Texte du bienfait..."
+                    className="flex-1 bg-transparent border-none text-sm text-gray-900 dark:text-white focus:ring-0 p-0"
+                  />
+                  <button 
+                    onClick={() => {
+                      const newBenefits = [...((newArticle as any).benefits || [])];
+                      newBenefits.splice(idx, 1);
+                      setNewArticle({ ...newArticle, benefits: newBenefits } as any);
+                    }}
+                    className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 p-2 rounded-lg"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => {
+                const newBenefits = [...((newArticle as any).benefits || []), { text: '', icon: 'Star' }];
+                setNewArticle({ ...newArticle, benefits: newBenefits } as any);
+              }}
+              className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400 font-bold hover:bg-emerald-50 dark:hover:bg-emerald-900/30 px-4 py-2 rounded-xl transition-colors"
+            >
+              <Plus size={16} /> Ajouter un bienfait
+            </button>
+          </div>
+
+          <div className="flex gap-2">
+            <button
+              onClick={handleSaveArticle}
+              className="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-colors"
+            >
+              <Save size={18} /> {editingArticle ? "Mettre à jour" : "Publier l'Article"}
+            </button>
+            <button
+              onClick={() => setShowPreview(true)}
+              disabled={!newArticle.title && !newArticle.content}
+              className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+            >
+              <Eye size={18} /> Prévisualiser
+            </button>
+            {editingArticle && (
+              <button
+                onClick={() => {
+                  setEditingArticle(null);
+                  setNewArticle({ title: '', thumbnail: '', content: '', type: 'richtext', benefits: [] } as any);
+                }}
+                className="mt-4 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white px-6 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-colors"
+              >
+                Annuler
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 mt-6">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="font-bold text-gray-900 dark:text-white">Articles ({articles.length})</h3>
+          {articles.length > 0 && (
+            <button
+              onClick={handleDeleteAllArticles}
+              className="px-4 py-2 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 rounded-xl text-sm font-semibold flex items-center gap-2 transition-colors"
+            >
+              <Trash2 size={16} /> Effacer tout
+            </button>
+          )}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {articles.map((article) => (
+            <div key={article.id} className="p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl flex gap-4">
+              {article.thumbnail && (
+                <div className="w-20 h-20 rounded-xl overflow-hidden shrink-0">
+                  <img src={article.thumbnail} alt={article.title} className="w-full h-full object-cover" />
+                </div>
+              )}
+              <div className="flex-1 flex flex-col justify-between">
+                <div>
+                  <h4 className="font-bold text-sm text-gray-900 dark:text-white">{article.title}</h4>
+                  <div className="flex flex-wrap items-center gap-2 mt-1">
+                    <span className="text-[10px] uppercase font-bold text-gray-500 bg-gray-200 dark:bg-gray-600 px-2 py-0.5 rounded-full">
+                      {article.type === 'richtext' ? 'Texte' : 'Code'}
+                    </span>
+                    <select
+                      value={article.status}
+                      onChange={async (e) => {
+                        try {
+                          await updateDoc(doc(db, 'articles', article.id), { status: e.target.value });
+                          showToast("Statut mis à jour");
+                        } catch (err) {
+                          showToast("Erreur", "error");
+                        }
+                      }}
+                      className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border-0 cursor-pointer ${
+                        article.status === 'Published' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
+                        article.status === 'Archived' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
+                        'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
+                      }`}
+                    >
+                      <option value="Published">Publié</option>
+                      <option value="Draft">Brouillon</option>
+                      <option value="Archived">Archivé</option>
+                    </select>
+                    
+                    <button
+                      onClick={async () => {
+                        try {
+                          await updateDoc(doc(db, 'articles', article.id), { isPremium: !article.isPremium });
+                          showToast("Statut Premium mis à jour");
+                        } catch (err) {
+                          showToast("Erreur", "error");
+                        }
+                      }}
+                      className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border border-violet-200 dark:border-violet-800 transition-colors ${
+                        article.isPremium 
+                          ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400' 
+                          : 'bg-transparent text-gray-400 hover:text-violet-500 hover:border-violet-300'
+                      }`}
+                    >
+                      {article.isPremium ? '★ Premium' : '☆ Standard'}
+                    </button>
+                  </div>
+                  {article.publishDate && (
+                    <p className="text-xs text-gray-500 mt-1">Plannifié: {new Date(article.publishDate).toLocaleDateString()}</p>
+                  )}
+                </div>
+                <div className="flex gap-2 mt-2">
+                  <button onClick={() => editArticle(article)} className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors">
+                    <Edit2 size={16} />
+                  </button>
+                  <button onClick={() => handleDeleteArticle(article.id)} className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors">
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderCommunity = () => (
+    <div className="space-y-6">
+      <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+        <h3 className="font-bold text-gray-900 dark:text-white mb-6">Modération de la Communauté</h3>
+        <div className="space-y-4">
+          {communityPosts.map(post => (
+            <div key={post.id} className="p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl">
+              <div className="flex justify-between items-start mb-2">
+                <span className="font-bold text-sm text-gray-900 dark:text-white">{post.author}</span>
+                <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${
+                  post.status === 'approved' ? 'bg-emerald-100 text-emerald-600' :
+                  post.status === 'rejected' ? 'bg-red-100 text-red-600' :
+                  'bg-amber-100 text-amber-600'
+                }`}>
+                  {post.status === 'approved' ? 'Approuvé' : post.status === 'rejected' ? 'Rejeté' : 'En attente'}
+                </span>
+              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">{post.content}</p>
+              <div className="flex gap-2">
+                {post.status !== 'approved' && (
+                  <button onClick={() => handleUpdatePostStatus(post.id, 'approved')} className="px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-lg text-xs font-semibold hover:bg-emerald-200 transition-colors">
+                    Approuver
+                  </button>
+                )}
+                {post.status !== 'rejected' && (
+                  <button onClick={() => handleUpdatePostStatus(post.id, 'rejected')} className="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg text-xs font-semibold hover:bg-red-200 transition-colors">
+                    Rejeter
+                  </button>
+                )}
+                <button onClick={() => handleDeletePost(post.id)} className="px-3 py-1.5 bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300 rounded-lg text-xs font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors ml-auto flex items-center gap-1">
+                  <Trash2 size={14} /> Supprimer
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderNotifications = () => (
+    <div className="space-y-6">
+      <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+        <h3 className="font-bold text-gray-900 dark:text-white mb-4">Envoyer une Notification Globale</h3>
+        {renderLanguageTabs()}
+        <div className="space-y-4 mb-6">
+          <input
+            type="text"
+            placeholder={`Titre de la notification (${activeLangTab.toUpperCase()})`}
+            value={newNotification[`title_${activeLangTab}`] || ''}
+            onChange={(e) => setNewNotification({...newNotification, [`title_${activeLangTab}`]: e.target.value})}
+            className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
+          />
+          <textarea
+            placeholder={`Message (${activeLangTab.toUpperCase()})`}
+            value={newNotification[`message_${activeLangTab}`] || ''}
+            onChange={(e) => setNewNotification({...newNotification, [`message_${activeLangTab}`]: e.target.value})}
+            className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 h-24 resize-none"
+          />
+          <button
+            onClick={handleAddNotification}
+            disabled={!newNotification.title_fr || !newNotification.message_fr}
+            className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white px-6 py-2 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-colors w-full sm:w-auto"
+          >
+            <Plus size={18} /> Envoyer la notification
+          </button>
+        </div>
+
+        <h3 className="font-bold text-gray-900 dark:text-white mb-4">Historique des Notifications</h3>
+        <div className="space-y-4">
+          {notifications.map(notif => (
+            <div key={notif.id} className="p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl flex justify-between items-start gap-4">
+              <div>
+                <h4 className="font-bold text-sm text-gray-900 dark:text-white">{notif.title}</h4>
+                <p className="text-xs text-gray-500 mt-1 mb-2">{new Date(notif.date).toLocaleString('fr-FR')}</p>
+                <p className="text-sm text-gray-600 dark:text-gray-300">{notif.message}</p>
+              </div>
+              <button onClick={() => handleDeleteNotification(notif.id)} className="p-2 text-gray-400 hover:text-red-500 transition-colors rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600">
+                <Trash2 size={16} />
+              </button>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderSettings = () => (
+    <div className="space-y-6">
+      <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+        <h3 className="font-bold text-gray-900 dark:text-white mb-6">Paramètres Globaux</h3>
+        
+        <div className="space-y-4 mb-8">
+          <div className="flex flex-col p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <Volume2 size={18} className="text-blue-500" />
+                  Annonce de l'Accueil
+                </h4>
+                <p className="text-sm text-gray-500 mt-1">Afficher une annonce sur la page d'accueil (force la mise à jour).</p>
+              </div>
+              <button
+                onClick={() => handleToggleFeature('announcementVisible', !featureToggles['announcementVisible'])}
+                className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors ${
+                  featureToggles['announcementVisible'] ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
+                }`}
+              >
+                <div
+                  className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${
+                    featureToggles['announcementVisible'] ? 'translate-x-6' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+            
+            {featureToggles['announcementVisible'] && (
+              <div className="space-y-3 mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Titre de l'annonce</label>
+                  <input
+                    type="text"
+                    value={featureToggles['announcementTitle'] || ''}
+                    onChange={(e) => handleToggleFeature('announcementTitle', e.target.value)}
+                    className="w-full px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl"
+                    placeholder="Nouvelles mises à jour disponibles !"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Texte de l'annonce</label>
+                  <textarea
+                    value={featureToggles['announcementText'] || ''}
+                    onChange={(e) => handleToggleFeature('announcementText', e.target.value)}
+                    className="w-full px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl"
+                    placeholder="Découvrez la nouvelle version..."
+                    rows={3}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4">
+            <div>
+              <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <Volume2 size={18} className="text-emerald-500" />
+                Lecture Audio Globale (Ruqyah)
+              </h4>
+              <p className="text-sm text-gray-500 mt-1">Activer ou désactiver la synthèse vocale pour tous les utilisateurs.</p>
+            </div>
+            <button
+              onClick={toggleAudio}
+              className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors ${
+                audioEnabled ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
+              }`}
+            >
+              <div
+                className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${
+                  audioEnabled ? 'translate-x-6' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
+
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4">
+            <div>
+              <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <Shield size={18} className="text-red-500" />
+                Mode Maintenance Global
+              </h4>
+              <p className="text-sm text-gray-500 mt-1">Bloque l'accès à toute l'application pour les utilisateurs non-administrateurs.</p>
+            </div>
+            <button
+              onClick={() => handleToggleFeature('globalMaintenanceMode', featureToggles['globalMaintenanceMode'] === true)}
+              className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors ${
+                featureToggles['globalMaintenanceMode'] ? 'bg-red-500' : 'bg-gray-300 dark:bg-gray-600'
+              }`}
+            >
+              <div
+                className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${
+                  featureToggles['globalMaintenanceMode'] ? 'translate-x-6' : 'translate-x-0'
+                }`}
+              />
+            </button>
+          </div>
+        </div>
+
+        <h3 className="font-bold text-gray-900 dark:text-white mb-4 mt-8">Passerelles de Paiement</h3>
+        <div className="space-y-4 mb-8">
+          <div className="flex flex-col p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <CreditCard size={18} className="text-blue-500" />
+                  Configuration Paystack
+                </h4>
+                <p className="text-sm text-gray-500 mt-1">Configurez la clé publique de votre passerelle Paystack.</p>
+              </div>
+            </div>
+            
+            <div className="space-y-3 mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Paystack Public Key</label>
+                <input
+                  type="text"
+                  value={featureToggles['paystackPublicKey'] || ''}
+                  onChange={(e) => handleToggleFeature('paystackPublicKey', e.target.value)}
+                  className="w-full px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl"
+                  placeholder="pk_test_..."
+                />
+              </div>
+              <p className="text-xs text-amber-600 dark:text-amber-400">
+                Note: Cette clé primera sur celle configurée dans les variables d'environnement.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <h3 className="font-bold text-gray-900 dark:text-white mb-4">Sauvegarde et Export</h3>
+        <div className="p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl">
+          <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+            Téléchargez une copie complète des données de l'application (utilisateurs, lexique, statistiques, posts) au format JSON.
+          </p>
+          <button
+            onClick={handleExportData}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-colors w-full sm:w-auto"
+          >
+            <Save size={18} /> Exporter les données
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  
+  const adminBypass = sessionStorage.getItem('admin_bypass') === 'true';
+  
+  if (!adminBypass && (!user || user.role !== 'admin')) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
+        <AuthModal isOpen={true} onClose={() => navigate('/')} adminOnly={true} />
+      </div>
+    );
+  }
+
+  const renderArticlePreviewModal = () => {
+    if (!showPreview) return null;
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div className="bg-white dark:bg-gray-900 rounded-3xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
+          <div className="p-4 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center bg-gray-50 dark:bg-gray-800">
+            <h3 className="font-bold text-lg text-gray-900 dark:text-white flex items-center gap-2">
+              <Eye size={20} /> Prévisualisation (Vue Utilisateur)
+            </h3>
+            <button onClick={() => setShowPreview(false)} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors text-gray-500">
+              <X size={20} />
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-6 lg:p-10 hide-scrollbar bg-gray-50 dark:bg-gray-900">
+            <div className="max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-3xl overflow-hidden shadow-sm border border-gray-100 dark:border-gray-700">
+              {newArticle.thumbnail && (
+                <div className="w-full h-64 md:h-80 overflow-hidden relative">
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-10" />
+                  <img src={newArticle.thumbnail} alt={newArticle.title} className="w-full h-full object-cover" />
+                  <div className="absolute bottom-0 left-0 p-6 z-20">
+                    <h1 className="text-2xl md:text-3xl font-black text-white">{newArticle.title || 'Titre Sans Nom'}</h1>
+                  </div>
+                </div>
+              )}
+              {!newArticle.thumbnail && (
+                <div className="p-6 md:p-10 border-b border-gray-100 dark:border-gray-700">
+                  <h1 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white">{newArticle.title || 'Titre Sans Nom'}</h1>
+                </div>
+              )}
+              
+              <div className="p-6 md:p-10 prose prose-emerald dark:prose-invert max-w-none article-content">
+                <div dangerouslySetInnerHTML={{ __html: newArticle.content || '' }} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8 safe-area-pt pb-24 border-none min-h-screen">
+      {renderArticlePreviewModal()}
+      <div className="flex items-center gap-4 mb-8">
+        <div className="p-3 bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 rounded-2xl">
+          <Shield size={28} />
+        </div>
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Admin Panel</h1>
+          <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 mt-1">Gérez le contenu et les paramètres de l'application</p>
+        </div>
+      </div>
+
+      {renderTabNavigation()}
+
+      <motion.div
+        key={activeTab}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.2 }}
+      >
+        {activeTab === 'overview' && renderOverview()}
+        {activeTab === 'users' && renderUsers()}
+        {activeTab === 'payments' && renderPayments()}
+        {activeTab === 'articles' && renderArticles()}
+        {activeTab === 'store' && <AdminStoreManager />}
+        {activeTab === 'community' && renderCommunity()}
+        {activeTab === 'notifications' && renderNotifications()}
+        {activeTab === 'features' && renderFeatures()}
+        {activeTab === 'ruqyah' && renderRuqyah()}
+        {activeTab === 'content' && renderContent()}
+        {activeTab === 'settings' && renderSettings()}
+      </motion.div>
+      
+      {toast && (
+        <div className="fixed bottom-6 right-6 z-[100] animate-in fade-in slide-in-from-bottom-5">
+          <div className={`flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg border ${
+            toast.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-900/30 dark:border-emerald-800 dark:text-emerald-300' :
+            toast.type === 'error' ? 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/30 dark:border-red-800 dark:text-red-300' :
+            'bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-300'
+          }`}>
+            <span className="font-semibold">{toast.message}</span>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};

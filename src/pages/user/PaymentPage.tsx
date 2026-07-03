@@ -1,0 +1,615 @@
+import React, { useState, useEffect } from 'react';
+import { useLanguage } from '../../contexts/LanguageContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { 
+  Shield, Star, Check, Sparkles, ArrowLeft, CreditCard, Landmark, Bitcoin, Crown, 
+  Copy, Upload, Clock, CheckCircle, XCircle, X, AlertCircle
+} from 'lucide-react';
+import { PaystackService } from '../../services/PaystackService';
+import { Link, useNavigate } from 'react-router-dom';
+import { AuthModal } from '../../components/AuthModal';
+import { db } from '../../lib/firebase';
+import { collection, addDoc, query, where, onSnapshot, orderBy, updateDoc, doc } from 'firebase/firestore';
+
+const detectUserCurrencyAndPrice = (priceUSD: number) => {
+  let price = 150; // Default for 13
+  if (priceUSD === 13) price = 150;
+  if (priceUSD === 25) price = 280;
+  if (priceUSD === 45) price = 520;
+  
+  return { currency: 'GHS', price: price, displayStr: `${price} GHS` };
+};
+
+export const PaymentPage: React.FC = () => {
+  const { t } = useLanguage();
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [userLocationInfo, setUserLocationInfo] = useState({ currency: 'USD' });
+  
+  // Direct Payment / Modal State
+  const [selectedPlan, setSelectedPlan] = useState<any>(null);
+  const [paymentMethod, setPaymentMethod] = useState<'paystack' | 'direct' | null>(null);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+  
+  // Direct transfer form state
+  const [senderName, setSenderName] = useState('');
+  const [transactionRef, setTransactionRef] = useState('');
+  const [receiptBase64, setReceiptBase64] = useState<string | null>(null);
+  const [receiptFileName, setReceiptFileName] = useState<string>('');
+  const [submittingDirect, setSubmittingDirect] = useState(false);
+  const [messageDirect, setMessageDirect] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
+
+  // Users' manual payment history
+  const [manualPayments, setManualPayments] = useState<any[]>([]);
+
+  useEffect(() => {
+    setUserLocationInfo({ currency: detectUserCurrencyAndPrice(13).currency });
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    const q = query(
+      collection(db, 'manual_payments'),
+      where('userId', '==', user.uid)
+    );
+    const unsub = onSnapshot(q, (snapshot) => {
+      const list = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      // Sort client-side by createdAt descending
+      list.sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
+      setManualPayments(list);
+    });
+    return () => unsub();
+  }, [user]);
+
+  const plans = [
+    {
+      id: 'premium_3m',
+      name: t('payment.plan3m', 'Premium (3 Mois)'),
+      description: t('payment.desc3m', 'Accès complet aux outils, renouvellement automatique.'),
+      priceNumber: 13,
+      features: [
+        t('payment.featUnlimited', 'Outils spirituels illimités'),
+        t('payment.featTutorials', 'Tutoriels Sirr Al Asrar avancés'),
+        t('payment.featNoAds', 'Aucune publicité'),
+        t('payment.featSupport', 'Support prioritaire'),
+        t('payment.featAutoRenew', 'Renouvellement automatique')
+      ],
+      icon: Star,
+      color: 'from-amber-400 to-orange-500'
+    },
+    {
+      id: 'premium_6m',
+      name: t('payment.plan6m', 'Premium (6 Mois)'),
+      description: t('payment.desc6m', 'Consultation personnalisée et accès complet, renouvellement automatique.'),
+      priceNumber: 25,
+      features: [
+        t('payment.featAllPremium', 'Toutes les fonctionnalités Premium'),
+        t('payment.featSave', 'Économie sur la durée'),
+        t('payment.featTreatments', 'Traitements personnalisés'),
+        t('payment.featExperts', 'Accès direct aux experts'),
+        t('payment.featAutoRenew', 'Renouvellement automatique')
+      ],
+      icon: Shield,
+      color: 'from-fuchsia-500 to-purple-600'
+    },
+    {
+      id: 'premium_12m',
+      name: t('payment.plan12m', 'Premium (12 Mois)'),
+      description: t('payment.desc12m', 'Le choix ultime pour une année de spiritualité accompagnée.'),
+      priceNumber: 45,
+      features: [
+        t('payment.featAllPremium', 'Toutes les fonctionnalités Premium'),
+        t('payment.featMaxSave', 'Économie maximale sur la durée'),
+        t('payment.featTreatments', 'Traitements personnalisés'),
+        t('payment.featExperts', 'Accès direct aux experts'),
+        t('payment.featAutoRenew', 'Renouvellement automatique')
+      ],
+      icon: Crown,
+      color: 'from-emerald-400 to-teal-600'
+    }
+  ];
+
+  const handleSubscribeClick = (plan: any) => {
+    if (!user) {
+      setShowAuthModal(true);
+      return;
+    }
+    setSelectedPlan(plan);
+    setPaymentMethod(null);
+    setMessageDirect(null);
+    setSenderName('');
+    setTransactionRef('');
+    setReceiptBase64(null);
+    setReceiptFileName('');
+  };
+
+  const handlePaystackPayment = async () => {
+    if (!user || !selectedPlan) return;
+    
+    setLoading(true);
+    let pricing = detectUserCurrencyAndPrice(selectedPlan.priceNumber);
+
+    try {
+      await PaystackService.initializePaystackPayment(
+        user.email || 'user@example.com',
+        pricing.price,
+        pricing.currency,
+        user.uid,
+        async (reference) => {
+          try {
+            let months = 3;
+            if (selectedPlan.id === 'premium_6m') months = 6;
+            if (selectedPlan.id === 'premium_12m') months = 12;
+
+            const premiumUntil = new Date();
+            premiumUntil.setMonth(premiumUntil.getMonth() + months);
+
+            await updateDoc(doc(db, 'users', user.uid), {
+              subscriptionTier: 'premium',
+              premiumUntil: premiumUntil
+            });
+          } catch (dbErr) {
+            console.error("Failed to update premium status in DB:", dbErr);
+          }
+
+          alert(t('payment.success', `Félicitations! Vous êtes maintenant abonné au plan ${selectedPlan.name}.`).replace('{plan}', selectedPlan.name));
+          setSelectedPlan(null);
+          navigate('/user/dashboard');
+        },
+        () => {
+          console.log(t('payment.cancelled', "Paiement annulé ou fermé."));
+        }
+      );
+    } catch (err) {
+      console.error(err);
+      alert(t('payment.error', "Une erreur est survenue lors de l'initialisation du paiement."));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Le fichier est trop volumineux. La taille maximale est de 5 Mo.");
+      return;
+    }
+
+    setReceiptFileName(file.name);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setReceiptBase64(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleDirectPaymentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !selectedPlan) return;
+
+    if (!senderName.trim()) {
+      setMessageDirect({ text: "Veuillez entrer votre nom ou le nom de l'expéditeur.", type: 'error' });
+      return;
+    }
+
+    setSubmittingDirect(true);
+    setMessageDirect(null);
+
+    const pricing = detectUserCurrencyAndPrice(selectedPlan.priceNumber);
+
+    try {
+      await addDoc(collection(db, 'manual_payments'), {
+        userId: user.uid,
+        userEmail: user.email || '',
+        userName: user.name || '',
+        planId: selectedPlan.id,
+        planName: selectedPlan.name,
+        amount: pricing.price,
+        currency: pricing.currency,
+        status: 'pending',
+        senderName: senderName.trim(),
+        transactionRef: transactionRef.trim(),
+        proofImage: receiptBase64 || '',
+        createdAt: Date.now()
+      });
+
+      setMessageDirect({ 
+        text: "Votre reçu a été soumis avec succès ! L'administrateur validera votre paiement sous peu pour activer votre accès Premium.", 
+        type: 'success' 
+      });
+
+      // Clear form
+      setSenderName('');
+      setTransactionRef('');
+      setReceiptBase64(null);
+      setReceiptFileName('');
+      setTimeout(() => {
+        setSelectedPlan(null);
+      }, 5000);
+    } catch (err) {
+      console.error(err);
+      setMessageDirect({ text: "Une erreur est survenue lors de la soumission de votre reçu. Veuillez réessayer.", type: 'error' });
+    } finally {
+      setSubmittingDirect(false);
+    }
+  };
+
+  const copyToClipboard = (text: string, fieldName: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(fieldName);
+    setTimeout(() => setCopiedField(null), 2000);
+  };
+
+  const directPaymentDetails = {
+    accountName: "Jibril Tengeh",
+    accountNumber: "1011103409690",
+    bankName: "GCB Bank PLC",
+    swiftCode: "GHCBGHAC"
+  };
+
+  return (
+    <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8 pt-8 pb-24">
+      <div className="mb-8 text-center sm:text-left">
+        <button onClick={() => navigate(-1)} className="flex items-center justify-center sm:justify-start gap-2 text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors mb-4 w-full sm:w-auto">
+          <ArrowLeft size={20} />
+          <span>{t('payment.back', 'Retour')}</span>
+        </button>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center justify-center sm:justify-start gap-3 mb-2">
+          <Sparkles className="text-amber-500" />
+          {t('payment.title', "Débloquer l'Accès Premium")}
+        </h1>
+        <p className="text-gray-500 dark:text-gray-400 max-w-2xl">
+          {t('payment.subtitle', "Choisissez le plan qui correspond à vos besoins spirituels.")}
+        </p>
+        
+        <div className="mt-6 flex flex-wrap gap-4 items-center justify-center sm:justify-start text-sm font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 p-4 rounded-xl border border-emerald-100 dark:border-emerald-800/50">
+          <span className="flex items-center gap-1.5"><CreditCard size={16} /> Paystack (Automatique : Cartes & Mobile Money)</span>
+          <span className="text-emerald-300 hidden sm:inline">•</span>
+          <span className="flex items-center gap-1.5"><Landmark size={16} /> Transfert Bancaire Direct (GCB Bank PLC)</span>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+        {plans.map((plan) => {
+          const pricing = detectUserCurrencyAndPrice(plan.priceNumber);
+          return (
+            <div key={plan.id} className="bg-white dark:bg-gray-800 rounded-3xl p-6 lg:p-8 border border-gray-200 dark:border-gray-700 shadow-xl relative overflow-hidden group flex flex-col transition-transform hover:-translate-y-1">
+              <div className={`absolute top-0 left-0 w-full h-2 bg-gradient-to-r ${plan.color}`}></div>
+              <div className="flex flex-col items-center sm:items-start sm:flex-row gap-4 mb-6 text-center sm:text-left">
+                <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${plan.color} flex items-center justify-center text-white shadow-lg transform group-hover:scale-110 transition-transform shrink-0`}>
+                  <plan.icon size={28} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">{plan.name}</h3>
+                  <p className="text-3xl font-black text-gray-900 dark:text-white mt-1">{pricing.displayStr}</p>
+                </div>
+              </div>
+              
+              <p className="text-gray-600 dark:text-gray-300 mb-6 min-h-[48px] text-center sm:text-left text-sm">
+                {plan.description}
+              </p>
+
+              <ul className="space-y-4 mb-8 flex-1">
+                {plan.features.map((feature, idx) => (
+                  <li key={idx} className="flex items-start gap-3">
+                    <div className={`mt-0.5 p-1 rounded-full bg-gradient-to-r ${plan.color} text-white shrink-0`}>
+                      <Check size={12} strokeWidth={4} />
+                    </div>
+                    <span className="text-gray-700 dark:text-gray-300 font-medium text-sm leading-tight">{feature}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <button
+                onClick={() => handleSubscribeClick(plan)}
+                className={`w-full mt-auto py-3.5 rounded-xl font-bold text-white shadow-lg transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 bg-gradient-to-r ${plan.color}`}
+              >
+                <Sparkles size={20} />
+                {t('payment.choosePlan', 'Choisir ce plan')}
+              </button>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* History of Manual Payments */}
+      {user && manualPayments.length > 0 && (
+        <div className="mt-16 bg-white dark:bg-gray-800 rounded-3xl p-6 sm:p-8 border border-gray-200 dark:border-gray-700 shadow-md">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+            <Clock className="text-emerald-500" />
+            Suivi de vos demandes de paiement direct
+          </h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-gray-200 dark:border-gray-700 text-xs uppercase font-bold text-gray-500 dark:text-gray-400">
+                  <th className="py-3 px-4">Plan</th>
+                  <th className="py-3 px-4">Montant</th>
+                  <th className="py-3 px-4">Expéditeur</th>
+                  <th className="py-3 px-4">Soumis le</th>
+                  <th className="py-3 px-4">Statut</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-750 text-sm">
+                {manualPayments.map((p) => (
+                  <tr key={p.id} className="text-gray-700 dark:text-gray-300">
+                    <td className="py-3.5 px-4 font-bold">{p.planName}</td>
+                    <td className="py-3.5 px-4 font-mono">{p.amount} {p.currency}</td>
+                    <td className="py-3.5 px-4">{p.senderName}</td>
+                    <td className="py-3.5 px-4 text-gray-500 text-xs">
+                      {new Date(p.createdAt).toLocaleDateString(t('locale', 'fr-FR'), {
+                        day: 'numeric',
+                        month: 'short',
+                        year: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </td>
+                    <td className="py-3.5 px-4">
+                      {p.status === 'pending' && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800">
+                          <Clock size={12} /> En attente d'approbation
+                        </span>
+                      )}
+                      {p.status === 'approved' && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800">
+                          <CheckCircle size={12} /> Activé / Approuvé
+                        </span>
+                      )}
+                      {p.status === 'rejected' && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800">
+                          <XCircle size={12} /> Rejeté (Vérifiez vos détails)
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Payment Selection & Instruction Modal */}
+      {selectedPlan && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+          <div className="bg-white dark:bg-gray-900 rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl my-8">
+            <div className="p-5 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gray-50 dark:bg-gray-800/50">
+              <div>
+                <h3 className="font-bold text-lg text-gray-900 dark:text-white">
+                  Abonnement : {selectedPlan.name}
+                </h3>
+                <p className="text-sm text-emerald-600 dark:text-emerald-400 font-bold mt-0.5">
+                  Tarif : {detectUserCurrencyAndPrice(selectedPlan.priceNumber).displayStr}
+                </p>
+              </div>
+              <button 
+                onClick={() => setSelectedPlan(null)} 
+                className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors text-gray-500 dark:text-gray-400"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6 space-y-6 hide-scrollbar">
+              {!paymentMethod ? (
+                <div className="space-y-4">
+                  <h4 className="font-bold text-gray-900 dark:text-white mb-2">Sélectionnez votre méthode de paiement</h4>
+                  
+                  <button
+                    onClick={() => setPaymentMethod('paystack')}
+                    className="w-full flex items-center gap-4 p-4 border-2 border-gray-100 hover:border-emerald-500 dark:border-gray-800 dark:hover:border-emerald-500 rounded-2xl text-left hover:bg-emerald-50/20 dark:hover:bg-emerald-900/10 transition-all group"
+                  >
+                    <div className="p-3 rounded-xl bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 group-hover:scale-110 transition-transform">
+                      <CreditCard size={24} />
+                    </div>
+                    <div className="flex-1">
+                      <h5 className="font-bold text-gray-900 dark:text-white">Paiement Automatique</h5>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Payez instantanément par Carte Bancaire ou Mobile Money automatique via Paystack.</p>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => setPaymentMethod('direct')}
+                    className="w-full flex items-center gap-4 p-4 border-2 border-gray-100 hover:border-emerald-500 dark:border-gray-800 dark:hover:border-emerald-500 rounded-2xl text-left hover:bg-emerald-50/20 dark:hover:bg-emerald-900/10 transition-all group"
+                  >
+                    <div className="p-3 rounded-xl bg-amber-100 dark:bg-amber-900/50 text-amber-600 group-hover:scale-110 transition-transform">
+                      <Landmark size={24} />
+                    </div>
+                    <div className="flex-1">
+                      <h5 className="font-bold text-gray-900 dark:text-white">Paiement Direct (Sans Commission)</h5>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Transférez directement sur mon compte GCB Bank PLC, puis soumettez le reçu.</p>
+                    </div>
+                  </button>
+                </div>
+              ) : paymentMethod === 'paystack' ? (
+                <div className="text-center py-6 space-y-4">
+                  <CreditCard className="mx-auto text-emerald-500 animate-pulse" size={48} />
+                  <h4 className="font-bold text-lg text-gray-900 dark:text-white">Redirection vers Paystack...</h4>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 max-w-sm mx-auto">Vous allez être redirigé vers la passerelle sécurisée de Paystack pour finaliser le paiement.</p>
+                  
+                  <div className="flex gap-3 pt-4 max-w-xs mx-auto">
+                    <button 
+                      onClick={() => setPaymentMethod(null)} 
+                      className="flex-1 py-2 rounded-xl text-sm font-bold bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
+                    >
+                      Retour
+                    </button>
+                    <button 
+                      onClick={handlePaystackPayment}
+                      disabled={loading}
+                      className="flex-1 py-2 rounded-xl text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg"
+                    >
+                      {loading ? "Chargement..." : "Continuer"}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  <button 
+                    onClick={() => setPaymentMethod(null)} 
+                    className="text-xs font-semibold text-emerald-600 hover:underline flex items-center gap-1"
+                  >
+                    ← Changer de méthode
+                  </button>
+
+                  <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 p-4 rounded-2xl text-amber-800 dark:text-amber-300 text-xs leading-relaxed">
+                    <p className="font-bold flex items-center gap-1.5 mb-1"><AlertCircle size={14} /> Instructions de Paiement Direct :</p>
+                    Effectuez le transfert du montant exact de <strong className="underline">{detectUserCurrencyAndPrice(selectedPlan.priceNumber).displayStr}</strong> vers l'une des coordonnées ci-dessous, puis remplissez le formulaire de soumission avec votre reçu d'opération.
+                  </div>
+
+                  {/* Payment Credentials */}
+                  <div className="space-y-3 bg-gray-50 dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-750">
+                    <div className="flex justify-between items-center text-xs py-1 border-b border-gray-200 dark:border-gray-700">
+                      <span className="text-gray-500">Nom du compte / Titulaire :</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-gray-900 dark:text-white">{directPaymentDetails.accountName}</span>
+                        <button 
+                          type="button"
+                          onClick={() => copyToClipboard(directPaymentDetails.accountName, 'accountName')}
+                          className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-gray-400 hover:text-emerald-500"
+                        >
+                          {copiedField === 'accountName' ? <span className="text-emerald-500 font-bold">Copié!</span> : <Copy size={13} />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center text-xs py-1 border-b border-gray-200 dark:border-gray-700">
+                      <span className="text-gray-500">Nom de la Banque :</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-gray-900 dark:text-white">{directPaymentDetails.bankName}</span>
+                        <button 
+                          type="button"
+                          onClick={() => copyToClipboard(directPaymentDetails.bankName, 'bankName')}
+                          className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-gray-400 hover:text-emerald-500"
+                        >
+                          {copiedField === 'bankName' ? <span className="text-emerald-500 font-bold">Copié!</span> : <Copy size={13} />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center text-xs py-1 border-b border-gray-200 dark:border-gray-700">
+                      <span className="text-gray-500">Numéro de compte :</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-mono font-bold text-gray-900 dark:text-white">{directPaymentDetails.accountNumber}</span>
+                        <button 
+                          type="button"
+                          onClick={() => copyToClipboard(directPaymentDetails.accountNumber, 'accountNumber')}
+                          className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-gray-400 hover:text-emerald-500"
+                        >
+                          {copiedField === 'accountNumber' ? <span className="text-emerald-500 font-bold">Copié!</span> : <Copy size={13} />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-between items-center text-xs py-1">
+                      <span className="text-gray-500">Code Swift (BIC) :</span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-mono font-bold text-gray-900 dark:text-white">{directPaymentDetails.swiftCode}</span>
+                        <button 
+                          type="button"
+                          onClick={() => copyToClipboard(directPaymentDetails.swiftCode, 'swiftCode')}
+                          className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-gray-400 hover:text-emerald-500"
+                        >
+                          {copiedField === 'swiftCode' ? <span className="text-emerald-500 font-bold">Copié!</span> : <Copy size={13} />}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Submission Form */}
+                  <form onSubmit={handleDirectPaymentSubmit} className="space-y-4">
+                    <h5 className="font-bold text-sm text-gray-900 dark:text-white border-b pb-2">Déclarez votre transfert</h5>
+                    
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
+                        Nom de l'expéditeur / Titulaire du compte émetteur *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={senderName}
+                        onChange={(e) => setSenderName(e.target.value)}
+                        placeholder="Ex: Sékou Bireino"
+                        className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
+                        Numéro de transaction / Référence (Optionnel)
+                      </label>
+                      <input
+                        type="text"
+                        value={transactionRef}
+                        onChange={(e) => setTransactionRef(e.target.value)}
+                        placeholder="Ex: TXN827189100 ou Réf. Wave"
+                        className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-white"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
+                        Reçu de transfert / Preuve d'opération (Optionnel, Max 5Mo)
+                      </label>
+                      <div className="flex items-center justify-center w-full">
+                        <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-2xl cursor-pointer bg-gray-50 dark:hover:bg-bray-800 dark:bg-gray-800 hover:bg-gray-100 dark:border-gray-700 dark:hover:border-gray-600 dark:hover:bg-gray-700">
+                          <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                            <Upload className="w-8 h-8 mb-3 text-gray-400" />
+                            <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
+                              <span className="font-semibold">Cliquez pour téléverser</span> ou glisser-déposer
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              {receiptFileName ? `Fichier : ${receiptFileName}` : "PNG, JPG ou JPEG"}
+                            </p>
+                          </div>
+                          <input type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
+                        </label>
+                      </div>
+                      {receiptBase64 && (
+                        <div className="mt-2 p-2 border rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-between">
+                          <span className="text-xs text-gray-500 truncate max-w-xs">Aperçu chargé avec succès</span>
+                          <button type="button" onClick={() => { setReceiptBase64(null); setReceiptFileName(''); }} className="text-xs text-red-500 font-bold hover:underline">Supprimer</button>
+                        </div>
+                      )}
+                    </div>
+
+                    {messageDirect && (
+                      <div className={`p-4 rounded-xl text-xs font-medium leading-relaxed flex items-start gap-2 ${
+                        messageDirect.type === 'success' 
+                          ? 'bg-emerald-50 border border-emerald-200 text-emerald-800 dark:bg-emerald-950/20 dark:border-emerald-900 dark:text-emerald-300'
+                          : 'bg-red-50 border border-red-200 text-red-800 dark:bg-red-950/20 dark:border-red-900 dark:text-red-300'
+                      }`}>
+                        {messageDirect.type === 'success' ? <CheckCircle size={16} className="shrink-0 mt-0.5" /> : <AlertCircle size={16} className="shrink-0 mt-0.5" />}
+                        <span>{messageDirect.text}</span>
+                      </div>
+                    )}
+
+                    <button
+                      type="submit"
+                      disabled={submittingDirect}
+                      className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-sm shadow-lg flex items-center justify-center gap-2 transition-all mt-6"
+                    >
+                      {submittingDirect ? "Transmission en cours..." : "Soumettre la preuve de paiement"}
+                    </button>
+                  </form>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
+    </div>
+  );
+};
+
+
