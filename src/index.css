@@ -34,10 +34,22 @@
 }
 
 html {
-  font-size: 14px;
+  font-size: 12px; /* Réduit de 2px pour les smartphones */
   touch-action: manipulation;
   overflow-x: hidden;
   max-width: 100vw;
+}
+
+@media (min-width: 768px) {
+  html {
+    font-size: 14px; /* Taille automatique pour les tablettes */
+  }
+}
+
+@media (min-width: 1024px) {
+  html {
+    font-size: 16px; /* Taille automatique pour les ordinateurs */
+  }
 }
 
 body {
