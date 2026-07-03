@@ -17,8 +17,11 @@ import {
   Shield,
   Droplets,
   Users,
-  Crown
+  Crown,
+  Maximize2,
+  X
 } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
 import { getAsrarItems } from "../../data/store";
 import { AsrarItem } from "../../types";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
@@ -59,10 +62,24 @@ export const SecretDetail: React.FC = () => {
   const [notFound, setNotFound] = useState(false);
 
   const [readingMode, setReadingMode] = useState(false);
+  const [zenMode, setZenMode] = useState(false);
+  const [zenFontSize, setZenFontSize] = useState<'sm' | 'md' | 'lg' | 'xl'>('lg');
+  const [zenTheme, setZenTheme] = useState<'cream' | 'dark' | 'white'>('cream');
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [viewMode, setViewMode] = useState<'full' | 'accordion'>('full');
   const [rating, setRating] = useState(0);
   const [showAuthModal, setShowAuthModal] = useState(false);
+
+  useEffect(() => {
+    if (zenMode) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [zenMode]);
 
   useEffect(() => {
     // Scroll to top when loading
@@ -273,6 +290,14 @@ export const SecretDetail: React.FC = () => {
             title={t("readingMode", "Mode Lecture")}
           >
             <BookType size={22} />
+          </button>
+          <button
+            onClick={() => setZenMode(true)}
+            className="p-2 rounded-full transition-all flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-100/50 dark:border-emerald-800/30 font-bold px-3 py-1.5 hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
+            title="Mode Zen (Plein Écran)"
+          >
+            <Maximize2 size={15} />
+            <span className="text-xs">Mode Zen</span>
           </button>
           <button
             onClick={toggleBookmark}
@@ -498,6 +523,155 @@ export const SecretDetail: React.FC = () => {
       </div>
       
       <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
+
+      {/* Immersive Zen Reading Mode Overlay */}
+      <AnimatePresence>
+        {zenMode && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className={`fixed inset-0 z-[9999] overflow-y-auto px-4 py-8 sm:px-12 sm:py-16 md:px-20 md:py-24 flex flex-col items-center justify-start ${
+              zenTheme === "cream"
+                ? "bg-[#fdfbf7] text-[#3c2f2f]"
+                : zenTheme === "dark"
+                ? "bg-[#121214] text-[#d1d1d6]"
+                : "bg-white text-gray-900"
+            }`}
+          >
+            {/* Top Toolbar */}
+            <div className={`w-full max-w-2xl flex flex-col sm:flex-row items-center justify-between gap-4 mb-10 pb-4 border-b shrink-0 ${
+              zenTheme === "cream" ? "border-[#e8dcb5]/60" : zenTheme === "dark" ? "border-stone-850/60" : "border-gray-150"
+            }`}>
+              <button
+                onClick={() => setZenMode(false)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition-all ${
+                  zenTheme === "cream"
+                    ? "hover:bg-[#f4ebd0] text-[#8b7556]"
+                    : zenTheme === "dark"
+                    ? "hover:bg-stone-800 text-stone-400"
+                    : "hover:bg-gray-100 text-gray-500"
+                }`}
+              >
+                <ArrowLeft size={16} />
+                <span>Quitter le mode Zen</span>
+              </button>
+
+              <div className="flex flex-wrap items-center gap-3">
+                {/* Theme Switcher */}
+                <div className={`flex items-center gap-1.5 p-1 rounded-xl border ${
+                  zenTheme === "cream" ? "bg-[#f4ebd0]/40 border-[#e8dcb5]/40" : zenTheme === "dark" ? "bg-stone-900/40 border-stone-800/40" : "bg-gray-50 border-gray-100"
+                }`}>
+                  <button
+                    onClick={() => setZenTheme("cream")}
+                    className={`w-5 h-5 rounded-full bg-[#fdfbf7] border ${zenTheme === "cream" ? "ring-2 ring-emerald-500 border-transparent" : "border-stone-300"}`}
+                    title="Crème"
+                  />
+                  <button
+                    onClick={() => setZenTheme("dark")}
+                    className={`w-5 h-5 rounded-full bg-[#121214] border ${zenTheme === "dark" ? "ring-2 ring-emerald-500 border-transparent" : "border-stone-700"}`}
+                    title="Sombre"
+                  />
+                  <button
+                    onClick={() => setZenTheme("white")}
+                    className={`w-5 h-5 rounded-full bg-white border ${zenTheme === "white" ? "ring-2 ring-emerald-500 border-transparent" : "border-gray-350"}`}
+                    title="Clair"
+                  />
+                </div>
+
+                {/* Font Size Selector */}
+                <div className={`flex items-center rounded-xl p-1 border text-xs font-bold ${
+                  zenTheme === "cream" ? "bg-[#f4ebd0]/40 border-[#e8dcb5]/40" : zenTheme === "dark" ? "bg-stone-900/40 border-stone-800/40" : "bg-gray-50 border-gray-100"
+                }`}>
+                  <button
+                    onClick={() => {
+                      if (zenFontSize === "xl") setZenFontSize("lg");
+                      else if (zenFontSize === "lg") setZenFontSize("md");
+                      else if (zenFontSize === "md") setZenFontSize("sm");
+                    }}
+                    disabled={zenFontSize === "sm"}
+                    className="px-2 py-1 hover:opacity-80 disabled:opacity-30 transition-opacity"
+                    title="Texte plus petit"
+                  >
+                    A-
+                  </button>
+                  <span className="opacity-50 px-1 font-normal">Taille</span>
+                  <button
+                    onClick={() => {
+                      if (zenFontSize === "sm") setZenFontSize("md");
+                      else if (zenFontSize === "md") setZenFontSize("lg");
+                      else if (zenFontSize === "lg") setZenFontSize("xl");
+                    }}
+                    disabled={zenFontSize === "xl"}
+                    className="px-2 py-1 hover:opacity-80 disabled:opacity-30 transition-opacity"
+                    title="Texte plus grand"
+                  >
+                    A+
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Content Container */}
+            <div
+              className={`w-full max-w-2xl select-text select-none leading-relaxed transition-all pb-24 ${
+                zenFontSize === "sm"
+                  ? "text-base sm:text-lg leading-[1.8]"
+                  : zenFontSize === "md"
+                  ? "text-lg sm:text-xl leading-[1.9]"
+                  : zenFontSize === "lg"
+                  ? "text-xl sm:text-2xl leading-[2.0]"
+                  : "text-2xl sm:text-3xl leading-[2.1]"
+              }`}
+            >
+              <h1 className={`font-serif font-extrabold text-3xl sm:text-4xl md:text-5xl text-center mb-10 tracking-tight leading-tight ${
+                zenTheme === "cream" ? "text-[#4a3f35]" : zenTheme === "dark" ? "text-white" : "text-gray-900"
+              }`}>
+                {item.title}
+              </h1>
+
+              {item.verse && (
+                <div className={`my-12 p-6 sm:p-8 rounded-3xl border text-center transition-colors ${
+                  zenTheme === "cream"
+                    ? "bg-[#f4ebd0]/30 border-[#e8dcb5]/50"
+                    : zenTheme === "dark"
+                    ? "bg-stone-900/40 border-stone-800/40"
+                    : "bg-gray-50 border-gray-150"
+                }`}>
+                  <p className={`font-arabic text-center mb-6 leading-loose font-medium ${
+                    zenFontSize === "sm" ? "text-2xl sm:text-3xl" :
+                    zenFontSize === "md" ? "text-3xl sm:text-4xl" :
+                    zenFontSize === "lg" ? "text-4xl sm:text-5xl" :
+                    "text-5xl sm:text-6xl"
+                  }`} dir="rtl">
+                    " {item.verse} "
+                  </p>
+                  {item.reference && (
+                    <p className={`text-xs sm:text-sm font-semibold uppercase tracking-wider ${
+                      zenTheme === "cream" ? "text-[#8b7556]" : zenTheme === "dark" ? "text-stone-500" : "text-gray-500"
+                    }`}>
+                      {item.reference}
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <div className="prose dark:prose-invert max-w-none font-serif tracking-wide text-justify">
+                {(() => {
+                  const isHtml = /<[a-z][\s\S]*>/i.test(item.content);
+                  if (isHtml) {
+                    return <div dangerouslySetInnerHTML={{ __html: item.content }} className="prose dark:prose-invert max-w-none font-serif text-justify" />;
+                  } else {
+                    return item.content.split("\n").map((paragraph, idx) => (
+                      <p key={idx} className="mb-6">{paragraph}</p>
+                    ));
+                  }
+                })()}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

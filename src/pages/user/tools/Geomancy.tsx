@@ -104,10 +104,12 @@ export const Geomancy: React.FC = () => {
           >
             {/* The houses standard display in Geomancy is right to left usually, standard layout */}
             {figures.slice(0, 16).map((fig, i) => (
-              <div key={i} className="flex flex-col items-center p-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/30 rounded-xl">
-                <span className="text-xs text-amber-600 dark:text-amber-400 font-bold mb-3 uppercase h-8 text-center">{HOUSES[i]}</span>
+              <div key={i} className="flex flex-col items-center p-2 sm:p-3 bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/30 rounded-xl">
+                <span className="text-[3px] sm:text-xs md:text-sm text-amber-600 dark:text-amber-400 font-bold mb-3 uppercase h-8 text-center leading-none flex items-center justify-center">
+                  {HOUSES[i]}
+                </span>
                 {renderDots(fig)}
-                <span className="text-xs text-gray-400 mt-3">{i+1}</span>
+                <span className="text-[6px] sm:text-xs text-gray-400 mt-3">{i+1}</span>
               </div>
             ))}
           </motion.div>

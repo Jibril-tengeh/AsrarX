@@ -311,7 +311,6 @@ export default function App() {
           </Routes>
             </React.Suspense>
         </main>
-        <AudioPlayer />
         <FaqButton />
         <BottomNav />
       </div>

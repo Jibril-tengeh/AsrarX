@@ -7,6 +7,7 @@ import { collection, query, orderBy, onSnapshot, doc } from 'firebase/firestore'
 import { Search, LayoutGrid, Square, List, Filter, X, BookOpen, Store, Award, MapPin, Trophy, ShieldCheck, ChevronDown, Bookmark, Flame, Shield, RefreshCw, Quote, Folder, Plus, Library, Music } from 'lucide-react';
 import { SecretCard, LayoutMode } from '../../components/SecretCard';
 import { HabitTracker } from '../../components/HabitTracker';
+import { DailyGoalsTracker } from '../../components/DailyGoalsTracker';
 import { HijriCalendarWidget } from '../../components/HijriCalendarWidget';
 import { OnboardingTour } from '../../components/OnboardingTour';
 import { getAsrarItems } from '../../data/store';
@@ -581,6 +582,11 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
             </div>
           </div>
         )}
+      </div>
+
+      {/* Daily Goals Tracking */}
+      <div className="mb-4">
+        <DailyGoalsTracker />
       </div>
 
       <div className="mb-4 grid grid-cols-1 gap-4">
