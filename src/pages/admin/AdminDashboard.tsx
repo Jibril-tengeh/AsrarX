@@ -101,6 +101,15 @@ export const AdminDashboard: React.FC = () => {
 
   // Users State
   const [users, setUsers] = useState<User[]>([]);
+  const [userSearch, setUserSearch] = useState('');
+  const [usersLimit, setUsersLimit] = useState(15);
+
+  // Content/Lexique pagination and search
+  const [lexiqueSearch, setLexiqueSearch] = useState('');
+  const [lexiqueLimit, setLexiqueLimit] = useState(15);
+
+  // Feature Search
+  const [featureSearch, setFeatureSearch] = useState('');
 
   // Manual Payments state
   const [manualPayments, setManualPayments] = useState<any[]>([]);
@@ -464,6 +473,38 @@ export const AdminDashboard: React.FC = () => {
         date: new Date().toISOString(),
         createdAt: new Date()
       });
+
+      // Broadcast push notifications to FCM active devices
+      try {
+        const usersSnap = await getDocs(collection(db, 'users'));
+        const allTokens: string[] = [];
+        usersSnap.forEach(userDoc => {
+          const udata = userDoc.data();
+          if (udata.fcmTokens && Array.isArray(udata.fcmTokens)) {
+            allTokens.push(...udata.fcmTokens);
+          } else if (udata.lastFCMToken) {
+            allTokens.push(udata.lastFCMToken);
+          }
+        });
+
+        const uniqueTokens = Array.from(new Set(allTokens));
+        if (uniqueTokens.length > 0) {
+          await fetch('/api/send-push', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              tokens: uniqueTokens,
+              title: newNotification.title_fr,
+              body: newNotification.message_fr
+            })
+          });
+        }
+      } catch (fcmErr) {
+        console.error("FCM broadcast error:", fcmErr);
+      }
+
       setNewNotification({ 
         title_fr: '', message_fr: '',
         title_en: '', message_en: '',
@@ -606,36 +647,61 @@ export const AdminDashboard: React.FC = () => {
     setActiveTab('articles');
   };
 
-  const renderTabNavigation = () => (
-    <div className="flex overflow-x-auto pb-4 mb-6 hide-scrollbar gap-2">
-      {[
-        { id: 'overview', label: 'Vue d\'ensemble', icon: LayoutDashboard },
-        { id: 'users', label: 'Utilisateurs', icon: Users },
-        { id: 'payments', label: 'Paiements Directs', icon: CreditCard },
-        { id: 'articles', label: 'Articles', icon: FileText },
-        { id: 'store', label: 'Boutique', icon: ShoppingBag },
-        { id: 'community', label: 'Communauté', icon: Users },
-        { id: 'notifications', label: 'Notifications', icon: Volume2 },
-        { id: 'features', label: 'Fonctionnalités', icon: ToggleLeft },
-        { id: 'ruqyah', label: 'Audio Ruqyah', icon: Volume2 },
-        { id: 'content', label: 'CMS (Lexique)', icon: Database },
-        { id: 'settings', label: 'Paramètres', icon: Settings },
-      ].map((tab) => (
-        <button
-          key={tab.id}
-          onClick={() => setActiveTab(tab.id as AdminTab)}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors ${
-            activeTab === tab.id
-              ? 'bg-emerald-600 text-white shadow-md'
-              : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700'
-          }`}
-        >
-          <tab.icon size={18} />
-          {tab.label}
-        </button>
-      ))}
-    </div>
-  );
+  const renderTabNavigation = () => {
+    const tabs = [
+      { id: 'overview', label: 'Vue d\'ensemble', icon: LayoutDashboard },
+      { id: 'users', label: 'Utilisateurs', icon: Users },
+      { id: 'payments', label: 'Paiements Directs', icon: CreditCard },
+      { id: 'articles', label: 'Articles', icon: FileText },
+      { id: 'store', label: 'Boutique', icon: ShoppingBag },
+      { id: 'community', label: 'Communauté', icon: Users },
+      { id: 'notifications', label: 'Notifications', icon: Volume2 },
+      { id: 'features', label: 'Fonctionnalités', icon: ToggleLeft },
+      { id: 'ruqyah', label: 'Audio Ruqyah', icon: Volume2 },
+      { id: 'content', label: 'CMS (Lexique)', icon: Database },
+      { id: 'settings', label: 'Paramètres', icon: Settings },
+    ];
+
+    return (
+      <div className="mb-6">
+        {/* Mobile Dropdown Menu (Cleaner & avoids horizontal clutter) */}
+        <div className="block md:hidden">
+          <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+            Section d'administration
+          </label>
+          <select
+            value={activeTab}
+            onChange={(e) => setActiveTab(e.target.value as AdminTab)}
+            className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 text-sm font-bold text-gray-750 dark:text-gray-200 outline-none shadow-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 cursor-pointer"
+          >
+            {tabs.map((tab) => (
+              <option key={tab.id} value={tab.id} className="font-medium text-gray-700 dark:text-gray-200">
+                {tab.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Desktop/Tablet Horizontal Tabs List */}
+        <div className="hidden md:flex overflow-x-auto pb-4 hide-scrollbar gap-2 max-w-full">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as AdminTab)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors ${
+                activeTab === tab.id
+                  ? 'bg-emerald-600 text-white shadow-md'
+                  : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700'
+              }`}
+            >
+              <tab.icon size={18} />
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   const renderOverview = () => (
     <div className="space-y-6">
@@ -713,59 +779,108 @@ export const AdminDashboard: React.FC = () => {
     </div>
   );
 
-  const renderUsers = () => (
-    <div className="space-y-6">
-      <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-        <h3 className="font-bold text-gray-900 dark:text-white mb-6">Gestion des Utilisateurs</h3>
-        <div className="space-y-4">
-          {users.map((user) => (
-            <div key={user.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4">
-              <div>
-                <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                  {user.name}
-                  {user.isBanned && <span className="bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400 text-[10px] uppercase font-bold px-2 py-0.5 rounded-full">Banni</span>}
-                  {user.isTrusted && <span className="bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400 text-[10px] uppercase font-bold px-2 py-0.5 rounded-full">De Confiance</span>}
-                </h4>
-                <p className="text-sm text-gray-500 mt-1">{user.email}</p>
-              </div>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <button
-                  onClick={() => handleToggleUserTrusted(user.id)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
-                    user.isTrusted 
-                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'
-                      : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-                  }`}
-                >
-                  {user.isTrusted ? 'Retirer Confiance' : 'Rendre Confiance'}
-                </button>
-                <button
-                  onClick={() => handleToggleMysteryTools(user.id)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
-                    user.mysteryToolsDisabled 
-                      ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400'
-                      : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-                  }`}
-                >
-                  {user.mysteryToolsDisabled ? 'Activer Outils Mystères' : 'Désactiver Outils Mystères'}
-                </button>
-                <button
-                  onClick={() => handleToggleUserBan(user.id)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
-                    user.isBanned 
-                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'
-                      : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400'
-                  }`}
-                >
-                  {user.isBanned ? 'Débannir' : 'Bannir'}
-                </button>
-              </div>
+  const renderUsers = () => {
+    const filteredUsers = users.filter(user => 
+      (user.name || '').toLowerCase().includes(userSearch.toLowerCase()) || 
+      (user.email || '').toLowerCase().includes(userSearch.toLowerCase())
+    );
+
+    const paginatedUsers = filteredUsers.slice(0, usersLimit);
+
+    return (
+      <div className="space-y-6">
+        <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
+            <div>
+              <h3 className="font-bold text-gray-900 dark:text-white text-lg">Gestion des Utilisateurs</h3>
+              <p className="text-xs text-gray-500 mt-1">Total: {filteredUsers.length} utilisateurs trouvés</p>
             </div>
-          ))}
+            
+            <div className="relative w-full sm:w-64">
+              <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                <Search size={16} />
+              </span>
+              <input
+                type="text"
+                value={userSearch}
+                onChange={(e) => {
+                  setUserSearch(e.target.value);
+                  setUsersLimit(15);
+                }}
+                placeholder="Rechercher par nom ou email..."
+                className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl text-xs text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
+              />
+            </div>
+          </div>
+
+          {filteredUsers.length === 0 ? (
+            <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+              <Users className="mx-auto mb-3 opacity-30" size={40} />
+              <p className="font-medium text-sm">Aucun utilisateur ne correspond à votre recherche.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {paginatedUsers.map((user) => (
+                <div key={user.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4 hover:border-gray-200 dark:hover:border-gray-650 transition-all">
+                  <div className="min-w-0">
+                    <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 flex-wrap">
+                      <span className="truncate">{user.name}</span>
+                      {user.isBanned && <span className="bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400 text-[10px] uppercase font-bold px-2 py-0.5 rounded-full shrink-0">Banni</span>}
+                      {user.isTrusted && <span className="bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400 text-[10px] uppercase font-bold px-2 py-0.5 rounded-full shrink-0">De Confiance</span>}
+                    </h4>
+                    <p className="text-xs text-gray-500 mt-1 truncate">{user.email}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2 shrink-0">
+                    <button
+                      onClick={() => handleToggleUserTrusted(user.id)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
+                        user.isTrusted 
+                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'
+                          : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                      }`}
+                    >
+                      {user.isTrusted ? 'Retirer Confiance' : 'Confiance'}
+                    </button>
+                    <button
+                      onClick={() => handleToggleMysteryTools(user.id)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
+                        user.mysteryToolsDisabled 
+                          ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400'
+                          : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                      }`}
+                    >
+                      {user.mysteryToolsDisabled ? 'Activer Outils' : 'Bloquer Outils'}
+                    </button>
+                    <button
+                      onClick={() => handleToggleUserBan(user.id)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
+                        user.isBanned 
+                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'
+                          : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400 hover:bg-red-200'
+                      }`}
+                    >
+                      {user.isBanned ? 'Débannir' : 'Bannir'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+
+              {filteredUsers.length > usersLimit && (
+                <div className="pt-4 flex justify-center">
+                  <button
+                    onClick={() => setUsersLimit(prev => prev + 15)}
+                    className="px-6 py-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 rounded-xl text-xs font-bold hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-all border border-emerald-200 dark:border-emerald-900/50"
+                  >
+                    Voir plus d'utilisateurs ({filteredUsers.length - usersLimit} restants)
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderPayments = () => {
     const filteredPayments = manualPayments.filter(p => {
@@ -1121,44 +1236,75 @@ export const AdminDashboard: React.FC = () => {
     { id: 'halaqat', label: 'Halaqat', desc: 'Cercles d\'étude' }
   ];
 
-  const renderFeatures = () => (
-    <div className="space-y-6">
-      <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-        <h3 className="font-bold text-gray-900 dark:text-white mb-6">Gestion des Outils Utilisateur</h3>
-        <p className="text-sm text-gray-500 mb-6">
-          Gérez l'accès aux différents outils de l'application. Vous pouvez les activer, les désactiver ou les mettre en maintenance.
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {ALL_USER_TOOLS.map((tool) => {
-            const status = featureToggles[`tool_${tool.id}`] || 'active';
-            return (
-              <div key={tool.id} className="flex flex-col p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-3">
-                <div>
-                  <h4 className="font-bold text-gray-900 dark:text-white">{tool.label}</h4>
-                  <p className="text-xs text-gray-500 mt-1">{tool.desc}</p>
-                </div>
-                <div className="flex items-center gap-2 mt-auto">
-                  <select
-                    value={status}
-                    onChange={(e) => handleToggleFeature(`tool_${tool.id}`, e.target.value)}
-                    className={`text-xs font-semibold px-3 py-1.5 rounded-lg border-0 cursor-pointer ${
-                      status === 'active' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400' :
-                      status === 'premium' ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-400' :
-                      status === 'maintenance' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400' :
-                      'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400'
-                    }`}
-                  >
-                    <option value="active">Actif</option>
-                    <option value="premium">Premium</option>
-                    <option value="maintenance">Maintenance</option>
-                    <option value="inactive">Inactif</option>
-                  </select>
-                </div>
-              </div>
-            );
-          })}
+  const renderFeatures = () => {
+    const filteredTools = ALL_USER_TOOLS.filter(tool => 
+      (tool.label || '').toLowerCase().includes(featureSearch.toLowerCase()) ||
+      (tool.desc || '').toLowerCase().includes(featureSearch.toLowerCase())
+    );
+
+    return (
+      <div className="space-y-6">
+        <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
+            <div>
+              <h3 className="font-bold text-gray-900 dark:text-white text-lg">Gestion des Outils Utilisateur</h3>
+              <p className="text-xs text-gray-500 mt-1">
+                Gérez l'accès aux différents outils de l'application. Vous pouvez les activer, les désactiver ou les mettre en maintenance.
+              </p>
+            </div>
+            
+            <div className="relative w-full sm:w-64 shrink-0">
+              <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                <Search size={16} />
+              </span>
+              <input
+                type="text"
+                value={featureSearch}
+                onChange={(e) => setFeatureSearch(e.target.value)}
+                placeholder="Rechercher un outil..."
+                className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl text-xs text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
+              />
+            </div>
+          </div>
+
+          {filteredTools.length === 0 ? (
+            <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+              <Settings className="mx-auto mb-3 opacity-30" size={40} />
+              <p className="font-medium text-sm">Aucun outil ne correspond à votre recherche.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {filteredTools.map((tool) => {
+                const status = featureToggles[`tool_${tool.id}`] || 'active';
+                return (
+                  <div key={tool.id} className="flex flex-col p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-3 hover:border-gray-250 dark:hover:border-gray-650 transition-all">
+                    <div>
+                      <h4 className="font-bold text-gray-900 dark:text-white">{tool.label}</h4>
+                      <p className="text-xs text-gray-500 mt-1">{tool.desc}</p>
+                    </div>
+                    <div className="flex items-center gap-2 mt-auto">
+                      <select
+                        value={status}
+                        onChange={(e) => handleToggleFeature(`tool_${tool.id}`, e.target.value)}
+                        className={`text-xs font-semibold px-3 py-1.5 rounded-lg border-0 cursor-pointer ${
+                          status === 'active' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400' :
+                          status === 'premium' ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-400' :
+                          status === 'maintenance' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400' :
+                          'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400'
+                        }`}
+                      >
+                        <option value="active">Actif</option>
+                        <option value="premium">Premium</option>
+                        <option value="maintenance">Maintenance</option>
+                        <option value="inactive">Inactif</option>
+                      </select>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
-      </div>
       
       <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
         <h3 className="font-bold text-gray-900 dark:text-white mb-6">Gestion des Accès Admin</h3>
@@ -1195,71 +1341,122 @@ export const AdminDashboard: React.FC = () => {
         </div>
       </div>
     </div>
-  );
+    );
+  };
 
-  const renderContent = () => (
-    <div className="space-y-6">
-      <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-        <h3 className="font-bold text-gray-900 dark:text-white mb-4">Ajouter au Lexique</h3>
-        {renderLanguageTabs()}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-          <input
-            type="text"
-            placeholder={`Mot / Terme (${activeLangTab.toUpperCase()})`}
-            value={newTerm[`word_${activeLangTab}`] || ''}
-            onChange={(e) => setNewTerm({...newTerm, [`word_${activeLangTab}`]: e.target.value})}
-            className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
+  const renderContent = () => {
+    const filteredTerms = lexiqueTerms.filter(term => 
+      (term.word || '').toLowerCase().includes(lexiqueSearch.toLowerCase()) ||
+      (term.definition || '').toLowerCase().includes(lexiqueSearch.toLowerCase()) ||
+      (term.category || '').toLowerCase().includes(lexiqueSearch.toLowerCase())
+    );
+
+    const paginatedTerms = filteredTerms.slice(0, lexiqueLimit);
+
+    return (
+      <div className="space-y-6">
+        <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+          <h3 className="font-bold text-gray-900 dark:text-white mb-4">Ajouter au Lexique</h3>
+          {renderLanguageTabs()}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+            <input
+              type="text"
+              placeholder={`Mot / Terme (${activeLangTab.toUpperCase()})`}
+              value={newTerm[`word_${activeLangTab}`] || ''}
+              onChange={(e) => setNewTerm({...newTerm, [`word_${activeLangTab}`]: e.target.value})}
+              className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
+            />
+            <input
+              type="text"
+              placeholder="Catégorie (ex: Prière, Pratique)"
+              value={newTerm.category}
+              onChange={(e) => setNewTerm({...newTerm, category: e.target.value})}
+              className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
+            />
+          </div>
+          <textarea
+            placeholder={`Définition (${activeLangTab.toUpperCase()})`}
+            value={newTerm[`definition_${activeLangTab}`] || ''}
+            onChange={(e) => setNewTerm({...newTerm, [`definition_${activeLangTab}`]: e.target.value})}
+            className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 h-24 resize-none mb-4"
           />
-          <input
-            type="text"
-            placeholder="Catégorie (ex: Prière, Pratique)"
-            value={newTerm.category}
-            onChange={(e) => setNewTerm({...newTerm, category: e.target.value})}
-            className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
-          />
+          <button
+            onClick={handleAddTerm}
+            disabled={!newTerm.word_fr || !newTerm.definition_fr}
+            className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white px-6 py-2 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-colors w-full sm:w-auto"
+          >
+            <Plus size={18} /> Ajouter le terme
+          </button>
         </div>
-        <textarea
-          placeholder={`Définition (${activeLangTab.toUpperCase()})`}
-          value={newTerm[`definition_${activeLangTab}`] || ''}
-          onChange={(e) => setNewTerm({...newTerm, [`definition_${activeLangTab}`]: e.target.value})}
-          className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 h-24 resize-none mb-4"
-        />
-        <button
-          onClick={handleAddTerm}
-          disabled={!newTerm.word_fr || !newTerm.definition_fr}
-          className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white px-6 py-2 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-colors w-full sm:w-auto"
-        >
-          <Plus size={18} /> Ajouter le terme
-        </button>
-      </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-        <h3 className="font-bold text-gray-900 dark:text-white mb-4">Termes du Lexique ({lexiqueTerms.length})</h3>
-        <div className="space-y-3">
-          {lexiqueTerms.map((term) => (
-            <div key={term.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-xl gap-4">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <h4 className="font-bold text-gray-900 dark:text-white">{term.word}</h4>
-                  <span className="text-[10px] uppercase tracking-wider font-bold bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded-full">
-                    {term.category}
-                  </span>
-                </div>
-                <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-1">{term.definition}</p>
-              </div>
-              <button
-                onClick={() => handleDeleteTerm(term.id)}
-                className="p-2 text-gray-400 hover:text-red-500 transition-colors rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 self-end sm:self-auto"
-                title="Supprimer"
-              >
-                <Trash2 size={18} />
-              </button>
+        <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
+            <div>
+              <h3 className="font-bold text-gray-900 dark:text-white text-lg">Termes du Lexique ({filteredTerms.length})</h3>
+              <p className="text-xs text-gray-500 mt-1">Total: {filteredTerms.length} termes correspondants</p>
             </div>
-          ))}
+            
+            <div className="relative w-full sm:w-64">
+              <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                <Search size={16} />
+              </span>
+              <input
+                type="text"
+                value={lexiqueSearch}
+                onChange={(e) => {
+                  setLexiqueSearch(e.target.value);
+                  setLexiqueLimit(15);
+                }}
+                placeholder="Rechercher un terme ou une catégorie..."
+                className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl text-xs text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
+              />
+            </div>
+          </div>
+
+          {filteredTerms.length === 0 ? (
+            <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+              <Book className="mx-auto mb-3 opacity-30" size={40} />
+              <p className="font-medium text-sm">Aucun terme ne correspond à votre recherche.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {paginatedTerms.map((term) => (
+                <div key={term.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-xl gap-4 hover:border-gray-200 dark:hover:border-gray-650 transition-all">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <h4 className="font-bold text-gray-900 dark:text-white truncate">{term.word}</h4>
+                      <span className="text-[10px] uppercase tracking-wider font-bold bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded-full shrink-0">
+                        {term.category}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2">{term.definition}</p>
+                  </div>
+                  <button
+                    onClick={() => handleDeleteTerm(term.id)}
+                    className="p-2 text-gray-400 hover:text-red-500 transition-colors rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 shrink-0 self-end sm:self-auto"
+                    title="Supprimer"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              ))}
+
+              {filteredTerms.length > lexiqueLimit && (
+                <div className="pt-4 flex justify-center">
+                  <button
+                    onClick={() => setLexiqueLimit(prev => prev + 15)}
+                    className="px-6 py-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 rounded-xl text-xs font-bold hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-all border border-emerald-200 dark:border-emerald-900/50"
+                  >
+                    Voir plus de termes ({filteredTerms.length - lexiqueLimit} restants)
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderArticles = () => (
     <div className="space-y-6">
@@ -1887,7 +2084,7 @@ export const AdminDashboard: React.FC = () => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8 safe-area-pt pb-24 border-none min-h-screen">
+    <div className="w-full max-w-5xl mx-auto p-4 sm:p-6 lg:p-8 safe-area-pt pb-24 border-none min-h-screen overflow-x-hidden">
       {renderArticlePreviewModal()}
       <div className="flex items-center gap-4 mb-8">
         <div className="p-3 bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 rounded-2xl">

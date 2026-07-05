@@ -4,12 +4,13 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useFeatures } from '../../contexts/FeatureContext';
 import { db } from '../../lib/firebase';
 import { collection, query, orderBy, onSnapshot, doc } from 'firebase/firestore';
-import { Search, LayoutGrid, Square, List, Filter, X, BookOpen, Store, Award, MapPin, Trophy, ShieldCheck, ChevronDown, Bookmark, Flame, Shield, RefreshCw, Quote, Folder, Plus, Library, Music } from 'lucide-react';
+import { Search, LayoutGrid, Square, List, Filter, X, BookOpen, Store, Award, MapPin, Trophy, ShieldCheck, ChevronDown, Bookmark, Flame, Shield, RefreshCw, Quote, Folder, Plus, Library, Music, Pencil, Trash2 } from 'lucide-react';
 import { SecretCard, LayoutMode } from '../../components/SecretCard';
 import { HabitTracker } from '../../components/HabitTracker';
 import { DailyGoalsTracker } from '../../components/DailyGoalsTracker';
 import { HijriCalendarWidget } from '../../components/HijriCalendarWidget';
 import { OnboardingTour } from '../../components/OnboardingTour';
+import { GlobalSearchModal } from '../../components/GlobalSearchModal';
 import { getAsrarItems } from '../../data/store';
 import { AsrarItem, Category } from '../../types';
 import { motion, AnimatePresence } from 'motion/react';
@@ -50,6 +51,16 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
 
   const [affirmation, setAffirmation] = useState({ verse: '', reference: '' });
   const [scrolled, setScrolled] = useState(false);
+  const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const s = params.get('search');
+    if (s) {
+      setSearchQuery(decodeURIComponent(s));
+      setIsSearchOpen(true);
+    }
+  }, [location.search]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -161,6 +172,16 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
   }, [pullProgress]);
 
   useEffect(() => {
+    // Pre-load from local offline cache for instant consultation even without connection
+    try {
+      const cached = localStorage.getItem('asrarhub_cached_articles_list');
+      if (cached) {
+        setItems(JSON.parse(cached));
+      }
+    } catch (e) {
+      console.error("Error pre-loading articles from offline cache", e);
+    }
+
     const q = query(collection(db, 'articles'), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const firestoreItems = snapshot.docs.filter(doc => doc.data().status === 'Published').map(doc => {
@@ -194,8 +215,23 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
         } as AsrarItem;
       });
       setItems(firestoreItems);
+      // Update local offline cache
+      try {
+        localStorage.setItem('asrarhub_cached_articles_list', JSON.stringify(firestoreItems));
+      } catch (e) {
+        console.error("Error writing articles list to cache", e);
+      }
     }, (error) => {
       console.error("Error fetching articles for dashboard", error);
+      // Force fallback to cache on error
+      try {
+        const cached = localStorage.getItem('asrarhub_cached_articles_list');
+        if (cached) {
+          setItems(JSON.parse(cached));
+        }
+      } catch (e) {
+        console.error("Error on fallback to local articles cache", e);
+      }
     });
 
     try {
@@ -282,6 +318,8 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
            setAnnouncement(null);
         }
       }
+    }, (error) => {
+      console.warn("UserDashboard features onSnapshot error (operating offline):", error);
     });
     return () => unsubFeatures();
   }, []);
@@ -350,7 +388,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
 
       {/* Toolbar as a second header */}
       <div className={`fixed left-0 right-0 z-40 py-2 sm:py-3 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 transition-all duration-300 ${scrolled ? 'top-[52px]' : 'top-[60px]'}`}>
-        <div className="max-w-5xl mx-auto flex justify-start sm:justify-center items-center gap-2 sm:gap-3 px-4 sm:px-6 lg:px-8 overflow-x-auto hide-scrollbar">
+        <div className="max-w-5xl mx-auto flex w-full justify-between sm:justify-center items-center gap-1.5 sm:gap-3 px-2 sm:px-6 lg:px-8 overflow-x-auto hide-scrollbar">
         <AnimatePresence>
           {isSearchOpen && (
             <motion.div
@@ -408,10 +446,10 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
           <Link
             id="tour-ruqyah"
             to="/tools/ruqyah"
-            className={`p-2 rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800/50 hover:bg-blue-100 dark:hover:bg-blue-900/50 h-[34px] w-[34px] flex items-center justify-center shadow-sm flex-shrink-0 transition-opacity duration-200 ${isSearchOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+            className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800/50 hover:bg-blue-100 dark:hover:bg-blue-900/50 h-[34px] w-[34px] sm:h-[42px] sm:w-[42px] flex items-center justify-center shadow-sm flex-shrink-0 transition-opacity duration-200 ${isSearchOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
             title="Roqya"
           >
-            <Music size={14} />
+            <Music className="w-[15px] h-[15px] sm:w-[18px] sm:h-[18px]" />
           </Link>
         )}
 
@@ -419,10 +457,10 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
           <Link
             id="tour-store"
             to="/store"
-            className={`p-2 rounded-xl bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50 hover:bg-amber-100 dark:hover:bg-amber-900/50 h-[34px] w-[34px] flex items-center justify-center shadow-sm flex-shrink-0 transition-opacity duration-200 ${isSearchOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+            className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50 hover:bg-amber-100 dark:hover:bg-amber-900/50 h-[34px] w-[34px] sm:h-[42px] sm:w-[42px] flex items-center justify-center shadow-sm flex-shrink-0 transition-opacity duration-200 ${isSearchOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
             title="Store"
           >
-            <Store size={14} />
+            <Store className="w-[15px] h-[15px] sm:w-[18px] sm:h-[18px]" />
           </Link>
         )}
 
@@ -430,10 +468,10 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
           <Link
             id="tour-lexique"
             to="/explore/lexique"
-            className={`p-2 rounded-xl bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-800/50 hover:bg-purple-100 dark:hover:bg-purple-900/50 h-[34px] w-[34px] flex items-center justify-center shadow-sm flex-shrink-0 transition-opacity duration-200 ${isSearchOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+            className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-800/50 hover:bg-purple-100 dark:hover:bg-purple-900/50 h-[34px] w-[34px] sm:h-[42px] sm:w-[42px] flex items-center justify-center shadow-sm flex-shrink-0 transition-opacity duration-200 ${isSearchOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
             title={t('nav.lexique', 'Lexique')}
           >
-            <Library size={14} />
+            <Library className="w-[15px] h-[15px] sm:w-[18px] sm:h-[18px]" />
           </Link>
         )}
 
@@ -441,36 +479,36 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
           <Link
             id="tour-quran"
             to="/tools/quran"
-            className={`p-2 rounded-xl bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 h-[34px] w-[34px] flex items-center justify-center shadow-sm flex-shrink-0 transition-opacity duration-200 ${isSearchOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+            className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 h-[34px] w-[34px] sm:h-[42px] sm:w-[42px] flex items-center justify-center shadow-sm flex-shrink-0 transition-opacity duration-200 ${isSearchOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
             title="Le Saint Coran"
           >
-            <BookOpen size={14} />
+            <BookOpen className="w-[15px] h-[15px] sm:w-[18px] sm:h-[18px]" />
           </Link>
         )}
 
         <button
           id="tour-search"
-          onClick={() => setIsSearchOpen(true)}
-          className={`p-2 rounded-xl bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 h-[34px] w-[34px] flex items-center justify-center shadow-sm flex-shrink-0 transition-opacity duration-200 ${isSearchOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+          onClick={() => setIsGlobalSearchOpen(true)}
+          className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 h-[34px] w-[34px] sm:h-[42px] sm:w-[42px] flex items-center justify-center shadow-sm flex-shrink-0 transition-opacity duration-200 ${isSearchOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
           aria-label="Search"
         >
-          <Search size={14} />
+          <Search className="w-[15px] h-[15px] sm:w-[18px] sm:h-[18px]" />
         </button>
 
         <div className={`relative transition-opacity duration-200 ${isSearchOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`} ref={filterRef}>
           <button
             id="tour-filter"
             onClick={() => setIsFilterOpen(!isFilterOpen)}
-            className={`p-2 rounded-xl border h-[34px] w-[34px] flex items-center justify-center transition-colors shadow-sm flex-shrink-0 relative ${
+            className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl border h-[34px] w-[34px] sm:h-[42px] sm:w-[42px] flex items-center justify-center transition-colors shadow-sm flex-shrink-0 relative ${
               filter !== 'all' || isFilterOpen
                 ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
                 : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
             }`}
             aria-label="Filter"
           >
-            <Filter size={14} />
+            <Filter className="w-[15px] h-[15px] sm:w-[18px] sm:h-[18px]" />
             {filter !== 'all' && (
-              <span className="absolute top-0 right-0 w-2 h-2 rounded-full bg-emerald-500 border-2 border-white dark:border-gray-800" />
+              <span className="absolute top-0 right-0 w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500 border border-white dark:border-gray-800" />
             )}
           </button>
 
@@ -505,27 +543,27 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
           </AnimatePresence>
         </div>
 
-        <div id="tour-layout" className={`flex bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-1 flex-shrink-0 h-[34px] items-center transition-opacity duration-200 ${isSearchOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+        <div id="tour-layout" className={`flex bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-0.5 sm:p-1 flex-shrink-0 h-[34px] sm:h-[42px] items-center transition-opacity duration-200 ${isSearchOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
           <button 
             onClick={() => setLayoutMode('grid2')}
-            className={`p-1.5 rounded-lg transition-colors ${layoutMode === 'grid2' ? 'bg-gray-100 dark:bg-gray-700 text-emerald-600 dark:text-emerald-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+            className={`p-1 sm:p-1.5 rounded-md sm:rounded-lg transition-colors ${layoutMode === 'grid2' ? 'bg-gray-100 dark:bg-gray-700 text-emerald-600 dark:text-emerald-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
             title="2 Colonnes"
           >
-            <LayoutGrid size={14} />
+            <LayoutGrid className="w-[15px] h-[15px] sm:w-[18px] sm:h-[18px]" />
           </button>
           <button 
             onClick={() => setLayoutMode('grid1')}
-            className={`p-1.5 rounded-lg transition-colors ${layoutMode === 'grid1' ? 'bg-gray-100 dark:bg-gray-700 text-emerald-600 dark:text-emerald-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+            className={`p-1 sm:p-1.5 rounded-md sm:rounded-lg transition-colors ${layoutMode === 'grid1' ? 'bg-gray-100 dark:bg-gray-700 text-emerald-600 dark:text-emerald-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
             title="1 Colonne"
           >
-            <Square size={14} />
+            <Square className="w-[15px] h-[15px] sm:w-[18px] sm:h-[18px]" />
           </button>
           <button 
             onClick={() => setLayoutMode('list')}
-            className={`p-1.5 rounded-lg transition-colors ${layoutMode === 'list' ? 'bg-gray-100 dark:bg-gray-700 text-emerald-600 dark:text-emerald-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+            className={`p-1 sm:p-1.5 rounded-md sm:rounded-lg transition-colors ${layoutMode === 'list' ? 'bg-gray-100 dark:bg-gray-700 text-emerald-600 dark:text-emerald-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
             title="Liste"
           >
-            <List size={14} />
+            <List className="w-[15px] h-[15px] sm:w-[18px] sm:h-[18px]" />
           </button>
         </div>
         </div>
@@ -535,7 +573,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
       <OnboardingTour />
 
       {/* Spacer to compensate for fixed toolbar */}
-      <div className="h-[36px] w-full" />
+      <div className="h-[44px] w-full" />
 
       {/* Banner Section */}
       <div className="mb-4 grid grid-cols-1 gap-4">
@@ -656,46 +694,88 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
       )}
 
       {filter === 'favoris' && (
-        <div className="mb-6 overflow-x-auto hide-scrollbar">
-          <div className="flex gap-3 pb-2">
-            <button
-              onClick={() => setActiveFolder(null)}
-              className={`px-4 py-2 rounded-xl flex items-center gap-2 whitespace-nowrap transition-colors border ${
-                activeFolder === null 
-                  ? 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-900/40 dark:border-emerald-800 dark:text-emerald-300' 
-                  : 'bg-white border-gray-200 text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300'
-              }`}
-            >
-              <Bookmark size={16} /> Tous les favoris
-            </button>
-            {bookmarkFolders.map(folder => (
+        <div className="space-y-4 mb-6">
+          <div className="overflow-x-auto hide-scrollbar">
+            <div className="flex gap-3 pb-2">
               <button
-                key={folder.id}
-                onClick={() => setActiveFolder(folder.id)}
+                onClick={() => setActiveFolder(null)}
                 className={`px-4 py-2 rounded-xl flex items-center gap-2 whitespace-nowrap transition-colors border ${
-                  activeFolder === folder.id 
+                  activeFolder === null 
                     ? 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-900/40 dark:border-emerald-800 dark:text-emerald-300' 
                     : 'bg-white border-gray-200 text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300'
                 }`}
               >
-                <Folder size={16} /> {folder.name}
+                <Bookmark size={16} /> Tous les favoris
               </button>
-            ))}
-            <button
-              onClick={() => {
-                const name = prompt("Nom du nouveau dossier :");
-                if (name) {
-                  const newFolder = { id: Date.now().toString(), name, items: [] };
-                  const newFolders = [...bookmarkFolders, newFolder];
-                  setBookmarkFolders(newFolders);
-                  localStorage.setItem('asrar_bookmark_folders', JSON.stringify(newFolders));
-                }
-              }}
-              className="px-4 py-2 rounded-xl flex items-center gap-2 whitespace-nowrap transition-colors border bg-gray-50 border-gray-200 text-gray-600 dark:bg-gray-800/50 dark:border-gray-700 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
-            >
-              <Plus size={16} /> Nouveau
-            </button>
+              {bookmarkFolders.map(folder => (
+                <button
+                  key={folder.id}
+                  onClick={() => setActiveFolder(folder.id)}
+                  className={`px-4 py-2 rounded-xl flex items-center gap-2 whitespace-nowrap transition-colors border ${
+                    activeFolder === folder.id 
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-900/40 dark:border-emerald-800 dark:text-emerald-300' 
+                      : 'bg-white border-gray-200 text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300'
+                  }`}
+                >
+                  <Folder size={16} /> {folder.name}
+                </button>
+              ))}
+              <button
+                onClick={() => {
+                  const name = prompt("Nom du nouveau dossier :");
+                  if (name && name.trim()) {
+                    const newFolder = { id: Date.now().toString(), name: name.trim(), items: [] };
+                    const newFolders = [...bookmarkFolders, newFolder];
+                    setBookmarkFolders(newFolders);
+                    localStorage.setItem('asrar_bookmark_folders', JSON.stringify(newFolders));
+                  }
+                }}
+                className="px-4 py-2 rounded-xl flex items-center gap-2 whitespace-nowrap transition-colors border bg-gray-50 border-gray-200 text-gray-600 dark:bg-gray-800/50 dark:border-gray-700 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+              >
+                <Plus size={16} /> Nouveau
+              </button>
+            </div>
           </div>
+
+          {activeFolder && (
+            <div className="flex items-center gap-3 bg-emerald-500/10 dark:bg-emerald-500/5 border border-emerald-500/20 px-4 py-2.5 rounded-2xl w-fit">
+              <span className="text-sm font-semibold text-emerald-800 dark:text-emerald-300">
+                Dossier : <span className="font-bold underline">{bookmarkFolders.find(f => f.id === activeFolder)?.name}</span>
+              </span>
+              <div className="flex items-center gap-1.5 border-l border-emerald-500/20 pl-3">
+                <button
+                  onClick={() => {
+                    const folder = bookmarkFolders.find(f => f.id === activeFolder);
+                    if (!folder) return;
+                    const newName = prompt("Nouveau nom du dossier :", folder.name);
+                    if (newName && newName.trim()) {
+                      const updated = bookmarkFolders.map(f => f.id === activeFolder ? { ...f, name: newName.trim() } : f);
+                      setBookmarkFolders(updated);
+                      localStorage.setItem('asrar_bookmark_folders', JSON.stringify(updated));
+                    }
+                  }}
+                  className="p-1.5 rounded-lg text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-colors"
+                  title="Renommer le dossier"
+                >
+                  <Pencil size={14} />
+                </button>
+                <button
+                  onClick={() => {
+                    if (confirm("Êtes-vous sûr de vouloir supprimer ce dossier ? Les Wirds et Secrets resteront dans vos favoris, mais ne seront plus classés dans ce dossier.")) {
+                      const updated = bookmarkFolders.filter(f => f.id !== activeFolder);
+                      setBookmarkFolders(updated);
+                      localStorage.setItem('asrar_bookmark_folders', JSON.stringify(updated));
+                      setActiveFolder(null);
+                    }
+                  }}
+                  className="p-1.5 rounded-lg text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors"
+                  title="Supprimer le dossier"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -705,9 +785,65 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
         'grid-cols-1'
       }`}>
         {filteredItems.length > 0 ? (
-          filteredItems.map(item => (
-            <SecretCard key={item.id} item={item} layoutMode={layoutMode} />
-          ))
+          filteredItems.map(item => {
+            const currentFolder = bookmarkFolders.find(f => f.items.includes(item.id));
+            return (
+              <div key={item.id} className="flex flex-col h-full">
+                <div className="flex-1">
+                  <SecretCard item={item} layoutMode={layoutMode} />
+                </div>
+                
+                {filter === 'favoris' && (
+                  <div className="mt-2 p-2 bg-gray-50/50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700 rounded-2xl flex items-center justify-between gap-2 shadow-sm">
+                    <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 pl-1 truncate">
+                      <Folder size={12} className="text-emerald-500 shrink-0" />
+                      <span className="truncate max-w-[100px] sm:max-w-[130px]" title={currentFolder?.name || "Sans dossier"}>
+                        {currentFolder?.name || "Sans dossier"}
+                      </span>
+                    </span>
+                    
+                    <select
+                      value={currentFolder?.id || ""}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === '__new__') {
+                          const name = prompt("Nom du nouveau dossier :");
+                          if (name && name.trim()) {
+                            const newId = Date.now().toString();
+                            const newFolder = { id: newId, name: name.trim(), items: [item.id] };
+                            const updated = bookmarkFolders.map(f => {
+                              f.items = f.items.filter(id => id !== item.id);
+                              return f;
+                            });
+                            const finalFolders = [...updated, newFolder];
+                            setBookmarkFolders(finalFolders);
+                            localStorage.setItem('asrar_bookmark_folders', JSON.stringify(finalFolders));
+                          }
+                        } else {
+                          const updated = bookmarkFolders.map(f => {
+                            f.items = f.items.filter(id => id !== item.id);
+                            if (f.id === val) {
+                              f.items.push(item.id);
+                            }
+                            return f;
+                          });
+                          setBookmarkFolders(updated);
+                          localStorage.setItem('asrar_bookmark_folders', JSON.stringify(updated));
+                        }
+                      }}
+                      className="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-2 py-1 text-[11px] text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium cursor-pointer"
+                    >
+                      <option value="">📁 Aucun dossier</option>
+                      {bookmarkFolders.map(f => (
+                        <option key={f.id} value={f.id}>{f.name}</option>
+                      ))}
+                      <option value="__new__" className="text-emerald-600 dark:text-emerald-400 font-semibold">+ Nouveau dossier...</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+            );
+          })
         ) : (
           <div className="col-span-full py-12 text-center flex flex-col items-center">
             <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
@@ -717,6 +853,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
           </div>
         )}
       </div>
+      <GlobalSearchModal isOpen={isGlobalSearchOpen} onClose={() => setIsGlobalSearchOpen(false)} />
     </div>
   );
 };

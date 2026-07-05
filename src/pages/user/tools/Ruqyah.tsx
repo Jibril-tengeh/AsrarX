@@ -56,6 +56,8 @@ export const Ruqyah: React.FC = () => {
     const qCol = query(collection(db, 'ruqyah_collections'), where('userId', '==', user.uid));
     const unsubscribeCol = onSnapshot(qCol, (snapshot) => {
       setUserCollections(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => {
+      console.error("Collections onSnapshot error:", error);
     });
     
     return () => { unsubscribe(); unsubscribeCol(); };

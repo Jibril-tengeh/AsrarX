@@ -24,6 +24,8 @@ export const AdminStoreManager = () => {
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'store_products'), (snap) => {
       setProducts(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (error) => {
+      console.warn("AdminStoreManager products onSnapshot error (operating offline):", error);
     });
     return () => unsub();
   }, []);

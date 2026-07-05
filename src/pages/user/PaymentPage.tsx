@@ -24,6 +24,20 @@ export const PaymentPage: React.FC = () => {
   const { t } = useLanguage();
   const { user } = useAuth();
   const navigate = useNavigate();
+
+  const handleBack = () => {
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate('/user/dashboard');
+    }
+    setTimeout(() => {
+      if (window.location.pathname === '/payment') {
+        navigate('/user/dashboard');
+      }
+    }, 150);
+  };
+
   const [loading, setLoading] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [userLocationInfo, setUserLocationInfo] = useState({ currency: 'USD' });
@@ -62,6 +76,8 @@ export const PaymentPage: React.FC = () => {
       // Sort client-side by createdAt descending
       list.sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
       setManualPayments(list);
+    }, (error) => {
+      console.warn("PaymentPage manual_payments onSnapshot error (operating offline):", error);
     });
     return () => unsub();
   }, [user]);
@@ -70,14 +86,13 @@ export const PaymentPage: React.FC = () => {
     {
       id: 'premium_3m',
       name: t('payment.plan3m', 'Premium (3 Mois)'),
-      description: t('payment.desc3m', 'Accès complet aux outils, renouvellement automatique.'),
+      description: t('payment.desc3m', 'Accès complet aux outils.'),
       priceNumber: 13,
       features: [
         t('payment.featUnlimited', 'Outils spirituels illimités'),
         t('payment.featTutorials', 'Tutoriels Sirr Al Asrar avancés'),
         t('payment.featNoAds', 'Aucune publicité'),
-        t('payment.featSupport', 'Support prioritaire'),
-        t('payment.featAutoRenew', 'Renouvellement automatique')
+        t('payment.featSupport', 'Support prioritaire')
       ],
       icon: Star,
       color: 'from-amber-400 to-orange-500'
@@ -85,14 +100,13 @@ export const PaymentPage: React.FC = () => {
     {
       id: 'premium_6m',
       name: t('payment.plan6m', 'Premium (6 Mois)'),
-      description: t('payment.desc6m', 'Consultation personnalisée et accès complet, renouvellement automatique.'),
+      description: t('payment.desc6m', 'Consultation personnalisée et accès complet.'),
       priceNumber: 25,
       features: [
         t('payment.featAllPremium', 'Toutes les fonctionnalités Premium'),
         t('payment.featSave', 'Économie sur la durée'),
         t('payment.featTreatments', 'Traitements personnalisés'),
-        t('payment.featExperts', 'Accès direct aux experts'),
-        t('payment.featAutoRenew', 'Renouvellement automatique')
+        t('payment.featExperts', 'Accès direct aux experts')
       ],
       icon: Shield,
       color: 'from-fuchsia-500 to-purple-600'
@@ -106,8 +120,7 @@ export const PaymentPage: React.FC = () => {
         t('payment.featAllPremium', 'Toutes les fonctionnalités Premium'),
         t('payment.featMaxSave', 'Économie maximale sur la durée'),
         t('payment.featTreatments', 'Traitements personnalisés'),
-        t('payment.featExperts', 'Accès direct aux experts'),
-        t('payment.featAutoRenew', 'Renouvellement automatique')
+        t('payment.featExperts', 'Accès direct aux experts')
       ],
       icon: Crown,
       color: 'from-emerald-400 to-teal-600'
@@ -178,7 +191,7 @@ export const PaymentPage: React.FC = () => {
     if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) {
-      alert("Le fichier est trop volumineux. La taille maximale est de 5 Mo.");
+      alert(t('payment.fileTooLarge', "Le fichier est trop volumineux. La taille maximale est de 5 Mo."));
       return;
     }
 
@@ -195,7 +208,7 @@ export const PaymentPage: React.FC = () => {
     if (!user || !selectedPlan) return;
 
     if (!senderName.trim()) {
-      setMessageDirect({ text: "Veuillez entrer votre nom ou le nom de l'expéditeur.", type: 'error' });
+      setMessageDirect({ text: t('payment.senderRequired', "Veuillez entrer votre nom ou le nom de l'expéditeur."), type: 'error' });
       return;
     }
 
@@ -221,7 +234,7 @@ export const PaymentPage: React.FC = () => {
       });
 
       setMessageDirect({ 
-        text: "Votre reçu a été soumis avec succès ! L'administrateur validera votre paiement sous peu pour activer votre accès Premium.", 
+        text: t('payment.submitSuccess', "Votre reçu a été soumis avec succès ! L'administrateur validera votre paiement sous peu pour activer votre accès Premium."), 
         type: 'success' 
       });
 
@@ -235,7 +248,7 @@ export const PaymentPage: React.FC = () => {
       }, 5000);
     } catch (err) {
       console.error(err);
-      setMessageDirect({ text: "Une erreur est survenue lors de la soumission de votre reçu. Veuillez réessayer.", type: 'error' });
+      setMessageDirect({ text: t('payment.submitError', "Une erreur est survenue lors de la soumission de votre reçu. Veuillez réessayer."), type: 'error' });
     } finally {
       setSubmittingDirect(false);
     }
@@ -257,7 +270,7 @@ export const PaymentPage: React.FC = () => {
   return (
     <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8 pt-8 pb-24">
       <div className="mb-8 text-center sm:text-left">
-        <button onClick={() => navigate(-1)} className="flex items-center justify-center sm:justify-start gap-2 text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors mb-4 w-full sm:w-auto">
+        <button onClick={handleBack} className="flex items-center justify-center sm:justify-start gap-2 text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors mb-4 w-full sm:w-auto">
           <ArrowLeft size={20} />
           <span>{t('payment.back', 'Retour')}</span>
         </button>
@@ -324,17 +337,17 @@ export const PaymentPage: React.FC = () => {
         <div className="mt-16 bg-white dark:bg-gray-800 rounded-3xl p-6 sm:p-8 border border-gray-200 dark:border-gray-700 shadow-md">
           <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
             <Clock className="text-emerald-500" />
-            Suivi de vos demandes de paiement direct
+            {t('payment.directTitle', 'Suivi de vos demandes de paiement direct')}
           </h2>
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-gray-200 dark:border-gray-700 text-xs uppercase font-bold text-gray-500 dark:text-gray-400">
-                  <th className="py-3 px-4">Plan</th>
-                  <th className="py-3 px-4">Montant</th>
-                  <th className="py-3 px-4">Expéditeur</th>
-                  <th className="py-3 px-4">Soumis le</th>
-                  <th className="py-3 px-4">Statut</th>
+                  <th className="py-3 px-4">{t('payment.directPlan', 'Plan')}</th>
+                  <th className="py-3 px-4">{t('payment.directAmount', 'Montant')}</th>
+                  <th className="py-3 px-4">{t('payment.directSender', 'Expéditeur')}</th>
+                  <th className="py-3 px-4">{t('payment.directSubmitted', 'Soumis le')}</th>
+                  <th className="py-3 px-4">{t('payment.directStatus', 'Statut')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-750 text-sm">
@@ -355,17 +368,17 @@ export const PaymentPage: React.FC = () => {
                     <td className="py-3.5 px-4">
                       {p.status === 'pending' && (
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-900/20 dark:text-amber-400 dark:border-amber-800">
-                          <Clock size={12} /> En attente d'approbation
+                          <Clock size={12} /> {t('payment.statusPending', "En attente d'approbation")}
                         </span>
                       )}
                       {p.status === 'approved' && (
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-400 dark:border-emerald-800">
-                          <CheckCircle size={12} /> Activé / Approuvé
+                          <CheckCircle size={12} /> {t('payment.statusApproved', 'Activé / Approuvé')}
                         </span>
                       )}
                       {p.status === 'rejected' && (
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800">
-                          <XCircle size={12} /> Rejeté (Vérifiez vos détails)
+                          <XCircle size={12} /> {t('payment.statusRejected', 'Rejeté (Vérifiez vos détails)')}
                         </span>
                       )}
                     </td>
@@ -384,10 +397,10 @@ export const PaymentPage: React.FC = () => {
             <div className="p-5 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gray-50 dark:bg-gray-800/50">
               <div>
                 <h3 className="font-bold text-lg text-gray-900 dark:text-white">
-                  Abonnement : {selectedPlan.name}
+                  {t('payment.modalSubscription', 'Abonnement :')} {selectedPlan.name}
                 </h3>
                 <p className="text-sm text-emerald-600 dark:text-emerald-400 font-bold mt-0.5">
-                  Tarif : {detectUserCurrencyAndPrice(selectedPlan.priceNumber).displayStr}
+                  {t('payment.modalTarif', 'Tarif :')} {detectUserCurrencyAndPrice(selectedPlan.priceNumber).displayStr}
                 </p>
               </div>
               <button 
@@ -401,7 +414,7 @@ export const PaymentPage: React.FC = () => {
             <div className="flex-1 overflow-y-auto p-6 space-y-6 hide-scrollbar">
               {!paymentMethod ? (
                 <div className="space-y-4">
-                  <h4 className="font-bold text-gray-900 dark:text-white mb-2">Sélectionnez votre méthode de paiement</h4>
+                  <h4 className="font-bold text-gray-900 dark:text-white mb-2">{t('payment.modalSelectMethod', 'Sélectionnez votre méthode de paiement')}</h4>
                   
                   <button
                     onClick={() => setPaymentMethod('paystack')}
@@ -411,8 +424,8 @@ export const PaymentPage: React.FC = () => {
                       <CreditCard size={24} />
                     </div>
                     <div className="flex-1">
-                      <h5 className="font-bold text-gray-900 dark:text-white">Paiement Automatique</h5>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Payez instantanément par Carte Bancaire ou Mobile Money automatique via Paystack.</p>
+                      <h5 className="font-bold text-gray-900 dark:text-white">{t('payment.modalAuto', 'Paiement Automatique')}</h5>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('payment.modalAutoDesc', 'Payez instantanément par Carte Bancaire ou Mobile Money automatique via Paystack.')}</p>
                     </div>
                   </button>
 
@@ -424,30 +437,30 @@ export const PaymentPage: React.FC = () => {
                       <Landmark size={24} />
                     </div>
                     <div className="flex-1">
-                      <h5 className="font-bold text-gray-900 dark:text-white">Paiement Direct (Sans Commission)</h5>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Transférez directement sur mon compte GCB Bank PLC, puis soumettez le reçu.</p>
+                      <h5 className="font-bold text-gray-900 dark:text-white">{t('payment.modalDirect', 'Paiement Direct (Sans Commission)')}</h5>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('payment.modalDirectDesc', 'Transférez directement sur mon compte GCB Bank PLC, puis soumettez le reçu.')}</p>
                     </div>
                   </button>
                 </div>
               ) : paymentMethod === 'paystack' ? (
                 <div className="text-center py-6 space-y-4">
                   <CreditCard className="mx-auto text-emerald-500 animate-pulse" size={48} />
-                  <h4 className="font-bold text-lg text-gray-900 dark:text-white">Redirection vers Paystack...</h4>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 max-w-sm mx-auto">Vous allez être redirigé vers la passerelle sécurisée de Paystack pour finaliser le paiement.</p>
+                  <h4 className="font-bold text-lg text-gray-900 dark:text-white">{t('payment.modalRedirecting', 'Redirection vers Paystack...')}</h4>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 max-w-sm mx-auto">{t('payment.modalRedirectingDesc', 'Vous allez être redirigé vers la passerelle sécurisée de Paystack pour finaliser le paiement.')}</p>
                   
                   <div className="flex gap-3 pt-4 max-w-xs mx-auto">
                     <button 
                       onClick={() => setPaymentMethod(null)} 
                       className="flex-1 py-2 rounded-xl text-sm font-bold bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300"
                     >
-                      Retour
+                      {t('payment.back', 'Retour')}
                     </button>
                     <button 
                       onClick={handlePaystackPayment}
                       disabled={loading}
                       className="flex-1 py-2 rounded-xl text-sm font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg"
                     >
-                      {loading ? "Chargement..." : "Continuer"}
+                      {loading ? t('payment.modalLoading', 'Chargement...') : t('payment.modalContinue', 'Continuer')}
                     </button>
                   </div>
                 </div>
@@ -457,18 +470,18 @@ export const PaymentPage: React.FC = () => {
                     onClick={() => setPaymentMethod(null)} 
                     className="text-xs font-semibold text-emerald-600 hover:underline flex items-center gap-1"
                   >
-                    ← Changer de méthode
+                    {t('payment.modalChangeMethod', '← Changer de méthode')}
                   </button>
 
                   <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 p-4 rounded-2xl text-amber-800 dark:text-amber-300 text-xs leading-relaxed">
-                    <p className="font-bold flex items-center gap-1.5 mb-1"><AlertCircle size={14} /> Instructions de Paiement Direct :</p>
-                    Effectuez le transfert du montant exact de <strong className="underline">{detectUserCurrencyAndPrice(selectedPlan.priceNumber).displayStr}</strong> vers l'une des coordonnées ci-dessous, puis remplissez le formulaire de soumission avec votre reçu d'opération.
+                    <p className="font-bold flex items-center gap-1.5 mb-1"><AlertCircle size={14} /> {t('payment.modalInstructions', 'Instructions de Paiement Direct :')}</p>
+                    {t('payment.modalInstructionsDesc', "Effectuez le transfert du montant exact de {amount} vers l'une des coordonnées ci-dessous, puis remplissez le formulaire de soumission avec votre reçu d'opération.").replace('{amount}', detectUserCurrencyAndPrice(selectedPlan.priceNumber).displayStr)}
                   </div>
 
                   {/* Payment Credentials */}
                   <div className="space-y-3 bg-gray-50 dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-750">
                     <div className="flex justify-between items-center text-xs py-1 border-b border-gray-200 dark:border-gray-700">
-                      <span className="text-gray-500">Nom du compte / Titulaire :</span>
+                      <span className="text-gray-500">{t('payment.modalHolder', 'Nom du compte / Titulaire :')}</span>
                       <div className="flex items-center gap-1.5">
                         <span className="font-bold text-gray-900 dark:text-white">{directPaymentDetails.accountName}</span>
                         <button 
@@ -476,13 +489,13 @@ export const PaymentPage: React.FC = () => {
                           onClick={() => copyToClipboard(directPaymentDetails.accountName, 'accountName')}
                           className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-gray-400 hover:text-emerald-500"
                         >
-                          {copiedField === 'accountName' ? <span className="text-emerald-500 font-bold">Copié!</span> : <Copy size={13} />}
+                          {copiedField === 'accountName' ? <span className="text-emerald-500 font-bold">{t('common.copied', 'Copié')}</span> : <Copy size={13} />}
                         </button>
                       </div>
                     </div>
 
                     <div className="flex justify-between items-center text-xs py-1 border-b border-gray-200 dark:border-gray-700">
-                      <span className="text-gray-500">Nom de la Banque :</span>
+                      <span className="text-gray-500">{t('payment.modalBank', 'Nom de la Banque :')}</span>
                       <div className="flex items-center gap-1.5">
                         <span className="font-bold text-gray-900 dark:text-white">{directPaymentDetails.bankName}</span>
                         <button 
@@ -490,13 +503,13 @@ export const PaymentPage: React.FC = () => {
                           onClick={() => copyToClipboard(directPaymentDetails.bankName, 'bankName')}
                           className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-gray-400 hover:text-emerald-500"
                         >
-                          {copiedField === 'bankName' ? <span className="text-emerald-500 font-bold">Copié!</span> : <Copy size={13} />}
+                          {copiedField === 'bankName' ? <span className="text-emerald-500 font-bold">{t('common.copied', 'Copié')}</span> : <Copy size={13} />}
                         </button>
                       </div>
                     </div>
 
                     <div className="flex justify-between items-center text-xs py-1 border-b border-gray-200 dark:border-gray-700">
-                      <span className="text-gray-500">Numéro de compte :</span>
+                      <span className="text-gray-500">{t('payment.modalNumber', 'Numéro de compte :')}</span>
                       <div className="flex items-center gap-1.5">
                         <span className="font-mono font-bold text-gray-900 dark:text-white">{directPaymentDetails.accountNumber}</span>
                         <button 
@@ -504,13 +517,13 @@ export const PaymentPage: React.FC = () => {
                           onClick={() => copyToClipboard(directPaymentDetails.accountNumber, 'accountNumber')}
                           className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-gray-400 hover:text-emerald-500"
                         >
-                          {copiedField === 'accountNumber' ? <span className="text-emerald-500 font-bold">Copié!</span> : <Copy size={13} />}
+                          {copiedField === 'accountNumber' ? <span className="text-emerald-500 font-bold">{t('common.copied', 'Copié')}</span> : <Copy size={13} />}
                         </button>
                       </div>
                     </div>
 
                     <div className="flex justify-between items-center text-xs py-1">
-                      <span className="text-gray-500">Code Swift (BIC) :</span>
+                      <span className="text-gray-500">{t('payment.modalSwift', 'Code Swift (BIC) :')}</span>
                       <div className="flex items-center gap-1.5">
                         <span className="font-mono font-bold text-gray-900 dark:text-white">{directPaymentDetails.swiftCode}</span>
                         <button 
@@ -518,7 +531,7 @@ export const PaymentPage: React.FC = () => {
                           onClick={() => copyToClipboard(directPaymentDetails.swiftCode, 'swiftCode')}
                           className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-gray-400 hover:text-emerald-500"
                         >
-                          {copiedField === 'swiftCode' ? <span className="text-emerald-500 font-bold">Copié!</span> : <Copy size={13} />}
+                          {copiedField === 'swiftCode' ? <span className="text-emerald-500 font-bold">{t('common.copied', 'Copié')}</span> : <Copy size={13} />}
                         </button>
                       </div>
                     </div>
@@ -526,48 +539,48 @@ export const PaymentPage: React.FC = () => {
 
                   {/* Submission Form */}
                   <form onSubmit={handleDirectPaymentSubmit} className="space-y-4">
-                    <h5 className="font-bold text-sm text-gray-900 dark:text-white border-b pb-2">Déclarez votre transfert</h5>
+                    <h5 className="font-bold text-sm text-gray-900 dark:text-white border-b pb-2">{t('payment.modalDeclare', 'Déclarez votre transfert')}</h5>
                     
                     <div>
                       <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
-                        Nom de l'expéditeur / Titulaire du compte émetteur *
+                        {t('payment.modalSenderLabel', "Nom de l'expéditeur / Titulaire du compte émetteur *")}
                       </label>
                       <input
                         type="text"
                         required
                         value={senderName}
                         onChange={(e) => setSenderName(e.target.value)}
-                        placeholder="Ex: Sékou Bireino"
+                        placeholder={t('payment.modalSenderPlaceholder', 'Ex: Sékou Bireino')}
                         className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-white"
                       />
                     </div>
 
                     <div>
                       <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
-                        Numéro de transaction / Référence (Optionnel)
+                        {t('payment.modalTxnLabel', 'Numéro de transaction / Référence (Optionnel)')}
                       </label>
                       <input
                         type="text"
                         value={transactionRef}
                         onChange={(e) => setTransactionRef(e.target.value)}
-                        placeholder="Ex: TXN827189100 ou Réf. Wave"
+                        placeholder={t('payment.modalTxnPlaceholder', 'Ex: TXN827189100 ou Réf. Wave')}
                         className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-white"
                       />
                     </div>
 
                     <div>
                       <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">
-                        Reçu de transfert / Preuve d'opération (Optionnel, Max 5Mo)
+                        {t('payment.modalReceiptLabel', "Reçu de transfert / Preuve d'opération (Optionnel, Max 5Mo)")}
                       </label>
                       <div className="flex items-center justify-center w-full">
                         <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-2xl cursor-pointer bg-gray-50 dark:hover:bg-bray-800 dark:bg-gray-800 hover:bg-gray-100 dark:border-gray-700 dark:hover:border-gray-600 dark:hover:bg-gray-700">
                           <div className="flex flex-col items-center justify-center pt-5 pb-6">
                             <Upload className="w-8 h-8 mb-3 text-gray-400" />
                             <p className="mb-2 text-sm text-gray-500 dark:text-gray-400">
-                              <span className="font-semibold">Cliquez pour téléverser</span> ou glisser-déposer
+                              <span className="font-semibold">{t('payment.modalUpload', 'Cliquez pour téléverser')}</span> {t('payment.modalUploadDragOrDrop', 'ou glisser-déposer')}
                             </p>
                             <p className="text-xs text-gray-500 dark:text-gray-400">
-                              {receiptFileName ? `Fichier : ${receiptFileName}` : "PNG, JPG ou JPEG"}
+                              {receiptFileName ? `${t('payment.modalFile', 'Fichier :')} ${receiptFileName}` : t('payment.modalUploadFormat', "PNG, JPG ou JPEG")}
                             </p>
                           </div>
                           <input type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
@@ -575,8 +588,8 @@ export const PaymentPage: React.FC = () => {
                       </div>
                       {receiptBase64 && (
                         <div className="mt-2 p-2 border rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-between">
-                          <span className="text-xs text-gray-500 truncate max-w-xs">Aperçu chargé avec succès</span>
-                          <button type="button" onClick={() => { setReceiptBase64(null); setReceiptFileName(''); }} className="text-xs text-red-500 font-bold hover:underline">Supprimer</button>
+                          <span className="text-xs text-gray-500 truncate max-w-xs">{t('payment.modalUploadSuccess', 'Aperçu chargé avec succès')}</span>
+                          <button type="button" onClick={() => { setReceiptBase64(null); setReceiptFileName(''); }} className="text-xs text-red-500 font-bold hover:underline">{t('payment.modalUploadDelete', 'Supprimer')}</button>
                         </div>
                       )}
                     </div>
@@ -597,7 +610,7 @@ export const PaymentPage: React.FC = () => {
                       disabled={submittingDirect}
                       className="w-full py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-sm shadow-lg flex items-center justify-center gap-2 transition-all mt-6"
                     >
-                      {submittingDirect ? "Transmission en cours..." : "Soumettre la preuve de paiement"}
+                      {submittingDirect ? t('payment.modalSubmitting', 'Transmission en cours...') : t('payment.modalSubmitProof', 'Soumettre la preuve de paiement')}
                     </button>
                   </form>
                 </div>

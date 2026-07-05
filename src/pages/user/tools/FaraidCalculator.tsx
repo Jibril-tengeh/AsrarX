@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Scale, ArrowLeft, Info } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Scale, ArrowLeft, Info, Database, Wifi } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { motion } from 'motion/react';
@@ -18,6 +18,39 @@ export const FaraidCalculator: React.FC = () => {
   
   const [father, setFather] = useState(false);
   const [mother, setMother] = useState(false);
+
+  const [isUsingCache, setIsUsingCache] = useState(true);
+
+  // Load saved inputs from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('asrar_faraid_inputs');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.assetValue !== undefined) setAssetValue(parsed.assetValue);
+        if (parsed.gender !== undefined) setGender(parsed.gender);
+        if (parsed.husband !== undefined) setHusband(parsed.husband);
+        if (parsed.wives !== undefined) setWives(parsed.wives);
+        if (parsed.sons !== undefined) setSons(parsed.sons);
+        if (parsed.daughters !== undefined) setDaughters(parsed.daughters);
+        if (parsed.father !== undefined) setFather(parsed.father);
+        if (parsed.mother !== undefined) setMother(parsed.mother);
+      }
+    } catch (e) {
+      console.warn("Failed to load Faraid inputs from cache", e);
+    }
+    setIsUsingCache(!navigator.onLine);
+  }, []);
+
+  // Save inputs to localStorage when they change
+  useEffect(() => {
+    try {
+      const data = { assetValue, gender, husband, wives, sons, daughters, father, mother };
+      localStorage.setItem('asrar_faraid_inputs', JSON.stringify(data));
+    } catch (e) {
+      console.warn("Failed to save Faraid inputs to cache", e);
+    }
+  }, [assetValue, gender, husband, wives, sons, daughters, father, mother]);
 
   // Gamification
   const logUsage = () => {
@@ -116,6 +149,17 @@ export const FaraidCalculator: React.FC = () => {
             Calculateur Faraid
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t("tools.faraid.description")}</p>
+          {isUsingCache ? (
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border border-amber-100 dark:border-amber-900/30 mt-2">
+              <Database size={11} className="animate-pulse" />
+              <span>Cache local (Mode Offline actif)</span>
+            </div>
+          ) : (
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30 mt-2">
+              <Wifi size={11} />
+              <span>Synchronisé localement (Offline-first)</span>
+            </div>
+          )}
         </div>
       </div>
 

@@ -12,6 +12,10 @@ export default defineConfig(() => {
       tailwindcss(),
       VitePWA({
         registerType: "autoUpdate",
+        devOptions: {
+          enabled: true,
+          type: "module",
+        },
         manifest: {
           name: "AsrarHub",
           short_name: "AsrarHub",
@@ -31,6 +35,7 @@ export default defineConfig(() => {
         },
         workbox: {
           globPatterns: ["**/*.{js,css,html,ico,png,svg,json}"],
+          maximumFileSizeToCacheInBytes: 5242880,
           runtimeCaching: [
             {
               urlPattern: ({ request }) => request.mode === "navigate",
@@ -39,6 +44,31 @@ export default defineConfig(() => {
                 cacheName: "pages-cache",
                 expiration: { maxEntries: 50 },
                 cacheableResponse: { statuses: [0, 200] },
+              },
+            },
+            {
+              urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
+              handler: "CacheFirst",
+              options: {
+                cacheName: "google-fonts-stylesheets",
+                expiration: {
+                  maxEntries: 10,
+                  maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+                },
+              },
+            },
+            {
+              urlPattern: /^https:\/\/fonts\.gstatic\.com\/.*/i,
+              handler: "CacheFirst",
+              options: {
+                cacheName: "google-fonts-webfonts",
+                expiration: {
+                  maxEntries: 50,
+                  maxAgeSeconds: 60 * 60 * 24 * 365, // 1 year
+                },
+                cacheableResponse: {
+                  statuses: [0, 200],
+                },
               },
             },
             {

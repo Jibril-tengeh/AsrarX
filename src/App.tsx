@@ -5,9 +5,10 @@ import { useAuth } from './contexts/AuthContext';
 import { useLanguage } from './contexts/LanguageContext';
 import { AuthModal } from './components/AuthModal';
 import { ShieldAlert, LogIn } from 'lucide-react';
-import { motion } from 'motion/react';
-import { db } from './lib/firebase';
+import { motion, AnimatePresence } from 'motion/react';
+import { db, isAutoSaveEnabled } from './lib/firebase';
 import { BottomNav } from './components/BottomNav';
+import { AsrarHubLoader } from './components/AsrarHubLoader';
 const UserDashboard = React.lazy(() => import('./pages/user/UserDashboard').then(m => ({ default: m.UserDashboard })));
 const SecretDetail = React.lazy(() => import('./pages/user/SecretDetail').then(m => ({ default: m.SecretDetail })));
 const ToolsDashboard = React.lazy(() => import('./pages/user/ToolsDashboard').then(m => ({ default: m.ToolsDashboard })));
@@ -122,12 +123,7 @@ const ProtectedToolsLayout: React.FC = () => {
   const [showAuthModal, setShowAuthModal] = React.useState(false);
 
   if (loading) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh]">
-        <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-        <p className="text-gray-500 font-medium">Chargement...</p>
-      </div>
-    );
+    return <AsrarHubLoader size="fullscreen" />;
   }
 
   if (!user) {
@@ -181,6 +177,17 @@ export default function App() {
   const navigate = useNavigate();
   const isRuqyahPlayer = location.pathname === '/tools/ruqyah';
 
+  // Global scroll-to-top on route changes
+  React.useEffect(() => {
+    window.scrollTo(0, 0);
+    if (document.documentElement) {
+      document.documentElement.scrollTo({ top: 0 });
+    }
+    if (document.body) {
+      document.body.scrollTo({ top: 0 });
+    }
+  }, [location.pathname]);
+
   React.useEffect(() => {
     CapacitorApp.addListener('backButton', () => {
       if (window.location.pathname !== '/' && window.location.pathname !== '/home') {
@@ -218,7 +225,9 @@ export default function App() {
           if (rem.enabled && rem.time === currentTimeString) {
             try {
               if ('Notification' in window && window.Notification && window.Notification.permission === 'granted') {
-                new Notification('AsrarHub', { body: `Il est temps pour: ${rem.label}` });
+                const title = rem.isZikr ? 'Rappel de Zikr Quotidien 📿' : 'AsrarHub';
+                const body = rem.isZikr ? `Il est temps pour votre Zikr : ${rem.label}` : `Il est temps pour : ${rem.label}`;
+                new Notification(title, { body });
               }
             } catch (e) {
               console.error("Notification access error", e);
@@ -231,12 +240,35 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
+  // Prefetch Quran data in background for instant offline "View all occurrences"
+  React.useEffect(() => {
+    if (navigator.onLine) {
+      import('idb-keyval').then(({ get, set }) => {
+        get('asrar_quran_full_json').then(cached => {
+          if (!cached) {
+            fetch('/quran.json')
+              .then(res => {
+                if (res.ok) return res.json();
+                throw new Error();
+              })
+              .then(data => {
+                if (Array.isArray(data)) {
+                  set('asrar_quran_full_json', data);
+                }
+              })
+              .catch(() => {});
+          }
+        });
+      });
+    }
+  }, []);
+
   if (!isCompletedOnboarding) {
     return <Onboarding onComplete={() => {
       localStorage.setItem('hasCompletedOnboarding', 'true');
       sessionStorage.setItem('hasCompletedOnboarding', 'true');
       setHasCompletedOnboarding(true);
-      if (user) {
+      if (user && isAutoSaveEnabled()) {
         import('firebase/firestore').then(({ updateDoc, doc }) => {
           updateDoc(doc(db, 'users', user.uid), { hasCompletedOnboarding: true }).catch(console.error);
         });
@@ -252,65 +284,71 @@ export default function App() {
         <Header />
         <DailyRewardHandler />
         <main className={`flex-1 text-gray-900 dark:text-gray-100 pb-20 ${isRuqyahPlayer ? '' : 'pt-20'}`}>
-          <React.Suspense fallback={
-              <div className="flex flex-col items-center justify-center min-h-[60vh]">
-                <div className="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-                <p className="text-gray-500 font-medium">Chargement...</p>
-              </div>
-            }>
-            <Routes>
-            <Route path="/" element={<Navigate to="/user/dashboard" replace />} />
-            <Route path="/user/dashboard" element={<UserDashboard />} />
-            <Route path="/secret/:id" element={<SecretDetail />} />
-            <Route path="/explore" element={<ExploreDashboard />} />
-            <Route path="/store" element={<Store />} />
-            <Route path="/explore/quizz" element={<Quizz />} />
-            <Route path="/explore/lexique" element={<Lexique />} />
-            <Route path="/explore/calendar" element={<CalendarConverter />} />
-            <Route element={<ProtectedToolsLayout />}>
-              <Route path="/tools" element={<ToolsDashboard />} />
-              <Route path="/tools/abjad" element={<AbjadCalculator />} />
-              <Route path="/tools/planetary" element={<PlanetaryHours />} />
-              <Route path="/tools/tasbih" element={<Tasbih />} />
-              <Route path="/tools/khatim" element={<KhatimGenerator />} />
-              <Route path="/tools/asma" element={<Asma />} />
-              <Route path="/tools/talsam" element={<Talsam />} />
-              <Route path="/tools/istikhara" element={<Istikhara />} />
-              <Route path="/tools/ruqyah" element={<Ruqyah />} />
-              <Route path="/tools/sirr" element={<SirrAlAsrar />} />
-              <Route path="/tools/zairja" element={<Zairja />} />
-              <Route path="/tools/zakat" element={<ZakatCalculator />} />
-              <Route path="/tools/faraid" element={<FaraidCalculator />} />
-              <Route path="/tools/dreams" element={<DreamJournal />} />
-              <Route path="/tools/halaqat" element={<Halaqat />} />
-              <Route path="/tools/elemental" element={<ElementalAnalyzer />} />
-              <Route path="/tools/geomancy" element={<Geomancy />} />
-              <Route path="/tools/letters" element={<ScienceOfLetters />} />
-              <Route path="/tools/personal-wird" element={<PersonalWird />} />
-              <Route path="/tools/daily-dhikr" element={<DailyDhikrTracker />} />
-              <Route path="/tools/lunar-mansions" element={<LunarMansions />} />
-              <Route path="/tools/spiritual-compatibility" element={<SpiritualCompatibility />} />
-              <Route path="/tools/ilm-jafar" element={<IlmJafar />} />
-              <Route path="/tools/grand-oaths" element={<GrandOaths />} />
-              <Route path="/tools/99names" element={<NamesOfAllah />} />
-              <Route path="/tools/rouhaniyya" element={<RouhaniyyaExtractor />} />
-              <Route path="/tools/taksir" element={<Taksir />} />
-              <Route path="/tools/quran" element={<QuranFull />} />
-              <Route path="/tools/khouddam" element={<KhouddamExtractor />} />
-              <Route path="/tools/awfaq" element={<AwfaqAdvanced />} />
-              <Route path="/tools/quranic-faal" element={<QuranicFaal />} />
-            </Route>
-            <Route path="/profile" element={<UserProfile />} />
-            <Route path="/payment" element={<PaymentPage />} />
-            <Route path="/journal" element={<Journal />} />
-            <Route path="/saved" element={<UserDashboard initialFilter="favoris" />} />
-            <Route path="/community" element={<Community />} />
-            <Route path="/admin" element={<AdminDashboard />} />
-            <Route path="/faq" element={<FaqPage />} />
-            <Route path="*" element={<Navigate to="/user/dashboard" replace />} />
-          </Routes>
-            </React.Suspense>
-        </main>
+          <React.Suspense fallback={<AsrarHubLoader size="fullscreen" />}>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={location.pathname}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.25, ease: 'easeOut' }}
+                className="w-full h-full flex flex-col flex-1"
+              >
+                <Routes location={location}>
+                <Route path="/" element={<Navigate to="/user/dashboard" replace />} />
+                <Route path="/user/dashboard" element={<UserDashboard />} />
+                <Route path="/secret/:id" element={<SecretDetail />} />
+                <Route path="/explore" element={<ExploreDashboard />} />
+                <Route path="/store" element={<Store />} />
+                <Route path="/explore/quizz" element={<Quizz />} />
+                <Route path="/explore/lexique" element={<Lexique />} />
+                <Route path="/explore/calendar" element={<CalendarConverter />} />
+                <Route element={<ProtectedToolsLayout />}>
+                  <Route path="/tools" element={<ToolsDashboard />} />
+                  <Route path="/tools/abjad" element={<AbjadCalculator />} />
+                  <Route path="/tools/planetary" element={<PlanetaryHours />} />
+                  <Route path="/tools/tasbih" element={<Tasbih />} />
+                  <Route path="/tools/khatim" element={<KhatimGenerator />} />
+                  <Route path="/tools/asma" element={<Asma />} />
+                  <Route path="/tools/talsam" element={<Talsam />} />
+                  <Route path="/tools/istikhara" element={<Istikhara />} />
+                  <Route path="/tools/ruqyah" element={<Ruqyah />} />
+                  <Route path="/tools/sirr" element={<SirrAlAsrar />} />
+                  <Route path="/tools/zairja" element={<Zairja />} />
+                  <Route path="/tools/zakat" element={<ZakatCalculator />} />
+                  <Route path="/tools/faraid" element={<FaraidCalculator />} />
+                  <Route path="/tools/dreams" element={<DreamJournal />} />
+                  <Route path="/tools/halaqat" element={<Halaqat />} />
+                  <Route path="/tools/elemental" element={<ElementalAnalyzer />} />
+                  <Route path="/tools/geomancy" element={<Geomancy />} />
+                  <Route path="/tools/letters" element={<ScienceOfLetters />} />
+                  <Route path="/tools/personal-wird" element={<PersonalWird />} />
+                  <Route path="/tools/daily-dhikr" element={<DailyDhikrTracker />} />
+                  <Route path="/tools/lunar-mansions" element={<LunarMansions />} />
+                  <Route path="/tools/spiritual-compatibility" element={<SpiritualCompatibility />} />
+                  <Route path="/tools/ilm-jafar" element={<IlmJafar />} />
+                  <Route path="/tools/grand-oaths" element={<GrandOaths />} />
+                  <Route path="/tools/99names" element={<NamesOfAllah />} />
+                  <Route path="/tools/rouhaniyya" element={<RouhaniyyaExtractor />} />
+                  <Route path="/tools/taksir" element={<Taksir />} />
+                  <Route path="/tools/quran" element={<QuranFull />} />
+                  <Route path="/tools/khouddam" element={<KhouddamExtractor />} />
+                  <Route path="/tools/awfaq" element={<AwfaqAdvanced />} />
+                  <Route path="/tools/quranic-faal" element={<QuranicFaal />} />
+                </Route>
+                <Route path="/profile" element={<UserProfile />} />
+                <Route path="/payment" element={<PaymentPage />} />
+                <Route path="/journal" element={<Journal />} />
+                <Route path="/saved" element={<UserDashboard initialFilter="favoris" />} />
+                <Route path="/community" element={<Community />} />
+                <Route path="/admin" element={<AdminDashboard />} />
+                <Route path="/faq" element={<FaqPage />} />
+                <Route path="*" element={<Navigate to="/user/dashboard" replace />} />
+              </Routes>
+            </motion.div>
+          </AnimatePresence>
+        </React.Suspense>
+      </main>
         <FaqButton />
         <BottomNav />
       </div>

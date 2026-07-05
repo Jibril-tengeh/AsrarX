@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Joyride, EventData, STATUS, Step, TooltipRenderProps } from 'react-joyride';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { X, ChevronRight, ChevronLeft, Check } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
-import { db } from '../lib/firebase';
+import { db, isAutoSaveEnabled } from '../lib/firebase';
 
 export const OnboardingTour: React.FC = () => {
   const [run, setRun] = useState(false);
@@ -102,7 +102,7 @@ export const OnboardingTour: React.FC = () => {
         setRun(true);
         localStorage.setItem('asrarhub_tour_completed', 'true');
         sessionStorage.setItem('asrarhub_tour_completed', 'true');
-        if (user) {
+        if (user && isAutoSaveEnabled()) {
           import('firebase/firestore').then(({ updateDoc, doc }) => {
             updateDoc(doc(db, 'users', user.uid), { hasSeenTour: true }).catch(console.error);
           });
@@ -219,7 +219,7 @@ export const OnboardingTour: React.FC = () => {
       setRun(false);
       localStorage.setItem('asrarhub_tour_completed', 'true');
       sessionStorage.setItem('asrarhub_tour_completed', 'true');
-      if (user) {
+      if (user && isAutoSaveEnabled()) {
         import('firebase/firestore').then(({ updateDoc, doc }) => {
           updateDoc(doc(db, 'users', user.uid), { hasSeenTour: true }).catch(console.error);
         });

@@ -43,6 +43,8 @@ export const PostComments: React.FC<PostCommentsProps> = ({ postId }) => {
         (doc) => ({ id: doc.id, ...doc.data() }) as Comment,
       );
       setComments(commentsData);
+    }, (error) => {
+      console.warn("PostComments onSnapshot error (operating offline):", error);
     });
 
     return () => unsubscribe();

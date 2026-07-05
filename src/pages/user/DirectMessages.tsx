@@ -82,6 +82,8 @@ export const DirectMessages: React.FC<DirectMessagesProps> = ({
         Array.from(convosMap.entries()).map(([id, name]) => ({ id, name })),
       );
       setMessages(msgs);
+    }, (error) => {
+      console.warn("DirectMessages onSnapshot error (operating offline):", error);
     });
     return () => unsubscribe();
   }, [user, initialRecipientId, initialRecipientName]);

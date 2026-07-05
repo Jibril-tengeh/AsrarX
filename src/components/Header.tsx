@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Moon, Sun, Languages, User, Users, Shield, LogOut, LogIn, Bell, Store, ChevronDown, ChevronUp, Megaphone, X, ExternalLink, MessageCircle } from 'lucide-react';
+import { Moon, Sun, Languages, User, Users, Shield, LogOut, LogIn, Bell, Store, ChevronDown, ChevronUp, Megaphone, X, ExternalLink, MessageCircle, Search } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useFeatures } from '../contexts/FeatureContext';
@@ -8,6 +8,7 @@ import { signOut, db } from '../lib/firebase';
 import { collection, query, orderBy, onSnapshot, limit } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { GlobalSearchModal } from './GlobalSearchModal';
 
 interface Notification {
   id: string;
@@ -17,7 +18,7 @@ interface Notification {
 }
 
 export const Header: React.FC = () => {
-  const { language, setLanguage } = useLanguage();
+  const { language, setLanguage, t } = useLanguage();
   const { theme, toggleTheme } = useTheme();
   const { user } = useAuth();
   const { featureToggles } = useFeatures();
@@ -27,6 +28,7 @@ export const Header: React.FC = () => {
   const [announcementOpen, setAnnouncementOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [hasUnread, setHasUnread] = useState(false);
+  const [searchModalOpen, setSearchModalOpen] = useState(false);
   const langMenuRef = useRef<HTMLDivElement>(null);
   const notifMenuRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
@@ -341,7 +343,7 @@ export const Header: React.FC = () => {
               
               <div className="relative z-10 flex flex-col">
                 <div className="flex justify-between items-start mb-2">
-                  <div className="text-[10px] uppercase tracking-wider font-bold text-emerald-400 bg-emerald-400/10 px-2 py-1 rounded-lg">Annonce Spéciale</div>
+                  <div className="text-[10px] uppercase tracking-wider font-bold text-emerald-400 bg-emerald-400/10 px-2 py-1 rounded-lg">{t('ad.specialAd', 'Annonce Spéciale')}</div>
                   <button 
                     onClick={() => setAnnouncementOpen(false)}
                     className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 transition-colors text-white"
@@ -349,20 +351,23 @@ export const Header: React.FC = () => {
                     <X size={16} />
                   </button>
                 </div>
-                <h4 className="font-bold text-xl mb-2 mt-2 leading-tight">Débloquez votre plein potentiel spirituel</h4>
-                <p className="text-blue-100 text-sm mb-4 leading-relaxed">Passez à la version Premium pour accéder aux cours Sirr Al Asrar complets et supprimer ces publicités.</p>
+                <h4 className="font-bold text-xl mb-2 mt-2 leading-tight">{t('ad.unlockTitle', 'Débloquez votre plein potentiel spirituel')}</h4>
+                <p className="text-blue-100 text-sm mb-4 leading-relaxed">{t('ad.unlockDesc', 'Passez à la version Premium pour accéder aux cours Sirr Al Asrar complets et supprimer ces publicités.')}</p>
                 <Link 
                   to="/payment" 
                   onClick={() => setAnnouncementOpen(false)}
                   className="w-full text-center bg-white text-indigo-900 px-5 py-3 rounded-xl font-bold text-sm hover:bg-gray-100 transition-colors flex items-center justify-center gap-2"
                 >
-                  Voir les Offres <ExternalLink size={16} />
+                  {t('ad.viewOffers', 'Voir les Offres')} <ExternalLink size={16} />
                 </Link>
               </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Global Search Overlay */}
+      <GlobalSearchModal isOpen={searchModalOpen} onClose={() => setSearchModalOpen(false)} />
     </>
   );
 };

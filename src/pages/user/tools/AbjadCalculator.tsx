@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calculator, ArrowLeft, RefreshCw, Copy, Check, ChevronDown, ChevronUp, History, Save, Trash2, X } from 'lucide-react';
+import { Calculator, ArrowLeft, RefreshCw, Copy, Check, ChevronDown, ChevronUp, History, Save, Trash2, X, Database, Wifi } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { motion, AnimatePresence } from 'motion/react';
@@ -31,8 +31,21 @@ export const AbjadCalculator: React.FC = () => {
   
   const [history, setHistory] = useState<{ id: string; text: string; mashriqi: number; maghribi: number; timestamp: number }[]>([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [isUsingCache, setIsUsingCache] = useState(true);
 
+  // Load abjad state and history on mount
   useEffect(() => {
+    try {
+      const savedText = localStorage.getItem('abjad_draft_text');
+      if (savedText) setText(savedText);
+      const savedShowWords = localStorage.getItem('abjad_show_words');
+      if (savedShowWords) setShowWords(savedShowWords === 'true');
+      const savedShowLetters = localStorage.getItem('abjad_show_letters');
+      if (savedShowLetters) setShowLetters(savedShowLetters === 'true');
+    } catch (e) {
+      console.warn("Failed to load Abjad state", e);
+    }
+
     const saved = localStorage.getItem('abjad_history');
     if (saved) {
       try {
@@ -40,7 +53,28 @@ export const AbjadCalculator: React.FC = () => {
         if (Array.isArray(parsed)) setHistory(parsed);
       } catch (e) {}
     }
+    setIsUsingCache(!navigator.onLine);
   }, []);
+
+  // Save text draft to localStorage on change
+  useEffect(() => {
+    try {
+      localStorage.setItem('abjad_draft_text', text);
+    } catch (e) {}
+  }, [text]);
+
+  // Save configurations on change
+  useEffect(() => {
+    try {
+      localStorage.setItem('abjad_show_words', String(showWords));
+    } catch (e) {}
+  }, [showWords]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('abjad_show_letters', String(showLetters));
+    } catch (e) {}
+  }, [showLetters]);
 
   const saveToHistory = () => {
     if (!text.trim() || totalMashriqi === 0) return;
@@ -122,6 +156,17 @@ export const AbjadCalculator: React.FC = () => {
               Abjad
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t("tools.abjad.subtitle")}</p>
+            {isUsingCache ? (
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border border-amber-100 dark:border-amber-900/30 mt-2">
+                <Database size={11} className="animate-pulse" />
+                <span>Cache local (Mode Offline actif)</span>
+              </div>
+            ) : (
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30 mt-2">
+                <Wifi size={11} />
+                <span>Synchronisé localement (Offline-first)</span>
+              </div>
+            )}
           </div>
         </div>
       </div>

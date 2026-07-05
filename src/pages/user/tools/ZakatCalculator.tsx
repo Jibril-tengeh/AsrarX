@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Coins, ArrowLeft, RefreshCw, Info } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Coins, ArrowLeft, RefreshCw, Info, Database, Wifi } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { motion, AnimatePresence } from 'motion/react';
@@ -14,6 +14,79 @@ export const ZakatCalculator: React.FC = () => {
   const [merchandise, setMerchandise] = useState('');
   const [debts, setDebts] = useState('');
 
+  const [goldPrice, setGoldPrice] = useState(65); // EUR per gram (approx)
+  const [silverPrice, setSilverPrice] = useState(0.70); // EUR per gram (approx)
+  const [isUsingCache, setIsUsingCache] = useState(true);
+
+  // Load saved inputs from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('asrar_zakat_inputs');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.gold !== undefined) setGold(parsed.gold);
+        if (parsed.silver !== undefined) setSilver(parsed.silver);
+        if (parsed.cash !== undefined) setCash(parsed.cash);
+        if (parsed.stocks !== undefined) setStocks(parsed.stocks);
+        if (parsed.merchandise !== undefined) setMerchandise(parsed.merchandise);
+        if (parsed.debts !== undefined) setDebts(parsed.debts);
+      }
+    } catch (e) {
+      console.warn("Failed to load Zakat inputs from cache", e);
+    }
+  }, []);
+
+  // Save inputs to localStorage when they change
+  useEffect(() => {
+    try {
+      const data = { gold, silver, cash, stocks, merchandise, debts };
+      localStorage.setItem('asrar_zakat_inputs', JSON.stringify(data));
+    } catch (e) {
+      console.warn("Failed to save Zakat inputs to cache", e);
+    }
+  }, [gold, silver, cash, stocks, merchandise, debts]);
+
+  // Fetch current live Gold and Silver prices
+  useEffect(() => {
+    const fetchPrices = async () => {
+      try {
+        const savedPrices = localStorage.getItem('asrar_zakat_prices');
+        if (savedPrices) {
+          const { goldP, silverP } = JSON.parse(savedPrices);
+          if (goldP) setGoldPrice(goldP);
+          if (silverP) setSilverPrice(silverP);
+        }
+
+        if (!navigator.onLine) {
+          setIsUsingCache(true);
+          return;
+        }
+
+        // Fetch PAXG price (1 PAXG = 1 troy ounce of gold) from CoinGecko
+        const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=pax-gold&vs_currencies=eur');
+        if (res.ok) {
+          const data = await res.json();
+          const paxgEur = data['pax-gold']?.eur;
+          if (paxgEur) {
+            const calculatedGoldPrice = Math.round((paxgEur / 31.1034768) * 100) / 100; // EUR per gram
+            const calculatedSilverPrice = Math.round((calculatedGoldPrice / 80) * 100) / 100; // silver ratio
+            setGoldPrice(calculatedGoldPrice);
+            setSilverPrice(calculatedSilverPrice);
+            setIsUsingCache(false);
+            localStorage.setItem('asrar_zakat_prices', JSON.stringify({ goldP: calculatedGoldPrice, silverP: calculatedSilverPrice }));
+          } else {
+            setIsUsingCache(true);
+          }
+        } else {
+          setIsUsingCache(true);
+        }
+      } catch (e) {
+        setIsUsingCache(true);
+      }
+    };
+    fetchPrices();
+  }, []);
+
   const handleReset = async () => {
     setGold('');
     setSilver('');
@@ -27,9 +100,6 @@ export const ZakatCalculator: React.FC = () => {
       if (navigator.vibrate) navigator.vibrate(40);
     }
   };
-
-  const [goldPrice, setGoldPrice] = useState(65); // EUR per gram (approx)
-  const [silverPrice, setSilverPrice] = useState(0.70); // EUR per gram (approx)
 
   // Nisab is either 85g of gold or 595g of silver
   const nisabGoldValue = 85 * goldPrice;
@@ -72,6 +142,17 @@ export const ZakatCalculator: React.FC = () => {
               {t('tools.zakat.title', 'Calculateur de Zakat')}
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t('tools.zakat.description', 'Calculez précisément votre Zakat al-Maal (2.5%)')}</p>
+            {isUsingCache ? (
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border border-amber-100 dark:border-amber-900/30 mt-2">
+                <Database size={11} className="animate-pulse" />
+                <span>Cache local (Mode Offline actif)</span>
+              </div>
+            ) : (
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30 mt-2">
+                <Wifi size={11} />
+                <span>Prix de l'or en temps réel (PAXG)</span>
+              </div>
+            )}
           </div>
         </div>
         <button 

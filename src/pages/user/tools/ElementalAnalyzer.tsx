@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Flame, Droplets, Wind, Mountain, ArrowLeft, Info } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Flame, Droplets, Wind, Mountain, ArrowLeft, Info, Database, Wifi } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { motion } from 'motion/react';
@@ -50,6 +50,23 @@ const ELEMENTS = {
 export const ElementalAnalyzer: React.FC = () => {
   const { t } = useLanguage();
   const [input, setInput] = useState('');
+  const [isUsingCache, setIsUsingCache] = useState(true);
+
+  useEffect(() => {
+    try {
+      const savedInput = localStorage.getItem('asrar_elemental_input');
+      if (savedInput) setInput(savedInput);
+    } catch (e) {
+      console.warn("Failed to load elemental input", e);
+    }
+    setIsUsingCache(!navigator.onLine);
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('asrar_elemental_input', input);
+    } catch (e) {}
+  }, [input]);
   
   const analyze = () => {
     const text = input.replace(/\s/g, '');
@@ -83,6 +100,17 @@ export const ElementalAnalyzer: React.FC = () => {
           Analyseur Élémentaire (Tabai' al-Huruf)
         </h1>
         <p className="text-gray-500 dark:text-gray-400 mt-2">{t("tools.elemental.description")}</p>
+        {isUsingCache ? (
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border border-amber-100 dark:border-amber-900/30 mt-2">
+            <Database size={11} className="animate-pulse" />
+            <span>Cache local (Mode Offline actif)</span>
+          </div>
+        ) : (
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30 mt-2">
+            <Wifi size={11} />
+            <span>Synchronisé localement (Offline-first)</span>
+          </div>
+        )}
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-6 shadow-sm mb-8">

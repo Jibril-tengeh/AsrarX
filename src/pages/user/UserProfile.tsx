@@ -1,20 +1,24 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { User, Bell, Clock, Save, Shield, Moon, Sun, Smartphone, Award, Medal, Star, Target, LogOut, Camera, Image as ImageIcon, RefreshCw, Sparkles, LogIn, ChevronDown } from 'lucide-react';
+import { User, Bell, Clock, Save, Shield, Moon, Sun, Smartphone, Laptop, Tablet, Globe, Trash2, Award, Medal, Star, Target, LogOut, Camera, Image as ImageIcon, RefreshCw, Sparkles, LogIn, ChevronDown, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { PremiumBadge } from '../../components/PremiumBadge';
 import { AuthModal } from '../../components/AuthModal';
 import { signOut, db, auth } from '../../lib/firebase';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, collection, deleteDoc, onSnapshot } from 'firebase/firestore';
 import { useNavigate, Link } from 'react-router-dom';
+import { getFCMToken, checkNotificationSupport, onMessageListener } from '../../lib/fcm';
 
 interface Reminder {
   id: string;
   time: string;
   enabled: boolean;
   label: string;
+  isZikr?: boolean;
+  zikrId?: string;
+  zikrTarget?: number;
 }
 
 const CollapsibleSection: React.FC<{
@@ -152,13 +156,133 @@ export const UserProfile: React.FC = () => {
   const navigate = useNavigate();
   
   const [showAuthModal, setShowAuthModal] = useState(false);
+
+  // --- Active Sessions State & Logic ---
+  interface Session {
+    id: string;
+    os: string;
+    browser: string;
+    deviceType: string;
+    lastActive: string;
+    ip: string;
+  }
+
+  const [activeSessions, setActiveSessions] = useState<Session[]>([]);
+  const [loadingSessions, setLoadingSessions] = useState(false);
+  const currentSessionId = localStorage.getItem('asrarhub_session_id');
+
+  useEffect(() => {
+    if (!user) {
+      setActiveSessions([]);
+      return;
+    }
+
+    setLoadingSessions(true);
+    const sessionsRef = collection(db, 'users', user.uid, 'sessions');
+    
+    const unsubscribe = onSnapshot(sessionsRef, (snapshot) => {
+      const sessionsList: Session[] = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        sessionsList.push({
+          id: doc.id,
+          os: data.os || 'Inconnu',
+          browser: data.browser || 'Inconnu',
+          deviceType: data.deviceType || 'desktop',
+          lastActive: data.lastActive || new Date().toISOString(),
+          ip: data.ip || 'Client Direct'
+        });
+      });
+      
+      // Sort sessions: current session first, then by last active desc
+      sessionsList.sort((a, b) => {
+        if (a.id === currentSessionId) return -1;
+        if (b.id === currentSessionId) return 1;
+        return new Date(b.lastActive).getTime() - new Date(a.lastActive).getTime();
+      });
+
+      setActiveSessions(sessionsList);
+      setLoadingSessions(false);
+    }, (error) => {
+      console.error("Error listening to sessions:", error);
+      setLoadingSessions(false);
+    });
+
+    return () => unsubscribe();
+  }, [user, currentSessionId]);
+
+  const revokeSession = async (sessionId: string) => {
+    if (!user) return;
+    try {
+      const sessionDocRef = doc(db, 'users', user.uid, 'sessions', sessionId);
+      await deleteDoc(sessionDocRef);
+    } catch (err) {
+      console.error("Error revoking session:", err);
+      alert("Impossible de révoquer la session. Veuillez réessayer.");
+    }
+  };
+  // -------------------------------------
   
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [newTime, setNewTime] = useState('06:00');
   const [newLabel, setNewLabel] = useState('');
+  const [reminderType, setReminderType] = useState<'simple' | 'zikr'>('simple');
+  const [selectedZikrId, setSelectedZikrId] = useState('subhanallah');
+  const [customZikrName, setCustomZikrName] = useState('');
+  const [customZikrTarget, setCustomZikrTarget] = useState(100);
+
+  const PRESET_ZIKRS = [
+    { id: 'subhanallah', text: 'Subhanallah', arabic: 'سُبْحَانَ ٱللَّٰهِ', target: 33 },
+    { id: 'alhamdulillah', text: 'Alhamdulillah', arabic: 'ٱلْحَمْدُ لِلَّٰهِ', target: 33 },
+    { id: 'allahuakbar', text: 'Allahu Akbar', arabic: 'ٱللَّٰهُ أَكْبَرُ', target: 34 },
+    { id: 'astaghfirullah', text: 'Astaghfirullah', arabic: 'أَسْتَغْفِرُ ٱللَّٰهَ', target: 100 },
+    { id: 'lailahaillallah', text: 'La ilaha illallah', arabic: 'لَا إِلَٰهَ إِلَّا ٱللَّٰهُ', target: 100 },
+    { id: 'salawat', text: 'Salawat', arabic: 'ٱللَّٰهُمَّ صَلِّ عَلَىٰ مُحَمَّدٍ', target: 100 },
+    { id: 'hasbunallah', text: 'Hasbunallah', arabic: 'حَسْبُنَا اللَّهُ وَنِعْمَ الْوَكِيلُ', target: 450 },
+    { id: 'ya_latif', text: 'Ya Latif', arabic: 'يَا لَطِيفُ', target: 129 },
+    { id: 'custom', text: 'Autre (Zikr personnalisé)', arabic: '', target: 100 }
+  ];
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState('');
   const [isClearingCache, setIsClearingCache] = useState(false);
+  const [autoSave, setAutoSave] = useState(localStorage.getItem('asrar_auto_save_firestore') !== 'false');
+
+  const [fcmToken, setFcmToken] = useState<string | null>(null);
+  const [fcmEnabled, setFcmEnabled] = useState(false);
+  const [isFcmLoading, setIsFcmLoading] = useState(false);
+  const [isTestingPush, setIsTestingPush] = useState(false);
+  const [testSuccess, setTestSuccess] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const checkFCMStatus = async () => {
+      try {
+        const supported = await checkNotificationSupport();
+        if (supported && Notification.permission === 'granted') {
+          setFcmEnabled(true);
+          const savedToken = localStorage.getItem('asrarhub_last_fcm_token');
+          if (savedToken) {
+            setFcmToken(savedToken);
+          }
+        }
+      } catch (err) {
+        console.warn("FCM Support check error:", err);
+      }
+    };
+    checkFCMStatus();
+
+    // Foreground message listener
+    let unsubscribe: any = null;
+    const setupListener = async () => {
+      unsubscribe = await onMessageListener((payload) => {
+        alert(`[Notification] ${payload.notification?.title}: ${payload.notification?.body}`);
+      });
+    };
+    setupListener();
+
+    return () => {
+      if (unsubscribe && typeof unsubscribe === 'function') unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     const saved = localStorage.getItem('asrar_reminders');
@@ -184,15 +308,58 @@ export const UserProfile: React.FC = () => {
   }, [reminders]);
 
   const addReminder = () => {
-    if (!newTime || !newLabel) return;
+    if (!newTime) return;
+    
+    let label = newLabel;
+    let isZikr = false;
+    let zikrId = '';
+    let zikrTarget = 100;
+
+    if (reminderType === 'zikr') {
+      isZikr = true;
+      if (selectedZikrId === 'custom') {
+        if (!customZikrName) {
+          alert("Veuillez saisir un nom pour votre Zikr personnalisé.");
+          return;
+        }
+        label = `Zikr : ${customZikrName} (${customZikrTarget}x)`;
+        zikrId = 'custom';
+        zikrTarget = customZikrTarget;
+      } else {
+        const preset = PRESET_ZIKRS.find(z => z.id === selectedZikrId);
+        if (preset) {
+          label = `Zikr : ${preset.text} (${preset.target}x)`;
+          zikrId = preset.id;
+          zikrTarget = preset.target;
+        }
+      }
+    } else {
+      if (!newLabel) {
+        alert("Veuillez saisir un libellé pour le rappel.");
+        return;
+      }
+    }
+
+    if ('Notification' in window && window.Notification.permission !== 'granted') {
+      window.Notification.requestPermission().then(permission => {
+        if (permission === 'granted') {
+          console.log("Notification permission granted.");
+        }
+      });
+    }
+
     const newRem: Reminder = {
       id: Date.now().toString(),
       time: newTime,
       enabled: true,
-      label: newLabel
+      label: label,
+      isZikr,
+      zikrId,
+      zikrTarget
     };
     setReminders([...reminders, newRem]);
     setNewLabel('');
+    setCustomZikrName('');
   };
 
   const toggleReminder = (id: string) => {
@@ -204,16 +371,68 @@ export const UserProfile: React.FC = () => {
   };
 
   const requestNotificationPermission = async () => {
+    if (!user) {
+      alert(t('profile.loginRequired', "Veuillez vous connecter pour activer les notifications push."));
+      return;
+    }
+    
+    setIsFcmLoading(true);
     try {
-      if ('Notification' in window && window.Notification) {
-        const permission = await Notification.requestPermission();
-        if (permission === 'granted') {
-          new Notification('AsrarHub', { body: t('profile.reminders.pushSuccess', 'Notifications activées avec succès!') });
-        }
+      const token = await getFCMToken(user.uid);
+      if (token) {
+        setFcmToken(token);
+        setFcmEnabled(true);
+        localStorage.setItem('asrarhub_last_fcm_token', token);
+        alert(t('profile.reminders.pushSuccess', 'Notifications push FCM activées avec succès !'));
+      } else {
+        alert(t('profile.reminders.pushUnsupported', "Les notifications push ne sont pas supportées sur ce navigateur ou cet appareil."));
       }
-    } catch (e) {
-      console.error("Notification permission error", e);
-      alert(t('profile.reminders.pushError', 'Les notifications ne sont pas supportées ou ont été bloquées.'));
+    } catch (e: any) {
+      console.error("FCM Token generation error", e);
+      alert(t('profile.reminders.pushError', 'Une erreur est survenue lors de la configuration FCM : ') + (e.message || e));
+    } finally {
+      setIsFcmLoading(false);
+    }
+  };
+
+  const testPushNotification = async () => {
+    const activeToken = fcmToken || localStorage.getItem('asrarhub_last_fcm_token');
+    if (!activeToken) {
+      alert("Aucun jeton de notification disponible. Veuillez d'abord cliquer sur 'Activer les notifications push'.");
+      return;
+    }
+
+    setIsTestingPush(true);
+    setTestSuccess(null);
+    try {
+      const res = await fetch('/api/send-push', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          tokens: [activeToken],
+          title: "Test de Rappel de Wird 🌟",
+          body: "Votre appareil est maintenant configuré pour recevoir vos rappels de Wird sur AsrarHub !",
+          data: {
+            type: "wird_test",
+            click_action: "/tools/personal-wird"
+          }
+        })
+      });
+
+      const data = await res.json();
+      if (data.success && data.successCount > 0) {
+        setTestSuccess(true);
+      } else {
+        setTestSuccess(false);
+        console.error("FCM test request response failed:", data);
+      }
+    } catch (err: any) {
+      console.error("FCM test request error:", err);
+      setTestSuccess(false);
+    } finally {
+      setIsTestingPush(false);
     }
   };
 
@@ -428,16 +647,64 @@ export const UserProfile: React.FC = () => {
           {t('profile.reminders.subtitle', "Configurez des rappels pour vos heures de lecture (Wirds, Zikrs). L'application vous enverra une notification à l'heure souhaitée.")}
         </p>
 
+        {fcmEnabled ? (
+          <div className="bg-emerald-500/10 dark:bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-4 mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                Notifications Push Actives
+              </p>
+              <p className="text-xs text-emerald-600/80 dark:text-emerald-400/80 mt-1">
+                Votre navigateur recevra des notifications push personnalisées pour vos rappels de Wird.
+              </p>
+            </div>
+            <button
+              onClick={testPushNotification}
+              disabled={isTestingPush}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 self-start sm:self-center"
+            >
+              {isTestingPush ? "Envoi du test..." : "Tester la notification"}
+              {testSuccess === true && " ✅"}
+              {testSuccess === false && " ❌"}
+            </button>
+          </div>
+        ) : (
+          <div className="bg-amber-500/10 dark:bg-amber-500/5 border border-amber-500/20 rounded-2xl p-4 mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <p className="text-sm font-bold text-amber-800 dark:text-amber-300">
+                Notifications Push Désactivées
+              </p>
+              <p className="text-xs text-amber-600/80 dark:text-amber-400/80 mt-1">
+                Activez les notifications pour recevoir vos rappels de Wird directement sur votre appareil.
+              </p>
+            </div>
+            <button
+              onClick={requestNotificationPermission}
+              disabled={isFcmLoading}
+              className="px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all shadow-sm self-start sm:self-center"
+            >
+              {isFcmLoading ? "Activation..." : "Activer maintenant"}
+            </button>
+          </div>
+        )}
+
         <div className="space-y-3 mb-6">
           {reminders.map(rem => (
             <div key={rem.id} className="flex flex-col sm:flex-row sm:items-center justify-between border border-gray-100 dark:border-gray-700 rounded-2xl p-4 bg-gray-50 dark:bg-gray-800/50 gap-4">
               <div className="flex items-center gap-3 flex-1">
                 <div className={`p-2 rounded-xl flex-shrink-0 ${rem.enabled ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/50 dark:text-emerald-400' : 'bg-gray-200 text-gray-400 dark:bg-gray-700 dark:text-gray-500'}`}>
-                  <Clock size={20} />
+                  {rem.isZikr ? <Sparkles size={20} /> : <Clock size={20} />}
                 </div>
                 <div>
                   <h3 className={`font-bold ${rem.enabled ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500'}`}>{rem.time}</h3>
-                  <p className={`text-sm ${rem.enabled ? 'text-gray-500 dark:text-gray-400' : 'text-gray-400 dark:text-gray-600'}`}>{rem.label}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className={`text-sm ${rem.enabled ? 'text-gray-500 dark:text-gray-400' : 'text-gray-400 dark:text-gray-600'}`}>{rem.label}</p>
+                    {rem.isZikr && (
+                      <span className="text-[10px] bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300 font-bold px-1.5 py-0.5 rounded-full uppercase tracking-wider">
+                        Zikr
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
               <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto">
@@ -463,27 +730,109 @@ export const UserProfile: React.FC = () => {
         </div>
 
         <div className="bg-emerald-50/50 dark:bg-emerald-900/10 rounded-2xl p-4 border border-emerald-100 dark:border-emerald-800/30">
-          <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-3">{t('profile.reminders.addTitle', 'Ajouter un rappel')}</h4>
-          <div className="flex flex-col sm:flex-row gap-3">
-            <input 
-              type="time" 
-              value={newTime}
-              onChange={e => setNewTime(e.target.value)}
-              className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:text-white"
-            />
-            <input 
-              type="text" 
-              placeholder={t('profile.reminders.placeholder', 'Ex: Wird du matin')}
-              value={newLabel}
-              onChange={e => setNewLabel(e.target.value)}
-              className="flex-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:text-white"
-            />
+          <h4 className="text-sm font-bold text-gray-900 dark:text-white mb-3">
+            {t('profile.reminders.addTitle', 'Ajouter un rappel')}
+          </h4>
+          
+          <div className="flex gap-2 mb-4 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl w-fit">
+            <button
+              type="button"
+              onClick={() => setReminderType('simple')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                reminderType === 'simple'
+                  ? 'bg-white dark:bg-gray-750 text-emerald-600 dark:text-emerald-400 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+              }`}
+            >
+              Rappel Simple
+            </button>
+            <button
+              type="button"
+              onClick={() => setReminderType('zikr')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                reminderType === 'zikr'
+                  ? 'bg-white dark:bg-gray-750 text-emerald-600 dark:text-emerald-400 shadow-sm'
+                  : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+              }`}
+            >
+              📿 Rappel de Zikr
+            </button>
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col md:flex-row gap-3">
+              <div className="flex flex-col gap-1 w-full md:w-1/4">
+                <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Heure du rappel</label>
+                <input 
+                  type="time" 
+                  value={newTime}
+                  onChange={e => setNewTime(e.target.value)}
+                  className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:text-white h-10 w-full"
+                />
+              </div>
+
+              {reminderType === 'simple' ? (
+                <div className="flex-1 flex flex-col gap-1 w-full">
+                  <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Libellé du rappel</label>
+                  <input 
+                    type="text" 
+                    placeholder={t('profile.reminders.placeholder', 'Ex: Wird du matin')}
+                    value={newLabel}
+                    onChange={e => setNewLabel(e.target.value)}
+                    className="flex-1 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:text-white h-10 w-full"
+                  />
+                </div>
+              ) : (
+                <div className="flex-1 flex flex-col sm:flex-row gap-3 w-full">
+                  <div className="flex-1 flex flex-col gap-1">
+                    <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Sélectionner un Zikr</label>
+                    <select
+                      value={selectedZikrId}
+                      onChange={e => setSelectedZikrId(e.target.value)}
+                      className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:text-white h-10 w-full"
+                    >
+                      {PRESET_ZIKRS.map(z => (
+                        <option key={z.id} value={z.id}>
+                          {z.text} {z.arabic ? `(${z.arabic})` : ''} {z.id !== 'custom' ? ` - ${z.target}x` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {selectedZikrId === 'custom' && (
+                    <>
+                      <div className="flex-1 flex flex-col gap-1">
+                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Nom du Zikr personnalisé</label>
+                        <input
+                          type="text"
+                          placeholder="Ex: Astaghfirullah Al-Azim"
+                          value={customZikrName}
+                          onChange={e => setCustomZikrName(e.target.value)}
+                          className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:text-white h-10 w-full"
+                        />
+                      </div>
+                      <div className="w-full sm:w-24 flex flex-col gap-1">
+                        <label className="text-xs font-medium text-gray-500 dark:text-gray-400">Objectif</label>
+                        <input
+                          type="number"
+                          min="1"
+                          value={customZikrTarget}
+                          onChange={e => setCustomZikrTarget(parseInt(e.target.value, 10) || 100)}
+                          className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:text-white h-10 w-full"
+                        />
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+
             <button 
               onClick={addReminder}
-              disabled={!newLabel}
-              className="bg-emerald-600 text-white rounded-xl px-4 py-2 text-sm font-bold disabled:opacity-50 hover:bg-emerald-700 transition-colors whitespace-nowrap shadow-sm"
+              disabled={reminderType === 'simple' ? !newLabel : (selectedZikrId === 'custom' ? !customZikrName : false)}
+              className="mt-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl px-4 py-2.5 text-sm font-bold disabled:opacity-50 transition-colors shadow-sm flex items-center justify-center gap-2"
             >
-              {t('common.add', 'Ajouter')}
+              <Plus size={16} /> Ajouter le rappel de Zikr quotidien
             </button>
           </div>
         </div>
@@ -557,14 +906,14 @@ export const UserProfile: React.FC = () => {
         ) : (
           <div className="flex flex-col gap-4 items-start">
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Passez à la version Premium pour débloquer toutes les fonctionnalités et supprimer les publicités.
+              {t('ad.profilePromo', 'Passez à la version Premium pour débloquer toutes les fonctionnalités et supprimer les publicités.')}
             </p>
             <Link
               to="/payment"
               className="bg-gradient-to-r from-amber-400 to-orange-500 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:opacity-90 transition-opacity"
             >
               <Star size={18} />
-              Devenir Premium
+              {t('ad.becomePremium', 'Devenir Premium')}
             </Link>
           </div>
         )}
@@ -622,6 +971,130 @@ export const UserProfile: React.FC = () => {
             <Sparkles size={16} />
             {syncMessage}
           </motion.div>
+        )}
+
+        <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h4 className="font-bold text-gray-900 dark:text-white text-sm">
+              Sauvegarde automatique sur Firestore
+            </h4>
+            <p className="text-xs text-gray-500 dark:text-gray-450 mt-1 leading-relaxed">
+              Désactivez cette option pour économiser vos données mobiles. Vos modifications seront conservées localement.
+            </p>
+          </div>
+          <div 
+            onClick={() => {
+              const current = localStorage.getItem('asrar_auto_save_firestore') !== 'false';
+              const next = !current;
+              localStorage.setItem('asrar_auto_save_firestore', next.toString());
+              setAutoSave(next);
+            }}
+            className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors ${autoSave ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+          >
+            <motion.div 
+              className="w-4 h-4 bg-white rounded-full shadow-sm"
+              animate={{ x: autoSave ? 24 : 0 }}
+              transition={{ type: "spring", stiffness: 500, damping: 30 }}
+            />
+          </div>
+        </div>
+      </CollapsibleSection>
+
+      <CollapsibleSection
+        title={t('profile.sessions.title', 'Sessions actives')}
+        icon={<Smartphone className="text-emerald-500" size={20} />}
+      >
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-5 leading-relaxed">
+          {t('profile.sessions.subtitle', 'Gérez les appareils connectés à votre compte spirituel. Vous pouvez révoquer l\'accès à tout moment pour déconnecter un appareil à distance.')}
+        </p>
+
+        {!user ? (
+          <div className="text-center py-6 bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-700">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+              {t('profile.sessions.loginRequired', 'Veuillez vous connecter pour gérer vos sessions actives.')}
+            </p>
+            <button
+              onClick={() => setShowAuthModal(true)}
+              className="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-4 py-2 rounded-xl transition-all shadow-sm"
+            >
+              <LogIn size={14} />
+              {t('auth.login', 'Se connecter')}
+            </button>
+          </div>
+        ) : loadingSessions ? (
+          <div className="flex items-center justify-center py-6">
+            <RefreshCw className="animate-spin text-emerald-500" size={24} />
+          </div>
+        ) : activeSessions.length === 0 ? (
+          <div className="text-center py-6 bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {t('profile.sessions.noSessions', 'Aucune session active trouvée.')}
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {activeSessions.map((session) => {
+              const isCurrent = session.id === currentSessionId;
+              return (
+                <div 
+                  key={session.id} 
+                  className={`flex flex-col sm:flex-row sm:items-center justify-between border rounded-2xl p-4 gap-4 transition-all ${
+                    isCurrent 
+                      ? 'border-emerald-200 bg-emerald-50/30 dark:border-emerald-800/30 dark:bg-emerald-950/10' 
+                      : 'border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`p-2.5 rounded-xl ${
+                      isCurrent 
+                        ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/50 dark:text-emerald-400' 
+                        : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400'
+                    }`}>
+                      {session.deviceType === 'mobile' ? (
+                        <Smartphone size={20} />
+                      ) : session.deviceType === 'tablet' ? (
+                        <Tablet size={20} />
+                      ) : (
+                        <Laptop size={20} />
+                      )}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-gray-900 dark:text-white text-sm sm:text-base">
+                          {t('profile.sessions.deviceFormat', '{browser} sur {os}').replace('{browser}', session.browser).replace('{os}', session.os)}
+                        </span>
+                        {isCurrent && (
+                          <span className="text-[10px] sm:text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/40 px-2 py-0.5 rounded-full">
+                            {t('profile.sessions.current', 'Cet appareil')}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5 flex items-center gap-1.5 flex-wrap">
+                        <span className="flex items-center gap-1">
+                          <Globe size={12} />
+                          {session.ip}
+                        </span>
+                        <span className="hidden sm:inline">•</span>
+                        <span>
+                          {t('profile.sessions.lastActive', 'Actif :')} {new Date(session.lastActive).toLocaleString()}
+                        </span>
+                      </p>
+                    </div>
+                  </div>
+                  {!isCurrent && (
+                    <button
+                      onClick={() => revokeSession(session.id)}
+                      className="text-xs text-red-500 hover:text-red-600 font-bold flex items-center gap-1 px-3 py-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20 self-end sm:self-center transition-colors"
+                      title={t('profile.sessions.revokeTooltip', 'Déconnecter cet appareil')}
+                    >
+                      <Trash2 size={14} />
+                      {t('profile.sessions.revoke', 'Déconnecter')}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         )}
       </CollapsibleSection>
 

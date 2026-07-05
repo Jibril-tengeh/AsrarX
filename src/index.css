@@ -118,3 +118,26 @@ body {
   word-break: break-all;
 }
 
+/* Hide scrollbar for Chrome, Safari and Opera */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.hide-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+/* Clear fixed header across all screens and prevent overlap */
+.safe-area-pt {
+  padding-top: 5rem;
+}
+
+@media (min-width: 640px) {
+  .safe-area-pt {
+    padding-top: 6rem;
+  }
+}
+
+

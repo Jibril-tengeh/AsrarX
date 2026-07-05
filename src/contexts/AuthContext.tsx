@@ -1,7 +1,48 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
-import { doc, getDoc, onSnapshot } from 'firebase/firestore';
-import { auth, db } from '../lib/firebase';
+import { doc, getDoc, onSnapshot, setDoc, deleteDoc } from 'firebase/firestore';
+import { auth, db, signOut } from '../lib/firebase';
+
+const parseUserAgent = (ua: string) => {
+  let os = 'Inconnu';
+  let browser = 'Inconnu';
+  let deviceType = 'desktop';
+
+  // Device Type
+  if (/mobi/i.test(ua)) {
+    deviceType = 'mobile';
+  } else if (/ipad|tablet/i.test(ua)) {
+    deviceType = 'tablet';
+  }
+
+  // OS
+  if (/windows/i.test(ua)) {
+    os = 'Windows';
+  } else if (/macintosh|mac os x/i.test(ua)) {
+    os = 'macOS';
+  } else if (/iphone|ipad|ipod/i.test(ua)) {
+    os = 'iOS';
+  } else if (/android/i.test(ua)) {
+    os = 'Android';
+  } else if (/linux/i.test(ua)) {
+    os = 'Linux';
+  }
+
+  // Browser
+  if (/chrome|crios/i.test(ua) && !/edge|edg/i.test(ua) && !/opr/i.test(ua)) {
+    browser = 'Chrome';
+  } else if (/safari/i.test(ua) && !/chrome/i.test(ua) && !/chromium/i.test(ua)) {
+    browser = 'Safari';
+  } else if (/firefox|fxios/i.test(ua)) {
+    browser = 'Firefox';
+  } else if (/edge|edg/i.test(ua)) {
+    browser = 'Edge';
+  } else if (/opr/i.test(ua) || /opera/i.test(ua)) {
+    browser = 'Opera';
+  }
+
+  return { os, browser, deviceType };
+};
 
 interface UserData {
   uid: string;
@@ -37,11 +78,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   useEffect(() => {
     let unsubscribeDoc: (() => void) | null = null;
+    let unsubscribeSession: (() => void) | null = null;
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
       if (unsubscribeDoc) {
         unsubscribeDoc();
         unsubscribeDoc = null;
+      }
+      if (unsubscribeSession) {
+        unsubscribeSession();
+        unsubscribeSession = null;
       }
 
       if (firebaseUser) {
@@ -50,6 +96,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         
         const userRef = doc(db, 'users', firebaseUser.uid);
         
+        // --- Track Active Session ---
+        let sessionId = localStorage.getItem('asrarhub_session_id');
+        if (!sessionId) {
+          sessionId = 'sess_' + Math.random().toString(36).substring(2, 11);
+          localStorage.setItem('asrarhub_session_id', sessionId);
+        }
+
+        const sessionRef = doc(db, 'users', firebaseUser.uid, 'sessions', sessionId);
+        const { os, browser, deviceType } = parseUserAgent(navigator.userAgent);
+        
+        setDoc(sessionRef, {
+          id: sessionId,
+          userAgent: navigator.userAgent,
+          os,
+          browser,
+          deviceType,
+          lastActive: new Date().toISOString(),
+          ip: 'Client Direct'
+        }, { merge: true }).then(() => {
+          unsubscribeSession = onSnapshot(sessionRef, (sessSnap) => {
+            if (!sessSnap.exists()) {
+              signOut().then(() => {
+                localStorage.removeItem('asrarhub_session_id');
+              });
+            }
+          }, (err) => {
+            console.warn("AuthContext sessions onSnapshot error (operating offline):", err);
+          });
+        }).catch(err => console.error("Error writing session:", err));
+        // ----------------------------
+
         // Auto-promote to admin in DB if email matches
         const adminEmails = ['jibriltengeh4@gmail.com', 'sbireino@gmail.com', 'tenibawwal10@gmail.com', 'jibriltengeh57@gmail.com'];
         if (firebaseUser.email && adminEmails.includes(firebaseUser.email.toLowerCase())) {
@@ -65,6 +142,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                   await setDoc(userRef, { email: firebaseUser.email, role: 'admin', createdAt: new Date() });
                 } catch (e) { console.error("Auto-promote set error:", e) }
              }
+          }).catch(e => {
+            console.warn("Auto-promote getDoc error (operating offline):", e);
           });
         }
         
@@ -141,6 +220,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       if (unsubscribeDoc) {
         unsubscribeDoc();
+      }
+      if (unsubscribeSession) {
+        unsubscribeSession();
       }
       unsubscribeAuth();
     };

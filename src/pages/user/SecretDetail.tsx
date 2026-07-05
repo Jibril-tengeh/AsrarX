@@ -19,7 +19,11 @@ import {
   Users,
   Crown,
   Maximize2,
-  X
+  X,
+  Sliders,
+  Volume2,
+  VolumeX,
+  Folder
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { getAsrarItems } from "../../data/store";
@@ -28,6 +32,7 @@ import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { useAuth } from '../../contexts/AuthContext';
 import { AuthModal } from '../../components/AuthModal';
+import { InteractiveLexiconText } from "../../components/InteractiveLexiconText";
 
 const AccordionSection: React.FC<{ title: string, htmlContent: string, readingMode: boolean }> = ({ title, htmlContent, readingMode }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -65,10 +70,67 @@ export const SecretDetail: React.FC = () => {
   const [zenMode, setZenMode] = useState(false);
   const [zenFontSize, setZenFontSize] = useState<'sm' | 'md' | 'lg' | 'xl'>('lg');
   const [zenTheme, setZenTheme] = useState<'cream' | 'dark' | 'white'>('cream');
+  const [showZenSettings, setShowZenSettings] = useState(false);
+  const [zenFont, setZenFont] = useState<'uthmani' | 'naskh' | 'indopak' | 'serif' | 'sans'>('uthmani');
+  const [zenBrightness, setZenBrightness] = useState<number>(100);
+  const [zenFontSizePx, setZenFontSizePx] = useState<number>(22);
   const [isBookmarked, setIsBookmarked] = useState(false);
+  const [bookmarkFolders, setBookmarkFolders] = useState<any[]>([]);
   const [viewMode, setViewMode] = useState<'full' | 'accordion'>('full');
   const [rating, setRating] = useState(0);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+
+  // Stop any reading when leaving page
+  useEffect(() => {
+    return () => {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, []);
+
+  const stripHtml = (html: string) => {
+    const tmp = document.createElement("DIV");
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || "";
+  };
+
+  const handleLectureVocale = () => {
+    if (!item) return;
+    if ('speechSynthesis' in window) {
+      if (isSpeaking) {
+        window.speechSynthesis.cancel();
+        setIsSpeaking(false);
+      } else {
+        // Build readable text: Title + verse (if any) + content text (HTML stripped)
+        const textToRead = `${item.title}. ${item.verse ? item.verse + '.' : ''} ${stripHtml(item.content)}`;
+        const newUtterance = new SpeechSynthesisUtterance(textToRead);
+        
+        // Match speech voice to active interface language
+        if (language === 'en') {
+          newUtterance.lang = 'en-US';
+        } else if (language === 'ha') {
+          newUtterance.lang = 'ha-NG';
+        } else {
+          newUtterance.lang = 'fr-FR';
+        }
+
+        newUtterance.onend = () => {
+          setIsSpeaking(false);
+        };
+
+        newUtterance.onerror = () => {
+          setIsSpeaking(false);
+        };
+
+        window.speechSynthesis.speak(newUtterance);
+        setIsSpeaking(true);
+      }
+    } else {
+      alert("La synthèse vocale n'est pas supportée par votre navigateur.");
+    }
+  };
 
   useEffect(() => {
     if (zenMode) {
@@ -84,6 +146,11 @@ export const SecretDetail: React.FC = () => {
   useEffect(() => {
     // Scroll to top when loading
     window.scrollTo(0, 0);
+    try {
+      setBookmarkFolders(JSON.parse(localStorage.getItem('asrar_bookmark_folders') || '[]'));
+    } catch (e) {
+      setBookmarkFolders([]);
+    }
     const items = getAsrarItems();
     const foundItem = items.find((i) => i.id === id);
     
@@ -104,6 +171,17 @@ export const SecretDetail: React.FC = () => {
       setItem(foundItem);
       checkBookmark(foundItem.id);
     } else if (id) {
+      // Pre-load from local offline details cache for instant view
+      try {
+        const cachedDetails = JSON.parse(localStorage.getItem('asrarhub_cached_article_details') || '{}');
+        if (cachedDetails[id]) {
+          setItem(cachedDetails[id]);
+          checkBookmark(id);
+        }
+      } catch (e) {
+        console.error("Error reading cached article detail", e);
+      }
+
       // Try to fetch from Firestore
       const fetchFromFirestore = async () => {
         try {
@@ -119,7 +197,7 @@ export const SecretDetail: React.FC = () => {
               activeHook = activeContent.replace(/<[^>]+>/g, '').substring(0, 120) + '...';
             }
             
-            setItem({
+            const fetchedItem: AsrarItem = {
               id: docSnap.id,
               title: activeTitle,
               hook: activeHook,
@@ -129,14 +207,41 @@ export const SecretDetail: React.FC = () => {
               imageUrl: data.thumbnail,
               isPremium: data.isPremium || false,
               createdAt: data.createdAt ? new Date(data.createdAt).toISOString() : new Date().toISOString()
-            } as AsrarItem);
+            };
+
+            setItem(fetchedItem);
             checkBookmark(docSnap.id);
+
+            // Save to local cache
+            try {
+              const cachedDetails = JSON.parse(localStorage.getItem('asrarhub_cached_article_details') || '{}');
+              cachedDetails[id] = fetchedItem;
+              localStorage.setItem('asrarhub_cached_article_details', JSON.stringify(cachedDetails));
+            } catch (e) {
+              console.error("Error saving article to offline cache", e);
+            }
           } else {
-            setNotFound(true);
+            // Check if we have a cached version
+            const cachedDetails = JSON.parse(localStorage.getItem('asrarhub_cached_article_details') || '{}');
+            if (cachedDetails[id]) {
+              setItem(cachedDetails[id]);
+            } else {
+              setNotFound(true);
+            }
           }
         } catch (error) {
           console.error("Error fetching article from Firestore", error);
-          setNotFound(true);
+          // Fallback to offline cache
+          try {
+            const cachedDetails = JSON.parse(localStorage.getItem('asrarhub_cached_article_details') || '{}');
+            if (cachedDetails[id]) {
+              setItem(cachedDetails[id]);
+            } else {
+              setNotFound(true);
+            }
+          } catch (e) {
+            setNotFound(true);
+          }
         }
       };
       fetchFromFirestore();
@@ -219,14 +324,14 @@ export const SecretDetail: React.FC = () => {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center text-center p-6">
         <BookOpen size={48} className="text-gray-300 dark:text-gray-600 mb-4" />
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Article introuvable</h2>
-        <p className="text-gray-500 dark:text-gray-400 mb-6">Cet article a peut-être été supprimé ou l'URL est incorrecte.</p>
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{t("secretDetail.articleNotFound", "Article introuvable")}</h2>
+        <p className="text-gray-500 dark:text-gray-400 mb-6">{t("secretDetail.articleNotFoundDesc", "Cet article a peut-être été supprimé ou l'URL est incorrecte.")}</p>
         <button
           onClick={() => navigate(-1)}
           className="flex items-center space-x-2 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition-colors"
         >
           <ArrowLeft size={20} />
-          <span>Retourner</span>
+          <span>{t("secretDetail.backBtn", "Retourner")}</span>
         </button>
       </div>
     );
@@ -291,13 +396,30 @@ export const SecretDetail: React.FC = () => {
           >
             <BookType size={22} />
           </button>
+          
+          {/* Lecture Vocale (Text-To-Speech) Button */}
+          <button
+            onClick={handleLectureVocale}
+            className={`p-2 rounded-full transition-all flex items-center gap-1.5 ${
+              isSpeaking 
+                ? "bg-red-500 hover:bg-red-600 text-white shadow-md animate-pulse font-bold px-3 py-1.5" 
+                : readingMode
+                  ? "bg-[#f4ebd0] text-[#8b6e3f] hover:bg-[#e8dcb5] dark:bg-[#383120] dark:text-[#d4c39c] dark:hover:bg-[#4a3f35] font-bold px-3 py-1.5"
+                  : "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-100/50 dark:border-emerald-800/30 font-bold px-3 py-1.5 hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
+            }`}
+            title={isSpeaking ? t("secretDetail.lectureVocaleStop", "Arrêter la lecture") : t("secretDetail.lectureVocalePlay", "Lecture Vocale")}
+          >
+            {isSpeaking ? <VolumeX size={15} /> : <Volume2 size={15} />}
+            <span className="text-xs">{isSpeaking ? t("secretDetail.lectureVocaleStop", "Arrêter") : t("secretDetail.lectureVocalePlay", "Lecture Vocale")}</span>
+          </button>
+
           <button
             onClick={() => setZenMode(true)}
             className="p-2 rounded-full transition-all flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-100/50 dark:border-emerald-800/30 font-bold px-3 py-1.5 hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
-            title="Mode Zen (Plein Écran)"
+            title={t("secretDetail.zenModeTitle", "Mode Zen (Plein Écran)")}
           >
             <Maximize2 size={15} />
-            <span className="text-xs">Mode Zen</span>
+            <span className="text-xs">{t("secretDetail.zenModeBtn", "Mode Zen")}</span>
           </button>
           <button
             onClick={toggleBookmark}
@@ -308,32 +430,54 @@ export const SecretDetail: React.FC = () => {
         </div>
       </div>
 
-      {isBookmarked && (
-        <div className={`mb-6 p-3 rounded-xl flex items-center justify-between ${readingMode ? "max-w-3xl mx-auto bg-[#f4ebd0]/30 dark:bg-[#383120]/30" : "bg-gray-50 dark:bg-gray-800"}`}>
-          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Classer dans un dossier :</span>
+      {isBookmarked && item && (
+        <div className={`mb-6 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${readingMode ? "max-w-3xl mx-auto bg-[#f4ebd0]/40 dark:bg-[#383120]/40 border border-[#e8dcb5] dark:border-[#524830]/30" : "bg-emerald-50/50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-800/30"}`}>
+          <div className="flex items-center gap-2">
+            <span className="p-1.5 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 rounded-lg">
+              <Folder size={16} />
+            </span>
+            <span className="text-sm font-semibold text-gray-800 dark:text-gray-200">
+              {t("secretDetail.bookmarkFolder", "Classer ce secret :")}
+            </span>
+          </div>
+          
           <select 
-            defaultValue={JSON.parse(localStorage.getItem('asrar_bookmark_folders') || '[]').find((f: any) => f.items.includes(item.id))?.id || ""}
+            value={bookmarkFolders.find((f: any) => f.items.includes(item.id))?.id || ""}
             onChange={(e) => {
-              const folderId = e.target.value;
-              try {
-                const parsedFolders = JSON.parse(localStorage.getItem('asrar_bookmark_folders') || '[]');
-                const newFolders = parsedFolders.map((f: any) => {
+              const val = e.target.value;
+              if (val === '__new__') {
+                const name = prompt("Nom du nouveau dossier :");
+                if (name && name.trim()) {
+                  const newId = Date.now().toString();
+                  const newFolder = { id: newId, name: name.trim(), items: [item.id] };
+                  
+                  const updated = bookmarkFolders.map((f: any) => {
+                    f.items = f.items.filter((id: string) => id !== item.id);
+                    return f;
+                  });
+                  const finalFolders = [...updated, newFolder];
+                  setBookmarkFolders(finalFolders);
+                  localStorage.setItem('asrar_bookmark_folders', JSON.stringify(finalFolders));
+                }
+              } else {
+                const updated = bookmarkFolders.map((f: any) => {
                   f.items = f.items.filter((id: string) => id !== item.id);
-                  if (f.id === folderId) {
+                  if (f.id === val) {
                     f.items.push(item.id);
                   }
                   return f;
                 });
-                localStorage.setItem('asrar_bookmark_folders', JSON.stringify(newFolders));
-                alert("Dossier mis à jour !");
-              } catch (err) {}
+                setBookmarkFolders(updated);
+                localStorage.setItem('asrar_bookmark_folders', JSON.stringify(updated));
+              }
             }}
-            className="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="bg-white dark:bg-gray-850 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium cursor-pointer"
           >
-            <option value="">-- Sélectionnez --</option>
-            {JSON.parse(localStorage.getItem('asrar_bookmark_folders') || '[]').map((f: any) => (
+            <option value="">📁 Aucun dossier</option>
+            {bookmarkFolders.map((f: any) => (
               <option key={f.id} value={f.id}>{f.name}</option>
             ))}
+            <option value="__new__" className="text-emerald-600 dark:text-emerald-400 font-bold">+ Nouveau dossier...</option>
           </select>
         </div>
       )}
@@ -428,13 +572,7 @@ export const SecretDetail: React.FC = () => {
                   const isHtml = /<[a-z][\s\S]*>/i.test(item.content);
 
                   if (viewMode === 'full') {
-                    if (isHtml) {
-                      return <div dangerouslySetInnerHTML={{ __html: item.content }} className="prose dark:prose-invert max-w-none" />;
-                    } else {
-                      return item.content.split("\n").map((paragraph, idx) => (
-                        <p key={idx} className="mb-6">{paragraph}</p>
-                      ));
-                    }
+                    return <InteractiveLexiconText content={item.content} isHtml={isHtml} />;
                   }
 
                   if (viewMode === 'accordion') {
@@ -486,7 +624,7 @@ export const SecretDetail: React.FC = () => {
             {/* Rating Section */}
             <div className="mt-12 pt-8 border-t border-gray-100 dark:border-gray-700">
               <div className="flex flex-col items-center justify-center">
-                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">Évaluez cet article</h3>
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-4">{t("secretDetail.rateArticle", "Évaluez cet article")}</h3>
                 <div className="flex items-center gap-2">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <button
@@ -504,8 +642,8 @@ export const SecretDetail: React.FC = () => {
                         size={32}
                         className={`${
                           (rating || 0) >= star
-                            ? "text-yellow-400 fill-yellow-400"
-                            : "text-gray-300 dark:text-gray-600"
+                        ? "text-yellow-400 fill-yellow-400"
+                        : "text-gray-300 dark:text-gray-600"
                         } transition-colors`}
                       />
                     </button>
@@ -513,7 +651,7 @@ export const SecretDetail: React.FC = () => {
                 </div>
                 {rating > 0 && (
                   <p className="text-emerald-600 dark:text-emerald-400 text-sm mt-3 font-medium">
-                    Merci pour votre évaluation ! ({rating}/5)
+                    {t("secretDetail.thankYouRating", "Merci pour votre évaluation !")} ({rating}/5)
                   </p>
                 )}
               </div>
@@ -539,8 +677,17 @@ export const SecretDetail: React.FC = () => {
                 : "bg-white text-gray-900"
             }`}
           >
+            {/* Integrated Brightness Dimmer Overlay */}
+            <div 
+              className="fixed inset-0 pointer-events-none bg-black transition-opacity duration-300"
+              style={{ 
+                opacity: (100 - zenBrightness) / 100,
+                zIndex: 99990
+              }}
+            />
+
             {/* Top Toolbar */}
-            <div className={`w-full max-w-2xl flex flex-col sm:flex-row items-center justify-between gap-4 mb-10 pb-4 border-b shrink-0 ${
+            <div className={`w-full max-w-2xl flex flex-col sm:flex-row items-center justify-between gap-4 mb-10 pb-4 border-b shrink-0 relative z-[99995] ${
               zenTheme === "cream" ? "border-[#e8dcb5]/60" : zenTheme === "dark" ? "border-stone-850/60" : "border-gray-150"
             }`}>
               <button
@@ -554,7 +701,7 @@ export const SecretDetail: React.FC = () => {
                 }`}
               >
                 <ArrowLeft size={16} />
-                <span>Quitter le mode Zen</span>
+                <span>{t("secretDetail.exitZenMode", "Quitter le mode Zen")}</span>
               </button>
 
               <div className="flex flex-wrap items-center gap-3">
@@ -565,64 +712,133 @@ export const SecretDetail: React.FC = () => {
                   <button
                     onClick={() => setZenTheme("cream")}
                     className={`w-5 h-5 rounded-full bg-[#fdfbf7] border ${zenTheme === "cream" ? "ring-2 ring-emerald-500 border-transparent" : "border-stone-300"}`}
-                    title="Crème"
+                    title={t("secretDetail.themeCream", "Crème")}
                   />
                   <button
                     onClick={() => setZenTheme("dark")}
                     className={`w-5 h-5 rounded-full bg-[#121214] border ${zenTheme === "dark" ? "ring-2 ring-emerald-500 border-transparent" : "border-stone-700"}`}
-                    title="Sombre"
+                    title={t("secretDetail.themeDark", "Sombre")}
                   />
                   <button
                     onClick={() => setZenTheme("white")}
                     className={`w-5 h-5 rounded-full bg-white border ${zenTheme === "white" ? "ring-2 ring-emerald-500 border-transparent" : "border-gray-350"}`}
-                    title="Clair"
+                    title={t("secretDetail.themeLight", "Clair")}
                   />
                 </div>
 
-                {/* Font Size Selector */}
-                <div className={`flex items-center rounded-xl p-1 border text-xs font-bold ${
-                  zenTheme === "cream" ? "bg-[#f4ebd0]/40 border-[#e8dcb5]/40" : zenTheme === "dark" ? "bg-stone-900/40 border-stone-800/40" : "bg-gray-50 border-gray-100"
-                }`}>
-                  <button
-                    onClick={() => {
-                      if (zenFontSize === "xl") setZenFontSize("lg");
-                      else if (zenFontSize === "lg") setZenFontSize("md");
-                      else if (zenFontSize === "md") setZenFontSize("sm");
-                    }}
-                    disabled={zenFontSize === "sm"}
-                    className="px-2 py-1 hover:opacity-80 disabled:opacity-30 transition-opacity"
-                    title="Texte plus petit"
-                  >
-                    A-
-                  </button>
-                  <span className="opacity-50 px-1 font-normal">Taille</span>
-                  <button
-                    onClick={() => {
-                      if (zenFontSize === "sm") setZenFontSize("md");
-                      else if (zenFontSize === "md") setZenFontSize("lg");
-                      else if (zenFontSize === "lg") setZenFontSize("xl");
-                    }}
-                    disabled={zenFontSize === "xl"}
-                    className="px-2 py-1 hover:opacity-80 disabled:opacity-30 transition-opacity"
-                    title="Texte plus grand"
-                  >
-                    A+
-                  </button>
-                </div>
+                {/* Customizable Display Options Dropdown Toggle */}
+                <button
+                  onClick={() => setShowZenSettings(!showZenSettings)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all border ${
+                    zenTheme === "cream"
+                      ? "hover:bg-[#f4ebd0] text-[#8b7556] border-[#e8dcb5]"
+                      : zenTheme === "dark"
+                      ? "hover:bg-stone-800 text-stone-400 border-stone-850"
+                      : "hover:bg-gray-100 text-gray-500 border-gray-200"
+                  }`}
+                  title="Personnaliser l'affichage"
+                >
+                  <Sliders size={14} />
+                  <span>Options</span>
+                </button>
               </div>
+
+              {/* Customizable Settings Float Menu */}
+              <AnimatePresence>
+                {showZenSettings && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className={`absolute top-14 right-0 z-[100000] w-72 sm:w-80 p-5 rounded-2xl shadow-2xl border ${
+                      zenTheme === "cream"
+                        ? "bg-[#fdfbf7] border-[#e8dcb5] text-[#3c2f2f]"
+                        : zenTheme === "dark"
+                        ? "bg-[#1c1c1e] border-stone-800 text-stone-200"
+                        : "bg-white border-gray-200 text-gray-800"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between border-b pb-2 mb-4 border-gray-200 dark:border-stone-800">
+                      <h3 className="font-bold text-sm">Options de Lecture</h3>
+                      <button onClick={() => setShowZenSettings(false)} className="opacity-75 hover:opacity-100">
+                        <X size={16} />
+                      </button>
+                    </div>
+
+                    {/* Font Family Selection */}
+                    <div className="mb-4">
+                      <label className="block text-xs font-bold uppercase tracking-wider mb-2 opacity-75">Police de caractères</label>
+                      <div className="grid grid-cols-2 gap-1.5 text-xs">
+                        {[
+                          { id: 'uthmani', label: 'Uthmani (Ar)' },
+                          { id: 'naskh', label: 'Naskh (Ar)' },
+                          { id: 'indopak', label: 'IndoPak (Ar)' },
+                          { id: 'serif', label: 'Sérif (Fr)' },
+                          { id: 'sans', label: 'Sans-Sérif' }
+                        ].map((f) => (
+                          <button
+                            key={f.id}
+                            onClick={() => setZenFont(f.id as any)}
+                            className={`py-1.5 px-2 rounded-lg font-medium border text-center transition-all ${
+                              zenFont === f.id
+                                ? "bg-emerald-600 text-white border-transparent"
+                                : zenTheme === "cream"
+                                ? "border-[#e8dcb5] hover:bg-[#f4ebd0]/50"
+                                : zenTheme === "dark"
+                                ? "border-stone-800 hover:bg-stone-900"
+                                : "border-gray-200 hover:bg-gray-50"
+                            }`}
+                          >
+                            {f.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Font Size Fine Tuning */}
+                    <div className="mb-4">
+                      <div className="flex justify-between items-center mb-1">
+                        <label className="block text-xs font-bold uppercase tracking-wider opacity-75">Taille du texte</label>
+                        <span className="text-xs font-bold">{zenFontSizePx}px</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="16"
+                        max="38"
+                        value={zenFontSizePx}
+                        onChange={(e) => setZenFontSizePx(Number(e.target.value))}
+                        className="w-full accent-emerald-600"
+                      />
+                    </div>
+
+                    {/* Integrated Brightness */}
+                    <div>
+                      <div className="flex justify-between items-center mb-1">
+                        <label className="block text-xs font-bold uppercase tracking-wider opacity-75">Luminosité intégrée</label>
+                        <span className="text-xs font-bold">{zenBrightness}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="20"
+                        max="100"
+                        value={zenBrightness}
+                        onChange={(e) => setZenBrightness(Number(e.target.value))}
+                        className="w-full accent-emerald-600"
+                      />
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
             {/* Content Container */}
             <div
-              className={`w-full max-w-2xl select-text select-none leading-relaxed transition-all pb-24 ${
-                zenFontSize === "sm"
-                  ? "text-base sm:text-lg leading-[1.8]"
-                  : zenFontSize === "md"
-                  ? "text-lg sm:text-xl leading-[1.9]"
-                  : zenFontSize === "lg"
-                  ? "text-xl sm:text-2xl leading-[2.0]"
-                  : "text-2xl sm:text-3xl leading-[2.1]"
-              }`}
+              className="w-full max-w-2xl select-text select-none leading-relaxed transition-all pb-24 relative z-[99992]"
+              style={{ 
+                fontSize: `${zenFontSizePx}px`,
+                fontFamily: `var(--font-${zenFont === 'serif' ? 'serif' : zenFont === 'sans' ? 'sans' : zenFont})`,
+                lineHeight: zenFont.includes('serif') || zenFont === 'sans' ? '1.8' : '2.2'
+              }}
             >
               <h1 className={`font-serif font-extrabold text-3xl sm:text-4xl md:text-5xl text-center mb-10 tracking-tight leading-tight ${
                 zenTheme === "cream" ? "text-[#4a3f35]" : zenTheme === "dark" ? "text-white" : "text-gray-900"
@@ -638,12 +854,11 @@ export const SecretDetail: React.FC = () => {
                     ? "bg-stone-900/40 border-stone-800/40"
                     : "bg-gray-50 border-gray-150"
                 }`}>
-                  <p className={`font-arabic text-center mb-6 leading-loose font-medium ${
-                    zenFontSize === "sm" ? "text-2xl sm:text-3xl" :
-                    zenFontSize === "md" ? "text-3xl sm:text-4xl" :
-                    zenFontSize === "lg" ? "text-4xl sm:text-5xl" :
-                    "text-5xl sm:text-6xl"
-                  }`} dir="rtl">
+                  <p 
+                    className={`text-center mb-6 leading-loose font-medium font-${zenFont === 'serif' || zenFont === 'sans' ? 'arabic' : zenFont}`} 
+                    style={{ fontSize: `${zenFontSizePx + 8}px` }}
+                    dir="rtl"
+                  >
                     " {item.verse} "
                   </p>
                   {item.reference && (
@@ -656,17 +871,14 @@ export const SecretDetail: React.FC = () => {
                 </div>
               )}
 
-              <div className="prose dark:prose-invert max-w-none font-serif tracking-wide text-justify">
-                {(() => {
-                  const isHtml = /<[a-z][\s\S]*>/i.test(item.content);
-                  if (isHtml) {
-                    return <div dangerouslySetInnerHTML={{ __html: item.content }} className="prose dark:prose-invert max-w-none font-serif text-justify" />;
-                  } else {
-                    return item.content.split("\n").map((paragraph, idx) => (
-                      <p key={idx} className="mb-6">{paragraph}</p>
-                    ));
-                  }
-                })()}
+              <div 
+                className="prose dark:prose-invert max-w-none text-justify"
+                style={{ 
+                  fontSize: `${zenFontSizePx}px`,
+                  fontFamily: `var(--font-${zenFont === 'serif' ? 'serif' : zenFont === 'sans' ? 'sans' : zenFont})`,
+                }}
+              >
+                <InteractiveLexiconText content={item.content} isHtml={/<[a-z][\s\S]*>/i.test(item.content)} />
               </div>
             </div>
           </motion.div>

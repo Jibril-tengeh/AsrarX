@@ -4,7 +4,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { motion, AnimatePresence } from 'motion/react';
-import html2canvas from 'html2canvas';
+import { toCanvas } from 'html-to-image';
 import { useAudio } from '../../../contexts/AudioContext';
 import { get, set } from 'idb-keyval';
 import { surahTranslations } from '../../../data/surahTranslations';
@@ -239,12 +239,16 @@ export const QuranFull: React.FC = () => {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const firebasePlaylists = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as RuqyahPlaylist));
       if (firebasePlaylists.length > 0) setRoqyaPlaylists(firebasePlaylists);
+    }, (error) => {
+      console.warn("QuranFull playlists onSnapshot error (operating offline):", error);
     });
     
     const qCol = query(collection(db, 'ruqyah_collections'), where('userId', '==', user.uid));
     const unsubscribeCol = onSnapshot(qCol, (snapshot) => {
       const firebaseCollections = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       if (firebaseCollections.length > 0) setRuqyahCollections(firebaseCollections);
+    }, (error) => {
+      console.warn("QuranFull collections onSnapshot error (operating offline):", error);
     });
     return () => { unsubscribe(); unsubscribeCol(); };
   }, [user]);
@@ -368,6 +372,24 @@ export const QuranFull: React.FC = () => {
         }
       }, 1500);
     }
+
+    // Check if a specific surah has been passed
+    const surahParam = params.get('surah');
+    if (surahParam) {
+      const sNum = Number(surahParam);
+      if (!isNaN(sNum) && sNum >= 1 && sNum <= 114) {
+        loadContent('surah', sNum);
+        const ayahParam = params.get('ayah');
+        if (ayahParam) {
+          setTimeout(() => {
+            const element = document.getElementById(`ayah-${ayahParam}`);
+            if (element) {
+              element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          }, 1500);
+        }
+      }
+    }
     
     // Check if we have a search query from dashboard
     const searchQuery = params.get('search');
@@ -393,42 +415,131 @@ export const QuranFull: React.FC = () => {
     setAdvancedSearchQuery(queryToUse);
     setIsSearching(true);
     setAdvancedSearchResults([]);
+
+    const normalizeArabicText = (text: string): string => {
+      return text
+        .replace(/[\u064B-\u0652\u0670\u0653\u0654\u0655]/g, '')
+        .replace(/\u0671/g, '\u0627')
+        .toLowerCase();
+    };
+
+    const isArabicText = (text: string): boolean => {
+      return /[\u0600-\u06FF]/.test(text);
+    };
+
+    const performLocalSearchFallback = async (queryStr: string): Promise<any[]> => {
+      try {
+        let quranData: any[] | undefined;
+        try {
+          // Attempt loading from IndexedDB first for offline capability
+          const cached = await get('asrar_quran_full_json');
+          if (cached && Array.isArray(cached)) {
+            quranData = cached;
+          }
+        } catch (idbErr) {
+          console.warn("Could not read Quran from IndexedDB:", idbErr);
+        }
+
+        if (!quranData) {
+          const qResponse = await fetch('/quran.json');
+          if (!qResponse.ok) return [];
+          quranData = await qResponse.json();
+          if (quranData && Array.isArray(quranData)) {
+            set('asrar_quran_full_json', quranData).catch(e => console.warn("Failed to cache quran.json:", e));
+          }
+        }
+
+        if (!quranData || !Array.isArray(quranData)) return [];
+        const matches: any[] = [];
+        
+        const isArQuery = isArabicText(queryStr);
+        const cleanQueryStr = isArQuery ? normalizeArabicText(queryStr) : queryStr.toLowerCase();
+
+        for (const surah of quranData) {
+          for (const ayah of surah.ayahs) {
+            const ayahAr = ayah.ar || ayah.text_clean || '';
+            const ayahClean = normalizeArabicText(ayahAr);
+            const ayahTr = (ayah.fr || ayah.en || ayah.text || '').toLowerCase();
+            
+            const isMatch = isArQuery 
+              ? ayahClean.includes(cleanQueryStr)
+              : ayahTr.includes(cleanQueryStr);
+
+            if (isMatch) {
+              matches.push({
+                number: ayah.id || ayah.number || (surah.id * 1000 + ayah.numberInSurah),
+                text: isArQuery ? ayahAr : (ayah.fr || ayah.en || ayah.text),
+                numberInSurah: ayah.numberInSurah,
+                matchLang: isArQuery ? undefined : (ayah.fr ? 'fr' : 'en'),
+                surah: {
+                  number: surah.id,
+                  name: surah.name,
+                  englishName: surah.transliteration || surah.name_en || '',
+                  englishNameTranslation: surah.translation || ''
+                }
+              });
+            }
+          }
+        }
+        return matches;
+      } catch (localErr) {
+        console.error("Local search failed:", localErr);
+        return [];
+      }
+    };
+
     try {
-      // Search in multiple languages simultaneously
-      const [arRes, frRes, enRes] = await Promise.all([
-        fetch(`https://api.alquran.cloud/v1/search/${encodeURIComponent(queryToUse)}/all/ar`).catch(() => null),
-        fetch(`https://api.alquran.cloud/v1/search/${encodeURIComponent(queryToUse)}/all/fr`).catch(() => null),
-        fetch(`https://api.alquran.cloud/v1/search/${encodeURIComponent(queryToUse)}/all/en`).catch(() => null)
-      ]);
+      const isAr = isArabicText(queryToUse);
+      const cleanQuery = isAr ? normalizeArabicText(queryToUse) : queryToUse;
 
       let allMatches: any[] = [];
-      
-      if (arRes && arRes.ok) {
-        const arData = await arRes.json();
-        if (arData.code === 200 && arData.data?.matches) allMatches = [...allMatches, ...arData.data.matches];
-      }
-      
-      if (frRes && frRes.ok) {
-        const frData = await frRes.json();
-        if (frData.code === 200 && frData.data?.matches) {
-          // Add language tag
-          const matchesWithLang = frData.data.matches.map((m: any) => ({...m, matchLang: 'fr'}));
-          allMatches = [...allMatches, ...matchesWithLang];
+
+      // If we are online, attempt remote search
+      if (navigator.onLine) {
+        try {
+          const promises = [
+            // Arabic: Simple Clean (highly robust, no diacritics)
+            fetch(`https://api.alquran.cloud/v1/search/${encodeURIComponent(cleanQuery)}/all/quran-simple-clean`)
+              .then(res => res.ok ? res.json() : null)
+              .then(data => (data?.code === 200 && data.data?.matches) ? data.data.matches : [])
+              .catch(() => []),
+
+            // Arabic: Simple text (retains original diacritics)
+            fetch(`https://api.alquran.cloud/v1/search/${encodeURIComponent(queryToUse)}/all/quran-simple`)
+              .then(res => res.ok ? res.json() : null)
+              .then(data => (data?.code === 200 && data.data?.matches) ? data.data.matches : [])
+              .catch(() => []),
+
+            // French: Hamidullah translation
+            fetch(`https://api.alquran.cloud/v1/search/${encodeURIComponent(queryToUse)}/all/fr.hamidullah`)
+              .then(res => res.ok ? res.json() : null)
+              .then(data => (data?.code === 200 && data.data?.matches) ? data.data.matches.map((m: any) => ({ ...m, matchLang: 'fr' })) : [])
+              .catch(() => []),
+
+            // English: Sahih International translation
+            fetch(`https://api.alquran.cloud/v1/search/${encodeURIComponent(queryToUse)}/all/en.sahih`)
+              .then(res => res.ok ? res.json() : null)
+              .then(data => (data?.code === 200 && data.data?.matches) ? data.data.matches.map((m: any) => ({ ...m, matchLang: 'en' })) : [])
+              .catch(() => [])
+          ];
+
+          const results = await Promise.all(promises);
+          allMatches = results.flat();
+        } catch (apiErr) {
+          console.warn("Remote API search failed, fallback to local search", apiErr);
+          allMatches = await performLocalSearchFallback(queryToUse);
         }
+      } else {
+        allMatches = await performLocalSearchFallback(queryToUse);
       }
 
-      if (enRes && enRes.ok) {
-        const enData = await enRes.json();
-        if (enData.code === 200 && enData.data?.matches) {
-           const matchesWithLang = enData.data.matches.map((m: any) => ({...m, matchLang: 'en'}));
-           allMatches = [...allMatches, ...matchesWithLang];
-        }
+      // If remote returned 0 results but user queried, try local search fallback as well
+      if (allMatches.length === 0) {
+        allMatches = await performLocalSearchFallback(queryToUse);
       }
       
-      // Deduplicate by ayah number to avoid showing the same verse 3 times if word is similar
-      // Wait, we WANT to show it, or maybe group them. Let's just deduplicate by verse number
-      // and prefer showing the translation that matched, or the arabic if matched
-      const uniqueMatches = [];
+      // Deduplicate by ayah number to avoid showing the same verse multiple times
+      const uniqueMatches: any[] = [];
       const seenAyahs = new Set();
       
       for (const match of allMatches) {
@@ -441,7 +552,12 @@ export const QuranFull: React.FC = () => {
       setAdvancedSearchResults(uniqueMatches);
     } catch (err) {
       console.error("Search error:", err);
-      setAdvancedSearchResults([]);
+      try {
+        const localMatches = await performLocalSearchFallback(queryToUse);
+        setAdvancedSearchResults(localMatches);
+      } catch (localErr) {
+        setAdvancedSearchResults([]);
+      }
     } finally {
       setIsSearching(false);
     }
@@ -545,14 +661,14 @@ export const QuranFull: React.FC = () => {
         originalOpacity = arabicTextNode.style.opacity || '1';
         arabicTextNode.style.opacity = '0';
       }
-      const canvasBg = await html2canvas(node, { useCORS: true, backgroundColor: document.documentElement.classList.contains('dark') && zoomedAyahBg === 0 ? '#111827' : null });
+      const canvasBg = await toCanvas(node, { backgroundColor: document.documentElement.classList.contains('dark') && zoomedAyahBg === 0 ? '#111827' : undefined });
       const dataUrlBg = canvasBg.toDataURL('image/png');
       
       // 2. Capture full image with text
       if (arabicTextNode) {
         arabicTextNode.style.opacity = originalOpacity;
       }
-      const canvasFull = await html2canvas(node, { useCORS: true, backgroundColor: document.documentElement.classList.contains('dark') && zoomedAyahBg === 0 ? '#111827' : null });
+      const canvasFull = await toCanvas(node, { backgroundColor: document.documentElement.classList.contains('dark') && zoomedAyahBg === 0 ? '#111827' : undefined });
       const dataUrlFull = canvasFull.toDataURL('image/png');
       
       if (actionButtons) actionButtons.style.display = 'flex';
@@ -2569,7 +2685,7 @@ export const QuranFull: React.FC = () => {
                                originalConsoleError(...args);
                              };
                              
-                             html2canvas(node, { useCORS: true, backgroundColor: document.documentElement.classList.contains('dark') && zoomedAyahBg === 0 ? '#111827' : null })
+                             toCanvas(node, { backgroundColor: document.documentElement.classList.contains('dark') && zoomedAyahBg === 0 ? '#111827' : undefined })
                                .then(async (canvas) => {
                                  const dataUrl = canvas.toDataURL('image/png');
                                  console.error = originalConsoleError;
@@ -3140,12 +3256,30 @@ export const QuranFull: React.FC = () => {
            ) : (
              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="space-y-6 pb-32 sm:pb-40">
                 {(() => {
-                  const query = surahSearchQuery.trim().toLowerCase();
+                  const rawQuery = surahSearchQuery.trim();
+                  const queryLower = rawQuery.toLowerCase();
+                  
+                  const normalizeAr = (text: string): string => {
+                    return text
+                      .replace(/[\u064B-\u0652\u0670\u0653\u0654\u0655]/g, '')
+                      .replace(/\u0671/g, '\u0627')
+                      .toLowerCase();
+                  };
+
+                  const isAr = /[\u0600-\u06FF]/.test(rawQuery);
+                  const cleanQuery = isAr ? normalizeAr(rawQuery) : queryLower;
+
                   const filteredAyahs = surahArabic.ayahs.filter(ayah => {
-                    if (!query) return true;
-                    if (ayah.numberInSurah.toString() === query) return true;
-                    if (ayah.text.toLowerCase().includes(query)) return true;
-                    return false;
+                    if (!rawQuery) return true;
+                    if (ayah.numberInSurah.toString() === rawQuery) return true;
+                    
+                    const textMatch = ayah.text && ayah.text.toLowerCase().includes(queryLower);
+                    
+                    const ayahAr = ayah.ar || '';
+                    const ayahClean = normalizeAr(ayahAr);
+                    const arabicMatch = isAr && ayahClean.includes(cleanQuery);
+                    
+                    return textMatch || arabicMatch;
                   });
 
                   if (filteredAyahs.length === 0) {

@@ -58,7 +58,14 @@ async function startServer() {
         return res.status(500).json({ error: "Gemini API key is not configured" });
       }
 
-      const ai = new GoogleGenAI({ apiKey });
+      const ai = new GoogleGenAI({
+        apiKey,
+        httpOptions: {
+          headers: {
+            'User-Agent': 'aistudio-build',
+          }
+        }
+      });
       const prompt = `
 Vous êtes un expert en interprétation islamique des rêves, suivant la méthodologie d'Ibn Sirin et des savants spirituels.
 L'utilisateur partage le rêve suivant :
@@ -76,7 +83,7 @@ Règles d'éthique spirituelle :
 `;
 
       const response = await generateWithRetry(ai, {
-        model: "gemini-2.5-pro",
+        model: "gemini-3.5-flash",
         contents: prompt,
       });
 
@@ -96,7 +103,14 @@ Règles d'éthique spirituelle :
         return res.status(500).json({ error: "Gemini API key is not configured" });
       }
 
-      const ai = new GoogleGenAI({ apiKey });
+      const ai = new GoogleGenAI({
+        apiKey,
+        httpOptions: {
+          headers: {
+            'User-Agent': 'aistudio-build',
+          }
+        }
+      });
       const prompt = `
 Vous êtes un assistant spirituel islamique.
 L'utilisateur pose la question suivante : "${query}"
@@ -115,7 +129,7 @@ Votre message ici...
 `;
 
       const response = await generateWithRetry(ai, {
-        model: "gemini-2.5-flash",
+        model: "gemini-3.5-flash",
         contents: prompt,
       });
 
@@ -151,7 +165,14 @@ Votre message ici...
         return res.status(500).json({ error: "Gemini API key is not configured" });
       }
 
-      const ai = new GoogleGenAI({ apiKey });
+      const ai = new GoogleGenAI({
+        apiKey,
+        httpOptions: {
+          headers: {
+            'User-Agent': 'aistudio-build',
+          }
+        }
+      });
       const prompt = `
 Vous êtes un expert spirituel islamique et un guide bienveillant sur l'application AsrarHub.
 L'utilisateur pose la question suivante : "${question}"
@@ -167,7 +188,7 @@ Règles de comportement et formatage (TRÈS IMPORTANT) :
 `;
 
       const response = await generateWithRetry(ai, {
-        model: "gemini-2.5-flash",
+        model: "gemini-3.5-flash",
         contents: prompt,
       });
 
@@ -211,6 +232,42 @@ Règles de comportement et formatage (TRÈS IMPORTANT) :
       }
     } catch (error: any) {
       console.error("Paystack verification error:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Send Push Notifications via FCM
+  app.post("/api/send-push", async (req, res) => {
+    try {
+      const { tokens, title, body, data } = req.body;
+      if (!tokens || !Array.isArray(tokens) || tokens.length === 0) {
+        return res.status(400).json({ error: "Missing or invalid tokens parameter" });
+      }
+
+      if (!getApps().length) {
+        return res.status(500).json({ error: "Firebase Admin is not initialized on the server. Please configure FIREBASE_SERVICE_ACCOUNT." });
+      }
+
+      const { getMessaging } = await import("firebase-admin/messaging");
+      const messaging = getMessaging();
+
+      const response = await messaging.sendEachForMulticast({
+        tokens,
+        notification: {
+          title: title || "Rappel AsrarHub",
+          body: body || "C'est l'heure de votre Wird !",
+        },
+        data: data || {},
+      });
+
+      res.json({
+        success: true,
+        successCount: response.successCount,
+        failureCount: response.failureCount,
+        responses: response.responses
+      });
+    } catch (error: any) {
+      console.error("FCM Send Error:", error);
       res.status(500).json({ error: error.message });
     }
   });

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, ArrowLeft, Sun, Moon, Info, Settings2, MapPin, Bell } from 'lucide-react';
+import { Clock, ArrowLeft, Sun, Moon, Info, Settings2, MapPin, Bell, Database, Wifi } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { motion, AnimatePresence } from 'motion/react';
@@ -27,6 +27,49 @@ export const PlanetaryHours: React.FC = () => {
   const [sunrise, setSunrise] = useState('06:00');
   const [sunset, setSunset] = useState('18:00');
   const [selectedDay, setSelectedDay] = useState(new Date().getDay()); // 0-6
+  const [isUsingCache, setIsUsingCache] = useState(true);
+
+  // Load saved state on mount
+  useEffect(() => {
+    try {
+      const savedSunrise = localStorage.getItem('asrar_planetary_sunrise');
+      if (savedSunrise) setSunrise(savedSunrise);
+      const savedSunset = localStorage.getItem('asrar_planetary_sunset');
+      if (savedSunset) setSunset(savedSunset);
+      const savedSelectedDay = localStorage.getItem('asrar_planetary_selected_day');
+      if (savedSelectedDay) setSelectedDay(Number(savedSelectedDay));
+      const savedIsDay = localStorage.getItem('asrar_planetary_is_day');
+      if (savedIsDay) setIsDay(savedIsDay === 'true');
+    } catch (e) {
+      console.warn("Failed to load planetary state", e);
+    }
+    setIsUsingCache(!navigator.onLine);
+  }, []);
+
+  // Save states on change
+  useEffect(() => {
+    try {
+      localStorage.setItem('asrar_planetary_sunrise', sunrise);
+    } catch (e) {}
+  }, [sunrise]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('asrar_planetary_sunset', sunset);
+    } catch (e) {}
+  }, [sunset]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('asrar_planetary_selected_day', String(selectedDay));
+    } catch (e) {}
+  }, [selectedDay]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('asrar_planetary_is_day', String(isDay));
+    } catch (e) {}
+  }, [isDay]);
 
   const daysOfWeek = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
 
@@ -143,6 +186,17 @@ export const PlanetaryHours: React.FC = () => {
               Heures Planétaires
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t("tools.planetary.description")}</p>
+            {isUsingCache ? (
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border border-amber-100 dark:border-amber-900/30 mt-2">
+                <Database size={11} className="animate-pulse" />
+                <span>Cache local (Mode Offline actif)</span>
+              </div>
+            ) : (
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30 mt-2">
+                <Wifi size={11} />
+                <span>Synchronisé localement (Offline-first)</span>
+              </div>
+            )}
           </div>
         </div>
         <div className="flex gap-2">

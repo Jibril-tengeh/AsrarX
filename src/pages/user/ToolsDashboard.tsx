@@ -34,7 +34,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 
 import { doc, onSnapshot } from "firebase/firestore";
-import { db } from "../../lib/firebase";
+import { db, isAutoSaveEnabled } from "../../lib/firebase";
 
 const tools = [
   // Simple Tools
@@ -380,7 +380,7 @@ export const ToolsDashboard: React.FC = () => {
     setShowGuide(false);
     localStorage.setItem("hasSeenMysticToolsGuide", "true");
     sessionStorage.setItem("hasSeenMysticToolsGuide", "true");
-    if (user) {
+    if (user && isAutoSaveEnabled()) {
       import('firebase/firestore').then(({ updateDoc, doc }) => {
         updateDoc(doc(db, 'users', user.uid), { hasSeenMysticToolsGuide: true }).catch(console.error);
       });

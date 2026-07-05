@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { FileText, Search } from 'lucide-react';
+import { useLocation } from 'react-router-dom';
 import { db } from '../../../lib/firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { useLanguage } from '../../../contexts/LanguageContext';
 
 export const Lexique: React.FC = () => {
   const { language, t } = useLanguage();
+  const location = useLocation();
 
   const defaultLexiqueData = [
     { term: t('lexique.items.alif.term', "Alif (أ)"), category: t('lexique.categories.letters', "Lettres"), description: t('lexique.items.alif.desc', "Première lettre de l'alphabet arabe. Sa valeur numérique est 1. Elle symbolise l'Unicité Divine (Tawhid) et le principe de toute création.") },
@@ -22,6 +24,14 @@ export const Lexique: React.FC = () => {
 
   const [search, setSearch] = useState('');
   const [lexiqueData, setLexiqueData] = useState<any[]>(defaultLexiqueData);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const q = params.get('search') || params.get('q');
+    if (q) {
+      setSearch(q);
+    }
+  }, [location.search]);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, 'lexique_terms'), (snapshot) => {

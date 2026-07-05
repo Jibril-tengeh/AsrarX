@@ -3,7 +3,7 @@ import { Hexagon, ArrowLeft, Send, Download, Share2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { motion, AnimatePresence } from 'motion/react';
-import html2canvas from 'html2canvas';
+import { toCanvas } from 'html-to-image';
 
 export const Zairja: React.FC = () => {
   const { t } = useLanguage();
@@ -15,7 +15,7 @@ export const Zairja: React.FC = () => {
   const downloadImage = async () => {
     if (!resultRef.current) return;
     try {
-      const canvas = await html2canvas(resultRef.current, { backgroundColor: '#18181b' });
+      const canvas = await toCanvas(resultRef.current, { backgroundColor: '#18181b' });
       const url = canvas.toDataURL('image/png');
       const link = document.createElement('a');
       link.download = 'zairja-result.png';
@@ -29,7 +29,7 @@ export const Zairja: React.FC = () => {
   const shareResult = async () => {
     if (!resultRef.current) return;
     try {
-      const canvas = await html2canvas(resultRef.current, { backgroundColor: '#18181b' });
+      const canvas = await toCanvas(resultRef.current, { backgroundColor: '#18181b' });
       canvas.toBlob(async (blob) => {
         if (!blob) return;
         const file = new File([blob], 'zairja-result.png', { type: 'image/png' });
