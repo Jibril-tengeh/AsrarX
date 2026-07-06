@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, X, Book, HelpCircle, ArrowRight, Sparkles, Sliders, ChevronRight, FileText, Zap, ShoppingBag, Users } from 'lucide-react';
+import { Search, X, Book, HelpCircle, ArrowRight, Sparkles, Sliders, ChevronRight, FileText, Zap, ShoppingBag, Users, MessageSquare } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getAsrarItems } from '../data/store';
+import { db } from '../lib/firebase';
+import { collection, onSnapshot, query as fsQuery, where } from 'firebase/firestore';
+import { asmaListData } from '../data/asmaListData';
 
 interface GlobalSearchModalProps {
   isOpen: boolean;
@@ -25,7 +28,30 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, on
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
   const [surahs, setSurahs] = useState<any[]>([]);
+  const [storeProducts, setStoreProducts] = useState<any[]>([]);
+  const [communityPosts, setCommunityPosts] = useState<any[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Load store products and community posts dynamically from Firestore
+  useEffect(() => {
+    const unsubStore = onSnapshot(collection(db, 'store_products'), (snap) => {
+      setStoreProducts(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (err) => {
+      console.warn("Failed to fetch store products for global search:", err);
+    });
+
+    const q = fsQuery(collection(db, 'community_posts'), where('status', '==', 'approved'));
+    const unsubCommunity = onSnapshot(q, (snap) => {
+      setCommunityPosts(snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    }, (err) => {
+      console.warn("Failed to fetch community posts for global search:", err);
+    });
+
+    return () => {
+      unsubStore();
+      unsubCommunity();
+    };
+  }, []);
 
   // Keyboard shortcut listener (Cmd+K or Ctrl+K)
   useEffect(() => {
@@ -185,7 +211,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, on
         title: item.title,
         description: item.content || '',
         category: item.category as any,
-        path: `/user/dashboard?search=${encodeURIComponent(item.title)}`,
+        path: `/secret/${item.id}`,
         icon: <Sparkles className="text-emerald-500" size={16} />,
         keywords: [item.title.toLowerCase(), item.content.toLowerCase(), item.category, 'wird', 'recette', 'secret']
       }));
@@ -198,7 +224,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, on
   // Store/Boutique items
   const getStoreItems = (): SearchItem[] => {
     const isFr = language === 'fr';
-    return [
+    const list: SearchItem[] = [
       {
         id: 'store-general',
         title: isFr ? 'La Boutique Spirituelle' : 'Spiritual Boutique',
@@ -207,41 +233,60 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, on
         path: `/store?search=${encodeURIComponent(query)}`,
         icon: <ShoppingBag className="text-amber-500" size={16} />,
         keywords: ['store', 'boutique', 'bague', 'ring', 'encens', 'incense', 'livre', 'book', 'talisman', 'shop']
-      },
-      {
-        id: 'store-ring',
-        title: isFr ? 'Bague d\'Élévation Spirituelle' : 'Spiritual Elevation Ring',
-        description: isFr ? 'Bague sacrée gravée d\'un awfaq pour la protection et la réussite.' : 'Sacred ring engraved with an awfaq for protection and success.',
-        category: 'store',
-        path: `/store?category=Bagues`,
-        icon: <Sparkles className="text-amber-500" size={16} />,
-        keywords: ['bague', 'ring', 'store', 'boutique', 'success', 'réussite', 'argent', 'protection']
-      },
-      {
-        id: 'store-incense',
-        title: isFr ? 'Encens Sirr Al Asrar' : 'Sirr Al Asrar Incense',
-        description: isFr ? 'Encens de purification suprême pour ouvrir les ondes de prière.' : 'Supreme purification incense to open prayer waves.',
-        category: 'store',
-        path: `/store?category=Encens`,
-        icon: <Zap className="text-amber-500" size={16} />,
-        keywords: ['encens', 'incense', 'purification', 'spiritual', 'parfum', 'store', 'boutique']
-      },
-      {
-        id: 'store-book',
-        title: isFr ? 'Livre : Le Secret des Secrets' : 'Book: The Secret of Secrets',
-        description: isFr ? 'Manuel complet des secrets de wirds, asma al-husna et awfaq.' : 'Complete handbook of wird secrets, asma al-husna, and awfaq.',
-        category: 'store',
-        path: `/store?category=Livres`,
-        icon: <Book className="text-amber-500" size={16} />,
-        keywords: ['livre', 'book', 'store', 'boutique', 'sirr', 'asrar', 'secret']
       }
     ];
+
+    if (storeProducts.length > 0) {
+      storeProducts.forEach(p => {
+        list.push({
+          id: `store-product-${p.id}`,
+          title: p.name || p.title || '',
+          description: isFr ? (p.description || '') : (p.description_en || p.description || ''),
+          category: 'store' as const,
+          path: `/store`,
+          icon: <ShoppingBag className="text-amber-500" size={16} />,
+          keywords: [(p.name || '').toLowerCase(), (p.category || '').toLowerCase(), 'store', 'boutique', 'product', 'produit']
+        });
+      });
+    } else {
+      list.push(
+        {
+          id: 'store-ring',
+          title: isFr ? 'Bague d\'Élévation Spirituelle' : 'Spiritual Elevation Ring',
+          description: isFr ? 'Bague sacrée gravée d\'un awfaq pour la protection et la réussite.' : 'Sacred ring engraved with an awfaq for protection and success.',
+          category: 'store',
+          path: `/store?category=Bagues`,
+          icon: <Sparkles className="text-amber-500" size={16} />,
+          keywords: ['bague', 'ring', 'store', 'boutique', 'success', 'réussite', 'argent', 'protection']
+        },
+        {
+          id: 'store-incense',
+          title: isFr ? 'Encens Sirr Al Asrar' : 'Sirr Al Asrar Incense',
+          description: isFr ? 'Encens de purification suprême pour ouvrir les ondes de prière.' : 'Supreme purification incense to open prayer waves.',
+          category: 'store',
+          path: `/store?category=Encens`,
+          icon: <Zap className="text-amber-500" size={16} />,
+          keywords: ['encens', 'incense', 'purification', 'spiritual', 'parfum', 'store', 'boutique']
+        },
+        {
+          id: 'store-book',
+          title: isFr ? 'Livre : Le Secret des Secrets' : 'Book: The Secret of Secrets',
+          description: isFr ? 'Manuel complet des secrets de wirds, asma al-husna et awfaq.' : 'Complete handbook of wird secrets, asma al-husna, and awfaq.',
+          category: 'store',
+          path: `/store?category=Livres`,
+          icon: <Book className="text-amber-500" size={16} />,
+          keywords: ['livre', 'book', 'store', 'boutique', 'sirr', 'asrar', 'secret']
+        }
+      );
+    }
+
+    return list;
   };
 
   // Community Forum & Circles
   const getCommunityItems = (): SearchItem[] => {
     const isFr = language === 'fr';
-    return [
+    const list: SearchItem[] = [
       {
         id: 'community-general',
         title: isFr ? 'Forum de la Communauté' : 'Community Forum',
@@ -261,6 +306,38 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, on
         keywords: ['cercle', 'prière', 'zikr', 'halaqat', 'virtuel', 'communauté', 'dhikr']
       }
     ];
+
+    if (communityPosts.length > 0) {
+      communityPosts.forEach(post => {
+        const cleanContent = (post.content || '').replace(/<[^>]+>/g, '');
+        if (cleanContent.trim()) {
+          list.push({
+            id: `community-post-${post.id}`,
+            title: `${post.authorName || 'Membre'} : ${cleanContent.substring(0, 40)}${cleanContent.length > 40 ? '...' : ''}`,
+            description: cleanContent,
+            category: 'community' as const,
+            path: `/community`,
+            icon: <MessageSquare className="text-blue-400" size={16} />,
+            keywords: [(post.authorName || '').toLowerCase(), cleanContent.toLowerCase(), 'post', 'communauté', 'message', 'forum']
+          });
+        }
+      });
+    }
+
+    return list;
+  };
+
+  // 99 Names of Allah Index
+  const getAsmaNames = (): SearchItem[] => {
+    return asmaListData.map((name, idx) => ({
+      id: `asma-name-${idx}`,
+      title: `${name.tr} (${name.ar}) - ${name.fr}`,
+      description: `Valeur Abjad: ${name.abjad} • Référence: ${name.ref}`,
+      category: 'secret' as const,
+      path: `/tools/99names?search=${encodeURIComponent(name.tr)}`,
+      icon: <Sparkles className="text-amber-500" size={16} />,
+      keywords: [name.tr.toLowerCase(), name.ar, name.fr.toLowerCase(), name.abjad.toString(), '99 noms', 'asma', 'allah']
+    }));
   };
 
   // Lexicon default list
@@ -296,6 +373,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, on
     ...getLocalAsrarItems(),
     ...getStoreItems(),
     ...getCommunityItems(),
+    ...getAsmaNames(),
     ...surahs.map((s) => ({
       id: `surah-${s.number}`,
       title: `${s.number}. ${s.englishName} (${s.name})`,
@@ -314,7 +392,16 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, on
         'sourate',
         'surah'
       ]
-    }))
+    })),
+    ...(query.trim() !== '' ? [{
+      id: 'quran-deep-search',
+      title: language === 'fr' ? `Rechercher "${query}" dans le Coran entier` : `Search "${query}" in the entire Quran`,
+      description: language === 'fr' ? 'Lancer une recherche approfondie de ce terme à travers tous les versets.' : 'Launch an in-depth search of this term across all verses.',
+      category: 'surah' as const,
+      path: `/tools/quran?search=${encodeURIComponent(query)}`,
+      icon: <Search className="text-emerald-600" size={16} />,
+      keywords: [query.toLowerCase(), 'quran', 'coran', 'recherche', 'search', 'entier', 'entire']
+    }] : [])
   ];
 
   // Filtering logic

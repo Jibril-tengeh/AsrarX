@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Target, Plus, Trash2, CheckCircle2, RotateCcw, Bell, Send, Check, AlertCircle, RefreshCw } from 'lucide-react';
+import { Target, Plus, Trash2, CheckCircle2, RotateCcw, Bell, Send, Check, AlertCircle, RefreshCw, Cloud } from 'lucide-react';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { app, auth, db } from '../../../lib/firebase';
+import { useAuth } from '../../../contexts/AuthContext';
+import { collection, query, where, onSnapshot, setDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 
 interface DhikrGoal {
   id: string;
@@ -14,7 +16,9 @@ interface DhikrGoal {
 
 export const DailyDhikrTracker: React.FC = () => {
   const { language, t } = useLanguage();
+  const { user } = useAuth();
   const [goals, setGoals] = useState<DhikrGoal[]>([]);
+  const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'local'>('local');
   const [newDhikrName, setNewDhikrName] = useState('');
   const [newDhikrTarget, setNewDhikrTarget] = useState<number | ''>('');
 
@@ -114,6 +118,7 @@ export const DailyDhikrTracker: React.FC = () => {
   };
 
   useEffect(() => {
+    // 1. Load from local cache first
     const saved = localStorage.getItem('asrar_dhikr_tracker');
     if (saved) {
       try {
@@ -129,36 +134,93 @@ export const DailyDhikrTracker: React.FC = () => {
             return goal;
           });
           setGoals(updated);
-          localStorage.setItem('asrar_dhikr_tracker', JSON.stringify(updated));
         }
       } catch (e) {
-        console.error('Error parsing dhikr tracker data', e);
+        console.error('Error parsing local dhikr tracker data:', e);
       }
     }
-  }, []);
 
-  const saveGoals = (newGoals: DhikrGoal[]) => {
-    setGoals(newGoals);
-    localStorage.setItem('asrar_dhikr_tracker', JSON.stringify(newGoals));
-  };
+    if (!user) {
+      setSyncStatus('local');
+      return;
+    }
 
-  const addGoal = () => {
+    // 2. Subscribe to Firestore goals
+    setSyncStatus('syncing');
+    const q = query(collection(db, 'dhikr_goals'), where('userId', '==', user.uid));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const fbGoals: DhikrGoal[] = [];
+      const today = new Date().toDateString();
+
+      snapshot.forEach((docSnap) => {
+        const data = docSnap.data();
+        let progress = data.progress || 0;
+        let lastUpdated = data.lastUpdated || new Date().toISOString();
+
+        // Check for new day reset
+        const goalDate = new Date(lastUpdated).toDateString();
+        if (goalDate !== today) {
+          progress = 0;
+          lastUpdated = new Date().toISOString();
+          // Update in background
+          setDoc(doc(db, 'dhikr_goals', docSnap.id), { ...data, progress, lastUpdated }, { merge: true }).catch(console.error);
+        }
+
+        fbGoals.push({
+          id: docSnap.id,
+          name: data.name || '',
+          target: data.target || 100,
+          progress,
+          lastUpdated
+        });
+      });
+
+      setGoals(fbGoals);
+      localStorage.setItem('asrar_dhikr_tracker', JSON.stringify(fbGoals));
+      setSyncStatus('synced');
+    }, (error) => {
+      console.error("Error loading dhikr goals from cloud:", error);
+      setSyncStatus('local');
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  const addGoal = async () => {
     if (!newDhikrName.trim() || !newDhikrTarget || newDhikrTarget <= 0) return;
 
+    const goalId = Date.now().toString();
     const newGoal: DhikrGoal = {
-      id: Date.now().toString(),
+      id: goalId,
       name: newDhikrName.trim(),
       target: Number(newDhikrTarget),
       progress: 0,
       lastUpdated: new Date().toISOString()
     };
 
-    saveGoals([...goals, newGoal]);
+    if (user) {
+      setSyncStatus('syncing');
+      try {
+        await setDoc(doc(db, 'dhikr_goals', goalId), {
+          ...newGoal,
+          userId: user.uid
+        });
+        setSyncStatus('synced');
+      } catch (e) {
+        console.error("Error saving dhikr goal to cloud:", e);
+        setSyncStatus('local');
+      }
+    } else {
+      const updated = [...goals, newGoal];
+      setGoals(updated);
+      localStorage.setItem('asrar_dhikr_tracker', JSON.stringify(updated));
+    }
+
     setNewDhikrName('');
     setNewDhikrTarget('');
   };
 
-  const updateProgress = (id: string, amount: number) => {
+  const updateProgress = async (id: string, amount: number) => {
     const updated = goals.map(g => {
       if (g.id === id) {
         const newProgress = Math.min(g.progress + amount, g.target);
@@ -166,21 +228,73 @@ export const DailyDhikrTracker: React.FC = () => {
       }
       return g;
     });
-    saveGoals(updated);
+
+    // Optimistically update local state
+    setGoals(updated);
+    localStorage.setItem('asrar_dhikr_tracker', JSON.stringify(updated));
+
+    if (user) {
+      setSyncStatus('syncing');
+      try {
+        const targetGoal = updated.find(g => g.id === id);
+        if (targetGoal) {
+          await setDoc(doc(db, 'dhikr_goals', id), {
+            ...targetGoal,
+            userId: user.uid
+          }, { merge: true });
+        }
+        setSyncStatus('synced');
+      } catch (e) {
+        console.error("Error updating progress in cloud:", e);
+        setSyncStatus('local');
+      }
+    }
   };
 
-  const resetProgress = (id: string) => {
+  const resetProgress = async (id: string) => {
     const updated = goals.map(g => {
       if (g.id === id) {
         return { ...g, progress: 0, lastUpdated: new Date().toISOString() };
       }
       return g;
     });
-    saveGoals(updated);
+
+    setGoals(updated);
+    localStorage.setItem('asrar_dhikr_tracker', JSON.stringify(updated));
+
+    if (user) {
+      setSyncStatus('syncing');
+      try {
+        const targetGoal = updated.find(g => g.id === id);
+        if (targetGoal) {
+          await setDoc(doc(db, 'dhikr_goals', id), {
+            ...targetGoal,
+            userId: user.uid
+          }, { merge: true });
+        }
+        setSyncStatus('synced');
+      } catch (e) {
+        console.error("Error resetting progress in cloud:", e);
+        setSyncStatus('local');
+      }
+    }
   };
 
-  const deleteGoal = (id: string) => {
-    saveGoals(goals.filter(g => g.id !== id));
+  const deleteGoal = async (id: string) => {
+    const updated = goals.filter(g => g.id !== id);
+    setGoals(updated);
+    localStorage.setItem('asrar_dhikr_tracker', JSON.stringify(updated));
+
+    if (user) {
+      setSyncStatus('syncing');
+      try {
+        await deleteDoc(doc(db, 'dhikr_goals', id));
+        setSyncStatus('synced');
+      } catch (e) {
+        console.error("Error deleting dhikr goal from cloud:", e);
+        setSyncStatus('local');
+      }
+    }
   };
 
   return (
@@ -191,7 +305,29 @@ export const DailyDhikrTracker: React.FC = () => {
         </div>
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Daily Dhikr Tracker</h1>
-          <p className="text-gray-500 dark:text-gray-400 text-sm">Définissez et suivez vos objectifs quotidiens de Dhikr</p>
+          <div className="flex flex-wrap items-center gap-2 mt-1">
+            <p className="text-gray-500 dark:text-gray-400 text-sm">Définissez et suivez vos objectifs quotidiens de Dhikr</p>
+            
+            {/* Sync Status Badge */}
+            {syncStatus === 'synced' && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded-full border border-emerald-100/30 dark:border-emerald-800/30">
+                <CheckCircle2 size={12} />
+                {t('sync.synced', 'Sauvegardé sur le Cloud')}
+              </span>
+            )}
+            {syncStatus === 'syncing' && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 rounded-full border border-amber-100/30 dark:border-amber-800/30 font-medium">
+                <RefreshCw size={12} className="animate-spin animate-duration-1000" />
+                {t('sync.syncing', 'Synchronisation...')}
+              </span>
+            )}
+            {syncStatus === 'local' && (
+              <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 px-2 py-0.5 rounded-full border border-gray-200 dark:border-gray-700">
+                <Cloud size={12} className="text-gray-400" />
+                {user ? t('sync.cached', 'Cache local') : t('sync.localOnly', 'Cache local uniquement (Connexion requise)')}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 

@@ -365,12 +365,6 @@ export const DreamJournal: React.FC = () => {
                 </span>
               </div>
               <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3 pr-16">{dream.title}</h3>
-              
-              {!isExpanded && dream.content && (
-                <p className="text-gray-500 dark:text-gray-400 text-sm line-clamp-2 leading-relaxed">
-                  {dream.content}
-                </p>
-              )}
 
               <AnimatePresence>
                 {isExpanded && (

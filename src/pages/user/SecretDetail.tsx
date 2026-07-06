@@ -33,6 +33,7 @@ import { db } from "../../lib/firebase";
 import { useAuth } from '../../contexts/AuthContext';
 import { AuthModal } from '../../components/AuthModal';
 import { InteractiveLexiconText } from "../../components/InteractiveLexiconText";
+import { PremiumWrapper } from "../../components/PremiumWrapper";
 
 const AccordionSection: React.FC<{ title: string, htmlContent: string, readingMode: boolean }> = ({ title, htmlContent, readingMode }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -260,9 +261,6 @@ export const SecretDetail: React.FC = () => {
         } else if (!user) {
            setIsCheckingPremium(true);
            setShowAuthModal(true);
-        } else if (user.subscriptionTier !== 'premium' && user.subscriptionTier !== 'pro') {
-           setIsCheckingPremium(true);
-           navigate('/payment');
         } else {
            setIsCheckingPremium(false);
         }
@@ -270,7 +268,7 @@ export const SecretDetail: React.FC = () => {
         setIsCheckingPremium(false);
       }
     }
-  }, [item, user, authLoading, navigate]);
+  }, [item, user, authLoading]);
 
   const toggleBookmark = () => {
     if (!item) return;
@@ -358,9 +356,10 @@ export const SecretDetail: React.FC = () => {
   }
 
   return (
-    <div
-      className={`mx-auto px-4 pt-0 sm:px-6 sm:pt-2 lg:px-8 pb-24 transition-colors duration-500 ${readingMode ? "bg-[#fdfbf7] dark:bg-[#1a1917] min-h-screen" : "max-w-3xl"}`}
-    >
+    <PremiumWrapper enabled={item.isPremium} requiredTier="premium" fallbackTitle="Lecture Secrète Premium">
+      <div
+        className={`mx-auto px-4 pt-0 sm:px-6 sm:pt-2 lg:px-8 pb-24 transition-colors duration-500 ${readingMode ? "bg-[#fdfbf7] dark:bg-[#1a1917] min-h-screen" : "max-w-3xl"}`}
+      >
       <div
         className={`flex items-center justify-between mb-6 ${readingMode ? "max-w-3xl mx-auto" : ""}`}
       >
@@ -885,5 +884,6 @@ export const SecretDetail: React.FC = () => {
         )}
       </AnimatePresence>
     </div>
+    </PremiumWrapper>
   );
 };

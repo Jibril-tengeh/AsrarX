@@ -8,24 +8,44 @@ import { useLocation, Navigate } from 'react-router-dom';
 import { AsrarHubLoader } from './AsrarHubLoader';
 
 export const MaintenanceOverlay: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [isMaintenance, setIsMaintenance] = useState(false);
+  const [isMaintenance, setIsMaintenance] = useState(() => {
+    try {
+      return localStorage.getItem('asrarhub_global_maintenance') === 'true';
+    } catch {
+      return false;
+    }
+  });
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
   const location = useLocation();
 
   useEffect(() => {
+    // Timeout to prevent infinite loading state if Firestore is unreachable or offline
+    const timeoutId = setTimeout(() => {
+      setLoading(false);
+    }, 1500);
+
     const unsub = onSnapshot(doc(db, 'settings', 'features'), (docSnap) => {
+      clearTimeout(timeoutId);
       if (docSnap.exists()) {
         const data = docSnap.data();
-        setIsMaintenance(data?.globalMaintenanceMode === true);
+        const isMaint = data?.globalMaintenanceMode === true;
+        setIsMaintenance(isMaint);
+        try {
+          localStorage.setItem('asrarhub_global_maintenance', isMaint ? 'true' : 'false');
+        } catch {}
       }
       setLoading(false);
     }, (error) => {
+      clearTimeout(timeoutId);
       console.error("Error reading maintenance mode", error);
       setLoading(false);
     });
 
-    return () => unsub();
+    return () => {
+      clearTimeout(timeoutId);
+      unsub();
+    };
   }, []);
 
   if (loading) {

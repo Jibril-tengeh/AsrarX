@@ -9,6 +9,7 @@ interface PremiumWrapperProps {
   fallbackMessage?: string;
   fallbackTitle?: string;
   previewContent?: React.ReactNode;
+  enabled?: boolean;
 }
 
 export const PremiumWrapper: React.FC<PremiumWrapperProps> = ({ 
@@ -16,11 +17,16 @@ export const PremiumWrapper: React.FC<PremiumWrapperProps> = ({
   requiredTier = 'premium',
   fallbackTitle = 'Contenu Premium',
   fallbackMessage = 'Ce contenu est réservé aux membres Premium. Débloquez-le pour y accéder.',
-  previewContent
+  previewContent,
+  enabled = true
 }) => {
   const { user } = useAuth();
   const [showPreview, setShowPreview] = useState(false);
   
+  if (!enabled) {
+    return <>{children}</>;
+  }
+
   const isPremium = user?.subscriptionTier === 'premium' || user?.subscriptionTier === 'pro';
   const isPro = user?.subscriptionTier === 'pro';
 

@@ -164,7 +164,7 @@ export const Ruqyah: React.FC = () => {
   const coverImageUrl = currentTrack?.coverImage || "https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=500";
 
   return (
-    <div className={`fixed inset-0 bg-[#121c17] text-white flex flex-col font-sans overflow-hidden bg-cover bg-center transition-all duration-700 ${isFullPlayer ? 'z-[60]' : 'z-40'}`} style={{ backgroundImage: `url('${bgImageUrl}')` }}>
+    <div className={`fixed inset-0 bg-[#121c17] text-white flex flex-col font-sans overflow-hidden bg-cover bg-center transition-all duration-700 ${isFullPlayer ? 'z-[60]' : 'z-40 safe-area-pt'}`} style={{ backgroundImage: `url('${bgImageUrl}')` }}>
       {/* Dark overlay for readability */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm"></div>
 
