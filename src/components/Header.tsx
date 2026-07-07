@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Moon, Sun, Languages, User, Users, Shield, LogOut, LogIn, Bell, Store, ChevronDown, ChevronUp, Megaphone, X, ExternalLink, MessageCircle } from 'lucide-react';
+import { Moon, Sun, Languages, User, Users, Shield, LogOut, LogIn, Bell, BellOff, Store, ChevronDown, ChevronUp, Megaphone, X, ExternalLink, MessageCircle } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useFeatures } from '../contexts/FeatureContext';
 import { signOut, db } from '../lib/firebase';
-import { collection, query, orderBy, onSnapshot, limit } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, limit, doc, updateDoc } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { GlobalSearchModal } from './GlobalSearchModal';
@@ -22,18 +22,33 @@ export const Header: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
   const { user } = useAuth();
   const { featureToggles } = useFeatures();
-  const [scrolled, setScrolled] = useState(false);
+   const [scrolled, setScrolled] = useState(false);
   const [langMenuOpen, setLangMenuOpen] = useState(false);
   const [notifMenuOpen, setNotifMenuOpen] = useState(false);
   const [announcementOpen, setAnnouncementOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [hasUnread, setHasUnread] = useState(false);
   const [searchModalOpen, setSearchModalOpen] = useState(false);
+  const [showEnableNotifPopup, setShowEnableNotifPopup] = useState(false);
+  const [notifsEnabled, setNotifsEnabled] = useState(false);
+  const initialLoadTime = useRef(Date.now());
   const langMenuRef = useRef<HTMLDivElement>(null);
   const notifMenuRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
   const isRuqyahPlayer = location.pathname === '/tools/ruqyah';
   const [ruqyahHeaderVisible, setRuqyahHeaderVisible] = useState(false);
+
+  useEffect(() => {
+    if ('Notification' in window) {
+      setNotifsEnabled(Notification.permission === 'granted');
+      
+      const handleFocus = () => {
+        setNotifsEnabled(Notification.permission === 'granted');
+      };
+      window.addEventListener('focus', handleFocus);
+      return () => window.removeEventListener('focus', handleFocus);
+    }
+  }, []);
 
   useEffect(() => {
     if (!isRuqyahPlayer) {
@@ -48,6 +63,27 @@ export const Header: React.FC = () => {
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
+
+  useEffect(() => {
+    if (user && user.pushNotificationsEnabled !== undefined) {
+      setNotifsEnabled(!!user.pushNotificationsEnabled);
+    }
+  }, [user, user?.pushNotificationsEnabled]);
+
+  const toggleHeaderNotifications = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!user) return;
+    const targetState = !notifsEnabled;
+    try {
+      const userRef = doc(db, 'users', user.uid);
+      await updateDoc(userRef, {
+        pushNotificationsEnabled: targetState
+      });
+      setNotifsEnabled(targetState);
+    } catch (err) {
+      console.error("Error toggling notifications in header:", err);
+    }
+  };
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -75,9 +111,40 @@ export const Header: React.FC = () => {
           if (!lastSeen || new Date(notifs[0].date).getTime() > parseInt(lastSeen)) {
             setHasUnread(true);
           }
+          
+          // Check if any is a NEW notification published after initial page load
+          const hasNewNotif = snapshot.docs.some(doc => {
+            const data = doc.data();
+            const docTime = data.createdAt?.toDate ? data.createdAt.toDate().getTime() : (data.date ? new Date(data.date).getTime() : 0);
+            return docTime > initialLoadTime.current;
+          });
+
+          if (hasNewNotif && Notification.permission !== 'granted') {
+            setShowEnableNotifPopup(true);
+          }
         }
       }, (error) => {
         console.error("Header notifications onSnapshot error:", error);
+      });
+      return () => unsubscribe();
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      const q = query(collection(db, 'articles'), orderBy('createdAt', 'desc'), limit(1));
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        if (!snapshot.empty) {
+          const firstDoc = snapshot.docs[0];
+          const data = firstDoc.data();
+          const docTime = data.createdAt || 0;
+          
+          if (docTime > initialLoadTime.current && Notification.permission !== 'granted') {
+            setShowEnableNotifPopup(true);
+          }
+        }
+      }, (error) => {
+        console.error("Header articles onSnapshot error:", error);
       });
       return () => unsubscribe();
     }
@@ -173,7 +240,11 @@ export const Header: React.FC = () => {
                   className="relative p-2 rounded-full hover:bg-emerald-700 dark:hover:bg-emerald-900 text-white transition-colors"
                   aria-label="Notifications"
                 >
-                  <Bell size={18} />
+                  {notifsEnabled ? (
+                    <Bell size={18} />
+                  ) : (
+                    <BellOff size={18} className="opacity-75" />
+                  )}
                   {hasUnread && (
                     <span className="absolute -top-1 -right-1 w-4 h-4 bg-yellow-400 text-yellow-900 text-[10px] font-bold flex items-center justify-center rounded-full shadow-sm border border-emerald-600 dark:border-emerald-800">
                       {notifications.length > 9 ? '9+' : notifications.length}
@@ -189,8 +260,21 @@ export const Header: React.FC = () => {
                       exit={{ opacity: 0, y: 10 }}
                       className="absolute -right-24 sm:right-0 mt-2 w-64 sm:w-72 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden z-50 flex flex-col"
                     >
-                      <div className="p-3 border-b border-gray-100 dark:border-gray-700 font-bold text-sm text-gray-900 dark:text-white">
-                        {language === 'fr' ? 'Notifications' : language === 'ha' ? 'Sanarwa' : 'Notifications'}
+                      <div className="p-3 border-b border-gray-100 dark:border-gray-700 font-bold text-sm text-gray-900 dark:text-white flex justify-between items-center">
+                        <span>{language === 'fr' ? 'Notifications' : language === 'ha' ? 'Sanarwa' : 'Notifications'}</span>
+                        <button 
+                          onClick={toggleHeaderNotifications} 
+                          className={`text-[11px] px-2.5 py-1 rounded-lg font-bold transition-all ${
+                            notifsEnabled 
+                              ? 'bg-red-50 text-red-600 dark:bg-red-950/40 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30' 
+                              : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/30'
+                          }`}
+                        >
+                          {notifsEnabled 
+                            ? (language === 'fr' ? 'Désactiver' : language === 'ha' ? 'Kashe' : 'Disable') 
+                            : (language === 'fr' ? 'Activer' : language === 'ha' ? 'Kunna' : 'Enable')
+                          }
+                        </button>
                       </div>
                       {notifications.length === 0 ? (
                         <div className="p-4 text-sm text-gray-500 text-center">{language === 'fr' ? 'Aucune notification' : language === 'ha' ? 'Babu sanarwa' : 'No notifications'}</div>
@@ -362,6 +446,67 @@ export const Header: React.FC = () => {
                 </Link>
               </div>
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showEnableNotifPopup && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-white dark:bg-gray-900 rounded-3xl p-6 shadow-2xl max-w-sm w-full border border-gray-100 dark:border-gray-800 relative text-center"
+            >
+              <button
+                onClick={() => setShowEnableNotifPopup(false)}
+                className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+              >
+                <X size={20} />
+              </button>
+              
+              <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-4 mt-2">
+                <Bell size={32} />
+              </div>
+              
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                {language === 'fr' ? 'Activer les notifications ?' : language === 'ha' ? 'Kunna sanarwa?' : 'Enable Notifications?'}
+              </h3>
+              
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-6 leading-relaxed">
+                {language === 'fr' 
+                  ? 'Une nouvelle publication ou notification est arrivée ! Pour ne rater aucune mise à jour importante d\'AsrarHub, veuillez activer les notifications dans votre profil.' 
+                  : language === 'ha' 
+                    ? 'Sabuwar sanarwa ko labari ya fito! Domin kada ku rasa muhimman sabuntawa na AsrarHub, da fatan za ku kunna sanarwa a cikin bayananku.' 
+                    : 'A new publication or notification has arrived! To ensure you do not miss any important updates from AsrarHub, please enable notifications in your profile.'}
+              </p>
+              
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={() => {
+                    setShowEnableNotifPopup(false);
+                    navigate('/profile');
+                  }}
+                  className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-semibold transition-colors flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <User size={16} />
+                  {language === 'fr' ? 'Aller sur mon profil' : language === 'ha' ? 'Je zuwa bayana' : 'Go to Profile'}
+                </button>
+                
+                <button
+                  onClick={() => setShowEnableNotifPopup(false)}
+                  className="w-full py-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl font-medium transition-colors cursor-pointer"
+                >
+                  {language === 'fr' ? 'Plus tard' : language === 'ha' ? 'Daga baya' : 'Later'}
+                </button>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

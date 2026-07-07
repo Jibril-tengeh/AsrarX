@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { doc, getDoc, onSnapshot, setDoc, deleteDoc } from 'firebase/firestore';
 import { auth, db, signOut } from '../lib/firebase';
+import { AsrarHubLoader } from '../components/AsrarHubLoader';
 
 const parseUserAgent = (ua: string) => {
   let os = 'Inconnu';
@@ -61,6 +62,9 @@ interface UserData {
   hideAds?: boolean;
   streakDays?: number;
   purchasedItems?: string[];
+  country?: string;
+  phone?: string;
+  pushNotificationsEnabled?: boolean;
 }
 
 interface AuthContextType {
@@ -169,10 +173,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               }
             }
 
-            setUser({
+             setUser({
               uid: firebaseUser.uid,
               email: firebaseUser.email,
-              name: firebaseUser.displayName,
+              name: data.name || firebaseUser.displayName || null,
               role: currentRole,
               isBanned: data.isBanned || false,
               mysteryToolsDisabled: data.mysteryToolsDisabled || false,
@@ -185,7 +189,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               subscriptionTier: subTier,
               hideAds: data.hideAds || false,
               streakDays: data.streakDays || 0,
-              purchasedItems: data.purchasedItems || []
+              purchasedItems: data.purchasedItems || [],
+              country: data.country || '',
+              phone: data.phone || '',
+              pushNotificationsEnabled: data.pushNotificationsEnabled !== undefined ? data.pushNotificationsEnabled : false
             });
           } else {
             setUser({
@@ -203,7 +210,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               subscriptionTier: 'free',
               hideAds: false,
               streakDays: 0,
-              purchasedItems: []
+              purchasedItems: [],
+              country: '',
+              phone: '',
+              pushNotificationsEnabled: false
             });
           }
           setLoading(false);
@@ -230,7 +240,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   return (
     <AuthContext.Provider value={{ user, loading }}>
-      {!loading && children}
+      {loading ? <AsrarHubLoader size="fullscreen" /> : children}
     </AuthContext.Provider>
   );
 };

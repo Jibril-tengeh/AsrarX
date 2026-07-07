@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Calculator, ArrowLeft, RefreshCw, Copy, Check, ChevronDown, ChevronUp, History, Save, Trash2, X, Database, Wifi, HelpCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
+import { ToolInfoTooltip } from '../../../components/ToolInfoTooltip';
 import { motion, AnimatePresence } from 'motion/react';
 
 // Simplified Abjad table mapping (Standard/Eastern)
@@ -210,6 +211,8 @@ export const AbjadCalculator: React.FC = () => {
             </div>
           </div>
         </div>
+
+        <ToolInfoTooltip toolId="abjad" />
 
         <div className="flex justify-between items-center px-1">
           <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1.5">

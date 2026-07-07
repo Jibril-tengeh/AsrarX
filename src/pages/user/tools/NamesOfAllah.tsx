@@ -246,6 +246,8 @@ export const NamesOfAllah: React.FC = () => {
           inSurah: parseInt(activeName.quranOptions.verse || "1"),
           ar: activeName.quranOptions.excerptAr || activeName.ar,
           fr: activeName.quranOptions.excerptFr || activeName.fr,
+          en: activeName.quranOptions.excerptFr || activeName.tr,
+          ha: activeName.quranOptions.excerptFr || activeName.tr,
           surahName: activeName.quranOptions.surah || "Coran",
           surahTransliteration: activeName.quranOptions.surah || "Coran",
           surahNumber: 1
@@ -259,6 +261,8 @@ export const NamesOfAllah: React.FC = () => {
           inSurah: 180,
           ar: "وَلِلَّهِ الْأَسْمَاءُ الْحُسْنَىٰ فَادْعُوهُ بِهَا ۖ وَذَرُوا الَّذِينَ يُلْحِدُونَ فِي أَسْمَائِهِ",
           fr: "C'est à Allah qu'appartiennent les noms les plus beaux. Invoquez-Le par ces noms et laissez ceux qui profanent Ses noms.",
+          en: "To Allah belong the best names, so invoke Him by them.",
+          ha: "Kuma Allah yanã da sũnãye mãsu kyau ƙwarai, sai ku rũƙe Shi da sũ.",
           surahName: "Al-A'raf",
           surahTransliteration: "Al-A'raf",
           surahNumber: 7
@@ -270,6 +274,8 @@ export const NamesOfAllah: React.FC = () => {
           inSurah: 23,
           ar: "هُوَ اللَّهُ الَّذِي لَا إِلَٰهَ إِلَّا هُوَ الْمَلِكِ الْقُدُّوسُ السَّلَامُ الْمُؤْمِنُ الْمُهَيْمِنُ الْعَزِيزُ الْجَبَّارُ الْمُتَكَبِّرُ",
           fr: "C'est Lui Allah. Nulle divinité autre que Lui, le Souverain, le Pur, l'Apaisant, le Rassurant, le Prédominant, le Tout-Puissant, le Contraignant, le Superbe.",
+          en: "He is Allah, other than whom there is no deity, the Sovereign, the Pure, the Perfection, the Bestower of Faith.",
+          ha: "Shĩ ne Allah, wanda bã bu wani abun bautãwa sai Shĩ, Mai mulki, Mai tsarki, Mai aminci, Mai amintarwa.",
           surahName: "Al-Hashr",
           surahTransliteration: "Al-Hashr",
           surahNumber: 59
@@ -615,7 +621,7 @@ export const NamesOfAllah: React.FC = () => {
                                                          {occurrence.ar}
                                                        </p>
                                                        <p className="text-gray-600 dark:text-gray-400 font-serif italic text-sm text-center leading-relaxed">
-                                                         "{occurrence.fr}"
+                                                         "{occurrence[language as 'fr' | 'en' | 'ha'] || occurrence.fr || occurrence.en || occurrence.ha || ''}"
                                                        </p>
                                                      </div>
                                                    </motion.div>

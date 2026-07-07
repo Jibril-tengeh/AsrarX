@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Layers, ArrowLeft, Info, Wand2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
+import { ToolInfoTooltip } from '../../../components/ToolInfoTooltip';
 import { motion, AnimatePresence } from 'motion/react';
 
 export const RouhaniyyaExtractor: React.FC = () => {
@@ -106,6 +107,10 @@ export const RouhaniyyaExtractor: React.FC = () => {
              <Wand2 size={20} /> Extraire
            </button>
         </div>
+      </div>
+
+      <div className="mb-6">
+        <ToolInfoTooltip toolId="rouhaniyya" />
       </div>
 
       <AnimatePresence>

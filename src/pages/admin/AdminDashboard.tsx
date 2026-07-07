@@ -6,7 +6,7 @@ import {
   Settings, Users, BarChart3, Database, Shield, LayoutDashboard, 
   Book, ToggleLeft, Volume2, Save, Search, Plus, Trash2, Edit2, FileText,
   Eye, Image as ImageIcon, Crop as CropIcon, X, Upload, ShoppingBag, CreditCard,
-  Clock, CheckCircle, XCircle
+  Clock, CheckCircle, XCircle, Globe, Grid, List, Mail, Phone, Lock, Bell, BellOff
 } from 'lucide-react';
 import { db } from '../../lib/firebase';
 import { collection, getDocs, doc, updateDoc, deleteDoc, addDoc, onSnapshot, query, orderBy, setDoc } from 'firebase/firestore';
@@ -22,6 +22,79 @@ import ReactCrop, { type Crop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 
 import { AdminStoreManager } from '../../components/AdminStoreManager';
+
+const LayoutSelector = ({ value, onChange, activeColor = 'border-emerald-500 text-emerald-500' }: { value: string, onChange: (val: string) => void, activeColor?: string }) => {
+  return (
+    <div className="flex items-center justify-center bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-3 max-w-[280px] shadow-sm">
+      <div className="flex items-center gap-4 w-full justify-between">
+        {/* Grid option */}
+        <button
+          type="button"
+          onClick={() => onChange('grid')}
+          className={`flex flex-col items-center justify-center w-16 h-16 rounded-2xl transition-all ${
+            value === 'grid' 
+              ? `bg-gray-50 dark:bg-gray-850 border-2 ${activeColor} shadow-md scale-105` 
+              : 'hover:bg-gray-50 dark:hover:bg-gray-800 border-2 border-transparent'
+          }`}
+          title="Grid Layout"
+        >
+          <div className="grid grid-cols-2 gap-1 w-6 h-6">
+            <div className={`w-2.5 h-2.5 rounded-[3px] border-2 ${value === 'grid' ? (activeColor.includes('emerald') ? 'border-emerald-500 bg-emerald-500/20' : 'border-indigo-500 bg-indigo-500/20') : 'border-gray-400 dark:border-gray-500'}`} />
+            <div className={`w-2.5 h-2.5 rounded-[3px] border-2 ${value === 'grid' ? (activeColor.includes('emerald') ? 'border-emerald-500 bg-emerald-500/20' : 'border-indigo-500 bg-indigo-500/20') : 'border-gray-400 dark:border-gray-500'}`} />
+            <div className={`w-2.5 h-2.5 rounded-[3px] border-2 ${value === 'grid' ? (activeColor.includes('emerald') ? 'border-emerald-500 bg-emerald-500/20' : 'border-indigo-500 bg-indigo-500/20') : 'border-gray-400 dark:border-gray-500'}`} />
+            <div className={`w-2.5 h-2.5 rounded-[3px] border-2 ${value === 'grid' ? (activeColor.includes('emerald') ? 'border-emerald-500 bg-emerald-500/20' : 'border-indigo-500 bg-indigo-500/20') : 'border-gray-400 dark:border-gray-500'}`} />
+          </div>
+          <span className="text-[10px] mt-1 font-medium text-gray-500 dark:text-gray-400">Grille</span>
+        </button>
+
+        {/* Large/Featured option */}
+        <button
+          type="button"
+          onClick={() => onChange('large')}
+          className={`flex flex-col items-center justify-center w-16 h-16 rounded-2xl transition-all ${
+            value === 'large' 
+              ? `bg-gray-50 dark:bg-gray-850 border-2 ${activeColor} shadow-md scale-105` 
+              : 'hover:bg-gray-50 dark:hover:bg-gray-800 border-2 border-transparent'
+          }`}
+          title="Large Layout"
+        >
+          <div className="flex items-center justify-center w-7 h-7 rounded-md bg-gray-50 dark:bg-gray-950 border border-gray-150 dark:border-gray-850">
+            <div className={`w-4.5 h-4.5 rounded-[4px] border-2 bg-transparent ${value === 'large' ? (activeColor.includes('emerald') ? 'border-emerald-500 bg-emerald-500/10' : 'border-indigo-500 bg-indigo-500/10') : 'border-gray-400 dark:border-gray-500'}`} />
+          </div>
+          <span className="text-[10px] mt-1 font-medium text-gray-500 dark:text-gray-400">Vedette</span>
+        </button>
+
+        {/* List option */}
+        <button
+          type="button"
+          onClick={() => onChange('list')}
+          className={`flex flex-col items-center justify-center w-16 h-16 rounded-2xl transition-all ${
+            value === 'list' 
+              ? `bg-gray-50 dark:bg-gray-850 border-2 ${activeColor} shadow-md scale-105` 
+              : 'hover:bg-gray-50 dark:hover:bg-gray-800 border-2 border-transparent'
+          }`}
+          title="List Layout"
+        >
+          <div className="flex flex-col gap-1 w-6 h-6 justify-center">
+            <div className="flex items-center gap-1.5">
+              <div className={`w-1 h-1 rounded-full ${value === 'list' ? (activeColor.includes('emerald') ? 'bg-emerald-500' : 'bg-indigo-500') : 'bg-gray-400 dark:bg-gray-500'}`} />
+              <div className={`h-1 flex-1 rounded-full ${value === 'list' ? (activeColor.includes('emerald') ? 'bg-emerald-500' : 'bg-indigo-500') : 'bg-gray-400 dark:bg-gray-500'}`} />
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className={`w-1 h-1 rounded-full ${value === 'list' ? (activeColor.includes('emerald') ? 'bg-emerald-500' : 'bg-indigo-500') : 'bg-gray-400 dark:bg-gray-500'}`} />
+              <div className={`h-1 flex-1 rounded-full ${value === 'list' ? (activeColor.includes('emerald') ? 'bg-emerald-500' : 'bg-indigo-500') : 'bg-gray-400 dark:bg-gray-500'}`} />
+            </div>
+            <div className="flex items-center gap-1.5">
+              <div className={`w-1 h-1 rounded-full ${value === 'list' ? (activeColor.includes('emerald') ? 'bg-emerald-500' : 'bg-indigo-500') : 'bg-gray-400 dark:bg-gray-500'}`} />
+              <div className={`h-1 flex-1 rounded-full ${value === 'list' ? (activeColor.includes('emerald') ? 'bg-emerald-500' : 'bg-indigo-500') : 'bg-gray-400 dark:bg-gray-500'}`} />
+            </div>
+          </div>
+          <span className="text-[10px] mt-1 font-medium text-gray-500 dark:text-gray-400">Liste</span>
+        </button>
+      </div>
+    </div>
+  );
+};
 
 type AdminTab = 'overview' | 'users' | 'payments' | 'community' | 'features' | 'ruqyah' | 'content' | 'notifications' | 'settings' | 'articles' | 'store';
 
@@ -52,6 +125,10 @@ interface User {
   isBanned: boolean;
   mysteryToolsDisabled: boolean;
   isTrusted: boolean;
+  country?: string;
+  phone?: string;
+  password?: string;
+  pushNotificationsEnabled?: boolean;
 }
 
 interface RuqyahAudio {
@@ -145,6 +222,7 @@ export const AdminDashboard: React.FC = () => {
   });
   const [showPreview, setShowPreview] = useState(false);
   const [draftSavedMessage, setDraftSavedMessage] = useState('');
+  const [articlesLayoutMode, setArticlesLayoutMode] = useState<'grid' | 'list'>('grid');
   
   // Crop state
   const [imgSrc, setImgSrc] = useState('');
@@ -789,6 +867,35 @@ export const AdminDashboard: React.FC = () => {
 
     return (
       <div className="space-y-6">
+        {/* Résumé des statuts de notifications */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/40 rounded-3xl p-5 flex items-center justify-between shadow-sm">
+            <div>
+              <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Notifications Activées</p>
+              <p className="text-3xl font-black text-emerald-800 dark:text-emerald-300 mt-1">
+                {users.filter(u => u.pushNotificationsEnabled === true).length}
+              </p>
+              <p className="text-xs text-emerald-500/80 mt-1">Utilisateurs recevant les rappels et annonces</p>
+            </div>
+            <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-2xl shrink-0">
+              <Bell size={28} />
+            </div>
+          </div>
+          
+          <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/40 rounded-3xl p-5 flex items-center justify-between shadow-sm">
+            <div>
+              <p className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">Notifications Désactivées</p>
+              <p className="text-3xl font-black text-amber-800 dark:text-amber-300 mt-1">
+                {users.filter(u => u.pushNotificationsEnabled !== true).length}
+              </p>
+              <p className="text-xs text-amber-500/80 mt-1">Utilisateurs n'ayant pas activé le push</p>
+            </div>
+            <div className="p-3 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-2xl shrink-0">
+              <BellOff size={28} />
+            </div>
+          </div>
+        </div>
+
         <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
           <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
             <div>
@@ -821,14 +928,47 @@ export const AdminDashboard: React.FC = () => {
           ) : (
             <div className="space-y-4">
               {paginatedUsers.map((user) => (
-                <div key={user.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4 hover:border-gray-200 dark:hover:border-gray-650 transition-all">
-                  <div className="min-w-0">
-                    <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 flex-wrap">
-                      <span className="truncate">{user.name}</span>
+                <div key={user.id} className="flex flex-col lg:flex-row lg:items-center justify-between p-5 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4 hover:border-gray-200 dark:hover:border-gray-650 transition-all">
+                  <div className="min-w-0 flex-1">
+                    <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 flex-wrap mb-2">
+                      <span className="truncate text-base">{user.name || 'Sans Nom'}</span>
                       {user.isBanned && <span className="bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400 text-[10px] uppercase font-bold px-2 py-0.5 rounded-full shrink-0">Banni</span>}
                       {user.isTrusted && <span className="bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400 text-[10px] uppercase font-bold px-2 py-0.5 rounded-full shrink-0">De Confiance</span>}
                     </h4>
-                    <p className="text-xs text-gray-500 mt-1 truncate">{user.email}</p>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
+                      <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 min-w-0">
+                        <Mail size={14} className="shrink-0 text-emerald-500" />
+                        <span className="truncate break-all"><strong>Email :</strong> {user.email}</span>
+                      </div>
+                      
+                      <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 min-w-0">
+                        <Globe size={14} className="shrink-0 text-emerald-500" />
+                        <span className="truncate"><strong>Pays :</strong> {user.country || <span className="text-gray-400 italic">Non renseigné</span>}</span>
+                      </div>
+
+                      <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 min-w-0">
+                        <Phone size={14} className="shrink-0 text-emerald-500" />
+                        <span className="truncate"><strong>Téléphone :</strong> {user.phone || <span className="text-gray-400 italic">Non renseigné</span>}</span>
+                      </div>
+
+                      <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 min-w-0">
+                        <Lock size={14} className="shrink-0 text-emerald-500" />
+                        <span className="break-all"><strong>Mot de passe :</strong> {user.password ? <span className="font-mono bg-gray-200 dark:bg-gray-800 px-1.5 py-0.5 rounded text-[11px] text-gray-700 dark:text-gray-300 break-all">{user.password}</span> : <span className="text-gray-400 italic">Non enregistré / Google</span>}</span>
+                      </div>
+
+                      <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 min-w-0">
+                        <Bell size={14} className="shrink-0 text-emerald-500" />
+                        <span className="break-all">
+                          <strong>Push Notifications :</strong>{' '}
+                          {user.pushNotificationsEnabled ? (
+                            <span className="text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-100 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md">Activées</span>
+                          ) : (
+                            <span className="text-amber-600 dark:text-amber-400 font-bold bg-amber-100 dark:bg-amber-950/40 px-2 py-0.5 rounded-md">Désactivées</span>
+                          )}
+                        </span>
+                      </div>
+                    </div>
                   </div>
                   <div className="flex flex-wrap gap-2 shrink-0">
                     <button
@@ -1711,8 +1851,34 @@ export const AdminDashboard: React.FC = () => {
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 mt-6">
-        <div className="flex justify-between items-center mb-6">
-          <h3 className="font-bold text-gray-900 dark:text-white">Articles ({articles.length})</h3>
+        <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
+          <div className="flex items-center gap-4">
+            <h3 className="font-bold text-gray-900 dark:text-white">Articles ({articles.length})</h3>
+            <div className="flex bg-gray-100 dark:bg-gray-900 p-1 rounded-xl">
+              <button
+                onClick={() => setArticlesLayoutMode('grid')}
+                className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                  articlesLayoutMode === 'grid' 
+                    ? 'bg-white dark:bg-gray-800 text-emerald-600 shadow-sm' 
+                    : 'text-gray-400 hover:text-gray-600'
+                }`}
+                title="Affichage Grille"
+              >
+                <Grid size={16} />
+              </button>
+              <button
+                onClick={() => setArticlesLayoutMode('list')}
+                className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                  articlesLayoutMode === 'list' 
+                    ? 'bg-white dark:bg-gray-800 text-emerald-600 shadow-sm' 
+                    : 'text-gray-400 hover:text-gray-600'
+                }`}
+                title="Affichage Liste"
+              >
+                <List size={16} />
+              </button>
+            </div>
+          </div>
           {articles.length > 0 && (
             <button
               onClick={handleDeleteAllArticles}
@@ -1722,7 +1888,9 @@ export const AdminDashboard: React.FC = () => {
             </button>
           )}
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className={`grid gap-4 ${
+          articlesLayoutMode === 'grid' ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'
+        }`}>
           {articles.map((article) => (
             <div key={article.id} className="p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl flex gap-4">
               {article.thumbnail && (
@@ -2025,24 +2193,12 @@ export const AdminDashboard: React.FC = () => {
               </h4>
               <p className="text-sm text-gray-500 mt-1">Choisissez comment les articles s'affichent sur la page d'accueil.</p>
             </div>
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                { id: 'grid', label: 'Grille (Grid)' },
-                { id: 'list', label: 'Liste (List)' },
-                { id: 'carousel', label: 'Carrousel (Carousel)' }
-              ].map(opt => (
-                <button
-                  key={opt.id}
-                  onClick={() => handleToggleFeature('articlesDisplayMode', opt.id)}
-                  className={`py-2 px-3 rounded-xl border text-sm font-semibold transition-all ${
-                    (featureToggles['articlesDisplayMode'] || 'grid') === opt.id
-                      ? 'bg-emerald-500 text-white border-emerald-500'
-                      : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700'
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
+            <div className="flex justify-start">
+              <LayoutSelector
+                value={featureToggles['articlesDisplayMode'] || 'grid'}
+                onChange={(newValue) => handleToggleFeature('articlesDisplayMode', newValue)}
+                activeColor="border-emerald-500 text-emerald-500"
+              />
             </div>
           </div>
 
@@ -2055,24 +2211,12 @@ export const AdminDashboard: React.FC = () => {
               </h4>
               <p className="text-sm text-gray-500 mt-1">Choisissez la disposition des produits dans la boutique.</p>
             </div>
-            <div className="grid grid-cols-3 gap-2">
-              {[
-                { id: 'grid', label: 'Grille (Grid)' },
-                { id: 'list', label: 'Liste compacte (Compact)' },
-                { id: 'bento', label: 'Bento' }
-              ].map(opt => (
-                <button
-                  key={opt.id}
-                  onClick={() => handleToggleFeature('storeDisplayMode', opt.id)}
-                  className={`py-2 px-3 rounded-xl border text-sm font-semibold transition-all ${
-                    (featureToggles['storeDisplayMode'] || 'grid') === opt.id
-                      ? 'bg-indigo-500 text-white border-indigo-500'
-                      : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700'
-                  }`}
-                >
-                  {opt.label}
-                </button>
-              ))}
+            <div className="flex justify-start">
+              <LayoutSelector
+                value={featureToggles['storeDisplayMode'] || 'grid'}
+                onChange={(newValue) => handleToggleFeature('storeDisplayMode', newValue)}
+                activeColor="border-indigo-500 text-indigo-500"
+              />
             </div>
           </div>
         </div>

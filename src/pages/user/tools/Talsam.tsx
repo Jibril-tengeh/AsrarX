@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Key, ArrowLeft, RefreshCw, AlertTriangle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
+import { ToolInfoTooltip } from '../../../components/ToolInfoTooltip';
 import { motion } from 'motion/react';
 
 export const Talsam: React.FC = () => {
@@ -70,6 +71,10 @@ export const Talsam: React.FC = () => {
         >
           <RefreshCw size={20} /> Extraire le Talsam
         </button>
+      </div>
+
+      <div className="mb-8">
+        <ToolInfoTooltip toolId="talsam" />
       </div>
 
       {talsam && (

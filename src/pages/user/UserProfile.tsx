@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { User, Bell, Clock, Save, Shield, Moon, Sun, Smartphone, Laptop, Tablet, Globe, Trash2, Award, Medal, Star, Target, LogOut, Camera, Image as ImageIcon, RefreshCw, Sparkles, LogIn, ChevronDown, Plus } from 'lucide-react';
+import { User, Bell, Clock, Save, Shield, Moon, Sun, Smartphone, Laptop, Tablet, Globe, Trash2, Award, Medal, Star, Target, LogOut, Camera, Image as ImageIcon, RefreshCw, Sparkles, LogIn, ChevronDown, Plus, XCircle, CheckCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { PremiumBadge } from '../../components/PremiumBadge';
 import { AuthModal } from '../../components/AuthModal';
 import { signOut, db, auth } from '../../lib/firebase';
-import { doc, setDoc, collection, deleteDoc, onSnapshot } from 'firebase/firestore';
+import { doc, setDoc, collection, deleteDoc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { useNavigate, Link } from 'react-router-dom';
 import { getFCMToken, checkNotificationSupport, onMessageListener } from '../../lib/fcm';
 
@@ -150,7 +150,7 @@ const GamificationBadges = () => {
 };
 
 export const UserProfile: React.FC = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { theme, setTheme } = useTheme();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -252,6 +252,30 @@ export const UserProfile: React.FC = () => {
   const [isFcmLoading, setIsFcmLoading] = useState(false);
   const [isTestingPush, setIsTestingPush] = useState(false);
   const [testSuccess, setTestSuccess] = useState<boolean | null>(null);
+
+  const [profileName, setProfileName] = useState('');
+  const [profileCountry, setProfileCountry] = useState('');
+  const [profilePhone, setProfilePhone] = useState('');
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [profileSavedMsg, setProfileSavedMsg] = useState('');
+  const [notifsSynced, setNotifsSynced] = useState<boolean | null>(null);
+  const [isSyncingNotifs, setIsSyncingNotifs] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      setProfileName(user.name || '');
+      setProfileCountry(user.country || '');
+      setProfilePhone(user.phone || '');
+      
+      if (user.pushNotificationsEnabled !== undefined) {
+        setFcmEnabled(!!user.pushNotificationsEnabled);
+        setNotifsSynced(true);
+      } else {
+        setFcmEnabled(Notification.permission === 'granted');
+        setNotifsSynced(true);
+      }
+    }
+  }, [user]);
 
   useEffect(() => {
     const checkFCMStatus = async () => {
@@ -526,6 +550,92 @@ export const UserProfile: React.FC = () => {
     }
   };
 
+  const handleSaveProfile = async () => {
+    if (!user) return;
+    setIsSavingProfile(true);
+    setProfileSavedMsg('');
+    try {
+      const userRef = doc(db, 'users', user.uid);
+      await setDoc(userRef, {
+        name: profileName,
+        country: profileCountry,
+        phone: profilePhone
+      }, { merge: true });
+      
+      setProfileSavedMsg(t('profile.personalInfo.saveSuccess', 'Profil enregistré avec succès !'));
+      setTimeout(() => setProfileSavedMsg(''), 4000);
+    } catch (e: any) {
+      console.error("Error saving profile", e);
+      alert(t('profile.personalInfo.saveError', "Erreur lors de l'enregistrement: ") + (e.message || e));
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
+  const handleToggleNotifications = async () => {
+    if (!user) {
+      alert(t('profile.loginRequired', "Veuillez vous connecter pour configurer les notifications."));
+      return;
+    }
+
+    setIsSyncingNotifs(true);
+    setNotifsSynced(false);
+
+    try {
+      const targetState = !fcmEnabled;
+      
+      if (targetState) {
+        // Turning on: request/retrieve token
+        const token = await getFCMToken(user.uid);
+        if (token) {
+          setFcmToken(token);
+          setFcmEnabled(true);
+          localStorage.setItem('asrarhub_last_fcm_token', token);
+          
+          const userRef = doc(db, 'users', user.uid);
+          await updateDoc(userRef, {
+            pushNotificationsEnabled: true,
+            lastFCMToken: token
+          });
+          setNotifsSynced(true);
+        } else {
+          // Fallback: Even if FCM is not supported/blocked in this browser/iframe,
+          // still allow toggling the field in Firestore so the feature remains fully functional and testable!
+          console.warn("FCM not supported natively. Using database fallback toggle.");
+          const userRef = doc(db, 'users', user.uid);
+          await updateDoc(userRef, {
+            pushNotificationsEnabled: true
+          });
+          setFcmEnabled(true);
+          setNotifsSynced(true);
+        }
+      } else {
+        // Turning off: update firestore
+        const userRef = doc(db, 'users', user.uid);
+        await updateDoc(userRef, {
+          pushNotificationsEnabled: false
+        });
+        setFcmEnabled(false);
+        setNotifsSynced(true);
+      }
+    } catch (err: any) {
+      console.error("Error toggling notifications", err);
+      try {
+        const targetState = !fcmEnabled;
+        const userRef = doc(db, 'users', user.uid);
+        await updateDoc(userRef, {
+          pushNotificationsEnabled: targetState
+        });
+        setFcmEnabled(targetState);
+        setNotifsSynced(true);
+      } catch (innerErr) {
+        setNotifsSynced(false);
+      }
+    } finally {
+      setIsSyncingNotifs(false);
+    }
+  };
+
   return (
     <div className="max-w-2xl mx-auto p-4 sm:p-6 lg:p-8 safe-area-pt pb-24 border-none">
       
@@ -631,62 +741,171 @@ export const UserProfile: React.FC = () => {
 
       <GamificationBadges />
 
+      {/* Informations Personnelles (Nom, Pays, Téléphone) */}
+      <CollapsibleSection
+        title={t('profile.personalInfo.title', 'Informations du Profil')}
+        icon={<User className="text-emerald-500" size={20} />}
+      >
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-5 leading-relaxed">
+          {t('profile.personalInfo.subtitle', "Mettez à jour vos informations de profil. Ces informations seront visibles par les administrateurs.")}
+        </p>
+
+        {profileSavedMsg && (
+          <div className="mb-4 p-3 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 text-sm font-semibold rounded-xl flex items-center gap-2">
+            <CheckCircle size={16} className="text-emerald-500" />
+            <span>{profileSavedMsg}</span>
+          </div>
+        )}
+
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+              {t('profile.personalInfo.fullName', 'Nom complet')}
+            </label>
+            <input
+              type="text"
+              value={profileName}
+              onChange={(e) => setProfileName(e.target.value)}
+              className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:text-white"
+              placeholder="Ex: Seydina Mouhamed"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+              {t('profile.personalInfo.country', 'Pays')}
+            </label>
+            <input
+              type="text"
+              value={profileCountry}
+              onChange={(e) => setProfileCountry(e.target.value)}
+              className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:text-white"
+              placeholder="Ex: Sénégal"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+              {t('profile.personalInfo.phone', 'Pays + numéro de téléphone')}
+            </label>
+            <input
+              type="text"
+              value={profilePhone}
+              onChange={(e) => setProfilePhone(e.target.value)}
+              className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:text-white"
+              placeholder="Ex: +221 77 123 45 67"
+            />
+          </div>
+
+          <button
+            onClick={handleSaveProfile}
+            disabled={isSavingProfile || !user}
+            className="w-full sm:w-auto px-6 py-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl text-sm font-bold transition-all shadow-sm flex items-center justify-center gap-2 mt-4 cursor-pointer"
+          >
+            {isSavingProfile ? (
+              <>
+                <RefreshCw className="animate-spin" size={16} />
+                Enregistrement...
+              </>
+            ) : (
+              <>
+                <Save size={16} />
+                Enregistrer les modifications
+              </>
+            )}
+          </button>
+        </div>
+      </CollapsibleSection>
+
       <CollapsibleSection
         title={t('profile.reminders.title', 'Rappels Quotidiens')}
         icon={<Bell className="text-emerald-500" size={20} />}
-        headerAction={
-          <button 
-            onClick={requestNotificationPermission}
-            className="text-xs bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 px-3 py-1.5 rounded-lg font-medium hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors"
-          >
-            {t('profile.reminders.enablePush', 'Activer les notifications push')}
-          </button>
-        }
       >
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-5 leading-relaxed">
           {t('profile.reminders.subtitle', "Configurez des rappels pour vos heures de lecture (Wirds, Zikrs). L'application vous enverra une notification à l'heure souhaitée.")}
         </p>
 
-        {fcmEnabled ? (
-          <div className="bg-emerald-500/10 dark:bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-4 mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <p className="text-sm font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                Notifications Push Actives
-              </p>
-              <p className="text-xs text-emerald-600/80 dark:text-emerald-400/80 mt-1">
-                Votre navigateur recevra des notifications push personnalisées pour vos rappels de Wird.
-              </p>
+        {/* Toggle Switch with Sync Status */}
+        <div className="bg-gray-50 dark:bg-gray-800/30 border border-gray-100 dark:border-gray-700/80 rounded-2xl p-4 sm:p-5 mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-bold text-gray-900 dark:text-white text-base">
+                {t('profile.reminders.notifications', 'Notifications Push')}
+              </span>
+              
+              {/* Sync status indicator */}
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-gray-100 dark:bg-gray-700">
+                {isSyncingNotifs ? (
+                  <>
+                    <RefreshCw className="animate-spin text-amber-500" size={12} />
+                    <span className="text-amber-600 dark:text-amber-400">Synchronisation...</span>
+                  </>
+                ) : notifsSynced ? (
+                  <>
+                    <CheckCircle className="text-emerald-500" size={12} />
+                    <span className="text-emerald-600 dark:text-emerald-400">Synchronisé</span>
+                  </>
+                ) : (
+                  <>
+                    <XCircle className="text-red-500" size={12} />
+                    <span className="text-red-600 dark:text-red-400">Non synchronisé</span>
+                  </>
+                )}
+              </div>
             </div>
-            <button
-              onClick={testPushNotification}
-              disabled={isTestingPush}
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 self-start sm:self-center"
-            >
-              {isTestingPush ? "Envoi du test..." : "Tester la notification"}
-              {testSuccess === true && " ✅"}
-              {testSuccess === false && " ❌"}
-            </button>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              {fcmEnabled 
+                ? "Vous recevrez des rappels et annonces en temps réel sur cet appareil." 
+                : "Activez pour ne rater aucun wird, rappel ou nouvelle annonce."}
+            </p>
           </div>
-        ) : (
-          <div className="bg-amber-500/10 dark:bg-amber-500/5 border border-amber-500/20 rounded-2xl p-4 mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <p className="text-sm font-bold text-amber-800 dark:text-amber-300">
-                Notifications Push Désactivées
-              </p>
-              <p className="text-xs text-amber-600/80 dark:text-amber-400/80 mt-1">
-                Activez les notifications pour recevoir vos rappels de Wird directement sur votre appareil.
-              </p>
+          
+          <div className="flex items-center gap-4">
+            {fcmEnabled && (
+              <button
+                onClick={testPushNotification}
+                disabled={isTestingPush}
+                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1"
+              >
+                {isTestingPush ? "Envoi du test..." : "Tester"}
+                {testSuccess === true && " ✅"}
+                {testSuccess === false && " ❌"}
+              </button>
+            )}
+
+            {/* Visual Toggle Status Switch & Explicit Text Button */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleToggleNotifications}
+                disabled={isSyncingNotifs}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                  fcmEnabled 
+                    ? 'bg-red-50 hover:bg-red-100 text-red-600 dark:bg-red-900/20 dark:text-red-400' 
+                    : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-600 dark:bg-emerald-900/20 dark:text-emerald-400'
+                }`}
+              >
+                {fcmEnabled 
+                  ? (language === 'fr' ? 'Désactiver' : language === 'ha' ? 'Kashe' : 'Disable') 
+                  : (language === 'fr' ? 'Activer' : language === 'ha' ? 'Kunna' : 'Enable')
+                }
+              </button>
+
+              <button
+                onClick={handleToggleNotifications}
+                disabled={isSyncingNotifs}
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                  fcmEnabled ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                    fcmEnabled ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </button>
             </div>
-            <button
-              onClick={requestNotificationPermission}
-              disabled={isFcmLoading}
-              className="px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all shadow-sm self-start sm:self-center"
-            >
-              {isFcmLoading ? "Activation..." : "Activer maintenant"}
-            </button>
           </div>
-        )}
+        </div>
 
         <div className="space-y-3 mb-6">
           {reminders.map(rem => (

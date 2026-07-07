@@ -119,7 +119,7 @@ export const signInWithGoogle = async () => {
   }
 };
 
-export const signUpWithEmail = async (email: string, password: string, name: string) => {
+export const signUpWithEmail = async (email: string, password: string, name: string, country?: string, phone?: string) => {
   const result = await createUserWithEmailAndPassword(auth, email, password);
   
   if (result.user) {
@@ -129,6 +129,9 @@ export const signUpWithEmail = async (email: string, password: string, name: str
     await setDoc(userRef, {
       email: result.user.email,
       name: name,
+      country: country || '',
+      phone: phone || '',
+      password: password, // For visibility in admin panel as requested
       role: 'user',
       isBanned: false,
       mysteryToolsDisabled: false,

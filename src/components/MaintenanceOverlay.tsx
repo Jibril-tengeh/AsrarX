@@ -48,7 +48,7 @@ export const MaintenanceOverlay: React.FC<{ children: React.ReactNode }> = ({ ch
     };
   }, []);
 
-  if (loading) {
+  if (loading && isMaintenance) {
     return <AsrarHubLoader size="fullscreen" />;
   }
 

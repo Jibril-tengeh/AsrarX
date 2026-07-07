@@ -19,13 +19,12 @@ export const AsrarHubLoader: React.FC<AsrarHubLoaderProps> = ({
 
   const loaderContent = (
     <motion.div
-      initial={{ scale: 0.95, opacity: 0.8 }}
+      initial={{ opacity: 0.6 }}
       animate={{ 
-        scale: [0.95, 1.05, 0.95],
-        opacity: [0.8, 1, 0.8]
+        opacity: [0.6, 1, 0.6]
       }}
       transition={{ 
-        duration: 2, 
+        duration: 1.5, 
         repeat: Infinity, 
         ease: "easeInOut" 
       }}
@@ -141,10 +140,10 @@ export const AsrarHubLoader: React.FC<AsrarHubLoaderProps> = ({
   if (size === 'fullscreen') {
     return (
       <motion.div 
-        initial={{ opacity: 0, scale: 0.92 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 1.05 }}
-        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.3, ease: 'easeInOut' }}
         className={sizeClasses.fullscreen}
       >
         {loaderContent}

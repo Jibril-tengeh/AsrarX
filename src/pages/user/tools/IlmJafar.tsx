@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { BookOpen, Key, ArrowLeft, RefreshCw, Sparkles, MessageCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
+import { ToolInfoTooltip } from '../../../components/ToolInfoTooltip';
 import { motion } from 'motion/react';
 
 const JAFAR_RESPONSES = [
@@ -103,6 +104,10 @@ export const IlmJafar: React.FC = () => {
             Consulter le Jafar
           </button>
         </div>
+      </div>
+
+      <div className="mb-8">
+        <ToolInfoTooltip toolId="ilm_jafar" />
       </div>
 
       {result && (

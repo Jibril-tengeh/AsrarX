@@ -309,7 +309,22 @@
     },
     "khatim": {
       "title": "Générateur de Khatim",
-      "description": "Créez des carrés magiques (Wafq) 3x3 basés sur des valeurs numériques."
+      "description": "Créez des carrés magiques (Wafq) 3x3 basés sur des valeurs numériques.",
+      "dynamicTitle": "Générateur de Khatim Dynamique",
+      "instructions": "Entrez un texte en arabe (pour calculer son Poids Mystique) ou directement une valeur numérique. Choisissez le type de sceau pour le générer.",
+      "inputLabel": "Texte (Arabe) ou Nombre",
+      "dimensionLabel": "Dimension du Sceau (Khatim)",
+      "generateButton": "GÉNÉRER LE KHATIM",
+      "totalWeight": "POIDS TOTAL",
+      "sacredHarmony": "Harmonie Sacrée",
+      "rowsColsDesc": "Lignes et colonnes",
+      "diagonalsNote": "(Les diagonales peuvent légèrement varier s'il y a un reste)",
+      "errorMin": "Le poids calculé ({total}) est trop petit pour un Khatim de taille {size}x{size}. Le minimum requis est {min}.",
+      "download": "Enregistrer",
+      "share": "Partager",
+      "shareText": "Voici mon Khatim généré.",
+      "shareNotSupported": "Le partage direct n'est pas supporté sur ce navigateur.",
+      "errorEmpty": "Veuillez entrer un nombre ou un texte en arabe."
     },
     "ruqyah": {
       "title": "Ruqyah Shari'ah",
@@ -542,6 +557,38 @@
     "confirmClearAll": "Voulez-vous vraiment supprimer toutes vos routines ?"
   },
   "profile": {
+    "defaultName": "Profil & Préférences",
+    "defaultEmail": "Gérez vos paramètres et rappels spirituels",
+    "login": "Se connecter",
+    "logout": "Déconnexion",
+    "loginRequired": "Veuillez vous connecter pour configurer vos préférences.",
+    "personalInfo": {
+      "title": "Informations du Profil",
+      "subtitle": "Mettez à jour vos informations de profil. Ces informations seront visibles par les administrateurs.",
+      "fullName": "Nom complet",
+      "country": "Pays",
+      "phone": "Pays + numéro de téléphone",
+      "saveSuccess": "Profil enregistré avec succès !",
+      "saveError": "Erreur lors de l'enregistrement: "
+    },
+    "reminders": {
+      "title": "Rappels Quotidiens",
+      "subtitle": "Configurez des rappels pour vos heures de lecture (Wirds, Zikrs). L'application vous enverra une notification à l'heure souhaitée.",
+      "notifications": "Notifications Push",
+      "enablePush": "Activer les notifications push",
+      "pushSuccess": "Notifications push FCM activées avec succès !",
+      "pushUnsupported": "Les notifications push ne sont pas supportées sur ce navigateur ou cet appareil.",
+      "pushError": "Une erreur est survenue lors de la configuration FCM : ",
+      "morning": "Wird du Matin",
+      "evening": "Wird du Soir"
+    },
+    "theme": {
+      "title": "Apparence & Thème",
+      "subtitle": "Personnalisez l'apparence de l'application. Le mode automatique synchronise l'affichage avec votre système pour un confort optimal jour et nuit.",
+      "light": "Clair",
+      "dark": "Sombre",
+      "auto": "Automatique"
+    },
     "sessions": {
       "title": "Sessions actives",
       "subtitle": "Gérez les appareils connectés à votre compte spirituel. Vous pouvez révoquer l'accès à tout moment pour déconnecter un appareil à distance.",

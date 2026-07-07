@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Star, ArrowLeft, RefreshCw, Calculator, Grid, Type, Download, Share2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
+import { ToolInfoTooltip } from '../../../components/ToolInfoTooltip';
 import { motion, AnimatePresence } from 'motion/react';
 import { calculateAbjadValue } from '../../../utils/abjad';
 import { toCanvas } from 'html-to-image';
@@ -38,12 +39,12 @@ export const KhatimGenerator: React.FC = () => {
         const file = new File([blob], `khatim-${gridSize}x${gridSize}.png`, { type: 'image/png' });
         if (navigator.share && navigator.canShare({ files: [file] })) {
           await navigator.share({
-            title: 'Khatim Généré',
-            text: 'Voici mon Khatim généré.',
+            title: t('tools.khatim.title', 'Khatim Généré'),
+            text: t('tools.khatim.shareText', 'Voici mon Khatim généré.'),
             files: [file]
           });
         } else {
-          alert('Le partage direct n\'est pas supporté sur ce navigateur.');
+          alert(t('tools.khatim.shareNotSupported', "Le partage direct n'est pas supporté sur ce navigateur."));
         }
       });
     } catch (e) {
@@ -127,7 +128,12 @@ export const KhatimGenerator: React.FC = () => {
   const generateKhatimGrid = (n: number, total: number) => {
     const stdSum = (n * (n * n + 1)) / 2;
     if (total < stdSum) {
-      throw new Error(`Le poids calculé (${total}) est trop petit pour un Khatim de taille ${n}x${n}. Le minimum requis est ${stdSum}.`);
+      throw new Error(
+        t('tools.khatim.errorMin', 'Le poids calculé ({total}) est trop petit pour un Khatim de taille {size}x{size}. Le minimum requis est {min}.')
+          .replace('{total}', String(total))
+          .replace('{size}', String(n))
+          .replace('{min}', String(stdSum))
+      );
     }
 
     const base = total - stdSum;
@@ -160,7 +166,7 @@ export const KhatimGenerator: React.FC = () => {
         n = calculateAbjadValue(inputText);
       }
 
-      if (n === 0) throw new Error("Veuillez entrer un nombre ou un texte en arabe.");
+      if (n === 0) throw new Error(t('tools.khatim.errorEmpty', 'Veuillez entrer un nombre ou un texte en arabe.'));
 
       setCalculatedTotal(n);
       
@@ -236,7 +242,7 @@ export const KhatimGenerator: React.FC = () => {
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
             <Star className="text-purple-500" />
-            Générateur de Khatim Dynamique
+            {t('tools.khatim.dynamicTitle', 'Générateur de Khatim Dynamique')}
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t("tools.khatim.description")}</p>
         </div>
@@ -245,14 +251,14 @@ export const KhatimGenerator: React.FC = () => {
       <div className="bg-purple-900/10 border border-purple-800/30 rounded-3xl p-6 mb-8 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/20 rounded-full blur-3xl"></div>
         <p className="text-sm text-purple-800 dark:text-purple-200 font-medium leading-relaxed relative z-10">
-          Entrez un texte en arabe (pour calculer son Poids Mystique) ou directement une valeur numérique. Choisissez le type de sceau pour le générer.
+          {t('tools.khatim.instructions', 'Entrez un texte en arabe (pour calculer son Poids Mystique) ou directement une valeur numérique. Choisissez le type de sceau pour le générer.')}
         </p>
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 sm:p-8 shadow-sm border border-gray-100 dark:border-gray-700 mb-8 relative z-20">
         <div className="mb-6">
           <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-            <Type size={16} /> Texte (Arabe) ou Nombre
+            <Type size={16} /> {t('tools.khatim.inputLabel', 'Texte (Arabe) ou Nombre')}
           </label>
           <input
             type="text"
@@ -266,7 +272,7 @@ export const KhatimGenerator: React.FC = () => {
 
         <div className="mb-6">
           <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-            <Grid size={16} /> Dimension du Sceau (Khatim)
+            <Grid size={16} /> {t('tools.khatim.dimensionLabel', 'Dimension du Sceau (Khatim)')}
           </label>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             {[
@@ -294,9 +300,9 @@ export const KhatimGenerator: React.FC = () => {
 
         <button
           onClick={generateKhatim}
-          className="w-full h-14 rounded-2xl bg-gradient-to-br from-purple-600 to-indigo-800 text-white font-bold transition-transform hover:scale-102 active:scale-98 shadow-lg flex items-center justify-center gap-2 tracking-wide"
+          className="w-full h-14 rounded-2xl bg-gradient-to-br from-purple-600 to-indigo-800 text-white font-bold transition-transform hover:scale-102 active:scale-98 shadow-lg flex items-center justify-center gap-2 tracking-wide cursor-pointer"
         >
-          <Grid size={20} /> GÉNÉRER LE KHATIM
+          <Grid size={20} /> {t('tools.khatim.generateButton', 'GÉNÉRER LE KHATIM')}
         </button>
         
         <AnimatePresence>
@@ -306,6 +312,10 @@ export const KhatimGenerator: React.FC = () => {
             </motion.p>
           )}
         </AnimatePresence>
+      </div>
+
+      <div className="mb-8">
+        <ToolInfoTooltip toolId="khatim" />
       </div>
 
       <AnimatePresence>
@@ -321,7 +331,7 @@ export const KhatimGenerator: React.FC = () => {
                
                <div className="text-center mb-8 relative z-10">
                 <span className="inline-block border-2 border-purple-500/50 text-purple-400 px-6 py-2 rounded-full text-sm font-black tracking-[0.3em] bg-purple-500/10 shadow-[0_0_15px_rgba(168,85,247,0.2)]">
-                  POIDS TOTAL : {calculatedTotal}
+                  {t('tools.khatim.totalWeight', 'POIDS TOTAL')} : {calculatedTotal}
                 </span>
               </div>
               
@@ -358,19 +368,19 @@ export const KhatimGenerator: React.FC = () => {
               </motion.div>
 
               <div className="text-center mt-8 relative z-10">
-                 <p className="text-xs text-zinc-500 font-bold tracking-widest uppercase mb-1">Harmonie Sacrée</p>
-                 <p className="text-xs text-zinc-400">Lignes et colonnes = {calculatedTotal} {calculatedTotal % gridSize !== 0 && "(Les diagonales peuvent légèrement varier s'il y a un reste)"}</p>
+                 <p className="text-xs text-zinc-500 font-bold tracking-widest uppercase mb-1">{t('tools.khatim.sacredHarmony', 'Harmonie Sacrée')}</p>
+                 <p className="text-xs text-zinc-400">{t('tools.khatim.rowsColsDesc', 'Lignes et colonnes')} = {calculatedTotal} {calculatedTotal % gridSize !== 0 && t('tools.khatim.diagonalsNote', "(Les diagonales peuvent légèrement varier s'il y a un reste)")}</p>
               </div>
             </div>
             
             <div className="flex gap-4 mt-4">
               <button onClick={downloadImage} className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-zinc-800 text-white hover:bg-zinc-700 font-semibold transition-colors shadow-lg cursor-pointer">
                 <Download size={20} />
-                {t('khatim.download', 'Enregistrer')}
+                {t('tools.khatim.download', 'Enregistrer')}
               </button>
               <button onClick={shareResult} className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-purple-600 text-white hover:bg-purple-500 font-semibold transition-colors shadow-lg cursor-pointer">
                 <Share2 size={20} />
-                {t('khatim.share', 'Partager')}
+                {t('tools.khatim.share', 'Partager')}
               </button>
             </div>
           </motion.div>

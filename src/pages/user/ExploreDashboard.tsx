@@ -351,6 +351,41 @@ export const ExploreDashboard: React.FC = () => {
               );
             }
 
+            if (displayMode === 'large' || displayMode === 'grid1') {
+              return (
+                <div className="grid grid-cols-1 gap-8">
+                  {articles.map((article) => (
+                    <div 
+                      key={article.id} 
+                      className="bg-white dark:bg-gray-800 rounded-3xl overflow-hidden border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow flex flex-col cursor-pointer group" 
+                      onClick={() => setSelectedArticle(article)}
+                    >
+                      {article.thumbnail ? (
+                        <div className="h-64 sm:h-96 w-full overflow-hidden">
+                          <img src={article.thumbnail} alt={article.title} className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300" />
+                        </div>
+                      ) : (
+                        <div className="h-64 sm:h-96 w-full bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center">
+                          <FileText size={64} className="text-emerald-200 dark:text-emerald-800" />
+                        </div>
+                      )}
+                      <div className="p-6 sm:p-8 flex-1 flex flex-col justify-between">
+                        <div>
+                          <h3 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-3 group-hover:text-emerald-500 transition-colors">
+                            {article.isPremium && <Sparkles size={20} className="inline mr-2 text-violet-500" />}
+                            {article.title}
+                          </h3>
+                        </div>
+                        <div className="mt-4 flex items-center text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                          Lire l'article <ArrowRight size={16} className="ml-2 group-hover:translate-x-1 transition-transform" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            }
+
             if (displayMode === 'carousel') {
               return (
                 <div className="flex gap-6 overflow-x-auto pb-4 custom-scrollbar snap-x snap-mandatory">

@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../lib/firebase';
 import { collection, onSnapshot, doc, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
-import { Edit2, Trash2, Plus, X, ShoppingBag } from 'lucide-react';
+import { Edit2, Trash2, Plus, X, ShoppingBag, Grid, List } from 'lucide-react';
 
 export const AdminStoreManager = () => {
   const [products, setProducts] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [productsLayoutMode, setProductsLayoutMode] = useState<'grid' | 'list'>('grid');
   
   // Product Form State
   const [formData, setFormData] = useState({
@@ -92,26 +93,62 @@ export const AdminStoreManager = () => {
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-      <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-bold flex items-center gap-2"><ShoppingBag className="text-emerald-500" /> Gestion Boutique</h2>
-        <button onClick={() => { resetForm(); setIsModalOpen(true); }} className="bg-emerald-600 text-white px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-emerald-700">
+      <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
+        <div className="flex items-center gap-4">
+          <h2 className="text-xl font-bold flex items-center gap-2"><ShoppingBag className="text-emerald-500" /> Gestion Boutique</h2>
+          <div className="flex bg-gray-100 dark:bg-gray-900 p-1 rounded-xl">
+            <button
+              onClick={() => setProductsLayoutMode('grid')}
+              className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                productsLayoutMode === 'grid' 
+                  ? 'bg-white dark:bg-gray-800 text-emerald-600 shadow-sm' 
+                  : 'text-gray-400 hover:text-gray-600'
+              }`}
+              title="Affichage Grille"
+            >
+              <Grid size={16} />
+            </button>
+            <button
+              onClick={() => setProductsLayoutMode('list')}
+              className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                productsLayoutMode === 'list' 
+                  ? 'bg-white dark:bg-gray-800 text-emerald-600 shadow-sm' 
+                  : 'text-gray-400 hover:text-gray-600'
+              }`}
+              title="Affichage Liste"
+            >
+              <List size={16} />
+            </button>
+          </div>
+        </div>
+        <button onClick={() => { resetForm(); setIsModalOpen(true); }} className="bg-emerald-600 text-white px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-emerald-700 cursor-pointer">
           <Plus size={18} /> Ajouter Produit
         </button>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className={`grid gap-4 ${
+        productsLayoutMode === 'grid' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'
+      }`}>
         {products.map(p => (
-          <div key={p.id} className="border border-gray-200 dark:border-gray-700 p-4 rounded-xl flex flex-col">
-            <img src={p.image} className="w-full h-32 object-cover rounded-lg mb-4" />
-            <div className="flex justify-between items-start mb-2">
-              <h3 className="font-bold">{p.name.fr || p.name}</h3>
-              <span className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">{p.category}</span>
-            </div>
-            <p className="text-sm text-gray-500 flex-1">{p.price} • {p.pointsCost ? `${p.pointsCost} pts` : 'Pas de pts'}</p>
-            {p.affiliateLink && <p className="text-xs text-blue-500 mb-2">🔗 Produit affilié</p>}
-            <div className="flex gap-2 mt-4">
-              <button onClick={() => openEdit(p)} className="flex-1 bg-gray-100 dark:bg-gray-700 p-2 rounded-lg text-center hover:bg-gray-200"><Edit2 size={16} className="mx-auto" /></button>
-              <button onClick={() => deleteProduct(p.id)} className="flex-1 bg-red-50 text-red-600 p-2 rounded-lg text-center hover:bg-red-100"><Trash2 size={16} className="mx-auto" /></button>
+          <div key={p.id} className={`border border-gray-200 dark:border-gray-700 p-4 rounded-xl flex ${
+            productsLayoutMode === 'grid' ? 'flex-col' : 'flex-col md:flex-row gap-4 items-center'
+          }`}>
+            <img src={p.image} className={`object-cover rounded-lg ${
+              productsLayoutMode === 'grid' ? 'w-full h-32 mb-4' : 'w-24 h-24 shrink-0'
+            }`} />
+            <div className="flex-1 flex flex-col justify-between w-full">
+              <div>
+                <div className="flex justify-between items-start mb-2 flex-wrap gap-2">
+                  <h3 className="font-bold">{p.name?.fr || p.name}</h3>
+                  <span className="text-xs bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded">{p.category}</span>
+                </div>
+                <p className="text-sm text-gray-500 flex-1">{p.price} • {p.pointsCost ? `${p.pointsCost} pts` : 'Pas de pts'}</p>
+                {p.affiliateLink && <p className="text-xs text-blue-500 mt-1">🔗 Produit affilié</p>}
+              </div>
+              <div className={`flex gap-2 mt-4 ${productsLayoutMode === 'grid' ? 'w-full' : 'max-w-[200px]'}`}>
+                <button onClick={() => openEdit(p)} className="flex-1 bg-gray-100 dark:bg-gray-700 p-2 rounded-lg text-center hover:bg-gray-200 cursor-pointer"><Edit2 size={16} className="mx-auto" /></button>
+                <button onClick={() => deleteProduct(p.id)} className="flex-1 bg-red-50 text-red-600 p-2 rounded-lg text-center hover:bg-red-100 cursor-pointer"><Trash2 size={16} className="mx-auto" /></button>
+              </div>
             </div>
           </div>
         ))}

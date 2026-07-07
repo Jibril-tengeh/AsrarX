@@ -118,13 +118,9 @@ const NetworkStatus = () => {
 };
 
 const ProtectedToolsLayout: React.FC = () => {
-  const { user, loading } = useAuth();
+  const { user } = useAuth();
   const { t } = useLanguage();
   const [showAuthModal, setShowAuthModal] = React.useState(false);
-
-  if (loading) {
-    return <AsrarHubLoader size="fullscreen" />;
-  }
 
   if (!user) {
     return (
@@ -284,7 +280,11 @@ export default function App() {
         <Header />
         <DailyRewardHandler />
         <main className={`flex-1 text-gray-900 dark:text-gray-100 pb-20 ${isRuqyahPlayer ? '' : 'pt-20'}`}>
-          <React.Suspense fallback={<AsrarHubLoader size="fullscreen" />}>
+          <React.Suspense fallback={
+            <div className="flex items-center justify-center min-h-[60vh]">
+              <div className="w-10 h-10 border-4 border-emerald-500/10 border-t-emerald-600 rounded-full animate-spin" />
+            </div>
+          }>
             <AnimatePresence mode="wait">
               <motion.div
                 key={location.pathname}

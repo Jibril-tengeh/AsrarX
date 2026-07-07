@@ -44,15 +44,12 @@ export const Store: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    // Default to GHS as requested
-    setPaystackConfig({ currency: 'GHS', amount: 200 });
-  }, []);
-
-  useEffect(() => {
     if (featureToggles?.storeDisplayMode) {
       const mode = featureToggles.storeDisplayMode;
       if (mode === 'grid') {
         setLayoutMode('grid2');
+      } else if (mode === 'large' || mode === 'grid1') {
+        setLayoutMode('grid1');
       } else if (mode === 'list') {
         setLayoutMode('list');
       } else if (mode === 'bento') {
@@ -60,6 +57,11 @@ export const Store: React.FC = () => {
       }
     }
   }, [featureToggles?.storeDisplayMode]);
+
+  useEffect(() => {
+    // Default to GHS as requested
+    setPaystackConfig({ currency: 'GHS', amount: 200 });
+  }, []);
 
   const handlePurchase = async (product: any, usePoints: boolean = false, paymentMethod?: 'paystack' | 'visa' | 'crypto') => {
     if (!user) {

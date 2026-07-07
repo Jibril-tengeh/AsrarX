@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Hexagon, ArrowLeft, Send, Download, Share2, HelpCircle, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
+import { ToolInfoTooltip } from '../../../components/ToolInfoTooltip';
 import { motion, AnimatePresence } from 'motion/react';
 import { toCanvas } from 'html-to-image';
 
@@ -159,6 +160,10 @@ export const Zairja: React.FC = () => {
             )}
           </button>
         </div>
+      </div>
+
+      <div className="mt-6">
+        <ToolInfoTooltip toolId="zairja" />
       </div>
 
       <AnimatePresence mode="wait">

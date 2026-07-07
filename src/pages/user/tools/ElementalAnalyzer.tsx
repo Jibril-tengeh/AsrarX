@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Flame, Droplets, Wind, Mountain, ArrowLeft, Info, Database, Wifi } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
+import { ToolInfoTooltip } from '../../../components/ToolInfoTooltip';
 import { motion } from 'motion/react';
 
 const ELEMENTS = {
@@ -123,6 +124,10 @@ export const ElementalAnalyzer: React.FC = () => {
           placeholder="ex: محمد, الرزاق..."
           className="w-full text-2xl font-arabic p-4 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900 focus:ring-2 focus:ring-indigo-500"
         />
+      </div>
+
+      <div className="mb-8">
+        <ToolInfoTooltip toolId="elemental" />
       </div>
 
       {result && result.dominants.length > 0 && (

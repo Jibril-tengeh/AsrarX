@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Shuffle, ArrowLeft, Info } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
+import { ToolInfoTooltip } from '../../../components/ToolInfoTooltip';
 import { motion, AnimatePresence } from 'motion/react';
 
 export const Taksir: React.FC = () => {
@@ -101,6 +102,10 @@ export const Taksir: React.FC = () => {
              <Shuffle size={20} /> Briser
            </button>
         </div>
+      </div>
+
+      <div className="mb-8">
+        <ToolInfoTooltip toolId="taksir" />
       </div>
 
       <AnimatePresence>

@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useFeatures } from '../../contexts/FeatureContext';
 import { db } from '../../lib/firebase';
 import { collection, query, orderBy, onSnapshot, doc } from 'firebase/firestore';
-import { Search, LayoutGrid, Square, List, Filter, X, BookOpen, Store, Award, MapPin, Trophy, ShieldCheck, ChevronDown, Bookmark, Flame, Shield, RefreshCw, Quote, Folder, Plus, Library, Music, Pencil, Trash2 } from 'lucide-react';
+import { Search, LayoutGrid, Square, List, Filter, X, BookOpen, Store, Award, MapPin, Trophy, ShieldCheck, ChevronDown, Bookmark, Flame, Shield, RefreshCw, Quote, Folder, Plus, Library, Music, Pencil, Trash2, Sliders } from 'lucide-react';
 import { SecretCard, LayoutMode } from '../../components/SecretCard';
 import { HabitTracker } from '../../components/HabitTracker';
 import { DailyGoalsTracker } from '../../components/DailyGoalsTracker';
@@ -36,8 +36,12 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
       const mode = featureToggles.articlesDisplayMode;
       if (mode === 'grid') {
         setLayoutMode('grid2');
+      } else if (mode === 'large' || mode === 'grid1') {
+        setLayoutMode('grid1');
       } else if (mode === 'list') {
         setLayoutMode('list');
+      } else {
+        setLayoutMode('grid2');
       }
     }
   }, [featureToggles?.articlesDisplayMode]);

@@ -309,7 +309,22 @@
     },
     "khatim": {
       "title": "Khatim Generator",
-      "description": "Create 3x3 magic squares (Wafq) based on numerical values."
+      "description": "Create 3x3 magic squares (Wafq) based on numerical values.",
+      "dynamicTitle": "Dynamic Khatim Generator",
+      "instructions": "Enter an Arabic text (to calculate its Mystic Weight) or directly a numerical value. Choose the type of seal to generate it.",
+      "inputLabel": "Text (Arabic) or Number",
+      "dimensionLabel": "Seal Dimension (Khatim)",
+      "generateButton": "GENERATE KHATIM",
+      "totalWeight": "TOTAL WEIGHT",
+      "sacredHarmony": "Sacred Harmony",
+      "rowsColsDesc": "Rows and columns",
+      "diagonalsNote": "(Diagonals may slightly vary if there is a remainder)",
+      "errorMin": "The calculated weight ({total}) is too small for a Khatim of size {size}x{size}. The minimum required is {min}.",
+      "download": "Save",
+      "share": "Share",
+      "shareText": "Here is my generated Khatim.",
+      "shareNotSupported": "Direct sharing is not supported on this browser.",
+      "errorEmpty": "Please enter a number or an Arabic text."
     },
     "ruqyah": {
       "title": "Ruqyah Shari'ah",
@@ -542,6 +557,38 @@
     "confirmClearAll": "Are you sure you want to delete all your routines?"
   },
   "profile": {
+    "defaultName": "Profile & Preferences",
+    "defaultEmail": "Manage your spiritual settings and reminders",
+    "login": "Log In",
+    "logout": "Log Out",
+    "loginRequired": "Please log in to configure your preferences.",
+    "personalInfo": {
+      "title": "Profile Information",
+      "subtitle": "Update your profile details. These details will be visible to administrators.",
+      "fullName": "Full Name",
+      "country": "Country",
+      "phone": "Country + Phone Number",
+      "saveSuccess": "Profile saved successfully!",
+      "saveError": "Error saving profile: "
+    },
+    "reminders": {
+      "title": "Daily Reminders",
+      "subtitle": "Set reminders for your reading times (Wirds, Zikrs). The application will send a notification at the selected time.",
+      "notifications": "Push Notifications",
+      "enablePush": "Enable push notifications",
+      "pushSuccess": "FCM push notifications successfully enabled!",
+      "pushUnsupported": "Push notifications are not supported on this browser or device.",
+      "pushError": "An error occurred during FCM configuration: ",
+      "morning": "Morning Wird",
+      "evening": "Evening Wird"
+    },
+    "theme": {
+      "title": "Appearance & Theme",
+      "subtitle": "Customize the look and feel of the app. Automatic mode syncs with your system settings for comfortable day and night reading.",
+      "light": "Light",
+      "dark": "Dark",
+      "auto": "Automatic"
+    },
     "sessions": {
       "title": "Active Sessions",
       "subtitle": "Manage devices connected to your spiritual account. You can revoke access at any time to disconnect a device remotely.",

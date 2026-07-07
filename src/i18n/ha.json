@@ -309,7 +309,22 @@
     },
     "khatim": {
       "title": "Mai Samar da Khatim",
-      "description": "Ƙirƙiri sihirin fili na 3x3 (Wafq) bisa ƙimar lamba."
+      "description": "Ƙirƙiri sihirin fili na 3x3 (Wafq) bisa ƙimar lamba.",
+      "dynamicTitle": "Mai Samar da Hatimi na Musamman",
+      "instructions": "Shigar da rubutun Larabci (don kirga nauyin sirrinsa) ko lambar kai tsaye. Sannan ka zabi girman Hatimi don samar da shi.",
+      "inputLabel": "Rubutu (Larabci) ko Lamba",
+      "dimensionLabel": "Girman Hatimi (Khatim)",
+      "generateButton": "SAMAR DA HATIMI",
+      "totalWeight": "JUMULLAR NAUYI",
+      "sacredHarmony": "Daidaiton Tsari",
+      "rowsColsDesc": "Layi da ginshiƙai",
+      "diagonalsNote": "(Layukan karkata na iya bambanta idan akwai saura)",
+      "errorMin": "Nauyin da aka lissafe ({total}) ya yi kankanta ga Hatimi na girman {size}x{size}. Mafi kankanta da ake bukata shi ne {min}.",
+      "download": "Ajiye",
+      "share": "Raba",
+      "shareText": "Ga Hatimina da aka samar.",
+      "shareNotSupported": "Ba a goyan bayan raba kai tsaye a kan wannan burauzar ba.",
+      "errorEmpty": "Da fatan za a shigar da lamba ko rubutun Larabci."
     },
     "ruqyah": {
       "title": "Ruqyah ta Shari'ah",
@@ -542,6 +557,38 @@
     "confirmClearAll": "Kuna da tabbacin kuna son goge duk ayyukan ku?"
   },
   "profile": {
+    "defaultName": "Bayanai & Zaɓuka",
+    "defaultEmail": "Sarrafa saitunanku na ruhaniya da tunatarwa",
+    "login": "Shiga Ciki",
+    "logout": "Fita",
+    "loginRequired": "Da fatan za a shiga don daidaita zaɓukanku.",
+    "personalInfo": {
+      "title": "Bayanin Bayanan Martaba",
+      "subtitle": "Sabunta cikakkun bayanan martaba. Waɗannan bayanan za su kasance ga masu gudanarwa.",
+      "fullName": "Cikakken Suna",
+      "country": "Ƙasa",
+      "phone": "Ƙasa + Lambar Waya",
+      "saveSuccess": "An ajiye bayanan martaba cikin nasara!",
+      "saveError": "Kuskure wajen ajiye bayanan martaba: "
+    },
+    "reminders": {
+      "title": "Tunatarwa na Yau da Kullum",
+      "subtitle": "Saita tunatarwa don lokutan karatunku (Wirds, Zikrs). Aikace-aikacen zai aika sanarwa a lokacin da aka zaɓa.",
+      "notifications": "Tura Sanarwa",
+      "enablePush": "Kunna tura sanarwa",
+      "pushSuccess": "An kunna sanarwar tura FCM cikin nasara!",
+      "pushUnsupported": "Ba a goyan bayan tura sanarwa a wannan mai binciken ko na'urar.",
+      "pushError": "An sami kuskure yayin tsarin FCM: ",
+      "morning": "Wird na Safe",
+      "evening": "Wird na Yamma"
+    },
+    "theme": {
+      "title": "Bayyana & Jigo",
+      "subtitle": "Keɓance kamanni da jin daɗin app ɗin. Yanayin atomatik yana aiki tare da saitunan tsarin ku don jin daɗin karatun rana da dare.",
+      "light": "Haske",
+      "dark": "Duhu",
+      "auto": "Atomatik"
+    },
     "sessions": {
       "title": "Zama Masu Aiki",
       "subtitle": "Sarrafa na'urorin da ke da alaƙa da asusunku na ruhaniya. Kuna iya soke shiga kowane lokaci don cire haɗin na'ura daga nesa.",

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLanguage } from '../contexts/LanguageContext';
-import { X, Mail, Lock, User as UserIcon, AlertCircle, Eye, EyeOff, KeyRound, CheckCircle } from 'lucide-react';
+import { X, Mail, Lock, User as UserIcon, AlertCircle, Eye, EyeOff, KeyRound, CheckCircle, Globe, Phone } from 'lucide-react';
 import { signInWithGoogle, signInWithEmail, signUpWithEmail, sendVerificationEmail, auth, db, signOut } from '../lib/firebase';
 import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
 import { useAuth } from '../contexts/AuthContext';
@@ -22,6 +22,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [country, setCountry] = useState('');
+  const [phone, setPhone] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [verificationSent, setVerificationSent] = useState(false);
@@ -80,14 +82,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
       if (isLogin) {
         result = await signInWithEmail(email, password);
       } else {
-        result = await signUpWithEmail(email, password, name);
+        result = await signUpWithEmail(email, password, name, country, phone);
         if (result?.user) {
-          await setDoc(doc(db, 'users', result.user.uid), {
-            email: result.user.email,
-            name: name,
-            role: 'user',
-            createdAt: new Date()
-          });
           await sendVerificationEmail(result.user);
           setVerificationSent(true);
           setLoading(false);
@@ -332,24 +328,64 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
                     )}
 
                     {!isLogin && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                          {t('auth.fullName', 'Nom complet')}
-                        </label>
-                        <div className="relative">
-                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                            <UserIcon size={18} />
+                      <>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            {t('auth.fullName', 'Nom complet')}
+                          </label>
+                          <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                              <UserIcon size={18} />
+                            </div>
+                            <input
+                              type="text"
+                              value={name}
+                              onChange={(e) => setName(e.target.value)}
+                              required
+                              className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all text-gray-900 dark:text-white"
+                              placeholder={t('auth.fullNamePlaceholder', 'Votre nom')}
+                            />
                           </div>
-                          <input
-                            type="text"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            required
-                            className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all text-gray-900 dark:text-white"
-                            placeholder={t('auth.fullNamePlaceholder', 'Votre nom')}
-                          />
                         </div>
-                      </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            {t('auth.country', 'Pays')}
+                          </label>
+                          <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                              <Globe size={18} />
+                            </div>
+                            <input
+                              type="text"
+                              value={country}
+                              onChange={(e) => setCountry(e.target.value)}
+                              required
+                              className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all text-gray-900 dark:text-white"
+                              placeholder={t('auth.countryPlaceholder', 'Votre pays (ex: Sénégal, Côte d\'Ivoire, France)')}
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            {t('auth.phone', 'Pays + numéro de téléphone')}
+                          </label>
+                          <div className="relative">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                              <Phone size={18} />
+                            </div>
+                            <input
+                              type="text"
+                              value={phone}
+                              onChange={(e) => setPhone(e.target.value)}
+                              required
+                              className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all text-gray-900 dark:text-white"
+                              placeholder={t('auth.phonePlaceholder', 'Ex: +221 77 123 45 67')}
+                            />
+                          </div>
+                        </div>
+                      </>
                     )}
 
                     <div>

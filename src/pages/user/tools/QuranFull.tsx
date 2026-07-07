@@ -2602,7 +2602,7 @@ export const QuranFull: React.FC = () => {
                        </div>
                      )}
                      </div>
-                     <div id="image-footer" style={{ display: 'none' }} className="mt-4 pt-2 w-full flex justify-between items-center opacity-90 z-0 border-t border-emerald-800/20 dark:border-emerald-200/20">
+                     <div id="image-footer" style={{ display: 'none' }} className="mt-6 pt-3 w-full flex justify-between items-center opacity-90 z-0 border-t-2 border-blue-500 text-blue-500">
                        <div className="flex items-center gap-4">
                          <span className="font-bold text-sm tracking-tight text-emerald-800 dark:text-emerald-200">AsrarHub</span>
                        </div>

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ArrowLeft, Sparkles, AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
+import { ToolInfoTooltip } from '../../../components/ToolInfoTooltip';
 import { motion } from 'motion/react';
 
 // Abjad calculation helper
@@ -118,6 +119,10 @@ export const KhouddamExtractor: React.FC = () => {
             <strong>Secret Initiatique :</strong> La règle de l'Istintihaq (extraction) consiste à déduire la valeur du suffixe ("A'il" = 51 pour l'ange, "Yush" = 316 pour l'esprit terrestre) du poids total du Nom ou du verset, puis à convertir le reste en lettres (Unités, Dizaines, Centaines) qu'on assemble de droite à gauche avant d'ajouter le suffixe.
           </p>
         </div>
+      </div>
+
+      <div className="mb-8">
+        <ToolInfoTooltip toolId="khouddam" />
       </div>
 
       {calculation && (
