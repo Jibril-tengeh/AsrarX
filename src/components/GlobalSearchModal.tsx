@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Search, X, Book, HelpCircle, ArrowRight, Sparkles, Sliders, ChevronRight, FileText, Zap, ShoppingBag, Users, MessageSquare } from 'lucide-react';
+import { Search, X, Book, HelpCircle, ChevronRight, Sparkles, Sliders, ShoppingBag, Users, MessageSquare, List } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getAsrarItems } from '../data/store';
@@ -17,7 +17,7 @@ interface SearchItem {
   id: string;
   title: string;
   description: string;
-  category: 'tools' | 'surah' | 'lexicon' | 'wird' | 'recette' | 'secret' | 'store' | 'community';
+  category: 'tools' | 'quran' | 'names';
   path: string;
   icon: React.ReactNode;
   keywords?: string[];
@@ -53,7 +53,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, on
     };
   }, []);
 
-  // Keyboard shortcut listener (Cmd+K or Ctrl+K)
+  // Keyboard shortcut / focus listener
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 100);
@@ -72,7 +72,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, on
       .catch((err) => console.warn('Failed to fetch surahs for search:', err));
   }, []);
 
-  // Multi-language Tools Index
+  // Multi-language Tools List
   const getTools = (): SearchItem[] => {
     const isFr = language === 'fr';
     const isHa = language === 'ha';
@@ -87,18 +87,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, on
         category: 'tools',
         path: '/tools/abjad',
         icon: <span className="font-mono font-bold text-xs">١٢٣</span>,
-        keywords: ['abjad', 'calculateur', 'calcul', 'valeur', 'numérique', 'chiffre', 'adad', 'number', 'math']
-      },
-      {
-        id: 'asma',
-        title: isFr ? 'Asma al-Husna (99 Noms)' : isHa ? 'Asma\'ul Husna (Suna 99)' : 'Asma al-Husna (99 Names)',
-        description: isFr 
-          ? 'Les 99 Noms sublimes d\'Allah, leurs poids Abjad et leurs secrets spirituels.' 
-          : isHa ? 'Sunayen Allah 99 masu kyau da asiransu.' : 'The 99 beautiful Names of Allah, their Abjad weights and spiritual secrets.',
-        category: 'tools',
-        path: '/tools/asma',
-        icon: <Sparkles className="text-amber-500" size={16} />,
-        keywords: ['allah', 'asma', '99', 'noms', 'names', 'husna', 'divins', 'divine', 'secrets', 'suna']
+        keywords: ['abjad', 'calculateur', 'calcul', 'valeur', 'numérique', 'chiffre', 'adad', 'number', 'math', 'numerology']
       },
       {
         id: 'personal-wird',
@@ -106,10 +95,10 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, on
         description: isFr 
           ? 'Découvrez les Noms d\'Allah en résonance avec votre prénom et votre profil astral.' 
           : isHa ? 'Gano sunayen Allah da suka dace da sunanka.' : 'Discover the Divine Names of Allah in resonance with your name.',
-        category: 'tools',
+        category: 'names',
         path: '/tools/personal-wird',
         icon: <Sparkles className="text-emerald-500" size={16} />,
-        keywords: ['wird', 'perso', 'personal', 'nom', 'divin', 'prenom', 'astral', 'resonance']
+        keywords: ['wird', 'perso', 'personal', 'nom', 'divin', 'prenom', 'astral', 'resonance', 'names', 'allah']
       },
       {
         id: 'ruqyah',
@@ -130,7 +119,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, on
           : isHa ? 'Fassarar mafarkai da adana su cikin sauƙi.' : 'Interpret and save your night visions according to Islamic dream wisdom.',
         category: 'tools',
         path: '/tools/dreams',
-        icon: <FileText className="text-purple-500" size={16} />,
+        icon: <span className="text-sm">🌙</span>,
         keywords: ['dreams', 'rêves', 'journal', 'vision', 'interprétation', 'mafarki', 'fassara']
       },
       {
@@ -141,7 +130,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, on
           : isHa ? 'Haɗu da wasu don yin zikiri tare a lokaci guda.' : 'Create or join real-time collective prayer and zikr circles.',
         category: 'tools',
         path: '/tools/halaqat',
-        icon: <Sparkles className="text-teal-500" size={16} />,
+        icon: <Users className="text-teal-500" size={16} />,
         keywords: ['zikr', 'circle', 'cercle', 'prière', 'halaqat', 'virtuel', 'communauté', 'dhikr']
       },
       {
@@ -150,7 +139,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, on
         description: isFr 
           ? 'Parcourez le Saint Coran avec traductions, audio et outils de recherche avancés.' 
           : isHa ? 'Karanta Alkur\'ani mai girma da fassara da sauti.' : 'Browse the Holy Quran with translations, audio, and advanced search tools.',
-        category: 'tools',
+        category: 'quran',
         path: '/tools/quran',
         icon: <Book className="text-emerald-600" size={16} />,
         keywords: ['quran', 'coran', 'sourates', 'surah', 'versets', 'ayah', 'lecture', 'alkurani']
@@ -174,7 +163,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, on
           : isHa ? 'Hanyar lissafa salati ko zikiri ta waya.' : 'A digital zikr counter with haptic feedback and spiritual themes.',
         category: 'tools',
         path: '/tools/tasbih',
-        icon: <Sparkles className="text-rose-500" size={16} />,
+        icon: <span className="text-sm">📿</span>,
         keywords: ['tasbih', 'compteur', 'zikr', 'counter', 'salat', 'haptique']
       },
       {
@@ -210,7 +199,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, on
         id: `asrar-${item.id}`,
         title: item.title,
         description: item.content || '',
-        category: item.category as any,
+        category: 'quran' as const, // Wirds & Recipes grouped under Quran
         path: `/secret/${item.id}`,
         icon: <Sparkles className="text-emerald-500" size={16} />,
         keywords: [item.title.toLowerCase(), item.content.toLowerCase(), item.category, 'wird', 'recette', 'secret']
@@ -229,7 +218,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, on
         id: 'store-general',
         title: isFr ? 'La Boutique Spirituelle' : 'Spiritual Boutique',
         description: isFr ? 'Bagues spirituelles, encens de purification, livres précieux et talismans.' : 'Spiritual rings, purification incense, precious books, and talismans.',
-        category: 'store',
+        category: 'tools',
         path: `/store?search=${encodeURIComponent(query)}`,
         icon: <ShoppingBag className="text-amber-500" size={16} />,
         keywords: ['store', 'boutique', 'bague', 'ring', 'encens', 'incense', 'livre', 'book', 'talisman', 'shop']
@@ -242,42 +231,12 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, on
           id: `store-product-${p.id}`,
           title: p.name || p.title || '',
           description: isFr ? (p.description || '') : (p.description_en || p.description || ''),
-          category: 'store' as const,
+          category: 'tools' as const,
           path: `/store`,
           icon: <ShoppingBag className="text-amber-500" size={16} />,
           keywords: [(p.name || '').toLowerCase(), (p.category || '').toLowerCase(), 'store', 'boutique', 'product', 'produit']
         });
       });
-    } else {
-      list.push(
-        {
-          id: 'store-ring',
-          title: isFr ? 'Bague d\'Élévation Spirituelle' : 'Spiritual Elevation Ring',
-          description: isFr ? 'Bague sacrée gravée d\'un awfaq pour la protection et la réussite.' : 'Sacred ring engraved with an awfaq for protection and success.',
-          category: 'store',
-          path: `/store?category=Bagues`,
-          icon: <Sparkles className="text-amber-500" size={16} />,
-          keywords: ['bague', 'ring', 'store', 'boutique', 'success', 'réussite', 'argent', 'protection']
-        },
-        {
-          id: 'store-incense',
-          title: isFr ? 'Encens Sirr Al Asrar' : 'Sirr Al Asrar Incense',
-          description: isFr ? 'Encens de purification suprême pour ouvrir les ondes de prière.' : 'Supreme purification incense to open prayer waves.',
-          category: 'store',
-          path: `/store?category=Encens`,
-          icon: <Zap className="text-amber-500" size={16} />,
-          keywords: ['encens', 'incense', 'purification', 'spiritual', 'parfum', 'store', 'boutique']
-        },
-        {
-          id: 'store-book',
-          title: isFr ? 'Livre : Le Secret des Secrets' : 'Book: The Secret of Secrets',
-          description: isFr ? 'Manuel complet des secrets de wirds, asma al-husna et awfaq.' : 'Complete handbook of wird secrets, asma al-husna, and awfaq.',
-          category: 'store',
-          path: `/store?category=Livres`,
-          icon: <Book className="text-amber-500" size={16} />,
-          keywords: ['livre', 'book', 'store', 'boutique', 'sirr', 'asrar', 'secret']
-        }
-      );
     }
 
     return list;
@@ -291,19 +250,10 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, on
         id: 'community-general',
         title: isFr ? 'Forum de la Communauté' : 'Community Forum',
         description: isFr ? 'Partagez vos expériences spirituelles et rejoignez les discussions collectives.' : 'Share your spiritual experiences and join collective discussions.',
-        category: 'community',
+        category: 'tools',
         path: `/community?search=${encodeURIComponent(query)}`,
         icon: <Users className="text-blue-500" size={16} />,
         keywords: ['communauté', 'community', 'forum', 'discussion', 'partage', 'groupe', 'sujet']
-      },
-      {
-        id: 'community-circles',
-        title: isFr ? 'Cercles de Zikr Actifs' : 'Active Zikr Circles',
-        description: isFr ? 'Rejoignez un groupe de zikr collectif en cours dans la communauté.' : 'Join an ongoing collective zikr group in the community.',
-        category: 'community',
-        path: `/tools/halaqat`,
-        icon: <Users className="text-emerald-500" size={16} />,
-        keywords: ['cercle', 'prière', 'zikr', 'halaqat', 'virtuel', 'communauté', 'dhikr']
       }
     ];
 
@@ -315,7 +265,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, on
             id: `community-post-${post.id}`,
             title: `${post.authorName || 'Membre'} : ${cleanContent.substring(0, 40)}${cleanContent.length > 40 ? '...' : ''}`,
             description: cleanContent,
-            category: 'community' as const,
+            category: 'tools' as const,
             path: `/community`,
             icon: <MessageSquare className="text-blue-400" size={16} />,
             keywords: [(post.authorName || '').toLowerCase(), cleanContent.toLowerCase(), 'post', 'communauté', 'message', 'forum']
@@ -333,14 +283,14 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, on
       id: `asma-name-${idx}`,
       title: `${name.tr} (${name.ar}) - ${name.fr}`,
       description: `Valeur Abjad: ${name.abjad} • Référence: ${name.ref}`,
-      category: 'secret' as const,
+      category: 'names' as const,
       path: `/tools/99names?search=${encodeURIComponent(name.tr)}`,
       icon: <Sparkles className="text-amber-500" size={16} />,
       keywords: [name.tr.toLowerCase(), name.ar, name.fr.toLowerCase(), name.abjad.toString(), '99 noms', 'asma', 'allah']
     }));
   };
 
-  // Lexicon default list
+  // Lexicon / Definitions
   const getLexicons = (): SearchItem[] => {
     const isFr = language === 'fr';
     const isHa = language === 'ha';
@@ -359,62 +309,145 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, on
       id: `lexicon-${idx}`,
       title: item.term,
       description: item.desc,
-      category: 'lexicon',
+      category: 'tools' as const, // Lexicons put under general Tools category
       path: `/explore/lexique?search=${encodeURIComponent(item.term)}`,
       icon: <HelpCircle className="text-amber-500" size={16} />,
       keywords: [item.term.toLowerCase(), item.category.toLowerCase(), 'lexique', 'lexicon', 'définition', 'concept']
     }));
   };
 
-  // Compile search indexes
-  const allItems: SearchItem[] = [
-    ...getTools(),
-    ...getLexicons(),
-    ...getLocalAsrarItems(),
-    ...getStoreItems(),
-    ...getCommunityItems(),
-    ...getAsmaNames(),
-    ...surahs.map((s) => ({
-      id: `surah-${s.number}`,
-      title: `${s.number}. ${s.englishName} (${s.name})`,
-      description: `${s.englishNameTranslation} • ${s.numberOfAyahs} ayahs • ${s.revelationType}`,
-      category: 'surah' as const,
-      path: `/tools/quran?surah=${s.number}`,
-      icon: <Book className="text-emerald-500" size={16} />,
-      keywords: [
-        s.englishName.toLowerCase(),
-        s.name.toLowerCase(),
-        s.englishNameTranslation.toLowerCase(),
-        s.number.toString(),
-        s.revelationType.toLowerCase(),
-        'quran',
-        'coran',
-        'sourate',
-        'surah'
-      ]
-    })),
-    ...(query.trim() !== '' ? [{
-      id: 'quran-deep-search',
-      title: language === 'fr' ? `Rechercher "${query}" dans le Coran entier` : `Search "${query}" in the entire Quran`,
-      description: language === 'fr' ? 'Lancer une recherche approfondie de ce terme à travers tous les versets.' : 'Launch an in-depth search of this term across all verses.',
-      category: 'surah' as const,
-      path: `/tools/quran?search=${encodeURIComponent(query)}`,
-      icon: <Search className="text-emerald-600" size={16} />,
-      keywords: [query.toLowerCase(), 'quran', 'coran', 'recherche', 'search', 'entier', 'entire']
-    }] : [])
-  ];
+  // Compile unified index
+  const getCompiledIndex = (): SearchItem[] => {
+    const base = [
+      ...getTools(),
+      ...getLexicons(),
+      ...getLocalAsrarItems(),
+      ...getStoreItems(),
+      ...getCommunityItems(),
+      ...getAsmaNames(),
+      ...surahs.map((s) => ({
+        id: `surah-${s.number}`,
+        title: `${s.number}. ${s.englishName} (${s.name})`,
+        description: `${s.englishNameTranslation} • ${s.numberOfAyahs} ayahs • ${s.revelationType}`,
+        category: 'quran' as const,
+        path: `/tools/quran?surah=${s.number}`,
+        icon: <Book className="text-emerald-500" size={16} />,
+        keywords: [
+          s.englishName.toLowerCase(),
+          s.name.toLowerCase(),
+          s.englishNameTranslation.toLowerCase(),
+          s.number.toString(),
+          s.revelationType.toLowerCase(),
+          'quran',
+          'coran',
+          'sourate',
+          'surah'
+        ]
+      }))
+    ];
 
-  // Filtering logic
-  const filteredItems = query.trim() === ''
-    ? allItems.slice(0, 5) // Show popular items initially
-    : allItems.filter((item) => {
-        const q = query.toLowerCase();
-        return (
-          item.title.toLowerCase().includes(q) ||
-          item.description.toLowerCase().includes(q) ||
-          item.keywords?.some((k) => k.includes(q))
-        );
+    if (query.trim() !== '') {
+      base.push({
+        id: 'quran-deep-search',
+        title: language === 'fr' ? `Rechercher "${query}" dans le Coran entier` : `Search "${query}" in the entire Quran`,
+        description: language === 'fr' ? 'Lancer une recherche approfondie de ce terme à travers tous les versets.' : 'Launch an in-depth search of this term across all verses.',
+        category: 'quran' as const,
+        path: `/tools/quran?search=${encodeURIComponent(query)}`,
+        icon: <Search className="text-emerald-600" size={16} />,
+        keywords: [query.toLowerCase(), 'quran', 'coran', 'recherche', 'search', 'entier', 'entire']
       });
+    }
+
+    return base;
+  };
+
+  // Offline Fuzzy Search scoring logic
+  const getFuzzyScore = (item: SearchItem, searchStr: string): number => {
+    const s = searchStr.toLowerCase().trim();
+    if (!s) return 0;
+
+    const title = item.title.toLowerCase();
+    const desc = item.description.toLowerCase();
+    let score = 0;
+
+    // Exact matches
+    if (title === s) score += 100;
+    if (desc === s) score += 40;
+
+    // Starts with matches
+    if (title.startsWith(s)) score += 60;
+
+    // Substring matches
+    const titleIdx = title.indexOf(s);
+    if (titleIdx !== -1) {
+      score += 30 - (titleIdx * 0.5);
+    }
+
+    const descIdx = desc.indexOf(s);
+    if (descIdx !== -1) {
+      score += 15 - (descIdx * 0.1);
+    }
+
+    // Keyword matches
+    if (item.keywords && item.keywords.length > 0) {
+      for (const kw of item.keywords) {
+        const kwLower = kw.toLowerCase();
+        if (kwLower === s) score += 40;
+        else if (kwLower.startsWith(s)) score += 20;
+        else if (kwLower.includes(s)) score += 10;
+      }
+    }
+
+    // Individual word matching for multi-word queries
+    const words = s.split(/\s+/).filter(w => w.length > 1);
+    if (words.length > 1) {
+      let wordMatches = 0;
+      for (const word of words) {
+        if (title.includes(word)) {
+          score += 15;
+          wordMatches++;
+        } else if (desc.includes(word)) {
+          score += 5;
+          wordMatches++;
+        }
+      }
+      if (wordMatches === words.length) {
+        score += 25;
+      }
+    }
+
+    return score;
+  };
+
+  // Get matching results with fuzzy scoring
+  const getSearchResults = (): SearchItem[] => {
+    const all = getCompiledIndex();
+    if (query.trim() === '') {
+      // Return a set of default popular suggestions when empty
+      return all.filter(item => 
+        ['abjad', 'personal-wird', 'ruqyah', 'quran', 'tasbih'].includes(item.id) || item.id === 'surah-1' || item.id === 'surah-36'
+      ).slice(0, 8);
+    }
+
+    return all
+      .map(item => ({ item, score: getFuzzyScore(item, query) }))
+      .filter(entry => entry.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .map(entry => entry.item);
+  };
+
+  const matchedItems = getSearchResults();
+
+  // Group matched results into Tools, Quran, Names
+  const toolsResults = matchedItems.filter(item => item.category === 'tools');
+  const quranResults = matchedItems.filter(item => item.category === 'quran');
+  const namesResults = matchedItems.filter(item => item.category === 'names');
+
+  const categoriesToDisplay = [
+    { id: 'tools', title: language === 'fr' ? '🛠️ Outils & Services' : language === 'ha' ? '🛠️ Kayan Aiki' : '🛠️ Tools & Services', items: toolsResults },
+    { id: 'quran', title: language === 'fr' ? '📖 Coran & Secrets' : language === 'ha' ? '📖 Alkur\'ani da Sirruka' : '📖 Quran & Secrets', items: quranResults },
+    { id: 'names', title: language === 'fr' ? '✨ Noms Divins (Asma)' : language === 'ha' ? '✨ Sunayen Allah' : '✨ Divine Names (Asma)', items: namesResults }
+  ].filter(cat => cat.items.length > 0);
 
   const handleItemSelect = (item: SearchItem) => {
     navigate(item.path);
@@ -432,7 +465,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, on
             animate={{ opacity: 0.6 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="absolute inset-0 bg-black/80 backdrop-blur-md"
+            className="absolute inset-0 bg-black/85 backdrop-blur-md"
           />
 
           {/* Search Box Card */}
@@ -441,11 +474,11 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, on
             animate={{ scale: 1, y: 0, opacity: 1 }}
             exit={{ scale: 0.95, y: -20, opacity: 0 }}
             transition={{ type: 'spring', duration: 0.35 }}
-            className="relative w-full max-w-2xl bg-white dark:bg-gray-950 rounded-3xl shadow-2xl overflow-hidden border border-gray-100 dark:border-gray-800 flex flex-col max-h-[80vh] sm:max-h-[70vh]"
+            className="relative w-full max-w-2xl bg-white dark:bg-gray-950 rounded-3xl shadow-2xl overflow-hidden border border-gray-100 dark:border-gray-800 flex flex-col max-h-[85vh] sm:max-h-[75vh]"
           >
             {/* Search Input Header */}
             <div className="relative border-b border-gray-100 dark:border-gray-800 flex items-center px-4 sm:px-6 py-4">
-              <Search className="text-gray-400 dark:text-gray-500 mr-3" size={22} />
+              <Search className="text-gray-400 dark:text-gray-500 mr-3 shrink-0" size={22} />
               <input
                 ref={inputRef}
                 type="text"
@@ -463,66 +496,67 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, on
               {query && (
                 <button
                   onClick={() => setQuery('')}
-                  className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-all text-gray-400 cursor-pointer"
+                  className="absolute right-14 p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-all text-gray-400 cursor-pointer"
                 >
                   <X size={16} />
                 </button>
               )}
+              <button
+                onClick={onClose}
+                className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-all text-gray-400 dark:text-gray-500 cursor-pointer shrink-0"
+              >
+                <X size={20} />
+              </button>
             </div>
 
             {/* Scrollable Results */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar space-y-4">
+            <div className="flex-grow overflow-y-auto p-4 sm:p-6 custom-scrollbar space-y-6">
               {query.trim() === '' && (
                 <p className="text-xs font-black text-gray-400 dark:text-gray-600 uppercase tracking-wider mb-2">
                   {language === 'fr' ? 'Raccourcis Populaires' : language === 'ha' ? 'Hanyoyi Masu Sauri' : 'Popular Suggestions'}
                 </p>
               )}
 
-              {filteredItems.length > 0 ? (
-                <div className="space-y-2">
-                  {filteredItems.map((item) => (
-                    <button
-                      key={item.id}
-                      onClick={() => handleItemSelect(item)}
-                      className="w-full text-left flex items-start gap-3.5 p-3.5 rounded-2xl hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-all border border-transparent hover:border-gray-100 dark:hover:border-gray-800/20 cursor-pointer group"
-                    >
-                      {/* Matching Icon */}
-                      <div className="shrink-0 w-9 h-9 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-400 group-hover:scale-105 transition-all">
-                        {item.icon}
+              {categoriesToDisplay.length > 0 ? (
+                <div className="space-y-6">
+                  {categoriesToDisplay.map((cat) => (
+                    <div key={cat.id} className="space-y-2">
+                      <div className="flex items-center justify-between px-2 py-1">
+                        <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-2.5 py-1 rounded-full">
+                          {cat.title}
+                        </span>
+                        <span className="text-[10px] text-gray-400 font-bold dark:text-gray-600">
+                          {cat.items.length} {cat.items.length > 1 ? 'résultats' : 'résultat'}
+                        </span>
                       </div>
+                      
+                      <div className="grid grid-cols-1 gap-1.5">
+                        {cat.items.map((item) => (
+                          <button
+                            key={item.id}
+                            onClick={() => handleItemSelect(item)}
+                            className="w-full text-left flex items-start gap-3.5 p-3 sm:p-3.5 rounded-2xl hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-all border border-transparent hover:border-gray-100 dark:hover:border-gray-800/20 cursor-pointer group"
+                          >
+                            {/* Icon */}
+                            <div className="shrink-0 w-9 h-9 rounded-xl bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-gray-500 dark:text-gray-400 group-hover:scale-105 transition-all">
+                              {item.icon}
+                            </div>
 
-                      {/* Info Text */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-0.5">
-                          <h4 className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-emerald-500 dark:group-hover:text-emerald-400 transition-colors truncate">
-                            {item.title}
-                          </h4>
-                          {/* Category Badge */}
-                          <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 group-hover:bg-emerald-50 dark:group-hover:bg-emerald-950/30 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-all ml-2">
-                            {item.category === 'tools'
-                              ? t('dashboard.advancedTools', 'Outils')
-                              : item.category === 'surah'
-                              ? 'Sourate'
-                              : item.category === 'wird'
-                              ? 'Wird'
-                              : item.category === 'recette'
-                              ? 'Recette'
-                              : item.category === 'secret'
-                              ? 'Secret'
-                              : item.category === 'store'
-                              ? 'Boutique'
-                              : item.category === 'community'
-                              ? 'Communauté'
-                              : 'Lexique'}
-                          </span>
-                        </div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">
-                          {item.description}
-                        </p>
+                            {/* Info */}
+                            <div className="flex-1 min-w-0">
+                              <h4 className="text-sm font-bold text-gray-900 dark:text-white group-hover:text-emerald-500 dark:group-hover:text-emerald-400 transition-colors truncate">
+                                {item.title}
+                              </h4>
+                              <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mt-0.5">
+                                {item.description}
+                              </p>
+                            </div>
+
+                            <ChevronRight className="shrink-0 text-gray-300 dark:text-gray-700 group-hover:text-emerald-500 dark:group-hover:text-emerald-400 group-hover:translate-x-1 transition-all self-center" size={16} />
+                          </button>
+                        ))}
                       </div>
-
-                      <ChevronRight className="shrink-0 text-gray-300 dark:text-gray-700 group-hover:text-emerald-500 dark:group-hover:text-emerald-400 group-hover:translate-x-1 transition-all self-center" size={16} />
-                    </button>
+                    </div>
                   ))}
                 </div>
               ) : (
@@ -535,10 +569,10 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, on
                   </h5>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 max-w-xs">
                     {language === 'fr'
-                      ? `Nous n'avons rien trouvé pour "${query}". Essayez un autre mot.`
+                      ? `Nous n'avons rien trouvé pour "${query}". Essayez d'autres mots.`
                       : language === 'ha'
                       ? `Ba mu sami komai ga "${query}" ba.`
-                      : `We couldn't find anything for "${query}". Try another word.`}
+                      : `We couldn't find anything for "${query}". Try different terms.`}
                   </p>
                 </div>
               )}
@@ -548,7 +582,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, on
             <div className="bg-gray-50 dark:bg-gray-900/30 border-t border-gray-100 dark:border-gray-800/50 px-4 sm:px-6 py-3.5 flex items-center justify-between text-[11px] text-gray-400 dark:text-gray-600 font-medium">
               <span className="flex items-center gap-1">
                 <Sparkles size={11} className="text-amber-500" />
-                {language === 'fr' ? 'Astuce: Utilisez la recherche rapide' : 'Tip: Use fast search'}
+                {language === 'fr' ? 'Recherche intelligente instantanée' : 'Instant smart search'}
               </span>
               <span>ESC pour fermer</span>
             </div>

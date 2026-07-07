@@ -2014,6 +2014,69 @@ export const AdminDashboard: React.FC = () => {
           </div>
         </div>
 
+        <h3 className="font-bold text-gray-900 dark:text-white mb-4 mt-8">Affichage & Mises en page</h3>
+        <div className="space-y-4 mb-8">
+          {/* Articles display mode */}
+          <div className="flex flex-col p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4">
+            <div>
+              <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <FileText size={18} className="text-emerald-500" />
+                Affichage des articles (Page d'accueil)
+              </h4>
+              <p className="text-sm text-gray-500 mt-1">Choisissez comment les articles s'affichent sur la page d'accueil.</p>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { id: 'grid', label: 'Grille (Grid)' },
+                { id: 'list', label: 'Liste (List)' },
+                { id: 'carousel', label: 'Carrousel (Carousel)' }
+              ].map(opt => (
+                <button
+                  key={opt.id}
+                  onClick={() => handleToggleFeature('articlesDisplayMode', opt.id)}
+                  className={`py-2 px-3 rounded-xl border text-sm font-semibold transition-all ${
+                    (featureToggles['articlesDisplayMode'] || 'grid') === opt.id
+                      ? 'bg-emerald-500 text-white border-emerald-500'
+                      : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Products display mode */}
+          <div className="flex flex-col p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4">
+            <div>
+              <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <ShoppingBag size={18} className="text-indigo-500" />
+                Affichage de la boutique
+              </h4>
+              <p className="text-sm text-gray-500 mt-1">Choisissez la disposition des produits dans la boutique.</p>
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { id: 'grid', label: 'Grille (Grid)' },
+                { id: 'list', label: 'Liste compacte (Compact)' },
+                { id: 'bento', label: 'Bento' }
+              ].map(opt => (
+                <button
+                  key={opt.id}
+                  onClick={() => handleToggleFeature('storeDisplayMode', opt.id)}
+                  className={`py-2 px-3 rounded-xl border text-sm font-semibold transition-all ${
+                    (featureToggles['storeDisplayMode'] || 'grid') === opt.id
+                      ? 'bg-indigo-500 text-white border-indigo-500'
+                      : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
         <h3 className="font-bold text-gray-900 dark:text-white mb-4">Sauvegarde et Export</h3>
         <div className="p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl">
           <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">

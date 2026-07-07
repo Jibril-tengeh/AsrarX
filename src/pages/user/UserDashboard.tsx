@@ -31,6 +31,17 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
   const [filter, setFilter] = useState<Category | 'all' | 'favoris'>(initialFilter);
   const [layoutMode, setLayoutMode] = useState<LayoutMode>('grid2');
   
+  useEffect(() => {
+    if (featureToggles?.articlesDisplayMode) {
+      const mode = featureToggles.articlesDisplayMode;
+      if (mode === 'grid') {
+        setLayoutMode('grid2');
+      } else if (mode === 'list') {
+        setLayoutMode('list');
+      }
+    }
+  }, [featureToggles?.articlesDisplayMode]);
+
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isTopContributorsOpen, setIsTopContributorsOpen] = useState(false);

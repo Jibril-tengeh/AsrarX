@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calculator, ArrowLeft, RefreshCw, Copy, Check, ChevronDown, ChevronUp, History, Save, Trash2, X, Database, Wifi } from 'lucide-react';
+import { Calculator, ArrowLeft, RefreshCw, Copy, Check, ChevronDown, ChevronUp, History, Save, Trash2, X, Database, Wifi, HelpCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { motion, AnimatePresence } from 'motion/react';
@@ -31,6 +31,7 @@ export const AbjadCalculator: React.FC = () => {
   
   const [history, setHistory] = useState<{ id: string; text: string; mashriqi: number; maghribi: number; timestamp: number }[]>([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [showAbjadInfoModal, setShowAbjadInfoModal] = useState(false);
   const [isUsingCache, setIsUsingCache] = useState(true);
 
   // Load abjad state and history on mount
@@ -208,6 +209,20 @@ export const AbjadCalculator: React.FC = () => {
               </button>
             </div>
           </div>
+        </div>
+
+        <div className="flex justify-between items-center px-1">
+          <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
+            Valeurs Numériques (Abjad)
+          </h2>
+          <button 
+            onClick={() => setShowAbjadInfoModal(true)}
+            className="text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center gap-1 cursor-pointer"
+            title="Comment interpréter ces résultats ?"
+          >
+            <HelpCircle size={16} />
+            <span className="text-xs font-semibold">Interpréter</span>
+          </button>
         </div>
 
         {/* Result Card */}
@@ -396,6 +411,68 @@ export const AbjadCalculator: React.FC = () => {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Abjad Info Modal */}
+      <AnimatePresence>
+        {showAbjadInfoModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.5 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowAbjadInfoModal(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-2xl max-w-md w-full relative border border-gray-100 dark:border-gray-700 z-10"
+            >
+              <button
+                onClick={() => setShowAbjadInfoModal(false)}
+                className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+              
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2.5 bg-blue-500/10 text-blue-500 rounded-xl">
+                  <Calculator size={22} />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                  Comment interpréter l'Abjad ?
+                </h3>
+              </div>
+              
+              <div className="space-y-4 text-sm text-gray-600 dark:text-gray-300">
+                <p>
+                  L'Abjad est un système d'écriture et de numérologie sacrée qui attribue une valeur numérique (adad) à chacune des 28 lettres de l'alphabet arabe.
+                </p>
+                <p>
+                  <strong>Pour vos invocations et zikrs :</strong>
+                  <br />
+                  Le chiffre obtenu (par exemple, de votre prénom) représente votre <strong>résonance mystique</strong>. Vous pouvez utiliser ce chiffre comme nombre de répétitions quotidiennes pour un Nom Divin compatible (dont la valeur Abjad correspond à la vôtre).
+                </p>
+                <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded-2xl border border-gray-100 dark:border-gray-700/50 space-y-2">
+                  <p className="text-xs font-semibold text-gray-800 dark:text-gray-200">Différence entre les systèmes :</p>
+                  <ul className="list-disc list-inside space-y-1 text-xs text-gray-500 dark:text-gray-400">
+                    <li><strong>Mashriqi (Orientale) :</strong> Système standard traditionnel le plus répandu au Moyen-Orient.</li>
+                    <li><strong>Maghribi (Occidentale) :</strong> Système privilégié en Afrique du Nord et de l'Ouest (traditions de l'Asrar ouest-africain et marocain).</li>
+                  </ul>
+                </div>
+              </div>
+              
+              <button
+                onClick={() => setShowAbjadInfoModal(false)}
+                className="mt-6 w-full py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-sm font-semibold transition-colors shadow-sm cursor-pointer"
+              >
+                J'ai compris
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

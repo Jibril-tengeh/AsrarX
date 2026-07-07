@@ -357,6 +357,89 @@ export const QuranFull: React.FC = () => {
   const [advancedSearchQuery, setAdvancedSearchQuery] = useState('');
   const [advancedSearchResults, setAdvancedSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+
+  useEffect(() => {
+    if (!advancedSearchQuery || advancedSearchQuery.trim().length < 2) {
+      if (advancedSearchQuery.trim().length === 0) {
+        setAdvancedSearchResults([]);
+      }
+      return;
+    }
+
+    const handler = setTimeout(async () => {
+      setIsSearching(true);
+      const queryStr = advancedSearchQuery.trim();
+      const isArQuery = /[\u0600-\u06FF]/.test(queryStr);
+      
+      const normAr = (text: string): string => {
+        return text
+          .replace(/[\u064B-\u0652\u0670\u0653\u0654\u0655]/g, '')
+          .replace(/\u0671/g, '\u0627')
+          .toLowerCase();
+      };
+
+      try {
+        let quranData: any[] | undefined;
+        try {
+          const cached = await get('asrar_quran_full_json');
+          if (cached && Array.isArray(cached)) {
+            quranData = cached;
+          }
+        } catch (err) {
+          console.warn("Could not read Quran from IDB:", err);
+        }
+
+        if (!quranData) {
+          const qResponse = await fetch('/quran.json');
+          if (qResponse.ok) {
+            quranData = await qResponse.json();
+            if (quranData && Array.isArray(quranData)) {
+              set('asrar_quran_full_json', quranData).catch(e => console.warn(e));
+            }
+          }
+        }
+
+        if (quranData && Array.isArray(quranData)) {
+          const matches: any[] = [];
+          const cleanQueryStr = isArQuery ? normAr(queryStr) : queryStr.toLowerCase();
+
+          for (const surah of quranData) {
+            for (const ayah of surah.ayahs) {
+              const ayahAr = ayah.ar || ayah.text_clean || '';
+              const ayahClean = normAr(ayahAr);
+              const ayahTr = (ayah.fr || ayah.en || ayah.text || '').toLowerCase();
+              
+              const isMatch = isArQuery 
+                ? ayahClean.includes(cleanQueryStr)
+                : ayahTr.includes(cleanQueryStr);
+
+              if (isMatch) {
+                matches.push({
+                  number: ayah.id || ayah.number || (surah.id * 1000 + ayah.numberInSurah),
+                  text: isArQuery ? ayahAr : (ayah.fr || ayah.en || ayah.text),
+                  numberInSurah: ayah.numberInSurah,
+                  matchLang: isArQuery ? undefined : (ayah.fr ? 'fr' : 'en'),
+                  surah: {
+                    number: surah.id,
+                    name: surah.name,
+                    englishName: surah.transliteration || surah.name_en || '',
+                    englishNameTranslation: surah.translation || ''
+                  }
+                });
+              }
+            }
+          }
+          setAdvancedSearchResults(matches.slice(0, 100)); // Show top 100 results instantly!
+        }
+      } catch (err) {
+        console.error("Instant advanced search failed", err);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 250); // Fast 250ms debounce
+
+    return () => clearTimeout(handler);
+  }, [advancedSearchQuery]);
   const location = useLocation();
 
   useEffect(() => {
@@ -3128,19 +3211,25 @@ export const QuranFull: React.FC = () => {
                       </button>
                     </div>
 
-                    <form onSubmit={handleAdvancedSearch} className="mb-6 relative">
+                    <form onSubmit={(e) => e.preventDefault()} className="mb-6 relative">
                       <input
                         type="text"
                         value={advancedSearchQuery}
                         onChange={(e) => setAdvancedSearchQuery(e.target.value)}
                         placeholder="Rechercher un mot, un thème dans le Coran..."
-                        className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-12 py-3.5 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                        className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl pl-12 pr-10 py-3.5 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm"
                         dir="auto"
                       />
                       <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-                      <button type="submit" className="absolute right-2 top-1/2 -translate-y-1/2 px-4 py-1.5 bg-emerald-500 text-white rounded-lg text-sm font-semibold hover:bg-emerald-600 transition-colors disabled:opacity-50" disabled={isSearching || !advancedSearchQuery.trim()}>
-                        {isSearching ? '...' : 'Chercher'}
-                      </button>
+                      {advancedSearchQuery && (
+                        <button 
+                          type="button" 
+                          onClick={() => setAdvancedSearchQuery('')}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                        >
+                          <X size={18} />
+                        </button>
+                      )}
                     </form>
 
                     <div className="overflow-y-auto flex-1 pr-2 space-y-4">

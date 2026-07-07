@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Hexagon, ArrowLeft, Send, Download, Share2 } from 'lucide-react';
+import { Hexagon, ArrowLeft, Send, Download, Share2, HelpCircle, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { motion, AnimatePresence } from 'motion/react';
@@ -10,6 +10,7 @@ export const Zairja: React.FC = () => {
   const [question, setQuestion] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [answer, setAnswer] = useState<{ crypted: string; clear: string } | null>(null);
+  const [showZairjaInfo, setShowZairjaInfo] = useState(false);
   const resultRef = useRef<HTMLDivElement>(null);
 
   const downloadImage = async () => {
@@ -198,7 +199,17 @@ export const Zairja: React.FC = () => {
               <div className="h-px bg-zinc-200 dark:bg-zinc-800 w-1/3 mx-auto mb-8"></div>
 
               <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.6, type: "spring" }}>
-                <h3 className="text-xs uppercase tracking-widest text-zinc-900 dark:text-zinc-100 font-bold mb-6">L'Oracle a parlé</h3>
+                <div className="flex justify-between items-center mb-6">
+                  <h3 className="text-xs uppercase tracking-widest text-zinc-900 dark:text-zinc-100 font-bold">L'Oracle a parlé</h3>
+                  <button 
+                    onClick={() => setShowZairjaInfo(true)}
+                    className="text-zinc-400 hover:text-emerald-500 dark:hover:text-emerald-400 p-1 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors flex items-center gap-1 cursor-pointer"
+                    title="Comment interpréter cette réponse ?"
+                  >
+                    <HelpCircle size={16} />
+                    <span className="text-[10px] font-bold uppercase tracking-wider">Interpréter</span>
+                  </button>
+                </div>
                 <p className="text-2xl sm:text-4xl font-serif text-zinc-900 dark:text-white leading-relaxed italic border-l-4 border-zinc-300 dark:border-zinc-700 pl-6 text-left">
                   « {answer.clear} »
                 </p>
@@ -216,6 +227,64 @@ export const Zairja: React.FC = () => {
               </button>
             </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Zairja Info Modal */}
+      <AnimatePresence>
+        {showZairjaInfo && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 0.5 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowZairjaInfo(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white dark:bg-zinc-900 rounded-3xl p-6 shadow-2xl max-w-md w-full relative border border-zinc-100 dark:border-zinc-800 z-10"
+            >
+              <button
+                onClick={() => setShowZairjaInfo(false)}
+                className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 hover:text-zinc-600 transition-colors cursor-pointer"
+              >
+                <X size={20} />
+              </button>
+              
+              <div className="flex items-center gap-3 mb-4">
+                <div className="p-2.5 bg-emerald-500/10 text-emerald-500 rounded-xl">
+                  <Hexagon size={22} className="animate-spin-slow" />
+                </div>
+                <h3 className="text-lg font-bold text-zinc-900 dark:text-white">
+                  Comment interpréter la Zairja ?
+                </h3>
+              </div>
+              
+              <div className="space-y-4 text-sm text-zinc-600 dark:text-zinc-400">
+                <p>
+                  La <strong>Zairja</strong> (ou Za'irajah) est une ancienne méthode de divination cabalistique et astrologique islamique, utilisée notamment par Ibn Khaldoun pour obtenir des réponses poétiques et symboliques.
+                </p>
+                <p>
+                  <strong>Signification spirituelle :</strong>
+                  <br />
+                  La réponse de la Zairja ne doit pas être prise comme une prédiction scientifique ou magique, mais comme un <strong>miroir de réflexion spirituelle</strong> (Isharat) qui vous incite à approfondir votre propre discernement et votre intuition.
+                </p>
+                <p className="text-xs italic bg-zinc-50 dark:bg-zinc-950 p-3 rounded-2xl border border-zinc-100 dark:border-zinc-800 text-zinc-500">
+                  Note : Chaque consultation s'appuie sur la science des lettres (Ilm al-Huruf) pour extraire l'essence vibratoire cachée de votre question.
+                </p>
+              </div>
+              
+              <button
+                onClick={() => setShowZairjaInfo(false)}
+                className="mt-6 w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold transition-colors shadow-sm cursor-pointer"
+              >
+                Fermer
+              </button>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>

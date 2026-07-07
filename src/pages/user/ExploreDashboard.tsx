@@ -312,30 +312,106 @@ export const ExploreDashboard: React.FC = () => {
       {articles.length > 0 && (
         <div className="mt-12">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Derniers Articles</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {articles.map((article) => (
-              <div key={article.id} className="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow flex flex-col cursor-pointer group" onClick={() => setSelectedArticle(article)}>
-                {article.thumbnail ? (
-                  <div className="h-48 overflow-hidden">
-                    <img src={article.thumbnail} alt={article.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
-                  </div>
-                ) : (
-                  <div className="h-48 bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center">
-                    <FileText size={48} className="text-emerald-200 dark:text-emerald-800" />
-                  </div>
-                )}
-                <div className="p-6 flex-1 flex flex-col">
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2 line-clamp-2 group-hover:text-emerald-500 transition-colors">
-                    {article.isPremium && <Sparkles size={16} className="inline mr-2 text-violet-500" />}
-                    {article.title}
-                  </h3>
-                  <div className="mt-auto flex items-center text-sm font-semibold text-emerald-600 dark:text-emerald-400">
-                    Lire l'article <ArrowRight size={16} className="ml-2 group-hover:translate-x-1 transition-transform" />
-                  </div>
+          
+          {(() => {
+            const displayMode = featureToggles?.articlesDisplayMode || 'grid';
+            
+            if (displayMode === 'list') {
+              return (
+                <div className="space-y-4">
+                  {articles.map((article) => (
+                    <div 
+                      key={article.id} 
+                      className="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow flex flex-col sm:flex-row cursor-pointer group" 
+                      onClick={() => setSelectedArticle(article)}
+                    >
+                      {article.thumbnail ? (
+                        <div className="w-full sm:w-48 h-36 shrink-0 overflow-hidden">
+                          <img src={article.thumbnail} alt={article.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                        </div>
+                      ) : (
+                        <div className="w-full sm:w-48 h-36 shrink-0 bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center">
+                          <FileText size={40} className="text-emerald-200 dark:text-emerald-800" />
+                        </div>
+                      )}
+                      <div className="p-5 flex-1 flex flex-col justify-between">
+                        <div>
+                          <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2 group-hover:text-emerald-500 transition-colors">
+                            {article.isPremium && <Sparkles size={16} className="inline mr-2 text-violet-500" />}
+                            {article.title}
+                          </h3>
+                        </div>
+                        <div className="mt-4 flex items-center text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                          Lire l'article <ArrowRight size={16} className="ml-2 group-hover:translate-x-1 transition-transform" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
+              );
+            }
+
+            if (displayMode === 'carousel') {
+              return (
+                <div className="flex gap-6 overflow-x-auto pb-4 custom-scrollbar snap-x snap-mandatory">
+                  {articles.map((article) => (
+                    <div 
+                      key={article.id} 
+                      className="min-w-[280px] sm:min-w-[320px] max-w-[320px] bg-white dark:bg-gray-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow flex flex-col cursor-pointer snap-start group" 
+                      onClick={() => setSelectedArticle(article)}
+                    >
+                      {article.thumbnail ? (
+                        <div className="h-40 overflow-hidden">
+                          <img src={article.thumbnail} alt={article.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                        </div>
+                      ) : (
+                        <div className="h-40 bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center">
+                          <FileText size={44} className="text-emerald-200 dark:text-emerald-800" />
+                        </div>
+                      )}
+                      <div className="p-5 flex-1 flex flex-col">
+                        <h3 className="text-base font-bold text-gray-900 dark:text-white mb-2 line-clamp-2 group-hover:text-emerald-500 transition-colors">
+                          {article.isPremium && <Sparkles size={16} className="inline mr-2 text-violet-500" />}
+                          {article.title}
+                        </h3>
+                        <div className="mt-auto pt-4 flex items-center text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                          Lire l'article <ArrowRight size={16} className="ml-2 group-hover:translate-x-1 transition-transform" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            }
+
+            // Default 'grid'
+            return (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {articles.map((article) => (
+                  <div key={article.id} className="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow flex flex-col cursor-pointer group" onClick={() => setSelectedArticle(article)}>
+                    {article.thumbnail ? (
+                      <div className="h-48 overflow-hidden">
+                        <img src={article.thumbnail} alt={article.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                      </div>
+                    ) : (
+                      <div className="h-48 bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center">
+                        <FileText size={48} className="text-emerald-200 dark:text-emerald-800" />
+                      </div>
+                    )}
+                    <div className="p-6 flex-1 flex flex-col">
+                      <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2 line-clamp-2 group-hover:text-emerald-500 transition-colors">
+                        {article.isPremium && <Sparkles size={16} className="inline mr-2 text-violet-500" />}
+                        {article.title}
+                      </h3>
+                      <div className="mt-auto flex items-center text-sm font-semibold text-emerald-600 dark:text-emerald-400">
+                        Lire l'article <ArrowRight size={16} className="ml-2 group-hover:translate-x-1 transition-transform" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            );
+          })()}
         </div>
       )}
 

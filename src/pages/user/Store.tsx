@@ -8,13 +8,15 @@ import { motion, AnimatePresence } from 'motion/react';
 import { PremiumBadge } from '../../components/PremiumBadge';
 import { PaystackService } from '../../services/PaystackService';
 import { AuthModal } from '../../components/AuthModal';
+import { useFeatures } from '../../contexts/FeatureContext';
 
-type LayoutMode = 'grid1' | 'grid2' | 'list';
+type LayoutMode = 'grid1' | 'grid2' | 'list' | 'bento';
 type SortOption = 'Date' | 'Popularité' | 'Alphabétique';
 
 export const Store: React.FC = () => {
   const { t } = useLanguage();
   const { user } = useAuth();
+  const { featureToggles } = useFeatures();
   const [layoutMode, setLayoutMode] = useState<LayoutMode>('grid2');
   const [selectedCategory, setSelectedCategory] = useState<string>('Tous');
   const [sortOption, setSortOption] = useState<SortOption>('Date');
@@ -45,6 +47,19 @@ export const Store: React.FC = () => {
     // Default to GHS as requested
     setPaystackConfig({ currency: 'GHS', amount: 200 });
   }, []);
+
+  useEffect(() => {
+    if (featureToggles?.storeDisplayMode) {
+      const mode = featureToggles.storeDisplayMode;
+      if (mode === 'grid') {
+        setLayoutMode('grid2');
+      } else if (mode === 'list') {
+        setLayoutMode('list');
+      } else if (mode === 'bento') {
+        setLayoutMode('bento');
+      }
+    }
+  }, [featureToggles?.storeDisplayMode]);
 
   const handlePurchase = async (product: any, usePoints: boolean = false, paymentMethod?: 'paystack' | 'visa' | 'crypto') => {
     if (!user) {
@@ -334,6 +349,7 @@ export const Store: React.FC = () => {
       <div className={`grid gap-3 sm:gap-6 lg:gap-8 ${
         layoutMode === 'grid2' ? 'grid-cols-2 lg:grid-cols-3' : 
         layoutMode === 'list' ? 'grid-cols-1 lg:grid-cols-2' : 
+        layoutMode === 'bento' ? 'grid-cols-1 md:grid-cols-3 md:grid-flow-row-dense' :
         'grid-cols-1'
       }`}>
         <AnimatePresence mode="popLayout">
@@ -346,9 +362,21 @@ export const Store: React.FC = () => {
               exit={{ opacity: 0, scale: 0.9 }}
               transition={{ duration: 0.2 }}
               onClick={() => setSelectedProduct(product)}
-              className={`bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden cursor-pointer hover:shadow-md transition-shadow ${layoutMode === 'list' ? 'flex flex-row items-stretch h-40 sm:h-48' : 'flex flex-col h-full'}`}
+              className={`bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden cursor-pointer hover:shadow-md transition-shadow ${
+                layoutMode === 'list' 
+                  ? 'flex flex-row items-stretch h-40 sm:h-48' 
+                  : layoutMode === 'bento' && (index === 0 || index === 4)
+                  ? 'md:col-span-2 flex flex-col sm:flex-row items-stretch h-full min-h-[180px]'
+                  : 'flex flex-col h-full'
+              }`}
             >
-              <div className={`relative ${layoutMode === 'list' ? 'w-32 sm:w-48 flex-shrink-0' : 'h-48 w-full'}`}>
+              <div className={`relative ${
+                layoutMode === 'list' 
+                  ? 'w-32 sm:w-48 flex-shrink-0' 
+                  : layoutMode === 'bento' && (index === 0 || index === 4)
+                  ? 'w-full sm:w-1/2 flex-shrink-0 min-h-[160px] sm:min-h-full'
+                  : 'h-48 w-full'
+              }`}>
                 <img src={product.image} alt={getLocalizedText(product.name)} className="w-full h-full object-cover" />
                 <div className={`absolute top-3 left-3 w-10 h-10 rounded-xl flex items-center justify-center shadow-md backdrop-blur-md bg-white/80 dark:bg-gray-900/80 ${product.color?.split(' ')?.[1] || ''} ${product.color?.split(' ')?.[3] || ''}`}>
                   {(() => {
@@ -369,7 +397,11 @@ export const Store: React.FC = () => {
               </div>
 
               <div className={`p-4 sm:p-5 flex-1 flex flex-col`}>
-                <h3 className={`font-bold text-gray-900 dark:text-white mb-2 ${layoutMode === 'list' ? 'text-base sm:text-xl' : 'text-lg'}`}>{getLocalizedText(product.name)}</h3>
+                <h3 className={`font-bold text-gray-900 dark:text-white mb-2 ${
+                  layoutMode === 'list' || (layoutMode === 'bento' && (index === 0 || index === 4)) 
+                    ? 'text-base sm:text-xl' 
+                    : 'text-lg'
+                }`}>{getLocalizedText(product.name)}</h3>
                 
                 <div className="flex items-center gap-1 mb-3 text-amber-400">
                   <Star size={16} className="fill-amber-400" />
@@ -390,13 +422,17 @@ export const Store: React.FC = () => {
                   )}
                 </div>
                 
-                <div className={layoutMode === 'list' ? 'mt-auto flex justify-end' : 'mt-auto'}>
+                <div className={layoutMode === 'list' || (layoutMode === 'bento' && (index === 0 || index === 4)) ? 'mt-auto flex justify-end' : 'mt-auto'}>
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();
                       setSelectedProduct(product);
                     }}
-                    className={`py-2 sm:py-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl font-bold transition-transform hover:scale-[1.02] active:scale-[0.98] ${layoutMode === 'list' ? 'px-6 text-sm sm:text-base' : 'w-full'}`}
+                    className={`py-2 sm:py-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl font-bold transition-transform hover:scale-[1.02] active:scale-[0.98] ${
+                      layoutMode === 'list' || (layoutMode === 'bento' && (index === 0 || index === 4)) 
+                        ? 'px-6 text-sm sm:text-base' 
+                        : 'w-full'
+                    }`}
                   >
                     {t('store.learnMore', 'En savoir plus')}
                   </button>
