@@ -430,7 +430,7 @@ export const AbjadCalculator: React.FC = () => {
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-2xl max-w-md w-full relative border border-gray-100 dark:border-gray-700 z-10"
+              className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-2xl max-w-md w-full relative border border-gray-100 dark:border-gray-700 z-10 max-h-[90vh] overflow-y-auto"
             >
               <button
                 onClick={() => setShowAbjadInfoModal(false)}

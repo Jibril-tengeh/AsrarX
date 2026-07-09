@@ -132,11 +132,13 @@ export const Quizz: React.FC = () => {
                     key={index}
                     onClick={() => handleOptionClick(index)}
                     disabled={isAnswered}
-                    className={`w-full p-4 rounded-xl border-2 text-left font-medium transition-all flex justify-between items-center ${btnStyle}`}
+                    className={`w-full p-4 rounded-xl border-2 text-left font-medium transition-all flex justify-between items-start ${btnStyle}`}
                   >
-                    <span>{option}</span>
-                    {isAnswered && isCorrect && <CheckCircle size={20} className="text-emerald-500" />}
-                    {isAnswered && isSelected && !isCorrect && <XCircle size={20} className="text-red-500" />}
+                    <span className="break-words flex-1 pr-2 text-sm sm:text-base">{option}</span>
+                    <div className="shrink-0 pt-0.5">
+                      {isAnswered && isCorrect && <CheckCircle size={20} className="text-emerald-500" />}
+                      {isAnswered && isSelected && !isCorrect && <XCircle size={20} className="text-red-500" />}
+                    </div>
                   </button>
                 );
               })}

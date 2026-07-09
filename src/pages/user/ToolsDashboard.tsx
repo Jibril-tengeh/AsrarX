@@ -347,6 +347,7 @@ export const ToolsDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"simple" | "advanced">("simple");
   const [searchQuery, setSearchQuery] = useState("");
   const [featureToggles, setFeatureToggles] = useState<any>({});
+  const [isLoading, setIsLoading] = useState(true);
   const [premiumModalOpen, setPremiumModalOpen] = useState<{
     isOpen: boolean;
     title: string;
@@ -370,7 +371,12 @@ export const ToolsDashboard: React.FC = () => {
         } else {
           setFeatureToggles({});
         }
+        setIsLoading(false);
       },
+      (error) => {
+        console.warn("ToolsDashboard features onSnapshot error (operating offline):", error);
+        setIsLoading(false);
+      }
     );
 
     return () => unsubscribeFeatures();
@@ -576,14 +582,14 @@ export const ToolsDashboard: React.FC = () => {
 
       <AnimatePresence>
         {showGuide && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm overflow-y-auto">
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col"
+              className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]"
             >
-              <div className="flex justify-between items-center p-4 border-b border-gray-100 dark:border-gray-700">
+              <div className="flex justify-between items-center p-4 border-b border-gray-100 dark:border-gray-700 shrink-0">
                 <h3 className="font-bold text-gray-900 dark:text-white">
                   Guide de Démarrage
                 </h3>
@@ -595,7 +601,7 @@ export const ToolsDashboard: React.FC = () => {
                 </button>
               </div>
 
-              <div className="p-6 sm:p-8 flex-1 min-h-[250px] flex flex-col items-center justify-center text-center">
+              <div className="p-6 sm:p-8 flex-1 overflow-y-auto min-h-[200px] sm:min-h-[250px] flex flex-col items-center justify-center text-center">
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={guideStep}
@@ -663,119 +669,142 @@ export const ToolsDashboard: React.FC = () => {
         )}
       </AnimatePresence>
 
-      <motion.div
-        layout
-        className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6"
-      >
-        <AnimatePresence mode="popLayout">
-          {displayedTools.map((tool, index) => {
-            const status = featureToggles[`tool_${tool.id}`] || "active";
-            const isMaintenance = status === "maintenance";
-            const isPremium = status === "premium";
-
-            const content = (
-              <div
-                className={`h-full rounded-2xl bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 p-4 transition-all duration-300 relative overflow-hidden group ${!tool.comingSoon && !isMaintenance ? "hover:shadow-md hover:-translate-y-1" : "opacity-75"}`}
-              >
-                {/* Background Decoration */}
-                <div
-                  className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${tool.color} rounded-bl-full opacity-10 transition-opacity ${!tool.comingSoon && !isMaintenance ? "group-hover:opacity-20" : ""}`}
-                ></div>
-
-                <div className="relative z-10 flex flex-col h-full">
-                  <div className="flex items-center gap-3 mb-2">
-                    <div
-                      className={`w-10 h-10 shrink-0 rounded-xl bg-gradient-to-br ${tool.color} text-white flex items-center justify-center shadow-sm ${!tool.comingSoon && !isMaintenance ? "group-hover:scale-110 transition-transform relative" : "relative"}`}
-                    >
-                      <tool.icon size={20} />
-                      {isPremium && (
-                        <div className="absolute -top-1 -right-1 bg-violet-500 text-white p-0.5 rounded-full shadow border border-white dark:border-gray-800">
-                          <Sparkles size={10} />
-                        </div>
-                      )}
-                    </div>
-                    <h3 className="text-[15px] sm:text-base font-bold text-gray-900 dark:text-white flex items-center gap-2 leading-tight">
-                      {t(`tools.${tool.id}.title`) !== `tools.${tool.id}.title`
-                        ? t(`tools.${tool.id}.title`)
-                        : tool.title}
-                      {tool.comingSoon && (
-                        <span className="bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300 text-[9px] px-1.5 py-0.5 rounded-full font-semibold uppercase tracking-widest shrink-0">
-                          Bientôt
-                        </span>
-                      )}
-                      {isMaintenance && !tool.comingSoon && (
-                        <span className="bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 text-[9px] px-1.5 py-0.5 rounded-full font-semibold uppercase tracking-widest shrink-0">
-                          Maintenance
-                        </span>
-                      )}
-                      {isPremium && !tool.comingSoon && !isMaintenance && (
-                        <span className="bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-400 text-[9px] px-1.5 py-0.5 rounded-full font-semibold uppercase tracking-widest shrink-0">
-                          Premium
-                        </span>
-                      )}
-                    </h3>
-                  </div>
-
-                  <p className="text-[13px] text-gray-500 dark:text-gray-400 leading-relaxed group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors line-clamp-3">
-                    {t(`tools.${tool.id}.description`) !==
-                    `tools.${tool.id}.description`
-                      ? t(`tools.${tool.id}.description`)
-                      : tool.description}
-                  </p>
-                  
-                  <div className="mt-auto pt-4 flex justify-between items-center relative z-20">
-                    <span className="text-emerald-600 dark:text-emerald-400 font-bold text-sm">
-                      {t("tools.access", "Accéder")} →
-                    </span>
-                    <button
-                      onClick={(e) => handleShareTool(e, tool)}
-                      className="p-2 text-gray-400 hover:text-blue-500 transition-colors rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
-                      title="Partager l'outil"
-                    >
-                      <Share2 size={16} />
-                    </button>
-                  </div>
+      {isLoading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+          {Array.from({ length: 6 }).map((_, idx) => (
+            <div key={idx} className="h-[180px] rounded-2xl bg-white dark:bg-gray-800 shadow-sm border border-gray-150 dark:border-gray-700 p-5 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-10 h-10 rounded-xl bg-gray-200 dark:bg-gray-700 animate-pulse shrink-0"></div>
+                  <div className="h-5 w-32 bg-gray-200 dark:bg-gray-700 animate-pulse rounded-lg"></div>
+                </div>
+                <div className="space-y-2.5">
+                  <div className="h-3.5 w-full bg-gray-200 dark:bg-gray-700 animate-pulse rounded-md"></div>
+                  <div className="h-3.5 w-5/6 bg-gray-200 dark:bg-gray-700 animate-pulse rounded-md"></div>
                 </div>
               </div>
-            );
+              <div className="flex justify-between items-center mt-4 pt-2">
+                <div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 animate-pulse rounded"></div>
+                <div className="h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse"></div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <motion.div
+          layout
+          className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6"
+        >
+          <AnimatePresence mode="popLayout">
+            {displayedTools.map((tool, index) => {
+              const status = featureToggles[`tool_${tool.id}`] || "active";
+              const isMaintenance = status === "maintenance";
+              const isPremium = status === "premium";
 
-            return (
-              <motion.div
-                layout
-                key={tool.id}
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.9 }}
-                transition={{ duration: 0.2, delay: index * 0.05 }}
-              >
-                {tool.comingSoon || isMaintenance ? (
-                  <div className="cursor-not-allowed">{content}</div>
-                ) : (
+              const content = (
+                <div
+                  className={`h-full rounded-2xl bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 p-4 transition-all duration-300 relative overflow-hidden group ${!tool.comingSoon && !isMaintenance ? "hover:shadow-md hover:-translate-y-1" : "opacity-75"}`}
+                >
+                  {/* Background Decoration */}
                   <div
-                    onClick={() => {
-                      if (
-                        isPremium &&
-                        user?.subscriptionTier !== "premium" &&
-                        user?.subscriptionTier !== "pro"
-                      ) {
-                        setPremiumModalOpen({
-                          isOpen: true,
-                          title: tool.title,
-                        });
-                      } else {
-                        navigate(tool.path);
-                      }
-                    }}
-                    className="block h-full cursor-pointer"
-                  >
-                    {content}
+                    className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${tool.color} rounded-bl-full opacity-10 transition-opacity ${!tool.comingSoon && !isMaintenance ? "group-hover:opacity-20" : ""}`}
+                  ></div>
+
+                  <div className="relative z-10 flex flex-col h-full">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div
+                        className={`w-10 h-10 shrink-0 rounded-xl bg-gradient-to-br ${tool.color} text-white flex items-center justify-center shadow-sm ${!tool.comingSoon && !isMaintenance ? "group-hover:scale-110 transition-transform relative" : "relative"}`}
+                      >
+                        <tool.icon size={20} />
+                        {isPremium && (
+                          <div className="absolute -top-1 -right-1 bg-violet-500 text-white p-0.5 rounded-full shadow border border-white dark:border-gray-800">
+                            <Sparkles size={10} />
+                          </div>
+                        )}
+                      </div>
+                      <h3 className="text-[15px] sm:text-base font-bold text-gray-900 dark:text-white flex items-center gap-2 leading-tight">
+                        {t(`tools.${tool.id}.title`) !== `tools.${tool.id}.title`
+                          ? t(`tools.${tool.id}.title`)
+                          : tool.title}
+                        {tool.comingSoon && (
+                          <span className="bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300 text-[9px] px-1.5 py-0.5 rounded-full font-semibold uppercase tracking-widest shrink-0">
+                            Bientôt
+                          </span>
+                        )}
+                        {isMaintenance && !tool.comingSoon && (
+                          <span className="bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 text-[9px] px-1.5 py-0.5 rounded-full font-semibold uppercase tracking-widest shrink-0">
+                            Maintenance
+                          </span>
+                        )}
+                        {isPremium && !tool.comingSoon && !isMaintenance && (
+                          <span className="bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-400 text-[9px] px-1.5 py-0.5 rounded-full font-semibold uppercase tracking-widest shrink-0">
+                            Premium
+                          </span>
+                        )}
+                      </h3>
+                    </div>
+
+                    <p className="text-[13px] text-gray-500 dark:text-gray-400 leading-relaxed group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors line-clamp-3">
+                      {t(`tools.${tool.id}.description`) !==
+                      `tools.${tool.id}.description`
+                        ? t(`tools.${tool.id}.description`)
+                        : tool.description}
+                    </p>
+                    
+                    <div className="mt-auto pt-4 flex justify-between items-center relative z-20">
+                      <span className="text-emerald-600 dark:text-emerald-400 font-bold text-sm">
+                        {t("tools.access", "Accéder")} →
+                      </span>
+                      <button
+                        onClick={(e) => handleShareTool(e, tool)}
+                        className="p-2 text-gray-400 hover:text-blue-500 transition-colors rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                        title="Partager l'outil"
+                      >
+                        <Share2 size={16} />
+                      </button>
+                    </div>
                   </div>
-                )}
-              </motion.div>
-            );
-          })}
-        </AnimatePresence>
-      </motion.div>
+                </div>
+              );
+
+              return (
+                <motion.div
+                  layout
+                  key={tool.id}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  transition={{ duration: 0.2, delay: index * 0.05 }}
+                >
+                  {tool.comingSoon || isMaintenance ? (
+                    <div className="cursor-not-allowed">{content}</div>
+                  ) : (
+                    <div
+                      onClick={() => {
+                        if (
+                          isPremium &&
+                          user?.subscriptionTier !== "premium" &&
+                          user?.subscriptionTier !== "pro"
+                        ) {
+                          setPremiumModalOpen({
+                            isOpen: true,
+                            title: tool.title,
+                          });
+                        } else {
+                          navigate(tool.path);
+                        }
+                      }}
+                      className="block h-full cursor-pointer"
+                    >
+                      {content}
+                    </div>
+                  )}
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+        </motion.div>
+      )}
 
       {/* Premium Access Modal */}
       {premiumModalOpen.isOpen && (

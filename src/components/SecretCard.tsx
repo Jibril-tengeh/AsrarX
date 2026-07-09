@@ -39,7 +39,24 @@ const ImageWithFallback: React.FC<{ src: string; alt: string; className?: string
 };
 
 export const SecretCard: React.FC<SecretCardProps> = ({ item, layoutMode = 'grid2' }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  
+  // Use cached translation if available
+  let displayTitle = item.title;
+  let displayHook = item.hook;
+  
+  if (language !== 'fr') {
+    try {
+      const cached = localStorage.getItem(`asrar_trans_${item.id}_${language}`);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed.title) displayTitle = parsed.title;
+        if (parsed.hook) displayHook = parsed.hook;
+      }
+    } catch (e) {
+      // silent fail
+    }
+  }
   
   const CategoryIcon = item.category === 'secret' ? BookOpen : item.category === 'recette' ? Sparkles : ScrollText;
   const categoryLabel = t(item.category === 'secret' ? 'secrets' : item.category === 'recette' ? 'recettes' : 'wirds');
@@ -53,7 +70,7 @@ export const SecretCard: React.FC<SecretCardProps> = ({ item, layoutMode = 'grid
             {item.imageUrl ? (
               <ImageWithFallback 
                 src={item.imageUrl} 
-                alt={item.title} 
+                alt={displayTitle} 
                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
                 referrerPolicy="no-referrer"
               />
@@ -79,11 +96,11 @@ export const SecretCard: React.FC<SecretCardProps> = ({ item, layoutMode = 'grid
           {/* Content Area */}
           <div className="p-2 sm:p-3 flex-1 flex flex-col justify-center bg-gray-50/50 dark:bg-gray-800/50 overflow-hidden">
             <h3 className="text-[15px] sm:text-[17px] font-bold text-gray-900 dark:text-gray-100 mb-1.5 leading-snug line-clamp-2 mt-0">
-              {item.title}
+              {displayTitle}
             </h3>
-            {item.hook && (
+            {displayHook && (
               <p className="text-gray-500 dark:text-gray-400 text-[12px] sm:text-[13px] leading-relaxed line-clamp-2">
-                {item.hook}
+                {displayHook}
               </p>
             )}
           </div>
@@ -102,7 +119,7 @@ export const SecretCard: React.FC<SecretCardProps> = ({ item, layoutMode = 'grid
              {item.imageUrl ? (
                <ImageWithFallback 
                  src={item.imageUrl} 
-                 alt={item.title} 
+                 alt={displayTitle} 
                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
                  referrerPolicy="no-referrer"
                />
@@ -128,16 +145,16 @@ export const SecretCard: React.FC<SecretCardProps> = ({ item, layoutMode = 'grid
              <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/30 to-transparent pointer-events-none z-0"></div>
              <div className="absolute bottom-0 left-0 right-0 p-2 sm:p-3 z-10">
                <h3 className={`font-bold text-white mb-0 leading-snug drop-shadow-md line-clamp-3 ${isGrid1 ? 'text-[18px] sm:text-[20px]' : 'text-[14px] sm:text-[16px]'}`}>
-                 {item.title}
+                 {displayTitle}
                </h3>
              </div>
           </div>
           
-          {item.hook && (
+          {displayHook && (
             <div className="p-2.5 sm:p-3 flex-1 flex flex-col border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
                {/* Hook */}
                <p className={`text-gray-500 dark:text-gray-400 leading-relaxed ${isGrid1 ? 'text-sm sm:text-[15px] line-clamp-3 mt-0' : 'text-[13px] sm:text-sm line-clamp-3 mt-0'}`}>
-                 {item.hook}
+                 {displayHook}
                </p>
             </div>
           )}

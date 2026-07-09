@@ -1,5 +1,7 @@
 {
   "welcome": "Welcome to AsrarHub",
+  "translating": "AI Translation in progress...",
+  "translated": "Automatically translated by AI",
   "selectRole": "Please select your role (USER or ADMIN) by prompting to generate the rest.",
   "userDashboard": "Dashboard",
   "dashboardContent": {
@@ -324,7 +326,8 @@
       "share": "Share",
       "shareText": "Here is my generated Khatim.",
       "shareNotSupported": "Direct sharing is not supported on this browser.",
-      "errorEmpty": "Please enter a number or an Arabic text."
+      "errorEmpty": "Please enter a number or an Arabic text.",
+      "placeholder": "Ex: جلب رزق or 66"
     },
     "ruqyah": {
       "title": "Ruqyah Shari'ah",
@@ -703,5 +706,10 @@
     "viewOffers": "View Offers",
     "profilePromo": "Upgrade to Premium to unlock all features and remove ads.",
     "becomePremium": "Become Premium"
+  },
+  "maintenance": {
+    "title": "Maintenance in Progress",
+    "description": "AsrarHub is currently undergoing maintenance to improve your experience. We will be back very soon. Thank you for your patience.",
+    "badge": "Access temporarily suspended"
   }
 }

@@ -1,13 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { User, Bell, Clock, Save, Shield, Moon, Sun, Smartphone, Laptop, Tablet, Globe, Trash2, Award, Medal, Star, Target, LogOut, Camera, Image as ImageIcon, RefreshCw, Sparkles, LogIn, ChevronDown, Plus, XCircle, CheckCircle } from 'lucide-react';
+import { User, Bell, Clock, Save, Shield, Moon, Sun, Smartphone, Laptop, Tablet, Globe, Trash2, Award, Medal, Star, Target, LogOut, Camera, Image as ImageIcon, RefreshCw, Sparkles, LogIn, ChevronDown, Plus, XCircle, CheckCircle, FileText, BookOpen, ScrollText, Heart, X, Share2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { PremiumBadge } from '../../components/PremiumBadge';
 import { AuthModal } from '../../components/AuthModal';
+import { PremiumWrapper } from '../../components/PremiumWrapper';
 import { signOut, db, auth } from '../../lib/firebase';
-import { doc, setDoc, collection, deleteDoc, onSnapshot, updateDoc } from 'firebase/firestore';
+import { doc, setDoc, collection, deleteDoc, onSnapshot, updateDoc, query } from 'firebase/firestore';
 import { useNavigate, Link } from 'react-router-dom';
 import { getFCMToken, checkNotificationSupport, onMessageListener } from '../../lib/fcm';
 
@@ -260,6 +261,76 @@ export const UserProfile: React.FC = () => {
   const [profileSavedMsg, setProfileSavedMsg] = useState('');
   const [notifsSynced, setNotifsSynced] = useState<boolean | null>(null);
   const [isSyncingNotifs, setIsSyncingNotifs] = useState(false);
+
+  // --- Favorites Feature State and Realtime Logic ---
+  const [favorites, setFavorites] = useState<any[]>([]);
+  const [loadingFavorites, setLoadingFavorites] = useState(true);
+  const [selectedFavArticle, setSelectedFavArticle] = useState<any | null>(null);
+
+  useEffect(() => {
+    const q = query(collection(db, 'articles'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const allItems = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+
+      // Get saved bookmarks
+      try {
+        const savedIds: string[] = JSON.parse(localStorage.getItem('asrar_bookmarks') || '[]');
+        if (Array.isArray(savedIds)) {
+          const bookmarkedItems = allItems.filter(item => savedIds.includes(item.id));
+          setFavorites(bookmarkedItems);
+        } else {
+          setFavorites([]);
+        }
+      } catch (err) {
+        setFavorites([]);
+      }
+      setLoadingFavorites(false);
+    }, (error) => {
+      console.error("Error loading favorites:", error);
+      setLoadingFavorites(false);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const handleRemoveFavorite = (itemId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      const savedIds: string[] = JSON.parse(localStorage.getItem('asrar_bookmarks') || '[]');
+      if (Array.isArray(savedIds)) {
+        const updatedIds = savedIds.filter(id => id !== itemId);
+        localStorage.setItem('asrar_bookmarks', JSON.stringify(updatedIds));
+        setFavorites(prev => prev.filter(item => item.id !== itemId));
+      }
+    } catch (err) {
+      console.error("Error removing favorite:", err);
+    }
+  };
+
+  const handleShareFavArticle = async (article: any, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const snippet = (article.content || '').replace(/<[^>]+>/g, '').substring(0, 100) + '...';
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: article.title,
+          text: `Lire l'article "${article.title}" : ${snippet}`,
+          url: window.location.href,
+        });
+      } catch (err: any) {
+        if (err.name !== 'AbortError') {
+          console.error(err);
+        }
+      }
+    } else {
+      window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(`Lire l'article "${article.title}" : ${snippet}`)}`, '_blank');
+    }
+  };
 
   useEffect(() => {
     if (user) {
@@ -740,6 +811,93 @@ export const UserProfile: React.FC = () => {
       />
 
       <GamificationBadges />
+
+      {/* Section Mes Favoris (Secrets et Articles) */}
+      <CollapsibleSection
+        title={t('profile.favorites.title', 'Mes Favoris')}
+        icon={<Star className="text-amber-500" size={20} />}
+      >
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-5 leading-relaxed">
+          Retrouvez ici tous les secrets et articles que vous avez marqués comme favoris.
+        </p>
+
+        {loadingFavorites ? (
+          <div className="flex flex-col gap-3">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="h-16 w-full bg-gray-100 dark:bg-gray-800/50 rounded-2xl animate-pulse"></div>
+            ))}
+          </div>
+        ) : favorites.length === 0 ? (
+          <div className="text-center py-8 bg-gray-50 dark:bg-gray-800/30 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
+            <Star className="mx-auto text-gray-300 dark:text-gray-600 mb-2" size={32} />
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Aucun favori pour le moment.
+            </p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+              Vous pouvez ajouter des secrets et des articles à vos favoris en cliquant sur l'icône étoile.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {favorites.map((item) => {
+              const isArticle = item.category === undefined || item.category === '' || item.type === 'richtext';
+              return (
+                <div 
+                  key={item.id}
+                  className="flex items-center justify-between border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800/40 rounded-2xl p-4 transition-all hover:border-emerald-200 dark:hover:border-emerald-800/40 group"
+                >
+                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                    <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400">
+                      {isArticle ? <FileText size={18} /> : <BookOpen size={18} />}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                          {isArticle ? "Article" : (item.category || "Secret")}
+                        </span>
+                        {item.isPremium && (
+                          <span className="bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-400 text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase">
+                            Premium
+                          </span>
+                        )}
+                      </div>
+                      <h4 className="font-bold text-gray-900 dark:text-white text-sm sm:text-base mt-0.5 truncate">
+                        {item.title}
+                      </h4>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0 ml-4">
+                    {isArticle ? (
+                      <button
+                        onClick={() => setSelectedFavArticle(item)}
+                        className="text-xs text-emerald-600 dark:text-emerald-400 font-bold px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors cursor-pointer"
+                      >
+                        Lire
+                      </button>
+                    ) : (
+                      <Link
+                        to={`/secret/${item.id}`}
+                        className="text-xs text-emerald-600 dark:text-emerald-400 font-bold px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors"
+                      >
+                        Ouvrir
+                      </Link>
+                    )}
+
+                    <button
+                      onClick={(e) => handleRemoveFavorite(item.id, e)}
+                      className="p-2 text-gray-400 hover:text-red-500 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors cursor-pointer"
+                      title="Retirer des favoris"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </CollapsibleSection>
 
       {/* Informations Personnelles (Nom, Pays, Téléphone) */}
       <CollapsibleSection
@@ -1357,6 +1515,96 @@ export const UserProfile: React.FC = () => {
           {isClearingCache ? 'Nettoyage...' : 'Vider le cache'}
         </button>
       </CollapsibleSection>
+      
+      {/* Article Modal */}
+      {selectedFavArticle && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-gray-900 rounded-3xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
+            <div className="p-4 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center bg-gray-50 dark:bg-gray-800">
+              <h3 className="font-bold text-lg text-gray-900 dark:text-white flex items-center gap-2">
+                <FileText size={20} /> Lecture
+              </h3>
+              <div className="flex items-center gap-2">
+                <button onClick={(e) => handleShareFavArticle(selectedFavArticle, e)} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors text-emerald-500" title="Partager">
+                  <Share2 size={20} />
+                </button>
+                <button onClick={() => setSelectedFavArticle(null)} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors text-gray-500" title="Fermer">
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6 lg:p-10 hide-scrollbar bg-gray-50 dark:bg-gray-900">
+              <div className="max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-3xl overflow-hidden shadow-sm border border-gray-100 dark:border-gray-700">
+                {selectedFavArticle.isPremium ? (
+                  <PremiumWrapper 
+                    fallbackTitle={selectedFavArticle.title} 
+                    fallbackMessage="Cet article est exclusif aux membres Premium. Débloquez-le pour lire la suite."
+                    previewContent={
+                      <>
+                        {selectedFavArticle.thumbnail && (
+                          <div className="w-full h-64 md:h-80 overflow-hidden relative">
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-10" />
+                            <img src={selectedFavArticle.thumbnail} alt={selectedFavArticle.title} className="w-full h-full object-cover" />
+                            <div className="absolute bottom-0 left-0 p-6 z-20">
+                              <h1 className="text-2xl md:text-3xl font-black text-white">{selectedFavArticle.title}</h1>
+                            </div>
+                          </div>
+                        )}
+                        {!selectedFavArticle.thumbnail && (
+                          <div className="p-6 md:p-10 border-b border-gray-100 dark:border-gray-700">
+                            <h1 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white">{selectedFavArticle.title}</h1>
+                          </div>
+                        )}
+                        <div className="p-6 md:p-10 prose prose-emerald dark:prose-invert max-w-none article-content">
+                          <div dangerouslySetInnerHTML={{ __html: (selectedFavArticle.content || '').substring(0, 300) + '...' }} />
+                        </div>
+                      </>
+                    }
+                  >
+                    {selectedFavArticle.thumbnail && (
+                      <div className="w-full h-64 md:h-80 overflow-hidden relative">
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-10" />
+                        <img src={selectedFavArticle.thumbnail} alt={selectedFavArticle.title} className="w-full h-full object-cover" />
+                        <div className="absolute bottom-0 left-0 p-6 z-20">
+                          <h1 className="text-2xl md:text-3xl font-black text-white">{selectedFavArticle.title}</h1>
+                        </div>
+                      </div>
+                    )}
+                    {!selectedFavArticle.thumbnail && (
+                      <div className="p-6 md:p-10 border-b border-gray-100 dark:border-gray-700">
+                        <h1 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white">{selectedFavArticle.title}</h1>
+                      </div>
+                    )}
+                    <div className="p-6 md:p-10 prose prose-emerald dark:prose-invert max-w-none article-content">
+                      <div dangerouslySetInnerHTML={{ __html: selectedFavArticle.content }} />
+                    </div>
+                  </PremiumWrapper>
+                ) : (
+                  <>
+                    {selectedFavArticle.thumbnail && (
+                      <div className="w-full h-64 md:h-80 overflow-hidden relative">
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-10" />
+                        <img src={selectedFavArticle.thumbnail} alt={selectedFavArticle.title} className="w-full h-full object-cover" />
+                        <div className="absolute bottom-0 left-0 p-6 z-20">
+                          <h1 className="text-2xl md:text-3xl font-black text-white">{selectedFavArticle.title}</h1>
+                        </div>
+                      </div>
+                    )}
+                    {!selectedFavArticle.thumbnail && (
+                      <div className="p-6 md:p-10 border-b border-gray-100 dark:border-gray-700">
+                        <h1 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white">{selectedFavArticle.title}</h1>
+                      </div>
+                    )}
+                    <div className="p-6 md:p-10 prose prose-emerald dark:prose-invert max-w-none article-content">
+                      <div dangerouslySetInnerHTML={{ __html: selectedFavArticle.content }} />
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       
       <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
     </div>

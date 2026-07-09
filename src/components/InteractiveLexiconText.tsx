@@ -9,12 +9,14 @@ interface InteractiveLexiconTextProps {
   content: string;
   className?: string;
   isHtml?: boolean;
+  style?: React.CSSProperties;
 }
 
 export const InteractiveLexiconText: React.FC<InteractiveLexiconTextProps> = ({
   content,
   className = '',
-  isHtml = true
+  isHtml = true,
+  style
 }) => {
   const { language, t } = useLanguage();
   const containerRef = useRef<HTMLDivElement>(null);
@@ -23,8 +25,6 @@ export const InteractiveLexiconText: React.FC<InteractiveLexiconTextProps> = ({
   const [tooltip, setTooltip] = useState<{
     term: string;
     definition: string;
-    x: number;
-    y: number;
   } | null>(null);
 
   const defaultLexiqueData = [
@@ -80,20 +80,11 @@ export const InteractiveLexiconText: React.FC<InteractiveLexiconTextProps> = ({
         
         const termName = target.getAttribute('data-term') || '';
         const termDef = target.getAttribute('data-definition') || '';
-        const rect = target.getBoundingClientRect();
-        
-        // Calculate coordinate relative to document
-        const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
-        const scrollY = window.pageYOffset || document.documentElement.scrollTop;
         
         setTooltip({
           term: termName,
-          definition: termDef,
-          x: rect.left + scrollX + rect.width / 2,
-          y: rect.top + scrollY - 12
+          definition: termDef
         });
-      } else {
-        setTooltip(null);
       }
     };
 
@@ -199,67 +190,79 @@ export const InteractiveLexiconText: React.FC<InteractiveLexiconTextProps> = ({
   };
 
   return (
-    <div ref={containerRef} className={`relative ${className}`}>
+    <div ref={containerRef} className={`w-full max-w-full break-words overflow-hidden relative ${className}`} style={style}>
       <div 
         dangerouslySetInnerHTML={{ __html: getHighlightedContent() }} 
-        className="prose dark:prose-invert max-w-none text-justify"
+        className="prose dark:prose-invert w-full max-w-full break-words overflow-hidden text-justify"
+        style={style}
       />
 
-      {/* Floating Tooltip Component */}
+      {/* Centered Popup Modal Component */}
       <AnimatePresence>
-        {tooltip && (
-          <>
-            {/* Tooltip Card */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              transition={{ type: 'spring', stiffness: 350, damping: 25 }}
-              style={{
-                position: 'absolute',
-                left: `${tooltip.x}px`,
-                top: `${tooltip.y}px`,
-                transform: 'translate(-50%, -100%)',
-                zIndex: 99999
-              }}
-              className="w-72 sm:w-80 bg-white dark:bg-gray-800 rounded-2xl border border-amber-100 dark:border-amber-900/50 shadow-2xl p-4 text-left pointer-events-auto select-text"
-            >
-              {/* Header */}
-              <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-700/50 pb-2 mb-2">
-                <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 font-bold text-sm">
-                  <BookOpen size={15} />
-                  <span>{tooltip.term}</span>
-                </div>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setTooltip(null);
-                  }}
-                  className="p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-750 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
-                >
-                  <X size={14} />
-                </button>
-              </div>
-
-              {/* Definition */}
-              <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 leading-relaxed font-normal">
-                {tooltip.definition}
-              </p>
-
-              {/* Little triangle arrow at the bottom of tooltip */}
-              <div 
-                className="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-white dark:border-t-gray-800"
-                style={{ filter: 'drop-shadow(0 1px 1px rgba(0,0,0,0.05))' }}
+        {tooltip && (() => {
+          const foundItem = lexiqueData.find(item => item.term === tooltip.term);
+          const foundCategory = foundItem?.category || t('lexique.categories.concepts', 'Concepts');
+          
+          return (
+            <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4">
+              {/* Dark semi-transparent backdrop */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setTooltip(null)}
+                className="fixed inset-0 bg-black/60 backdrop-blur-sm"
               />
-            </motion.div>
 
-            {/* Tap-out listener to close tooltip */}
-            <div 
-              className="fixed inset-0 z-[99998]" 
-              onClick={() => setTooltip(null)}
-            />
-          </>
-        )}
+              {/* Modal Card */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+                className="relative w-full max-w-sm bg-white dark:bg-gray-800 rounded-3xl border border-amber-100 dark:border-amber-900/40 shadow-2xl overflow-hidden text-left flex flex-col pointer-events-auto select-text"
+              >
+                {/* Header with warm ambient background */}
+                <div className="bg-amber-50/50 dark:bg-amber-950/20 px-5 py-4 border-b border-amber-100/50 dark:border-amber-900/20 flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-950/60 flex items-center justify-center text-amber-600 dark:text-amber-400">
+                      <BookOpen size={16} />
+                    </div>
+                    <div>
+                      <span className="text-[10px] uppercase tracking-wider text-amber-600 dark:text-amber-400 font-bold block">
+                        {foundCategory}
+                      </span>
+                      <h3 className="font-bold text-gray-900 dark:text-white text-base">
+                        {tooltip.term}
+                      </h3>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setTooltip(null)}
+                    className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-amber-100 dark:hover:bg-amber-900/40 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+
+                {/* Content */}
+                <div className="p-5 md:p-6 text-sm sm:text-base text-gray-700 dark:text-gray-200 leading-relaxed max-h-[50vh] overflow-y-auto font-sans">
+                  {tooltip.definition}
+                </div>
+
+                {/* Footer with close action button */}
+                <div className="px-5 pb-5 pt-2 flex justify-end">
+                  <button
+                    onClick={() => setTooltip(null)}
+                    className="w-full bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl py-3 font-semibold text-sm transition-all shadow-md shadow-emerald-500/10 active:scale-[0.98]"
+                  >
+                    {t('close', 'D\'accord')}
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          );
+        })()}
       </AnimatePresence>
     </div>
   );

@@ -188,6 +188,89 @@ export const NamesOfAllah: React.FC = () => {
     localStorage.setItem('asrar_stats', JSON.stringify(stats));
   }, []);
 
+  // AI Translation for activeName details
+  const [translatedFields, setTranslatedFields] = useState<Record<string, any>>({});
+  const [translatingName, setTranslatingName] = useState(false);
+
+  React.useEffect(() => {
+    if (!activeName || language === 'fr') {
+      setTranslatedFields({});
+      return;
+    }
+
+    const cacheKey = `asrar_names_trans_${language}_${activeName.tr}`;
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        setTranslatedFields(JSON.parse(cached));
+        return;
+      }
+    } catch (e) {
+      console.error("Error reading Name of Allah translation cache:", e);
+    }
+
+    const translateFields = async () => {
+      setTranslatingName(true);
+      try {
+        const textsToTranslate = {
+          fr: activeName.fr || '',
+          ref: activeName.ref || '',
+          excerptFr: activeName.quranOptions?.excerptFr || '',
+          context: activeName.quranOptions?.context || ''
+        };
+
+        const res = await fetch('/api/translate-text', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            texts: textsToTranslate,
+            targetLanguage: language,
+          }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data) {
+            localStorage.setItem(cacheKey, JSON.stringify(data));
+            setTranslatedFields(data);
+          }
+        }
+      } catch (err) {
+        console.error("Name of Allah translation error:", err);
+      } finally {
+        setTranslatingName(false);
+      }
+    };
+
+    translateFields();
+  }, [activeName?.tr, language]);
+
+  const getTranslatedMeaning = (nameItem: typeof asmaListData[0]) => {
+    if (language === 'fr') return nameItem.fr;
+    try {
+      const cached = localStorage.getItem(`asrar_names_trans_${language}_${nameItem.tr}`);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed.fr) return parsed.fr;
+      }
+    } catch (e) {}
+    return nameItem.fr;
+  };
+
+  const getTranslatedRef = (nameItem: typeof asmaListData[0]) => {
+    if (language === 'fr') return nameItem.ref;
+    try {
+      const cached = localStorage.getItem(`asrar_names_trans_${language}_${nameItem.tr}`);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed.ref) return parsed.ref;
+      }
+    } catch (e) {}
+    return nameItem.ref;
+  };
+
   const [quranData, setQuranData] = useState<any[]>([]);
   const [loadingQuran, setLoadingQuran] = useState(true);
 
@@ -396,11 +479,11 @@ export const NamesOfAllah: React.FC = () => {
               </h3>
               
               <h4 className="font-bold text-lg text-gray-900 dark:text-gray-100 mb-1">{name.tr}</h4>
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">{name.fr}</p>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-4">{getTranslatedMeaning(name)}</p>
               
               <div className="w-full mt-auto pt-4 border-t border-gray-100 dark:border-gray-750 text-left">
                 <span className="text-xs text-gray-400 dark:text-gray-500 uppercase font-bold tracking-widest block mb-1">{t('namesOfAllah.khassiyya')}</span>
-                <p className="text-sm text-gray-700 dark:text-gray-300 italic">{name.ref}</p>
+                <p className="text-sm text-gray-700 dark:text-gray-300 italic">{getTranslatedRef(name)}</p>
               </div>
             </div>
 
@@ -460,6 +543,13 @@ export const NamesOfAllah: React.FC = () => {
               </div>
 
               <div className="p-5 sm:p-6 overflow-y-auto">
+                {language !== 'fr' && (
+                  <div className="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50/75 dark:bg-emerald-900/20 border border-emerald-100/50 dark:border-emerald-800/30 px-2.5 py-1 rounded-full w-fit mb-4 select-none">
+                    <Sparkles size={12} className={translatingName ? "animate-spin text-emerald-500" : "text-emerald-500"} />
+                    <span>{translatingName ? t("translating", "Traduction automatique en cours...") : t("translated", "Traduit automatiquement par IA")}</span>
+                  </div>
+                )}
+
                 {/* QURAN VIEW */}
                 {viewState === 'quran' && (
                   <div className="space-y-6">
@@ -511,7 +601,7 @@ export const NamesOfAllah: React.FC = () => {
                              
                              <div className="space-y-3 relative z-10">
                                <p className="font-medium text-indigo-900/90 dark:text-indigo-100/90 leading-relaxed text-justify" style={{ fontSize: `${textSize}px`, lineHeight: '1.6' }}>
-                                 {(activeName as any).quranOptions.context}
+                                 {translatedFields.context || (activeName as any).quranOptions.context}
                                </p>
                                <div className="w-8 h-px bg-indigo-200 dark:bg-indigo-800/50 my-2"></div>
                                <p className="font-medium text-indigo-900/90 dark:text-indigo-100/90 leading-relaxed text-justify" style={{ fontSize: `${textSize}px`, lineHeight: '1.6' }}>
@@ -541,7 +631,7 @@ export const NamesOfAllah: React.FC = () => {
                                </div>
                                <>
                                  <p className="font-arabic text-2xl sm:text-3xl text-gray-900 dark:text-white leading-[2] mb-4 text-center" dir="rtl">{(activeName as any).quranOptions.excerptAr}</p>
-                                 <p className="text-gray-600 dark:text-gray-400 font-serif italic text-sm text-center leading-relaxed">" {(activeName as any).quranOptions.excerptFr} "</p>
+                                 <p className="text-gray-600 dark:text-gray-400 font-serif italic text-sm text-center leading-relaxed">" {translatedFields.excerptFr || (activeName as any).quranOptions.excerptFr} "</p>
                                </>
                              </div>
 
@@ -700,7 +790,19 @@ export const NamesOfAllah: React.FC = () => {
                   return (
                     <div className="space-y-6 py-4 flex flex-col items-center">
                       <p className="text-center text-sm font-medium text-gray-600 dark:text-gray-400">
-                        Générateur de Carrés Magiques (Awfaq) pour la valeur <span className="font-bold text-purple-600 dark:text-purple-400">{activeName.abjad}</span>. Les restes ne sont pas traités dans cette version simple.
+                        {language === 'en' ? (
+                          <>
+                            Magic Square (Awfaq) Generator for the value <span className="font-bold text-purple-600 dark:text-purple-400">{activeName.abjad}</span>. Remainders are not handled in this simple version.
+                          </>
+                        ) : language === 'ha' ? (
+                          <>
+                            Injin samar da Murabba'ai na Sihiri (Awfaq) don ƙimar <span className="font-bold text-purple-600 dark:text-purple-400">{activeName.abjad}</span>. Ba a sarrafa ragowar a cikin wannan sigar mai sauƙi ba.
+                          </>
+                        ) : (
+                          <>
+                            Générateur de Carrés Magiques (Awfaq) pour la valeur <span className="font-bold text-purple-600 dark:text-purple-400">{activeName.abjad}</span>. Les restes ne sont pas traités dans cette version simple.
+                          </>
+                        )}
                       </p>
 
                       {/* Dynamic Selector 3x3 to 10x10 */}

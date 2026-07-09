@@ -23,73 +23,72 @@ import 'react-image-crop/dist/ReactCrop.css';
 
 import { AdminStoreManager } from '../../components/AdminStoreManager';
 
-const LayoutSelector = ({ value, onChange, activeColor = 'border-emerald-500 text-emerald-500' }: { value: string, onChange: (val: string) => void, activeColor?: string }) => {
+const LayoutSelector = ({ value, onChange, activeColor = 'emerald' }: { value: string, onChange: (val: string) => void, activeColor?: string }) => {
+  const isEmerald = activeColor.includes('emerald');
+  const activeBorderColor = isEmerald ? 'border-emerald-500' : 'border-indigo-500';
+  const activeBgColor = isEmerald ? 'bg-emerald-50/50 dark:bg-emerald-950/20' : 'bg-indigo-50/50 dark:bg-indigo-950/20';
+
   return (
-    <div className="flex items-center justify-center bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-3 max-w-[280px] shadow-sm">
-      <div className="flex items-center gap-4 w-full justify-between">
+    <div className="inline-flex items-center bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl p-1.5 shadow-sm">
+      <div className="flex items-center gap-1.5">
         {/* Grid option */}
         <button
           type="button"
           onClick={() => onChange('grid')}
-          className={`flex flex-col items-center justify-center w-16 h-16 rounded-2xl transition-all ${
+          className={`flex items-center justify-center w-12 h-12 rounded-xl transition-all ${
             value === 'grid' 
-              ? `bg-gray-50 dark:bg-gray-850 border-2 ${activeColor} shadow-md scale-105` 
-              : 'hover:bg-gray-50 dark:hover:bg-gray-800 border-2 border-transparent'
+              ? `bg-gray-100 dark:bg-gray-800 shadow-inner scale-105` 
+              : 'hover:bg-gray-50 dark:hover:bg-gray-850'
           }`}
           title="Grid Layout"
         >
-          <div className="grid grid-cols-2 gap-1 w-6 h-6">
-            <div className={`w-2.5 h-2.5 rounded-[3px] border-2 ${value === 'grid' ? (activeColor.includes('emerald') ? 'border-emerald-500 bg-emerald-500/20' : 'border-indigo-500 bg-indigo-500/20') : 'border-gray-400 dark:border-gray-500'}`} />
-            <div className={`w-2.5 h-2.5 rounded-[3px] border-2 ${value === 'grid' ? (activeColor.includes('emerald') ? 'border-emerald-500 bg-emerald-500/20' : 'border-indigo-500 bg-indigo-500/20') : 'border-gray-400 dark:border-gray-500'}`} />
-            <div className={`w-2.5 h-2.5 rounded-[3px] border-2 ${value === 'grid' ? (activeColor.includes('emerald') ? 'border-emerald-500 bg-emerald-500/20' : 'border-indigo-500 bg-indigo-500/20') : 'border-gray-400 dark:border-gray-500'}`} />
-            <div className={`w-2.5 h-2.5 rounded-[3px] border-2 ${value === 'grid' ? (activeColor.includes('emerald') ? 'border-emerald-500 bg-emerald-500/20' : 'border-indigo-500 bg-indigo-500/20') : 'border-gray-400 dark:border-gray-500'}`} />
+          <div className="grid grid-cols-2 gap-1 w-5 h-5">
+            <div className={`w-2 h-2 rounded-[3px] border-2 transition-colors ${value === 'grid' ? `${activeBorderColor} ${isEmerald ? 'bg-emerald-500/15' : 'bg-indigo-500/15'}` : 'border-gray-400 dark:border-gray-500'}`} />
+            <div className={`w-2 h-2 rounded-[3px] border-2 transition-colors ${value === 'grid' ? `${activeBorderColor} ${isEmerald ? 'bg-emerald-500/15' : 'bg-indigo-500/15'}` : 'border-gray-400 dark:border-gray-500'}`} />
+            <div className={`w-2 h-2 rounded-[3px] border-2 transition-colors ${value === 'grid' ? `${activeBorderColor} ${isEmerald ? 'bg-emerald-500/15' : 'bg-indigo-500/15'}` : 'border-gray-400 dark:border-gray-500'}`} />
+            <div className={`w-2 h-2 rounded-[3px] border-2 transition-colors ${value === 'grid' ? `${activeBorderColor} ${isEmerald ? 'bg-emerald-500/15' : 'bg-indigo-500/15'}` : 'border-gray-400 dark:border-gray-500'}`} />
           </div>
-          <span className="text-[10px] mt-1 font-medium text-gray-500 dark:text-gray-400">Grille</span>
         </button>
 
         {/* Large/Featured option */}
         <button
           type="button"
           onClick={() => onChange('large')}
-          className={`flex flex-col items-center justify-center w-16 h-16 rounded-2xl transition-all ${
+          className={`flex items-center justify-center w-12 h-12 rounded-xl transition-all ${
             value === 'large' 
-              ? `bg-gray-50 dark:bg-gray-850 border-2 ${activeColor} shadow-md scale-105` 
-              : 'hover:bg-gray-50 dark:hover:bg-gray-800 border-2 border-transparent'
+              ? `bg-gray-100 dark:bg-gray-800 shadow-inner scale-105` 
+              : 'hover:bg-gray-50 dark:hover:bg-gray-850'
           }`}
-          title="Large Layout"
+          title="Featured Layout"
         >
-          <div className="flex items-center justify-center w-7 h-7 rounded-md bg-gray-50 dark:bg-gray-950 border border-gray-150 dark:border-gray-850">
-            <div className={`w-4.5 h-4.5 rounded-[4px] border-2 bg-transparent ${value === 'large' ? (activeColor.includes('emerald') ? 'border-emerald-500 bg-emerald-500/10' : 'border-indigo-500 bg-indigo-500/10') : 'border-gray-400 dark:border-gray-500'}`} />
-          </div>
-          <span className="text-[10px] mt-1 font-medium text-gray-500 dark:text-gray-400">Vedette</span>
+          <div className={`w-5.5 h-5.5 rounded-md border-2 transition-colors ${value === 'large' ? `${activeBorderColor} ${isEmerald ? 'bg-emerald-500/15' : 'bg-indigo-500/15'}` : 'border-gray-400 dark:border-gray-500'}`} />
         </button>
 
         {/* List option */}
         <button
           type="button"
           onClick={() => onChange('list')}
-          className={`flex flex-col items-center justify-center w-16 h-16 rounded-2xl transition-all ${
+          className={`flex items-center justify-center w-12 h-12 rounded-xl transition-all ${
             value === 'list' 
-              ? `bg-gray-50 dark:bg-gray-850 border-2 ${activeColor} shadow-md scale-105` 
-              : 'hover:bg-gray-50 dark:hover:bg-gray-800 border-2 border-transparent'
+              ? `bg-gray-100 dark:bg-gray-800 shadow-inner scale-105` 
+              : 'hover:bg-gray-50 dark:hover:bg-gray-850'
           }`}
           title="List Layout"
         >
-          <div className="flex flex-col gap-1 w-6 h-6 justify-center">
+          <div className="flex flex-col gap-1 w-5 h-5 justify-center">
             <div className="flex items-center gap-1.5">
-              <div className={`w-1 h-1 rounded-full ${value === 'list' ? (activeColor.includes('emerald') ? 'bg-emerald-500' : 'bg-indigo-500') : 'bg-gray-400 dark:bg-gray-500'}`} />
-              <div className={`h-1 flex-1 rounded-full ${value === 'list' ? (activeColor.includes('emerald') ? 'bg-emerald-500' : 'bg-indigo-500') : 'bg-gray-400 dark:bg-gray-500'}`} />
+              <div className={`w-1 h-1 rounded-full ${value === 'list' ? (isEmerald ? 'bg-emerald-500' : 'bg-indigo-500') : 'bg-gray-400 dark:bg-gray-500'}`} />
+              <div className={`h-1 flex-1 rounded-full ${value === 'list' ? (isEmerald ? 'bg-emerald-500' : 'bg-indigo-500') : 'bg-gray-400 dark:bg-gray-500'}`} />
             </div>
             <div className="flex items-center gap-1.5">
-              <div className={`w-1 h-1 rounded-full ${value === 'list' ? (activeColor.includes('emerald') ? 'bg-emerald-500' : 'bg-indigo-500') : 'bg-gray-400 dark:bg-gray-500'}`} />
-              <div className={`h-1 flex-1 rounded-full ${value === 'list' ? (activeColor.includes('emerald') ? 'bg-emerald-500' : 'bg-indigo-500') : 'bg-gray-400 dark:bg-gray-500'}`} />
+              <div className={`w-1 h-1 rounded-full ${value === 'list' ? (isEmerald ? 'bg-emerald-500' : 'bg-indigo-500') : 'bg-gray-400 dark:bg-gray-500'}`} />
+              <div className={`h-1 flex-1 rounded-full ${value === 'list' ? (isEmerald ? 'bg-emerald-500' : 'bg-indigo-500') : 'bg-gray-400 dark:bg-gray-500'}`} />
             </div>
             <div className="flex items-center gap-1.5">
-              <div className={`w-1 h-1 rounded-full ${value === 'list' ? (activeColor.includes('emerald') ? 'bg-emerald-500' : 'bg-indigo-500') : 'bg-gray-400 dark:bg-gray-500'}`} />
-              <div className={`h-1 flex-1 rounded-full ${value === 'list' ? (activeColor.includes('emerald') ? 'bg-emerald-500' : 'bg-indigo-500') : 'bg-gray-400 dark:bg-gray-500'}`} />
+              <div className={`w-1 h-1 rounded-full ${value === 'list' ? (isEmerald ? 'bg-emerald-500' : 'bg-indigo-500') : 'bg-gray-400 dark:bg-gray-500'}`} />
+              <div className={`h-1 flex-1 rounded-full ${value === 'list' ? (isEmerald ? 'bg-emerald-500' : 'bg-indigo-500') : 'bg-gray-400 dark:bg-gray-500'}`} />
             </div>
           </div>
-          <span className="text-[10px] mt-1 font-medium text-gray-500 dark:text-gray-400">Liste</span>
         </button>
       </div>
     </div>

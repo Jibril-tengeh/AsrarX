@@ -200,6 +200,133 @@ Règles de comportement et formatage (TRÈS IMPORTANT) :
     }
   });
 
+  // AI Article Translation
+  app.post("/api/translate-article", async (req, res) => {
+    try {
+      const { title, content, hook, benefits, targetLanguage } = req.body;
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ error: "Gemini API key is not configured" });
+      }
+
+      if (!targetLanguage || (targetLanguage !== 'en' && targetLanguage !== 'ha')) {
+        return res.status(400).json({ error: "Invalid target language. Supported: 'en', 'ha'" });
+      }
+
+      const ai = new GoogleGenAI({
+        apiKey,
+        httpOptions: {
+          headers: {
+            'User-Agent': 'aistudio-build',
+          }
+        }
+      });
+
+      const languageName = targetLanguage === 'ha' ? 'Hausa' : 'English';
+      
+      const prompt = `
+You are a professional translator specializing in spiritual, Islamic, and esoteric literature.
+Translate the following article fields from French into ${languageName} (language code: "${targetLanguage}").
+
+Strict Rules:
+1. Retain all Arabic text, Quranic verses, and Names of Allah written in Arabic script EXACTLY as they are. Do not translate or alter Arabic script.
+2. Translate all French/non-Arabic text into highly professional, elegant ${languageName}.
+3. Preserve all HTML formatting tags (like <p>, <strong>, <br>, <li>, etc.) inside the "content" field exactly as they are.
+4. Output the translation in JSON matching the requested schema.
+
+Input Fields:
+Title: ${title || ""}
+Hook: ${hook || ""}
+Content: ${content || ""}
+Benefits: ${JSON.stringify(benefits || [])}
+`;
+
+      const response = await generateWithRetry(ai, {
+        model: "gemini-3.5-flash",
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: "OBJECT",
+            properties: {
+              title: { type: "STRING", description: "The translated title" },
+              hook: { type: "STRING", description: "The translated hook" },
+              content: { type: "STRING", description: "The translated content keeping all HTML tags" },
+              benefits: {
+                type: "ARRAY",
+                items: { type: "STRING" },
+                description: "The translated list of benefits"
+              }
+            },
+            required: ["title", "hook", "content", "benefits"]
+          }
+        }
+      });
+
+      const resultText = response?.text?.trim() || "{}";
+      const translatedData = JSON.parse(resultText);
+      res.json(translatedData);
+    } catch (error: any) {
+      console.error("AI Article Translation error:", error);
+      res.status(500).json({ error: "Failed to translate article" });
+    }
+  });
+
+  // AI Generic Text Translation
+  app.post("/api/translate-text", async (req, res) => {
+    try {
+      const { texts, targetLanguage } = req.body;
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ error: "Gemini API key is not configured" });
+      }
+
+      if (!targetLanguage || (targetLanguage !== 'en' && targetLanguage !== 'ha')) {
+        return res.status(400).json({ error: "Invalid target language. Supported: 'en', 'ha'" });
+      }
+
+      const ai = new GoogleGenAI({
+        apiKey,
+        httpOptions: {
+          headers: {
+            'User-Agent': 'aistudio-build',
+          }
+        }
+      });
+
+      const languageName = targetLanguage === 'ha' ? 'Hausa' : 'English';
+      
+      const prompt = `
+You are a professional translator specializing in spiritual, Islamic, and esoteric literature.
+Translate the following key-value text pairs from French into ${languageName} (language code: "${targetLanguage}").
+
+Strict Rules:
+1. Preserve the exact JSON keys in the output. Do not rename, add, or remove keys.
+2. Retain all Arabic text, Quranic verses, and Names of Allah written in Arabic script EXACTLY as they are. Do not translate or alter Arabic script.
+3. Translate all French/non-Arabic text into highly professional, elegant ${languageName}.
+4. Output the translation as a clean flat JSON object.
+
+Input Fields JSON:
+${JSON.stringify(texts)}
+`;
+
+      const response = await generateWithRetry(ai, {
+        model: "gemini-3.5-flash",
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json"
+        }
+      });
+
+      const resultText = response?.text?.trim() || "{}";
+      const translatedData = JSON.parse(resultText);
+      res.json(translatedData);
+    } catch (error: any) {
+      console.error("AI Text Translation error:", error);
+      res.status(500).json({ error: "Failed to translate text" });
+    }
+  });
+
   // Paystack verification
   app.post("/api/verify-paystack", async (req, res) => {
     try {

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useLanguage } from "../../contexts/LanguageContext";
 import {
@@ -35,10 +35,10 @@ import { AuthModal } from '../../components/AuthModal';
 import { InteractiveLexiconText } from "../../components/InteractiveLexiconText";
 import { PremiumWrapper } from "../../components/PremiumWrapper";
 
-const AccordionSection: React.FC<{ title: string, htmlContent: string, readingMode: boolean }> = ({ title, htmlContent, readingMode }) => {
+const AccordionSection: React.FC<{ title: string, htmlContent: string, readingMode: boolean, style?: React.CSSProperties }> = ({ title, htmlContent, readingMode, style }) => {
   const [isOpen, setIsOpen] = useState(false);
   return (
-    <div className={`rounded-2xl border transition-colors overflow-hidden ${readingMode ? "border-[#e8dcb5] dark:border-[#524830]/50" : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"}`}>
+    <div className={`rounded-2xl border transition-colors overflow-hidden ${readingMode ? "border-[#e8dcb5] dark:border-[#524830]/50" : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"}`} style={style}>
       <button 
         onClick={() => setIsOpen(!isOpen)}
         className={`w-full flex items-center justify-between p-4 sm:p-5 text-left font-bold transition-colors ${
@@ -51,8 +51,8 @@ const AccordionSection: React.FC<{ title: string, htmlContent: string, readingMo
         <ChevronDown size={20} className={`transform transition-transform ${isOpen ? "rotate-180" : ""}`} />
       </button>
       {isOpen && (
-        <div className={`p-4 sm:p-5 border-t ${readingMode ? "border-[#e8dcb5] dark:border-[#524830]/50 text-[#363028] dark:text-[#c4b79d]" : "border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300"}`}>
-          <div dangerouslySetInnerHTML={{ __html: htmlContent }} className="prose dark:prose-invert max-w-none" />
+        <div className={`p-4 sm:p-5 border-t ${readingMode ? "border-[#e8dcb5] dark:border-[#524830]/50 text-[#363028] dark:text-[#c4b79d]" : "border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300"}`} style={style}>
+          <div dangerouslySetInnerHTML={{ __html: htmlContent }} className="prose dark:prose-invert w-full max-w-full break-words overflow-hidden" style={style} />
         </div>
       )}
     </div>
@@ -78,15 +78,179 @@ export const SecretDetail: React.FC = () => {
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [bookmarkFolders, setBookmarkFolders] = useState<any[]>([]);
   const [viewMode, setViewMode] = useState<'full' | 'accordion'>('full');
+  const [articleFontSize, setArticleFontSize] = useState<number>(18);
   const [rating, setRating] = useState(0);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [isTranslating, setIsTranslating] = useState(false);
+
+  useEffect(() => {
+    if (!item || language === 'fr') {
+      setIsTranslating(false);
+      return;
+    }
+
+    const cacheKey = `asrar_trans_${item.id}_${language}`;
+    try {
+      const cached = localStorage.getItem(cacheKey);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (item.title === parsed.title) {
+          setIsTranslating(false);
+          return;
+        }
+        setItem(prev => {
+          if (!prev || prev.id !== item.id) return prev;
+          return {
+            ...prev,
+            title: parsed.title,
+            hook: parsed.hook,
+            content: parsed.content,
+            benefits: parsed.benefits,
+          };
+        });
+        setIsTranslating(false);
+        return;
+      }
+    } catch (e) {
+      console.error("Error reading translation cache", e);
+    }
+
+    const translateArticle = async () => {
+      setIsTranslating(true);
+      try {
+        const staticItems = getAsrarItems();
+        const staticItem = staticItems.find(i => i.id === item.id);
+        const sourceTitle = staticItem ? staticItem.title : item.title;
+        const sourceContent = staticItem ? staticItem.content : item.content;
+        const sourceHook = staticItem ? staticItem.hook : item.hook;
+        const sourceBenefits = staticItem ? staticItem.benefits : item.benefits;
+
+        const res = await fetch('/api/translate-article', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            title: sourceTitle,
+            content: sourceContent,
+            hook: sourceHook,
+            benefits: sourceBenefits,
+            targetLanguage: language,
+          }),
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.title) {
+            localStorage.setItem(cacheKey, JSON.stringify(data));
+            setItem(prev => {
+              if (!prev || prev.id !== item.id) return prev;
+              return {
+                ...prev,
+                title: data.title,
+                hook: data.hook,
+                content: data.content,
+                benefits: data.benefits,
+              };
+            });
+          }
+        }
+      } catch (err) {
+        console.error("Automatic translation error:", err);
+      } finally {
+        setIsTranslating(false);
+      }
+    };
+
+    translateArticle();
+  }, [id, language, item?.id]);
+
+  const chunkText = (text: string, maxLength: number): string[] => {
+    const words = text.split(/\s+/);
+    const chunks: string[] = [];
+    let currentChunk = '';
+    for (const word of words) {
+      if ((currentChunk + ' ' + word).length > maxLength) {
+        if (currentChunk) chunks.push(currentChunk.trim());
+        currentChunk = word;
+      } else {
+        currentChunk = currentChunk ? currentChunk + ' ' + word : word;
+      }
+    }
+    if (currentChunk) chunks.push(currentChunk.trim());
+    return chunks;
+  };
+
+  const playGoogleTTS = (text: string, lang: string) => {
+    setIsSpeaking(true);
+    const chunks = chunkText(text, 180);
+    let currentChunk = 0;
+
+    const playNext = () => {
+      if (currentChunk >= chunks.length) {
+        setIsSpeaking(false);
+        return;
+      }
+      const t = chunks[currentChunk];
+      const googleUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${lang}&client=tw-ob&q=${encodeURIComponent(t)}`;
+      const backupUrl = `https://dict.youdao.com/dictvoice?audio=${encodeURIComponent(t)}&le=${lang === 'en' ? 'eng' : 'fr'}`;
+
+      const audio = document.createElement('audio');
+      audio.setAttribute('referrerpolicy', 'no-referrer');
+      audio.src = googleUrl;
+      audioRef.current = audio;
+
+      let triedBackup = false;
+
+      const handlePlaybackError = () => {
+        if (!triedBackup && lang !== 'ha') {
+          triedBackup = true;
+          audio.src = backupUrl;
+          audio.play().catch(() => {
+            currentChunk++;
+            playNext();
+          });
+        } else {
+          currentChunk++;
+          playNext();
+        }
+      };
+
+      audio.onended = () => {
+        currentChunk++;
+        playNext();
+      };
+
+      audio.onerror = () => {
+        handlePlaybackError();
+      };
+
+      audio.play().catch(() => {
+        handlePlaybackError();
+      });
+    };
+
+    playNext();
+  };
+
+  // Preload voices
+  useEffect(() => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.getVoices();
+    }
+  }, []);
 
   // Stop any reading when leaving page
   useEffect(() => {
     return () => {
       if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
+      }
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
       }
     };
   }, []);
@@ -99,16 +263,28 @@ export const SecretDetail: React.FC = () => {
 
   const handleLectureVocale = () => {
     if (!item) return;
-    if ('speechSynthesis' in window) {
-      if (isSpeaking) {
+
+    if (isSpeaking) {
+      if ('speechSynthesis' in window) {
         window.speechSynthesis.cancel();
-        setIsSpeaking(false);
-      } else {
-        // Build readable text: Title + verse (if any) + content text (HTML stripped)
-        const textToRead = `${item.title}. ${item.verse ? item.verse + '.' : ''} ${stripHtml(item.content)}`;
+      }
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+      setIsSpeaking(false);
+      return;
+    }
+
+    const textToRead = `${item.title}. ${item.verse ? item.verse + '.' : ''} ${stripHtml(item.content)}`;
+    const lang = language === 'en' ? 'en' : language === 'ha' ? 'ha' : 'fr';
+
+    if ('speechSynthesis' in window) {
+      try {
+        // Cancel any pending/paused speech before playing to avoid queuing issues
+        window.speechSynthesis.cancel();
+
         const newUtterance = new SpeechSynthesisUtterance(textToRead);
-        
-        // Match speech voice to active interface language
         if (language === 'en') {
           newUtterance.lang = 'en-US';
         } else if (language === 'ha') {
@@ -117,19 +293,38 @@ export const SecretDetail: React.FC = () => {
           newUtterance.lang = 'fr-FR';
         }
 
+        // Keep a timeout in case speech engine fails to start (e.g. mobile browser restrictions)
+        let fallbackTimeout = setTimeout(() => {
+          console.warn("SpeechSynthesis start timed out, recovering with Google Translate TTS fallback.");
+          window.speechSynthesis.cancel();
+          playGoogleTTS(textToRead, lang);
+        }, 4000);
+
+        newUtterance.onstart = () => {
+          clearTimeout(fallbackTimeout);
+          setIsSpeaking(true);
+        };
+
         newUtterance.onend = () => {
+          clearTimeout(fallbackTimeout);
           setIsSpeaking(false);
         };
 
-        newUtterance.onerror = () => {
-          setIsSpeaking(false);
+        newUtterance.onerror = (e) => {
+          clearTimeout(fallbackTimeout);
+          console.warn("SpeechSynthesis error, falling back to Google Translate TTS:", e);
+          playGoogleTTS(textToRead, lang);
         };
 
         window.speechSynthesis.speak(newUtterance);
+      } catch (err) {
+        console.warn("SpeechSynthesis threw error, falling back to Google Translate TTS:", err);
+        playGoogleTTS(textToRead, lang);
         setIsSpeaking(true);
       }
     } else {
-      alert("La synthèse vocale n'est pas supportée par votre navigateur.");
+      playGoogleTTS(textToRead, lang);
+      setIsSpeaking(true);
     }
   };
 
@@ -358,21 +553,27 @@ export const SecretDetail: React.FC = () => {
   return (
     <PremiumWrapper enabled={item.isPremium} requiredTier="premium" fallbackTitle="Lecture Secrète Premium">
       <div
-        className={`mx-auto px-4 pt-0 sm:px-6 sm:pt-2 lg:px-8 pb-24 transition-colors duration-500 ${readingMode ? "bg-[#fdfbf7] dark:bg-[#1a1917] min-h-screen" : "max-w-3xl"}`}
+        className={`w-full max-w-3xl mx-auto px-4 pt-0 sm:px-6 sm:pt-2 lg:px-8 pb-24 transition-colors duration-500 ${readingMode ? "bg-[#fdfbf7] dark:bg-[#1a1917] min-h-screen" : ""}`}
       >
       <div
         className={`flex items-center justify-between mb-6 ${readingMode ? "max-w-3xl mx-auto" : ""}`}
       >
         <button
-          onClick={() => navigate(-1)}
+          onClick={() => {
+            if (window.history.state && window.history.state.idx > 0) {
+              navigate(-1);
+            } else {
+              navigate('/user/dashboard');
+            }
+          }}
           className={`flex items-center space-x-2 px-3 py-2 -ml-3 rounded-lg transition-colors ${readingMode ? "text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800" : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
         >
           <ArrowLeft size={20} />
-          <span className="font-medium">{t("back")}</span>
+          <span className="font-medium hidden sm:inline">{t("back")}</span>
         </button>
 
-        <div className="flex items-center gap-2">
-          <div className="flex items-center bg-gray-100 dark:bg-gray-800 p-1 rounded-full mr-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <div className="flex items-center bg-gray-100 dark:bg-gray-800 p-1 rounded-full mr-1 sm:mr-2">
             <button
               onClick={() => setViewMode('full')}
               className={`p-1.5 rounded-full transition-colors ${viewMode === 'full' ? 'bg-white dark:bg-gray-700 shadow-sm text-emerald-600 dark:text-emerald-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
@@ -409,7 +610,7 @@ export const SecretDetail: React.FC = () => {
             title={isSpeaking ? t("secretDetail.lectureVocaleStop", "Arrêter la lecture") : t("secretDetail.lectureVocalePlay", "Lecture Vocale")}
           >
             {isSpeaking ? <VolumeX size={15} /> : <Volume2 size={15} />}
-            <span className="text-xs">{isSpeaking ? t("secretDetail.lectureVocaleStop", "Arrêter") : t("secretDetail.lectureVocalePlay", "Lecture Vocale")}</span>
+            <span className="text-xs hidden sm:inline">{isSpeaking ? t("secretDetail.lectureVocaleStop", "Arrêter") : t("secretDetail.lectureVocalePlay", "Lecture Vocale")}</span>
           </button>
 
           <button
@@ -418,7 +619,7 @@ export const SecretDetail: React.FC = () => {
             title={t("secretDetail.zenModeTitle", "Mode Zen (Plein Écran)")}
           >
             <Maximize2 size={15} />
-            <span className="text-xs">{t("secretDetail.zenModeBtn", "Mode Zen")}</span>
+            <span className="text-xs hidden sm:inline">{t("secretDetail.zenModeBtn", "Mode Zen")}</span>
           </button>
           <button
             onClick={toggleBookmark}
@@ -482,7 +683,7 @@ export const SecretDetail: React.FC = () => {
       )}
 
       <div
-        className={`overflow-hidden transition-all duration-500 ${readingMode ? "max-w-3xl mx-auto bg-transparent border-none" : "bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700"}`}
+        className={`w-full overflow-hidden transition-all duration-500 ${readingMode ? "max-w-3xl mx-auto bg-transparent border-none" : "bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700"}`}
       >
         {item.imageUrl && !readingMode && (
           <div className="w-full h-64 sm:h-80 md:h-96 relative overflow-hidden bg-gray-100 dark:bg-gray-800">
@@ -514,6 +715,12 @@ export const SecretDetail: React.FC = () => {
             >
               {item.title}
             </h1>
+            {language !== 'fr' && (
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50/75 dark:bg-emerald-900/20 border border-emerald-100/50 dark:border-emerald-800/30 px-2.5 py-1 rounded-full w-fit mt-1 select-none mx-auto sm:mx-0">
+                <Sparkles size={14} className={isTranslating ? "animate-spin text-emerald-500" : "text-emerald-500"} />
+                <span>{isTranslating ? t("translating", "Traduction automatique en cours...") : t("translated", "Traduit automatiquement par IA")}</span>
+              </div>
+            )}
           </div>
 
           {item.verse && (
@@ -555,29 +762,53 @@ export const SecretDetail: React.FC = () => {
           <div className="space-y-10 mt-8">
             <section>
               {!readingMode && (
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-5 flex items-center border-b border-gray-100 dark:border-gray-700 pb-3">
-                  <BookOpen className="mr-3 text-emerald-500" size={24} />
-                  {t("content")}
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-5 flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-3">
+                  <span className="flex items-center">
+                    <BookOpen className="mr-3 text-emerald-500" size={24} />
+                    {t("content")}
+                  </span>
+                  
+                  {/* Fine-Tuning Text Size (pointed in blue) */}
+                  <div className="flex items-center gap-1.5 bg-gray-50 dark:bg-gray-900 px-2.5 py-1 rounded-xl border border-gray-200 dark:border-gray-700">
+                    <button 
+                      onClick={() => setArticleFontSize(prev => Math.max(12, prev - 2))}
+                      className="p-1 hover:bg-gray-200 dark:hover:bg-gray-800 rounded text-gray-500 dark:text-gray-400 font-bold text-xs cursor-pointer select-none"
+                      title="Diminuer la taille"
+                    >
+                      A-
+                    </button>
+                    <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 min-w-[28px] text-center font-mono">
+                      {articleFontSize}px
+                    </span>
+                    <button 
+                      onClick={() => setArticleFontSize(prev => Math.min(36, prev + 2))}
+                      className="p-1 hover:bg-gray-200 dark:hover:bg-gray-800 rounded text-gray-500 dark:text-gray-400 font-bold text-xs cursor-pointer select-none"
+                      title="Augmenter la taille"
+                    >
+                      A+
+                    </button>
+                  </div>
                 </h2>
               )}
               <div
-                className={`max-w-none transition-all ${
+                className={`w-full max-w-full break-words overflow-hidden transition-all ${
                   readingMode
                     ? "text-[#363028] dark:text-[#c4b79d] font-arabic text-xl sm:text-2xl leading-[2.5]"
                     : "text-gray-700 dark:text-gray-300 leading-relaxed text-lg"
                 }`}
+                style={{ fontSize: `${articleFontSize}px` }}
               >
                 {(() => {
                   const isHtml = /<[a-z][\s\S]*>/i.test(item.content);
 
                   if (viewMode === 'full') {
-                    return <InteractiveLexiconText content={item.content} isHtml={isHtml} />;
+                    return <InteractiveLexiconText content={item.content} isHtml={isHtml} style={{ fontSize: `${articleFontSize}px` }} />;
                   }
 
                   if (viewMode === 'accordion') {
                     if (!isHtml) {
                       return item.content.split("\n").map((paragraph, idx) => (
-                        <p key={idx} className="mb-6">{paragraph}</p>
+                        <p key={idx} className="mb-6" style={{ fontSize: `${articleFontSize}px` }}>{paragraph}</p>
                       ));
                     }
 
@@ -611,7 +842,7 @@ export const SecretDetail: React.FC = () => {
                     return (
                       <div className="space-y-4">
                         {sections.map((section, idx) => (
-                          <AccordionSection key={idx} title={section.title} htmlContent={section.htmlContent} readingMode={readingMode} />
+                          <AccordionSection key={idx} title={section.title} htmlContent={section.htmlContent} readingMode={readingMode} style={{ fontSize: `${articleFontSize}px` }} />
                         ))}
                       </div>
                     );
@@ -749,7 +980,7 @@ export const SecretDetail: React.FC = () => {
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
-                    className={`absolute top-14 right-0 z-[100000] w-72 sm:w-80 p-5 rounded-2xl shadow-2xl border ${
+                    className={`absolute top-14 right-0 z-[100000] w-72 sm:w-80 p-5 rounded-2xl shadow-2xl border max-h-[75vh] sm:max-h-[85vh] overflow-y-auto ${
                       zenTheme === "cream"
                         ? "bg-[#fdfbf7] border-[#e8dcb5] text-[#3c2f2f]"
                         : zenTheme === "dark"
@@ -877,7 +1108,14 @@ export const SecretDetail: React.FC = () => {
                   fontFamily: `var(--font-${zenFont === 'serif' ? 'serif' : zenFont === 'sans' ? 'sans' : zenFont})`,
                 }}
               >
-                <InteractiveLexiconText content={item.content} isHtml={/<[a-z][\s\S]*>/i.test(item.content)} />
+                <InteractiveLexiconText 
+                  content={item.content} 
+                  isHtml={/<[a-z][\s\S]*>/i.test(item.content)} 
+                  style={{ 
+                    fontSize: `${zenFontSizePx}px`,
+                    fontFamily: `var(--font-${zenFont === 'serif' ? 'serif' : zenFont === 'sans' ? 'sans' : zenFont})`,
+                  }}
+                />
               </div>
             </div>
           </motion.div>

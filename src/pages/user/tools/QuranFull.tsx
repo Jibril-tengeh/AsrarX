@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { BookOpen, Shield, ArrowLeft, ArrowRight, Search, Play, Pause, ChevronDown, AlignJustify, Settings, Type, Volume2, FastForward, Headphones, X, Download, Check, Bookmark, BookmarkCheck, Share2, RefreshCw, Moon, Sun, Activity, Clock, TrendingUp, Copy, Image as ImageIcon, Maximize, Minimize2, ListPlus, ListMusic, GripVertical, Database, CloudOff } from 'lucide-react';
+import { BookOpen, Shield, ArrowLeft, ArrowRight, Search, Play, Pause, ChevronDown, AlignJustify, Settings, Type, Volume2, FastForward, Headphones, X, Download, Check, Bookmark, BookmarkCheck, Share2, RefreshCw, Moon, Sun, Activity, Clock, TrendingUp, Copy, Image as ImageIcon, Maximize, Minimize2, ListPlus, ListMusic, GripVertical, Database, CloudOff, Sliders } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -172,6 +172,9 @@ export const QuranFull: React.FC = () => {
   const [downloadingSurah, setDownloadingSurah] = useState(false);
   const [surahDownloadProgress, setSurahDownloadProgress] = useState(0);
   const [lineHeight, setLineHeight] = useState<number>(2.5);
+  const [arabicColor, setArabicColor] = useState<string>(() => localStorage.getItem('asrarhub_arabic_color') || 'default');
+  const [translationColor, setTranslationColor] = useState<string>(() => localStorage.getItem('asrarhub_translation_color') || 'default');
+  const [translationFontFamily, setTranslationFontFamily] = useState<string>(() => localStorage.getItem('asrarhub_translation_font') || 'serif');
   const [surahSearchQuery, setSurahSearchQuery] = useState('');
   const [showAyahSearch, setShowAyahSearch] = useState(false);
   const [readSurahs, setReadSurahs] = useState<number[]>(() => {
@@ -764,6 +767,25 @@ export const QuranFull: React.FC = () => {
       const audioBlob = await fetch(audioUrl).then(r => r.blob());
       const audioObjectUrl = URL.createObjectURL(audioBlob);
       
+      const translationText = zoomedAyahTranslationLang === 'fr' 
+        ? surahFrench?.ayahs.find(a => a.numberInSurah === zoomedAyah.numberInSurah)?.text 
+        : zoomedAyahTranslationLang === 'en' 
+          ? surahEnglish?.ayahs.find(a => a.numberInSurah === zoomedAyah.numberInSurah)?.text 
+          : zoomedAyahTranslationLang === 'ha' 
+            ? surahHausa?.ayahs.find(a => a.numberInSurah === zoomedAyah.numberInSurah)?.text 
+            : '';
+            
+      let translationObjectUrl = '';
+      if (zoomedAyahTranslationLang !== 'none' && translationText) {
+        try {
+          const transUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${zoomedAyahTranslationLang}&client=tw-ob&q=${encodeURIComponent(translationText)}`;
+          const transBlob = await fetch(transUrl).then(r => r.blob());
+          translationObjectUrl = URL.createObjectURL(transBlob);
+        } catch (e) {
+          console.warn("Could not load translation TTS blob:", e);
+        }
+      }
+
       const canvas = document.createElement('canvas');
       
       const imgBg = new Image(); imgBg.crossOrigin = 'anonymous';
@@ -784,6 +806,14 @@ export const QuranFull: React.FC = () => {
       audio.src = audioObjectUrl;
       
       await new Promise(r => audio.addEventListener('canplaythrough', r, { once: true }));
+
+      let translationAudio: HTMLAudioElement | null = null;
+      if (translationObjectUrl) {
+        translationAudio = new Audio();
+        translationAudio.crossOrigin = 'anonymous';
+        translationAudio.src = translationObjectUrl;
+        await new Promise(r => translationAudio!.addEventListener('canplaythrough', r, { once: true }));
+      }
       
       // @ts-ignore
       const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -791,6 +821,13 @@ export const QuranFull: React.FC = () => {
       const source = audioCtx.createMediaElementSource(audio);
       source.connect(dest);
       source.connect(audioCtx.destination);
+
+      let sourceTrans = null;
+      if (translationAudio) {
+        sourceTrans = audioCtx.createMediaElementSource(translationAudio);
+        sourceTrans.connect(dest);
+        sourceTrans.connect(audioCtx.destination);
+      }
       
       const canvasStream = canvas.captureStream ? canvas.captureStream(30) : (canvas as any).mozCaptureStream ? (canvas as any).mozCaptureStream(30) : null;
       if (!canvasStream) throw new Error("L'enregistrement vidéo n'est pas supporté sur ce navigateur.");
@@ -816,6 +853,9 @@ export const QuranFull: React.FC = () => {
           const actualMimeType = mimeType || recorder.mimeType || 'video/mp4';
           const blob = new Blob(chunks, { type: actualMimeType });
           URL.revokeObjectURL(audioObjectUrl);
+          if (translationObjectUrl) {
+            URL.revokeObjectURL(translationObjectUrl);
+          }
           audioCtx.close();
           resolve({blob, mimeType: actualMimeType});
         };
@@ -827,11 +867,19 @@ export const QuranFull: React.FC = () => {
       const maxRadius = Math.sqrt(canvas.width * canvas.width + canvas.height * canvas.height);
       
       const drawFrame = () => {
-        if (!audio.paused && !audio.ended) {
+        const isArabicPlaying = !audio.paused && !audio.ended;
+        const isTranslationPlaying = translationAudio && !translationAudio.paused && !translationAudio.ended;
+        
+        if (isArabicPlaying || isTranslationPlaying) {
           ctx.clearRect(0, 0, canvas.width, canvas.height);
           ctx.drawImage(imgBg, 0, 0);
           
-          const p = audio.currentTime / audio.duration;
+          let p = 0;
+          if (isArabicPlaying) {
+            p = (audio.currentTime / audio.duration) * 0.5;
+          } else if (isTranslationPlaying && translationAudio) {
+            p = 0.5 + (translationAudio.currentTime / translationAudio.duration) * 0.5;
+          }
           
           ctx.save();
           ctx.beginPath();
@@ -841,15 +889,25 @@ export const QuranFull: React.FC = () => {
           ctx.restore();
           
           requestAnimationFrame(drawFrame);
-        } else if (audio.ended) {
+        } else if (audio.ended && (!translationAudio || translationAudio.ended)) {
           ctx.drawImage(imgFull, 0, 0);
         }
       };
       drawFrame();
       
       audio.onended = () => {
-        recorder.stop();
+        if (translationAudio) {
+          translationAudio.play();
+        } else {
+          recorder.stop();
+        }
       };
+
+      if (translationAudio) {
+        translationAudio.onended = () => {
+          recorder.stop();
+        };
+      }
       
       const {blob, mimeType: finalMimeType} = await recordingEnded;
       const fullFileName = fileName + (finalMimeType === 'video/mp4' ? '.mp4' : '.webm');
@@ -1292,11 +1350,51 @@ export const QuranFull: React.FC = () => {
   const [toolbarPosition, setToolbarPosition] = useState<'left' | 'right'>('right');
   
   const getArabicStyle = () => {
-    return { fontSize: `${15 + fontSize}px`, lineHeight: lineHeight.toString(), fontFamily: `"${fontFamily}", serif` };
+    let colorStyle = {};
+    if (arabicColor === 'emerald') colorStyle = { color: '#047857' };
+    else if (arabicColor === 'amber') colorStyle = { color: '#b45309' };
+    else if (arabicColor === 'indigo') colorStyle = { color: '#4338ca' };
+    
+    // Check if dark mode is active to use accessible color variants
+    const isDark = document.documentElement.classList.contains('dark');
+    if (isDark) {
+      if (arabicColor === 'emerald') colorStyle = { color: '#34d399' };
+      else if (arabicColor === 'amber') colorStyle = { color: '#fbbf24' };
+      else if (arabicColor === 'indigo') colorStyle = { color: '#818cf8' };
+    }
+    return { 
+      fontSize: `${15 + fontSize}px`, 
+      lineHeight: lineHeight.toString(), 
+      fontFamily: `"${fontFamily}", serif`,
+      ...colorStyle
+    };
   };
 
   const getTranslationStyle = () => {
-    return { fontSize: `${11 + (fontSize * 0.4)}px`, lineHeight: '1.6' };
+    let colorStyle = {};
+    if (translationColor === 'emerald') colorStyle = { color: '#059669' };
+    else if (translationColor === 'amber') colorStyle = { color: '#d97706' };
+    else if (translationColor === 'blue') colorStyle = { color: '#2563eb' };
+
+    const isDark = document.documentElement.classList.contains('dark');
+    if (isDark) {
+      if (translationColor === 'emerald') colorStyle = { color: '#10b981' };
+      else if (translationColor === 'amber') colorStyle = { color: '#f59e0b' };
+      else if (translationColor === 'blue') colorStyle = { color: '#3b82f6' };
+    }
+
+    const fontStyle = translationFontFamily === 'sans' 
+      ? 'Inter, sans-serif' 
+      : translationFontFamily === 'mono' 
+        ? 'monospace' 
+        : 'serif';
+
+    return { 
+      fontSize: `${11 + (fontSize * 0.4)}px`, 
+      lineHeight: '1.6',
+      fontFamily: fontStyle,
+      ...colorStyle
+    };
   };
 
   useEffect(() => {
@@ -2319,7 +2417,90 @@ export const QuranFull: React.FC = () => {
                        </div>
                      </div>
                      
-                     <div>
+                     
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                          <Sliders size={18} className="text-emerald-500" /> Couleurs & Polices personnalisées
+                        </label>
+                        <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 border border-gray-100 dark:border-gray-800 space-y-4">
+                          {/* Arabic Text Color */}
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Couleur du texte arabe</label>
+                            <div className="flex flex-wrap gap-2">
+                              {[
+                                { id: 'default', name: 'Défaut', bg: 'bg-gray-950 dark:bg-white' },
+                                { id: 'emerald', name: 'Émeraude', bg: 'bg-emerald-600' },
+                                { id: 'amber', name: 'Ambre', bg: 'bg-amber-600' },
+                                { id: 'indigo', name: 'Indigo', bg: 'bg-indigo-600' }
+                              ].map((c) => (
+                                <button
+                                  key={c.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setArabicColor(c.id);
+                                    localStorage.setItem('asrarhub_arabic_color', c.id);
+                                  }}
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${arabicColor === c.id ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-200' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50'}`}
+                                >
+                                  <span className={`w-3.5 h-3.5 rounded-full ${c.bg}`}></span>
+                                  {c.name}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Translation Font Family */}
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Police de la Traduction</label>
+                            <div className="flex flex-wrap gap-2">
+                              {[
+                                { id: 'serif', name: 'Serif (Classique)' },
+                                { id: 'sans', name: 'Sans-Serif (Moderne)' },
+                                { id: 'mono', name: 'Mono' }
+                              ].map((f) => (
+                                <button
+                                  key={f.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setTranslationFontFamily(f.id);
+                                    localStorage.setItem('asrarhub_translation_font', f.id);
+                                  }}
+                                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${translationFontFamily === f.id ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50'}`}
+                                >
+                                  {f.name}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Translation Color */}
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Couleur de la Traduction</label>
+                            <div className="flex flex-wrap gap-2">
+                              {[
+                                { id: 'default', name: 'Défaut', bg: 'bg-gray-600 dark:bg-gray-400' },
+                                { id: 'emerald', name: 'Émeraude', bg: 'bg-emerald-500' },
+                                { id: 'amber', name: 'Ambre', bg: 'bg-amber-500' },
+                                { id: 'blue', name: 'Bleu', bg: 'bg-blue-500' }
+                              ].map((c) => (
+                                <button
+                                  key={c.id}
+                                  type="button"
+                                  onClick={() => {
+                                    setTranslationColor(c.id);
+                                    localStorage.setItem('asrarhub_translation_color', c.id);
+                                  }}
+                                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${translationColor === c.id ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-200' : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50'}`}
+                                >
+                                  <span className={`w-3.5 h-3.5 rounded-full ${c.bg}`}></span>
+                                  {c.name}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+<div>
                        <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
                          <AlignJustify size={18} className="text-emerald-500" /> Langues affichées
                        </label>
@@ -2601,15 +2782,16 @@ export const QuranFull: React.FC = () => {
                          </p>
                        </div>
                      )}
-                     </div>
-                     <div id="image-footer" style={{ display: 'none' }} className="mt-6 pt-3 w-full flex justify-between items-center opacity-90 z-0 border-t-2 border-blue-500 text-blue-500">
-                       <div className="flex items-center gap-4">
-                         <span className="font-bold text-sm tracking-tight text-emerald-800 dark:text-emerald-200">AsrarHub</span>
-                       </div>
-                       <div className="flex flex-col items-end text-emerald-800 dark:text-emerald-200">
-                         <span className="font-bold text-base font-arabic leading-none">{zoomedAyah.surahName?.replace('سُورَةُ ', '') || ''}</span>
-                         <span className="text-[10px] font-semibold uppercase tracking-widest mt-1">Verset {zoomedAyah.numberInSurah}</span>
-                       </div>
+                     
+                                           <div id="image-footer" className="mt-8 pt-4 w-full flex justify-between items-center opacity-100 z-0 border-t-2 border-blue-500 text-blue-600 dark:text-blue-400">
+                        <div className="flex items-center gap-4">
+                          <span className="font-bold text-sm tracking-tight uppercase">AsrarHub</span>
+                        </div>
+                        <div className="flex flex-col items-end text-right">
+                          <span className="font-bold text-base font-arabic leading-none">{zoomedAyah.surahName?.replace('سُورَةُ ', '') || ''}</span>
+                          <span className="text-[10px] font-semibold uppercase tracking-widest mt-1">Verset {zoomedAyah.numberInSurah}</span>
+                        </div>
+                      </div>
                      </div>
                       <div className="mt-8 pt-6 border-t border-black/10 dark:border-white/10 flex flex-col gap-4 w-full relative z-10" id="zoomed-ayah-actions">
                         <div className="flex items-center justify-between w-full mb-2">
@@ -3456,12 +3638,7 @@ export const QuranFull: React.FC = () => {
                                   }}
                                   data-ayah-number={ayah.number}
                                   className={`inline transition-colors ${playingAyah === ayah.number ? 'bg-emerald-100/80 dark:bg-emerald-900/40 text-emerald-900 dark:text-emerald-100 rounded-lg px-1' : ''} ${selectionMode && selectedAyahs.some(a => a.number === ayah.number) ? 'bg-blue-100 dark:bg-blue-900/40 outline outline-2 outline-blue-500 rounded px-1 cursor-pointer' : ''} ${selectionMode ? 'cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 rounded px-1' : ''}`}
-                                  onContextMenu={(e) => {
-                                    e.preventDefault();
-                                    setZoomedAyah({ text: ayahText, numberInSurah: ayah.numberInSurah, isTajweed: !!isTajweed, surahName: surahInfo.name, surahNumber: surahInfo.number, ayahNumber: ayah.number });
-                                  }}
-                                  onTouchStart={() => handleAyahTouchStart({ text: ayahText, numberInSurah: ayah.numberInSurah, surahName: surahInfo.name, surahNumber: surahInfo.number, number: ayah.number }, !!isTajweed)}
-                                  onTouchEnd={handleAyahTouchEnd}
+                                                                     /* Long-press disabled */
                                 >
                                   <span 
                                     className="cursor-pointer hover:bg-black/5 dark:hover:bg-white/5 rounded-lg px-1 transition-colors"
@@ -3549,24 +3726,7 @@ export const QuranFull: React.FC = () => {
                            <p 
                              className={`font-arabic text-gray-900 dark:text-white ${getJustifyClass(ayah.text)}`} 
                              style={getArabicStyle()}
-                             onContextMenu={(e) => {
-                               e.preventDefault();
-                               const isTajweed = MUSHAF_OPTIONS.find(m => m.id === fontFamily)?.isTajweed;
-                               const rawText = isTajweed && surahTajweed?.ayahs[i] ? surahTajweed.ayahs[i].text : ayah.text;
-                               const text = ayah.numberInSurah === 1 && (ayah.surah?.number || surahArabic.number) !== 1 && (ayah.surah?.number || surahArabic.number) !== 9 
-                                 ? rawText.replace(/^بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ\s*/, '').replace(/^بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ\s*/, '').replace(/^بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ\s*/, '').replace(/^بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ\s*/, '') 
-                                 : rawText;
-                               setZoomedAyah({ text, numberInSurah: ayah.numberInSurah, isTajweed: !!isTajweed, surahName: surahInfo.name, surahNumber: surahInfo.number, ayahNumber: ayah.number });
-                             }}
-                             onTouchStart={() => {
-                               const isTajweed = MUSHAF_OPTIONS.find(m => m.id === fontFamily)?.isTajweed;
-                               const rawText = isTajweed && surahTajweed?.ayahs[i] ? surahTajweed.ayahs[i].text : ayah.text;
-                               const text = ayah.numberInSurah === 1 && (ayah.surah?.number || surahArabic.number) !== 1 && (ayah.surah?.number || surahArabic.number) !== 9 
-                                 ? rawText.replace(/^بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ\s*/, '').replace(/^بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ\s*/, '').replace(/^بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ\s*/, '').replace(/^بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ\s*/, '') 
-                                 : rawText;
-                               handleAyahTouchStart({ text, numberInSurah: ayah.numberInSurah, surahName: surahInfo.name, surahNumber: surahInfo.number, number: ayah.number }, !!isTajweed);
-                             }}
-                             onTouchEnd={handleAyahTouchEnd}
+                             /* Long press disabled */
                            >
                              {(() => {
                                const isTajweed = MUSHAF_OPTIONS.find(m => m.id === fontFamily)?.isTajweed;
@@ -3664,25 +3824,26 @@ export const QuranFull: React.FC = () => {
                              <ListPlus size={18} />
                            </button>
                            <button
-                             onClick={async () => {
-                               const shareText = `${ayah.text}\n\n[Coran ${ayah.surah?.number || surahArabic.number}:${ayah.numberInSurah}]`;
-                               if (navigator.share) {
-                                 try {
-                                   await navigator.share({ title: 'Verset du Coran', text: shareText, url: window.location.href });
-                                 } catch(e: any) {
-                                   if (e.name !== 'AbortError') {
-                                     console.error(e);
-                                   }
-                                 }
-                               } else {
-                                 window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)} ${encodeURIComponent(window.location.href)}`, '_blank');
-                               }
-                             }}
-                             className="w-10 h-10 rounded-full flex items-center justify-center transition-colors bg-gray-50 text-gray-400 hover:bg-gray-100 hover:text-emerald-500 dark:bg-gray-900 dark:text-gray-500 dark:hover:bg-gray-800 dark:hover:text-emerald-400"
-                             title="Partager le verset"
-                           >
-                             <Share2 size={18} />
-                           </button>
+                              onClick={() => {
+                                const isTajweed = MUSHAF_OPTIONS.find(m => m.id === fontFamily)?.isTajweed;
+                                const rawText = isTajweed && surahTajweed?.ayahs[i] ? surahTajweed.ayahs[i].text : ayah.text;
+                                const text = ayah.numberInSurah === 1 && (ayah.surah?.number || surahArabic.number) !== 1 && (ayah.surah?.number || surahArabic.number) !== 9 
+                                  ? rawText.replace(/^بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ\s*/, '').replace(/^بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ\s*/, '').replace(/^بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ\s*/, '').replace(/^بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ\s*/, '') 
+                                  : rawText;
+                                setZoomedAyah({ 
+                                  text, 
+                                  numberInSurah: ayah.numberInSurah, 
+                                  isTajweed: !!isTajweed, 
+                                  surahName: surahInfo.name, 
+                                  surahNumber: surahInfo.number, 
+                                  ayahNumber: ayah.number 
+                                });
+                              }}
+                              className="w-10 h-10 rounded-full flex items-center justify-center transition-colors bg-gray-50 text-gray-400 hover:bg-gray-100 hover:text-emerald-500 dark:bg-gray-900 dark:text-gray-500 dark:hover:bg-gray-800 dark:hover:text-emerald-400"
+                              title="Partager et créer image/vidéo"
+                            >
+                              <Share2 size={18} />
+                            </button>
                            <button
                              onClick={() => {
                                setLastReadPosition({

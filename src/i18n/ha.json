@@ -1,5 +1,7 @@
 {
   "welcome": "Barka da zuwa AsrarHub",
+  "translating": "Fassarar AI tana nan gudanarwa...",
+  "translated": "Fassarar ta atomatik ta hanyar AI",
   "selectRole": "Da fatan za a zaɓi rawar ku (USER ko ADMIN).",
   "userDashboard": "Allon gudanarwa",
   "dashboardContent": {
@@ -324,7 +326,8 @@
       "share": "Raba",
       "shareText": "Ga Hatimina da aka samar.",
       "shareNotSupported": "Ba a goyan bayan raba kai tsaye a kan wannan burauzar ba.",
-      "errorEmpty": "Da fatan za a shigar da lamba ko rubutun Larabci."
+      "errorEmpty": "Da fatan za a shigar da lamba ko rubutun Larabci.",
+      "placeholder": "Misali: جلب رزق ko 66"
     },
     "ruqyah": {
       "title": "Ruqyah ta Shari'ah",
@@ -697,5 +700,10 @@
     "viewOffers": "Duba Tayi",
     "profilePromo": "Haɓaka zuwa Premium don buɗe duk fasalolin da kuma cire tallace-tallace.",
     "becomePremium": "Zama Premium"
+  },
+  "maintenance": {
+    "title": "Ana Gudanar da Gyara",
+    "description": "Ana kan gyara AsrarHub a halin yanzu don inganta ƙwarewarku. Za mu dawo nan ba da jimawa ba. Mun gode da haƙurin ku.",
+    "badge": "An dakatar da shiga na ɗan lokaci"
   }
 }

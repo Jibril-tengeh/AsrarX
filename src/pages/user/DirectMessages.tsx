@@ -11,7 +11,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { useAuth } from "../../contexts/AuthContext";
-import { Send, X } from "lucide-react";
+import { Send, X, ArrowLeft } from "lucide-react";
 
 interface Message {
   id: string;
@@ -118,7 +118,7 @@ export const DirectMessages: React.FC<DirectMessagesProps> = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
       <div className="bg-white dark:bg-gray-800 rounded-2xl w-full max-w-4xl h-[80vh] flex overflow-hidden shadow-2xl">
         {/* Sidebar */}
-        <div className="w-1/3 border-r border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex flex-col">
+        <div className={`w-full md:w-1/3 border-r border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex flex-col ${activeChat ? "hidden md:flex" : "flex"}`}>
           <div className="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
             <h3 className="font-bold text-gray-900 dark:text-white">
               Messages
@@ -142,7 +142,7 @@ export const DirectMessages: React.FC<DirectMessagesProps> = ({
                   onClick={() => setActiveChat(c)}
                   className={`w-full text-left p-4 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors border-b border-gray-100 dark:border-gray-700 ${activeChat?.id === c.id ? "bg-emerald-50 dark:bg-emerald-900/20" : ""}`}
                 >
-                  <div className="font-medium text-gray-900 dark:text-white">
+                  <div className="font-medium text-gray-900 dark:text-white truncate">
                     {c.name}
                   </div>
                 </button>
@@ -152,14 +152,24 @@ export const DirectMessages: React.FC<DirectMessagesProps> = ({
         </div>
 
         {/* Chat Area */}
-        <div className="flex-1 flex flex-col">
+        <div className={`flex-1 flex flex-col ${!activeChat ? "hidden md:flex" : "flex"}`}>
           <div className="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-white dark:bg-gray-800">
-            <h3 className="font-bold text-gray-900 dark:text-white">
-              {activeChat ? activeChat.name : "Sélectionnez une conversation"}
-            </h3>
+            <div className="flex items-center gap-2">
+              {activeChat && (
+                <button
+                  onClick={() => setActiveChat(null)}
+                  className="p-1.5 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg md:hidden"
+                >
+                  <ArrowLeft size={18} />
+                </button>
+              )}
+              <h3 className="font-bold text-gray-900 dark:text-white truncate max-w-[200px] sm:max-w-xs">
+                {activeChat ? activeChat.name : "Sélectionnez une conversation"}
+              </h3>
+            </div>
             <button
               onClick={onClose}
-              className="p-2 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-full hidden md:block"
+              className="p-2 text-gray-500 hover:bg-gray-200 dark:hover:bg-gray-800 rounded-full"
             >
               <X size={20} />
             </button>

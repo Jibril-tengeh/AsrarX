@@ -22,6 +22,21 @@ export class ErrorBoundary extends React.Component<Props, State> {
   }
 
   public static getDerivedStateFromError(error: Error): State {
+    const isChunkError = 
+      error.message && 
+      (error.message.includes('Failed to fetch dynamically imported module') ||
+       error.message.includes('Loading chunk') ||
+       error.message.includes('error loading dynamically imported module'));
+       
+    if (isChunkError) {
+      const lastReload = sessionStorage.getItem('chunk_error_reload');
+      const now = Date.now();
+      if (!lastReload || now - parseInt(lastReload) > 10000) {
+        sessionStorage.setItem('chunk_error_reload', now.toString());
+        window.location.reload();
+        return { hasError: false, error: null, errorInfo: null };
+      }
+    }
     return { hasError: true, error, errorInfo: null };
   }
 

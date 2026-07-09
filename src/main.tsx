@@ -12,6 +12,20 @@ import { FeatureProvider } from './contexts/FeatureContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { registerSW } from 'virtual:pwa-register';
 
+// Unregister any active service worker in development to avoid chunk loading conflicts
+if (import.meta.env.DEV && 'serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then((registrations) => {
+    for (const registration of registrations) {
+      registration.unregister().then((success) => {
+        if (success) {
+          console.log('Unregistered active service worker in development');
+          window.location.reload();
+        }
+      });
+    }
+  });
+}
+
 const updateSW = registerSW({
   onNeedRefresh() {
     if (confirm('Une nouvelle version est disponible. Recharger ?')) {

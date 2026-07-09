@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Compass, Book, Shield, Heart, Sparkles, Moon, Sun, ArrowRight, Wallet, Activity, Share2, HelpCircle, FileText, Download, Eye, X } from 'lucide-react';
+import { Compass, Book, Shield, Heart, Sparkles, Moon, Sun, ArrowRight, Wallet, Activity, Share2, HelpCircle, FileText, Download, Eye, X, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useFeatures } from '../../contexts/FeatureContext';
-import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 
 import { BannerAd } from '../../components/BannerAd';
@@ -73,6 +73,8 @@ export const ExploreDashboard: React.FC = () => {
   ];
   const [sagesse, setSagesse] = useState(sagesses[0]);
   const [articles, setArticles] = useState<any[]>([]);
+  const [visibleCount, setVisibleCount] = useState(3);
+  const [bookmarks, setBookmarks] = useState<string[]>([]);
   const [selectedArticle, setSelectedArticle] = useState<any | null>(null);
 
   useEffect(() => {
@@ -80,13 +82,48 @@ export const ExploreDashboard: React.FC = () => {
     const today = new Date().getDate();
     setSagesse(sagesses[today % sagesses.length]);
 
-    const q = query(collection(db, 'articles'), orderBy('createdAt', 'desc'), limit(3));
+    // Load initial bookmarks
+    try {
+      const saved = JSON.parse(localStorage.getItem('asrar_bookmarks') || '[]');
+      if (Array.isArray(saved)) setBookmarks(saved);
+    } catch (e) {
+      setBookmarks([]);
+    }
+
+    const q = query(collection(db, 'articles'), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      setArticles(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      const allArticles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      // Support filtering by Published
+      const publishedArticles = allArticles.filter((art: any) => art.status === 'Published');
+      setArticles(publishedArticles);
     }, (error) => console.error("Error fetching articles", error));
 
     return () => unsubscribe();
   }, []);
+
+  const toggleBookmarkArticle = (articleId: string) => {
+    let currentBookmarks = [];
+    try {
+      const saved = JSON.parse(localStorage.getItem('asrar_bookmarks') || '[]');
+      if (Array.isArray(saved)) currentBookmarks = saved;
+    } catch (e) {
+      currentBookmarks = [];
+    }
+
+    let nextBookmarks;
+    if (currentBookmarks.includes(articleId)) {
+      nextBookmarks = currentBookmarks.filter((id: string) => id !== articleId);
+    } else {
+      nextBookmarks = [...currentBookmarks, articleId];
+    }
+
+    localStorage.setItem('asrar_bookmarks', JSON.stringify(nextBookmarks));
+    setBookmarks(nextBookmarks);
+  };
+
+  const isArticleBookmarked = (articleId: string) => {
+    return bookmarks.includes(articleId);
+  };
 
   const handleShare = async () => {
     if (navigator.share) {
@@ -315,11 +352,12 @@ export const ExploreDashboard: React.FC = () => {
           
           {(() => {
             const displayMode = featureToggles?.articlesDisplayMode || 'grid';
+            const displayedArticles = articles.slice(0, visibleCount);
             
             if (displayMode === 'list') {
               return (
                 <div className="space-y-4">
-                  {articles.map((article) => (
+                  {displayedArticles.map((article) => (
                     <div 
                       key={article.id} 
                       className="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow flex flex-col sm:flex-row cursor-pointer group" 
@@ -354,7 +392,7 @@ export const ExploreDashboard: React.FC = () => {
             if (displayMode === 'large' || displayMode === 'grid1') {
               return (
                 <div className="grid grid-cols-1 gap-8">
-                  {articles.map((article) => (
+                  {displayedArticles.map((article) => (
                     <div 
                       key={article.id} 
                       className="bg-white dark:bg-gray-800 rounded-3xl overflow-hidden border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow flex flex-col cursor-pointer group" 
@@ -389,7 +427,7 @@ export const ExploreDashboard: React.FC = () => {
             if (displayMode === 'carousel') {
               return (
                 <div className="flex gap-6 overflow-x-auto pb-4 custom-scrollbar snap-x snap-mandatory">
-                  {articles.map((article) => (
+                  {displayedArticles.map((article) => (
                     <div 
                       key={article.id} 
                       className="min-w-[280px] sm:min-w-[320px] max-w-[320px] bg-white dark:bg-gray-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow flex flex-col cursor-pointer snap-start group" 
@@ -406,7 +444,7 @@ export const ExploreDashboard: React.FC = () => {
                       )}
                       <div className="p-5 flex-1 flex flex-col">
                         <h3 className="text-base font-bold text-gray-900 dark:text-white mb-2 line-clamp-2 group-hover:text-emerald-500 transition-colors">
-                          {article.isPremium && <Sparkles size={16} className="inline mr-2 text-violet-500" />}
+                           {article.isPremium && <Sparkles size={16} className="inline mr-2 text-violet-500" />}
                           {article.title}
                         </h3>
                         <div className="mt-auto pt-4 flex items-center text-sm font-semibold text-emerald-600 dark:text-emerald-400">
@@ -422,7 +460,7 @@ export const ExploreDashboard: React.FC = () => {
             // Default 'grid'
             return (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {articles.map((article) => (
+                {displayedArticles.map((article) => (
                   <div key={article.id} className="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow flex flex-col cursor-pointer group" onClick={() => setSelectedArticle(article)}>
                     {article.thumbnail ? (
                       <div className="h-48 overflow-hidden">
@@ -447,6 +485,18 @@ export const ExploreDashboard: React.FC = () => {
               </div>
             );
           })()}
+
+          {articles.length > visibleCount && (
+            <div className="mt-8 flex justify-center">
+              <button 
+                onClick={() => setVisibleCount(prev => prev + 6)}
+                className="px-6 py-3 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 font-bold rounded-2xl hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors flex items-center gap-2 border border-emerald-200 dark:border-emerald-800 cursor-pointer"
+              >
+                <span>Voir plus d'articles</span>
+                <ArrowRight size={16} className="rotate-90" />
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -484,6 +534,13 @@ export const ExploreDashboard: React.FC = () => {
                 <FileText size={20} /> Lecture
               </h3>
               <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => toggleBookmarkArticle(selectedArticle.id)} 
+                  className={`p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors ${isArticleBookmarked(selectedArticle.id) ? 'text-amber-500' : 'text-gray-400 hover:text-amber-500'}`} 
+                  title={isArticleBookmarked(selectedArticle.id) ? "Retirer des favoris" : "Ajouter aux favoris"}
+                >
+                  <Star size={20} fill={isArticleBookmarked(selectedArticle.id) ? "currentColor" : "none"} />
+                </button>
                 <button onClick={() => handleShareArticle(selectedArticle)} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors text-emerald-500" title="Partager">
                   <Share2 size={20} />
                 </button>

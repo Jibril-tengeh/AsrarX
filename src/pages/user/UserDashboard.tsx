@@ -27,6 +27,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
   const { featureToggles } = useFeatures();
   const location = useLocation();
   const [items, setItems] = useState<AsrarItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<Category | 'all' | 'favoris'>(initialFilter);
   const [layoutMode, setLayoutMode] = useState<LayoutMode>('grid2');
@@ -192,6 +193,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
       const cached = localStorage.getItem('asrarhub_cached_articles_list');
       if (cached) {
         setItems(JSON.parse(cached));
+        setIsLoading(false);
       }
     } catch (e) {
       console.error("Error pre-loading articles from offline cache", e);
@@ -230,6 +232,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
         } as AsrarItem;
       });
       setItems(firestoreItems);
+      setIsLoading(false);
       // Update local offline cache
       try {
         localStorage.setItem('asrarhub_cached_articles_list', JSON.stringify(firestoreItems));
@@ -238,6 +241,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
       }
     }, (error) => {
       console.error("Error fetching articles for dashboard", error);
+      setIsLoading(false);
       // Force fallback to cache on error
       try {
         const cached = localStorage.getItem('asrarhub_cached_articles_list');
@@ -799,7 +803,21 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
         layoutMode === 'list' ? 'grid-cols-1 lg:grid-cols-2' : 
         'grid-cols-1'
       }`}>
-        {filteredItems.length > 0 ? (
+        {isLoading ? (
+          Array.from({ length: 6 }).map((_, idx) => (
+            <div key={idx} className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700/80 p-4 animate-pulse h-48 flex flex-col justify-between shadow-sm">
+              <div className="space-y-3">
+                <div className="flex justify-between items-center">
+                  <div className="h-4 bg-gray-200 dark:bg-gray-750 rounded-md w-1/4"></div>
+                  <div className="h-4 bg-gray-200 dark:bg-gray-750 rounded-full w-8"></div>
+                </div>
+                <div className="h-6 bg-gray-200 dark:bg-gray-750 rounded-md w-3/4"></div>
+                <div className="h-4 bg-gray-200 dark:bg-gray-750 rounded-md w-5/6"></div>
+              </div>
+              <div className="h-4 bg-gray-200 dark:bg-gray-750 rounded-md w-1/3"></div>
+            </div>
+          ))
+        ) : filteredItems.length > 0 ? (
           filteredItems.map(item => {
             const currentFolder = bookmarkFolders.find(f => f.items.includes(item.id));
             return (

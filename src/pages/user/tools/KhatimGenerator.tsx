@@ -265,7 +265,7 @@ export const KhatimGenerator: React.FC = () => {
             dir="auto"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            placeholder="Ex: جلب رزق ou 66"
+            placeholder={t('tools.khatim.placeholder', "Ex: جلب رزق ou 66")}
             className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 text-lg font-bold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all font-arabic"
           />
         </div>
