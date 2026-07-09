@@ -154,6 +154,92 @@ export const QuranFull: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   
   const [searchTerm, setSearchTerm] = useState('');
+  const [mainVerseResults, setMainVerseResults] = useState<any[]>([]);
+  const [isMainSearching, setIsMainSearching] = useState(false);
+
+  const normalizeArabic = (text: string): string => {
+    return text
+      .replace(/[\u064B-\u0652\u0670\u0653\u0654\u0655]/g, '') // remove harakat / diacritics
+      .replace(/\u0671/g, '\u0627') // normalize alif wasla to alif
+      .replace(/[\u0622\u0623\u0625]/g, '\u0627') // normalize all kinds of alif to plain alif
+      .replace(/\u0629/g, '\u0647') // normalize teh marbuta to heh
+      .replace(/\u0649/g, '\u064A') // normalize alef maksura to yeh
+      .toLowerCase();
+  };
+
+  useEffect(() => {
+    if (!searchTerm || searchTerm.trim().length < 2) {
+      setMainVerseResults([]);
+      return;
+    }
+
+    const handler = setTimeout(async () => {
+      setIsMainSearching(true);
+      const queryStr = searchTerm.trim();
+      const isArQuery = /[\u0600-\u06FF]/.test(queryStr);
+
+      try {
+        let quranData: any[] | undefined;
+        try {
+          const cached = await get('asrar_quran_full_json');
+          if (cached && Array.isArray(cached)) {
+            quranData = cached;
+          }
+        } catch (err) {
+          console.warn("Could not read Quran from IDB for main search:", err);
+        }
+
+        if (!quranData) {
+          const qResponse = await fetch('/quran.json');
+          if (qResponse.ok) {
+            quranData = await qResponse.json();
+            if (quranData && Array.isArray(quranData)) {
+              set('asrar_quran_full_json', quranData).catch(e => console.warn(e));
+            }
+          }
+        }
+
+        if (quranData && Array.isArray(quranData)) {
+          const matches: any[] = [];
+          const cleanQueryStr = isArQuery ? normalizeArabic(queryStr) : queryStr.toLowerCase();
+
+          for (const surah of quranData) {
+            for (const ayah of surah.ayahs) {
+              const ayahAr = ayah.ar || ayah.text_clean || '';
+              const ayahClean = normalizeArabic(ayahAr);
+              const ayahTr = (ayah.fr || ayah.en || ayah.text || '').toLowerCase();
+              
+              const isMatch = isArQuery 
+                ? ayahClean.includes(cleanQueryStr)
+                : ayahTr.includes(cleanQueryStr);
+
+              if (isMatch) {
+                matches.push({
+                  number: ayah.id || ayah.number || (surah.id * 1000 + ayah.numberInSurah),
+                  text: ayahAr,
+                  translationText: ayah.fr || ayah.en || ayah.text || '',
+                  numberInSurah: ayah.numberInSurah,
+                  surah: {
+                    number: surah.id,
+                    name: surah.name,
+                    englishName: surah.transliteration || surah.name_en || '',
+                    englishNameTranslation: surah.translation || ''
+                  }
+                });
+              }
+            }
+          }
+          setMainVerseResults(matches.slice(0, 50));
+        }
+      } catch (err) {
+        console.error("Instant main search failed", err);
+      } finally {
+        setIsMainSearching(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
   
   const [activeSurah, setActiveSurah] = useState<number | null>(null);
   const [surahArabic, setSurahArabic] = useState<SurahData | null>(null);
@@ -1862,18 +1948,29 @@ export const QuranFull: React.FC = () => {
 
   const filteredSurahs = surahs.filter(s => {
     const translation = surahTranslations[s.number]?.[language as keyof typeof surahTranslations[1]];
+    const cleanSearch = searchTerm.trim().toLowerCase();
+    
+    // Check if the search term contains Arabic characters
+    const isAr = /[\u0600-\u06FF]/.test(cleanSearch);
+    
+    if (isAr) {
+      const normQuery = normalizeArabic(cleanSearch);
+      const normSurahName = normalizeArabic(s.name);
+      return normSurahName.includes(normQuery);
+    }
+    
     return (
-      s.englishName.toLowerCase().includes(searchTerm.toLowerCase()) || 
-      s.englishNameTranslation.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.englishName.toLowerCase().includes(cleanSearch) || 
+      s.englishNameTranslation.toLowerCase().includes(cleanSearch) ||
       s.name.includes(searchTerm) ||
-      s.number.toString() === searchTerm.trim() ||
-      (translation && translation.toLowerCase().includes(searchTerm.toLowerCase()))
+      s.number.toString() === cleanSearch ||
+      (translation && translation.toLowerCase().includes(cleanSearch))
     );
   });
 
   return (
     <div 
-      className={`${fullScreenMode ? 'fixed inset-0 z-[100] bg-white dark:bg-gray-900 overflow-y-auto w-full max-w-none p-4 sm:p-8' : 'max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 safe-area-pt pb-24'}`} 
+      className={`${fullScreenMode ? 'fixed inset-0 z-[100] bg-white dark:bg-gray-900 overflow-y-auto w-full max-w-none p-4 sm:p-8 overflow-x-hidden' : 'w-full max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 safe-area-pt pb-24 overflow-x-hidden'}`} 
       style={applyEyeComfort ? { filter: 'sepia(0.3) brightness(0.9) contrast(0.95)' } : {}}
       onTouchStart={onTouchStartEvent}
       onTouchMove={onTouchMoveEvent}
@@ -1962,7 +2059,13 @@ export const QuranFull: React.FC = () => {
               </div>
               <input
                 type="text"
-                placeholder={t('searchSurah', "Rechercher une sourate (ex: Ya-Sin, 36, L'Aube)...")}
+                placeholder={
+                  language === 'fr' 
+                    ? "Rechercher une sourate, un verset, un mot clé (ex: Ya-Sin, paix, 36)..."
+                    : language === 'ha'
+                      ? "Nemi surah, aya ko kalma (misali: Ya-Sin, zaman lafiya, 36)..."
+                      : "Search a surah, verse, or keyword (ex: Ya-Sin, peace, 36)..."
+                }
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="block w-full pl-10 pr-3 py-4 border border-gray-200 dark:border-gray-700 rounded-2xl leading-5 bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm shadow-sm transition-all"
@@ -1979,58 +2082,201 @@ export const QuranFull: React.FC = () => {
               {error}
             </div>
           ) : viewMode === 'surah' ? (
-            <div className="flex flex-col bg-white dark:bg-gray-900 rounded-none sm:rounded-2xl shadow-sm sm:border border-gray-100 dark:border-gray-800 overflow-hidden">
-              {filteredSurahs.map((surah, i) => (
-                <motion.div
-                  key={surah.number}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: Math.min(i * 0.02, 0.2) }}
-                  onClick={() => loadContent('surah', surah.number)}
-                  className="flex items-center justify-between py-4 px-4 border-b border-gray-100 dark:border-gray-800 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors text-left w-full cursor-pointer"
-                >
-                  <div className="flex items-center gap-6">
-                    <div className="w-8 text-[16px] sm:text-[18px] md:text-[24px] font-light text-gray-800 dark:text-gray-200 flex justify-center">
-                      {surah.number}
-                    </div>
-                    <div className="flex flex-col">
-                      <div className="flex items-center gap-2">
-                        <h3 className="text-[9px] sm:text-[11px] font-medium text-[#2d7d45] dark:text-[#45b066]">{surah.englishName}</h3>
-                        {downloadedItems.surah?.includes(surah.number) && (
-                          <span className="flex items-center gap-1 text-[6px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400 px-1.5 py-0.5 rounded-md">
-                            <CloudOff size={10} /> {t('offlineReady', 'Offline')}
-                          </span>
-                        )}
+            <div className="space-y-6">
+              {searchTerm.trim().length > 0 ? (
+                <>
+                  {/* Results for Surahs */}
+                  {filteredSurahs.length > 0 && (
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 px-2 sm:px-0 flex items-center gap-2">
+                        <BookOpen size={16} />
+                        {language === 'fr' ? 'Sourates correspondantes' : language === 'ha' ? 'Surorin da suka dace' : 'Matching Surahs'}
+                      </h3>
+                      <div className="flex flex-col bg-white dark:bg-gray-900 rounded-none sm:rounded-2xl shadow-sm sm:border border-gray-100 dark:border-gray-800 overflow-hidden">
+                        {filteredSurahs.map((surah, i) => (
+                          <motion.div
+                            key={surah.number}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: Math.min(i * 0.02, 0.2) }}
+                            onClick={() => loadContent('surah', surah.number)}
+                            className="flex items-center justify-between py-3.5 px-3 sm:px-4 border-b border-gray-100 dark:border-gray-800 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors text-left w-full cursor-pointer min-w-0"
+                          >
+                            <div className="flex items-center gap-3 sm:gap-6 min-w-0">
+                              <div className="w-6 sm:w-8 text-[14px] sm:text-[18px] md:text-[24px] font-light text-gray-500 dark:text-gray-400 flex justify-center shrink-0">
+                                {surah.number}
+                              </div>
+                              <div className="flex flex-col min-w-0">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <h3 className="text-[11px] sm:text-sm font-semibold text-gray-900 dark:text-white truncate">{surah.englishName}</h3>
+                                  {downloadedItems.surah?.includes(surah.number) && (
+                                    <span className="flex items-center gap-1 text-[8px] sm:text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400 px-1.5 py-0.5 rounded-md shrink-0">
+                                      <CloudOff size={10} /> {t('offlineReady', 'Offline')}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-1.5 text-[9px] sm:text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide truncate">
+                                  <span className="truncate">{surahTranslations[surah.number]?.[language as keyof typeof surahTranslations[1]] || surah.englishNameTranslation}</span>
+                                  <span className="text-[10px] opacity-70 shrink-0">
+                                    {surah.revelationType === 'Meccan' ? '🕋' : '🕌'}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+                              <div className="text-right">
+                                <span className="font-arabic text-[18px] sm:text-[24px] md:text-[30px] text-gray-900 dark:text-white" style={{ fontFamily: '"Amiri", serif' }}>
+                                  {surah.name.replace('سُورَةُ ', '')}
+                                </span>
+                              </div>
+                              {!downloadedItems.surah?.includes(surah.number) && (
+                                <button 
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    downloadForOffline('surah', [surah.number]);
+                                  }}
+                                  className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center bg-gray-50 text-gray-400 hover:bg-emerald-50 hover:text-emerald-600 dark:bg-gray-800 dark:hover:bg-emerald-900/40 dark:hover:text-emerald-400 transition-colors shrink-0"
+                                  title={t('downloadOffline', 'Télécharger (Hors ligne)')}
+                                >
+                                  <Download size={16} />
+                                </button>
+                              )}
+                            </div>
+                          </motion.div>
+                        ))}
                       </div>
-                      <div className="flex items-center gap-1.5 text-[5px] sm:text-[7px] text-gray-500 dark:text-gray-400 uppercase tracking-wide">
-                        {surahTranslations[surah.number]?.[language as keyof typeof surahTranslations[1]] || surah.englishNameTranslation}
-                        <span className="text-[5px] opacity-70">
-                          {surah.revelationType === 'Meccan' ? '🕋' : '🕌'}
-                        </span>
+                    </div>
+                  )}
+
+                  {/* Results for Verses */}
+                  <div className="space-y-3">
+                    <h3 className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 px-2 sm:px-0 flex items-center gap-2">
+                      <Search size={16} />
+                      {language === 'fr' ? 'Versets contenant le terme' : language === 'ha' ? 'Ayoyin da ke ɗauke da kalmar' : 'Verses containing the term'}
+                    </h3>
+                    
+                    {isMainSearching ? (
+                      <div className="flex flex-col items-center justify-center py-8 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-6 shadow-sm">
+                        <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin mb-3"></div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">{language === 'fr' ? 'Recherche en cours...' : language === 'ha' ? 'Ana bincike...' : 'Searching...'}</p>
                       </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <span className="font-arabic text-[22px] sm:text-[24px] md:text-[30px] text-gray-900 dark:text-white" style={{ fontFamily: '"Amiri", serif' }}>
-                        {surah.name.replace('سُورَةُ ', '')}
-                      </span>
-                    </div>
-                    {!downloadedItems.surah?.includes(surah.number) && (
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          downloadForOffline('surah', [surah.number]);
-                        }}
-                        className="w-10 h-10 rounded-full flex items-center justify-center bg-gray-50 text-gray-400 hover:bg-emerald-50 hover:text-emerald-600 dark:bg-gray-800 dark:hover:bg-emerald-900/40 dark:hover:text-emerald-400 transition-colors"
-                        title={t('downloadOffline', 'Télécharger (Hors ligne)')}
-                      >
-                        <Download size={18} />
-                      </button>
+                    ) : mainVerseResults.length > 0 ? (
+                      <div className="space-y-3">
+                        {mainVerseResults.map((match, idx) => (
+                          <div 
+                            key={idx} 
+                            className="bg-white dark:bg-gray-900 rounded-2xl p-4 border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:border-emerald-200 dark:hover:border-emerald-800 flex flex-col gap-3"
+                          >
+                            <div className="flex justify-between items-center gap-2">
+                              <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2.5 py-1 rounded-lg">
+                                {match.surah.englishName} ({match.surah.number}:{match.numberInSurah})
+                              </span>
+                              <button 
+                                onClick={() => {
+                                  loadContent('surah', match.surah.number);
+                                  // Wait for content to load then scroll
+                                  setTimeout(() => {
+                                    const element = document.getElementById(`ayah-${match.numberInSurah}`);
+                                    if (element) {
+                                      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                                      // Visual highlight
+                                      element.classList.add('bg-emerald-50', 'dark:bg-emerald-900/20');
+                                      setTimeout(() => {
+                                        element.classList.remove('bg-emerald-50', 'dark:bg-emerald-900/20');
+                                      }, 3000);
+                                    }
+                                  }, 1500);
+                                }}
+                                className="text-xs font-bold text-emerald-500 hover:text-emerald-600 dark:hover:text-emerald-400 flex items-center gap-1 bg-emerald-50/50 dark:bg-emerald-900/10 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 px-2.5 py-1 rounded-lg transition-colors"
+                              >
+                                {language === 'fr' ? 'Aller au verset' : language === 'ha' ? 'Je zuwa aya' : 'Go to verse'} <ArrowRight size={12} />
+                              </button>
+                            </div>
+                            <div className="flex flex-col gap-2">
+                              <p className="font-arabic text-right text-lg sm:text-xl text-gray-900 dark:text-white leading-loose" style={{ fontFamily: '"Amiri", serif' }} dir="rtl">
+                                {match.text}
+                              </p>
+                              <p className="text-left text-xs sm:text-sm text-gray-500 dark:text-gray-400 italic">
+                                {match.translationText}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-6 shadow-sm text-gray-500 dark:text-gray-400 text-sm">
+                        {language === 'fr' 
+                          ? `Aucun verset trouvé pour "${searchTerm}"` 
+                          : language === 'ha' 
+                            ? `Ba a sami aya ba don "${searchTerm}"` 
+                            : `No verses found for "${searchTerm}"`}
+                      </div>
                     )}
                   </div>
-                </motion.div>
-              ))}
+
+                  {filteredSurahs.length === 0 && mainVerseResults.length === 0 && !isMainSearching && (
+                    <div className="text-center py-12 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 p-6 shadow-sm text-gray-500 dark:text-gray-400">
+                      <Search size={40} className="mx-auto text-gray-300 dark:text-gray-700 mb-4 animate-bounce" />
+                      <p className="font-medium">{language === 'fr' ? 'Aucun résultat' : language === 'ha' ? 'Babu sakamako' : 'No results'}</p>
+                      <p className="text-xs mt-1 opacity-75">{language === 'fr' ? "Essayez d'autres termes ou vérifiez l'orthographe." : language === 'ha' ? "Gwada wani kalmar daban." : "Try different terms or check spelling."}</p>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="flex flex-col bg-white dark:bg-gray-900 rounded-none sm:rounded-2xl shadow-sm sm:border border-gray-100 dark:border-gray-800 overflow-hidden">
+                  {filteredSurahs.map((surah, i) => (
+                    <motion.div
+                      key={surah.number}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: Math.min(i * 0.02, 0.2) }}
+                      onClick={() => loadContent('surah', surah.number)}
+                      className="flex items-center justify-between py-3.5 px-3 sm:px-4 border-b border-gray-100 dark:border-gray-800 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors text-left w-full cursor-pointer min-w-0"
+                    >
+                      <div className="flex items-center gap-3 sm:gap-6 min-w-0">
+                        <div className="w-6 sm:w-8 text-[14px] sm:text-[18px] md:text-[24px] font-light text-gray-500 dark:text-gray-400 flex justify-center shrink-0">
+                          {surah.number}
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <h3 className="text-[11px] sm:text-sm font-semibold text-gray-900 dark:text-white truncate">{surah.englishName}</h3>
+                            {downloadedItems.surah?.includes(surah.number) && (
+                              <span className="flex items-center gap-1 text-[8px] sm:text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400 px-1.5 py-0.5 rounded-md shrink-0">
+                                <CloudOff size={10} /> {t('offlineReady', 'Offline')}
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1.5 text-[9px] sm:text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide truncate">
+                            <span className="truncate">{surahTranslations[surah.number]?.[language as keyof typeof surahTranslations[1]] || surah.englishNameTranslation}</span>
+                            <span className="text-[10px] opacity-70 shrink-0">
+                              {surah.revelationType === 'Meccan' ? '🕋' : '🕌'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 sm:gap-4 shrink-0">
+                        <div className="text-right">
+                          <span className="font-arabic text-[18px] sm:text-[24px] md:text-[30px] text-gray-900 dark:text-white" style={{ fontFamily: '"Amiri", serif' }}>
+                            {surah.name.replace('سُورَةُ ', '')}
+                          </span>
+                        </div>
+                        {!downloadedItems.surah?.includes(surah.number) && (
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              downloadForOffline('surah', [surah.number]);
+                            }}
+                            className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center bg-gray-50 text-gray-400 hover:bg-emerald-50 hover:text-emerald-600 dark:bg-gray-800 dark:hover:bg-emerald-900/40 dark:hover:text-emerald-400 transition-colors shrink-0"
+                            title={t('downloadOffline', 'Télécharger (Hors ligne)')}
+                          >
+                            <Download size={16} />
+                          </button>
+                        )}
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              )}
             </div>
           ) : (
             <div className={`grid gap-3 ${viewMode === 'page' ? 'grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 md:grid-cols-10' : 'grid-cols-3 sm:grid-cols-4 lg:grid-cols-6'}`}>

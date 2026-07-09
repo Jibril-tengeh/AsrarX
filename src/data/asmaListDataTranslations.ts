@@ -1,0 +1,1518 @@
+// Automatically generated offline translation file for 99 Names of Allah.
+// Contains English and Hausa translations of meaning, ref, excerpt, and context.
+
+export interface TranslationItem {
+  fr: string;
+  ref: string;
+  excerptFr: string;
+  context: string;
+}
+
+export interface NameTranslation {
+  tr: string;
+  en: TranslationItem;
+  ha: TranslationItem;
+}
+
+export const asmaListDataTranslations: Record<string, NameTranslation> = {
+  "Allah": {
+    "tr": "Allah",
+    "en": {
+      "fr": "The Absolute God",
+      "ref": "Supreme Name (Ism al-A'dham)",
+      "excerptFr": "In the name of Allah, the Entirely Merciful, the Especially Merciful.",
+      "context": "The supreme name of the Essence (Dhat). It contains the energy of all other names. It invokes the totality of the Divine Presence."
+    },
+    "ha": {
+      "fr": "Allah Ubangiji Mai Kadaituwa",
+      "ref": "Sunan Allah Mafi Girma (Ism al-A'dham)",
+      "excerptFr": "Da sunan Allah, Mai rahama, Mai jin kai.",
+      "context": "Wannan shi ne sunan Asalin Allah (Dhat). Yana kunshe da kuzarin dukkan sauran sunaye. Yana kiran dukkanin kasancewar Allah a tare."
+    }
+  },
+  "Ar-Rahmān": {
+    "tr": "Ar-Rahmān",
+    "en": {
+      "fr": "The Entirely Merciful",
+      "ref": "General Mercy",
+      "excerptFr": "The Entirely Merciful [who is] above the Throne established.",
+      "context": "The grace of Rahman irrigates every atom of creation, regardless of merit."
+    },
+    "ha": {
+      "fr": "Mai Jin Kai",
+      "ref": "Rahama ta gaba daya",
+      "excerptFr": "Mai rahama ya daidaita a kan Al'arshi.",
+      "context": "Rahamar Rahman tana ratsa kowane kwayoyin halitta, ba tare da la'akari da cancanta ba."
+    }
+  },
+  "Ar-Rahīm": {
+    "tr": "Ar-Rahīm",
+    "en": {
+      "fr": "The Especially Merciful",
+      "ref": "Specific Mercy",
+      "excerptFr": "And ever, to the believers, is He Merciful.",
+      "context": "A continuous, protective, and targeted mercy for the sincere believer."
+    },
+    "ha": {
+      "fr": "Mai Jinkai na musamman",
+      "ref": "Rahama ta musamman",
+      "excerptFr": "Kuma Ya kasance Mai jin kai ga muminai.",
+      "context": "Wannan rahama ce mai gudana, mai kariya kuma ta musamman ga mumini na gaskiya."
+    }
+  },
+  "Al-Malik": {
+    "tr": "Al-Malik",
+    "en": {
+      "fr": "The Sovereign",
+      "ref": "Absolute Dominion",
+      "excerptFr": "So high [above all] is Allah, the Sovereign, the Truth!",
+      "context": "Reveals the total mastery of the Exalted Being over the heavens and the earth."
+    },
+    "ha": {
+      "fr": "Sarki",
+      "ref": "Mulki cikakke",
+      "excerptFr": "Tsarki ya tabbata ga Allah, Sarki na gaskiya!",
+      "context": "Yana bayyana cikakken ikon Ubangiji a kan sammai da kassai."
+    }
+  },
+  "Al-Quddūs": {
+    "tr": "Al-Quddūs",
+    "en": {
+      "fr": "The Holy One",
+      "ref": "Purity",
+      "excerptFr": "Whatever is in the heavens and whatever is on the earth is exalting Allah, the Sovereign, the Pure...",
+      "context": "The name of spiritual cleansing. Al-Quddus transcends all imperfection."
+    },
+    "ha": {
+      "fr": "Mai Tsarki",
+      "ref": "Tsarkakewa",
+      "excerptFr": "Abin da ke cikin sammai da abin da ke cikin kassai suna tasbihi ga Allah, Sarki, Mai tsarki...",
+      "context": "Wannan sunan tsarkakewa ne na ruhi. Al-Quddus ya wuce kowane irin aibi."
+    }
+  },
+  "As-Salām": {
+    "tr": "As-Salām",
+    "en": {
+      "fr": "The Peace",
+      "ref": "Source of Peace",
+      "excerptFr": "He is Allah, other than whom there is no deity, the Sovereign, the Pure, the Perfection...",
+      "context": "Absolute peace (As-Salam) protects from annihilation and balances the cosmos."
+    },
+    "ha": {
+      "fr": "Aminci",
+      "ref": "Tushen Aminci",
+      "excerptFr": "Shi ne Allah wanda babu wani abin bautawa in ba Shi ba, Sarki, Mai tsarki, Mai bayar da aminci...",
+      "context": "Amincin Allah (As-Salam) yana kiyaye halittu daga halaka kuma yana daidaita sararin samaniya."
+    }
+  },
+  "Al-Mu'min": {
+    "tr": "Al-Mu'min",
+    "en": {
+      "fr": "The Grantor of Security",
+      "ref": "Faith and Security",
+      "excerptFr": "...the Perfection, the Bestower of Faith, the Overseer...",
+      "context": "Al-Mu'min instills the light of certainty (Yaqin) into the fearful heart."
+    },
+    "ha": {
+      "fr": "Mai Ba da Aminci/Tsaro",
+      "ref": "Imani da Tsaro",
+      "excerptFr": "...Mai ba da aminci, Mai tsaro, Mai iko...",
+      "context": "Al-Mu'min yana sanya hasken tabbatuwa (Yaqin) a cikin zuciyar da ke cikin tsoro."
+    }
+  },
+  "Al-Muhaymin": {
+    "tr": "Al-Muhaymin",
+    "en": {
+      "fr": "The Guardian",
+      "ref": "Protection",
+      "excerptFr": "...the Bestower of Faith, the Overseer, the Exalted in Might...",
+      "context": "The one who encompasses all things with His protective observation."
+    },
+    "ha": {
+      "fr": "Mai Kula da Komai",
+      "ref": "Kariya",
+      "excerptFr": "...Mai ba da aminci, Mai tsaro, Mai iko, Mai girman daɗaɗawa...",
+      "context": "Shi ne wanda ya kewayi kowane abu da idonsa na kariya."
+    }
+  },
+  "Al-'Azīz": {
+    "tr": "Al-'Azīz",
+    "en": {
+      "fr": "The Exalted in Might",
+      "ref": "Power and Dignity",
+      "excerptFr": "...the Overseer, the Exalted in Might, the Compeller...",
+      "context": "Name of imposing victories, offering prestige (Hayba) and a status of invulnerability."
+    },
+    "ha": {
+      "fr": "Mai Iko",
+      "ref": "Iko da Girma",
+      "excerptFr": "...Mai tsaro, Mai iko, Mai tilastawa...",
+      "context": "Sunan nasara mai ƙarfi, wanda ke ba da daraja (Hayba) da matsayin rashin nasara."
+    }
+  },
+  "Al-Jabbār": {
+    "tr": "Al-Jabbār",
+    "en": {
+      "fr": "The Compeller",
+      "ref": "Restoration and Strength",
+      "excerptFr": "...the Exalted in Might, the Compeller, the Superior.",
+      "context": "The divine energy that corrects bent destinies and repairs the fractures of the soul."
+    },
+    "ha": {
+      "fr": "Mai Tilastawa",
+      "ref": "Gyara da Karfi",
+      "excerptFr": "...Mai iko, Mai tilastawa, Mai girma.",
+      "context": "Kuzarin Allah da ke gyara ƙaddarar da ta karkace da kuma gyara raunin rai."
+    }
+  },
+  "Al-Mutakabbir": {
+    "tr": "Al-Mutakabbir",
+    "en": {
+      "fr": "The Majestic",
+      "ref": "Grandeur",
+      "excerptFr": "...the Compeller, the Superior. Exalted is Allah...",
+      "context": "The name of infinite Exaltation, stripping the Ego (Nafs) of its pretensions to greatness."
+    },
+    "ha": {
+      "fr": "Mai Girma",
+      "ref": "Girma",
+      "excerptFr": "...Mai tilastawa, Mai girma. Tsarki ya tabbata ga Allah...",
+      "context": "Sunan daukaka mara iyaka, wanda ke cire girman kai (Nafs) na karya daga zuciya."
+    }
+  },
+  "Al-Khāliq": {
+    "tr": "Al-Khāliq",
+    "en": {
+      "fr": "The Creator",
+      "ref": "Creation ex-nihilo",
+      "excerptFr": "He is Allah, the Creator, the Inventor...",
+      "context": "The great designer who invents from absolute nothingness ('Adham)."
+    },
+    "ha": {
+      "fr": "Mahalicci",
+      "ref": "Halitta daga babu",
+      "excerptFr": "Shi ne Allah, Mahalicci, Mai ƙaga halitta...",
+      "context": "Babban mai tsarawa wanda yake ƙaga abu daga rashin komai ('Adham)."
+    }
+  },
+  "Al-Bāri'": {
+    "tr": "Al-Bāri'",
+    "en": {
+      "fr": "The Inventor",
+      "ref": "Conception",
+      "excerptFr": "...the Creator, the Inventor, the Fashioner.",
+      "context": "It is the active process of realization and detachment from pure chaos."
+    },
+    "ha": {
+      "fr": "Mai Ƙaga Halitta",
+      "ref": "Zane",
+      "excerptFr": "...Mahalicci, Mai ƙaga halitta, Mai surantawa.",
+      "context": "Wannan shi ne aikin tabbatar da abu da kuma fitar da shi daga rudani."
+    }
+  },
+  "Al-Musawwir": {
+    "tr": "Al-Musawwir",
+    "en": {
+      "fr": "The Fashioner",
+      "ref": "Form and Beauty",
+      "excerptFr": "...the Inventor, the Fashioner. To Him belong the best names.",
+      "context": "The cosmic artist who gives individual and aesthetic form (Sura)."
+    },
+    "ha": {
+      "fr": "Mai Sura",
+      "ref": "Sura da Kyau",
+      "excerptFr": "...Mai ƙaga halitta, Mai surantawa. Allah ne Mafi kyawun sunaye.",
+      "context": "Mai zane na sararin samaniya wanda yake ba wa kowane abu sura (Sura) da kyau."
+    }
+  },
+  "Al-Ghaffār": {
+    "tr": "Al-Ghaffār",
+    "en": {
+      "fr": "The Forgiving",
+      "ref": "Infinite Forgiveness",
+      "excerptFr": "And said, 'Ask forgiveness of your Lord. Indeed, He is ever a Perpetual Forgiver.'",
+      "context": "Absolves repeatedly without tiring and dissolves dark karma."
+    },
+    "ha": {
+      "fr": "Mai Yawan Gafara",
+      "ref": "Gafara mara iyaka",
+      "excerptFr": "Na ce, 'Ku nemi gafarar Ubangijinku, lallai Shi ne Mai yawan gafara.'",
+      "context": "Yana gafartawa akai-akai ba tare da gajiyawa ba kuma yana wanke duhun zunubai."
+    }
+  },
+  "Al-Qahhār": {
+    "tr": "Al-Qahhār",
+    "en": {
+      "fr": "The Prevailing",
+      "ref": "Submission of elements",
+      "excerptFr": "Which are [better] - separate lords or Allah, the One, the Prevailing?",
+      "context": "Colossal force of Majesty. Al-Qahhar crushes all rebellion."
+    },
+    "ha": {
+      "fr": "Mai Nasara",
+      "ref": "Mika wuya",
+      "excerptFr": "Wanne ne mafi alheri - gumaka da yawa ko Allah, Guda, Mai nasara?",
+      "context": "Karfi mai girma na daukaka. Al-Qahhar yana murkushe duk wata tawaye."
+    }
+  },
+  "Al-Wahhāb": {
+    "tr": "Al-Wahhāb",
+    "en": {
+      "fr": "The Bestower",
+      "ref": "Continuous gifts",
+      "excerptFr": "Grant us from Yourself mercy. Indeed, You are the Bestower.",
+      "context": "The sudden gift without deserved counterpart, causing unforeseen openings."
+    },
+    "ha": {
+      "fr": "Mai Bayarwa",
+      "ref": "Kyaututtuka masu ci gaba",
+      "excerptFr": "Ka ba mu rahama daga wurinka. Lallai Kai ne Mai bayarwa.",
+      "context": "Kyauta mai sauri ba tare da an cancanta ba, wadda take kawo budi mai ban mamaki."
+    }
+  },
+  "Ar-Razzāq": {
+    "tr": "Ar-Razzāq",
+    "en": {
+      "fr": "The Provider",
+      "ref": "Sustenance",
+      "excerptFr": "Indeed, it is Allah who is the [continual] Provider, the Firm Possessor of Strength.",
+      "context": "The inexhaustible river attracting material and spiritual Rizq."
+    },
+    "ha": {
+      "fr": "Mai Arziki",
+      "ref": "Arziki",
+      "excerptFr": "Lallai Allah Shi ne Mai arziki, Mai karfi, Mai karko.",
+      "context": "Kogin arziki mara bushewa wanda yake jan hankalin arzikin duniya da na ruhi (Rizq)."
+    }
+  },
+  "Al-Fattāh": {
+    "tr": "Al-Fattāh",
+    "en": {
+      "fr": "The Opener",
+      "ref": "Opening doors",
+      "excerptFr": "...Then He will judge between us in truth. And He is the Knowing Judge.",
+      "context": "Settles undecided conflicts and unlocks all deadlocks."
+    },
+    "ha": {
+      "fr": "Mai Budi",
+      "ref": "Bude kofofi",
+      "excerptFr": "...Sa'an nan Ya yanke hukunci a tsakaninmu da gaskiya. Kuma Shi ne Mai yanke hukunci, Masani.",
+      "context": "Yana warware rikice-rikice kuma yana buda dukkan kofofin da suka kulle."
+    }
+  },
+  "Al-'Alīm": {
+    "tr": "Al-'Alīm",
+    "en": {
+      "fr": "The All-Knowing",
+      "ref": "Absolute knowledge",
+      "excerptFr": "They said, 'Exalted are You; we have no knowledge except what You have taught us. Indeed, it is You who is the Knowing, the Wise.'",
+      "context": "The intelligence penetrating the microscopic secrets of reality."
+    },
+    "ha": {
+      "fr": "Masani",
+      "ref": "Ilimi cikakke",
+      "excerptFr": "Suka ce, 'Tsarki ya tabbata a gare Ka; ba mu da ilimi sai abin da Ka sanar da mu. Lallai Kai ne Masani, Mai hikima.'",
+      "context": "Hikimar da take ratsa boyayyun sirrikan kowane abu a duniya."
+    }
+  },
+  "Al-Qābid": {
+    "tr": "Al-Qābid",
+    "en": {
+      "fr": "The Withholder",
+      "ref": "Retention",
+      "excerptFr": "And it is Allah who withholds and grants abundance, and to Him you will be returned.",
+      "context": "Masters the existential balance of restriction (Qabd) and pacifies passions."
+    },
+    "ha": {
+      "fr": "Mai Kamawa",
+      "ref": "Kamawa",
+      "excerptFr": "Kuma Allah ne Yake kamawa Yake kuma shimfidawa, kuma zuwa gare Shi ne za ku koma.",
+      "context": "Yana daidaita yanayin rayuwa na takaitawa (Qabd) kuma yana sanyaya zuciya."
+    }
+  },
+  "Al-Bāsit": {
+    "tr": "Al-Bāsit",
+    "en": {
+      "fr": "The Extender",
+      "ref": "Extension of sustenance",
+      "excerptFr": "And it is Allah who withholds and grants abundance...",
+      "context": "Bringer of Opening and material or spiritual joy."
+    },
+    "ha": {
+      "fr": "Mai Shimfidawa",
+      "ref": "Shimfidar arziki",
+      "excerptFr": "Kuma Allah ne Yake kamawa Yake kuma shimfidawa...",
+      "context": "Mai kawo budi da farin cikin duniya ko na ruhi."
+    }
+  },
+  "Al-Khāfid": {
+    "tr": "Al-Khāfid",
+    "en": {
+      "fr": "The Abaser",
+      "ref": "Abasement of the proud",
+      "excerptFr": "He will abase some and elevate others.",
+      "context": "The name of corrective justice lowering the arrogance of tyrants."
+    },
+    "ha": {
+      "fr": "Mai Kaskantarwa",
+      "ref": "Kaskantar da masu girman kai",
+      "excerptFr": "Zai kaskantar da wasu, Ya ɗaukaka wasu.",
+      "context": "Sunan adalci na gyara wanda yake kaskantar da girman kai na azzalumai."
+    }
+  },
+  "Ar-Rāfi'": {
+    "tr": "Ar-Rāfi'",
+    "en": {
+      "fr": "The Exalter",
+      "ref": "Spiritual and material elevation",
+      "excerptFr": "[He is] the Exalter of ranks, the Owner of the Throne.",
+      "context": "Elevates social statuses, consciousness, and grants general esteem."
+    },
+    "ha": {
+      "fr": "Mai Ɗaukakawa",
+      "ref": "Ɗaukaka ta ruhi da duniya",
+      "excerptFr": "[Shi ne] Mai ɗaukaka darajoji, Ma'abocin Al'arshi.",
+      "context": "Yana ɗaukaka darajar mutum a duniya, wayewar kai, kuma yana ba da girmamawa a wajen mutane."
+    }
+  },
+  "Al-Mu'izz": {
+    "tr": "Al-Mu'izz",
+    "en": {
+      "fr": "The Honourer",
+      "ref": "Honor and dignity",
+      "excerptFr": "You grant honor to whom You wish and You abase whom You wish.",
+      "context": "Envelops the dhakir with an aura of respected prestige."
+    },
+    "ha": {
+      "fr": "Mai Ba da Girma",
+      "ref": "Girma da daraja",
+      "excerptFr": "Kana ba da girma ga wanda Ka so, kuma Kana kaskantar da wanda Ka so.",
+      "context": "Yana lulluɓe mai zikiri da hasken girma da ake girmamawa."
+    }
+  },
+  "Al-Mudhill": {
+    "tr": "Al-Mudhill",
+    "en": {
+      "fr": "The Dishonourer",
+      "ref": "Protection against tyrants",
+      "excerptFr": "You grant honor to whom You wish and You abase whom You wish...",
+      "context": "Neutralizes the oversized ego of oppressors and protects the weak."
+    },
+    "ha": {
+      "fr": "Mai Kaskantarwa",
+      "ref": "Kariya daga azzalumai",
+      "excerptFr": "Kana ba da girma ga wanda Ka so, kuma Kana kaskantar da wanda Ka so...",
+      "context": "Yana murkushe girman kai na azzalumai kuma yana kiyaye raunana."
+    }
+  },
+  "As-Samī'": {
+    "tr": "As-Samī'",
+    "en": {
+      "fr": "The All-Hearing",
+      "ref": "Absolute hearing",
+      "excerptFr": "Our Lord, accept [this] from us. Indeed You are the All-Hearing, the All-Knowing.",
+      "context": "The subtle listening perceiving every intimate vibration to answer it."
+    },
+    "ha": {
+      "fr": "Mai Ji",
+      "ref": "Jin komai",
+      "excerptFr": "Ubangijinmu, Ka karɓa daga gare mu. Lallai Kai ne Mai ji, Masani.",
+      "context": "Jin da yake fahimtar kowane sauti na boye domin amsawa."
+    }
+  },
+  "Al-Basīr": {
+    "tr": "Al-Basīr",
+    "en": {
+      "fr": "The All-Seeing",
+      "ref": "Total vision",
+      "excerptFr": "Indeed, Allah is Seeing of what you do.",
+      "context": "Pierces the secrets of hearts and sharpens clairvoyance."
+    },
+    "ha": {
+      "fr": "Mai Gani",
+      "ref": "Gani cikakke",
+      "excerptFr": "Lallai Allah Mai gani ne ga abin da kuke aikatawa.",
+      "context": "Yana hango sirrikan zuciya kuma yana kaifafa basirar mutum."
+    }
+  },
+  "Al-Hakam": {
+    "tr": "Al-Hakam",
+    "en": {
+      "fr": "The Judge",
+      "ref": "Supreme arbitration",
+      "excerptFr": "Then is it other than Allah I should seek as judge?",
+      "context": "Restores legitimate balance in the most complex disputes."
+    },
+    "ha": {
+      "fr": "Mai Yanke Hukunci",
+      "ref": "Hukunci na karshe",
+      "excerptFr": "Shin wanin Allah zan nema a matsayin mai yanke hukunci?",
+      "context": "Yana daidaita rigingimu masu rikitarwa cikin adalci."
+    }
+  },
+  "Al-'Adl": {
+    "tr": "Al-'Adl",
+    "en": {
+      "fr": "The Just",
+      "ref": "Equitable justice",
+      "excerptFr": "And the word of your Lord has been fulfilled in truth and in justice.",
+      "context": "Universal equity governing destinies and harmonizing forces."
+    },
+    "ha": {
+      "fr": "Mai Adalci",
+      "ref": "Adalci",
+      "excerptFr": "Kuma kalmar Ubangijinka ta cika da gaskiya da adalci.",
+      "context": "Adalcin duniya wanda yake tafiyar da ƙaddara da daidaita dukkan abubuwa."
+    }
+  },
+  "Al-Latīf": {
+    "tr": "Al-Latīf",
+    "en": {
+      "fr": "The Subtle",
+      "ref": "Imperceptible grace",
+      "excerptFr": "Vision perceives Him not, but He perceives [all] vision; and He is the Subtle, the Acquainted.",
+      "context": "Blesses with His subtle sweetness, resolving crises without any clash."
+    },
+    "ha": {
+      "fr": "Mai Tauyauwa/Mai Lattafi",
+      "ref": "Rahama mara ganuwa",
+      "excerptFr": "Gani ba ya cimma Shi, amma Shi Yana cimma kowane gani; kuma Shi ne Mai taushi, Masani.",
+      "context": "Yana albarkace da tausayinsa na boye, yana warware matsaloli ba tare da tashin hankali ba."
+    }
+  },
+  "Al-Khabīr": {
+    "tr": "Al-Khabīr",
+    "en": {
+      "fr": "The All-Acquainted",
+      "ref": "Intimate knowledge",
+      "excerptFr": "And He is the Subtle, the Acquainted.",
+      "context": "Unveils deep mysteries of situations and unmasks conspiracies."
+    },
+    "ha": {
+      "fr": "Mai Sanin Komai",
+      "ref": "Ilimi na boye",
+      "excerptFr": "Kuma Shi ne Mai taushi, Masani.",
+      "context": "Yana bayyana boyayyun sirrikan al'amura da kuma tonon sililin makirci."
+    }
+  },
+  "Al-Halīm": {
+    "tr": "Al-Halīm",
+    "en": {
+      "fr": "The Forbearing",
+      "ref": "Patience and clemency",
+      "excerptFr": "And Allah is Forgiving and Forbearing.",
+      "context": "Soothes all nervous tension, instills calm and patience."
+    },
+    "ha": {
+      "fr": "Mai Hakuri",
+      "ref": "Hakuri da sassauci",
+      "excerptFr": "Kuma Allah Mai gafara ne, Mai hakuri.",
+      "context": "Yana sanyaya kowane irin fushi, yana sanya nutsuwa da hakuri."
+    }
+  },
+  "Al-'Azīm": {
+    "tr": "Al-'Azīm",
+    "en": {
+      "fr": "The Great",
+      "ref": "Absolute grandeur",
+      "excerptFr": "And He is the Most High, the Most Great.",
+      "context": "Cosmic splendor protecting the spirit and strengthening morality."
+    },
+    "ha": {
+      "fr": "Mai Girma",
+      "ref": "Girma cikakke",
+      "excerptFr": "Kuma Shi ne Mafi girma, Mai daukaka.",
+      "context": "Girmamawa ta sararin samaniya wadda take kiyaye ruhi da karfafa tarbiya."
+    }
+  },
+  "Al-Ghafūr": {
+    "tr": "Al-Ghafūr",
+    "en": {
+      "fr": "The All-Forgiving",
+      "ref": "Unconditional forgiveness",
+      "excerptFr": "Indeed, Allah is Forgiving and Merciful.",
+      "context": "Absolves psychic burdens and brings luminous peace."
+    },
+    "ha": {
+      "fr": "Mai Gafara",
+      "ref": "Gafara mara sharadi",
+      "excerptFr": "Lallai Allah Mai gafara ne, Mai jin kai.",
+      "context": "Yana wanke nauyin zuciya kuma yana kawo zaman lafiya mai haske."
+    }
+  },
+  "Ash-Shakūr": {
+    "tr": "Ash-Shakūr",
+    "en": {
+      "fr": "The Appreciative",
+      "ref": "Multiplication of rewards",
+      "excerptFr": "Indeed, He is Forgiving and Appreciative.",
+      "context": "Multiplies your modest efforts into colossal blessings."
+    },
+    "ha": {
+      "fr": "Mai Godiya",
+      "ref": "Yawaita lada",
+      "excerptFr": "Lallai Shi Mai gafara ne, Mai godiya.",
+      "context": "Yana ninka ƙoƙarinka kaɗan ya zama babban lada da albarka."
+    }
+  },
+  "Al-'Aliyy": {
+    "tr": "Al-'Aliyy",
+    "en": {
+      "fr": "The Most High",
+      "ref": "Absolute elevation",
+      "excerptFr": "And He is the Most High, the Most Great.",
+      "context": "Elevates above worldly conflicts towards spiritual summits."
+    },
+    "ha": {
+      "fr": "Mai Ɗaukaka",
+      "ref": "Ɗaukaka cikakkiya",
+      "excerptFr": "Kuma Shi ne Mafi girma, Mai daukaka.",
+      "context": "Yana ɗaukaka mutum sama da rikicin duniya zuwa matsayin ruhi."
+    }
+  },
+  "Al-Kabīr": {
+    "tr": "Al-Kabīr",
+    "en": {
+      "fr": "The Grand",
+      "ref": "Infinite majesty",
+      "excerptFr": "The Knower of the unseen and the seen, the Grand, the Sublime.",
+      "context": "Affirms moral authority and dissipates intimidation by tyrants."
+    },
+    "ha": {
+      "fr": "Mai Girma",
+      "ref": "Girma mara iyaka",
+      "excerptFr": "Masani na gaibu da bayyane, Mai girma, Madaukaki.",
+      "context": "Yana tabbatar da karfin tarbiya kuma yana kawar da tsoron azzalumai."
+    }
+  },
+  "Al-Hafīz": {
+    "tr": "Al-Hafīz",
+    "en": {
+      "fr": "The Preserver",
+      "ref": "Infallible protection",
+      "excerptFr": "Indeed my Lord, over all things, is Guardian.",
+      "context": "The celestial rampart protecting against diseases, theft, and calamities."
+    },
+    "ha": {
+      "fr": "Mai Tsaro",
+      "ref": "Kariya mara kuskure",
+      "excerptFr": "Lallai Ubangijina, a kan kowane abu, Mai tsaro ne.",
+      "context": "Katangar sama da take karewa daga cututtuka, sata, da masifu."
+    }
+  },
+  "Al-Muqīt": {
+    "tr": "Al-Muqīt",
+    "en": {
+      "fr": "The Sustainer",
+      "ref": "Physical and spiritual sustenance",
+      "excerptFr": "And ever is Allah, over all things, Keeper.",
+      "context": "Guarantees that every creature receives its legitimate daily intake."
+    },
+    "ha": {
+      "fr": "Mai Ciyarwa",
+      "ref": "Arziki na jiki da na ruhi",
+      "excerptFr": "Kuma Allah ya kasance a kan kowane abu, Mai kiyayewa.",
+      "context": "Yana tabbatar da cewa kowane halitta ya samu abincin da ya dace da shi."
+    }
+  },
+  "Al-Hasīb": {
+    "tr": "Al-Hasīb",
+    "en": {
+      "fr": "The Reckoner",
+      "ref": "Protection and sufficiency",
+      "excerptFr": "And sufficient is Allah as Accountant.",
+      "context": "The absolute sufficiency of the invoker in the face of anxiety."
+    },
+    "ha": {
+      "fr": "Mai Lissafi",
+      "ref": "Kariya da isuwa",
+      "excerptFr": "Kuma Allah Ya isa a matsayin Mai lissafi.",
+      "context": "Isuwar Allah ga wanda ya dogara gare Shi lokacin fargaba."
+    }
+  },
+  "Al-Jalīl": {
+    "tr": "Al-Jalīl",
+    "en": {
+      "fr": "The Majestic",
+      "ref": "Splendor and dignity",
+      "excerptFr": "And there will remain the Face of your Lord, Owner of Majesty and Honor.",
+      "context": "Instills reverence and respect in the hearts of those around you."
+    },
+    "ha": {
+      "fr": "Mai Daraja",
+      "ref": "Girma da daraja",
+      "excerptFr": "Kuma Fuskar Ubangijinka Mai girma da daraja za ta kasance.",
+      "context": "Yana sanya girmamawa a zuciyar mutane gare ka."
+    }
+  },
+  "Al-Karīm": {
+    "tr": "Al-Karīm",
+    "en": {
+      "fr": "The Generous",
+      "ref": "Unlimited generosity",
+      "excerptFr": "O mankind, what has deceived you concerning your Lord, the Generous?",
+      "context": "Opens material abundance and dissipates selfishness or greed."
+    },
+    "ha": {
+      "fr": "Mai Karami",
+      "ref": "Karami mara iyaka",
+      "excerptFr": "Ya ku mutane, me ya rude ku game da Ubangijinku, Mai karami?",
+      "context": "Yana buda kofofin arziki da kawar da son zuciya ko kwadayi."
+    }
+  },
+  "Al-Raqīb": {
+    "tr": "Al-Raqīb",
+    "en": {
+      "fr": "The Watchful",
+      "ref": "Loving surveillance",
+      "excerptFr": "Indeed Allah is ever, over you, an Observer.",
+      "context": "Protects the home and family privacy in your absence."
+    },
+    "ha": {
+      "fr": "Mai Kulawa",
+      "ref": "Kula da kauna",
+      "excerptFr": "Lallai Allah ya kasance a kanku, Mai kula ne.",
+      "context": "Yana kiyaye gida da sirrin iyali a lokacin da baka nan."
+    }
+  },
+  "Al-Mujīb": {
+    "tr": "Al-Mujīb",
+    "en": {
+      "fr": "The Responsive",
+      "ref": "Response",
+      "excerptFr": "Indeed, my Lord is near and responsive.",
+      "context": "The immediate relief granted to the invoker in need."
+    },
+    "ha": {
+      "fr": "Mai Amsa Addu'a",
+      "ref": "Amsawa",
+      "excerptFr": "Lallai Ubangijina Kusa ne, Mai amsawa.",
+      "context": "Taimako na nan take da Allah yake ba wa mai roko."
+    }
+  },
+  "Al-Wāsi'": {
+    "tr": "Al-Wāsi'",
+    "en": {
+      "fr": "The Vast",
+      "ref": "Unlimited expansion",
+      "excerptFr": "Indeed, Allah is all-Encompassing and Knowing.",
+      "context": "The expansion of the mind, finances, and divine patience."
+    },
+    "ha": {
+      "fr": "Mai Yalwatawa",
+      "ref": "Faɗaɗawa mara iyaka",
+      "excerptFr": "Lallai Allah Mai yalwatawa ne, Masani.",
+      "context": "Faɗaɗa tunani, arziki, da hakurin Allah."
+    }
+  },
+  "Al-Hakīm": {
+    "tr": "Al-Hakīm",
+    "en": {
+      "fr": "The Wise",
+      "ref": "Superior wisdom",
+      "excerptFr": "Indeed, it is You who is the Knowing, the Wise.",
+      "context": "Allows to discern the hidden reason behind the veils of destiny."
+    },
+    "ha": {
+      "fr": "Mai Hikima",
+      "ref": "Hikima madaukakiya",
+      "excerptFr": "Lallai Kai ne Masani, Mai hikima.",
+      "context": "Yana ba da ikon gane dalilin da ke boye a bayan kaddara."
+    }
+  },
+  "Al-Wadūd": {
+    "tr": "Al-Wadūd",
+    "en": {
+      "fr": "The Affectionate",
+      "ref": "Divine love",
+      "excerptFr": "Indeed, my Lord is Merciful and Affectionate.",
+      "context": "Diffuses harmony and healthy affective attraction within couples."
+    },
+    "ha": {
+      "fr": "Mai Kauna",
+      "ref": "Kaunar Allah",
+      "excerptFr": "Lallai Ubangijina Mai jin kai ne, Mai kauna.",
+      "context": "Yana yada zaman lafiya da kauna mai kyau tsakanin ma'aurata."
+    }
+  },
+  "Al-Majīd": {
+    "tr": "Al-Majīd",
+    "en": {
+      "fr": "The Glorious",
+      "ref": "Glory and nobility",
+      "excerptFr": "Indeed, He is Praiseworthy and Glorious.",
+      "context": "Heals self-esteem and purifies the lineage of moral flaws."
+    },
+    "ha": {
+      "fr": "Mai Daukaka",
+      "ref": "Daukaka da daraja",
+      "excerptFr": "Lallai Shi Mai yabo ne, Mai daukaka.",
+      "context": "Yana warkar da kima kai da tsarkake zuriya daga munanan dabi'u."
+    }
+  },
+  "Al-Bā'ith": {
+    "tr": "Al-Bā'ith",
+    "en": {
+      "fr": "The Resurrector",
+      "ref": "Resurrection",
+      "excerptFr": "It is We who bring the dead to life...",
+      "context": "Breathes new life into extinguished projects or failing faith."
+    },
+    "ha": {
+      "fr": "Mai Tashin Matattu",
+      "ref": "Tashin kiyama",
+      "excerptFr": "Mu ne Muke rayar da matattu...",
+      "context": "Yana sanya sabon rai ga ayyukan da suka mutu ko imani da ya raunana."
+    }
+  },
+  "Ash-Shahīd": {
+    "tr": "Ash-Shahīd",
+    "en": {
+      "fr": "The Witness",
+      "ref": "Universal Testimony",
+      "excerptFr": "And Allah is a Witness over all things.",
+      "context": "Absolute truth that prevails against slander or false testimonies."
+    },
+    "ha": {
+      "fr": "Shaida",
+      "ref": "Shaida kan komai",
+      "excerptFr": "Kuma Allah Mai shaida ne a kan komai.",
+      "context": "Gaskiya ta dindindin da take bayyana a gaban karya ko shedar zur."
+    }
+  },
+  "Al-Haqq": {
+    "tr": "Al-Haqq",
+    "en": {
+      "fr": "The Truth",
+      "ref": "Absolute Truth",
+      "excerptFr": "That is because Allah is the Truth (Al-Haqq) and because He gives life to the dead.",
+      "context": "Firmly establishes spiritual reality against deceptive illusions."
+    },
+    "ha": {
+      "fr": "Gaskiya",
+      "ref": "Gaskiyar da babu makawa",
+      "excerptFr": "Wannan kuwa saboda Allah Shi ne Gaskiya, kuma Shi ne Yake raya matattu.",
+      "context": "Yana tabbatar da gaskiyar ruhi a gaban rudanin duniya."
+    }
+  },
+  "Al-Wakīl": {
+    "tr": "Al-Wakīl",
+    "en": {
+      "fr": "The Trustee / Guardian",
+      "ref": "Absolute Guarantor",
+      "excerptFr": "And He is the Trustee / Guardian of all things.",
+      "context": "Entrusting oneself entirely to Him to relieve anxieties and worries."
+    },
+    "ha": {
+      "fr": "Wakili",
+      "ref": "Mai kula da komai",
+      "excerptFr": "Kuma Shi ne Wakili a kan komai.",
+      "context": "Mika dukkan lamura ga Allah don rage damuwa da fargaba."
+    }
+  },
+  "Al-Qawiyy": {
+    "tr": "Al-Qawiyy",
+    "en": {
+      "fr": "The Strong",
+      "ref": "Absolute Strength",
+      "excerptFr": "Indeed, Allah is Strong and severe in punishment.",
+      "context": "Provides unmatched physical vigor and mental resilience."
+    },
+    "ha": {
+      "fr": "Mai Karfi",
+      "ref": "Karfi cikakke",
+      "excerptFr": "Lallai Allah Mai karfi ne, Mai tsananin horo.",
+      "context": "Yana ba da kwarin gwiwa da karfin jiki wajen fuskantar kalubale."
+    }
+  },
+  "Al-Matin": {
+    "tr": "Al-Matin",
+    "en": {
+      "fr": "The Firm",
+      "ref": "Absolute Firmness",
+      "excerptFr": "Indeed, it is Allah who is the great Provider, the Possessor of strength, the Firm.",
+      "context": "Supreme solidity that withstands all emotional pressures."
+    },
+    "ha": {
+      "fr": "Mai Juriya",
+      "ref": "Tsayayye",
+      "excerptFr": "Lallai Allah Shi ne Ar-Razzak, Mai iko, Mai juriya.",
+      "context": "Tsayuwa da kyamar matsaloli duk da irin matsin lamba."
+    }
+  },
+  "Al-Waliyy": {
+    "tr": "Al-Waliyy",
+    "en": {
+      "fr": "The Protector",
+      "ref": "Spiritual Ally",
+      "excerptFr": "Allah is the Protector of those who believe.",
+      "context": "Manifests support from the unseen and ensures sincere friendship."
+    },
+    "ha": {
+      "fr": "Mataimaki",
+      "ref": "Abokin tafiya na ruhi",
+      "excerptFr": "Allah Shi ne Mataimakin wadanda suka yi imani.",
+      "context": "Yana kawo taimakon da ba a tsammani da kuma kyakkyawar abota."
+    }
+  },
+  "Al-Hamīd": {
+    "tr": "Al-Hamīd",
+    "en": {
+      "fr": "The Praiseworthy",
+      "ref": "Infinite Praise",
+      "excerptFr": "...on the path of the Almighty, the Praiseworthy.",
+      "context": "Illuminates reputation and attracts the deserved consideration of others."
+    },
+    "ha": {
+      "fr": "Abin Yabo",
+      "ref": "Yabo mara iyaka",
+      "excerptFr": "...zuwa ga tafarkin Mai iko, Abin yabo.",
+      "context": "Yana haskaka kima da mutuncin mutum a idon jama'a."
+    }
+  },
+  "Al-Muhsī": {
+    "tr": "Al-Muhsī",
+    "en": {
+      "fr": "The Counter",
+      "ref": "Absolute Precision",
+      "excerptFr": "He has enumerated them and counted them exactly.",
+      "context": "Helps structure the mind and memorize sacred sciences."
+    },
+    "ha": {
+      "fr": "Mai Lissafi",
+      "ref": "Lissafi cikakke",
+      "excerptFr": "Lallai Ya kirga su kuma Ya lissafa su lissafi.",
+      "context": "Yana taimakawa wajen tsara tunani da haddace ilimin addini."
+    }
+  },
+  "Al-Mubdi'": {
+    "tr": "Al-Mubdi'",
+    "en": {
+      "fr": "The Originator",
+      "ref": "Beginning of all things",
+      "excerptFr": "It is He who begins creation and repeats it.",
+      "context": "Ideal for starting a new business or a life project."
+    },
+    "ha": {
+      "fr": "Mafaranci",
+      "ref": "Farkon komai",
+      "excerptFr": "Shi ne Yake farawa halitta sannan Yake mayar da ita.",
+      "context": "Yana da amfani wajen fara sabon aiki ko sabon tsarin rayuwa."
+    }
+  },
+  "Al-Mu'īd": {
+    "tr": "Al-Mu'īd",
+    "en": {
+      "fr": "The Restorer",
+      "ref": "Restoration",
+      "excerptFr": "It is He who begins creation and repeats it...",
+      "context": "Helps rebuild after a disaster and recover what is lost."
+    },
+    "ha": {
+      "fr": "Mai Mayarwa",
+      "ref": "Gyara",
+      "excerptFr": "Shi ne Yake farawa halitta sannan Yake mayar da ita...",
+      "context": "Yana taimakawa wajen gyara abin da ya lalace ko dawo da abin da aka rasa."
+    }
+  },
+  "Al-Muhyī": {
+    "tr": "Al-Muhyī",
+    "en": {
+      "fr": "The Giver of Life",
+      "ref": "Vitality and regeneration",
+      "excerptFr": "He who gives life to it will certainly resurrect the dead.",
+      "context": "Regenerates the sick body and brings overflowing vitality."
+    },
+    "ha": {
+      "fr": "Mai Rayarwa",
+      "ref": "Rayuwa da sabuntawa",
+      "excerptFr": "Wanda Ya rayar da ita, tabbas Shi ne Mai rayar da matattu.",
+      "context": "Yana sabunta jiki kuma yana kawo kuzari da lafiya."
+    }
+  },
+  "Al-Mumīt": {
+    "tr": "Al-Mumīt",
+    "en": {
+      "fr": "The Giver of Death",
+      "ref": "Mastery of passions",
+      "excerptFr": "My Lord is the One who gives life and death.",
+      "context": "Helps subdue the carnal Ego (Nafs) and its dark impulses."
+    },
+    "ha": {
+      "fr": "Mai Kashewa",
+      "ref": "Ikon sarrafa zuciya",
+      "excerptFr": "Ubangijina Shi ne wanda Yake rayarwa kuma Yake kashewa.",
+      "context": "Yana taimakawa wajen danne sha'awar zuciya da mummunan tunani."
+    }
+  },
+  "Al-Hayy": {
+    "tr": "Al-Hayy",
+    "en": {
+      "fr": "The Ever-Living",
+      "ref": "Eternal life",
+      "excerptFr": "Allah! There is no deity except Him, the Ever-Living, the Sustainer of all.",
+      "context": "The name of divine life force fighting against exhaustion."
+    },
+    "ha": {
+      "fr": "Rayayye",
+      "ref": "Rayuwa ta har abada",
+      "excerptFr": "Allah! Babu abin bautawa sai Shi, Rayayye, Mai tsayawa da kansa.",
+      "context": "Sunan karfin rayuwa don yakar kasala da gajiya."
+    }
+  },
+  "Al-Qayyūm": {
+    "tr": "Al-Qayyūm",
+    "en": {
+      "fr": "The Self-Sustaining",
+      "ref": "Autonomy and sustenance",
+      "excerptFr": "Allah! There is no deity except Him, the Ever-Living, the Sustainer of all...",
+      "context": "Maintains financial stability and clarity of mind."
+    },
+    "ha": {
+      "fr": "Mai Tsayuwa",
+      "ref": "Cin gashin kai",
+      "excerptFr": "Allah! Babu abin bautawa sai Shi, Rayayye, Mai tsayawa da kansa...",
+      "context": "Yana kiyaye kwanciyar hankali da samun nasara a harkokin rayuwa."
+    }
+  },
+  "Al-Wājid": {
+    "tr": "Al-Wājid",
+    "en": {
+      "fr": "The All-Perceiving",
+      "ref": "Wealth and fullness",
+      "excerptFr": "And He found you poor and made you rich.",
+      "context": "Eliminates the feeling of lack and attracts abundance."
+    },
+    "ha": {
+      "fr": "Mai Wadata",
+      "ref": "Dukiya da wadata",
+      "excerptFr": "Kuma Ya same ka matalauci Ya wadata ka.",
+      "context": "Yana kawar da jin rashin komai da jawo arziiki."
+    }
+  },
+  "Al-Mājid": {
+    "tr": "Al-Mājid",
+    "en": {
+      "fr": "The Noble",
+      "ref": "Splendor",
+      "excerptFr": "The Master of the Throne, the All-Glorious.",
+      "context": "Illuminates the aura, brings respect and moral distinction."
+    },
+    "ha": {
+      "fr": "Mai Daraja",
+      "ref": "Girma",
+      "excerptFr": "Ma'abocin Al'arshi, Mai girma.",
+      "context": "Yana haskaka fuska kuma yana ba da girmamawa da mutunci."
+    }
+  },
+  "Al-Wāhid": {
+    "tr": "Al-Wāhid",
+    "en": {
+      "fr": "The Unique",
+      "ref": "Cosmic Uniqueness",
+      "excerptFr": "And your God is one God.",
+      "context": "Unifies the scattered mind and eliminates the fear of loneliness."
+    },
+    "ha": {
+      "fr": "Guda",
+      "ref": "Kadaita halitta",
+      "excerptFr": "Kuma Ubangijinku Allahn guda ne.",
+      "context": "Yana taru da tunanin da ya watse kuma yana kawar da tsoron kadaici."
+    }
+  },
+  "Al-Ahad": {
+    "tr": "Al-Ahad",
+    "en": {
+      "fr": "The One",
+      "ref": "Pure Oneness",
+      "excerptFr": "Say: He is Allah, the One.",
+      "context": "The quintessence of Oneness dissolving all illusions of this world."
+    },
+    "ha": {
+      "fr": "Makaɗaici",
+      "ref": "Kadaita Allah",
+      "excerptFr": "Ka ce: Shi ne Allah, Makaɗaici.",
+      "context": "Ma'anar kadaita Allah da take rushe duk wani rudanin duniya."
+    }
+  },
+  "As-Samad": {
+    "tr": "As-Samad",
+    "en": {
+      "fr": "The Eternal Refuge",
+      "ref": "Universal Support",
+      "excerptFr": "Allah, the Eternal Refuge.",
+      "context": "Frees the practitioner from any material dependence on others."
+    },
+    "ha": {
+      "fr": "Ma'abocin Koma",
+      "ref": "Taimako na gaba daya",
+      "excerptFr": "Allah, Ma'abocin koma.",
+      "context": "Yana kubutar da mai zikiri daga dogara ga kowa sai Allah."
+    }
+  },
+  "Al-Qādir": {
+    "tr": "Al-Qādir",
+    "en": {
+      "fr": "The All-Powerful",
+      "ref": "Absolute Power",
+      "excerptFr": "Indeed, Allah is able to create their like.",
+      "context": "Gives the capacity to manifest virtuous goals."
+    },
+    "ha": {
+      "fr": "Mai Iko",
+      "ref": "Iko cikakke",
+      "excerptFr": "Lallai Allah Mai iko ne a kan Ya halicci kamarsu.",
+      "context": "Yana ba da iko wajen cimma buri na kwarai."
+    }
+  },
+  "Al-Muqtadir": {
+    "tr": "Al-Muqtadir",
+    "en": {
+      "fr": "The Determiner",
+      "ref": "Absolute Decree",
+      "excerptFr": "We seized them with the seizure of an Almighty, All-Powerful.",
+      "context": "Eradicates major blocks of destiny in the blink of an eye."
+    },
+    "ha": {
+      "fr": "Mai Girman Iko",
+      "ref": "Kaddara ta gaskiya",
+      "excerptFr": "Muka kama su da kamo Mai iko, Mai girman iko.",
+      "context": "Yana warware manyan matsalolin rayuwa a cikin kankanin lokaci."
+    }
+  },
+  "Al-Muqaddim": {
+    "tr": "Al-Muqaddim",
+    "en": {
+      "fr": "The Expediter",
+      "ref": "Advancement",
+      "excerptFr": "While I had already given you warning.",
+      "context": "Accelerates the achievement of success and healthily outpaces competition."
+    },
+    "ha": {
+      "fr": "Mai Gabatarwa",
+      "ref": "Ci gaba",
+      "excerptFr": "Alhali na riga na ba ku gargadi.",
+      "context": "Yana hanzarta cimma nasara da ba mutum damar gaba da saura."
+    }
+  },
+  "Al-Mu'akhkhir": {
+    "tr": "Al-Mu'akhkhir",
+    "en": {
+      "fr": "The Delayer",
+      "ref": "Wisdom of Time",
+      "excerptFr": "And He will grant you respite until a specified term.",
+      "context": "Pushes back imminent danger or misfortune, teaching patience."
+    },
+    "ha": {
+      "fr": "Mai Jinkirtawa",
+      "ref": "Hikimar lokaci",
+      "excerptFr": "Kuma zai ba ku jinkiri har zuwa lokacin da aka kayyade.",
+      "context": "Yana kiyaye mutum daga hadari da koya masa hakuri."
+    }
+  },
+  "Al-Awwal": {
+    "tr": "Al-Awwal",
+    "en": {
+      "fr": "The First",
+      "ref": "Eternal Priority",
+      "excerptFr": "He is the First and the Last.",
+      "context": "Sets robust life milestones from the beginning of a venture."
+    },
+    "ha": {
+      "fr": "Farko",
+      "ref": "Dindindin",
+      "excerptFr": "Shi ne Farko kuma Shi ne Karshe.",
+      "context": "Yana sanya kyakkyawan tsari ga duk wani abu da aka fara."
+    }
+  },
+  "Al-Ākhir": {
+    "tr": "Al-Ākhir",
+    "en": {
+      "fr": "The Last",
+      "ref": "Eternal Sustenance",
+      "excerptFr": "He is the First and the Last...",
+      "context": "Guarantees a favorable and happy outcome in any initiated project."
+    },
+    "ha": {
+      "fr": "Karshe",
+      "ref": "Mai dawwama",
+      "excerptFr": "Shi ne Farko kuma Shi ne Karshe...",
+      "context": "Yana tabbatar da kyakkyawan karshe ga duk wani aiki."
+    }
+  },
+  "Az-Zāhir": {
+    "tr": "Az-Zāhir",
+    "en": {
+      "fr": "The Manifest",
+      "ref": "Manifest Proof",
+      "excerptFr": "The Manifest and the Hidden.",
+      "context": "Exposes the moral truth of the supplicant to the light."
+    },
+    "ha": {
+      "fr": "Mai Bayyana",
+      "ref": "Hujja",
+      "excerptFr": "Mai bayyana da Mai boyewa.",
+      "context": "Yana fitar da gaskiyar lamari fili."
+    }
+  },
+  "Al-Bātin": {
+    "tr": "Al-Bātin",
+    "en": {
+      "fr": "The Hidden",
+      "ref": "Interiority",
+      "excerptFr": "The Manifest and the Hidden...",
+      "context": "Facilitates access to inner depths and meditation."
+    },
+    "ha": {
+      "fr": "Mai Boyewa",
+      "ref": "Ciki",
+      "excerptFr": "Mai bayyana da Mai boyewa...",
+      "context": "Yana saukaka fahimtar sirrin zuciya da tunani."
+    }
+  },
+  "Al-Wālī": {
+    "tr": "Al-Wālī",
+    "en": {
+      "fr": "The Governor",
+      "ref": "Governance",
+      "excerptFr": "And they have, other than Him, no protector.",
+      "context": "Ideal for guiding with wisdom and presiding over civil responsibilities."
+    },
+    "ha": {
+      "fr": "Mai Shugabanci",
+      "ref": "Gwamnati",
+      "excerptFr": "Kuma babu wani mai kariya gare su in ba Shi ba.",
+      "context": "Yana taimakawa wajen jagoranci da hikima da gudanar da aiki."
+    }
+  },
+  "Al-Muta'ālī": {
+    "tr": "Al-Muta'ālī",
+    "en": {
+      "fr": "The Exalted",
+      "ref": "Transcendence",
+      "excerptFr": "The Grand, the Exalted.",
+      "context": "Elevates dignity and reputation against disparagement by others."
+    },
+    "ha": {
+      "fr": "Mai Girma",
+      "ref": "Daukaka",
+      "excerptFr": "Mai Girma, Madaukaki.",
+      "context": "Yana daukaka martaba da daraja a gaban masu cin zarafi."
+    }
+  },
+  "Al-Barr": {
+    "tr": "Al-Barr",
+    "en": {
+      "fr": "The Benign",
+      "ref": "Infinite Goodness",
+      "excerptFr": "He is the Benign, the Most Merciful.",
+      "context": "Promotes the affability of others and the success of cooperative efforts."
+    },
+    "ha": {
+      "fr": "Mai Kyautatawa",
+      "ref": "Alheri",
+      "excerptFr": "Shi ne Mai kyautatawa, Mai rahama.",
+      "context": "Yana karawa mutane son taimakon juna da samun nasara."
+    }
+  },
+  "At-Tawwāb": {
+    "tr": "At-Tawwāb",
+    "en": {
+      "fr": "The Accepter of Repentance",
+      "ref": "Forgiveness",
+      "excerptFr": "He is the Accepter of Repentance, the Most Merciful.",
+      "context": "Facilitates the lightening of guilt and restores spiritual harmony."
+    },
+    "ha": {
+      "fr": "Mai Karbar Tubar",
+      "ref": "Gafara",
+      "excerptFr": "Shi ne Mai karbar tuba, Mai rahama.",
+      "context": "Yana kawar da nadama da kuma maido da nutsuwar zuciya."
+    }
+  },
+  "Al-Muntaqim": {
+    "tr": "Al-Muntaqim",
+    "en": {
+      "fr": "The Avenger",
+      "ref": "Corrective Justice",
+      "excerptFr": "We will certainly take vengeance on the criminals.",
+      "context": "Entrusting oneself solely to the absolute Justice to restore one's rights."
+    },
+    "ha": {
+      "fr": "Mai Ramuwa",
+      "ref": "Adalci",
+      "excerptFr": "Lallai Mu Masu ramuwa ne ga masu laifi.",
+      "context": "Mika lamari ga Allah don Ya tabbatar da gaskiya."
+    }
+  },
+  "Al-'Afuww": {
+    "tr": "Al-'Afuww",
+    "en": {
+      "fr": "The Pardoner",
+      "ref": "Erasure of faults",
+      "excerptFr": "And Allah is Pardoning and Forgiving.",
+      "context": "Completely erases the inner impurities of the mind."
+    },
+    "ha": {
+      "fr": "Mai Yafewa",
+      "ref": "Shafe laifi",
+      "excerptFr": "Kuma Allah Mai yafewa ne, Mai gafara.",
+      "context": "Yana shafe dukkan datti ko laifin da ke cikin zuciya."
+    }
+  },
+  "Ar-Ra'ūf": {
+    "tr": "Ar-Ra'ūf",
+    "en": {
+      "fr": "The Kind",
+      "ref": "Compassion",
+      "excerptFr": "And Allah is full of compassion to His servants.",
+      "context": "Grants divine mercy in daily life and softens relationships."
+    },
+    "ha": {
+      "fr": "Mai Jin Kai",
+      "ref": "Tausayi",
+      "excerptFr": "Kuma Allah Mai tausayi ne ga bayinSa.",
+      "context": "Yana kawo rahama a rayuwar yau da kullum da kyautata dangantaka."
+    }
+  },
+  "Mālik-ul-Mulk": {
+    "tr": "Mālik-ul-Mulk",
+    "en": {
+      "fr": "The Owner of Sovereignty",
+      "ref": "Sovereignty",
+      "excerptFr": "Say: O Allah, Owner of all sovereignty.",
+      "context": "Stabilizes social or professional situations in a lasting way."
+    },
+    "ha": {
+      "fr": "Mai Mulki",
+      "ref": "Sarkin komai",
+      "excerptFr": "Ka ce: Ya Allah, Mai mulkin komai.",
+      "context": "Yana tabbatar da zaman lafiya a matsayin mutum da aikinsa."
+    }
+  },
+  "Dhū-l-Jalāli wal-Ikrām": {
+    "tr": "Dhū-l-Jalāli wal-Ikrām",
+    "en": {
+      "fr": "Lord of Majesty and Generosity",
+      "ref": "Supreme Lord",
+      "excerptFr": "And there will remain the Face of your Lord, Owner of Majesty and Honor.",
+      "context": "Unifies the nobility of rigor and the elegance of divine generosity."
+    },
+    "ha": {
+      "fr": "Ma'abocin Girma da Karamci",
+      "ref": "Ubangiji",
+      "excerptFr": "Fuskar Ubangijinka Mai girma da karamci za ta dawwama.",
+      "context": "Yana tattara karfin iko da kyautatawa a wuri daya."
+    }
+  },
+  "Al-Muqsit": {
+    "tr": "Al-Muqsit",
+    "en": {
+      "fr": "The Equitable",
+      "ref": "Harmony",
+      "excerptFr": "Say: My Lord has commanded justice.",
+      "context": "Restores civil harmony and eliminates sources of disputes."
+    },
+    "ha": {
+      "fr": "Mai Adalci",
+      "ref": "Daidaito",
+      "excerptFr": "Ka ce: Ubangijina Ya umarci adalci.",
+      "context": "Yana maido da zaman lafiya da kawar da jayayya."
+    }
+  },
+  "Al-Jāmi'": {
+    "tr": "Al-Jāmi'",
+    "en": {
+      "fr": "The Gatherer",
+      "ref": "Gathering",
+      "excerptFr": "You will gather the people on a day about which there is no doubt.",
+      "context": "Gathers what was scattered (separated families, lost objects, minds)."
+    },
+    "ha": {
+      "fr": "Mai Tarawa",
+      "ref": "Tarawa",
+      "excerptFr": "Kai ne Mai tara mutane a wani yini wanda babu shakka a gare shi.",
+      "context": "Yana tattara abin da ya watse (iyali, abu, ko tunani)."
+    }
+  },
+  "Al-Ghaniyy": {
+    "tr": "Al-Ghaniyy",
+    "en": {
+      "fr": "The Rich",
+      "ref": "Independence",
+      "excerptFr": "And Allah is Self-Sufficient and Forbearing.",
+      "context": "Attracts financial and spiritual autonomy through the ease of the heart."
+    },
+    "ha": {
+      "fr": "Mai Wadata",
+      "ref": "Cin gashin kai",
+      "excerptFr": "Kuma Allah Mawadaci ne, Mai haƙuri.",
+      "context": "Yana jawo wadata ta zuciya da kuma ta kudi."
+    }
+  },
+  "Al-Mughnī": {
+    "tr": "Al-Mughnī",
+    "en": {
+      "fr": "The Enricher",
+      "ref": "Enrichment",
+      "excerptFr": "And it is He who enriches and gives possessions.",
+      "context": "Attracts material fortune and pacifies fears of poverty."
+    },
+    "ha": {
+      "fr": "Mai Wadatawa",
+      "ref": "Arziiki",
+      "excerptFr": "Shi ne Yake wadatawa kuma Yake bayar da dukiya.",
+      "context": "Yana ba da kudi da kawar da tsoron talauci."
+    }
+  },
+  "Al-Māni'": {
+    "tr": "Al-Māni'",
+    "en": {
+      "fr": "The Defender",
+      "ref": "Protection",
+      "excerptFr": "What group could defend you?",
+      "context": "Acts as a barrier against accidents, illnesses, and hostile plots."
+    },
+    "ha": {
+      "fr": "Mai Hanawa",
+      "ref": "Kariya",
+      "excerptFr": "Wace kungiya ce za ta iya kare ku?",
+      "context": "Yana zama garkuwa daga hatsari, cuta, da mugun nufi."
+    }
+  },
+  "Ad-Dārr": {
+    "tr": "Ad-Dārr",
+    "en": {
+      "fr": "The Distresser",
+      "ref": "Control",
+      "excerptFr": "And if Allah should touch you with adversity, none can remove it except Him.",
+      "context": "Reminds that trials forge the patience of the supplicant."
+    },
+    "ha": {
+      "fr": "Mai Cutarwa",
+      "ref": "Sarrafa",
+      "excerptFr": "Idan Allah Ya shafe ka da cuta, babu wanda zai iya kawar da ita sai Shi.",
+      "context": "Yana tunatarwa cewa jarabawa tana kara hakuri."
+    }
+  },
+  "An-Nāfi'": {
+    "tr": "An-Nāfi'",
+    "en": {
+      "fr": "The Benefactor",
+      "ref": "Profit",
+      "excerptFr": "Who then can do anything for you against Allah, if He intends you harm or if He intends you good?",
+      "context": "Attracts commercial success, promotes health and public utility."
+    },
+    "ha": {
+      "fr": "Mai Amfanarwa",
+      "ref": "Alheri",
+      "excerptFr": "Wanene zai iya komai gare ku a gaban Allah, idan Yana son cutar da ku ko Yana son amfanar da ku?",
+      "context": "Yana sa samun nasara a kasuwanci da lafiya."
+    }
+  },
+  "An-Nūr": {
+    "tr": "An-Nūr",
+    "en": {
+      "fr": "The Light",
+      "ref": "Illumination",
+      "excerptFr": "Allah is the Light of the heavens and the earth.",
+      "context": "The spiritual light guiding the heart through darkness."
+    },
+    "ha": {
+      "fr": "Hasken",
+      "ref": "Haske",
+      "excerptFr": "Allah ne Hasken sammai da kassai.",
+      "context": "Hasken ruhin da yake jagorantar zuciya a cikin duhu."
+    }
+  },
+  "Al-Hādī": {
+    "tr": "Al-Hādī",
+    "en": {
+      "fr": "The Guide",
+      "ref": "Guidance",
+      "excerptFr": "And your Lord is sufficient as a guide and as a helper.",
+      "context": "Guides undecided minds toward the right path."
+    },
+    "ha": {
+      "fr": "Mai Shiryarwa",
+      "ref": "Jagora",
+      "excerptFr": "Kuma Ubangijinka Ya isa a matsayin Mai shiryarwa da Taimako.",
+      "context": "Yana shiryar da masu rudani zuwa ga tafarki madaidaici."
+    }
+  },
+  "Al-Badī'": {
+    "tr": "Al-Badī'",
+    "en": {
+      "fr": "The Originator",
+      "ref": "Creativity",
+      "excerptFr": "Originator of the heavens and the earth without prior model.",
+      "context": "Inspires artistic inspiration and innovative ideas."
+    },
+    "ha": {
+      "fr": "Mai Kirkira",
+      "ref": "Fahimtar kirkira",
+      "excerptFr": "Mai kirkirar sammai da kassai ba tare da wani misali ba.",
+      "context": "Yana ba da fasaha da sabbin dabaru."
+    }
+  },
+  "Al-Bāqī": {
+    "tr": "Al-Bāqī",
+    "en": {
+      "fr": "The Everlasting",
+      "ref": "Eternity",
+      "excerptFr": "And Allah is better and more everlasting.",
+      "context": "Ensures the longevity of good deeds and permanence."
+    },
+    "ha": {
+      "fr": "Mai Dawwama",
+      "ref": "Har abada",
+      "excerptFr": "Kuma Allah ne Mafi alheri kuma Mai dawwama.",
+      "context": "Yana tabbatar da dadewar kyawawan ayyuka."
+    }
+  },
+  "Al-Wārith": {
+    "tr": "Al-Wārith",
+    "en": {
+      "fr": "The Inheritor",
+      "ref": "Final Inheritance",
+      "excerptFr": "And it is We who are the ultimate Inheritor.",
+      "context": "Reassures that every effort will be divinely compensated."
+    },
+    "ha": {
+      "fr": "Magaji",
+      "ref": "Gado na karshe",
+      "excerptFr": "Kuma Mu ne Magaji na karshe.",
+      "context": "Yana ba da tabbacin cewa duk aikin da aka yi za a saka masa."
+    }
+  },
+  "Ar-Rashīd": {
+    "tr": "Ar-Rashīd",
+    "en": {
+      "fr": "The Rightly Guiding",
+      "ref": "Orientation",
+      "excerptFr": "You will find for him no protector to guide him.",
+      "context": "Helps choose the best path without making regrettable mistakes."
+    },
+    "ha": {
+      "fr": "Mai Shiryarwa zuwa Ga Dace",
+      "ref": "Daidaitawa",
+      "excerptFr": "Ba za ka samu wani mataimaki da zai shiryar da shi ba.",
+      "context": "Yana taimaka wa mutum wajen zabar tafarkin da ba shi da kuskure."
+    }
+  },
+  "As-Sabūr": {
+    "tr": "As-Sabūr",
+    "en": {
+      "fr": "The Patient",
+      "ref": "Infinite Patience",
+      "excerptFr": "Indeed, Allah is with the patient.",
+      "context": "Infuses the serenity necessary to overcome anxiety."
+    },
+    "ha": {
+      "fr": "Mai Hakuri",
+      "ref": "Hakuri mara iyaka",
+      "excerptFr": "Lallai Allah na tare da masu hakuri.",
+      "context": "Yana ba da nutsuwar da ake bukata don shawo kan damuwa."
+    }
+  }
+};

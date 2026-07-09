@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { asmaListData } from '../../../data/asmaListData';
 import { countsBenefitsTranslations } from '../../../data/countsBenefitsData';
+import { asmaListDataTranslations } from '../../../data/asmaListDataTranslations';
 
 
 // Helper to generate N x N Khatim / Magic Square (3x3 up to 10x10)
@@ -198,6 +199,20 @@ export const NamesOfAllah: React.FC = () => {
       return;
     }
 
+    // Check offline dictionary first
+    if (asmaListDataTranslations && asmaListDataTranslations[activeName.tr]) {
+      const trans = asmaListDataTranslations[activeName.tr][language as 'en' | 'ha'];
+      if (trans) {
+        setTranslatedFields({
+          fr: trans.fr,
+          ref: trans.ref,
+          excerptFr: trans.excerptFr,
+          context: trans.context
+        });
+        return;
+      }
+    }
+
     const cacheKey = `asrar_names_trans_${language}_${activeName.tr}`;
     try {
       const cached = localStorage.getItem(cacheKey);
@@ -249,6 +264,11 @@ export const NamesOfAllah: React.FC = () => {
 
   const getTranslatedMeaning = (nameItem: typeof asmaListData[0]) => {
     if (language === 'fr') return nameItem.fr;
+    // Check offline dictionary first
+    if (asmaListDataTranslations && asmaListDataTranslations[nameItem.tr]) {
+      const trans = asmaListDataTranslations[nameItem.tr][language as 'en' | 'ha'];
+      if (trans && trans.fr) return trans.fr;
+    }
     try {
       const cached = localStorage.getItem(`asrar_names_trans_${language}_${nameItem.tr}`);
       if (cached) {
@@ -261,6 +281,11 @@ export const NamesOfAllah: React.FC = () => {
 
   const getTranslatedRef = (nameItem: typeof asmaListData[0]) => {
     if (language === 'fr') return nameItem.ref;
+    // Check offline dictionary first
+    if (asmaListDataTranslations && asmaListDataTranslations[nameItem.tr]) {
+      const trans = asmaListDataTranslations[nameItem.tr][language as 'en' | 'ha'];
+      if (trans && trans.ref) return trans.ref;
+    }
     try {
       const cached = localStorage.getItem(`asrar_names_trans_${language}_${nameItem.tr}`);
       if (cached) {
@@ -329,8 +354,8 @@ export const NamesOfAllah: React.FC = () => {
           inSurah: parseInt(activeName.quranOptions.verse || "1"),
           ar: activeName.quranOptions.excerptAr || activeName.ar,
           fr: activeName.quranOptions.excerptFr || activeName.fr,
-          en: activeName.quranOptions.excerptFr || activeName.tr,
-          ha: activeName.quranOptions.excerptFr || activeName.tr,
+          en: asmaListDataTranslations?.[activeName.tr]?.en?.excerptFr || activeName.quranOptions.excerptFr || activeName.tr,
+          ha: asmaListDataTranslations?.[activeName.tr]?.ha?.excerptFr || activeName.quranOptions.excerptFr || activeName.tr,
           surahName: activeName.quranOptions.surah || "Coran",
           surahTransliteration: activeName.quranOptions.surah || "Coran",
           surahNumber: 1

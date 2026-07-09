@@ -761,6 +761,30 @@ export const SecretDetail: React.FC = () => {
 
           <div className="space-y-10 mt-8">
             <section>
+              {readingMode && (
+                <div className="flex items-center justify-end mb-4 max-w-3xl mx-auto">
+                  <div className="flex items-center gap-1.5 bg-[#f4ebd0]/40 dark:bg-[#383120]/40 px-2.5 py-1 rounded-xl border border-[#e8dcb5]/40 dark:border-[#524830]/30">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#8b7556] dark:text-[#a89871] mr-1">Taille :</span>
+                    <button 
+                      onClick={() => setArticleFontSize(prev => Math.max(12, prev - 2))}
+                      className="p-1 hover:bg-[#e8dcb5] dark:hover:bg-[#4a3f35] rounded text-[#8b7556] dark:text-[#d4c39c] font-bold text-xs cursor-pointer select-none"
+                      title="Diminuer la taille"
+                    >
+                      A-
+                    </button>
+                    <span className="text-xs font-semibold text-[#8b7556] dark:text-[#d4c39c] min-w-[28px] text-center font-mono">
+                      {articleFontSize}px
+                    </span>
+                    <button 
+                      onClick={() => setArticleFontSize(prev => Math.min(36, prev + 2))}
+                      className="p-1 hover:bg-[#e8dcb5] dark:hover:bg-[#4a3f35] rounded text-[#8b7556] dark:text-[#d4c39c] font-bold text-xs cursor-pointer select-none"
+                      title="Augmenter la taille"
+                    >
+                      A+
+                    </button>
+                  </div>
+                </div>
+              )}
               {!readingMode && (
                 <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-5 flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-3">
                   <span className="flex items-center">
@@ -956,6 +980,49 @@ export const SecretDetail: React.FC = () => {
                   />
                 </div>
 
+                {/* Direct Font Size Adjuster */}
+                <div className={`flex items-center gap-1 p-1 rounded-xl border ${
+                  zenTheme === "cream" ? "bg-[#f4ebd0]/40 border-[#e8dcb5]/40" : zenTheme === "dark" ? "bg-stone-900/40 border-stone-800/40" : "bg-gray-50 border-gray-100"
+                }`}>
+                  <button
+                    onClick={() => setZenFontSizePx(prev => Math.max(12, prev - 2))}
+                    disabled={zenFontSizePx <= 12}
+                    className={`px-2 py-0.5 text-xs font-bold rounded-lg transition-all ${
+                      zenFontSizePx <= 12
+                        ? "opacity-30 cursor-not-allowed"
+                        : zenTheme === "cream"
+                        ? "hover:bg-[#f4ebd0] text-[#8b7556]"
+                        : zenTheme === "dark"
+                        ? "hover:bg-stone-800 text-stone-300"
+                        : "hover:bg-gray-200 text-gray-700"
+                    }`}
+                    title="Réduire la taille du texte"
+                  >
+                    A-
+                  </button>
+                  <span className={`text-[10px] font-bold px-1 ${
+                    zenTheme === "cream" ? "text-[#8b7556]" : zenTheme === "dark" ? "text-stone-400" : "text-gray-500"
+                  }`}>
+                    {zenFontSizePx}px
+                  </span>
+                  <button
+                    onClick={() => setZenFontSizePx(prev => Math.min(48, prev + 2))}
+                    disabled={zenFontSizePx >= 48}
+                    className={`px-2 py-0.5 text-xs font-bold rounded-lg transition-all ${
+                      zenFontSizePx >= 48
+                        ? "opacity-30 cursor-not-allowed"
+                        : zenTheme === "cream"
+                        ? "hover:bg-[#f4ebd0] text-[#8b7556]"
+                        : zenTheme === "dark"
+                        ? "hover:bg-stone-800 text-stone-300"
+                        : "hover:bg-gray-200 text-gray-700"
+                    }`}
+                    title="Agrandir la taille du texte"
+                  >
+                    A+
+                  </button>
+                </div>
+
                 {/* Customizable Display Options Dropdown Toggle */}
                 <button
                   onClick={() => setShowZenSettings(!showZenSettings)}
@@ -1033,8 +1100,8 @@ export const SecretDetail: React.FC = () => {
                       </div>
                       <input
                         type="range"
-                        min="16"
-                        max="38"
+                        min="12"
+                        max="48"
                         value={zenFontSizePx}
                         onChange={(e) => setZenFontSizePx(Number(e.target.value))}
                         className="w-full accent-emerald-600"

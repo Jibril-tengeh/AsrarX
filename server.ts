@@ -295,31 +295,56 @@ Benefits: ${JSON.stringify(benefits || [])}
       });
 
       const languageName = targetLanguage === 'ha' ? 'Hausa' : 'English';
+      const textArray = Object.entries(texts || {}).map(([key, value]) => ({ key, value }));
       
       const prompt = `
 You are a professional translator specializing in spiritual, Islamic, and esoteric literature.
-Translate the following key-value text pairs from French into ${languageName} (language code: "${targetLanguage}").
+Translate the following texts from French into ${languageName} (language code: "${targetLanguage}").
 
 Strict Rules:
-1. Preserve the exact JSON keys in the output. Do not rename, add, or remove keys.
-2. Retain all Arabic text, Quranic verses, and Names of Allah written in Arabic script EXACTLY as they are. Do not translate or alter Arabic script.
-3. Translate all French/non-Arabic text into highly professional, elegant ${languageName}.
-4. Output the translation as a clean flat JSON object.
+1. Retain all Arabic text, Quranic verses, and Names of Allah written in Arabic script EXACTLY as they are. Do not translate or alter Arabic script.
+2. Translate all French/non-Arabic text into highly professional, elegant ${languageName}.
+3. Keep the keys exactly as they are.
 
-Input Fields JSON:
-${JSON.stringify(texts)}
+Texts to translate:
+${JSON.stringify(textArray)}
 `;
 
       const response = await generateWithRetry(ai, {
         model: "gemini-3.5-flash",
         contents: prompt,
         config: {
-          responseMimeType: "application/json"
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: "OBJECT",
+            properties: {
+              translations: {
+                type: "ARRAY",
+                items: {
+                  type: "OBJECT",
+                  properties: {
+                    key: { type: "STRING" },
+                    value: { type: "STRING" }
+                  },
+                  required: ["key", "value"]
+                }
+              }
+            },
+            required: ["translations"]
+          }
         }
       });
 
-      const resultText = response?.text?.trim() || "{}";
-      const translatedData = JSON.parse(resultText);
+      const resultText = response?.text?.trim() || '{"translations":[]}';
+      const parsed = JSON.parse(resultText);
+      const translatedData: Record<string, string> = {};
+      if (parsed.translations && Array.isArray(parsed.translations)) {
+        parsed.translations.forEach((item: any) => {
+          if (item && item.key) {
+            translatedData[item.key] = item.value || '';
+          }
+        });
+      }
       res.json(translatedData);
     } catch (error: any) {
       console.error("AI Text Translation error:", error);

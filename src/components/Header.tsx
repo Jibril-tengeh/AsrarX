@@ -9,6 +9,7 @@ import { collection, query, orderBy, onSnapshot, limit, doc, updateDoc } from 'f
 import { motion, AnimatePresence } from 'motion/react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { GlobalSearchModal } from './GlobalSearchModal';
+import { AsrarLogo } from './AsrarLogo';
 
 interface Notification {
   id: string;
@@ -211,9 +212,7 @@ export const Header: React.FC = () => {
       >
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <Link to="/" className="flex items-center group">
-            <span className="text-xl font-extrabold text-white tracking-tight transition-all">
-              AsrarHub
-            </span>
+            <AsrarLogo variant="horizontal" size="md" className="text-white hover:opacity-90 transition-opacity" />
           </Link>
           
           <div className="flex items-center space-x-2 sm:space-x-3">
