@@ -361,9 +361,9 @@ export const DailyDhikrTracker: React.FC = () => {
 
       {/* Push Notifications & Zikr Reminders Card */}
       <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 mb-8">
-        <div className="flex items-start justify-between mb-4">
+        <div className="flex flex-row items-start justify-between gap-3 mb-4">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 rounded-xl">
+            <div className="p-2.5 bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 rounded-xl shrink-0">
               <Bell size={20} />
             </div>
             <div>
@@ -378,7 +378,7 @@ export const DailyDhikrTracker: React.FC = () => {
             </div>
           </div>
 
-          <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-lg ${
+          <span className={`shrink-0 text-[10px] font-black uppercase tracking-wider px-2 py-1 rounded-lg ${
             pushStatus === 'granted' 
               ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400' 
               : 'bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400'

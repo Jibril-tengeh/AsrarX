@@ -5,8 +5,39 @@ import { useLanguage } from '../../../contexts/LanguageContext';
 import { ToolInfoTooltip } from '../../../components/ToolInfoTooltip';
 import { motion } from 'motion/react';
 
+const talsamDict = {
+  fr: {
+    title: "Générateur de Talsam",
+    warning: "Attention: Les Talsams génèrent une forte charge énergétique. Ne les utilisez que si vous êtes initié aux règles de purification (Taharah) et de protection préalable (Tahsin).",
+    intentionLabel: "Votre Vœu / Intention (Niyyah)",
+    intentionPlaceholder: "Ex: Obtenir l'ouverture dans le commerce...",
+    generateBtn: "Extraire le Talsam",
+    sealedPowerWord: "Mot de pouvoir scellé",
+    instruction: "Inscrivez ce Talsam au centre d'un Khatim (Muthallath) et récitez-le le nombre de fois indiqué entre parenthèses pendant la planète dominante de votre vœu."
+  },
+  en: {
+    title: "Talsam Generator",
+    warning: "Warning: Talsams generate a high energy charge. Only use them if you are initiated into the rules of purification (Taharah) and prior spiritual protection (Tahsin).",
+    intentionLabel: "Your Wish / Intention (Niyyah)",
+    intentionPlaceholder: "Ex: Get success in business...",
+    generateBtn: "Extract Talsam",
+    sealedPowerWord: "Sealed Word of Power",
+    instruction: "Write this Talsam in the center of a Khatim (Muthallath) and recite it the number of times indicated in parentheses during the dominant planet of your wish."
+  },
+  ha: {
+    title: "Mai Samar da Talsam",
+    warning: "Gargaɗi: Talsam yana haifar da babban ƙarfin kuzari. Kada ka yi amfani da shi sai idan kana da sani game da dokokin tsarki (Taharah) da kariya ta ruhaniya (Tahsin).",
+    intentionLabel: "Manufarka / Bukatarka (Niyyah)",
+    intentionPlaceholder: "Alal misali: Samun nasara a kasuwanci...",
+    generateBtn: "Fitar da Talsam",
+    sealedPowerWord: "Kalmar Iko Da Aka Hatimce",
+    instruction: "Rubuta wannan Talsam ɗin a tsakiyar Khatim (Muthallath) sannan ka karanta shi adadin sau da aka nuna a cikin baka lokacin lokacin tauraron da ke da alaƙa da buƙatarka."
+  }
+};
+
 export const Talsam: React.FC = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const dict = talsamDict[(language as 'fr' | 'en' | 'ha') || 'fr'] || talsamDict.fr;
   const [intention, setIntention] = useState('');
   const [talsam, setTalsam] = useState('');
 
@@ -42,7 +73,7 @@ export const Talsam: React.FC = () => {
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
             <Key className="text-slate-600" />
-            Générateur de Talsam
+            {dict.title}
           </h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t("tools.talsam.description")}</p>
         </div>
@@ -51,16 +82,16 @@ export const Talsam: React.FC = () => {
       <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-800/50 rounded-2xl p-4 mb-8 flex items-start gap-3">
         <AlertTriangle className="text-amber-500 shrink-0 mt-0.5" size={20} />
         <p className="text-sm text-amber-800 dark:text-amber-200 font-medium">
-          Attention: Les Talsams génèrent une forte charge énergétique. Ne les utilisez que si vous êtes initié aux règles de purification (Taharah) et de protection préalable (Tahsin).
+          {dict.warning}
         </p>
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-3xl p-5 shadow-sm border border-gray-100 dark:border-gray-700 mb-8">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Votre Vœu / Intention (Niyyah)</label>
+        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">{dict.intentionLabel}</label>
         <textarea
           value={intention}
           onChange={(e) => setIntention(e.target.value)}
-          placeholder="Ex: Obtenir l'ouverture dans le commerce..."
+          placeholder={dict.intentionPlaceholder}
           rows={3}
           className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 text-gray-900 dark:text-white focus:ring-2 focus:ring-slate-500 resize-none mb-4"
         />
@@ -69,7 +100,7 @@ export const Talsam: React.FC = () => {
           disabled={!intention}
           className="w-full py-4 rounded-2xl bg-gradient-to-r from-slate-700 to-slate-900 dark:from-slate-600 dark:to-slate-800 text-white font-bold disabled:opacity-50 hover:shadow-md transition-all flex items-center justify-center gap-2"
         >
-          <RefreshCw size={20} /> Extraire le Talsam
+          <RefreshCw size={20} /> {dict.generateBtn}
         </button>
       </div>
 
@@ -84,7 +115,7 @@ export const Talsam: React.FC = () => {
           className="bg-slate-900 rounded-3xl p-8 border-2 border-slate-700 text-center relative overflow-hidden"
         >
           <div className="absolute top-0 right-0 w-32 h-32 bg-slate-600 rounded-full blur-3xl opacity-20"></div>
-          <h3 className="text-slate-400 font-bold uppercase tracking-widest text-xs mb-6">Mot de pouvoir scellé</h3>
+          <h3 className="text-slate-400 font-bold uppercase tracking-widest text-xs mb-6">{dict.sealedPowerWord}</h3>
           
           <p className="font-arabic text-3xl sm:text-4xl text-white mb-8 leading-relaxed font-bold tracking-widest" dir="rtl">
             {talsam}
@@ -92,7 +123,7 @@ export const Talsam: React.FC = () => {
           
           <div className="bg-slate-800 p-4 rounded-xl border border-slate-700">
             <p className="text-slate-300 text-sm">
-              Inscrivez ce Talsam au centre d'un Khatim (Muthallath) et récitez-le le nombre de fois indiqué entre parenthèses pendant la planète dominante de votre vœu.
+              {dict.instruction}
             </p>
           </div>
         </motion.div>

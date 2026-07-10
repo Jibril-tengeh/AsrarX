@@ -23,7 +23,10 @@ import {
   Sliders,
   Volume2,
   VolumeX,
-  Folder
+  Folder,
+  Play,
+  Pause,
+  Square
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { getAsrarItems } from "../../data/store";
@@ -78,16 +81,31 @@ export const SecretDetail: React.FC = () => {
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [bookmarkFolders, setBookmarkFolders] = useState<any[]>([]);
   const [viewMode, setViewMode] = useState<'full' | 'accordion'>('full');
-  const [articleFontSize, setArticleFontSize] = useState<number>(18);
+  const [articleFontSize, setArticleFontSize] = useState<number>(() => {
+    const isAndroid = /Android/i.test(navigator.userAgent);
+    return isAndroid ? 14 : 18;
+  });
   const [rating, setRating] = useState(0);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
+  const isPausedRef = useRef(false);
+  const [speechRate, setSpeechRate] = useState(1.0);
+  const [speakingWordIndex, setSpeakingWordIndex] = useState<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const backupIntervalRef = useRef<any>(null);
   const [isTranslating, setIsTranslating] = useState(false);
+  const [translationError, setTranslationError] = useState(false);
+  const [isTranslated, setIsTranslated] = useState(false);
+  const [retryTrigger, setRetryTrigger] = useState(0);
 
   useEffect(() => {
-    if (!item || language === 'fr') {
+    if (!item) return;
+
+    if (language === 'fr') {
       setIsTranslating(false);
+      setTranslationError(false);
+      setIsTranslated(false);
       return;
     }
 
@@ -96,8 +114,11 @@ export const SecretDetail: React.FC = () => {
       const cached = localStorage.getItem(cacheKey);
       if (cached) {
         const parsed = JSON.parse(cached);
+        setIsTranslated(true);
+        setTranslationError(false);
+        setIsTranslating(false);
+
         if (item.title === parsed.title) {
-          setIsTranslating(false);
           return;
         }
         setItem(prev => {
@@ -110,7 +131,6 @@ export const SecretDetail: React.FC = () => {
             benefits: parsed.benefits,
           };
         });
-        setIsTranslating(false);
         return;
       }
     } catch (e) {
@@ -119,6 +139,8 @@ export const SecretDetail: React.FC = () => {
 
     const translateArticle = async () => {
       setIsTranslating(true);
+      setTranslationError(false);
+      setIsTranslated(false);
       try {
         const staticItems = getAsrarItems();
         const staticItem = staticItems.find(i => i.id === item.id);
@@ -127,11 +149,15 @@ export const SecretDetail: React.FC = () => {
         const sourceHook = staticItem ? staticItem.hook : item.hook;
         const sourceBenefits = staticItem ? staticItem.benefits : item.benefits;
 
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 45000); // 45 seconds timeout for larger articles
+
         const res = await fetch('/api/translate-article', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
+          signal: controller.signal,
           body: JSON.stringify({
             title: sourceTitle,
             content: sourceContent,
@@ -141,10 +167,14 @@ export const SecretDetail: React.FC = () => {
           }),
         });
 
+        clearTimeout(timeoutId);
+
         if (res.ok) {
           const data = await res.json();
           if (data && data.title) {
             localStorage.setItem(cacheKey, JSON.stringify(data));
+            setIsTranslated(true);
+            setTranslationError(false);
             setItem(prev => {
               if (!prev || prev.id !== item.id) return prev;
               return {
@@ -155,17 +185,25 @@ export const SecretDetail: React.FC = () => {
                 benefits: data.benefits,
               };
             });
+          } else {
+            setTranslationError(true);
+            setIsTranslated(false);
           }
+        } else {
+          setTranslationError(true);
+          setIsTranslated(false);
         }
       } catch (err) {
         console.error("Automatic translation error:", err);
+        setTranslationError(true);
+        setIsTranslated(false);
       } finally {
         setIsTranslating(false);
       }
     };
 
     translateArticle();
-  }, [id, language, item?.id]);
+  }, [id, language, item?.id, retryTrigger]);
 
   const chunkText = (text: string, maxLength: number): string[] => {
     const words = text.split(/\s+/);
@@ -252,8 +290,22 @@ export const SecretDetail: React.FC = () => {
         audioRef.current.pause();
         audioRef.current = null;
       }
+      if (backupIntervalRef.current) {
+        clearInterval(backupIntervalRef.current);
+        backupIntervalRef.current = null;
+      }
     };
   }, []);
+
+  // Automatically scroll the current spoken word into view
+  useEffect(() => {
+    if (isSpeaking && speakingWordIndex !== null) {
+      const element = document.getElementById(`word-speak-${speakingWordIndex}`);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  }, [speakingWordIndex, isSpeaking]);
 
   const stripHtml = (html: string) => {
     const tmp = document.createElement("DIV");
@@ -261,27 +313,125 @@ export const SecretDetail: React.FC = () => {
     return tmp.textContent || tmp.innerText || "";
   };
 
+  interface WordToken {
+    text: string;
+    globalIndex: number;
+  }
+
+  interface SpokenParagraph {
+    type: 'title' | 'verse' | 'content';
+    words: WordToken[];
+  }
+
+  const buildSpokenSegments = (currentItem: AsrarItem): SpokenParagraph[] => {
+    const segments: SpokenParagraph[] = [];
+    let globalIndex = 0;
+
+    // Title segment
+    const titleWords = currentItem.title.split(/\s+/).filter(w => w.length > 0).map(text => ({
+      text,
+      globalIndex: globalIndex++
+    }));
+    segments.push({ type: 'title', words: titleWords });
+
+    // Verse segment
+    if (currentItem.verse) {
+      const verseWords = currentItem.verse.split(/\s+/).filter(w => w.length > 0).map(text => ({
+        text,
+        globalIndex: globalIndex++
+      }));
+      segments.push({ type: 'verse', words: verseWords });
+    }
+
+    // Content paragraphs
+    const cleanContent = stripHtml(currentItem.content);
+    const paragraphs = cleanContent.split('\n').filter(p => p.trim().length > 0);
+    paragraphs.forEach(para => {
+      const paraWords = para.split(/\s+/).filter(w => w.length > 0).map(text => ({
+        text,
+        globalIndex: globalIndex++
+      }));
+      if (paraWords.length > 0) {
+        segments.push({ type: 'content', words: paraWords });
+      }
+    });
+
+    return segments;
+  };
+
+  const pauseSpeech = () => {
+    if ('speechSynthesis' in window && window.speechSynthesis.speaking) {
+      window.speechSynthesis.pause();
+    } else if (audioRef.current) {
+      audioRef.current.pause();
+    }
+    setIsPaused(true);
+    isPausedRef.current = true;
+  };
+
+  const resumeSpeech = () => {
+    if ('speechSynthesis' in window && window.speechSynthesis.paused) {
+      window.speechSynthesis.resume();
+    } else if (audioRef.current) {
+      audioRef.current.play().catch(e => console.warn(e));
+    }
+    setIsPaused(false);
+    isPausedRef.current = false;
+  };
+
+  const stopSpeech = () => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel();
+    }
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current = null;
+    }
+    if (backupIntervalRef.current) {
+      clearInterval(backupIntervalRef.current);
+      backupIntervalRef.current = null;
+    }
+    setIsSpeaking(false);
+    setIsPaused(false);
+    isPausedRef.current = false;
+    setSpeakingWordIndex(null);
+  };
+
   const handleLectureVocale = () => {
     if (!item) return;
 
     if (isSpeaking) {
-      if ('speechSynthesis' in window) {
-        window.speechSynthesis.cancel();
-      }
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current = null;
-      }
-      setIsSpeaking(false);
+      stopSpeech();
       return;
     }
 
-    const textToRead = `${item.title}. ${item.verse ? item.verse + '.' : ''} ${stripHtml(item.content)}`;
+    setIsPaused(false);
+    isPausedRef.current = false;
+
+    const segments = buildSpokenSegments(item);
+    const allWords = segments.flatMap(s => s.words);
+    const textToRead = allWords.map(w => w.text).join(' ');
+
+    if (!textToRead.trim()) return;
+
     const lang = language === 'en' ? 'en' : language === 'ha' ? 'ha' : 'fr';
+
+    // Calculate exact offsets for each word to pair with onboundary's charIndex
+    const wordsWithOffsets: { text: string; globalIndex: number; start: number; end: number }[] = [];
+    let currentOffset = 0;
+    for (let i = 0; i < allWords.length; i++) {
+      const wordText = allWords[i].text;
+      wordsWithOffsets.push({
+        text: wordText,
+        globalIndex: allWords[i].globalIndex,
+        start: currentOffset,
+        end: currentOffset + wordText.length
+      });
+      currentOffset += wordText.length + 1; // +1 for the space
+    }
 
     if ('speechSynthesis' in window) {
       try {
-        // Cancel any pending/paused speech before playing to avoid queuing issues
         window.speechSynthesis.cancel();
 
         const newUtterance = new SpeechSynthesisUtterance(textToRead);
@@ -293,38 +443,99 @@ export const SecretDetail: React.FC = () => {
           newUtterance.lang = 'fr-FR';
         }
 
-        // Keep a timeout in case speech engine fails to start (e.g. mobile browser restrictions)
-        let fallbackTimeout = setTimeout(() => {
-          console.warn("SpeechSynthesis start timed out, recovering with Google Translate TTS fallback.");
-          window.speechSynthesis.cancel();
-          playGoogleTTS(textToRead, lang);
-        }, 4000);
+        newUtterance.rate = speechRate * 0.95; // Configurable speech rate
+        newUtterance.pitch = 1.0;
+
+        let lastBoundaryTime = Date.now();
+        let expectedWordDuration = Math.round(320 / speechRate); // scale duration with rate
 
         newUtterance.onstart = () => {
-          clearTimeout(fallbackTimeout);
           setIsSpeaking(true);
+          setSpeakingWordIndex(0);
+          lastBoundaryTime = Date.now();
+
+          // Start hybrid backup interval to ensure smooth selection even if WebView onboundary is restricted
+          if (backupIntervalRef.current) clearInterval(backupIntervalRef.current);
+          backupIntervalRef.current = setInterval(() => {
+            if (isPausedRef.current) return; // Do not progress if paused
+            // If native onboundary hasn't fired in 1500ms, manually step to keep in sync
+            if (Date.now() - lastBoundaryTime > 1500) {
+              setSpeakingWordIndex(prev => {
+                if (prev === null) return 0;
+                if (prev < allWords.length - 1) {
+                  return prev + 1;
+                }
+                return prev;
+              });
+            }
+          }, expectedWordDuration);
+        };
+
+        newUtterance.onboundary = (event: any) => {
+          if (event.name === 'word') {
+            lastBoundaryTime = Date.now();
+            const charIndex = event.charIndex;
+            const matchedWord = wordsWithOffsets.find(w => charIndex >= w.start && charIndex <= w.end);
+            if (matchedWord) {
+              setSpeakingWordIndex(matchedWord.globalIndex);
+            }
+          }
         };
 
         newUtterance.onend = () => {
-          clearTimeout(fallbackTimeout);
+          if (backupIntervalRef.current) {
+            clearInterval(backupIntervalRef.current);
+            backupIntervalRef.current = null;
+          }
           setIsSpeaking(false);
+          setIsPaused(false);
+          isPausedRef.current = false;
+          setSpeakingWordIndex(null);
         };
 
         newUtterance.onerror = (e) => {
-          clearTimeout(fallbackTimeout);
-          console.warn("SpeechSynthesis error, falling back to Google Translate TTS:", e);
-          playGoogleTTS(textToRead, lang);
+          console.warn("SpeechSynthesis error:", e);
+          if (backupIntervalRef.current) {
+            clearInterval(backupIntervalRef.current);
+            backupIntervalRef.current = null;
+          }
+          setIsSpeaking(false);
+          setIsPaused(false);
+          isPausedRef.current = false;
+          setSpeakingWordIndex(null);
         };
 
         window.speechSynthesis.speak(newUtterance);
       } catch (err) {
-        console.warn("SpeechSynthesis threw error, falling back to Google Translate TTS:", err);
-        playGoogleTTS(textToRead, lang);
-        setIsSpeaking(true);
+        console.warn("SpeechSynthesis error:", err);
+        setIsSpeaking(false);
+        setIsPaused(false);
+        isPausedRef.current = false;
+        setSpeakingWordIndex(null);
       }
     } else {
-      playGoogleTTS(textToRead, lang);
+      // In case speechSynthesis is completely missing, we have no choice but to use fallback, 
+      // but let's still support the active words animation via an interval!
       setIsSpeaking(true);
+      setSpeakingWordIndex(0);
+      playGoogleTTS(textToRead, lang);
+
+      let currentVal = 0;
+      if (backupIntervalRef.current) clearInterval(backupIntervalRef.current);
+      backupIntervalRef.current = setInterval(() => {
+        if (isPausedRef.current) return; // Do not progress if paused
+        if (currentVal < allWords.length - 1) {
+          currentVal++;
+          setSpeakingWordIndex(currentVal);
+        } else {
+          clearInterval(backupIntervalRef.current);
+          backupIntervalRef.current = null;
+          setIsSpeaking(false);
+          setIsPaused(false);
+          isPausedRef.current = false;
+          setSpeakingWordIndex(null);
+        }
+      }, Math.round(350 / speechRate));
     }
   };
 
@@ -551,7 +762,7 @@ export const SecretDetail: React.FC = () => {
   }
 
   return (
-    <PremiumWrapper enabled={item.isPremium} requiredTier="premium" fallbackTitle="Lecture Secrète Premium">
+    <PremiumWrapper enabled={item.isPremium} requiredTier="premium" itemId={item.id} pointsCost={(item as any).pointsCost} fallbackTitle="Lecture Secrète Premium">
       <div
         className={`w-full max-w-3xl mx-auto px-4 pt-0 sm:px-6 sm:pt-2 lg:px-8 pb-24 transition-colors duration-500 ${readingMode ? "bg-[#fdfbf7] dark:bg-[#1a1917] min-h-screen" : ""}`}
       >
@@ -716,9 +927,27 @@ export const SecretDetail: React.FC = () => {
               {item.title}
             </h1>
             {language !== 'fr' && (
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50/75 dark:bg-emerald-900/20 border border-emerald-100/50 dark:border-emerald-800/30 px-2.5 py-1 rounded-full w-fit mt-1 select-none mx-auto sm:mx-0">
-                <Sparkles size={14} className={isTranslating ? "animate-spin text-emerald-500" : "text-emerald-500"} />
-                <span>{isTranslating ? t("translating", "Traduction automatique en cours...") : t("translated", "Traduit automatiquement par IA")}</span>
+              <div className="flex items-center gap-1.5 mt-1 select-none mx-auto sm:mx-0">
+                {isTranslating ? (
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50/75 dark:bg-emerald-900/20 border border-emerald-100/50 dark:border-emerald-800/30 px-2.5 py-1 rounded-full w-fit">
+                    <Sparkles size={14} className="animate-spin text-emerald-500" />
+                    <span>{t("translating", "Traduction automatique en cours...")}</span>
+                  </div>
+                ) : translationError ? (
+                  <button
+                    onClick={() => setRetryTrigger(prev => prev + 1)}
+                    className="flex items-center gap-1.5 text-xs font-semibold text-red-600 dark:text-red-400 bg-red-50/75 dark:bg-red-900/20 border border-red-100/50 dark:border-red-800/30 px-2.5 py-1 rounded-full w-fit hover:bg-red-100/80 dark:hover:bg-red-900/40 transition-colors cursor-pointer"
+                    title={t("retryTranslation", "Recommencer la traduction")}
+                  >
+                    <Sparkles size={14} className="text-red-500 animate-pulse" />
+                    <span>{t("translationFailed", "Échec de la traduction. Cliquer pour réessayer")}</span>
+                  </button>
+                ) : isTranslated ? (
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50/75 dark:bg-emerald-900/20 border border-emerald-100/50 dark:border-emerald-800/30 px-2.5 py-1 rounded-full w-fit">
+                    <Sparkles size={14} className="text-emerald-500" />
+                    <span>{t("translated", "Traduit automatiquement par IA")}</span>
+                  </div>
+                ) : null}
               </div>
             )}
           </div>
@@ -814,6 +1043,23 @@ export const SecretDetail: React.FC = () => {
                   </div>
                 </h2>
               )}
+              {isSpeaking && (
+                <div className="mb-6 p-4 bg-amber-50/70 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/30 rounded-2xl flex items-center justify-between text-xs sm:text-sm text-amber-800 dark:text-amber-300">
+                  <div className="flex items-center gap-2.5">
+                    <span className="relative flex h-3 w-3">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                    </span>
+                    <span className="font-semibold">{t("secretDetail.lectureVocaleActive", "Lecture vocale interactive active (Chaque mot prononcé est sélectionné)")}</span>
+                  </div>
+                  <button 
+                    onClick={handleLectureVocale}
+                    className="text-amber-900 dark:text-amber-100 hover:underline font-bold bg-amber-100 dark:bg-amber-900/40 px-2.5 py-1 rounded-lg transition-all"
+                  >
+                    {t("secretDetail.stop", "Arrêter")}
+                  </button>
+                </div>
+              )}
               <div
                 className={`w-full max-w-full break-words overflow-hidden transition-all ${
                   readingMode
@@ -822,7 +1068,67 @@ export const SecretDetail: React.FC = () => {
                 }`}
                 style={{ fontSize: `${articleFontSize}px` }}
               >
-                {(() => {
+                {isSpeaking ? (
+                  <div className="space-y-6 select-text transition-all" style={{ fontSize: `${articleFontSize}px` }}>
+                    {buildSpokenSegments(item).map((segment, sIdx) => {
+                      if (segment.type === 'title') {
+                        return (
+                          <h2 key={sIdx} className="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white mb-4">
+                            {segment.words.map((word) => (
+                              <span
+                                key={word.globalIndex}
+                                id={`word-speak-${word.globalIndex}`}
+                                className={`inline-block mr-1.5 transition-all duration-150 px-1 rounded ${
+                                  speakingWordIndex === word.globalIndex
+                                    ? "bg-amber-300 text-slate-900 dark:bg-amber-500 dark:text-slate-900 scale-110 font-bold shadow-md"
+                                    : "text-gray-900 dark:text-white"
+                                }`}
+                              >
+                                {word.text}
+                              </span>
+                            ))}
+                          </h2>
+                        );
+                      }
+                      if (segment.type === 'verse') {
+                        return (
+                          <div key={sIdx} className="my-6 p-4 bg-emerald-50/50 dark:bg-emerald-900/10 rounded-xl border border-emerald-100/50 dark:border-emerald-800/30 font-arabic text-center leading-loose text-2xl">
+                            {segment.words.map((word) => (
+                              <span
+                                key={word.globalIndex}
+                                id={`word-speak-${word.globalIndex}`}
+                                className={`inline-block mr-1.5 transition-all duration-150 px-1 rounded ${
+                                  speakingWordIndex === word.globalIndex
+                                    ? "bg-amber-300 text-slate-900 dark:bg-amber-500 dark:text-slate-900 scale-110 font-bold shadow-md"
+                                    : "text-emerald-800 dark:text-emerald-300"
+                                }`}
+                              >
+                                {word.text}
+                              </span>
+                            ))}
+                          </div>
+                        );
+                      }
+                      return (
+                        <p key={sIdx} className="mb-4 leading-relaxed text-justify">
+                          {segment.words.map((word) => (
+                            <span
+                              key={word.globalIndex}
+                              id={`word-speak-${word.globalIndex}`}
+                              className={`inline-block mr-1.5 transition-all duration-150 px-1 rounded ${
+                                speakingWordIndex === word.globalIndex
+                                  ? "bg-amber-300 text-slate-900 dark:bg-amber-500 dark:text-slate-900 scale-110 font-bold shadow-md"
+                                  : "text-gray-700 dark:text-gray-300"
+                              }`}
+                            >
+                              {word.text}
+                            </span>
+                          ))}
+                        </p>
+                      );
+                    })}
+                  </div>
+                ) : (() => {
                   const isHtml = /<[a-z][\s\S]*>/i.test(item.content);
 
                   if (viewMode === 'full') {
@@ -1183,6 +1489,81 @@ export const SecretDetail: React.FC = () => {
                     fontFamily: `var(--font-${zenFont === 'serif' ? 'serif' : zenFont === 'sans' ? 'sans' : zenFont})`,
                   }}
                 />
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Floating Audio Controller Panel */}
+      <AnimatePresence>
+        {isSpeaking && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 50, scale: 0.95 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100005] bg-white/95 dark:bg-gray-900/95 backdrop-blur-md px-5 py-3 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-2xl flex items-center gap-4 transition-all duration-300 max-w-sm sm:max-w-md w-[92%]"
+          >
+            {/* Status indicator: pulse circle and label */}
+            <div className="flex items-center gap-2 border-r pr-3 border-gray-200 dark:border-gray-800">
+              <span className="relative flex h-3 w-3">
+                {!isPaused && (
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                )}
+                <span className={`relative inline-flex rounded-full h-3 w-3 ${isPaused ? 'bg-amber-400' : 'bg-emerald-500'}`}></span>
+              </span>
+              <span className="text-xs font-bold text-gray-700 dark:text-gray-300 font-sans whitespace-nowrap">
+                {isPaused ? t("audio.paused", "En pause") : t("audio.playing", "Lecture")}
+              </span>
+            </div>
+
+            {/* Controls */}
+            <div className="flex items-center justify-between flex-1 gap-2">
+              {/* Speed change button */}
+              <button
+                onClick={() => {
+                  const rates = [0.8, 1.0, 1.25, 1.5];
+                  const currentIdx = rates.indexOf(speechRate);
+                  const nextIdx = (currentIdx + 1) % rates.length;
+                  const nextRate = rates[nextIdx];
+                  setSpeechRate(nextRate);
+                  
+                  // If speaking, restart to apply rate instantly!
+                  if ('speechSynthesis' in window && window.speechSynthesis.speaking) {
+                    stopSpeech();
+                    setTimeout(() => {
+                      handleLectureVocale();
+                    }, 100);
+                  }
+                }}
+                className="p-1.5 rounded-lg hover:bg-gray-150 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs font-bold font-mono transition-colors"
+                title={t("audio.speed", "Vitesse de lecture")}
+              >
+                {speechRate}x
+              </button>
+
+              <div className="flex items-center gap-1.5">
+                {/* Play/Pause Button */}
+                <button
+                  onClick={isPaused ? resumeSpeech : pauseSpeech}
+                  className={`p-2 rounded-full shadow-sm text-white transition-all ${
+                    isPaused 
+                      ? "bg-emerald-600 hover:bg-emerald-700" 
+                      : "bg-amber-500 hover:bg-amber-600"
+                  }`}
+                  title={isPaused ? t("audio.resume", "Reprendre") : t("audio.pause", "Mettre en pause")}
+                >
+                  {isPaused ? <Play size={16} fill="currentColor" /> : <Pause size={16} fill="currentColor" />}
+                </button>
+
+                {/* Stop Button */}
+                <button
+                  onClick={stopSpeech}
+                  className="p-2 rounded-full bg-red-100 dark:bg-red-950/40 hover:bg-red-200 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 shadow-sm transition-all"
+                  title={t("audio.stop", "Arrêter")}
+                >
+                  <Square size={14} fill="currentColor" />
+                </button>
               </div>
             </div>
           </motion.div>

@@ -33,7 +33,7 @@ export const AsrarHubLoader: React.FC<AsrarHubLoaderProps> = ({
       }}
       className="flex flex-col items-center justify-center select-none gap-6"
     >
-      <AsrarLogo variant="stacked" size={logoSize} />
+      <AsrarLogo variant="stacked" size={logoSize} hideSymbol={true} />
       {text && (
         <span className="text-sm font-semibold text-amber-500 animate-pulse tracking-wide mt-2">{text}</span>
       )}

@@ -344,7 +344,13 @@ export const ToolsDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [showGuide, setShowGuide] = useState(false);
   const [guideStep, setGuideStep] = useState(0);
-  const [activeTab, setActiveTab] = useState<"simple" | "advanced">("simple");
+  const [activeTab, setActiveTab] = useState<"simple" | "advanced">(
+    () => (localStorage.getItem("active_tools_tab") as "simple" | "advanced") || "simple"
+  );
+
+  useEffect(() => {
+    localStorage.setItem("active_tools_tab", activeTab);
+  }, [activeTab]);
   const [searchQuery, setSearchQuery] = useState("");
   const [featureToggles, setFeatureToggles] = useState<any>({});
   const [isLoading, setIsLoading] = useState(true);

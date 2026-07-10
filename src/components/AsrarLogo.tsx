@@ -5,30 +5,32 @@ interface AsrarLogoProps {
   variant?: 'horizontal' | 'stacked' | 'symbol';
   size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | 'fullscreen';
   className?: string;
+  hideSymbol?: boolean;
 }
 
 export const AsrarLogo: React.FC<AsrarLogoProps> = ({
   variant = 'horizontal',
   size = 'md',
-  className = ''
+  className = '',
+  hideSymbol = variant === 'horizontal' // Default hideSymbol to true for horizontal layout to avoid logo beside text
 }) => {
   // Size mappings based on variant and size presets
   const sizeClasses = {
     horizontal: {
-      sm: 'h-8',
-      md: 'h-10',
-      lg: 'h-14',
-      xl: 'h-20',
-      '2xl': 'h-28',
-      fullscreen: 'h-32 sm:h-40'
+      sm: 'h-7 sm:h-8',
+      md: 'h-[38px] sm:h-[46px]', // Increased size by another 2px in header as requested
+      lg: 'h-11 sm:h-14',
+      xl: 'h-16 sm:h-20',
+      '2xl': 'h-22 sm:h-28',
+      fullscreen: 'h-28 sm:h-40'
     },
     stacked: {
-      sm: 'w-24 h-24',
-      md: 'w-36 h-36',
-      lg: 'w-48 h-48',
-      xl: 'w-64 h-64',
-      '2xl': 'w-80 h-80',
-      fullscreen: 'w-72 sm:w-[320px] md:w-[380px]'
+      sm: hideSymbol ? 'w-24 h-auto' : 'w-24 h-24',
+      md: hideSymbol ? 'w-36 h-auto' : 'w-36 h-36',
+      lg: hideSymbol ? 'w-48 h-auto' : 'w-48 h-48',
+      xl: hideSymbol ? 'w-64 h-auto' : 'w-64 h-64',
+      '2xl': hideSymbol ? 'w-80 h-auto' : 'w-80 h-80',
+      fullscreen: hideSymbol ? 'w-72 sm:w-[320px] md:w-[380px] h-auto' : 'w-72 sm:w-[320px] md:w-[380px]'
     },
     symbol: {
       sm: 'w-6 h-6',
@@ -44,7 +46,7 @@ export const AsrarLogo: React.FC<AsrarLogoProps> = ({
     <div className={`flex items-center justify-center select-none ${sizeClasses} ${className}`}>
       {variant === 'horizontal' && (
         <svg
-          viewBox="0 0 280 80"
+          viewBox={hideSymbol ? "0 0 215 70" : "0 0 280 80"}
           className="w-full h-full filter drop-shadow-[0_2px_8px_rgba(245,195,104,0.15)]"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
@@ -63,88 +65,96 @@ export const AsrarLogo: React.FC<AsrarLogoProps> = ({
           </defs>
 
           {/* Symbol Part (Left) */}
-          <g transform="translate(10, 5) scale(0.65)">
-            {/* Elegant Calligraphic Crescent Moon */}
-            <path
-              d="M 52,18 
-                 C 45,28 36,44 38,62 
-                 C 40,78 48,90 62,94 
-                 C 50,94 36,88 28,78 
-                 C 20,68 18,52 24,36 
-                 C 28,26 34,18 42,12 
-                 C 43,11 44,13 43,15 
-                 C 38,25 32,38 34,54 
-                 C 36,70 44,82 56,86 
-                 C 48,84 41,74 40,60 
-                 C 39,46 45,30 52,18 Z"
-              fill="url(#goldGradientLogo)"
-              filter="url(#goldGlowLogo)"
-            />
-            {/* Central Islamic Geometry Star / Diamond Sparkle */}
-            <path
-              d="M 44,42 
-                 C 41,45 38,50 38,56 
-                 C 38,64 44,70 50,70 
-                 C 54,70 56,66 54,62 
-                 C 52,58 48,58 46,62 
-                 C 44,65 42,65 41,60 
-                 C 40,55 42,48 44,42 Z"
-              fill="url(#goldGradientLogo)"
-            />
-            {/* Spiritual Sparks & Starbursts */}
-            <path d="M 33,32 L 39,28 C 40,27 39,26 38,27 L 32,31 C 31,32 32,33 33,32 Z" fill="url(#goldGradientLogo)" />
-            <path d="M 46,50 C 47,48 49,48 48,51 C 47,54 45,56 44,54 Z" fill="url(#goldGradientLogo)" />
-            {/* Top Star */}
-            <path
-              d="M 56,22 L 58.5,27 L 64,28 L 59.5,31 L 60.5,36.5 L 56,33 L 51.5,36.5 L 52.5,31 L 48,28 L 53.5,27 Z"
-              fill="url(#goldGradientLogo)"
-            />
-            {/* Bottom Star */}
-            <path
-              d="M 42,98 L 44,101 L 48,102 L 44,103 L 42,106 L 40,103 L 36,102 L 40,101 Z"
-              fill="url(#goldGradientLogo)"
-            />
-          </g>
+          {!hideSymbol && (
+            <g transform="translate(14, 5) scale(0.68)">
+              {/* Majestic Calligraphic Symbol with Sweep - High Fidelity Traced Curves */}
+              {/* Outer Golden Crescent Loop */}
+              <path
+                d="M 54,12 
+                   C 42,22 30,42 32,64 
+                   C 34,82 46,94 62,96 
+                   C 48,96 34,88 26,76 
+                   C 16,62 14,44 22,26 
+                   C 26,14 34,6 44,2 
+                   C 45,1 46,3 45,5 
+                   C 39,16 32,32 34,50 
+                   C 36,68 46,82 60,86 
+                   C 48,84 40,72 38,56 
+                   C 36,40 44,22 54,12 Z"
+                fill="url(#goldGradientLogo)"
+                filter="url(#goldGlowLogo)"
+              />
+              {/* Inner Artistic Arabic Cursive Accents / Calligraphy strokes */}
+              <path
+                d="M 45,38 
+                   C 42,42 38,48 38,55 
+                   C 38,64 45,71 52,71 
+                   C 57,71 59,67 57,62 
+                   C 55,57 50,57 48,62 
+                   C 45,66 43,66 42,60 
+                   C 41,54 43,46 45,38 Z"
+                fill="url(#goldGradientLogo)"
+              />
+              {/* Fine Calligraphic Accent details (Gold tashkeel marks) */}
+              <path d="M 33,28 L 39,24 C 40,23 39,22 38,23 L 32,27 C 31,28 32,29 33,28 Z" fill="url(#goldGradientLogo)" />
+              <path d="M 47,48 C 48,46 50,46 49,49 C 48,52 46,54 45,52 Z" fill="url(#goldGradientLogo)" />
+              <path d="M 28,42 C 29,40 31,40 30,43 C 29,46 27,48 26,46 Z" fill="url(#goldGradientLogo)" />
+              
+              {/* Elegant Top 4-Point Star (Sparkle) */}
+              <path
+                d="M 54,18 L 56.5,23 L 62,24 L 57.5,27 L 58.5,32.5 L 54,29 L 49.5,32.5 L 50.5,27 L 46,24 L 51.5,23 Z"
+                fill="url(#goldGradientLogo)"
+              />
+              {/* Elegant Bottom 4-Point Star (Sparkle) */}
+              <path
+                d="M 42,94 L 44,97 L 48,98 L 44,99 L 42,102 L 40,99 L 36,98 L 40,97 Z"
+                fill="url(#goldGradientLogo)"
+              />
+            </g>
+          )}
 
           {/* Typography Part (Right) */}
-          <g transform="translate(68, 47)">
-            {/* Asrar (Primary text) */}
+          <g transform={hideSymbol ? "translate(5, 48) scale(1.05)" : "translate(68, 48)"}>
+            {/* Asrar (Primary text) in Elegant Playfair Display */}
             <text
               x="0"
               y="0"
               fill="currentColor"
               fontSize="34"
-              fontWeight="800"
-              letterSpacing="0.05em"
-              fontFamily="Playfair Display, Inter, system-ui, sans-serif"
+              fontWeight="700"
+              letterSpacing="0.02em"
+              fontFamily="'Playfair Display', Georgia, serif"
               className="text-white dark:text-white"
             >
               Asrar
             </text>
             
-            {/* Hub (Gold gradient text) */}
+            {/* Hub (Gold gradient text) in Elegant Playfair Display */}
             <text
-              x="104"
+              x="96"
               y="0"
               fill="url(#goldGradientLogo)"
               filter="url(#goldGlowLogo)"
               fontSize="34"
-              fontWeight="800"
-              letterSpacing="0.05em"
-              fontFamily="Playfair Display, Inter, system-ui, sans-serif"
+              fontWeight="700"
+              letterSpacing="0.02em"
+              fontFamily="'Playfair Display', Georgia, serif"
             >
               Hub
             </text>
 
-            {/* Subtle subline divider or spiritual dot */}
-            <circle cx="198" cy="-12" r="2.5" fill="url(#goldGradientLogo)" />
+            {/* Elegant Custom Connected Gold Crossbar (Slash) for the letter 'H' that connects with 'Asrar' */}
+            <path
+              d="M 80,-11 C 88,-12 96,-12 110,-12 C 110,-10 96,-10 88,-10 Z"
+              fill="url(#goldGradientLogo)"
+            />
           </g>
         </svg>
       )}
 
       {variant === 'stacked' && (
         <svg
-          viewBox="0 0 240 240"
+          viewBox={hideSymbol ? "0 0 240 80" : "0 0 240 240"}
           className="w-full h-full filter drop-shadow-[0_4px_20px_rgba(245,195,104,0.25)]"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
@@ -163,72 +173,88 @@ export const AsrarLogo: React.FC<AsrarLogoProps> = ({
           </defs>
 
           {/* Majestic Large Crescent Symbol (Centered on top) */}
-          <g transform="translate(70, 20) scale(1.4)">
-            <path
-              d="M 52,18 
-                 C 45,28 36,44 38,62 
-                 C 40,78 48,90 62,94 
-                 C 50,94 36,88 28,78 
-                 C 20,68 18,52 24,36 
-                 C 28,26 34,18 42,12 
-                 C 43,11 44,13 43,15 
-                 C 38,25 32,38 34,54 
-                 C 36,70 44,82 56,86 
-                 C 48,84 41,74 40,60 
-                 C 39,46 45,30 52,18 Z"
-              fill="url(#goldGradientLogoStacked)"
-              filter="url(#goldGlowLogoStacked)"
-            />
-            <path
-              d="M 44,42 
-                 C 41,45 38,50 38,56 
-                 C 38,64 44,70 50,70 
-                 C 54,70 56,66 54,62 
-                 C 52,58 48,58 46,62 
-                 C 44,65 42,65 41,60 
-                 C 40,55 42,48 44,42 Z"
-              fill="url(#goldGradientLogoStacked)"
-            />
-            <path d="M 33,32 L 39,28 C 40,27 39,26 38,27 L 32,31 C 31,32 32,33 33,32 Z" fill="url(#goldGradientLogoStacked)" />
-            <path d="M 46,50 C 47,48 49,48 48,51 C 47,54 45,56 44,54 Z" fill="url(#goldGradientLogoStacked)" />
-            <path
-              d="M 56,22 L 58.5,27 L 64,28 L 59.5,31 L 60.5,36.5 L 56,33 L 51.5,36.5 L 52.5,31 L 48,28 L 53.5,27 Z"
-              fill="url(#goldGradientLogoStacked)"
-            />
-            <path
-              d="M 42,98 L 44,101 L 48,102 L 44,103 L 42,106 L 40,103 L 36,102 L 40,101 Z"
-              fill="url(#goldGradientLogoStacked)"
-            />
-          </g>
+          {!hideSymbol && (
+            <g transform="translate(70, 15) scale(1.5)">
+              {/* Majestic Calligraphic Symbol with Sweep - High Fidelity Traced Curves */}
+              {/* Outer Golden Crescent Loop */}
+              <path
+                d="M 54,12 
+                   C 42,22 30,42 32,64 
+                   C 34,82 46,94 62,96 
+                   C 48,96 34,88 26,76 
+                   C 16,62 14,44 22,26 
+                   C 26,14 34,6 44,2 
+                   C 45,1 46,3 45,5 
+                   C 39,16 32,32 34,50 
+                   C 36,68 46,82 60,86 
+                   C 48,84 40,72 38,56 
+                   C 36,40 44,22 54,12 Z"
+                fill="url(#goldGradientLogoStacked)"
+                filter="url(#goldGlowLogoStacked)"
+              />
+              {/* Inner Artistic Arabic Cursive Accents / Calligraphy strokes */}
+              <path
+                d="M 45,38 
+                   C 42,42 38,48 38,55 
+                   C 38,64 45,71 52,71 
+                   C 57,71 59,67 57,62 
+                   C 55,57 50,57 48,62 
+                   C 45,66 43,66 42,60 
+                   C 41,54 43,46 45,38 Z"
+                fill="url(#goldGradientLogoStacked)"
+              />
+              {/* Fine Calligraphic Accent details (Gold tashkeel marks) */}
+              <path d="M 33,28 L 39,24 C 40,23 39,22 38,23 L 32,27 C 31,28 32,29 33,28 Z" fill="url(#goldGradientLogoStacked)" />
+              <path d="M 47,48 C 48,46 50,46 49,49 C 48,52 46,54 45,52 Z" fill="url(#goldGradientLogoStacked)" />
+              <path d="M 28,42 C 29,40 31,40 30,43 C 29,46 27,48 26,46 Z" fill="url(#goldGradientLogoStacked)" />
+              
+              {/* Elegant Top 4-Point Star (Sparkle) */}
+              <path
+                d="M 54,18 L 56.5,23 L 62,24 L 57.5,27 L 58.5,32.5 L 54,29 L 49.5,32.5 L 50.5,27 L 46,24 L 51.5,23 Z"
+                fill="url(#goldGradientLogoStacked)"
+              />
+              {/* Elegant Bottom 4-Point Star (Sparkle) */}
+              <path
+                d="M 42,94 L 44,97 L 48,98 L 44,99 L 42,102 L 40,99 L 36,98 L 40,97 Z"
+                fill="url(#goldGradientLogoStacked)"
+              />
+            </g>
+          )}
 
           {/* Typography Centered Below */}
-          <g transform="translate(120, 205)">
+          <g transform={`translate(120, ${hideSymbol ? 50 : 205})`}>
             <text
-              x="0"
+              x="-4"
               y="0"
               textAnchor="end"
               fill="currentColor"
               fontSize="34"
-              fontWeight="800"
-              letterSpacing="0.06em"
-              fontFamily="Playfair Display, Inter, system-ui, sans-serif"
+              fontWeight="700"
+              letterSpacing="0.02em"
+              fontFamily="'Playfair Display', Georgia, serif"
               className="text-white dark:text-white"
             >
               Asrar
             </text>
             <text
-              x="8"
+              x="4"
               y="0"
               textAnchor="start"
               fill="url(#goldGradientLogoStacked)"
               filter="url(#goldGlowLogoStacked)"
               fontSize="34"
-              fontWeight="800"
-              letterSpacing="0.06em"
-              fontFamily="Playfair Display, Inter, system-ui, sans-serif"
+              fontWeight="700"
+              letterSpacing="0.02em"
+              fontFamily="'Playfair Display', Georgia, serif"
             >
               Hub
             </text>
+
+            {/* Elegant Custom Connected Gold Crossbar (Slash) for stacked layout */}
+            <path
+              d="M -16,-11 C -8,-12 0,-12 18,-12 C 18,-10 0,-10 -8,-10 Z"
+              fill="url(#goldGradientLogoStacked)"
+            />
           </g>
         </svg>
       )}
@@ -236,7 +262,7 @@ export const AsrarLogo: React.FC<AsrarLogoProps> = ({
       {variant === 'symbol' && (
         <svg
           viewBox="0 0 120 120"
-          className="w-full h-full filter drop-shadow-[0_2px_10px_rgba(245,195,104,0.2)]"
+          className="w-full h-full filter drop-shadow-[0_4px_16px_rgba(245,195,104,0.4)]"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
         >
@@ -247,46 +273,78 @@ export const AsrarLogo: React.FC<AsrarLogoProps> = ({
               <stop offset="60%" stopColor="#E5A93C" />
               <stop offset="100%" stopColor="#966C15" />
             </linearGradient>
-            <filter id="goldGlowLogoSymbol" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="3" result="blur" />
+            <radialGradient id="mysticAura" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#D4AF37" stopOpacity="0.25" />
+              <stop offset="50%" stopColor="#1E1B4B" stopOpacity="0.4" />
+              <stop offset="100%" stopColor="#0F172A" stopOpacity="1" />
+            </radialGradient>
+            <filter id="goldGlowLogoSymbol" x="-25%" y="-25%" width="150%" height="150%">
+              <feGaussianBlur stdDeviation="4" result="blur" />
               <feComposite in="SourceGraphic" in2="blur" operator="over" />
             </filter>
           </defs>
 
-          <g transform="translate(30, 8) scale(1.0)">
+          {/* Mystic background container circle with gold border */}
+          <circle cx="60" cy="60" r="54" fill="url(#mysticAura)" stroke="url(#goldGradientLogoSymbol)" strokeWidth="1.5" />
+          <circle cx="60" cy="60" r="50" stroke="url(#goldGradientLogoSymbol)" strokeWidth="0.5" strokeDasharray="4 3" opacity="0.6" />
+          
+          {/* Subtle surrounding star points for mystical geometry */}
+          {[0, 45, 90, 135, 180, 225, 270, 315].map((angle) => {
+            const rad = (angle * Math.PI) / 180;
+            const x = 60 + Math.cos(rad) * 44;
+            const y = 60 + Math.sin(rad) * 44;
+            return (
+              <path
+                key={angle}
+                d={`M ${x},${y-3} L ${x+1},${y-1} L ${x+3},${y} L ${x+1},${y+1} L ${x},${y+3} L ${x-1},${y+1} L ${x-3},${y} L ${x-1},${y-1} Z`}
+                fill="url(#goldGradientLogoSymbol)"
+                opacity="0.8"
+              />
+            );
+          })}
+
+          <g transform="translate(30, 10) scale(1.0)">
+            {/* Majestic Calligraphic Symbol with Sweep - High Fidelity Traced Curves */}
+            {/* Outer Golden Crescent Loop */}
             <path
-              d="M 52,18 
-                 C 45,28 36,44 38,62 
-                 C 40,78 48,90 62,94 
-                 C 50,94 36,88 28,78 
-                 C 20,68 18,52 24,36 
-                 C 28,26 34,18 42,12 
-                 C 43,11 44,13 43,15 
-                 C 38,25 32,38 34,54 
-                 C 36,70 44,82 56,86 
-                 C 48,84 41,74 40,60 
-                 C 39,46 45,30 52,18 Z"
+              d="M 54,12 
+                 C 42,22 30,42 32,64 
+                 C 34,82 46,94 62,96 
+                 C 48,96 34,88 26,76 
+                 C 16,62 14,44 22,26 
+                 C 26,14 34,6 44,2 
+                 C 45,1 46,3 45,5 
+                 C 39,16 32,32 34,50 
+                 C 36,68 46,82 60,86 
+                 C 48,84 40,72 38,56 
+                 C 36,40 44,22 54,12 Z"
               fill="url(#goldGradientLogoSymbol)"
               filter="url(#goldGlowLogoSymbol)"
             />
+            {/* Inner Artistic Arabic Cursive Accents / Calligraphy strokes */}
             <path
-              d="M 44,42 
-                 C 41,45 38,50 38,56 
-                 C 38,64 44,70 50,70 
-                 C 54,70 56,66 54,62 
-                 C 52,58 48,58 46,62 
-                 C 44,65 42,65 41,60 
-                 C 40,55 42,48 44,42 Z"
+              d="M 45,38 
+                 C 42,42 38,48 38,55 
+                 C 38,64 45,71 52,71 
+                 C 57,71 59,67 57,62 
+                 C 55,57 50,57 48,62 
+                 C 45,66 43,66 42,60 
+                 C 41,54 43,46 45,38 Z"
               fill="url(#goldGradientLogoSymbol)"
             />
-            <path d="M 33,32 L 39,28 C 40,27 39,26 38,27 L 32,31 C 31,32 32,33 33,32 Z" fill="url(#goldGradientLogoSymbol)" />
-            <path d="M 46,50 C 47,48 49,48 48,51 C 47,54 45,56 44,54 Z" fill="url(#goldGradientLogoSymbol)" />
+            {/* Fine Calligraphic Accent details (Gold tashkeel marks) */}
+            <path d="M 33,28 L 39,24 C 40,23 39,22 38,23 L 32,27 C 31,28 32,29 33,28 Z" fill="url(#goldGradientLogoSymbol)" />
+            <path d="M 47,48 C 48,46 50,46 49,49 C 48,52 46,54 45,52 Z" fill="url(#goldGradientLogoSymbol)" />
+            <path d="M 28,42 C 29,40 31,40 30,43 C 29,46 27,48 26,46 Z" fill="url(#goldGradientLogoSymbol)" />
+            
+            {/* Elegant Top 4-Point Star (Sparkle) */}
             <path
-              d="M 56,22 L 58.5,27 L 64,28 L 59.5,31 L 60.5,36.5 L 56,33 L 51.5,36.5 L 52.5,31 L 48,28 L 53.5,27 Z"
+              d="M 54,18 L 56.5,23 L 62,24 L 57.5,27 L 58.5,32.5 L 54,29 L 49.5,32.5 L 50.5,27 L 46,24 L 51.5,23 Z"
               fill="url(#goldGradientLogoSymbol)"
             />
+            {/* Elegant Bottom 4-Point Star (Sparkle) */}
             <path
-              d="M 42,98 L 44,101 L 48,102 L 44,103 L 42,106 L 40,103 L 36,102 L 40,101 Z"
+              d="M 42,94 L 44,97 L 48,98 L 44,99 L 42,102 L 40,99 L 36,98 L 40,97 Z"
               fill="url(#goldGradientLogoSymbol)"
             />
           </g>

@@ -72,7 +72,8 @@ service cloud.firestore {
       allow read: if !resource.data.get('isPremium', false) 
                   || (request.auth != null && (
                       isAdmin() ||
-                      get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('subscriptionTier', 'free') in ['premium', 'pro']
+                      get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('subscriptionTier', 'free') in ['premium', 'pro'] ||
+                      resource.id in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('purchasedItems', [])
                   ));
       allow write: if isAdmin();
     }
@@ -86,6 +87,12 @@ service cloud.firestore {
       allow read: if request.auth != null && resource.data.userId == request.auth.uid;
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
       allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
+
+    match /user_points/{document} {
+      allow read: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update, delete: if isAdmin();
     }
 
     match /{document=**} {

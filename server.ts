@@ -1,10 +1,11 @@
+import "dotenv/config";
 import express from "express";
 import path from "path";
 import cors from "cors";
 import { initializeApp, getApps, cert } from "firebase-admin/app";
 import { getFirestore, Timestamp } from "firebase-admin/firestore";
 
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, Type } from "@google/genai";
 
 async function startServer() {
   const app = express();
@@ -247,14 +248,14 @@ Benefits: ${JSON.stringify(benefits || [])}
         config: {
           responseMimeType: "application/json",
           responseSchema: {
-            type: "OBJECT",
+            type: Type.OBJECT,
             properties: {
-              title: { type: "STRING", description: "The translated title" },
-              hook: { type: "STRING", description: "The translated hook" },
-              content: { type: "STRING", description: "The translated content keeping all HTML tags" },
+              title: { type: Type.STRING, description: "The translated title" },
+              hook: { type: Type.STRING, description: "The translated hook" },
+              content: { type: Type.STRING, description: "The translated content keeping all HTML tags" },
               benefits: {
-                type: "ARRAY",
-                items: { type: "STRING" },
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
                 description: "The translated list of benefits"
               }
             },
@@ -316,15 +317,15 @@ ${JSON.stringify(textArray)}
         config: {
           responseMimeType: "application/json",
           responseSchema: {
-            type: "OBJECT",
+            type: Type.OBJECT,
             properties: {
               translations: {
-                type: "ARRAY",
+                type: Type.ARRAY,
                 items: {
-                  type: "OBJECT",
+                  type: Type.OBJECT,
                   properties: {
-                    key: { type: "STRING" },
-                    value: { type: "STRING" }
+                    key: { type: Type.STRING },
+                    value: { type: Type.STRING }
                   },
                   required: ["key", "value"]
                 }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calculator, ArrowLeft, RefreshCw, Copy, Check, ChevronDown, ChevronUp, History, Save, Trash2, X, Database, Wifi, HelpCircle } from 'lucide-react';
+import { Calculator, ArrowLeft, RefreshCw, Copy, Check, ChevronDown, ChevronUp, History, Save, Trash2, X, Database, Wifi, HelpCircle, Share2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { ToolInfoTooltip } from '../../../components/ToolInfoTooltip';
@@ -23,8 +23,42 @@ const abjadMaghribi: Record<string, number> = {
   'س': 300, 'ش': 1000, 'ص': 60, 'ض': 90, 'ظ': 800, 'غ': 900
 };
 
+const localDict = {
+  fr: {
+    cacheLocal: "Cache local (Mode Offline actif)",
+    syncLocal: "Synchronisé localement (Offline-first)",
+    enterArabic: "Entrez le texte en Arabe",
+    words: "Mots",
+    letters: "Lettres",
+    numericValues: "Valeurs Numériques (Abjad)",
+    howToInterpret: "Comment interpréter ces résultats ?",
+    interpret: "Interpréter"
+  },
+  en: {
+    cacheLocal: "Local cache (Offline Mode active)",
+    syncLocal: "Locally synchronized (Offline-first)",
+    enterArabic: "Enter text in Arabic",
+    words: "Words",
+    letters: "Letters",
+    numericValues: "Numerical Values (Abjad)",
+    howToInterpret: "How to interpret these results?",
+    interpret: "Interpret"
+  },
+  ha: {
+    cacheLocal: "Ma'ajiyar gida (Yanayin Offline yana aiki)",
+    syncLocal: "An daidaita na gida (Offline-farko)",
+    enterArabic: "Shigar da rubutu cikin Harshen Larabci",
+    words: "Kalmomi",
+    letters: "Haruffa",
+    numericValues: "Darajojin Lambobi (Abjad)",
+    howToInterpret: "Yadda za a fassara waɗannan sakamakon?",
+    interpret: "Fassara"
+  }
+};
+
 export const AbjadCalculator: React.FC = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const dict = localDict[(language as 'fr' | 'en' | 'ha') || 'fr'] || localDict.fr;
   const [text, setText] = useState('');
   const [copied, setCopied] = useState(false);
   const [showWords, setShowWords] = useState(false);
@@ -141,6 +175,34 @@ export const AbjadCalculator: React.FC = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleShare = async (variant: 'mashriqi' | 'maghribi', score: number) => {
+    if (!text.trim()) return;
+    const textSnippet = text.trim().substring(0, 50) + (text.length > 50 ? '...' : '');
+    const title = `Calcul Abjad - ${variant === 'mashriqi' ? 'Orientale' : 'Maghrébine'}`;
+    const shareText = `Texte : "${textSnippet}"\n\nValeur Abjad calculée (${variant === 'mashriqi' ? 'Orientale' : 'Maghrébine'}) : ${score}\n\nCalculé avec précision sur AsrarHub.`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title,
+          text: shareText,
+          url: window.location.href
+        });
+      } catch (err: any) {
+        if (err.name !== 'AbortError') {
+          console.error("Share error:", err);
+        }
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(shareText);
+        alert("Texte de partage copié dans le presse-papiers ! Vous pouvez le coller sur vos réseaux sociaux.");
+      } catch (e) {
+        console.error("Clipboard write error:", e);
+      }
+    }
+  };
+
   return (
     <div className="max-w-2xl mx-auto p-4 sm:p-6 lg:p-8 safe-area-pt pb-24">
       {/* Header */}
@@ -161,12 +223,12 @@ export const AbjadCalculator: React.FC = () => {
             {isUsingCache ? (
               <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border border-amber-100 dark:border-amber-900/30 mt-2">
                 <Database size={11} className="animate-pulse" />
-                <span>Cache local (Mode Offline actif)</span>
+                <span>{dict.cacheLocal}</span>
               </div>
             ) : (
               <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30 mt-2">
                 <Wifi size={11} />
-                <span>Synchronisé localement (Offline-first)</span>
+                <span>{dict.syncLocal}</span>
               </div>
             )}
           </div>
@@ -177,7 +239,7 @@ export const AbjadCalculator: React.FC = () => {
         {/* Input Card */}
         <div className="bg-white dark:bg-gray-800 rounded-3xl p-4 sm:p-5 shadow-sm border border-gray-100 dark:border-gray-700">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Entrez le texte en Arabe
+            {dict.enterArabic}
           </label>
           <textarea
             value={text}
@@ -189,8 +251,8 @@ export const AbjadCalculator: React.FC = () => {
           />
           <div className="flex justify-between items-center mt-3">
             <div className="flex gap-4 text-xs font-medium text-gray-500 dark:text-gray-400">
-              <span>Mots: <strong className="text-gray-700 dark:text-gray-300">{words}</strong></span>
-              <span>Lettres: <strong className="text-gray-700 dark:text-gray-300">{letterCount}</strong></span>
+              <span>{dict.words}: <strong className="text-gray-700 dark:text-gray-300">{words}</strong></span>
+              <span>{dict.letters}: <strong className="text-gray-700 dark:text-gray-300">{letterCount}</strong></span>
             </div>
             <div className="flex gap-2">
               <button
@@ -216,15 +278,15 @@ export const AbjadCalculator: React.FC = () => {
 
         <div className="flex justify-between items-center px-1">
           <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-            Valeurs Numériques (Abjad)
+            {dict.numericValues}
           </h2>
           <button 
             onClick={() => setShowAbjadInfoModal(true)}
             className="text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center gap-1 cursor-pointer"
-            title="Comment interpréter ces résultats ?"
+            title={dict.howToInterpret}
           >
             <HelpCircle size={16} />
-            <span className="text-xs font-semibold">Interpréter</span>
+            <span className="text-xs font-semibold">{dict.interpret}</span>
           </button>
         </div>
 
@@ -241,13 +303,22 @@ export const AbjadCalculator: React.FC = () => {
                 {totalMashriqi}
               </div>
               {totalMashriqi > 0 && (
-                <button
-                  onClick={() => handleCopy(totalMashriqi)}
-                  className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-white/10 hover:bg-white/20 rounded-full backdrop-blur-sm transition-colors text-xs sm:text-sm font-medium w-full sm:w-auto"
-                >
-                  {copied ? <Check size={16} className="text-emerald-300" /> : <Copy size={16} />}
-                  {copied ? t('tools.abjad.copied') : t('tools.abjad.copy')}
-                </button>
+                <div className="flex gap-2 w-full justify-center">
+                  <button
+                    onClick={() => handleCopy(totalMashriqi)}
+                    className="flex-1 flex items-center justify-center gap-1 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-white/10 hover:bg-white/20 rounded-2xl backdrop-blur-sm transition-colors text-xs sm:text-sm font-medium"
+                  >
+                    {copied ? <Check size={14} className="text-emerald-300" /> : <Copy size={14} />}
+                    <span className="truncate">{copied ? t('tools.abjad.copied') : t('tools.abjad.copy')}</span>
+                  </button>
+                  <button
+                    onClick={() => handleShare('mashriqi', totalMashriqi)}
+                    className="flex items-center justify-center p-2 bg-white/10 hover:bg-white/20 rounded-2xl backdrop-blur-sm transition-colors"
+                    title="Partager"
+                  >
+                    <Share2 size={14} />
+                  </button>
+                </div>
               )}
             </div>
           </div>
@@ -261,13 +332,22 @@ export const AbjadCalculator: React.FC = () => {
                 {totalMaghribi}
               </div>
               {totalMaghribi > 0 && (
-                <button
-                  onClick={() => handleCopy(totalMaghribi)}
-                  className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-white/10 hover:bg-white/20 rounded-full backdrop-blur-sm transition-colors text-xs sm:text-sm font-medium w-full sm:w-auto"
-                >
-                  {copied ? <Check size={16} className="text-green-300" /> : <Copy size={16} />}
-                  {copied ? t('tools.abjad.copied') : t('tools.abjad.copy')}
-                </button>
+                <div className="flex gap-2 w-full justify-center">
+                  <button
+                    onClick={() => handleCopy(totalMaghribi)}
+                    className="flex-1 flex items-center justify-center gap-1 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-white/10 hover:bg-white/20 rounded-2xl backdrop-blur-sm transition-colors text-xs sm:text-sm font-medium"
+                  >
+                    {copied ? <Check size={14} className="text-emerald-300" /> : <Copy size={14} />}
+                    <span className="truncate">{copied ? t('tools.abjad.copied') : t('tools.abjad.copy')}</span>
+                  </button>
+                  <button
+                    onClick={() => handleShare('maghribi', totalMaghribi)}
+                    className="flex items-center justify-center p-2 bg-white/10 hover:bg-white/20 rounded-2xl backdrop-blur-sm transition-colors"
+                    title="Partager"
+                  >
+                    <Share2 size={14} />
+                  </button>
+                </div>
               )}
             </div>
           </div>
