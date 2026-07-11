@@ -710,28 +710,6 @@
     "pointsDesc": "Watch a 15s ad to get +{points} pts and unlock any article of your choice.",
     "watchNow": "Watch the Ad"
   },
-  "premium": {
-    "fallbackTitle": "Premium Secret Reading",
-    "fallbackMessage": "This content is reserved for Premium members. Unlock it to access.",
-    "subscribeToView": "Subscribe to view the entire content.",
-    "unlock": "Unlock",
-    "cancel": "Cancel",
-    "back": "Back",
-    "preview": "Preview",
-    "badge": "Premium",
-    "yourBalance": "Your Balance",
-    "unlockWithPoints": "Unlock with Points",
-    "useBalanceDesc": "Use your spiritual balance to open this article permanently.",
-    "unlocking": "Unlocking...",
-    "buyForPoints": "Buy for {points} pts",
-    "insufficientPoints": "Insufficient points (missing {points} pts)",
-    "earnPoints": "Earn Points",
-    "watchAdDesc": "Watch a short sponsored ad to accumulate points.",
-    "watchAdBtn": "Watch ad (+{points} pts)",
-    "unlimitedVersion": "Unlimited Premium Version",
-    "unlimitedVersionDesc": "Disable all ads and open all articles instantly.",
-    "subscribe": "Subscribe"
-  },
   "maintenance": {
     "title": "Maintenance in Progress",
     "description": "AsrarHub is currently undergoing maintenance to improve your experience. We will be back very soon. Thank you for your patience.",
