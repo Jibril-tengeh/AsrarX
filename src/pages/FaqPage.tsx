@@ -610,7 +610,7 @@ export const FaqPage: React.FC = () => {
                   key={idx} 
                   className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
-                  <div className={`max-w-[85%] sm:max-w-[75%] rounded-2xl p-4 shadow-sm ${
+                  <div className={`max-w-[85%] sm:max-w-[75%] rounded-2xl p-4 shadow-sm min-w-0 break-words overflow-hidden ${
                     msg.role === 'user' 
                       ? 'bg-emerald-500 text-white rounded-br-none' 
                       : 'bg-gray-100 dark:bg-gray-800 text-gray-850 dark:text-gray-150 rounded-bl-none border border-gray-200/20'
@@ -618,7 +618,7 @@ export const FaqPage: React.FC = () => {
                     {msg.role === 'user' ? (
                       <p className="whitespace-pre-wrap text-sm leading-relaxed">{msg.content}</p>
                     ) : (
-                      <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-gray-900 prose-pre:text-gray-100 text-sm">
+                      <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-gray-900 prose-pre:text-gray-100 text-sm overflow-x-auto break-words">
                         <Markdown remarkPlugins={[remarkGfm]}>{msg.content}</Markdown>
                       </div>
                     )}

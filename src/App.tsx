@@ -279,7 +279,7 @@ export default function App() {
         <FloatingBackButton />
         <Header />
         <DailyRewardHandler />
-        <main className={`flex-1 text-gray-900 dark:text-gray-100 pb-20 ${isRuqyahPlayer ? '' : 'pt-20'}`}>
+        <main className={`flex-1 text-gray-900 dark:text-gray-100 pb-20 w-full max-w-full overflow-x-hidden ${isRuqyahPlayer ? '' : 'pt-20'}`}>
           <React.Suspense fallback={
             <div className="flex items-center justify-center min-h-[60vh]">
               <div className="w-10 h-10 border-4 border-emerald-500/10 border-t-emerald-600 rounded-full animate-spin" />

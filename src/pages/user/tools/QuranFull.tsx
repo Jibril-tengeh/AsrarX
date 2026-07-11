@@ -40,6 +40,53 @@ const toArabicNumeral = (num: number | undefined | null) => {
   return num.toString().split('').map(digit => arabicNumbers[parseInt(digit)]).join('');
 };
 
+const highlightText = (text: string, query: string): React.ReactNode => {
+  if (!text || !query || !query.trim()) return text;
+  
+  const cleanQuery = query.trim();
+  const isAr = /[\u0600-\u06FF]/.test(cleanQuery);
+  
+  const escapeRegExp = (string: string) => {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  };
+
+  if (isAr) {
+    const escapedQuery = escapeRegExp(cleanQuery);
+    const regex = new RegExp(`(${escapedQuery})`, 'g');
+    const parts = text.split(regex);
+    return (
+      <>
+        {parts.map((part, i) => 
+          part === cleanQuery ? (
+            <mark key={i} className="bg-yellow-200 dark:bg-yellow-800 text-gray-900 dark:text-white px-0.5 rounded font-semibold">
+              {part}
+            </mark>
+          ) : (
+            part
+          )
+        )}
+      </>
+    );
+  } else {
+    const escapedQuery = escapeRegExp(cleanQuery);
+    const regex = new RegExp(`(${escapedQuery})`, 'gi');
+    const parts = text.split(regex);
+    return (
+      <>
+        {parts.map((part, i) => 
+          regex.test(part) ? (
+            <mark key={i} className="bg-yellow-200 dark:bg-yellow-850 text-gray-900 dark:text-white px-0.5 rounded font-semibold">
+              {part}
+            </mark>
+          ) : (
+            part
+          )
+        )}
+      </>
+    );
+  }
+};
+
 const TAJWEED_COLORS: Record<string, string> = {
   h: 'text-gray-400', // silent
   l: 'text-gray-400', 
@@ -2136,7 +2183,9 @@ export const QuranFull: React.FC = () => {
                               </div>
                               <div className="flex flex-col min-w-0">
                                 <div className="flex items-center gap-1.5 flex-wrap">
-                                  <h3 className="text-[11px] sm:text-sm font-semibold text-gray-900 dark:text-white truncate">{surah.englishName}</h3>
+                                  <h3 className="text-[11px] sm:text-sm font-semibold text-gray-900 dark:text-white truncate">
+                                    {highlightText(surah.englishName, searchTerm)}
+                                  </h3>
                                   {downloadedItems.surah?.includes(surah.number) && (
                                     <span className="flex items-center gap-1 text-[8px] sm:text-[10px] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400 px-1.5 py-0.5 rounded-md shrink-0">
                                       <CloudOff size={10} /> {t('offlineReady', 'Offline')}
@@ -2144,7 +2193,9 @@ export const QuranFull: React.FC = () => {
                                   )}
                                 </div>
                                 <div className="flex items-center gap-1.5 text-[9px] sm:text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide truncate">
-                                  <span className="truncate">{surahTranslations[surah.number]?.[language as keyof typeof surahTranslations[1]] || surah.englishNameTranslation}</span>
+                                  <span className="truncate">
+                                    {highlightText(surahTranslations[surah.number]?.[language as keyof typeof surahTranslations[1]] || surah.englishNameTranslation, searchTerm)}
+                                  </span>
                                   <span className="text-[10px] opacity-70 shrink-0">
                                     {surah.revelationType === 'Meccan' ? '🕋' : '🕌'}
                                   </span>
@@ -2154,7 +2205,7 @@ export const QuranFull: React.FC = () => {
                             <div className="flex items-center gap-2 sm:gap-4 shrink-0">
                               <div className="text-right">
                                 <span className="font-arabic text-[18px] sm:text-[24px] md:text-[30px] text-gray-900 dark:text-white" style={{ fontFamily: '"Amiri", serif' }}>
-                                  {surah.name.replace('سُورَةُ ', '')}
+                                  {highlightText(surah.name.replace('سُورَةُ ', ''), searchTerm)}
                                 </span>
                               </div>
                               {!downloadedItems.surah?.includes(surah.number) && (
@@ -2222,10 +2273,10 @@ export const QuranFull: React.FC = () => {
                             </div>
                             <div className="flex flex-col gap-2">
                               <p className="font-arabic text-right text-lg sm:text-xl text-gray-900 dark:text-white leading-loose" style={{ fontFamily: '"Amiri", serif' }} dir="rtl">
-                                {match.text}
+                                {highlightText(match.text, searchTerm)}
                               </p>
                               <p className="text-left text-xs sm:text-sm text-gray-500 dark:text-gray-400 italic">
-                                {match.translationText}
+                                {highlightText(match.translationText, searchTerm)}
                               </p>
                             </div>
                           </div>
@@ -4008,7 +4059,7 @@ export const QuranFull: React.FC = () => {
                                const text = ayah.numberInSurah === 1 && (ayah.surah?.number || surahArabic.number) !== 1 && (ayah.surah?.number || surahArabic.number) !== 9 
                                  ? rawText.replace(/^بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ\s*/, '').replace(/^بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ\s*/, '').replace(/^بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ\s*/, '').replace(/^بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ\s*/, '') 
                                  : rawText;
-                               return isTajweed ? renderTajweed(text) : text;
+                               return isTajweed ? renderTajweed(text) : highlightText(text, surahSearchQuery);
                              })()} 
                              <span className="text-emerald-600 dark:text-emerald-400 mx-2 font-normal text-2xl select-none" dir="rtl">﴿{toArabicNumeral(ayah.numberInSurah)}﴾</span>
                            </p>
@@ -4021,7 +4072,7 @@ export const QuranFull: React.FC = () => {
                              <div>
                                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-1 block">Français</span>
                                <p className="text-gray-600 dark:text-gray-300 font-serif leading-relaxed" style={getTranslationStyle()}>
-                                 {frAyah.text}
+                                 {highlightText(frAyah.text, surahSearchQuery)}
                                </p>
                              </div>
                            )}
@@ -4029,7 +4080,7 @@ export const QuranFull: React.FC = () => {
                              <div>
                                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-1 block">English</span>
                                <p className="text-gray-600 dark:text-gray-300 font-serif leading-relaxed" style={getTranslationStyle()}>
-                                 {enAyah.text}
+                                 {highlightText(enAyah.text, surahSearchQuery)}
                                </p>
                              </div>
                            )}
@@ -4037,7 +4088,7 @@ export const QuranFull: React.FC = () => {
                              <div>
                                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-1 block">Hausa</span>
                                <p className="text-gray-600 dark:text-gray-300 font-serif leading-relaxed" style={getTranslationStyle()}>
-                                 {haAyah.text}
+                                 {highlightText(haAyah.text, surahSearchQuery)}
                                </p>
                              </div>
                            )}
