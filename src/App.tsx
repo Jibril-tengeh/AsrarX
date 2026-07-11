@@ -59,6 +59,7 @@ import { DailyRewardHandler } from './components/DailyRewardHandler';
 import { MaintenanceOverlay } from './components/MaintenanceOverlay';
 import { FloatingBackButton } from './components/FloatingBackButton';
 import { Link } from 'react-router-dom';
+import { BannerAd } from './components/BannerAd';
 
 const Store = React.lazy(() => import('./pages/user/Store').then(m => ({ default: m.Store })));
 const FaqPage = React.lazy(() => import('./pages/FaqPage').then(m => ({ default: m.FaqPage })));
@@ -272,6 +273,8 @@ export default function App() {
     }} />;
   }
 
+  const showAd = !location.pathname.startsWith('/admin') && !location.pathname.startsWith('/payment');
+
   return (
     <MaintenanceOverlay>
       <NetworkStatus />
@@ -280,6 +283,11 @@ export default function App() {
         <Header />
         <DailyRewardHandler />
         <main className={`flex-1 text-gray-900 dark:text-gray-100 pb-20 ${isRuqyahPlayer ? '' : 'pt-20'}`}>
+          {showAd && (
+            <div className="max-w-3xl mx-auto px-4 sm:px-6 w-full pt-4">
+              <BannerAd />
+            </div>
+          )}
           <React.Suspense fallback={
             <div className="flex items-center justify-center min-h-[60vh]">
               <div className="w-10 h-10 border-4 border-emerald-500/10 border-t-emerald-600 rounded-full animate-spin" />

@@ -705,7 +705,10 @@
     "unlockDesc": "Passez à la version Premium pour accéder aux cours Sirr Al Asrar complets et supprimer ces publicités.",
     "viewOffers": "Voir les Offres",
     "profilePromo": "Passez à la version Premium pour débloquer toutes les fonctionnalités et supprimer les publicités.",
-    "becomePremium": "Devenir Premium"
+    "becomePremium": "Devenir Premium",
+    "pointsTitle": "Gagnez des Points Spirituels",
+    "pointsDesc": "Visionnez une publicité de 15s pour obtenir +{points} pts et débloquer les articles de votre choix.",
+    "watchNow": "Regarder la Pub"
   },
   "maintenance": {
     "title": "Maintenance en cours",

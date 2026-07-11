@@ -699,7 +699,10 @@
     "unlockDesc": "Haɓaka zuwa Premium don samun damar shiga cikakkun darussan Sirr Al Asrar da kuma cire waɗannan tallace-tallace.",
     "viewOffers": "Duba Tayi",
     "profilePromo": "Haɓaka zuwa Premium don buɗe duk fasalolin da kuma cire tallace-tallace.",
-    "becomePremium": "Zama Premium"
+    "becomePremium": "Zama Premium",
+    "pointsTitle": "Sami Maki na Ruhi",
+    "pointsDesc": "Kalli tallan sakan 15 don samun maki +{points} kuma ka buɗe duk labarin da kake so.",
+    "watchNow": "Kalli Talla"
   },
   "maintenance": {
     "title": "Ana Gudanar da Gyara",

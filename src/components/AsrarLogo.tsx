@@ -262,7 +262,7 @@ export const AsrarLogo: React.FC<AsrarLogoProps> = ({
       {variant === 'symbol' && (
         <svg
           viewBox="0 0 120 120"
-          className="w-full h-full filter drop-shadow-[0_2px_10px_rgba(245,195,104,0.2)]"
+          className="w-full h-full filter drop-shadow-[0_4px_16px_rgba(245,195,104,0.4)]"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
         >
@@ -273,13 +273,37 @@ export const AsrarLogo: React.FC<AsrarLogoProps> = ({
               <stop offset="60%" stopColor="#E5A93C" />
               <stop offset="100%" stopColor="#966C15" />
             </linearGradient>
-            <filter id="goldGlowLogoSymbol" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="3" result="blur" />
+            <radialGradient id="mysticAura" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#D4AF37" stopOpacity="0.25" />
+              <stop offset="50%" stopColor="#1E1B4B" stopOpacity="0.4" />
+              <stop offset="100%" stopColor="#0F172A" stopOpacity="1" />
+            </radialGradient>
+            <filter id="goldGlowLogoSymbol" x="-25%" y="-25%" width="150%" height="150%">
+              <feGaussianBlur stdDeviation="4" result="blur" />
               <feComposite in="SourceGraphic" in2="blur" operator="over" />
             </filter>
           </defs>
 
-          <g transform="translate(30, 8) scale(1.0)">
+          {/* Mystic background container circle with gold border */}
+          <circle cx="60" cy="60" r="54" fill="url(#mysticAura)" stroke="url(#goldGradientLogoSymbol)" strokeWidth="1.5" />
+          <circle cx="60" cy="60" r="50" stroke="url(#goldGradientLogoSymbol)" strokeWidth="0.5" strokeDasharray="4 3" opacity="0.6" />
+          
+          {/* Subtle surrounding star points for mystical geometry */}
+          {[0, 45, 90, 135, 180, 225, 270, 315].map((angle) => {
+            const rad = (angle * Math.PI) / 180;
+            const x = 60 + Math.cos(rad) * 44;
+            const y = 60 + Math.sin(rad) * 44;
+            return (
+              <path
+                key={angle}
+                d={`M ${x},${y-3} L ${x+1},${y-1} L ${x+3},${y} L ${x+1},${y+1} L ${x},${y+3} L ${x-1},${y+1} L ${x-3},${y} L ${x-1},${y-1} Z`}
+                fill="url(#goldGradientLogoSymbol)"
+                opacity="0.8"
+              />
+            );
+          })}
+
+          <g transform="translate(30, 10) scale(1.0)">
             {/* Majestic Calligraphic Symbol with Sweep - High Fidelity Traced Curves */}
             {/* Outer Golden Crescent Loop */}
             <path
