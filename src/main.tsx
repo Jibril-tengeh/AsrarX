@@ -13,7 +13,14 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { registerSW } from 'virtual:pwa-register';
 
 // Unregister any active service worker in development to avoid chunk loading conflicts
-if (import.meta.env.DEV && 'serviceWorker' in navigator) {
+const isNative = typeof window !== 'undefined' && (
+  (window as any).Capacitor?.isNativePlatform?.() || 
+  !!(window as any).Capacitor ||
+  window.location.protocol === 'file:' ||
+  window.location.protocol === 'capacitor:'
+);
+
+if (import.meta.env.DEV && !isNative && 'serviceWorker' in navigator) {
   navigator.serviceWorker.getRegistrations().then((registrations) => {
     for (const registration of registrations) {
       registration.unregister().then((success) => {
@@ -26,16 +33,23 @@ if (import.meta.env.DEV && 'serviceWorker' in navigator) {
   });
 }
 
-const updateSW = registerSW({
-  onNeedRefresh() {
-    if (confirm('Une nouvelle version est disponible. Recharger ?')) {
-      updateSW(true);
-    }
-  },
-  onOfflineReady() {
-    console.log('Application prête pour une utilisation hors ligne.');
-  },
-});
+// Only register PWA service worker if we are on a regular web browser and not native platform
+if (!isNative && typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+  try {
+    const updateSW = registerSW({
+      onNeedRefresh() {
+        if (typeof confirm !== 'undefined' && confirm('Une nouvelle version est disponible. Recharger ?')) {
+          updateSW(true);
+        }
+      },
+      onOfflineReady() {
+        console.log('Application prête pour une utilisation hors ligne.');
+      },
+    });
+  } catch (error) {
+    console.warn('PWA service worker registration failed safely:', error);
+  }
+}
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

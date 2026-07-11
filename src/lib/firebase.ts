@@ -79,17 +79,23 @@ const checkIndexedDBFunctional = (): Promise<boolean> => {
   });
 };
 
-checkIndexedDBFunctional().then((functional) => {
-  if (functional) {
-    enableIndexedDbPersistence(db).catch((err) => {
-      if (err.code == 'failed-precondition') {
-          console.warn("Multiple tabs open, persistence can only be enabled in one tab at a time.");
-      } else if (err.code == 'unimplemented') {
-          console.warn("The current browser does not support all of the features required to enable persistence");
-      }
-    });
-  }
-});
+try {
+  checkIndexedDBFunctional().then((functional) => {
+    if (functional) {
+      enableIndexedDbPersistence(db).catch((err) => {
+        if (err.code == 'failed-precondition') {
+            console.warn("Multiple tabs open, persistence can only be enabled in one tab at a time.");
+        } else if (err.code == 'unimplemented') {
+            console.warn("The current browser does not support all of the features required to enable persistence");
+        }
+      });
+    }
+  }).catch((err) => {
+    console.warn("Error running IndexedDB check:", err);
+  });
+} catch (e) {
+  console.warn("Firestore persistence initialization failed synchronously:", e);
+}
 
 export const googleProvider = new GoogleAuthProvider();
 
