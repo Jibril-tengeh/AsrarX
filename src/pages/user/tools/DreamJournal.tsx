@@ -31,7 +31,6 @@ export const DreamJournal: React.FC = () => {
   const [wirdDone, setWirdDone] = useState('');
   const [type, setType] = useState<DreamEntry['type']>('unknown');
   const [isInterpreting, setIsInterpreting] = useState(false);
-  const [syncCount, setSyncCount] = useState(0);
 
   const toggleDream = (id: string) => {
     const newSet = new Set(expandedDreamIds);
@@ -41,56 +40,6 @@ export const DreamJournal: React.FC = () => {
       newSet.add(id);
     }
     setExpandedDreamIds(newSet);
-  };
-
-  const syncOfflineDreams = async () => {
-    if (!user || !navigator.onLine) return;
-    
-    try {
-      const pending = JSON.parse(localStorage.getItem('asrar_pending_dreams') || '[]');
-      if (pending.length === 0) return;
-      
-      setSyncStatus('syncing');
-      let successCount = 0;
-      const remainingPending = [];
-
-      for (const dream of pending) {
-        try {
-          const { isPendingSync, ...cleanDream } = dream;
-          await setDoc(doc(db, 'dreams', dream.id), {
-            ...cleanDream,
-            userId: user.uid
-          });
-          successCount++;
-        } catch (e) {
-          console.error("Failed to sync offline dream:", e);
-          remainingPending.push(dream);
-        }
-      }
-
-      localStorage.setItem('asrar_pending_dreams', JSON.stringify(remainingPending));
-      
-      if (successCount > 0) {
-        setSyncCount(successCount);
-        setDreams(prev => prev.map(d => {
-          const wasSynced = pending.some((p: any) => p.id === d.id) && !remainingPending.some((p: any) => p.id === d.id);
-          if (wasSynced) {
-            const { isPendingSync, ...rest } = d as any;
-            return rest as DreamEntry;
-          }
-          return d;
-        }));
-        setTimeout(() => setSyncCount(0), 5000);
-      }
-      
-      if (remainingPending.length === 0) {
-        setSyncStatus('synced');
-      } else {
-        setSyncStatus('local');
-      }
-    } catch (err) {
-      console.error("Error during offline sync:", err);
-    }
   };
 
   useEffect(() => {
@@ -122,46 +71,21 @@ export const DreamJournal: React.FC = () => {
           content: data.content || '',
           interpretation: data.interpretation || '',
           type: data.type || 'unknown',
-          wirdDone: data.wirdDone || '',
-          isPendingSync: data.isPendingSync || false
-        } as any);
+          wirdDone: data.wirdDone || ''
+        });
       });
 
-      // Merge with local pending dreams so they don't disappear when Firestore snaps overwrite local cache
-      const pending = JSON.parse(localStorage.getItem('asrar_pending_dreams') || '[]');
-      const pendingIds = pending.map((p: any) => p.id);
-      
-      // Filter out any of the incoming firebase dreams that are already present in pending to avoid duplicates
-      const cleanFbDreams = fbDreams.filter(fd => !pendingIds.includes(fd.id));
-      const mergedDreams = [...pending, ...cleanFbDreams];
+      fbDreams.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-      mergedDreams.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
-      setDreams(mergedDreams);
-      localStorage.setItem('asrar_dreams', JSON.stringify(mergedDreams));
-      
-      if (pending.length === 0) {
-        setSyncStatus('synced');
-      } else {
-        setSyncStatus('local');
-      }
+      setDreams(fbDreams);
+      localStorage.setItem('asrar_dreams', JSON.stringify(fbDreams));
+      setSyncStatus('synced');
     }, (error) => {
       console.error("Error loading dreams from cloud:", error);
       setSyncStatus('local');
     });
 
     return () => unsubscribe();
-  }, [user]);
-
-  // Handle Online auto-sync
-  useEffect(() => {
-    window.addEventListener('online', syncOfflineDreams);
-    if (navigator.onLine && user) {
-      syncOfflineDreams();
-    }
-    return () => {
-      window.removeEventListener('online', syncOfflineDreams);
-    };
   }, [user]);
 
   const handleInterpret = async () => {
@@ -183,7 +107,7 @@ export const DreamJournal: React.FC = () => {
         alert(data.error || "Erreur d'interprétation");
       }
     } catch (e) {
-      alert("Erreur réseau. Impossible d'interpréter le rêve sans connexion internet.");
+      alert("Erreur réseau");
     } finally {
       setIsInterpreting(false);
     }
@@ -194,7 +118,7 @@ export const DreamJournal: React.FC = () => {
 
     setSyncStatus('syncing');
     const dreamId = Date.now().toString();
-    const newDream: DreamEntry & { isPendingSync?: boolean } = {
+    const newDream: DreamEntry = {
       id: dreamId,
       date: new Date().toISOString(),
       title,
@@ -205,43 +129,18 @@ export const DreamJournal: React.FC = () => {
     };
 
     if (user) {
-      if (navigator.onLine) {
-        try {
-          await setDoc(doc(db, 'dreams', dreamId), {
-            ...newDream,
-            userId: user.uid
-          });
-          
-          const updated = [newDream as DreamEntry, ...dreams];
-          setDreams(updated);
-          localStorage.setItem('asrar_dreams', JSON.stringify(updated));
-          setSyncStatus('synced');
-        } catch (e) {
-          console.error("Error saving dream to Cloud, saving to pending list:", e);
-          newDream.isPendingSync = true;
-          const pending = JSON.parse(localStorage.getItem('asrar_pending_dreams') || '[]');
-          pending.push({ ...newDream, userId: user.uid });
-          localStorage.setItem('asrar_pending_dreams', JSON.stringify(pending));
-          
-          const updated = [newDream as DreamEntry, ...dreams];
-          setDreams(updated);
-          localStorage.setItem('asrar_dreams', JSON.stringify(updated));
-          setSyncStatus('local');
-        }
-      } else {
-        // Explicitly offline
-        newDream.isPendingSync = true;
-        const pending = JSON.parse(localStorage.getItem('asrar_pending_dreams') || '[]');
-        pending.push({ ...newDream, userId: user.uid });
-        localStorage.setItem('asrar_pending_dreams', JSON.stringify(pending));
-        
-        const updated = [newDream as DreamEntry, ...dreams];
-        setDreams(updated);
-        localStorage.setItem('asrar_dreams', JSON.stringify(updated));
+      try {
+        await setDoc(doc(db, 'dreams', dreamId), {
+          ...newDream,
+          userId: user.uid
+        });
+        setSyncStatus('synced');
+      } catch (e) {
+        console.error("Error saving dream to Cloud:", e);
         setSyncStatus('local');
       }
     } else {
-      const updated = [newDream as DreamEntry, ...dreams];
+      const updated = [newDream, ...dreams];
       setDreams(updated);
       localStorage.setItem('asrar_dreams', JSON.stringify(updated));
       setSyncStatus('local');
@@ -262,31 +161,12 @@ export const DreamJournal: React.FC = () => {
 
   const deleteDream = async (id: string) => {
     setSyncStatus('syncing');
-    
-    // Remove from pending local list
-    const pending = JSON.parse(localStorage.getItem('asrar_pending_dreams') || '[]');
-    const filteredPending = pending.filter((p: any) => p.id !== id);
-    localStorage.setItem('asrar_pending_dreams', JSON.stringify(filteredPending));
-
     if (user) {
       try {
         await deleteDoc(doc(db, 'dreams', id));
-        
-        const updated = dreams.filter(d => d.id !== id);
-        setDreams(updated);
-        localStorage.setItem('asrar_dreams', JSON.stringify(updated));
-        
-        if (filteredPending.length === 0) {
-          setSyncStatus('synced');
-        } else {
-          setSyncStatus('local');
-        }
+        setSyncStatus('synced');
       } catch (e) {
         console.error("Error deleting dream from Cloud:", e);
-        
-        const updated = dreams.filter(d => d.id !== id);
-        setDreams(updated);
-        localStorage.setItem('asrar_dreams', JSON.stringify(updated));
         setSyncStatus('local');
       }
     } else {
@@ -446,15 +326,6 @@ export const DreamJournal: React.FC = () => {
       </AnimatePresence>
 
       <div className="space-y-4">
-        {syncCount > 0 && (
-          <div className="mb-6 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 p-4 rounded-2xl flex items-center gap-3 shadow-sm text-emerald-800 dark:text-emerald-300">
-            <CheckCircle2 className="text-emerald-500" size={20} />
-            <p className="text-sm font-bold">
-              Synchronisation réussie : {syncCount} rêve(s) enregistré(s) en mode hors-ligne ont été synchronisés automatiquement avec le serveur !
-            </p>
-          </div>
-        )}
-
         {dreams.length === 0 && !isEditorOpen && (
           <div className="text-center py-12">
             <Moon size={48} className="mx-auto text-gray-300 dark:text-gray-600 mb-4" />
@@ -464,7 +335,6 @@ export const DreamJournal: React.FC = () => {
 
         {dreams.map(dream => {
           const isExpanded = expandedDreamIds.has(dream.id);
-          const isPending = (dream as any).isPendingSync;
           return (
             <motion.div 
               key={dream.id}
@@ -485,7 +355,7 @@ export const DreamJournal: React.FC = () => {
                 </button>
                 <ChevronDown size={20} className={`text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
               </div>
-              <div className="flex flex-wrap items-center gap-3 mb-4">
+              <div className="flex items-center gap-3 mb-4">
                 <span className={`px-3 py-1 rounded-full text-xs font-bold border ${typeConfig[dream.type].bg}`}>
                   {typeConfig[dream.type].label}
                 </span>
@@ -493,12 +363,6 @@ export const DreamJournal: React.FC = () => {
                   <Calendar size={14} />
                   {new Date(dream.date).toLocaleDateString('fr-FR')}
                 </span>
-                {isPending && (
-                  <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 rounded-full border border-amber-100/30 dark:border-amber-800/30">
-                    <Cloud size={12} className="text-amber-500 animate-pulse" />
-                    Saisie différée (En attente de connexion)
-                  </span>
-                )}
               </div>
               <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-3 pr-16">{dream.title}</h3>
 

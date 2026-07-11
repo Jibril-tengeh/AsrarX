@@ -3,7 +3,6 @@ import { Sparkles, ArrowLeft, Search, BookOpen, Star, Shield, Heart, Compass, Fe
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { motion, AnimatePresence } from 'motion/react';
-import { asmaListData } from '../../../data/asmaListData';
 
 // Helper to generate a 3x3 Vifiq (Muthallath)
 const generateVifiq3x3 = (total: number) => {
@@ -221,280 +220,8 @@ const divineNamesDeep = [
   }
 ];
 
-const divineNamesTranslations: Record<string, Record<string, Partial<typeof divineNamesDeep[0]>>> = {
-  en: {
-    "Ya Allah": {
-      effect: "Absolute illumination, ego dissolution (Fana), spiritual sovereignty.",
-      meaning: "The Absolute Divine Essence, encompassing all attributes of Perfection.",
-      esoteric: "Considered by the highest gnostics as the Supreme Name (Ism al-A'dham). 'Allah' acts on the wholeness of being. Its vibration resonates with the 'Sirr' (deep secret). It burns away the veils of the ego (Nafs) and disintegrates all magic. 66 links microcosm and macrocosm.",
-      zikr: "The Dhikr of the poles (Aqtab): 66 times a day for perfect vibratory alignment. 4356 (66x66) in retreat (Khalwa) for unveiling (Kashf).",
-      category: "Essence (Dhat)",
-      maqam: "Station of Pure Oneness (Ahadiyya)"
-    },
-    "Ya Rahman": {
-      effect: "Attraction of cosmic grace, resolution of impossibles, opening of the heart.",
-      meaning: "The Universal Matrix of Mercy, whose clémence encompasses all existence.",
-      esoteric: "Causes the effusion of existence. Rahman is the attribute by which the universe maintains itself. Its secret, often coupled with 298, acts like rain on dead soil.",
-      zikr: "298 times after Fajr to synchronize your aura with the descending mercy of the day.",
-      category: "Beauty (Jamal)",
-      maqam: "Station of Expansion (Bist)"
-    },
-    "Ya Rahim": {
-      effect: "Intimate protection, softness of heart, safeguarding the family structure.",
-      meaning: "The Specifically Merciful, source of pure and continuous Love.",
-      esoteric: "While Rahman distributes grace to all, Rahim targets the seeker. It is the healing esoteric balm. It weaves invisible threads of tenderness between individuals.",
-      zikr: "258 times after each obligatory prayer to seal your family and projects under divine preservation.",
-      category: "Beauty (Jamal)",
-      maqam: "Station of Chosen Love (Mahabba)"
-    },
-    "Ya Quddus": {
-      effect: "Purging dark traumas, repelling negative entities (Jinn).",
-      meaning: "The Infinitely Holy, Transcendent, devoid of all imperfection.",
-      esoteric: "The alchemical fire that purifies the spirit. Al-Quddus dissolves dark obsessions, neuroses, and spells. Recitation of this name raises the vibratory rate of the soul.",
-      zikr: "170 times right before sleeping or after dusk to cleanse the psyche of collected negative energies.",
-      category: "Majesty (Jalal)",
-      maqam: "Station of Original Purity (Fitra)"
-    },
-    "Ya Salam": {
-      effect: "Physical healing, mental peace, immunity against disasters.",
-      meaning: "The Giver of Peace and Source of Safety.",
-      esoteric: "The cosmic antidote. Ya Salam extinguishes physical fevers, inflammations, and psychological anxiety. This Name pacifies cells and freezes hostile intentions.",
-      zikr: "131 times blown onto a glass of water for healing. Recited in fear, it instantly restores peace.",
-      category: "Beauty (Jamal)",
-      maqam: "Station of Peaceful Heart (Mutma'inna)"
-    },
-    "Ya Mu'min": {
-      effect: "Absolute psychic immunity against anxiety and terror, certified faith.",
-      meaning: "The Giver of Security, the Guarantor, Confirmer of Truth.",
-      esoteric: "Anchors the soul against life's storms. Acts as a consciousness stabilizer. When zikred, the Light of certainty (Yaqin) floods the chest, making fear powerless.",
-      zikr: "136 times at sunrise to wear the armor of security. Protects against unexpected betrayal.",
-      category: "Beauty (Jamal)",
-      maqam: "Station of Lived Certainty (Haqq al-Yaqin)"
-    },
-    "Ya Muhaymin": {
-      effect: "Clairvoyance (Firasa), reading of hearts, spiritual telepathy.",
-      meaning: "The Dominator, the Watchful, the Omniscient Guardian.",
-      esoteric: "One of the greatest secrets for opening the inner eye (Bashira). Al-Muhaymin reveals hidden thoughts and intentions of others, letting the veil of reality fall.",
-      zikr: "145 times in the middle of the night (Tahajjud). Famous for the gift of second sight.",
-      category: "Majesty (Jalal)",
-      maqam: "Station of Watchful Vigilance (Muraqaba)"
-    },
-    "Ya Aziz": {
-      effect: "Glory, overwhelming dignity, defeat of enemies.",
-      meaning: "The Mighty, the Conqueror, the Invulnerable.",
-      esoteric: "Induces instinctive respect and reverent fear in the observer. Ya Aziz carries the energetic signature of a solar aura, repelling tyrants and attracting truth-seekers.",
-      zikr: "40 times daily for 40 days to rise from subaltern to glory, or 94 times as a routine.",
-      category: "Majesty (Jalal)",
-      maqam: "Station of Soul Power ('Izza)"
-    },
-    "Ya Wahhab": {
-      effect: "Irrational abundance, lightning-fast spiritual unveilings.",
-      meaning: "The Bestower of boundless gifts without any merit.",
-      esoteric: "The divine shortcut. Al-Wahhab bypasses temporal merit, triggering sudden material wealth, genius ideas, and esoteric knowledge (Ilm Ladunni).",
-      zikr: "14 times (or 300) with forehead to the ground after Duha. Breaks generational poverty.",
-      category: "Beauty (Jamal)",
-      maqam: "Station of Favor (Fadl)"
-    },
-    "Ya Razzaq": {
-      effect: "Multidimensional opening of sustenance (Rizq).",
-      meaning: "The Inexhaustible Provider.",
-      esoteric: "Sustenance is not just money; it is knowledge, air, and quality relationships. Al-Razzaq acts on cosmic commercial flow, attracting opportunities and repelling lack.",
-      zikr: "308 times after Fajr at the four corners of your home: occult shield against bankruptcy.",
-      category: "Beauty (Jamal)",
-      maqam: "Station of Complete Trust (Tawakkul)"
-    },
-    "Ya Fattah": {
-      effect: "Destruction of karmic/magical knots, decisive success.",
-      meaning: "The Supreme Opener (who cuts, resolves, and unlocks).",
-      esoteric: "The Mystical Key (Miftah). Whether it's an illness, an occult knot, or a crisis, Fattah breaks blocks with luminous force, illuminating the heart.",
-      zikr: "489 times after Fajr with hands on the solar plexus. The spirit's sword for success.",
-      category: "Universal Majesty/Beauty",
-      maqam: "Station of Opening (Fath)"
-    },
-    "Ya Latif": {
-      effect: "Quiet miracles, resolution of inextricable crises, softness of life.",
-      meaning: "The Subtle, the Penetrating, whose softness flows into the unseen.",
-      esoteric: "The spiritual panacea. Latif alters events at a subatomic level. Invoked in massive numbers (Zikr Jalali), it dissolves catastrophes before they manifest.",
-      zikr: "129 times daily. 16,641 times in group for miracles, legal battles, or extreme crises.",
-      category: "Subtle Beauty (Jamal)",
-      maqam: "Station of Tested Subtlety (Lutf)"
-    },
-    "Ya Haq": {
-      effect: "Absolute sorting of truth and falsehood, victory of justice.",
-      meaning: "The Ultimate Reality.",
-      esoteric: "Destroys illusions and unveils structural lies. A heavy-weight balancer of the universe, it forces justice and disperses manipulators.",
-      zikr: "108 times in the middle of night. This dhikr returns ill-will to its sender and restores balance.",
-      category: "Sharp Majesty (Jalal)",
-      maqam: "Station of Constant Truth (Haqiqa)"
-    },
-    "Ya Wadud": {
-      effect: "Interpersonal magnetism, mystical ecstasy (Wajd), social affection.",
-      meaning: "The Loving and the Beloved Absolute, the universal Attractor.",
-      esoteric: "The Name of cosmic attraction (Mahabba). One who wears its vibration becomes so attractive that even hateful hearts are disarmed.",
-      zikr: "20 or 400 times over food, drink, or in palms to radiate universal Love and overcome hatred.",
-      category: "Beauty (Jamal)",
-      maqam: "Station of Radiant Ecstasy (Wajd)"
-    },
-    "Ya Basit": {
-      effect: "Expansion of the heart, triumph over deep depression (Qabd).",
-      meaning: "The Expander.",
-      esoteric: "The sovereign Name against deep melancholy. Basit loosens the grip around the chest, injecting spiritual oxygen and empowering the voice.",
-      zikr: "72 times at sunrise with arms raised in a V. Alchemical remedy for anxiety.",
-      category: "Extensive Beauty (Jamal)",
-      maqam: "Station of Expansion (Bist)"
-    },
-    "Ya Nur": {
-      effect: "Transmutation of all shadows, facial radiance (Nuraniyya).",
-      meaning: "The Eternal Luminous Essence.",
-      esoteric: "Photons of pure divine intelligence. Al-Nur grants radiant insight (Ilm Ladunni). A powerful secret to burn dark witchcraft and entities.",
-      zikr: "256 times with eyes closed (Tahajjud), mentally absorbing crystalline white light.",
-      category: "Awakening Beauty (Jamal)",
-      maqam: "Station of Illumination (Tajalli)"
-    }
-  },
-  ha: {
-    "Ya Allah": {
-      effect: "Haskakawa cikakke, rushewar ego (Fana), ikon ruhaniya.",
-      meaning: "Siffar Allah Maɗaukaki wacce ta ƙunshi dukkan kammala.",
-      esoteric: "Mafi yawan masana sun ɗauke shi a matsayin Babban Suna (Ism al-A'dham). Allah yana shafar dukkan sassan halitta.",
-      zikr: "Zikirin shugabanni (Aqtab): sau 66 a rana don daidaituwa ta ruhaniya. Sau 4356 a cikin kaɗaitaka.",
-      category: "Zati (Dhat)",
-      maqam: "Matsayin Kadaitaka (Ahadiyya)"
-    },
-    "Ya Rahman": {
-      effect: "Jan hankalin alherin sararin samaniya, warware matsaloli, buɗe zuciya.",
-      meaning: "Matattarar Jinƙai ga dukkan halittu.",
-      esoteric: "Yana kawo albarkar rayuwa. Rahman ita ce sifar da dukkan sararin samaniya ke dogara da ita.",
-      zikr: "Sau 298 bayan asuba don daidaita aura da rahamar da ke sauka.",
-      category: "Kyau (Jamal)",
-      maqam: "Matsayin Yalwa (Bist)"
-    },
-    "Ya Rahim": {
-      effect: "Kariya ta musamman, taushin zuciya, tsaron iyali.",
-      meaning: "Mai Jinƙai na Musamman ga muminai.",
-      esoteric: "Yana warkar da raunin ruhaniya. Yana haɗa zukatan mutane da soyayya da aminci.",
-      zikr: "Sau 258 bayan kowace sallah don kare iyali da ayyuka a ƙarƙashin tsaron Allah.",
-      category: "Kyau (Jamal)",
-      maqam: "Matsayin Soyayya (Mahabba)"
-    },
-    "Ya Quddus": {
-      effect: "Wanke tsoffin damuwar zuciya, korar miyagun aljanu.",
-      meaning: "Tsarkakakke, Mai Transcendent, maras aibi.",
-      esoteric: "Wutar alchemical ce mai tsarkake ruhu. Al-Quddus yana rushe damuwar tunani da sihiri.",
-      zikr: "Sau 170 kafin barci don tsarkake tunani daga munanan kuzarin da aka tara da rana.",
-      category: "Jalala (Jalal)",
-      maqam: "Matsayin Tsarki (Fitra)"
-    },
-    "Ya Salam": {
-      effect: "Warkar da jiki, kwanciyar hankali, kariya daga musifu.",
-      meaning: "Sallamar Zaman Lafiya, Tushen Kariya.",
-      esoteric: "Rigakafin sararin samaniya. Ya Salam yana kashe zazzaɓi da fargabar hankali. Invoƙin sa yana daidaita kwayoyin halitta.",
-      zikr: "Sau 131 a hura a ruwa don waraka. Karanta shi lokacin tsoro don samun kwanciyar hankali nan take.",
-      category: "Kyau (Jamal)",
-      maqam: "Matsayin Kwanciyar Hankali (Mutma'inna)"
-    },
-    "Ya Mu'min": {
-      effect: "Kariya ta musamman kaɗai daban-daban daga fargaba da tsoro, ingantaccen imani.",
-      meaning: "Mai ba da Tsaro da Kariya.",
-      esoteric: "Yana tabbatar da rai a lokacin wahala. Hasken yakini yana cika zuciya lokacin yin zikirin sa.",
-      zikr: "Sau 136 da safe don sanya sulken kariya da aminci daga cin amana.",
-      category: "Kyau (Jamal)",
-      maqam: "Matsayin Tabbas (Haqq al-Yaqin)"
-    },
-    "Ya Muhaymin": {
-      effect: "Bayyanar basira (Firasa), karanta zukata, telepathy ta ruhu.",
-      meaning: "Mai Kula, Mabuwayi, Mai kiyayewa.",
-      esoteric: "Wani babban sirri ne na buɗe idon basira. Al-Muhaymin yana bayyana ɓoyayyen tunanin wasu.",
-      zikr: "Sau 145 a tsakiyar dare (Sallan dare). Sananne ne don samun basirar gaskiya.",
-      category: "Jalala (Jalal)",
-      maqam: "Matsayin Kula da Zuciya (Muraqaba)"
-    },
-    "Ya Aziz": {
-      effect: "Daukaka, kwarjini mai girma, nasara a kan makiya.",
-      meaning: "Mabuwayi, Mai nasara, maras rauni.",
-      esoteric: "Yana sanya girmamawa a zukatan mutane. Yana sanya aura mai ƙarfi da ke korar azzalufai.",
-      zikr: "Sau 40 a kowace rana na tsawon kwanaki 40 don samun ɗaukaka, ko sau 94 a matsayin zikiri.",
-      category: "Jalala (Jalal)",
-      maqam: "Matsayin Izzah ('Izza)"
-    },
-    "Ya Wahhab": {
-      effect: "Arziki mai yawa, buɗewar ruhaniya cikin sauri.",
-      meaning: "Mai yawan kyauta maras iyaka ba tare da lissafi ba.",
-      esoteric: "Hanya mafi sauƙi. Al-Wahhab yana kawo arziki na ba zato ba tsammani da ilimin asiri.",
-      zikr: "Sau 14 (ko 300) da goshi a ƙasa bayan sallar hantsi. Yana karya talauci.",
-      category: "Kyau (Jamal)",
-      maqam: "Matsayin Falala (Fadl)"
-    },
-    "Ya Razzaq": {
-      effect: "Buɗe hanyoyin arziki da abinci ta ko'ina (Rizq).",
-      meaning: "Mai azurta halittu ba tare da yankewa ba.",
-      esoteric: "Arziki ba kuɗi kaɗai ba ne; ilimi ne da zaman lafiya. Al-Razzaq yana jan hankalin damammakin kasuwanci.",
-      zikr: "Sau 308 bayan asuba a kusurwoyi huɗu na gida don karewa daga fatara.",
-      category: "Kyau (Jamal)",
-      maqam: "Matsayin Dogara ga Allah (Tawakkul)"
-    },
-    "Ya Fattah": {
-      effect: "Karya ƙulle-ƙullen sihiri, samun babban rabo.",
-      meaning: "Mai Buɗewa Maɗaukaki (Mai yanke hukunci da buɗe hanya).",
-      esoteric: "Mabuɗin Ruhaniya (Miftah). Al-Fattah yana buɗe dukkan ƙofofin da aka rufe na rayuwa.",
-      zikr: "Sau 489 bayan asuba da hannaye a kan ƙirji don nasara da daukaka.",
-      category: "Mulki da Kyau",
-      maqam: "Matsayin Buɗewa (Fath)"
-    },
-    "Ya Latif": {
-      effect: "Mu'ujizoji na sirri, maganin matsaloli masu wuya, sauƙin rayuwa.",
-      meaning: "Mai Sauƙi da Sanin dukkan abubuwan da ke ɓoye.",
-      esoteric: "Lafiyar ruhu. Latif yana canza yanayi cikin ikon Allah don kawar da bala'o'i.",
-      zikr: "Sau 129 a kowace rana. Sau 16641 a cikin rukuni don neman babban taimako a kan shari'a ko bala'i.",
-      category: "Kyau na Sirri (Jamal)",
-      maqam: "Matsayin Tausayi (Lutf)"
-    },
-    "Ya Haq": {
-      effect: "Tabbatar da gaskiya da karyata ƙarya, nasarar adalci.",
-      meaning: "Gaskiya ta Har abada.",
-      esoteric: "Yana ruguza yaudara kuma yana bayyana gaskiya. Yana mayar da dukkan haƙƙoƙi ga masu su.",
-      zikr: "Sau 108 a tsakiyar dare don kare kai da dawo da adalci.",
-      category: "Jalala mai ƙarfi (Jalal)",
-      maqam: "Matsayin Haƙiƙa (Haqiqa)"
-    },
-    "Ya Wadud": {
-      effect: "Jan hankali tsakanin mutane, soyayya da daukaka a cikin al'umma.",
-      meaning: "Mai Son Bayinsa, Abokin Tarayya na Gaskiya.",
-      esoteric: "Suna ne na soyayya (Mahabba). Wanda ya saba da shi yana samun karɓuwa a idon kowa.",
-      zikr: "Sau 20 ko 400 a kan abinci ko abin sha ko a busa a hannu don samar da zaman lafiya da soyayya.",
-      category: "Kyau (Jamal)",
-      maqam: "Matsayin Soyayyar gaskiya (Wajd)"
-    },
-    "Ya Basit": {
-      effect: "Yalwar zuciya da farin ciki, maganin damuwar zuciya (Qabd).",
-      meaning: "Mai Yalwatawa.",
-      esoteric: "Maganin bakin ciki mai zurfi. Basit yana buɗe ƙirjin mutum kuma yana cire ƙunci.",
-      zikr: "Sau 72 lokacin fitowar rana tare da ɗaga hannaye sama don warware damuwa.",
-      category: "Kyau (Jamal)",
-      maqam: "Matsayin Yalwa (Bist)"
-    },
-    "Ya Nur": {
-      effect: "Juya dukkan duhu zuwa haske, hasken fuska (Nuraniyya).",
-      meaning: "Hasken da ba ya ƙarewa.",
-      esoteric: "Haske ne na gaskiya. Al-Nur yana ba da basira ta musamman kuma yana ƙone dukkan sihiri na duhu.",
-      zikr: "Sau 256 da idanu a rufe a cikin sallah dare, don cika zuciya da hasken Allah.",
-      category: "Kyau (Jamal)",
-      maqam: "Matsayin Bayyanar Haske (Tajalli)"
-    }
-  }
-};
-
-const getLocalizedNameItem = (item: typeof divineNamesDeep[0], lang: string): typeof divineNamesDeep[0] => {
-  const trans = divineNamesTranslations[lang]?.[item.name];
-  if (!trans) return item;
-  return {
-    ...item,
-    ...trans
-  };
-};
-
 export const Asma: React.FC = () => {
-  const { t, language } = useLanguage();
+  const { t } = useLanguage();
   const [val, setVal] = useState('');
   const [result, setResult] = useState<typeof divineNamesDeep>([]);
   const [expandedId, setExpandedId] = useState<number | null>(null);
@@ -571,15 +298,14 @@ export const Asma: React.FC = () => {
         {result.length > 0 && (
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
             <h3 className="font-black text-gray-900 dark:text-white uppercase tracking-widest text-sm mb-2 pt-4 border-t border-gray-200 dark:border-gray-700">
-              {t("tools.asma.titleResult", "Vos Noms Résonnants (Zikr Personnel)")}
+              Vos Noms Résonnants (Zikr Personnel)
             </h3>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-              {t("tools.asma.descResult", "Le premier Nom affiché est celui qui fusionne le plus parfaitement avec votre empreinte d'âme. Cliquez sur une carte pour révéler les secrets.")}
+              Le premier Nom affiché est celui qui fusionne le plus parfaitement avec votre empreinte d'âme. Cliquez sur une carte pour révéler les secrets.
             </p>
 
             {result.map((item, idx) => {
               const isExpanded = expandedId === idx;
-              const localizedItem = getLocalizedNameItem(item, language);
               
               return (
                 <motion.div
@@ -590,30 +316,26 @@ export const Asma: React.FC = () => {
                 >
                   <div className="p-6 md:p-8 flex items-center justify-between gap-4">
                     <div className="flex-1">
-                      <div className="flex flex-wrap items-center gap-2 mb-2">
-                         <span className={`px-3 py-1 rounded-lg text-[10px] uppercase font-black tracking-widest ${getCategoryColor(localizedItem.category || '')}`}>
-                           {localizedItem.category}
+                      <div className="flex items-center gap-3 mb-2">
+                         <span className={`px-3 py-1 rounded-lg text-[10px] uppercase font-black tracking-widest ${getCategoryColor(item.category)}`}>
+                           {item.category}
                          </span>
                          {idx === 0 && (
                             <span className="flex items-center gap-1 text-[10px] uppercase font-black tracking-widest text-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 dark:text-indigo-400 px-3 py-1 rounded-lg">
-                               <Star size={12} fill="currentColor" /> {t("tools.asma.mainAffinity", "Affinité Principale")}
+                              <Star size={12} fill="currentColor" /> Affinité Principale
                             </span>
                          )}
-                         <span className="flex items-center gap-1 text-[10px] uppercase font-black tracking-widest text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 dark:text-emerald-400 px-3 py-1 rounded-lg">
-                           <BookOpen size={12} />
-                           {(asmaListData.find(n => n.abjad === localizedItem.val)?.quranOptions?.count ?? 0)} {language === 'fr' ? 'fois dans le Coran' : language === 'ha' ? 'sau a Alƙur\'ani' : 'times in Quran'}
-                         </span>
                       </div>
                       <h4 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-2 tracking-tight">
-                        {localizedItem.name.replace(/^Ya\s+/, '')} <span className="font-arabic font-normal text-indigo-600 dark:text-indigo-400 ml-2">{localizedItem.ar.replace(/^يَا\s+/, '').replace(/^يَا/, '')}</span>
+                        {item.name} <span className="font-arabic font-normal text-indigo-600 dark:text-indigo-400 ml-2">{item.ar}</span>
                       </h4>
-                      <p className="text-sm font-medium text-gray-600 dark:text-gray-300">{localizedItem.meaning}</p>
+                      <p className="text-sm font-medium text-gray-600 dark:text-gray-300">{item.meaning}</p>
                     </div>
                     
                     <div className="hidden sm:flex shrink-0 w-20 h-20 bg-gray-50 dark:bg-gray-900 rounded-2xl items-center justify-center border-2 border-gray-100 dark:border-gray-700">
                        <div className="text-center">
                           <span className="block text-[10px] uppercase font-bold text-gray-400">Abjad</span>
-                          <span className="block text-xl font-bold text-indigo-600 dark:text-indigo-400 font-mono tracking-tighter">{localizedItem.val}</span>
+                          <span className="block text-xl font-bold text-indigo-600 dark:text-indigo-400 font-mono tracking-tighter">{item.val}</span>
                        </div>
                     </div>
                   </div>
@@ -636,7 +358,7 @@ export const Asma: React.FC = () => {
                                    </div>
                                    <div>
                                       <span className="block text-[10px] font-bold uppercase tracking-widest text-gray-400">{t("tools.asma.maqam")}</span>
-                                      <span className="block text-sm font-bold text-gray-900 dark:text-white">{localizedItem.maqam}</span>
+                                      <span className="block text-sm font-bold text-gray-900 dark:text-white">{item.maqam}</span>
                                    </div>
                                 </div>
                                 
@@ -646,7 +368,7 @@ export const Asma: React.FC = () => {
                                    </div>
                                    <div>
                                       <span className="block text-[10px] font-bold uppercase tracking-widest text-gray-400">{t("tools.asma.ruhaniyya")}</span>
-                                      <span className="block text-sm font-bold text-gray-900 dark:text-white">{localizedItem.angel}</span>
+                                      <span className="block text-sm font-bold text-gray-900 dark:text-white">{item.angel}</span>
                                    </div>
                                 </div>
                             </div>
@@ -658,7 +380,7 @@ export const Asma: React.FC = () => {
                                <div>
                                   <h5 className="text-sm font-bold uppercase tracking-widest text-gray-900 dark:text-white mb-2">{t("tools.asma.sirr")}</h5>
                                   <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed font-serif text-justify">
-                                    {localizedItem.esoteric}
+                                    {item.esoteric}
                                   </p>
                                </div>
                             </div>
@@ -670,7 +392,7 @@ export const Asma: React.FC = () => {
                                <div>
                                   <h5 className="text-sm font-bold uppercase tracking-widest text-gray-900 dark:text-white mb-2">{t("tools.asma.khassiyya")}</h5>
                                   <p className="text-sm font-medium text-rose-600 dark:text-rose-400 shadow-sm border border-rose-100 dark:border-rose-900/30 bg-white dark:bg-gray-900 p-3 rounded-xl inline-block">
-                                    {localizedItem.effect}
+                                    {item.effect}
                                   </p>
                                </div>
                             </div>
@@ -682,7 +404,7 @@ export const Asma: React.FC = () => {
                                <div className="w-full">
                                   <h5 className="text-sm font-bold uppercase tracking-widest text-gray-900 dark:text-white mb-2">{t("tools.asma.tariqa")}</h5>
                                   <p className="text-sm font-mono text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
-                                    {localizedItem.zikr}
+                                    {item.zikr}
                                   </p>
                                </div>
                             </div>
@@ -693,15 +415,15 @@ export const Asma: React.FC = () => {
                                 
                                 <div className="mb-6 bg-indigo-50 dark:bg-indigo-900/10 p-4 rounded-xl text-center">
                                   <span className="block text-xs uppercase font-bold text-indigo-800 dark:text-indigo-300 mb-1">{t("tools.asma.talsamCode")}</span>
-                                  <span className="font-arabic text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">طمشلش {localizedItem.ar.replace('يَا ', '').replace('يَا', '')} كضهيوش</span>
-                                  <p className="text-xs text-indigo-600/70 dark:text-indigo-400/70 mt-2 font-mono">{t("tools.asma.talsamDesc")} {localizedItem.val}</p>
+                                  <span className="font-arabic text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">طمشلش {item.ar.replace('يَا ', '').replace('يَا', '')} كضهيوش</span>
+                                  <p className="text-xs text-indigo-600/70 dark:text-indigo-400/70 mt-2 font-mono">Formule vibratoire de connexion pour la valeur {item.val}</p>
                                 </div>
 
                                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
                                   <div className="text-center">
                                     <h6 className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 mb-2">{t("tools.asma.muthallath")}</h6>
                                     <div className="grid grid-cols-3 mx-auto max-w-[12rem] gap-1 p-2 bg-gray-100 dark:bg-gray-900 rounded-xl">
-                                      {generateVifiq3x3(localizedItem.val).map((row, i) => 
+                                      {generateVifiq3x3(item.val).map((row, i) => 
                                         row.map((cell, j) => (
                                           <div key={`${i}-${j}`} className="aspect-square bg-white dark:bg-gray-800 rounded-lg flex items-center justify-center font-mono font-bold text-sm sm:text-base text-gray-900 dark:text-white shadow-sm border border-gray-50 dark:border-gray-700">
                                             {cell}
@@ -714,14 +436,13 @@ export const Asma: React.FC = () => {
                                   <div className="text-center">
                                     <h6 className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 mb-2">{t("tools.asma.murabba")}</h6>
                                     <div className="grid grid-cols-4 mx-auto max-w-[16rem] gap-1 p-2 bg-gray-100 dark:bg-gray-900 rounded-xl">
-                                      {generateVifiq4x4(localizedItem.val).map((row, i) => 
+                                      {generateVifiq4x4(item.val).map((row, i) => 
                                         row.map((cell, j) => (
                                           <div key={`${i}-${j}`} className="aspect-square bg-white dark:bg-gray-800 rounded-lg flex items-center justify-center font-mono font-bold text-xs sm:text-sm text-gray-900 dark:text-white shadow-sm border border-gray-50 dark:border-gray-700">
                                             {cell}
                                           </div>
                                         ))
                                       )}
-
                                     </div>
                                   </div>
                                 </div>

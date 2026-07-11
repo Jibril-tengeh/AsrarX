@@ -1109,7 +1109,6 @@ export const QuranFull: React.FC = () => {
   const contentRepeatLeftRef = useRef<number>(0);
   const playOnlyOneRef = useRef<boolean>(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const objectUrlRef = useRef<string | null>(null);
   const ayahRefs = useRef<{[key: number]: HTMLDivElement | null}>({});
   
   const [showDownloadModal, setShowDownloadModal] = useState(false);
@@ -1399,27 +1398,6 @@ export const QuranFull: React.FC = () => {
                  setDownloadMessage(`Téléchargement de l'audio... (${s}) ${Math.round((audioProcessed / ayahs.length) * 100)}%`);
               }
             }
-
-            // Also cache the full continuous Surah MP3 file for background audio context play
-            if (type === 'surah') {
-              try {
-                const reciter = QURAN_RECITERS.find(r => r.id === selectedReciterId) || QURAN_RECITERS[0];
-                const surahNumStr = String(s).padStart(3, '0');
-                const fullSurahAudioUrl = `${reciter.server}${surahNumStr}.mp3`;
-                
-                const cachedFull = await audioCache.match(fullSurahAudioUrl);
-                if (!cachedFull) {
-                  setDownloadMessage(`Téléchargement de la sourate complète ${s}...`);
-                  const response = await fetch(fullSurahAudioUrl);
-                  if (response.ok) {
-                    await audioCache.put(fullSurahAudioUrl, response);
-                    console.log(`[QuranFull] Cached full surah audio for: ${fullSurahAudioUrl}`);
-                  }
-                }
-              } catch (fullSurahErr) {
-                console.warn("Failed to cache full surah audio for offline background play:", fullSurahErr);
-              }
-            }
           }
         } catch (e) {
           console.warn("Failed to download audio for offline mode", e);
@@ -1530,10 +1508,6 @@ export const QuranFull: React.FC = () => {
         audioRef.current.pause();
         audioRef.current = null;
       }
-      if (objectUrlRef.current) {
-        URL.revokeObjectURL(objectUrlRef.current);
-        objectUrlRef.current = null;
-      }
     };
   }, []);
 
@@ -1555,10 +1529,6 @@ export const QuranFull: React.FC = () => {
     
     if (audioRef.current) {
       audioRef.current.pause();
-    }
-    if (objectUrlRef.current) {
-      URL.revokeObjectURL(objectUrlRef.current);
-      objectUrlRef.current = null;
     }
 
     if (!isRepeat && playingAyah === ayah.number && isPlaying) {
@@ -1663,9 +1633,11 @@ export const QuranFull: React.FC = () => {
   };
 
     if (blob) {
-      const url = URL.createObjectURL(blob);
-      objectUrlRef.current = url;
-      playAudioWithUrl(url);
+      const reader = new FileReader();
+      reader.readAsDataURL(blob);
+      reader.onloadend = () => {
+        playAudioWithUrl(reader.result as string);
+      };
     } else {
       playAudioWithUrl(ayah.audio);
     }

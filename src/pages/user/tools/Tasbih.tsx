@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Activity, ArrowLeft, RefreshCw, Volume2, VolumeX, Settings, Target, Save, History as HistoryIcon, Plus, Trash2, Check, ChevronDown, ChevronRight, BarChart2, Users } from 'lucide-react';
+import { Activity, ArrowLeft, RefreshCw, Volume2, VolumeX, Settings, Target, Save, History as HistoryIcon, Plus, Trash2, Check, ChevronDown, ChevronRight, BarChart2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
-import { CollectiveTasbih } from '../../../components/CollectiveTasbih';
 
 interface Zikr {
   id: string;
@@ -48,7 +47,7 @@ export const Tasbih: React.FC = () => {
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [vibrationEnabled, setVibrationEnabled] = useState(true);
   
-  const [activeTab, setActiveTab] = useState<'main' | 'settings' | 'history' | 'stats' | 'collective'>('main');
+  const [activeTab, setActiveTab] = useState<'main' | 'settings' | 'history' | 'stats'>('main');
 
   const [totalLifetime, setTotalLifetime] = useState(0);
   const [dailyTotal, setDailyTotal] = useState(0);
@@ -267,13 +266,6 @@ export const Tasbih: React.FC = () => {
              className={`p-2 rounded-full transition-colors ${activeTab === 'stats' ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
            >
              <BarChart2 size={18} />
-           </button>
-           <button 
-             onClick={() => setActiveTab('collective')}
-             className={`p-2 rounded-full transition-colors ${activeTab === 'collective' ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
-             title="Tasbih Collectif"
-           >
-             <Users size={18} />
            </button>
            <button 
              onClick={() => setActiveTab(activeTab === 'settings' ? 'main' : 'settings')}
@@ -570,16 +562,6 @@ export const Tasbih: React.FC = () => {
                </div>
             </div>
           </div>
-        </motion.div>
-      )}
-
-      {activeTab === 'collective' && (
-        <motion.div 
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="flex-1 flex flex-col animate-fadeIn"
-        >
-          <CollectiveTasbih />
         </motion.div>
       )}
 

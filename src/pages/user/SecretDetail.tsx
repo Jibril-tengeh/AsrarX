@@ -78,16 +78,11 @@ export const SecretDetail: React.FC = () => {
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [bookmarkFolders, setBookmarkFolders] = useState<any[]>([]);
   const [viewMode, setViewMode] = useState<'full' | 'accordion'>('full');
-  const [articleFontSize, setArticleFontSize] = useState<number>(() => {
-    const isAndroid = /Android/i.test(navigator.userAgent);
-    return isAndroid ? 14 : 18;
-  });
+  const [articleFontSize, setArticleFontSize] = useState<number>(18);
   const [rating, setRating] = useState(0);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [speakingWordIndex, setSpeakingWordIndex] = useState<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const backupIntervalRef = useRef<any>(null);
   const [isTranslating, setIsTranslating] = useState(false);
 
   useEffect(() => {
@@ -257,73 +252,13 @@ export const SecretDetail: React.FC = () => {
         audioRef.current.pause();
         audioRef.current = null;
       }
-      if (backupIntervalRef.current) {
-        clearInterval(backupIntervalRef.current);
-        backupIntervalRef.current = null;
-      }
     };
   }, []);
-
-  // Automatically scroll the current spoken word into view
-  useEffect(() => {
-    if (isSpeaking && speakingWordIndex !== null) {
-      const element = document.getElementById(`word-speak-${speakingWordIndex}`);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    }
-  }, [speakingWordIndex, isSpeaking]);
 
   const stripHtml = (html: string) => {
     const tmp = document.createElement("DIV");
     tmp.innerHTML = html;
     return tmp.textContent || tmp.innerText || "";
-  };
-
-  interface WordToken {
-    text: string;
-    globalIndex: number;
-  }
-
-  interface SpokenParagraph {
-    type: 'title' | 'verse' | 'content';
-    words: WordToken[];
-  }
-
-  const buildSpokenSegments = (currentItem: AsrarItem): SpokenParagraph[] => {
-    const segments: SpokenParagraph[] = [];
-    let globalIndex = 0;
-
-    // Title segment
-    const titleWords = currentItem.title.split(/\s+/).filter(w => w.length > 0).map(text => ({
-      text,
-      globalIndex: globalIndex++
-    }));
-    segments.push({ type: 'title', words: titleWords });
-
-    // Verse segment
-    if (currentItem.verse) {
-      const verseWords = currentItem.verse.split(/\s+/).filter(w => w.length > 0).map(text => ({
-        text,
-        globalIndex: globalIndex++
-      }));
-      segments.push({ type: 'verse', words: verseWords });
-    }
-
-    // Content paragraphs
-    const cleanContent = stripHtml(currentItem.content);
-    const paragraphs = cleanContent.split('\n').filter(p => p.trim().length > 0);
-    paragraphs.forEach(para => {
-      const paraWords = para.split(/\s+/).filter(w => w.length > 0).map(text => ({
-        text,
-        globalIndex: globalIndex++
-      }));
-      if (paraWords.length > 0) {
-        segments.push({ type: 'content', words: paraWords });
-      }
-    });
-
-    return segments;
   };
 
   const handleLectureVocale = () => {
@@ -337,39 +272,16 @@ export const SecretDetail: React.FC = () => {
         audioRef.current.pause();
         audioRef.current = null;
       }
-      if (backupIntervalRef.current) {
-        clearInterval(backupIntervalRef.current);
-        backupIntervalRef.current = null;
-      }
       setIsSpeaking(false);
-      setSpeakingWordIndex(null);
       return;
     }
 
-    const segments = buildSpokenSegments(item);
-    const allWords = segments.flatMap(s => s.words);
-    const textToRead = allWords.map(w => w.text).join(' ');
-
-    if (!textToRead.trim()) return;
-
+    const textToRead = `${item.title}. ${item.verse ? item.verse + '.' : ''} ${stripHtml(item.content)}`;
     const lang = language === 'en' ? 'en' : language === 'ha' ? 'ha' : 'fr';
-
-    // Calculate exact offsets for each word to pair with onboundary's charIndex
-    const wordsWithOffsets: { text: string; globalIndex: number; start: number; end: number }[] = [];
-    let currentOffset = 0;
-    for (let i = 0; i < allWords.length; i++) {
-      const wordText = allWords[i].text;
-      wordsWithOffsets.push({
-        text: wordText,
-        globalIndex: allWords[i].globalIndex,
-        start: currentOffset,
-        end: currentOffset + wordText.length
-      });
-      currentOffset += wordText.length + 1; // +1 for the space
-    }
 
     if ('speechSynthesis' in window) {
       try {
+        // Cancel any pending/paused speech before playing to avoid queuing issues
         window.speechSynthesis.cancel();
 
         const newUtterance = new SpeechSynthesisUtterance(textToRead);
@@ -381,89 +293,38 @@ export const SecretDetail: React.FC = () => {
           newUtterance.lang = 'fr-FR';
         }
 
-        newUtterance.rate = 0.95; // Slightly slower for better pronunciation / synchronization
-        newUtterance.pitch = 1.0;
-
-        let lastBoundaryTime = Date.now();
-        let expectedWordDuration = 320; // ms per word estimate
+        // Keep a timeout in case speech engine fails to start (e.g. mobile browser restrictions)
+        let fallbackTimeout = setTimeout(() => {
+          console.warn("SpeechSynthesis start timed out, recovering with Google Translate TTS fallback.");
+          window.speechSynthesis.cancel();
+          playGoogleTTS(textToRead, lang);
+        }, 4000);
 
         newUtterance.onstart = () => {
+          clearTimeout(fallbackTimeout);
           setIsSpeaking(true);
-          setSpeakingWordIndex(0);
-          lastBoundaryTime = Date.now();
-
-          // Start hybrid backup interval to ensure smooth selection even if WebView onboundary is restricted
-          if (backupIntervalRef.current) clearInterval(backupIntervalRef.current);
-          backupIntervalRef.current = setInterval(() => {
-            // If native onboundary hasn't fired in 1500ms, manually step to keep in sync
-            if (Date.now() - lastBoundaryTime > 1500) {
-              setSpeakingWordIndex(prev => {
-                if (prev === null) return 0;
-                if (prev < allWords.length - 1) {
-                  return prev + 1;
-                }
-                return prev;
-              });
-            }
-          }, expectedWordDuration);
-        };
-
-        newUtterance.onboundary = (event: any) => {
-          if (event.name === 'word') {
-            lastBoundaryTime = Date.now();
-            const charIndex = event.charIndex;
-            const matchedWord = wordsWithOffsets.find(w => charIndex >= w.start && charIndex <= w.end);
-            if (matchedWord) {
-              setSpeakingWordIndex(matchedWord.globalIndex);
-            }
-          }
         };
 
         newUtterance.onend = () => {
-          if (backupIntervalRef.current) {
-            clearInterval(backupIntervalRef.current);
-            backupIntervalRef.current = null;
-          }
+          clearTimeout(fallbackTimeout);
           setIsSpeaking(false);
-          setSpeakingWordIndex(null);
         };
 
         newUtterance.onerror = (e) => {
-          console.warn("SpeechSynthesis error:", e);
-          if (backupIntervalRef.current) {
-            clearInterval(backupIntervalRef.current);
-            backupIntervalRef.current = null;
-          }
-          setIsSpeaking(false);
-          setSpeakingWordIndex(null);
+          clearTimeout(fallbackTimeout);
+          console.warn("SpeechSynthesis error, falling back to Google Translate TTS:", e);
+          playGoogleTTS(textToRead, lang);
         };
 
         window.speechSynthesis.speak(newUtterance);
       } catch (err) {
-        console.warn("SpeechSynthesis error:", err);
-        setIsSpeaking(false);
-        setSpeakingWordIndex(null);
+        console.warn("SpeechSynthesis threw error, falling back to Google Translate TTS:", err);
+        playGoogleTTS(textToRead, lang);
+        setIsSpeaking(true);
       }
     } else {
-      // In case speechSynthesis is completely missing, we have no choice but to use fallback, 
-      // but let's still support the active words animation via an interval!
-      setIsSpeaking(true);
-      setSpeakingWordIndex(0);
       playGoogleTTS(textToRead, lang);
-
-      let currentVal = 0;
-      if (backupIntervalRef.current) clearInterval(backupIntervalRef.current);
-      backupIntervalRef.current = setInterval(() => {
-        if (currentVal < allWords.length - 1) {
-          currentVal++;
-          setSpeakingWordIndex(currentVal);
-        } else {
-          clearInterval(backupIntervalRef.current);
-          backupIntervalRef.current = null;
-          setIsSpeaking(false);
-          setSpeakingWordIndex(null);
-        }
-      }, 350);
+      setIsSpeaking(true);
     }
   };
 
@@ -690,7 +551,7 @@ export const SecretDetail: React.FC = () => {
   }
 
   return (
-    <PremiumWrapper enabled={item.isPremium} requiredTier="premium" itemId={item.id} pointsCost={(item as any).pointsCost} fallbackTitle="Lecture Secrète Premium">
+    <PremiumWrapper enabled={item.isPremium} requiredTier="premium" fallbackTitle="Lecture Secrète Premium">
       <div
         className={`w-full max-w-3xl mx-auto px-4 pt-0 sm:px-6 sm:pt-2 lg:px-8 pb-24 transition-colors duration-500 ${readingMode ? "bg-[#fdfbf7] dark:bg-[#1a1917] min-h-screen" : ""}`}
       >
@@ -953,23 +814,6 @@ export const SecretDetail: React.FC = () => {
                   </div>
                 </h2>
               )}
-              {isSpeaking && (
-                <div className="mb-6 p-4 bg-amber-50/70 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/30 rounded-2xl flex items-center justify-between text-xs sm:text-sm text-amber-800 dark:text-amber-300">
-                  <div className="flex items-center gap-2.5">
-                    <span className="relative flex h-3 w-3">
-                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-                    </span>
-                    <span className="font-semibold">{t("secretDetail.lectureVocaleActive", "Lecture vocale interactive active (Chaque mot prononcé est sélectionné)")}</span>
-                  </div>
-                  <button 
-                    onClick={handleLectureVocale}
-                    className="text-amber-900 dark:text-amber-100 hover:underline font-bold bg-amber-100 dark:bg-amber-900/40 px-2.5 py-1 rounded-lg transition-all"
-                  >
-                    {t("secretDetail.stop", "Arrêter")}
-                  </button>
-                </div>
-              )}
               <div
                 className={`w-full max-w-full break-words overflow-hidden transition-all ${
                   readingMode
@@ -978,67 +822,7 @@ export const SecretDetail: React.FC = () => {
                 }`}
                 style={{ fontSize: `${articleFontSize}px` }}
               >
-                {isSpeaking ? (
-                  <div className="space-y-6 select-text transition-all" style={{ fontSize: `${articleFontSize}px` }}>
-                    {buildSpokenSegments(item).map((segment, sIdx) => {
-                      if (segment.type === 'title') {
-                        return (
-                          <h2 key={sIdx} className="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white mb-4">
-                            {segment.words.map((word) => (
-                              <span
-                                key={word.globalIndex}
-                                id={`word-speak-${word.globalIndex}`}
-                                className={`inline-block mr-1.5 transition-all duration-150 px-1 rounded ${
-                                  speakingWordIndex === word.globalIndex
-                                    ? "bg-amber-300 text-slate-900 dark:bg-amber-500 dark:text-slate-900 scale-110 font-bold shadow-md"
-                                    : "text-gray-900 dark:text-white"
-                                }`}
-                              >
-                                {word.text}
-                              </span>
-                            ))}
-                          </h2>
-                        );
-                      }
-                      if (segment.type === 'verse') {
-                        return (
-                          <div key={sIdx} className="my-6 p-4 bg-emerald-50/50 dark:bg-emerald-900/10 rounded-xl border border-emerald-100/50 dark:border-emerald-800/30 font-arabic text-center leading-loose text-2xl">
-                            {segment.words.map((word) => (
-                              <span
-                                key={word.globalIndex}
-                                id={`word-speak-${word.globalIndex}`}
-                                className={`inline-block mr-1.5 transition-all duration-150 px-1 rounded ${
-                                  speakingWordIndex === word.globalIndex
-                                    ? "bg-amber-300 text-slate-900 dark:bg-amber-500 dark:text-slate-900 scale-110 font-bold shadow-md"
-                                    : "text-emerald-800 dark:text-emerald-300"
-                                }`}
-                              >
-                                {word.text}
-                              </span>
-                            ))}
-                          </div>
-                        );
-                      }
-                      return (
-                        <p key={sIdx} className="mb-4 leading-relaxed text-justify">
-                          {segment.words.map((word) => (
-                            <span
-                              key={word.globalIndex}
-                              id={`word-speak-${word.globalIndex}`}
-                              className={`inline-block mr-1.5 transition-all duration-150 px-1 rounded ${
-                                speakingWordIndex === word.globalIndex
-                                  ? "bg-amber-300 text-slate-900 dark:bg-amber-500 dark:text-slate-900 scale-110 font-bold shadow-md"
-                                  : "text-gray-700 dark:text-gray-300"
-                              }`}
-                            >
-                              {word.text}
-                            </span>
-                          ))}
-                        </p>
-                      );
-                    })}
-                  </div>
-                ) : (() => {
+                {(() => {
                   const isHtml = /<[a-z][\s\S]*>/i.test(item.content);
 
                   if (viewMode === 'full') {
