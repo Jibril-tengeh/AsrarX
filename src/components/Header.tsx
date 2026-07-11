@@ -40,11 +40,11 @@ export const Header: React.FC = () => {
   const [ruqyahHeaderVisible, setRuqyahHeaderVisible] = useState(false);
 
   useEffect(() => {
-    if ('Notification' in window) {
-      setNotifsEnabled(Notification.permission === 'granted');
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      setNotifsEnabled(window.Notification.permission === 'granted');
       
       const handleFocus = () => {
-        setNotifsEnabled(Notification.permission === 'granted');
+        setNotifsEnabled(window.Notification.permission === 'granted');
       };
       window.addEventListener('focus', handleFocus);
       return () => window.removeEventListener('focus', handleFocus);
@@ -120,7 +120,7 @@ export const Header: React.FC = () => {
             return docTime > initialLoadTime.current;
           });
 
-          if (hasNewNotif && Notification.permission !== 'granted') {
+          if (hasNewNotif && typeof window !== 'undefined' && 'Notification' in window && window.Notification.permission !== 'granted') {
             setShowEnableNotifPopup(true);
           }
         }
@@ -140,7 +140,7 @@ export const Header: React.FC = () => {
           const data = firstDoc.data();
           const docTime = data.createdAt || 0;
           
-          if (docTime > initialLoadTime.current && Notification.permission !== 'granted') {
+          if (docTime > initialLoadTime.current && typeof window !== 'undefined' && 'Notification' in window && window.Notification.permission !== 'granted') {
             setShowEnableNotifPopup(true);
           }
         }
