@@ -15,7 +15,9 @@ const awfaqDict = {
     needFraction: (val: number) => `La valeur ${val} nécessite un "Kasr" (fraction) dans le carré 3x3.`,
     yourWafq: (size: number) => `Votre Wafq ${size}x${size}`,
     ruleTitle: "Règle de remplissage (Sayr) :",
-    ruleDesc: "Pour que le Wafq soit actif spirituellement, il doit être rempli selon l'ordre numérique croissant des maisons (de la cellule 1 à la dernière), tout en respectant l'encens et l'heure planétaire associés à l'objectif."
+    ruleDesc: "Pour que le Wafq soit actif spirituellement, il doit être rempli selon l'ordre numérique croissant des maisons (de la cellule 1 à la dernière), tout en respectant l'encens et l'heure planétaire associés à l'objectif.",
+    valuesMode: "Valeurs finales",
+    sayrMode: "Ordre d'écriture (Sayr)"
   },
   en: {
     title: "Awfaq Generator",
@@ -28,7 +30,9 @@ const awfaqDict = {
     needFraction: (val: number) => `The value ${val} requires a "Kasr" (fraction) in the 3x3 square.`,
     yourWafq: (size: number) => `Your ${size}x${size} Wafq`,
     ruleTitle: "Filling Rule (Sayr):",
-    ruleDesc: "For the Wafq to be spiritually active, it must be filled in ascending numerical order of the houses (from cell 1 to the last), while respecting the incense and planetary hour associated with the objective."
+    ruleDesc: "For the Wafq to be spiritually active, it must be filled in ascending numerical order of the houses (from cell 1 to the last), while respecting the incense and planetary hour associated with the objective.",
+    valuesMode: "Final Values",
+    sayrMode: "Writing Order (Sayr)"
   },
   ha: {
     title: "Mai Samar da Awfaq",
@@ -41,7 +45,9 @@ const awfaqDict = {
     needFraction: (val: number) => `Darajar ${val} tana buƙatar "Kasr" (girma) a cikin murabba'in 3x3.`,
     yourWafq: (size: number) => `Wafq ɗinka na ${size}x${size}`,
     ruleTitle: "Dokar Cikawa (Sayr):",
-    ruleDesc: "Don Wafq ya kasance mai tasiri a ruhance, dole ne a cika shi bisa tsari na lambobi masu girma na gidajen (daga gida na 1 zuwa na ƙarshe), tare da kiyaye turare da sa'ar tauraro da ke da alaƙa da manufar."
+    ruleDesc: "Don Wafq ya kasance mai tasiri a ruhance, dole ne a cika shi bisa tsari na lambobi masu girma na gidajen (daga gida na 1 zuwa na ƙarshe), tare da kiyaye turare da sa'ar tauraro da ke da alaƙa da manufar.",
+    valuesMode: "Maki na ƙarshe",
+    sayrMode: "Tsarin rubutu (Sayr)"
   }
 };
 
@@ -151,6 +157,8 @@ export const AwfaqAdvanced: React.FC = () => {
   const [targetValue, setTargetValue] = useState<string>('');
   const [gridSize, setGridSize] = useState<number>(3); // 3x3 to 10x10
   const [grid, setGrid] = useState<number[][]>([]);
+  const [baseGrid, setBaseGrid] = useState<number[][]>([]);
+  const [viewMode, setViewMode] = useState<'values' | 'sayr'>('values');
   const [error, setError] = useState<string>('');
 
   const generateWafq = () => {
@@ -191,6 +199,7 @@ export const AwfaqAdvanced: React.FC = () => {
       })
     );
 
+    setBaseGrid(baseSq);
     setGrid(newGrid);
   };
 
@@ -274,19 +283,45 @@ export const AwfaqAdvanced: React.FC = () => {
 
       {grid.length > 0 && (
         <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 sm:p-8 border border-gray-100 dark:border-gray-700 shadow-sm flex flex-col items-center max-w-full overflow-x-auto">
-          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6">{dict.yourWafq(gridSize)}</h3>
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-4">{dict.yourWafq(gridSize)}</h3>
           
+          {/* View Mode Toggle Buttons */}
+          <div className="flex gap-2 mb-6 p-1 bg-gray-100 dark:bg-gray-900 rounded-xl">
+            <button
+              onClick={() => setViewMode('values')}
+              className={`px-4 py-2 rounded-lg font-bold text-xs transition-colors ${viewMode === 'values' ? 'bg-white dark:bg-gray-800 text-fuchsia-600 dark:text-fuchsia-400 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
+            >
+              {dict.valuesMode}
+            </button>
+            <button
+              onClick={() => setViewMode('sayr')}
+              className={`px-4 py-2 rounded-lg font-bold text-xs transition-colors ${viewMode === 'sayr' ? 'bg-white dark:bg-gray-800 text-fuchsia-600 dark:text-fuchsia-400 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
+            >
+              {dict.sayrMode}
+            </button>
+          </div>
+
           <div className="p-2 bg-gray-100 dark:bg-gray-900/55 rounded-3xl border border-gray-200 dark:border-gray-700/50">
             <div className={`grid gap-1.5 sm:gap-2`} style={{ gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))` }}>
               {grid.map((row, i) => (
-                row.map((cell, j) => (
-                  <div 
-                    key={`${i}-${j}`}
-                    className={`${cellSizeClass} bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center font-bold text-gray-900 dark:text-white hover:bg-fuchsia-50 dark:hover:bg-fuchsia-950/20 transition-colors shadow-sm`}
-                  >
-                    {cell}
-                  </div>
-                ))
+                row.map((cell, j) => {
+                  const sayrValue = baseGrid[i] && baseGrid[i][j] !== undefined ? baseGrid[i][j] + 1 : '';
+                  return (
+                    <div 
+                      key={`${i}-${j}`}
+                      className={`${cellSizeClass} bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex flex-col items-center justify-center font-bold text-gray-900 dark:text-white hover:bg-fuchsia-50 dark:hover:bg-fuchsia-950/20 transition-colors shadow-sm relative`}
+                    >
+                      {viewMode === 'values' ? (
+                        <>
+                          <span className="z-10">{cell}</span>
+                          <span className="absolute bottom-1 right-1 text-[8px] opacity-35 font-mono">{sayrValue}</span>
+                        </>
+                      ) : (
+                        <span className="text-fuchsia-600 dark:text-fuchsia-400">{sayrValue}</span>
+                      )}
+                    </div>
+                  );
+                })
               ))}
             </div>
           </div>

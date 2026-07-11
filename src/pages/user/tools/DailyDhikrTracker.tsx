@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Target, Plus, Trash2, CheckCircle2, RotateCcw, Bell, Send, Check, AlertCircle, RefreshCw, Cloud, Clock } from 'lucide-react';
+import { Target, Plus, Trash2, CheckCircle2, RotateCcw, Bell, Send, Check, AlertCircle, RefreshCw, Cloud } from 'lucide-react';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { app, auth, db } from '../../../lib/firebase';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -21,45 +21,6 @@ export const DailyDhikrTracker: React.FC = () => {
   const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'local'>('local');
   const [newDhikrName, setNewDhikrName] = useState('');
   const [newDhikrTarget, setNewDhikrTarget] = useState<number | ''>('');
-
-  // Local browser notification scheduler states
-  const [reminderLabel, setReminderLabel] = useState('');
-  const [reminderTime, setReminderTime] = useState('');
-  const [localReminders, setLocalReminders] = useState<any[]>(() => {
-    try {
-      const parsed = JSON.parse(localStorage.getItem('asrar_reminders') || '[]');
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
-  });
-
-  // Persist local reminders to localStorage when they change
-  useEffect(() => {
-    localStorage.setItem('asrar_reminders', JSON.stringify(localReminders));
-  }, [localReminders]);
-
-  const addLocalReminder = () => {
-    if (!reminderLabel.trim() || !reminderTime) return;
-    const newRem = {
-      id: Date.now().toString(),
-      label: reminderLabel.trim(),
-      time: reminderTime,
-      enabled: true,
-      isZikr: true
-    };
-    setLocalReminders([...localReminders, newRem]);
-    setReminderLabel('');
-    setReminderTime('');
-  };
-
-  const deleteLocalReminder = (id: string) => {
-    setLocalReminders(localReminders.filter(r => r.id !== id));
-  };
-
-  const toggleLocalReminder = (id: string) => {
-    setLocalReminders(localReminders.map(r => r.id === id ? { ...r, enabled: !r.enabled } : r));
-  };
 
   // FCM States
   const [pushStatus, setPushStatus] = useState<NotificationPermission>(
@@ -537,85 +498,6 @@ export const DailyDhikrTracker: React.FC = () => {
             <span className="break-all">{testError}</span>
           </div>
         )}
-
-        {/* Local Daily Dhikr Reminder Planner */}
-        <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-700/60 space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <Clock size={16} className="text-emerald-500" />
-              {language === 'fr' ? 'Planifier un rappel quotidien de Dhikr' : 'Schedule a Daily Dhikr Reminder'}
-            </h3>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <input
-              type="text"
-              placeholder={language === 'fr' ? "Nom du Dhikr (ex: Subhanallah)" : "Dhikr name (e.g. Subhanallah)"}
-              value={reminderLabel}
-              onChange={(e) => setReminderLabel(e.target.value)}
-              className="sm:col-span-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl p-2.5 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
-            />
-            <div className="flex gap-2">
-              <input
-                type="time"
-                value={reminderTime}
-                onChange={(e) => setReminderTime(e.target.value)}
-                className="flex-1 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl p-2.5 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
-              />
-              <button
-                onClick={addLocalReminder}
-                disabled={!reminderLabel.trim() || !reminderTime}
-                className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white px-4 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center transition-colors shrink-0 cursor-pointer"
-              >
-                <Plus size={16} />
-              </button>
-            </div>
-          </div>
-
-          {localReminders.length > 0 ? (
-            <div className="space-y-2 mt-3">
-              <label className="text-[10px] font-black text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-                {language === 'fr' ? 'Mes rappels planifiés' : 'My Scheduled Reminders'}
-              </label>
-              <div className="divide-y divide-gray-100 dark:divide-gray-800 bg-gray-50 dark:bg-gray-900/40 rounded-2xl border border-gray-100 dark:border-gray-800/60 overflow-hidden">
-                {localReminders.map((rem) => (
-                  <div key={rem.id} className="flex items-center justify-between p-3 text-sm">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span className="font-mono text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md">
-                        {rem.time}
-                      </span>
-                      <span className={`font-medium truncate ${rem.enabled ? 'text-gray-900 dark:text-white' : 'text-gray-400 dark:text-gray-500 line-through'}`}>
-                        {rem.label}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <button
-                        onClick={() => toggleLocalReminder(rem.id)}
-                        className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                          rem.enabled 
-                            ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-400' 
-                            : 'bg-gray-100 text-gray-400 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-500'
-                        }`}
-                      >
-                        {rem.enabled ? (language === 'fr' ? 'Actif' : 'Active') : (language === 'fr' ? 'Désactivé' : 'Disabled')}
-                      </button>
-                      <button
-                        onClick={() => deleteLocalReminder(rem.id)}
-                        className="p-1.5 text-gray-400 hover:text-red-500 transition-colors rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : (
-            <p className="text-[11px] text-gray-400 dark:text-gray-500 italic mt-2">
-              {language === 'fr' ? "Aucun rappel quotidien planifié pour le moment." : "No scheduled reminders yet."}
-            </p>
-          )}
-        </div>
       </div>
 
       <div className="space-y-4">

@@ -699,7 +699,32 @@
     "unlockDesc": "Haɓaka zuwa Premium don samun damar shiga cikakkun darussan Sirr Al Asrar da kuma cire waɗannan tallace-tallace.",
     "viewOffers": "Duba Tayi",
     "profilePromo": "Haɓaka zuwa Premium don buɗe duk fasalolin da kuma cire tallace-tallace.",
-    "becomePremium": "Zama Premium"
+    "becomePremium": "Zama Premium",
+    "pointsTitle": "Sami Maki na Ruhi",
+    "pointsDesc": "Kalli tallan sakan 15 don samun maki +{points} kuma ka buɗe duk labarin da kake so.",
+    "watchNow": "Kalli Talla"
+  },
+  "premium": {
+    "fallbackTitle": "Karatun Sirri Na Premium",
+    "fallbackMessage": "Wannan abun ciki na mambobin Premium ne kawai. Bude shi don samun dama.",
+    "subscribeToView": "Yi rajista don duba cikakken abun ciki.",
+    "unlock": "Bude",
+    "cancel": "Soke",
+    "back": "Koma Baya",
+    "preview": "Dandana",
+    "badge": "Premium",
+    "yourBalance": "Ma'auninka",
+    "unlockWithPoints": "Bude da maki",
+    "useBalanceDesc": "Yi amfani da maki na ruhaniya don bude wannan labarin dindindin.",
+    "unlocking": "Ana budewa...",
+    "buyForPoints": "Saya akan maki {points}",
+    "insufficientPoints": "Maki bai isa ba (ya rage maki {points})",
+    "earnPoints": "Sami Maki",
+    "watchAdDesc": "Kalli gajeren tallan da aka dauki nauyi don tara maki.",
+    "watchAdBtn": "Kalli talla (+{points} maki)",
+    "unlimitedVersion": "Siga Premium Mara Iyaka",
+    "unlimitedVersionDesc": "Kashe duk tallace-tallace kuma bude duk labarai nan take.",
+    "subscribe": "Yi Rajista"
   },
   "maintenance": {
     "title": "Ana Gudanar da Gyara",

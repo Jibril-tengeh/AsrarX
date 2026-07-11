@@ -705,7 +705,32 @@
     "unlockDesc": "Passez à la version Premium pour accéder aux cours Sirr Al Asrar complets et supprimer ces publicités.",
     "viewOffers": "Voir les Offres",
     "profilePromo": "Passez à la version Premium pour débloquer toutes les fonctionnalités et supprimer les publicités.",
-    "becomePremium": "Devenir Premium"
+    "becomePremium": "Devenir Premium",
+    "pointsTitle": "Gagnez des Points Spirituels",
+    "pointsDesc": "Visionnez une publicité de 15s pour obtenir +{points} pts et débloquer les articles de votre choix.",
+    "watchNow": "Regarder la Pub"
+  },
+  "premium": {
+    "fallbackTitle": "Lecture Secrète Premium",
+    "fallbackMessage": "Ce contenu est réservé aux membres Premium. Débloquez-le pour y accéder.",
+    "subscribeToView": "Abonnez-vous pour voir l'intégralité du contenu.",
+    "unlock": "Débloquer",
+    "cancel": "Annuler",
+    "back": "Retour",
+    "preview": "Aperçu",
+    "badge": "Premium",
+    "yourBalance": "Votre Solde",
+    "unlockWithPoints": "Débloquer par Points",
+    "useBalanceDesc": "Utilisez votre solde spirituel pour ouvrir cet article de façon définitive.",
+    "unlocking": "Déblocage...",
+    "buyForPoints": "Acheter pour {points} pts",
+    "insufficientPoints": "Points insuffisants (manque {points} pts)",
+    "earnPoints": "Gagnez des Points",
+    "watchAdDesc": "Visionnez une courte publicité sponsorisée pour accumuler des points.",
+    "watchAdBtn": "Voir la pub (+{points} pts)",
+    "unlimitedVersion": "Version Premium Illimitée",
+    "unlimitedVersionDesc": "Désactivez toutes les publicités et ouvrez tous les articles instantanément.",
+    "subscribe": "S'abonner"
   },
   "maintenance": {
     "title": "Maintenance en cours",
