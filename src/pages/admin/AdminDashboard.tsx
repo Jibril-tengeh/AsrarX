@@ -107,7 +107,6 @@ interface Article {
   status?: string;
   publishDate?: string;
   isPremium?: boolean;
-  pointsCost?: number;
   createdAt: number;
 }
 
@@ -650,8 +649,7 @@ export const AdminDashboard: React.FC = () => {
           type: newArticle.type || 'richtext',
           status: newArticle.status || 'Draft',
           publishDate: newArticle.publishDate || '',
-          isPremium: newArticle.isPremium || false,
-          pointsCost: newArticle.pointsCost || null
+          isPremium: newArticle.isPremium || false
         });
         setEditingArticle(null);
         showToast("Article mis à jour avec succès !");
@@ -672,7 +670,6 @@ export const AdminDashboard: React.FC = () => {
           status: newArticle.status || 'Draft',
           publishDate: newArticle.publishDate || '',
           isPremium: newArticle.isPremium || false,
-          pointsCost: newArticle.pointsCost || null,
           createdAt: Date.now()
         });
         showToast("Article publié avec succès !");
@@ -722,8 +719,7 @@ export const AdminDashboard: React.FC = () => {
       type: article.type,
       status: article.status || 'Draft',
       publishDate: article.publishDate || '',
-      isPremium: (article as any).isPremium || false,
-      pointsCost: article.pointsCost || undefined
+      isPremium: (article as any).isPremium || false
     });
     setActiveTab('articles');
   };
@@ -1324,9 +1320,9 @@ export const AdminDashboard: React.FC = () => {
     </div>
   );
 
-  const handleToggleFeature = async (featureId: string, currentValue: boolean | string | number) => {
+  const handleToggleFeature = async (featureId: string, currentValue: boolean | string) => {
     try {
-      // If it's a boolean (from toggle switch), invert it. If it's a string or number, use it directly.
+      // If it's a boolean (from toggle switch), invert it. If it's a string (from select), use it directly.
       const newValue = typeof currentValue === 'boolean' ? !currentValue : currentValue;
       await setDoc(doc(db, 'settings', 'features'), {
         [featureId]: newValue
@@ -1644,28 +1640,9 @@ export const AdminDashboard: React.FC = () => {
               className="w-5 h-5 text-violet-600 rounded focus:ring-violet-500"
             />
             <label htmlFor="isPremiumArticle" className="text-sm font-bold text-gray-900 dark:text-white cursor-pointer">
-              Article Premium (Réservé aux abonnés / déblocable par points)
+              Article Premium (Réservé aux abonnés)
             </label>
           </div>
-
-          {newArticle.isPremium && (
-            <div className="p-3 bg-amber-50 dark:bg-amber-900/10 rounded-xl border border-amber-100 dark:border-amber-800/30 space-y-2">
-              <label className="block text-xs font-bold text-amber-900 dark:text-amber-400">
-                Coût spécifique en Points Spirituels pour cet article
-              </label>
-              <input 
-                type="number"
-                min="1"
-                placeholder="Ex: 20 (Utilise le coût global si vide)"
-                value={newArticle.pointsCost || ''}
-                onChange={(e) => setNewArticle({ ...newArticle, pointsCost: parseInt(e.target.value) || undefined })}
-                className="w-full bg-white dark:bg-gray-900 border border-amber-200 dark:border-amber-700/50 rounded-lg p-2 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500"
-              />
-              <p className="text-[10px] text-amber-700 dark:text-amber-500">
-                Laissez vide pour appliquer le coût par défaut paramétré dans l'admin ({featureToggles['pointsToUnlockArticle'] === undefined ? 20 : featureToggles['pointsToUnlockArticle']} pts).
-              </p>
-            </div>
-          )}
 
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">Nouvel Article</h2>
@@ -1922,10 +1899,7 @@ export const AdminDashboard: React.FC = () => {
               )}
               <div className="flex-1 flex flex-col justify-between">
                 <div>
-                  <h4 className="font-bold text-sm text-gray-900 dark:text-white flex items-center gap-1.5">
-                    {article.isPremium && <Lock size={14} className="text-violet-500 shrink-0" />}
-                    {article.title}
-                  </h4>
+                  <h4 className="font-bold text-sm text-gray-900 dark:text-white">{article.title}</h4>
                   <div className="flex flex-wrap items-center gap-2 mt-1">
                     <span className="text-[10px] uppercase font-bold text-gray-500 bg-gray-200 dark:bg-gray-600 px-2 py-0.5 rounded-full">
                       {article.type === 'richtext' ? 'Texte' : 'Code'}
@@ -2173,61 +2147,6 @@ export const AdminDashboard: React.FC = () => {
                 }`}
               />
             </button>
-          </div>
-        </div>
-
-        <h3 className="font-bold text-gray-900 dark:text-white mb-4 mt-8">Configuration des Publicités et Points (AsrarHub)</h3>
-        <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 space-y-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4">
-            <div>
-              <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                <Volume2 size={18} className="text-emerald-500" />
-                Activer les Publicités pour la version gratuite
-              </h4>
-              <p className="text-sm text-gray-500 mt-1">Si activé, les utilisateurs gratuits verront des publicités et devront utiliser des points pour lire des articles Premium.</p>
-            </div>
-            <button
-              onClick={() => handleToggleFeature('adsEnabledForFree', featureToggles['adsEnabledForFree'] !== false)}
-              className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors ${
-                featureToggles['adsEnabledForFree'] !== false ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
-              }`}
-            >
-              <div
-                className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${
-                  featureToggles['adsEnabledForFree'] !== false ? 'translate-x-6' : 'translate-x-0'
-                }`}
-              />
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl">
-              <label className="block text-sm font-bold text-gray-900 dark:text-white mb-2">
-                Points gagnés par publicité regardée
-              </label>
-              <input
-                type="number"
-                min="1"
-                value={featureToggles['pointsPerAd'] === undefined ? 10 : featureToggles['pointsPerAd']}
-                onChange={(e) => handleToggleFeature('pointsPerAd', parseInt(e.target.value) || 0)}
-                className="w-full px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl font-medium focus:ring-2 focus:ring-emerald-500 outline-none"
-              />
-              <p className="text-xs text-gray-400 mt-2">Le nombre de points spirituels crédités au solde d'un utilisateur après avoir terminé le visionnage d'une publicité.</p>
-            </div>
-
-            <div className="p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl">
-              <label className="block text-sm font-bold text-gray-900 dark:text-white mb-2">
-                Coût en points pour débloquer un article Premium
-              </label>
-              <input
-                type="number"
-                min="1"
-                value={featureToggles['pointsToUnlockArticle'] === undefined ? 20 : featureToggles['pointsToUnlockArticle']}
-                onChange={(e) => handleToggleFeature('pointsToUnlockArticle', parseInt(e.target.value) || 0)}
-                className="w-full px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl font-medium focus:ring-2 focus:ring-emerald-500 outline-none"
-              />
-              <p className="text-xs text-gray-400 mt-2">Le nombre de points spirituels déduits pour débloquer la lecture d'un article Premium si l'utilisateur n'est pas abonné Premium.</p>
-            </div>
           </div>
         </div>
 

@@ -553,8 +553,6 @@ export const ExploreDashboard: React.FC = () => {
               <div className="max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-3xl overflow-hidden shadow-sm border border-gray-100 dark:border-gray-700">
                 {selectedArticle.isPremium ? (
                   <PremiumWrapper 
-                    itemId={selectedArticle.id}
-                    pointsCost={selectedArticle.pointsCost}
                     fallbackTitle={selectedArticle.title} 
                     fallbackMessage="Cet article est exclusif aux membres Premium. Débloquez-le pour lire la suite."
                     previewContent={
