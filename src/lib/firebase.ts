@@ -14,17 +14,13 @@ import {
 } from 'firebase/auth';
 import { getFirestore, initializeFirestore, enableIndexedDbPersistence, doc, getDoc, setDoc, updateDoc, collection, getDocs, addDoc, deleteDoc, query, where, orderBy, getDocFromServer } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
+import { Capacitor } from '@capacitor/core';
 
 export const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
 export const storage = getStorage(app);
-const isNative = typeof window !== 'undefined' && (
-  (window as any).Capacitor?.isNativePlatform?.() || 
-  !!(window as any).Capacitor ||
-  window.location.protocol === 'file:' ||
-  window.location.protocol === 'capacitor:'
-);
+const isNative = Capacitor.isNativePlatform();
 
 const isIframe = typeof window !== 'undefined' && (
   window.self !== window.top ||

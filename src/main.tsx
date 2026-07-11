@@ -11,14 +11,10 @@ import { LanguageProvider } from './contexts/LanguageContext';
 import { FeatureProvider } from './contexts/FeatureContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { registerSW } from 'virtual:pwa-register';
+import { Capacitor } from '@capacitor/core';
 
 // Unregister any active service worker in development to avoid chunk loading conflicts
-const isNative = typeof window !== 'undefined' && (
-  (window as any).Capacitor?.isNativePlatform?.() || 
-  !!(window as any).Capacitor ||
-  window.location.protocol === 'file:' ||
-  window.location.protocol === 'capacitor:'
-);
+const isNative = Capacitor.isNativePlatform();
 
 if (import.meta.env.DEV && !isNative && 'serviceWorker' in navigator) {
   navigator.serviceWorker.getRegistrations().then((registrations) => {
