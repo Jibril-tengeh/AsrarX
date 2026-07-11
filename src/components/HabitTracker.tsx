@@ -14,14 +14,14 @@ export const HabitTracker = () => {
   const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && 'Notification' in window) {
-      setIsNotificationsEnabled(window.Notification.permission === 'granted');
+    if ('Notification' in window) {
+      setIsNotificationsEnabled(Notification.permission === 'granted');
     }
   }, []);
 
   const requestPermission = async () => {
-    if (typeof window !== 'undefined' && 'Notification' in window) {
-      const permission = await window.Notification.requestPermission();
+    if ('Notification' in window) {
+      const permission = await Notification.requestPermission();
       setIsNotificationsEnabled(permission === 'granted');
     }
   };

@@ -342,8 +342,7 @@ export const UserProfile: React.FC = () => {
         setFcmEnabled(!!user.pushNotificationsEnabled);
         setNotifsSynced(true);
       } else {
-        const isGranted = typeof window !== 'undefined' && 'Notification' in window && window.Notification.permission === 'granted';
-        setFcmEnabled(isGranted);
+        setFcmEnabled(Notification.permission === 'granted');
         setNotifsSynced(true);
       }
     }
@@ -353,8 +352,7 @@ export const UserProfile: React.FC = () => {
     const checkFCMStatus = async () => {
       try {
         const supported = await checkNotificationSupport();
-        const isGranted = typeof window !== 'undefined' && 'Notification' in window && window.Notification.permission === 'granted';
-        if (supported && isGranted) {
+        if (supported && Notification.permission === 'granted') {
           setFcmEnabled(true);
           const savedToken = localStorage.getItem('asrarhub_last_fcm_token');
           if (savedToken) {

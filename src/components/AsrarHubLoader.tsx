@@ -12,9 +12,9 @@ export const AsrarHubLoader: React.FC<AsrarHubLoaderProps> = ({
   text
 }) => {
   const sizeClasses = {
-    sm: 'w-24 h-auto',
-    md: 'w-36 h-auto',
-    lg: 'w-48 h-auto',
+    sm: 'w-16 h-16',
+    md: 'w-36 h-36',
+    lg: 'w-56 h-56',
     fullscreen: 'fixed inset-0 z-50 flex items-center justify-center bg-slate-950 text-white'
   };
 

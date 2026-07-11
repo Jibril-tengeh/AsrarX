@@ -12,27 +12,17 @@ import {
   updateProfile,
   User
 } from 'firebase/auth';
-import { getFirestore, initializeFirestore, enableIndexedDbPersistence, doc, getDoc, setDoc, updateDoc, collection, getDocs, addDoc, deleteDoc, query, where, orderBy, getDocFromServer } from 'firebase/firestore';
+import { getFirestore, initializeFirestore, enableIndexedDbPersistence, doc, getDoc, setDoc, updateDoc, collection, getDocs, addDoc, deleteDoc, query, where, orderBy } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
-import { Capacitor } from '@capacitor/core';
 
 export const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
 export const storage = getStorage(app);
-const isNative = Capacitor.isNativePlatform();
-
-const isIframe = typeof window !== 'undefined' && (
-  window.self !== window.top ||
-  window.location.hostname.includes('run.app') ||
-  window.location.hostname.includes('localhost') ||
-  window.location.hostname.includes('127.0.0.1')
-);
-
-export const db = initializeFirestore(app, (!isNative || isIframe) ? {
+export const db = initializeFirestore(app, {
   experimentalForceLongPolling: true,
   ...({ useFetchStreams: false } as any)
-} : {});
+});
 
 // Helper to check if IndexedDB is fully functional (especially inside iframes where it can hang)
 const checkIndexedDBFunctional = (): Promise<boolean> => {
@@ -87,23 +77,17 @@ const checkIndexedDBFunctional = (): Promise<boolean> => {
   });
 };
 
-try {
-  checkIndexedDBFunctional().then((functional) => {
-    if (functional) {
-      enableIndexedDbPersistence(db).catch((err) => {
-        if (err.code == 'failed-precondition') {
-            console.warn("Multiple tabs open, persistence can only be enabled in one tab at a time.");
-        } else if (err.code == 'unimplemented') {
-            console.warn("The current browser does not support all of the features required to enable persistence");
-        }
-      });
-    }
-  }).catch((err) => {
-    console.warn("Error running IndexedDB check:", err);
-  });
-} catch (e) {
-  console.warn("Firestore persistence initialization failed synchronously:", e);
-}
+checkIndexedDBFunctional().then((functional) => {
+  if (functional) {
+    enableIndexedDbPersistence(db).catch((err) => {
+      if (err.code == 'failed-precondition') {
+          console.warn("Multiple tabs open, persistence can only be enabled in one tab at a time.");
+      } else if (err.code == 'unimplemented') {
+          console.warn("The current browser does not support all of the features required to enable persistence");
+      }
+    });
+  }
+});
 
 export const googleProvider = new GoogleAuthProvider();
 
@@ -188,15 +172,5 @@ export const signOut = async () => {
 
 export const isAutoSaveEnabled = () => {
   return localStorage.getItem('asrar_auto_save_firestore') !== 'false';
-};
-
-// Validate Connection to Firestore (manual diagnostic only, do not auto-run to avoid blocking startup errors)
-export const testConnection = async () => {
-  try {
-    // Keep as helper if needed for manual debugging
-    console.log("Firestore connection test: SKIPPED (Manual run only)");
-  } catch (error) {
-    console.warn("Firestore connection test error:", error);
-  }
 };
 

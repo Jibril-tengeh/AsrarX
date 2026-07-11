@@ -92,7 +92,6 @@ const FaqButton = () => {
 };
 
 import { App as CapacitorApp } from '@capacitor/app';
-import { Capacitor } from '@capacitor/core';
 
 const NetworkStatus = () => {
   const [isOnline, setIsOnline] = React.useState(navigator.onLine);
@@ -187,8 +186,6 @@ export default function App() {
   }, [location.pathname]);
 
   React.useEffect(() => {
-    if (!Capacitor.isNativePlatform()) return;
-
     CapacitorApp.addListener('backButton', () => {
       if (window.location.pathname !== '/' && window.location.pathname !== '/home') {
         window.history.back();
@@ -227,7 +224,7 @@ export default function App() {
               if ('Notification' in window && window.Notification && window.Notification.permission === 'granted') {
                 const title = rem.isZikr ? 'Rappel de Zikr Quotidien 📿' : 'AsrarHub';
                 const body = rem.isZikr ? `Il est temps pour votre Zikr : ${rem.label}` : `Il est temps pour : ${rem.label}`;
-                new window.Notification(title, { body });
+                new Notification(title, { body });
               }
             } catch (e) {
               console.error("Notification access error", e);

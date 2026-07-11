@@ -475,7 +475,7 @@ export const NamesOfAllah: React.FC = () => {
     setActiveName(null);
   };
 
-  const totalOccurrences = (quranData && quranData.length > 0) ? realOccurrences.length : (activeName?.quranOptions?.count || 0);
+  const totalOccurrences = activeName?.quranOptions?.count || 0;
 
   return (
     <div className="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8 safe-area-pt pb-24 min-h-screen relative">

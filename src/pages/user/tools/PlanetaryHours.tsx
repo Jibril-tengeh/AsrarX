@@ -137,13 +137,13 @@ export const PlanetaryHours: React.FC = () => {
   const currentViewHours = allHours.filter(h => h.isDay === isDay);
 
   const enableNotifications = async () => {
-    if (typeof window === "undefined" || !("Notification" in window)) {
+    if (!("Notification" in window)) {
       alert("Ce navigateur ne supporte pas les notifications de bureau");
       return;
     }
-    let permission = window.Notification.permission;
+    let permission = Notification.permission;
     if (permission !== "granted") {
-      permission = await window.Notification.requestPermission();
+      permission = await Notification.requestPermission();
     }
     
     if (permission === "granted") {
