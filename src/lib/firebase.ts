@@ -19,9 +19,21 @@ export const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
 export const storage = getStorage(app);
-const isIframe = typeof window !== 'undefined' && window.self !== window.top;
+const isNative = typeof window !== 'undefined' && (
+  (window as any).Capacitor?.isNativePlatform?.() || 
+  !!(window as any).Capacitor ||
+  window.location.protocol === 'file:' ||
+  window.location.protocol === 'capacitor:'
+);
 
-export const db = initializeFirestore(app, isIframe ? {
+const isIframe = typeof window !== 'undefined' && (
+  window.self !== window.top ||
+  window.location.hostname.includes('run.app') ||
+  window.location.hostname.includes('localhost') ||
+  window.location.hostname.includes('127.0.0.1')
+);
+
+export const db = initializeFirestore(app, (!isNative || isIframe) ? {
   experimentalForceLongPolling: true,
   ...({ useFetchStreams: false } as any)
 } : {});
