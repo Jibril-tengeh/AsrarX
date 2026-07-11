@@ -275,7 +275,7 @@ export default function App() {
   return (
     <MaintenanceOverlay>
       <NetworkStatus />
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors flex flex-col font-sans mb-16 sm:mb-0">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors flex flex-col font-sans mb-16 sm:mb-0 w-full overflow-x-hidden">
         <FloatingBackButton />
         <Header />
         <DailyRewardHandler />

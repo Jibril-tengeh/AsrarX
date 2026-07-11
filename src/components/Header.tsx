@@ -207,12 +207,12 @@ export const Header: React.FC = () => {
           scrolled 
             ? 'py-3 bg-emerald-600 dark:bg-emerald-800 shadow-lg' 
             : 'py-4 bg-emerald-600 dark:bg-emerald-800'
-        } px-6`}
+        } px-3 sm:px-6`}
         onClick={handleSecretClick}
       >
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <Link to="/" className="flex items-center group">
-            <AsrarLogo variant="horizontal" size="md" className="text-white hover:opacity-90 transition-opacity" />
+            <AsrarLogo variant="horizontal" size="md" className="text-white hover:opacity-90 transition-opacity" hideSymbol={true} />
           </Link>
           
           <div className="flex items-center space-x-2 sm:space-x-3">

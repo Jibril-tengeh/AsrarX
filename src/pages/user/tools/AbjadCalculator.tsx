@@ -23,8 +23,42 @@ const abjadMaghribi: Record<string, number> = {
   'س': 300, 'ش': 1000, 'ص': 60, 'ض': 90, 'ظ': 800, 'غ': 900
 };
 
+const localDict = {
+  fr: {
+    cacheLocal: "Cache local (Mode Offline actif)",
+    syncLocal: "Synchronisé localement (Offline-first)",
+    enterArabic: "Entrez le texte en Arabe",
+    words: "Mots",
+    letters: "Lettres",
+    numericValues: "Valeurs Numériques (Abjad)",
+    howToInterpret: "Comment interpréter ces résultats ?",
+    interpret: "Interpréter"
+  },
+  en: {
+    cacheLocal: "Local cache (Offline Mode active)",
+    syncLocal: "Locally synchronized (Offline-first)",
+    enterArabic: "Enter text in Arabic",
+    words: "Words",
+    letters: "Letters",
+    numericValues: "Numerical Values (Abjad)",
+    howToInterpret: "How to interpret these results?",
+    interpret: "Interpret"
+  },
+  ha: {
+    cacheLocal: "Ma'ajiyar gida (Yanayin Offline yana aiki)",
+    syncLocal: "An daidaita na gida (Offline-farko)",
+    enterArabic: "Shigar da rubutu cikin Harshen Larabci",
+    words: "Kalmomi",
+    letters: "Haruffa",
+    numericValues: "Darajojin Lambobi (Abjad)",
+    howToInterpret: "Yadda za a fassara waɗannan sakamakon?",
+    interpret: "Fassara"
+  }
+};
+
 export const AbjadCalculator: React.FC = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const dict = localDict[(language as 'fr' | 'en' | 'ha') || 'fr'] || localDict.fr;
   const [text, setText] = useState('');
   const [copied, setCopied] = useState(false);
   const [showWords, setShowWords] = useState(false);
@@ -161,12 +195,12 @@ export const AbjadCalculator: React.FC = () => {
             {isUsingCache ? (
               <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border border-amber-100 dark:border-amber-900/30 mt-2">
                 <Database size={11} className="animate-pulse" />
-                <span>Cache local (Mode Offline actif)</span>
+                <span>{dict.cacheLocal}</span>
               </div>
             ) : (
               <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30 mt-2">
                 <Wifi size={11} />
-                <span>Synchronisé localement (Offline-first)</span>
+                <span>{dict.syncLocal}</span>
               </div>
             )}
           </div>
@@ -177,7 +211,7 @@ export const AbjadCalculator: React.FC = () => {
         {/* Input Card */}
         <div className="bg-white dark:bg-gray-800 rounded-3xl p-4 sm:p-5 shadow-sm border border-gray-100 dark:border-gray-700">
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Entrez le texte en Arabe
+            {dict.enterArabic}
           </label>
           <textarea
             value={text}
@@ -189,8 +223,8 @@ export const AbjadCalculator: React.FC = () => {
           />
           <div className="flex justify-between items-center mt-3">
             <div className="flex gap-4 text-xs font-medium text-gray-500 dark:text-gray-400">
-              <span>Mots: <strong className="text-gray-700 dark:text-gray-300">{words}</strong></span>
-              <span>Lettres: <strong className="text-gray-700 dark:text-gray-300">{letterCount}</strong></span>
+              <span>{dict.words}: <strong className="text-gray-700 dark:text-gray-300">{words}</strong></span>
+              <span>{dict.letters}: <strong className="text-gray-700 dark:text-gray-300">{letterCount}</strong></span>
             </div>
             <div className="flex gap-2">
               <button
@@ -216,15 +250,15 @@ export const AbjadCalculator: React.FC = () => {
 
         <div className="flex justify-between items-center px-1">
           <h2 className="text-sm font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider flex items-center gap-1.5">
-            Valeurs Numériques (Abjad)
+            {dict.numericValues}
           </h2>
           <button 
             onClick={() => setShowAbjadInfoModal(true)}
             className="text-gray-400 hover:text-blue-500 dark:hover:text-blue-400 p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center gap-1 cursor-pointer"
-            title="Comment interpréter ces résultats ?"
+            title={dict.howToInterpret}
           >
             <HelpCircle size={16} />
-            <span className="text-xs font-semibold">Interpréter</span>
+            <span className="text-xs font-semibold">{dict.interpret}</span>
           </button>
         </div>
 

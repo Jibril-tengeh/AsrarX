@@ -155,19 +155,42 @@ const gridCellPaddingMap: Record<number, string> = {
   10: 'p-0.5',
 };
 
-// Helper to convert Name to its Zikr vocative form (prepend "يا" and keep tashkeel, e.g. "الله" -> "يَا اللَّهُ", "الرَّحْمٰنُ" -> "يَا رَّحْمٰنُ")
+// Helper to return the Name in its pure Quranic form without "Ya" (يَا) prefix
 const getZikrName = (arName: string) => {
-  const cleanAr = arName.replace(/[\u064B-\u0652\u0670\u0653\u0654\u0655]/g, '');
-  if (cleanAr === 'الله' || cleanAr === 'اللّه' || cleanAr === 'اللَّه') {
-    return 'يَا اللَّهُ';
+  return arName;
+};
+
+// Helper to return the Name preceded by "Ya" (يَا) with proper Arabic rules
+const getVocativeName = (arName: string) => {
+  const clean = arName.trim();
+  if (clean.includes("اللَّ") || clean.includes("الله")) {
+    return "يَا الله";
   }
-  // Remove starting Al- with any tashkeel
-  const clean = arName.replace(/^[اأإَُِّْ]*ل[ّْ]?/, '');
-  return 'يَا ' + clean;
+  const withoutAl = clean.replace(/^ال[َّْ]?/, "");
+  return `يَا ${withoutAl}`;
+};
+
+const namesOfAllahDict = {
+  fr: {
+    loadingOccurrences: "Chargement de toutes les occurrences depuis le Coran...",
+    offlineMode: "Mode hors ligne activé (Données de secours chargées)",
+    propheticHadithFallback: "Ce Nom est traditionnellement dérivé du Hadith prophétique ou ne figure pas explicitement sous cette forme lexicale exacte directe dans le Coran."
+  },
+  en: {
+    loadingOccurrences: "Loading all occurrences from the Quran...",
+    offlineMode: "Offline mode activated (Fallback data loaded)",
+    propheticHadithFallback: "This Name is traditionally derived from prophetic Hadith or does not appear explicitly in this exact direct lexical form in the Quran."
+  },
+  ha: {
+    loadingOccurrences: "Ana loda duk wuraren da sunan ya bayyana daga Alƙur'ani...",
+    offlineMode: "Yanayin offline yana aiki (An loda bayanan taimako)",
+    propheticHadithFallback: "Wannan Sunan an samo shi ne daga Hadisin Annabi ko kuma bai bayyana a fili ba a cikin wannan lafazi na musamman a cikin Alƙur'ani."
+  }
 };
 
 export const NamesOfAllah: React.FC = () => {
   const { t, language } = useLanguage();
+  const dict = namesOfAllahDict[(language as 'fr' | 'en' | 'ha') || 'fr'] || namesOfAllahDict.fr;
   const [searchQuery, setSearchQuery] = useState('');
   
   // Modal states
@@ -452,7 +475,7 @@ export const NamesOfAllah: React.FC = () => {
     setActiveName(null);
   };
 
-  const totalOccurrences = quranData.length > 0 ? realOccurrences.length : activeName?.quranOptions?.count || 0;
+  const totalOccurrences = activeName?.quranOptions?.count || 0;
 
   return (
     <div className="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8 safe-area-pt pb-24 min-h-screen relative">
@@ -496,6 +519,10 @@ export const NamesOfAllah: React.FC = () => {
               <div className="w-full flex justify-between items-start mb-4">
                 <span className="text-xs font-bold uppercase tracking-widest text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-900/20 px-2 py-1 rounded-lg">
                   {t('namesOfAllah.abjad')}: {name.abjad}
+                </span>
+                <span className="text-xs font-bold uppercase tracking-widest text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-1 rounded-lg flex items-center gap-1" title="Occurrences dans le Coran entier">
+                  <BookOpen size={12} />
+                  {name.quranOptions?.count || 0} {language === 'fr' ? 'fois' : language === 'ha' ? 'sau' : 'times'}
                 </span>
               </div>
 
@@ -686,14 +713,14 @@ export const NamesOfAllah: React.FC = () => {
                                          {loadingQuran ? (
                                            <div className="text-center py-6 flex flex-col items-center justify-center gap-3">
                                              <div className="w-8 h-8 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
-                                             <p className="text-xs text-gray-500 font-medium">Chargement de toutes les occurrences depuis le Coran...</p>
+                                             <p className="text-xs text-gray-500 font-medium">{dict.loadingOccurrences}</p>
                                            </div>
                                          ) : (
                                            <>
                                              {quranData.length === 0 && (
                                                <div className="text-center py-2 px-3 mb-3 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center justify-center gap-2">
                                                  <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-                                                 <span className="text-xs text-amber-700 dark:text-amber-400 font-medium">Mode hors ligne activé (Données de secours chargées)</span>
+                                                 <span className="text-xs text-amber-700 dark:text-amber-400 font-medium">{dict.offlineMode}</span>
                                                </div>
                                              )}
                                              {realOccurrences.length === 0 && (
@@ -760,7 +787,7 @@ export const NamesOfAllah: React.FC = () => {
                         </div>
                       </div>
                     ) : (
-                      <p className="text-center text-gray-500 italic bg-gray-50 dark:bg-gray-800 p-6 rounded-2xl">Ce Nom est traditionnellement dérivé du Hadith prophétique ou ne figure pas explicitement sous cette forme lexicale exacte directe dans le Coran.</p>
+                      <p className="text-center text-gray-500 italic bg-gray-50 dark:bg-gray-800 p-6 rounded-2xl">{dict.propheticHadithFallback}</p>
                     )}
                   </div>
                 )}
@@ -769,7 +796,7 @@ export const NamesOfAllah: React.FC = () => {
                 {viewState === 'zikr' && (
                   <div className="flex flex-col items-center justify-center text-center space-y-8 py-8">
                     <div>
-                      <h4 className="text-4xl sm:text-6xl font-arabic font-bold text-gray-900 dark:text-white mb-2">{getZikrName(activeName.ar)}</h4>
+                      <h4 className="text-4xl sm:text-6xl font-arabic font-bold text-gray-900 dark:text-white mb-2">{getVocativeName(activeName.ar)}</h4>
                       <p className="text-gray-500 dark:text-gray-400 font-medium text-lg">
                         {t('namesOfAllah.poidsAbjad', 'Poids Abjad')}: <span className="font-bold text-emerald-600 dark:text-emerald-400">{activeName.abjad}</span>
                         {zikrTarget !== activeName.abjad && (

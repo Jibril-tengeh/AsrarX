@@ -227,7 +227,29 @@ export const AudioProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         if (!activeUrl) return;
 
         try {
-          audioRef.current.src = activeUrl;
+          // Revoke previous object URL if any to free up memory
+          if (objectUrl) {
+            URL.revokeObjectURL(objectUrl);
+            objectUrl = null;
+          }
+
+          let resolvedSrc = activeUrl;
+          
+          // Try to match the audio URL in the browser's Cache Storage API
+          try {
+            const cache = await caches.open('quran-audio-cache');
+            const matched = await cache.match(activeUrl);
+            if (matched) {
+              const blob = await matched.blob();
+              objectUrl = URL.createObjectURL(blob);
+              resolvedSrc = objectUrl;
+              console.log("[AudioContext] Serving audio from Cache Storage:", activeUrl);
+            }
+          } catch (cacheErr) {
+            console.warn("[AudioContext] Offline cache check failed:", cacheErr);
+          }
+
+          audioRef.current.src = resolvedSrc;
           const playPromise = audioRef.current.play();
           if (playPromise !== undefined) {
             playPromise.catch(e => {
