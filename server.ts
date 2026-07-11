@@ -5,7 +5,7 @@ import cors from "cors";
 import { initializeApp, getApps, cert } from "firebase-admin/app";
 import { getFirestore, Timestamp } from "firebase-admin/firestore";
 
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI } from "@google/genai";
 
 async function startServer() {
   const app = express();
@@ -248,14 +248,14 @@ Benefits: ${JSON.stringify(benefits || [])}
         config: {
           responseMimeType: "application/json",
           responseSchema: {
-            type: Type.OBJECT,
+            type: "OBJECT",
             properties: {
-              title: { type: Type.STRING, description: "The translated title" },
-              hook: { type: Type.STRING, description: "The translated hook" },
-              content: { type: Type.STRING, description: "The translated content keeping all HTML tags" },
+              title: { type: "STRING", description: "The translated title" },
+              hook: { type: "STRING", description: "The translated hook" },
+              content: { type: "STRING", description: "The translated content keeping all HTML tags" },
               benefits: {
-                type: Type.ARRAY,
-                items: { type: Type.STRING },
+                type: "ARRAY",
+                items: { type: "STRING" },
                 description: "The translated list of benefits"
               }
             },
@@ -317,15 +317,15 @@ ${JSON.stringify(textArray)}
         config: {
           responseMimeType: "application/json",
           responseSchema: {
-            type: Type.OBJECT,
+            type: "OBJECT",
             properties: {
               translations: {
-                type: Type.ARRAY,
+                type: "ARRAY",
                 items: {
-                  type: Type.OBJECT,
+                  type: "OBJECT",
                   properties: {
-                    key: { type: Type.STRING },
-                    value: { type: Type.STRING }
+                    key: { type: "STRING" },
+                    value: { type: "STRING" }
                   },
                   required: ["key", "value"]
                 }

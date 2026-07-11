@@ -19,10 +19,9 @@ import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 
 interface Props {
   initialFilter?: Category | 'all' | 'favoris';
-  adVisible?: boolean;
 }
 
-export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all', adVisible = false }) => {
+export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
   const { t, language } = useLanguage();
   const { user } = useAuth();
   const { featureToggles } = useFeatures();
@@ -396,7 +395,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all', adVisibl
   // console.log("UserDashboard loaded");
 
   return (
-    <div className={`max-w-5xl mx-auto pb-24 relative px-4 sm:px-6 lg:px-8 ${adVisible ? 'pt-0' : 'pt-4 sm:pt-6 lg:pt-8 safe-area-pt'}`}>
+    <div className="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8 safe-area-pt pb-24 relative">
       {pullProgress > 0 && (
         <div 
           className="fixed top-16 left-1/2 -translate-x-1/2 z-50 flex items-center justify-center bg-white dark:bg-gray-800 rounded-full shadow-lg h-10 w-10 transition-all duration-200"
@@ -593,7 +592,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all', adVisibl
       <OnboardingTour />
 
       {/* Spacer to compensate for fixed toolbar */}
-      {!adVisible && <div className="h-10 sm:h-14 w-full" />}
+      <div className="h-10 sm:h-14 w-full" />
 
       {/* Banner Section */}
       <div className="mb-4 grid grid-cols-1 gap-4">
@@ -799,7 +798,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all', adVisibl
         </div>
       )}
 
-      <div id="tour-dashboard-grid" className={`grid gap-4 sm:gap-6 lg:gap-8 ${
+      <div className={`flex flex-wrap gap-4 sm:grid sm:gap-6 lg:gap-8 ${
         layoutMode === 'grid2' ? 'grid-cols-2 sm:grid-cols-2 lg:grid-cols-3' : 
         layoutMode === 'list' ? 'grid-cols-1 lg:grid-cols-2' : 
         'grid-cols-1'
@@ -808,7 +807,11 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all', adVisibl
           Array.from({ length: 6 }).map((_, idx) => (
             <div 
               key={idx} 
-              className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700/80 p-4 animate-pulse h-48 flex flex-col justify-between shadow-sm w-full"
+              className={`bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700/80 p-4 animate-pulse h-48 flex flex-col justify-between shadow-sm ${
+                layoutMode === 'grid2' 
+                  ? 'w-[calc(50%-8px)] sm:w-full' 
+                  : 'w-full'
+              }`}
             >
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
@@ -827,7 +830,11 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all', adVisibl
             return (
               <div 
                 key={item.id} 
-                className="flex flex-col h-full w-full"
+                className={`flex flex-col h-full ${
+                  layoutMode === 'grid2' 
+                    ? 'w-[calc(50%-8px)] sm:w-full' 
+                    : 'w-full'
+                }`}
               >
                 <div className="flex-1">
                   <SecretCard item={item} layoutMode={layoutMode} />

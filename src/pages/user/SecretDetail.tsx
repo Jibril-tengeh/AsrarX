@@ -23,10 +23,7 @@ import {
   Sliders,
   Volume2,
   VolumeX,
-  Folder,
-  Play,
-  Pause,
-  Square
+  Folder
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { getAsrarItems } from "../../data/store";
@@ -88,24 +85,14 @@ export const SecretDetail: React.FC = () => {
   const [rating, setRating] = useState(0);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
-  const [isPaused, setIsPaused] = useState(false);
-  const isPausedRef = useRef(false);
-  const [speechRate, setSpeechRate] = useState(1.0);
   const [speakingWordIndex, setSpeakingWordIndex] = useState<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const backupIntervalRef = useRef<any>(null);
   const [isTranslating, setIsTranslating] = useState(false);
-  const [translationError, setTranslationError] = useState(false);
-  const [isTranslated, setIsTranslated] = useState(false);
-  const [retryTrigger, setRetryTrigger] = useState(0);
 
   useEffect(() => {
-    if (!item) return;
-
-    if (language === 'fr') {
+    if (!item || language === 'fr') {
       setIsTranslating(false);
-      setTranslationError(false);
-      setIsTranslated(false);
       return;
     }
 
@@ -114,11 +101,8 @@ export const SecretDetail: React.FC = () => {
       const cached = localStorage.getItem(cacheKey);
       if (cached) {
         const parsed = JSON.parse(cached);
-        setIsTranslated(true);
-        setTranslationError(false);
-        setIsTranslating(false);
-
         if (item.title === parsed.title) {
+          setIsTranslating(false);
           return;
         }
         setItem(prev => {
@@ -131,6 +115,7 @@ export const SecretDetail: React.FC = () => {
             benefits: parsed.benefits,
           };
         });
+        setIsTranslating(false);
         return;
       }
     } catch (e) {
@@ -139,8 +124,6 @@ export const SecretDetail: React.FC = () => {
 
     const translateArticle = async () => {
       setIsTranslating(true);
-      setTranslationError(false);
-      setIsTranslated(false);
       try {
         const staticItems = getAsrarItems();
         const staticItem = staticItems.find(i => i.id === item.id);
@@ -149,15 +132,11 @@ export const SecretDetail: React.FC = () => {
         const sourceHook = staticItem ? staticItem.hook : item.hook;
         const sourceBenefits = staticItem ? staticItem.benefits : item.benefits;
 
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 45000); // 45 seconds timeout for larger articles
-
         const res = await fetch('/api/translate-article', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          signal: controller.signal,
           body: JSON.stringify({
             title: sourceTitle,
             content: sourceContent,
@@ -167,14 +146,10 @@ export const SecretDetail: React.FC = () => {
           }),
         });
 
-        clearTimeout(timeoutId);
-
         if (res.ok) {
           const data = await res.json();
           if (data && data.title) {
             localStorage.setItem(cacheKey, JSON.stringify(data));
-            setIsTranslated(true);
-            setTranslationError(false);
             setItem(prev => {
               if (!prev || prev.id !== item.id) return prev;
               return {
@@ -185,25 +160,17 @@ export const SecretDetail: React.FC = () => {
                 benefits: data.benefits,
               };
             });
-          } else {
-            setTranslationError(true);
-            setIsTranslated(false);
           }
-        } else {
-          setTranslationError(true);
-          setIsTranslated(false);
         }
       } catch (err) {
         console.error("Automatic translation error:", err);
-        setTranslationError(true);
-        setIsTranslated(false);
       } finally {
         setIsTranslating(false);
       }
     };
 
     translateArticle();
-  }, [id, language, item?.id, retryTrigger]);
+  }, [id, language, item?.id]);
 
   const chunkText = (text: string, maxLength: number): string[] => {
     const words = text.split(/\s+/);
@@ -359,54 +326,25 @@ export const SecretDetail: React.FC = () => {
     return segments;
   };
 
-  const pauseSpeech = () => {
-    if ('speechSynthesis' in window && window.speechSynthesis.speaking) {
-      window.speechSynthesis.pause();
-    } else if (audioRef.current) {
-      audioRef.current.pause();
-    }
-    setIsPaused(true);
-    isPausedRef.current = true;
-  };
-
-  const resumeSpeech = () => {
-    if ('speechSynthesis' in window && window.speechSynthesis.paused) {
-      window.speechSynthesis.resume();
-    } else if (audioRef.current) {
-      audioRef.current.play().catch(e => console.warn(e));
-    }
-    setIsPaused(false);
-    isPausedRef.current = false;
-  };
-
-  const stopSpeech = () => {
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-    }
-    if (audioRef.current) {
-      audioRef.current.pause();
-      audioRef.current = null;
-    }
-    if (backupIntervalRef.current) {
-      clearInterval(backupIntervalRef.current);
-      backupIntervalRef.current = null;
-    }
-    setIsSpeaking(false);
-    setIsPaused(false);
-    isPausedRef.current = false;
-    setSpeakingWordIndex(null);
-  };
-
   const handleLectureVocale = () => {
     if (!item) return;
 
     if (isSpeaking) {
-      stopSpeech();
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+      if (backupIntervalRef.current) {
+        clearInterval(backupIntervalRef.current);
+        backupIntervalRef.current = null;
+      }
+      setIsSpeaking(false);
+      setSpeakingWordIndex(null);
       return;
     }
-
-    setIsPaused(false);
-    isPausedRef.current = false;
 
     const segments = buildSpokenSegments(item);
     const allWords = segments.flatMap(s => s.words);
@@ -443,11 +381,11 @@ export const SecretDetail: React.FC = () => {
           newUtterance.lang = 'fr-FR';
         }
 
-        newUtterance.rate = speechRate * 0.95; // Configurable speech rate
+        newUtterance.rate = 0.95; // Slightly slower for better pronunciation / synchronization
         newUtterance.pitch = 1.0;
 
         let lastBoundaryTime = Date.now();
-        let expectedWordDuration = Math.round(320 / speechRate); // scale duration with rate
+        let expectedWordDuration = 320; // ms per word estimate
 
         newUtterance.onstart = () => {
           setIsSpeaking(true);
@@ -457,7 +395,6 @@ export const SecretDetail: React.FC = () => {
           // Start hybrid backup interval to ensure smooth selection even if WebView onboundary is restricted
           if (backupIntervalRef.current) clearInterval(backupIntervalRef.current);
           backupIntervalRef.current = setInterval(() => {
-            if (isPausedRef.current) return; // Do not progress if paused
             // If native onboundary hasn't fired in 1500ms, manually step to keep in sync
             if (Date.now() - lastBoundaryTime > 1500) {
               setSpeakingWordIndex(prev => {
@@ -488,8 +425,6 @@ export const SecretDetail: React.FC = () => {
             backupIntervalRef.current = null;
           }
           setIsSpeaking(false);
-          setIsPaused(false);
-          isPausedRef.current = false;
           setSpeakingWordIndex(null);
         };
 
@@ -500,8 +435,6 @@ export const SecretDetail: React.FC = () => {
             backupIntervalRef.current = null;
           }
           setIsSpeaking(false);
-          setIsPaused(false);
-          isPausedRef.current = false;
           setSpeakingWordIndex(null);
         };
 
@@ -509,8 +442,6 @@ export const SecretDetail: React.FC = () => {
       } catch (err) {
         console.warn("SpeechSynthesis error:", err);
         setIsSpeaking(false);
-        setIsPaused(false);
-        isPausedRef.current = false;
         setSpeakingWordIndex(null);
       }
     } else {
@@ -523,7 +454,6 @@ export const SecretDetail: React.FC = () => {
       let currentVal = 0;
       if (backupIntervalRef.current) clearInterval(backupIntervalRef.current);
       backupIntervalRef.current = setInterval(() => {
-        if (isPausedRef.current) return; // Do not progress if paused
         if (currentVal < allWords.length - 1) {
           currentVal++;
           setSpeakingWordIndex(currentVal);
@@ -531,11 +461,9 @@ export const SecretDetail: React.FC = () => {
           clearInterval(backupIntervalRef.current);
           backupIntervalRef.current = null;
           setIsSpeaking(false);
-          setIsPaused(false);
-          isPausedRef.current = false;
           setSpeakingWordIndex(null);
         }
-      }, Math.round(350 / speechRate));
+      }, 350);
     }
   };
 
@@ -927,27 +855,9 @@ export const SecretDetail: React.FC = () => {
               {item.title}
             </h1>
             {language !== 'fr' && (
-              <div className="flex items-center gap-1.5 mt-1 select-none mx-auto sm:mx-0">
-                {isTranslating ? (
-                  <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50/75 dark:bg-emerald-900/20 border border-emerald-100/50 dark:border-emerald-800/30 px-2.5 py-1 rounded-full w-fit">
-                    <Sparkles size={14} className="animate-spin text-emerald-500" />
-                    <span>{t("translating", "Traduction automatique en cours...")}</span>
-                  </div>
-                ) : translationError ? (
-                  <button
-                    onClick={() => setRetryTrigger(prev => prev + 1)}
-                    className="flex items-center gap-1.5 text-xs font-semibold text-red-600 dark:text-red-400 bg-red-50/75 dark:bg-red-900/20 border border-red-100/50 dark:border-red-800/30 px-2.5 py-1 rounded-full w-fit hover:bg-red-100/80 dark:hover:bg-red-900/40 transition-colors cursor-pointer"
-                    title={t("retryTranslation", "Recommencer la traduction")}
-                  >
-                    <Sparkles size={14} className="text-red-500 animate-pulse" />
-                    <span>{t("translationFailed", "Échec de la traduction. Cliquer pour réessayer")}</span>
-                  </button>
-                ) : isTranslated ? (
-                  <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50/75 dark:bg-emerald-900/20 border border-emerald-100/50 dark:border-emerald-800/30 px-2.5 py-1 rounded-full w-fit">
-                    <Sparkles size={14} className="text-emerald-500" />
-                    <span>{t("translated", "Traduit automatiquement par IA")}</span>
-                  </div>
-                ) : null}
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50/75 dark:bg-emerald-900/20 border border-emerald-100/50 dark:border-emerald-800/30 px-2.5 py-1 rounded-full w-fit mt-1 select-none mx-auto sm:mx-0">
+                <Sparkles size={14} className={isTranslating ? "animate-spin text-emerald-500" : "text-emerald-500"} />
+                <span>{isTranslating ? t("translating", "Traduction automatique en cours...") : t("translated", "Traduit automatiquement par IA")}</span>
               </div>
             )}
           </div>
@@ -1489,81 +1399,6 @@ export const SecretDetail: React.FC = () => {
                     fontFamily: `var(--font-${zenFont === 'serif' ? 'serif' : zenFont === 'sans' ? 'sans' : zenFont})`,
                   }}
                 />
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Floating Audio Controller Panel */}
-      <AnimatePresence>
-        {isSpeaking && (
-          <motion.div
-            initial={{ opacity: 0, y: 50, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 50, scale: 0.95 }}
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[100005] bg-white/95 dark:bg-gray-900/95 backdrop-blur-md px-5 py-3 rounded-2xl border border-gray-200/80 dark:border-gray-800 shadow-2xl flex items-center gap-4 transition-all duration-300 max-w-sm sm:max-w-md w-[92%]"
-          >
-            {/* Status indicator: pulse circle and label */}
-            <div className="flex items-center gap-2 border-r pr-3 border-gray-200 dark:border-gray-800">
-              <span className="relative flex h-3 w-3">
-                {!isPaused && (
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                )}
-                <span className={`relative inline-flex rounded-full h-3 w-3 ${isPaused ? 'bg-amber-400' : 'bg-emerald-500'}`}></span>
-              </span>
-              <span className="text-xs font-bold text-gray-700 dark:text-gray-300 font-sans whitespace-nowrap">
-                {isPaused ? t("audio.paused", "En pause") : t("audio.playing", "Lecture")}
-              </span>
-            </div>
-
-            {/* Controls */}
-            <div className="flex items-center justify-between flex-1 gap-2">
-              {/* Speed change button */}
-              <button
-                onClick={() => {
-                  const rates = [0.8, 1.0, 1.25, 1.5];
-                  const currentIdx = rates.indexOf(speechRate);
-                  const nextIdx = (currentIdx + 1) % rates.length;
-                  const nextRate = rates[nextIdx];
-                  setSpeechRate(nextRate);
-                  
-                  // If speaking, restart to apply rate instantly!
-                  if ('speechSynthesis' in window && window.speechSynthesis.speaking) {
-                    stopSpeech();
-                    setTimeout(() => {
-                      handleLectureVocale();
-                    }, 100);
-                  }
-                }}
-                className="p-1.5 rounded-lg hover:bg-gray-150 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400 text-xs font-bold font-mono transition-colors"
-                title={t("audio.speed", "Vitesse de lecture")}
-              >
-                {speechRate}x
-              </button>
-
-              <div className="flex items-center gap-1.5">
-                {/* Play/Pause Button */}
-                <button
-                  onClick={isPaused ? resumeSpeech : pauseSpeech}
-                  className={`p-2 rounded-full shadow-sm text-white transition-all ${
-                    isPaused 
-                      ? "bg-emerald-600 hover:bg-emerald-700" 
-                      : "bg-amber-500 hover:bg-amber-600"
-                  }`}
-                  title={isPaused ? t("audio.resume", "Reprendre") : t("audio.pause", "Mettre en pause")}
-                >
-                  {isPaused ? <Play size={16} fill="currentColor" /> : <Pause size={16} fill="currentColor" />}
-                </button>
-
-                {/* Stop Button */}
-                <button
-                  onClick={stopSpeech}
-                  className="p-2 rounded-full bg-red-100 dark:bg-red-950/40 hover:bg-red-200 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 shadow-sm transition-all"
-                  title={t("audio.stop", "Arrêter")}
-                >
-                  <Square size={14} fill="currentColor" />
-                </button>
               </div>
             </div>
           </motion.div>

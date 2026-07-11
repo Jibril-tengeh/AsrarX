@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useFeatures } from '../contexts/FeatureContext';
-import { useLanguage } from '../contexts/LanguageContext';
 import { Lock, Sparkles, Eye, Play, Coins, Check, ArrowRight, Star } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { WatchAdModal } from './WatchAdModal';
@@ -23,21 +22,17 @@ export const PremiumWrapper: React.FC<PremiumWrapperProps> = ({
   itemId,
   pointsCost,
   requiredTier = 'premium',
-  fallbackTitle,
-  fallbackMessage,
+  fallbackTitle = 'Contenu Premium',
+  fallbackMessage = 'Ce contenu est réservé aux membres Premium. Débloquez-le pour y accéder.',
   previewContent,
   enabled = true
 }) => {
   const { user } = useAuth();
   const { featureToggles } = useFeatures();
-  const { t } = useLanguage();
   const [showPreview, setShowPreview] = useState(false);
   const [isWatchAdOpen, setIsWatchAdOpen] = useState(false);
   const [isUnlocking, setIsUnlocking] = useState(false);
   const [unlockSuccess, setUnlockSuccess] = useState(false);
-
-  const activeFallbackTitle = fallbackTitle || t('premium.fallbackTitle', 'Lecture Secrète Premium');
-  const activeFallbackMessage = fallbackMessage || t('premium.fallbackMessage', 'Ce contenu est réservé aux membres Premium. Débloquez-le pour y accéder.');
 
   const premiumCardEnabled = featureToggles['premiumCardEnabled'] !== false;
 
@@ -74,7 +69,7 @@ export const PremiumWrapper: React.FC<PremiumWrapperProps> = ({
     if (!user || !itemId || isUnlocking || !canUnlockWithPoints) return;
     setIsUnlocking(true);
     try {
-      await spendPoints(user.uid, pointsToUnlock, itemId, `Déblocage article premium : ${activeFallbackTitle}`);
+      await spendPoints(user.uid, pointsToUnlock, itemId, `Déblocage article premium : ${fallbackTitle}`);
       setUnlockSuccess(true);
     } catch (e) {
       console.error("Error unlocking content:", e);
@@ -95,21 +90,19 @@ export const PremiumWrapper: React.FC<PremiumWrapperProps> = ({
               <div className="w-20 h-20 bg-gradient-to-br from-violet-500 to-fuchsia-600 rounded-full flex items-center justify-center shadow-lg mb-6 shadow-violet-500/30">
                 <Lock size={32} className="text-white" />
               </div>
-              <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-2">{activeFallbackTitle}</h2>
-              <p className="text-gray-900 dark:text-gray-100 mb-6 font-medium max-w-sm drop-shadow-md">
-                {t('premium.subscribeToView', "Abonnez-vous pour voir l'intégralité du contenu.")}
-              </p>
+              <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-2">{fallbackTitle}</h2>
+              <p className="text-gray-900 dark:text-gray-100 mb-6 font-medium max-w-sm drop-shadow-md">Abonnez-vous pour voir l'intégralité du contenu.</p>
               <Link 
                 to="/payment" 
                 className="px-6 py-3 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-white font-bold hover:from-amber-500 hover:to-orange-600 transition-colors shadow-xl flex items-center gap-2"
               >
-                <Sparkles size={18} /> {t('premium.unlock', 'Débloquer')} {requiredTier === 'pro' ? 'Pro' : 'Premium'}
+                <Sparkles size={18} /> Débloquer {requiredTier === 'pro' ? 'Pro' : 'Premium'}
               </Link>
               <button 
                 onClick={() => setShowPreview(false)}
                 className="mt-4 text-sm font-bold text-gray-600 dark:text-gray-300 hover:underline"
               >
-                {t('premium.cancel', 'Annuler')}
+                Annuler
               </button>
           </div>
         </div>
@@ -121,30 +114,30 @@ export const PremiumWrapper: React.FC<PremiumWrapperProps> = ({
         <div className="w-24 h-24 bg-gradient-to-br from-violet-500 to-fuchsia-600 rounded-full flex items-center justify-center shadow-lg mb-6 shadow-violet-500/30">
           <Lock size={40} className="text-white" />
         </div>
-        <h1 className="text-3xl font-black text-gray-900 dark:text-white mb-4 tracking-tight">{activeFallbackTitle}</h1>
+        <h1 className="text-3xl font-black text-gray-900 dark:text-white mb-4 tracking-tight">{fallbackTitle}</h1>
         <p className="text-lg text-gray-600 dark:text-gray-300 mb-8 max-w-md mx-auto leading-relaxed">
-          {activeFallbackMessage}
+          {fallbackMessage}
         </p>
         <div className="flex flex-wrap items-center justify-center gap-4">
           <Link 
             to="/tools" 
             className="px-6 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 font-bold hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-gray-900 dark:text-white"
           >
-            {t('premium.back', 'Retour')}
+            Retour
           </Link>
           {previewContent && (
             <button 
               onClick={() => setShowPreview(true)}
               className="px-6 py-3 rounded-xl border-2 border-violet-200 dark:border-violet-900 bg-violet-50 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 font-bold hover:bg-violet-100 dark:hover:bg-violet-900/50 transition-colors flex items-center gap-2"
             >
-              <Eye size={18} /> {t('premium.preview', 'Aperçu')}
+              <Eye size={18} /> Aperçu
             </button>
           )}
           <Link 
             to="/payment" 
             className="px-6 py-3 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-white font-bold hover:from-amber-500 hover:to-orange-600 transition-colors shadow-md flex items-center gap-2"
           >
-            <Sparkles size={18} /> {t('premium.unlock', 'Débloquer')} {requiredTier === 'pro' ? 'Pro' : 'Premium'}
+            <Sparkles size={18} /> Débloquer {requiredTier === 'pro' ? 'Pro' : 'Premium'}
           </Link>
         </div>
       </div>
@@ -162,7 +155,7 @@ export const PremiumWrapper: React.FC<PremiumWrapperProps> = ({
         
         {/* Floating badge */}
         <div className="absolute top-0 right-0 bg-violet-600 text-white font-bold text-[10px] uppercase tracking-wider px-4 py-1.5 rounded-bl-2xl shadow-sm flex items-center gap-1">
-          <Sparkles size={12} className="animate-pulse" /> {t('premium.badge', 'Premium')}
+          <Sparkles size={12} className="animate-pulse" /> Premium
         </div>
 
         <div className="w-20 h-20 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center shadow-lg shadow-indigo-500/20 mx-auto mb-6">
@@ -170,19 +163,17 @@ export const PremiumWrapper: React.FC<PremiumWrapperProps> = ({
         </div>
 
         <h2 className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white tracking-tight mb-3">
-          {activeFallbackTitle}
+          {fallbackTitle}
         </h2>
         
         <p className="text-sm text-gray-600 dark:text-gray-300 mb-8 max-w-md mx-auto leading-relaxed">
-          {activeFallbackMessage}
+          {fallbackMessage}
         </p>
 
         {/* Dynamic Point Box & Options */}
         <div className="bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-750 rounded-2xl p-6 mb-8">
           <div className="flex justify-between items-center border-b border-gray-200 dark:border-gray-800 pb-4 mb-4">
-            <span className="text-xs font-bold uppercase tracking-wider text-gray-500">
-              {t('premium.yourBalance', 'Votre Solde')}
-            </span>
+            <span className="text-xs font-bold uppercase tracking-wider text-gray-500">Votre Solde</span>
             <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-500/10 text-amber-500 rounded-full font-bold text-sm">
               <Coins size={16} />
               <span>{userPoints} pts</span>
@@ -194,10 +185,10 @@ export const PremiumWrapper: React.FC<PremiumWrapperProps> = ({
             <div className="flex flex-col justify-between p-4 bg-white dark:bg-gray-850 border border-gray-150 dark:border-gray-700 rounded-xl text-left shadow-sm">
               <div>
                 <h4 className="font-bold text-sm text-gray-900 dark:text-white flex items-center gap-1.5">
-                  <Coins size={16} className="text-amber-500" /> {t('premium.unlockWithPoints', 'Débloquer par Points')}
+                  <Coins size={16} className="text-amber-500" /> Débloquer par Points
                 </h4>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
-                  {t('premium.useBalanceDesc', 'Utilisez votre solde spirituel pour ouvrir cet article de façon définitive.')}
+                  Utilisez votre solde spirituel pour ouvrir cet article de façon définitive.
                 </p>
               </div>
               <div className="mt-4">
@@ -210,14 +201,11 @@ export const PremiumWrapper: React.FC<PremiumWrapperProps> = ({
                       : 'bg-gray-100 dark:bg-gray-800 text-gray-400 cursor-not-allowed'
                   }`}
                 >
-                  {isUnlocking 
-                    ? t('premium.unlocking', 'Déblocage...') 
-                    : t('premium.buyForPoints', 'Acheter pour {points} pts').replace('{points}', pointsToUnlock.toString())
-                  }
+                  {isUnlocking ? "Déblocage..." : `Acheter pour ${pointsToUnlock} pts`}
                 </button>
                 {!canUnlockWithPoints && (
                   <p className="text-[10px] text-red-500 font-semibold mt-1.5 text-center">
-                    {t('premium.insufficientPoints', 'Points insuffisants (manque {points} pts)').replace('{points}', (pointsToUnlock - userPoints).toString())}
+                    Points insuffisants (manque {pointsToUnlock - userPoints} pts)
                   </p>
                 )}
               </div>
@@ -227,10 +215,10 @@ export const PremiumWrapper: React.FC<PremiumWrapperProps> = ({
             <div className="flex flex-col justify-between p-4 bg-white dark:bg-gray-850 border border-gray-150 dark:border-gray-700 rounded-xl text-left shadow-sm">
               <div>
                 <h4 className="font-bold text-sm text-gray-900 dark:text-white flex items-center gap-1.5">
-                  <Play size={16} fill="currentColor" className="text-emerald-500" /> {t('premium.earnPoints', 'Gagnez des Points')}
+                  <Play size={16} fill="currentColor" className="text-emerald-500" /> Gagnez des Points
                 </h4>
                 <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
-                  {t('premium.watchAdDesc', 'Visionnez une courte publicité sponsorisée pour accumuler des points.')}
+                  Visionnez une courte publicité sponsorisée pour accumuler des points.
                 </p>
               </div>
               <div className="mt-4">
@@ -238,7 +226,7 @@ export const PremiumWrapper: React.FC<PremiumWrapperProps> = ({
                   onClick={() => setIsWatchAdOpen(true)}
                   className="w-full py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 shadow-md active:scale-95 transition-all"
                 >
-                  <Play size={14} fill="currentColor" /> {t('premium.watchAdBtn', 'Voir la pub (+{points} pts)').replace('{points}', pointsPerAd.toString())}
+                  <Play size={14} fill="currentColor" /> Voir la pub (+{pointsPerAd} pts)
                 </button>
               </div>
             </div>
@@ -249,17 +237,15 @@ export const PremiumWrapper: React.FC<PremiumWrapperProps> = ({
         <div className="flex flex-col sm:flex-row items-center justify-between p-4 border border-violet-100 dark:border-violet-900/50 bg-violet-50/50 dark:bg-violet-950/20 rounded-2xl gap-4">
           <div className="text-left">
             <h4 className="font-bold text-sm text-violet-900 dark:text-violet-300 flex items-center gap-1">
-              <Star size={16} fill="currentColor" className="text-amber-400" /> {t('premium.unlimitedVersion', 'Version Premium Illimitée')}
+              <Star size={16} fill="currentColor" className="text-amber-400" /> Version Premium Illimitée
             </h4>
-            <p className="text-xs text-violet-700 dark:text-violet-400 mt-0.5">
-              {t('premium.unlimitedVersionDesc', 'Désactivez toutes les publicités et ouvrez tous les articles instantanément.')}
-            </p>
+            <p className="text-xs text-violet-700 dark:text-violet-400 mt-0.5">Désactivez toutes les publicités et ouvrez tous les articles instantanément.</p>
           </div>
           <Link 
             to="/payment" 
             className="px-4 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white text-xs font-black rounded-xl shadow-md transition-all shrink-0 flex items-center gap-1"
           >
-            {t('premium.subscribe', "S'abonner")} <ArrowRight size={14} />
+            S'abonner <ArrowRight size={14} />
           </Link>
         </div>
 
