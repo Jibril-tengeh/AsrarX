@@ -8,12 +8,7 @@ import { WatchAdModal } from './WatchAdModal';
 import { admobService } from '../lib/admob';
 import { earnPoints } from '../lib/points';
 
-interface BannerAdProps {
-  onClose?: () => void;
-  className?: string;
-}
-
-export const BannerAd: React.FC<BannerAdProps> = ({ onClose, className = "mb-1" }) => {
+export const BannerAd: React.FC = () => {
   const { user } = useAuth();
   const { t } = useLanguage();
   const { featureToggles } = useFeatures();
@@ -61,7 +56,7 @@ export const BannerAd: React.FC<BannerAdProps> = ({ onClose, className = "mb-1" 
     .replace('{points}', pointsPerAd.toString());
 
   return (
-    <div className={`w-full bg-gradient-to-r from-blue-900 to-indigo-900 text-white p-3 sm:p-4 rounded-2xl shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 relative overflow-hidden group ${className}`}>
+    <div className="w-full bg-gradient-to-r from-blue-900 to-indigo-900 text-white p-3 sm:p-4 rounded-2xl shadow-sm mb-6 flex flex-col sm:flex-row items-center justify-between gap-4 relative overflow-hidden group">
       <div className="absolute right-0 top-0 w-32 h-32 bg-white opacity-5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2"></div>
       
       <div className="flex-1 z-10 text-center sm:text-left">
@@ -76,7 +71,7 @@ export const BannerAd: React.FC<BannerAdProps> = ({ onClose, className = "mb-1" 
           {pointsDesc}
         </p>
       </div>
- 
+
       <div className="flex items-center gap-2.5 z-10 w-full sm:w-auto shrink-0">
         <button
           onClick={handleWatchAd}
@@ -91,10 +86,7 @@ export const BannerAd: React.FC<BannerAdProps> = ({ onClose, className = "mb-1" 
           {t('ad.viewOffers', 'Premium')} <ExternalLink size={12} />
         </Link>
         <button 
-          onClick={() => {
-            setIsVisible(false);
-            if (onClose) onClose();
-          }}
+          onClick={() => setIsVisible(false)}
           className="p-2 rounded-xl bg-white/5 hover:bg-white/15 transition-colors text-white"
           aria-label="Fermer l'annonce"
         >

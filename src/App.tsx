@@ -273,9 +273,7 @@ export default function App() {
     }} />;
   }
 
-  const [adVisible, setAdVisible] = React.useState(true);
   const showAd = !location.pathname.startsWith('/admin') && !location.pathname.startsWith('/payment');
-  const isDashboardAdActive = showAd && adVisible && location.pathname === '/user/dashboard';
 
   return (
     <MaintenanceOverlay>
@@ -287,13 +285,13 @@ export default function App() {
         <main className={`flex-1 text-gray-900 dark:text-gray-100 pb-20 ${
           isRuqyahPlayer 
             ? '' 
-            : isDashboardAdActive
-              ? 'pt-[116px] sm:pt-[124px]'
-              : 'pt-20 sm:pt-24'
+            : location.pathname === '/user/dashboard' 
+              ? 'pt-28 sm:pt-32' 
+              : 'pt-20'
         }`}>
-          {showAd && adVisible && (
-            <div className={`max-w-3xl mx-auto px-4 sm:px-6 w-full ${isDashboardAdActive ? 'pt-0' : 'pt-4'}`}>
-              <BannerAd onClose={() => setAdVisible(false)} />
+          {showAd && (
+            <div className="max-w-3xl mx-auto px-4 sm:px-6 w-full pt-4">
+              <BannerAd />
             </div>
           )}
           <React.Suspense fallback={
@@ -312,7 +310,7 @@ export default function App() {
               >
                 <Routes location={location}>
                 <Route path="/" element={<Navigate to="/user/dashboard" replace />} />
-                <Route path="/user/dashboard" element={<UserDashboard adVisible={showAd && adVisible} />} />
+                <Route path="/user/dashboard" element={<UserDashboard />} />
                 <Route path="/secret/:id" element={<SecretDetail />} />
                 <Route path="/explore" element={<ExploreDashboard />} />
                 <Route path="/store" element={<Store />} />
