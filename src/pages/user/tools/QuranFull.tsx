@@ -1701,8 +1701,8 @@ export const QuranFull: React.FC = () => {
   useEffect(() => {
     if (!reminderTime) return;
     
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
+    if (typeof window !== 'undefined' && 'Notification' in window && window.Notification.permission === 'default') {
+      window.window.Notification.requestPermission();
     }
 
     const checkReminder = () => {
@@ -1716,8 +1716,8 @@ export const QuranFull: React.FC = () => {
         const todayDate = now.toDateString();
         
         if (lastReminded !== todayDate) {
-           if ('Notification' in window && Notification.permission === 'granted') {
-             new Notification('Rappel de lecture', {
+           if (typeof window !== 'undefined' && 'Notification' in window && window.Notification.permission === 'granted') {
+             new window.Notification('Rappel de lecture', {
                 body: 'Il est temps de lire votre portion quotidienne du Coran.',
              });
            }
@@ -2851,7 +2851,7 @@ export const QuranFull: React.FC = () => {
                              onChange={(e) => {
                                setReminderTime(e.target.value);
                                localStorage.setItem('asrarhub_quran_reminder', e.target.value);
-                               if ('Notification' in window && Notification.permission === 'default') {
+                               if (typeof window !== 'undefined' && 'Notification' in window && window.Notification.permission === 'default') {
                                  Notification.requestPermission();
                                }
                              }}

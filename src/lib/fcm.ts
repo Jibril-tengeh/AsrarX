@@ -1,10 +1,16 @@
 import { getMessaging, getToken, onMessage, isSupported } from 'firebase/messaging';
 import { app, db } from './firebase';
 import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { Capacitor } from '@capacitor/core';
 
 // Request permission and retrieve FCM token
 export const getFCMToken = async (userId: string): Promise<string | null> => {
   try {
+    if (Capacitor.isNativePlatform()) {
+      console.warn("FCM Web SDK is not supported on native platforms. Use native plugins instead.");
+      return null;
+    }
+
     const supported = await isSupported();
     if (!supported) {
       console.warn("FCM is not supported in this browser environment.");
@@ -14,11 +20,16 @@ export const getFCMToken = async (userId: string): Promise<string | null> => {
     const messaging = getMessaging(app);
 
     // Request permission from the browser
-    if (Notification.permission !== 'granted') {
-      const permission = await Notification.requestPermission();
-      if (permission !== 'granted') {
-        throw new Error("Permission de notification refusée par l'utilisateur.");
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (window.Notification.permission !== 'granted') {
+        const permission = await window.Notification.requestPermission();
+        if (permission !== 'granted') {
+          throw new Error("Permission de notification refusée par l'utilisateur.");
+        }
       }
+    } else {
+      console.warn("Notifications are not supported in this environment.");
+      return null;
     }
 
     // Try to register the service worker if not already registered
@@ -59,7 +70,10 @@ export const getFCMToken = async (userId: string): Promise<string | null> => {
 // Check if notifications are active and supported
 export const checkNotificationSupport = async (): Promise<boolean> => {
   try {
-    return await isSupported() && 'Notification' in window;
+    if (Capacitor.isNativePlatform()) {
+      return false;
+    }
+    return await isSupported() && typeof window !== 'undefined' && 'Notification' in window;
   } catch {
     return false;
   }
@@ -68,6 +82,9 @@ export const checkNotificationSupport = async (): Promise<boolean> => {
 // Listen to foreground FCM messages
 export const onMessageListener = async (onMessageReceived: (payload: any) => void) => {
   try {
+    if (Capacitor.isNativePlatform()) {
+      return;
+    }
     const supported = await isSupported();
     if (!supported) return;
 

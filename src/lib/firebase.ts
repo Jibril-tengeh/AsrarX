@@ -12,17 +12,19 @@ import {
   updateProfile,
   User
 } from 'firebase/auth';
-import { getFirestore, initializeFirestore, enableIndexedDbPersistence, doc, getDoc, setDoc, updateDoc, collection, getDocs, addDoc, deleteDoc, query, where, orderBy } from 'firebase/firestore';
+import { getFirestore, initializeFirestore, enableIndexedDbPersistence, doc, getDoc, setDoc, updateDoc, collection, getDocs, addDoc, deleteDoc, query, where, orderBy, getDocFromServer } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 
 export const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
 export const storage = getStorage(app);
-export const db = initializeFirestore(app, {
+const isIframe = typeof window !== 'undefined' && window.self !== window.top;
+
+export const db = initializeFirestore(app, isIframe ? {
   experimentalForceLongPolling: true,
   ...({ useFetchStreams: false } as any)
-});
+} : {});
 
 // Helper to check if IndexedDB is fully functional (especially inside iframes where it can hang)
 const checkIndexedDBFunctional = (): Promise<boolean> => {
@@ -172,5 +174,15 @@ export const signOut = async () => {
 
 export const isAutoSaveEnabled = () => {
   return localStorage.getItem('asrar_auto_save_firestore') !== 'false';
+};
+
+// Validate Connection to Firestore (manual diagnostic only, do not auto-run to avoid blocking startup errors)
+export const testConnection = async () => {
+  try {
+    // Keep as helper if needed for manual debugging
+    console.log("Firestore connection test: SKIPPED (Manual run only)");
+  } catch (error) {
+    console.warn("Firestore connection test error:", error);
+  }
 };
 

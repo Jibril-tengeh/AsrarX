@@ -5,6 +5,7 @@ import { useLanguage } from '../../../contexts/LanguageContext';
 import { app, auth, db } from '../../../lib/firebase';
 import { useAuth } from '../../../contexts/AuthContext';
 import { collection, query, where, onSnapshot, setDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { Capacitor } from '@capacitor/core';
 
 interface DhikrGoal {
   id: string;
@@ -24,7 +25,7 @@ export const DailyDhikrTracker: React.FC = () => {
 
   // FCM States
   const [pushStatus, setPushStatus] = useState<NotificationPermission>(
-    'Notification' in window ? Notification.permission : 'denied'
+    typeof window !== 'undefined' && 'Notification' in window ? window.Notification.permission : 'denied'
   );
   const [fcmToken, setFcmToken] = useState(() => localStorage.getItem('asrar_fcm_token') || '');
   const [registering, setRegistering] = useState(false);
@@ -34,13 +35,18 @@ export const DailyDhikrTracker: React.FC = () => {
 
   // Automatically attempt to retrieve/refresh token if permission is already granted and token isn't stored
   useEffect(() => {
-    if ('Notification' in window && Notification.permission === 'granted' && !fcmToken) {
+    if (typeof window !== 'undefined' && 'Notification' in window && window.Notification.permission === 'granted' && !fcmToken) {
       registerPushNotifications();
     }
   }, []);
 
   const registerPushNotifications = async () => {
-    if (!('Notification' in window) || !('serviceWorker' in navigator)) {
+    if (Capacitor.isNativePlatform()) {
+      setTestError("Les notifications push Web ne sont pas supportées sur plateforme native.");
+      return;
+    }
+
+    if (typeof window === 'undefined' || !('Notification' in window) || !('serviceWorker' in navigator)) {
       setTestError("Les notifications push ne sont pas supportées par ce navigateur.");
       return;
     }
@@ -48,7 +54,7 @@ export const DailyDhikrTracker: React.FC = () => {
     setRegistering(true);
     setTestError('');
     try {
-      const permission = await Notification.requestPermission();
+      const permission = await window.Notification.requestPermission();
       setPushStatus(permission);
 
       if (permission === 'granted') {

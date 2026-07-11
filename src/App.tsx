@@ -224,7 +224,7 @@ export default function App() {
               if ('Notification' in window && window.Notification && window.Notification.permission === 'granted') {
                 const title = rem.isZikr ? 'Rappel de Zikr Quotidien 📿' : 'AsrarHub';
                 const body = rem.isZikr ? `Il est temps pour votre Zikr : ${rem.label}` : `Il est temps pour : ${rem.label}`;
-                new Notification(title, { body });
+                new window.Notification(title, { body });
               }
             } catch (e) {
               console.error("Notification access error", e);
