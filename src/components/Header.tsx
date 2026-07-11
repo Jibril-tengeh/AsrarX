@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { GlobalSearchModal } from './GlobalSearchModal';
 import { AsrarLogo } from './AsrarLogo';
+import { SyncStatusBadge } from './SyncStatusBadge';
 
 interface Notification {
   id: string;
@@ -394,6 +395,8 @@ export const Header: React.FC = () => {
                 </motion.div>
               </Link>
             )}
+
+            <SyncStatusBadge />
 
             <Link to="/profile" id="tour-profile">
               <motion.div 

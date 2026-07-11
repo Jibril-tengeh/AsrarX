@@ -99,7 +99,7 @@ export const SecretCard: React.FC<SecretCardProps> = ({ item, layoutMode = 'grid
               {displayTitle}
             </h3>
             {displayHook && (
-              <p className="text-gray-500 dark:text-gray-400 text-[11.5px] sm:text-[12.5px] leading-relaxed line-clamp-2">
+              <p className="text-gray-500 dark:text-gray-400 text-[11px] sm:text-[12px] leading-relaxed line-clamp-2">
                 {displayHook}
               </p>
             )}
@@ -153,7 +153,7 @@ export const SecretCard: React.FC<SecretCardProps> = ({ item, layoutMode = 'grid
           {displayHook && (
             <div className="p-2.5 sm:p-3 flex-1 flex flex-col border-t border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50">
                {/* Hook */}
-               <p className="text-gray-500 dark:text-gray-400 leading-relaxed text-[11.5px] sm:text-[12.5px] line-clamp-3 mt-0">
+               <p className="text-gray-500 dark:text-gray-400 leading-relaxed text-[11px] sm:text-[12px] line-clamp-3 mt-0">
                  {displayHook}
                </p>
             </div>
