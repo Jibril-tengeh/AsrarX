@@ -92,6 +92,7 @@ const FaqButton = () => {
 };
 
 import { App as CapacitorApp } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
 
 const NetworkStatus = () => {
   const [isOnline, setIsOnline] = React.useState(navigator.onLine);
@@ -186,6 +187,8 @@ export default function App() {
   }, [location.pathname]);
 
   React.useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
     CapacitorApp.addListener('backButton', () => {
       if (window.location.pathname !== '/' && window.location.pathname !== '/home') {
         window.history.back();
