@@ -690,7 +690,7 @@ export const SecretDetail: React.FC = () => {
   }
 
   return (
-    <PremiumWrapper enabled={item.isPremium} requiredTier="premium" itemId={item.id} pointsCost={(item as any).pointsCost} fallbackTitle="Lecture Secrète Premium">
+    <PremiumWrapper enabled={item.isPremium} requiredTier="premium" fallbackTitle="Lecture Secrète Premium">
       <div
         className={`w-full max-w-3xl mx-auto px-4 pt-0 sm:px-6 sm:pt-2 lg:px-8 pb-24 transition-colors duration-500 ${readingMode ? "bg-[#fdfbf7] dark:bg-[#1a1917] min-h-screen" : ""}`}
       >

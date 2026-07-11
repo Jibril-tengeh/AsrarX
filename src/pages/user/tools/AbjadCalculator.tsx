@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calculator, ArrowLeft, RefreshCw, Copy, Check, ChevronDown, ChevronUp, History, Save, Trash2, X, Database, Wifi, HelpCircle, Share2 } from 'lucide-react';
+import { Calculator, ArrowLeft, RefreshCw, Copy, Check, ChevronDown, ChevronUp, History, Save, Trash2, X, Database, Wifi, HelpCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { ToolInfoTooltip } from '../../../components/ToolInfoTooltip';
@@ -175,34 +175,6 @@ export const AbjadCalculator: React.FC = () => {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleShare = async (variant: 'mashriqi' | 'maghribi', score: number) => {
-    if (!text.trim()) return;
-    const textSnippet = text.trim().substring(0, 50) + (text.length > 50 ? '...' : '');
-    const title = `Calcul Abjad - ${variant === 'mashriqi' ? 'Orientale' : 'Maghrébine'}`;
-    const shareText = `Texte : "${textSnippet}"\n\nValeur Abjad calculée (${variant === 'mashriqi' ? 'Orientale' : 'Maghrébine'}) : ${score}\n\nCalculé avec précision sur AsrarHub.`;
-
-    if (navigator.share) {
-      try {
-        await navigator.share({
-          title,
-          text: shareText,
-          url: window.location.href
-        });
-      } catch (err: any) {
-        if (err.name !== 'AbortError') {
-          console.error("Share error:", err);
-        }
-      }
-    } else {
-      try {
-        await navigator.clipboard.writeText(shareText);
-        alert("Texte de partage copié dans le presse-papiers ! Vous pouvez le coller sur vos réseaux sociaux.");
-      } catch (e) {
-        console.error("Clipboard write error:", e);
-      }
-    }
-  };
-
   return (
     <div className="max-w-2xl mx-auto p-4 sm:p-6 lg:p-8 safe-area-pt pb-24">
       {/* Header */}
@@ -303,22 +275,13 @@ export const AbjadCalculator: React.FC = () => {
                 {totalMashriqi}
               </div>
               {totalMashriqi > 0 && (
-                <div className="flex gap-2 w-full justify-center">
-                  <button
-                    onClick={() => handleCopy(totalMashriqi)}
-                    className="flex-1 flex items-center justify-center gap-1 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-white/10 hover:bg-white/20 rounded-2xl backdrop-blur-sm transition-colors text-xs sm:text-sm font-medium"
-                  >
-                    {copied ? <Check size={14} className="text-emerald-300" /> : <Copy size={14} />}
-                    <span className="truncate">{copied ? t('tools.abjad.copied') : t('tools.abjad.copy')}</span>
-                  </button>
-                  <button
-                    onClick={() => handleShare('mashriqi', totalMashriqi)}
-                    className="flex items-center justify-center p-2 bg-white/10 hover:bg-white/20 rounded-2xl backdrop-blur-sm transition-colors"
-                    title="Partager"
-                  >
-                    <Share2 size={14} />
-                  </button>
-                </div>
+                <button
+                  onClick={() => handleCopy(totalMashriqi)}
+                  className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-white/10 hover:bg-white/20 rounded-full backdrop-blur-sm transition-colors text-xs sm:text-sm font-medium w-full sm:w-auto"
+                >
+                  {copied ? <Check size={16} className="text-emerald-300" /> : <Copy size={16} />}
+                  {copied ? t('tools.abjad.copied') : t('tools.abjad.copy')}
+                </button>
               )}
             </div>
           </div>
@@ -332,22 +295,13 @@ export const AbjadCalculator: React.FC = () => {
                 {totalMaghribi}
               </div>
               {totalMaghribi > 0 && (
-                <div className="flex gap-2 w-full justify-center">
-                  <button
-                    onClick={() => handleCopy(totalMaghribi)}
-                    className="flex-1 flex items-center justify-center gap-1 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 bg-white/10 hover:bg-white/20 rounded-2xl backdrop-blur-sm transition-colors text-xs sm:text-sm font-medium"
-                  >
-                    {copied ? <Check size={14} className="text-emerald-300" /> : <Copy size={14} />}
-                    <span className="truncate">{copied ? t('tools.abjad.copied') : t('tools.abjad.copy')}</span>
-                  </button>
-                  <button
-                    onClick={() => handleShare('maghribi', totalMaghribi)}
-                    className="flex items-center justify-center p-2 bg-white/10 hover:bg-white/20 rounded-2xl backdrop-blur-sm transition-colors"
-                    title="Partager"
-                  >
-                    <Share2 size={14} />
-                  </button>
-                </div>
+                <button
+                  onClick={() => handleCopy(totalMaghribi)}
+                  className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-white/10 hover:bg-white/20 rounded-full backdrop-blur-sm transition-colors text-xs sm:text-sm font-medium w-full sm:w-auto"
+                >
+                  {copied ? <Check size={16} className="text-green-300" /> : <Copy size={16} />}
+                  {copied ? t('tools.abjad.copied') : t('tools.abjad.copy')}
+                </button>
               )}
             </div>
           </div>

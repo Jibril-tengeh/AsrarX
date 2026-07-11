@@ -705,10 +705,7 @@
     "unlockDesc": "Upgrade to Premium to access full Sirr Al Asrar courses and remove these ads.",
     "viewOffers": "View Offers",
     "profilePromo": "Upgrade to Premium to unlock all features and remove ads.",
-    "becomePremium": "Become Premium",
-    "pointsTitle": "Earn Spiritual Points",
-    "pointsDesc": "Watch a 15s ad to get +{points} pts and unlock any article of your choice.",
-    "watchNow": "Watch the Ad"
+    "becomePremium": "Become Premium"
   },
   "maintenance": {
     "title": "Maintenance in Progress",

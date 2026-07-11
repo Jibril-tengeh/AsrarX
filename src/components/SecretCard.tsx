@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
-import { useFeatures } from '../contexts/FeatureContext';
 import { BookOpen, Sparkles, ScrollText, Image as ImageIcon, Crown } from 'lucide-react';
 import { AsrarItem } from '../types';
 
@@ -41,8 +40,6 @@ const ImageWithFallback: React.FC<{ src: string; alt: string; className?: string
 
 export const SecretCard: React.FC<SecretCardProps> = ({ item, layoutMode = 'grid2' }) => {
   const { t, language } = useLanguage();
-  const { featureToggles } = useFeatures();
-  const premiumCardEnabled = featureToggles['premiumCardEnabled'] !== false;
   
   // Use cached translation if available
   let displayTitle = item.title;
@@ -85,7 +82,7 @@ export const SecretCard: React.FC<SecretCardProps> = ({ item, layoutMode = 'grid
             
             {/* Badge */}
             <div className="absolute top-2 left-2 flex gap-1 z-10 max-w-[calc(100%-16px)]">
-              {item.isPremium && premiumCardEnabled && (
+              {item.isPremium && (
                 <div className="bg-gradient-to-r from-amber-400 to-orange-500 text-white px-1.5 py-0.5 rounded-full flex items-center shadow-sm">
                   <Crown size={12} className="shrink-0" />
                 </div>
@@ -134,7 +131,7 @@ export const SecretCard: React.FC<SecretCardProps> = ({ item, layoutMode = 'grid
              
              {/* Badge Over Image */}
              <div className="absolute top-3 left-3 flex gap-1.5 z-10 transition-colors max-w-[calc(100%-24px)]">
-               {item.isPremium && premiumCardEnabled && (
+               {item.isPremium && (
                  <div className="bg-gradient-to-r from-amber-400 to-orange-500 text-white px-2 py-1 rounded-full flex items-center shadow-md">
                    <Crown size={14} className="shrink-0" />
                  </div>
