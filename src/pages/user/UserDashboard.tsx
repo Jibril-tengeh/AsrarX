@@ -592,7 +592,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
       <OnboardingTour />
 
       {/* Spacer to compensate for fixed toolbar */}
-      <div className="h-10 sm:h-14 w-full" />
+      <div className="h-[44px] w-full" />
 
       {/* Banner Section */}
       <div className="mb-4 grid grid-cols-1 gap-4">
@@ -715,7 +715,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
       {filter === 'favoris' && (
         <div className="space-y-4 mb-6">
           <div className="overflow-x-auto hide-scrollbar">
-            <div className="flex flex-wrap gap-4 pb-2">
+            <div className="flex gap-3 pb-2">
               <button
                 onClick={() => setActiveFolder(null)}
                 className={`px-4 py-2 rounded-xl flex items-center gap-2 whitespace-nowrap transition-colors border ${
@@ -798,21 +798,14 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
         </div>
       )}
 
-      <div className={`flex flex-wrap gap-4 sm:grid sm:gap-6 lg:gap-8 ${
-        layoutMode === 'grid2' ? 'grid-cols-2 sm:grid-cols-2 lg:grid-cols-3' : 
+      <div className={`grid gap-3 sm:gap-6 lg:gap-8 ${
+        layoutMode === 'grid2' ? 'grid-cols-2 lg:grid-cols-3' : 
         layoutMode === 'list' ? 'grid-cols-1 lg:grid-cols-2' : 
         'grid-cols-1'
       }`}>
         {isLoading ? (
           Array.from({ length: 6 }).map((_, idx) => (
-            <div 
-              key={idx} 
-              className={`bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700/80 p-4 animate-pulse h-48 flex flex-col justify-between shadow-sm ${
-                layoutMode === 'grid2' 
-                  ? 'w-[calc(50%-8px)] sm:w-full' 
-                  : 'w-full'
-              }`}
-            >
+            <div key={idx} className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700/80 p-4 animate-pulse h-48 flex flex-col justify-between shadow-sm">
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <div className="h-4 bg-gray-200 dark:bg-gray-750 rounded-md w-1/4"></div>
@@ -828,14 +821,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
           filteredItems.map(item => {
             const currentFolder = bookmarkFolders.find(f => f.items.includes(item.id));
             return (
-              <div 
-                key={item.id} 
-                className={`flex flex-col h-full ${
-                  layoutMode === 'grid2' 
-                    ? 'w-[calc(50%-8px)] sm:w-full' 
-                    : 'w-full'
-                }`}
-              >
+              <div key={item.id} className="flex flex-col h-full">
                 <div className="flex-1">
                   <SecretCard item={item} layoutMode={layoutMode} />
                 </div>

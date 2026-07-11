@@ -282,13 +282,7 @@ export default function App() {
         <FloatingBackButton />
         <Header />
         <DailyRewardHandler />
-        <main className={`flex-1 text-gray-900 dark:text-gray-100 pb-20 ${
-          isRuqyahPlayer 
-            ? '' 
-            : location.pathname === '/user/dashboard' 
-              ? 'pt-28 sm:pt-32' 
-              : 'pt-20'
-        }`}>
+        <main className={`flex-1 text-gray-900 dark:text-gray-100 pb-20 ${isRuqyahPlayer ? '' : 'pt-20'}`}>
           {showAd && (
             <div className="max-w-3xl mx-auto px-4 sm:px-6 w-full pt-4">
               <BannerAd />
