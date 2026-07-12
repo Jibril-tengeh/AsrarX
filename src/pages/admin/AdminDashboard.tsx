@@ -211,6 +211,13 @@ export const AdminDashboard: React.FC = () => {
 
   // Features State
   const [featureToggles, setFeatureToggles] = useState<any>({});
+  const [localBackendUrl, setLocalBackendUrl] = useState('');
+
+  useEffect(() => {
+    if (featureToggles.backend_url !== undefined) {
+      setLocalBackendUrl(featureToggles.backend_url || '');
+    }
+  }, [featureToggles.backend_url]);
 
   // Notifications State
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -2217,14 +2224,26 @@ export const AdminDashboard: React.FC = () => {
             <div className="flex flex-col sm:flex-row gap-2 mt-2">
               <input
                 type="text"
-                value={featureToggles['backend_url'] || ''}
-                onChange={(e) => handleToggleFeature('backend_url', e.target.value)}
+                value={localBackendUrl}
+                onChange={(e) => setLocalBackendUrl(e.target.value)}
                 placeholder="https://votre-app-backend.run.app"
                 className="flex-1 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-650 rounded-xl text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 animate-none"
               />
               <button
                 onClick={() => {
-                  handleToggleFeature('backend_url', window.location.origin);
+                  handleToggleFeature('backend_url', localBackendUrl);
+                  showToast("URL de l'API sauvegardée !");
+                }}
+                type="button"
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-sm transition-colors cursor-pointer"
+              >
+                Sauvegarder
+              </button>
+              <button
+                onClick={() => {
+                  const currentOrigin = window.location.origin;
+                  setLocalBackendUrl(currentOrigin);
+                  handleToggleFeature('backend_url', currentOrigin);
                   showToast("URL réinitialisée à celle actuelle.");
                 }}
                 type="button"

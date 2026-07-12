@@ -67,6 +67,11 @@ service cloud.firestore {
       allow read: if true;
       allow write: if isAdmin();
     }
+
+    match /assistant_prompts/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
     
     match /articles/{document=**} {
       allow read: if !resource.data.get('isPremium', false) 

@@ -9,7 +9,13 @@ export function getApiUrl(path: string): string {
   
   // In normal web environment, use window.location.origin if it's not localhost/capacitor
   const origin = window.location.origin;
-  const isCapacitorOrLocal = origin.startsWith('capacitor:') || origin.includes('localhost') || origin.includes('127.0.5.') || origin.includes('127.0.0.1');
+  const isCapacitorOrLocal = 
+    origin.startsWith('capacitor:') || 
+    origin.startsWith('file:') || 
+    origin.includes('localhost') || 
+    origin.includes('127.0.5.') || 
+    origin.includes('127.0.0.1') ||
+    !!(window as any).Capacitor;
   
   if (!isCapacitorOrLocal) {
     return `${origin}${cleanPath}`;
