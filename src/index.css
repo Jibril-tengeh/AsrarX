@@ -140,4 +140,16 @@ body {
   }
 }
 
+/* Utility to visually debug layout overflow with a subtle red outline */
+.debug-layout-overflow * {
+  outline: 1px solid rgba(239, 68, 68, 0.25) !important;
+}
+
+/* Pinpoint elements exceeding their parent container bounds */
+.highlight-overflow {
+  outline: 2px solid #ef4444 !important;
+  background-color: rgba(239, 68, 68, 0.05) !important;
+}
+
+
 

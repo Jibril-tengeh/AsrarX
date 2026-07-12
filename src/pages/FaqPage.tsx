@@ -536,7 +536,7 @@ export const FaqPage: React.FC = () => {
       </AnimatePresence>
 
       {/* CHAT MAIN INTERFACE */}
-      <div className="flex-1 flex flex-col h-[calc(100vh-180px)] overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 w-full h-[calc(100vh-180px)] overflow-hidden">
         
         {/* HEADER / ACTIONS BAR */}
         <div className="flex items-center justify-between gap-4 mb-4">
@@ -577,7 +577,7 @@ export const FaqPage: React.FC = () => {
         </div>
 
         {/* MESSAGES AREA */}
-        <div className="flex-1 bg-white dark:bg-gray-900 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800 p-4 sm:p-6 flex flex-col overflow-hidden relative">
+        <div className="flex-1 bg-white dark:bg-gray-900 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800 p-4 sm:p-6 flex flex-col overflow-hidden relative min-w-0 w-full">
           <div className="flex-1 overflow-y-auto mb-4 space-y-4 custom-scrollbar pr-1">
             {messages.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-center p-6 text-gray-400">
@@ -590,12 +590,12 @@ export const FaqPage: React.FC = () => {
                       : "Je suis votre assistant IA spécialisé dans les sciences spirituelles et l'utilisation de l'application AsrarHub. Posez-moi vos questions."
                   }
                 </p>
-                <div className="flex flex-wrap gap-2 justify-center max-w-lg">
+                <div className="flex flex-wrap gap-2 justify-center max-w-full px-2">
                   {predefinedQuestions.map((q, idx) => (
                     <button 
                       key={idx}
                       onClick={() => handleAsk(q)}
-                      className="px-4 py-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 rounded-full text-xs font-bold hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors cursor-pointer"
+                      className="px-4 py-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 rounded-full text-xs font-bold hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors cursor-pointer whitespace-normal break-words text-left sm:text-center max-w-full"
                     >
                       {q}
                     </button>
@@ -616,9 +616,9 @@ export const FaqPage: React.FC = () => {
                       : 'bg-gray-100 dark:bg-gray-800 text-gray-850 dark:text-gray-150 rounded-bl-none border border-gray-200/20'
                   }`}>
                     {msg.role === 'user' ? (
-                      <p className="whitespace-pre-wrap text-sm leading-relaxed">{msg.content}</p>
+                      <p className="whitespace-pre-wrap text-sm leading-relaxed break-words">{msg.content}</p>
                     ) : (
-                      <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-gray-900 prose-pre:text-gray-100 text-sm">
+                      <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-gray-900 prose-pre:text-gray-100 text-sm break-words overflow-x-auto">
                         <Markdown remarkPlugins={[remarkGfm]}>{msg.content}</Markdown>
                       </div>
                     )}

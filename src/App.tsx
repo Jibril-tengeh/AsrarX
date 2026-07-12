@@ -1,6 +1,7 @@
 import React from 'react';
 import { Routes, Route, Navigate, useLocation, useNavigate, Outlet } from 'react-router-dom';
 import { Header } from './components/Header';
+import { LayoutTester } from './components/LayoutTester';
 import { useAuth } from './contexts/AuthContext';
 import { useLanguage } from './contexts/LanguageContext';
 import { AuthModal } from './components/AuthModal';
@@ -279,9 +280,9 @@ export default function App() {
         <FloatingBackButton />
         <Header />
         <DailyRewardHandler />
-        <main className={`flex-1 text-gray-900 dark:text-gray-100 pb-20 ${isRuqyahPlayer ? '' : 'pt-20'}`}>
+        <main className={`flex flex-col min-h-screen w-full overflow-x-hidden flex-1 text-gray-900 dark:text-gray-100 pb-20 ${isRuqyahPlayer ? '' : 'pt-20'}`}>
           <React.Suspense fallback={
-            <div className="flex items-center justify-center min-h-[60vh]">
+            <div className="flex items-center justify-center min-h-[60vh] w-full">
               <div className="w-10 h-10 border-4 border-emerald-500/10 border-t-emerald-600 rounded-full animate-spin" />
             </div>
           }>
@@ -292,7 +293,7 @@ export default function App() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.25, ease: 'easeOut' }}
-                className="w-full h-full flex flex-col flex-1"
+                className="w-full max-w-full overflow-x-hidden flex flex-col flex-1"
               >
                 <Routes location={location}>
                 <Route path="/" element={<Navigate to="/user/dashboard" replace />} />
@@ -349,6 +350,7 @@ export default function App() {
           </AnimatePresence>
         </React.Suspense>
       </main>
+        <LayoutTester />
         <FaqButton />
         <BottomNav />
       </div>
