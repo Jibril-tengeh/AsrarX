@@ -216,14 +216,14 @@ export const Header: React.FC = () => {
             <AsrarLogo variant="horizontal" size="md" className="text-white hover:opacity-90 transition-opacity" hideSymbol={true} />
           </Link>
           
-          <div className="flex items-center space-x-2 sm:space-x-3">
+          <div className="flex items-center space-x-1 sm:space-x-3">
             
             {featureToggles['tool_community'] !== 'inactive' && (
               <Link to="/community" id="tour-community">
                 <motion.div
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className="p-2 rounded-full hover:bg-emerald-700 dark:hover:bg-emerald-900 text-white transition-colors hidden sm:flex"
+                  className="p-1.5 sm:p-2 rounded-full hover:bg-emerald-700 dark:hover:bg-emerald-900 text-white transition-colors hidden sm:flex"
                   aria-label="Community"
                 >
                   <Users size={18} />
@@ -237,7 +237,7 @@ export const Header: React.FC = () => {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={handleOpenNotifs}
-                  className="relative p-2 rounded-full hover:bg-emerald-700 dark:hover:bg-emerald-900 text-white transition-colors"
+                  className="relative p-1.5 sm:p-2 rounded-full hover:bg-emerald-700 dark:hover:bg-emerald-900 text-white transition-colors"
                   aria-label="Notifications"
                 >
                   {notifsEnabled ? (
@@ -305,7 +305,7 @@ export const Header: React.FC = () => {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setLangMenuOpen(!langMenuOpen)}
-                className="flex items-center space-x-1.5 p-2 rounded-full hover:bg-emerald-700 dark:hover:bg-emerald-900 text-white transition-colors"
+                className="flex items-center space-x-1 p-1.5 sm:p-2 rounded-full hover:bg-emerald-700 dark:hover:bg-emerald-900 text-white transition-colors"
                 aria-label="Toggle language menu"
               >
                 <Languages size={18} />
@@ -349,7 +349,7 @@ export const Header: React.FC = () => {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={toggleTheme}
-              className="p-2 rounded-full hover:bg-emerald-700 dark:hover:bg-emerald-900 text-white transition-colors"
+              className="p-1.5 sm:p-2 rounded-full hover:bg-emerald-700 dark:hover:bg-emerald-900 text-white transition-colors"
               aria-label="Toggle dark mode"
             >
               {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
@@ -363,7 +363,7 @@ export const Header: React.FC = () => {
                   e.stopPropagation();
                   setRuqyahHeaderVisible(false);
                 }}
-                className="p-2 rounded-full hover:bg-emerald-700 dark:hover:bg-emerald-900 text-white transition-colors"
+                className="p-1.5 sm:p-2 rounded-full hover:bg-emerald-700 dark:hover:bg-emerald-900 text-white transition-colors"
                 aria-label="Hide header"
               >
                 <ChevronUp size={18} />
@@ -375,7 +375,7 @@ export const Header: React.FC = () => {
                 <motion.div
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className="p-2 rounded-full hover:bg-emerald-700 dark:hover:bg-emerald-900 text-white transition-colors"
+                  className="p-1.5 sm:p-2 rounded-full hover:bg-emerald-700 dark:hover:bg-emerald-900 text-white transition-colors"
                   aria-label="Community"
                 >
                   <Users size={18} />
@@ -388,7 +388,7 @@ export const Header: React.FC = () => {
                 <motion.div
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className="p-2 rounded-full hover:bg-emerald-700 dark:hover:bg-emerald-900 text-white transition-colors flex items-center justify-center"
+                  className="p-1.5 sm:p-2 rounded-full hover:bg-emerald-700 dark:hover:bg-emerald-900 text-white transition-colors flex items-center justify-center"
                   aria-label="Admin Dashboard"
                 >
                   <Shield size={18} />
@@ -402,7 +402,7 @@ export const Header: React.FC = () => {
               <motion.div 
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="w-8 h-8 rounded-full bg-emerald-500 dark:bg-emerald-600 flex items-center justify-center overflow-hidden ring-2 ring-white/20 cursor-pointer ml-1"
+                className="w-8 h-8 rounded-full bg-emerald-500 dark:bg-emerald-600 flex items-center justify-center overflow-hidden ring-2 ring-white/20 cursor-pointer ml-0.5 sm:ml-1"
               >
                 {user?.photoURL ? (
                   <img src={user.photoURL} alt="Profile" className="w-full h-full object-cover" />
