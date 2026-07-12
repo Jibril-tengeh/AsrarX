@@ -31,13 +31,60 @@ export const FaqPage: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [customPrompts, setCustomPrompts] = useState<{ id: string; text: string; lang: string }[]>([]);
 
-  const predefinedQuestions = [
-    "Qu'est-ce qu'un wird et comment le pratiquer ?",
-    "Comment me protéger contre le mauvais œil ?",
-    "Quel est le moment idéal pour faire le zikr ?",
-    "Quelle est la différence entre un secret et une recette ?"
-  ];
+  const defaultPromptsByLang: Record<string, string[]> = {
+    fr: [
+      "Qu'est-ce qu'un wird et comment le pratiquer ?",
+      "Comment me protéger contre le mauvais œil ?",
+      "Quel est le moment idéal pour faire le zikr ?",
+      "Quelle est la différence entre un secret et une recette ?"
+    ],
+    en: [
+      "What is a wird and how to practice it?",
+      "How to protect myself from the evil eye?",
+      "What is the best time for doing dhikr?",
+      "What is the difference between a secret and a recipe?"
+    ],
+    ha: [
+      "Mene ne wird kuma yaya ake yin sa?",
+      "Yaya zan kare kaina daga kakar maita ko miyagun idanu?",
+      "Wane lokaci ne ya fi dacewa don yin zikirai?",
+      "Menene bambanci tsakanin sirri da rubutu ko girke-girke?"
+    ]
+  };
+
+  // Fetch prompts from Firestore
+  useEffect(() => {
+    const fetchPrompts = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, 'assistant_prompts'));
+        const prompts: { id: string; text: string; lang: string }[] = [];
+        querySnapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          if (data && data.text) {
+            prompts.push({
+              id: docSnap.id,
+              text: data.text,
+              lang: data.lang || 'fr'
+            });
+          }
+        });
+        setCustomPrompts(prompts);
+      } catch (err) {
+        console.error("Error loading custom assistant prompts:", err);
+      }
+    };
+    fetchPrompts();
+  }, []);
+
+  const activePrompts = customPrompts.length > 0
+    ? customPrompts.filter(p => p.lang === language).map(p => p.text)
+    : [];
+
+  const promptsToShow = activePrompts.length > 0
+    ? activePrompts
+    : (defaultPromptsByLang[language] || defaultPromptsByLang['fr']);
 
   // Load sessions from Firestore (if user is authenticated) or localStorage
   useEffect(() => {
@@ -81,7 +128,15 @@ export const FaqPage: React.FC = () => {
             });
           }
         } catch (e) {
-          console.error("Error reading Firestore chat sessions:", e);
+          console.error("Error reading Firestore chat sessions, using fallback:", e);
+          const fallbackSession: ChatSession = {
+            id: 'sess_' + Date.now(),
+            title: language === 'en' ? 'New Conversation' : language === 'ha' ? 'Sabuwar Tattaunawa' : 'Nouvelle conversation',
+            timestamp: new Date().toLocaleDateString(),
+            messages: []
+          };
+          setSessions([fallbackSession]);
+          setActiveSessionId(fallbackSession.id);
         }
       } else {
         // Guest mode - localStorage
@@ -251,18 +306,53 @@ export const FaqPage: React.FC = () => {
   const messages = activeSession ? activeSession.messages : [];
 
   const handleAsk = async (text: string = question) => {
-    if (!text.trim() || !activeSessionId || !activeSession) return;
+    if (!text.trim()) return;
+    
+    let currentSessionId = activeSessionId;
+    let currentSession = activeSession;
+    let currentSessionsList = [...sessions];
+    
+    // Dynamic / lazy creation of a session if we don't have one active
+    if (!currentSessionId || !currentSession) {
+      const newSessId = 'sess_' + Date.now();
+      const newSess: ChatSession = {
+        id: newSessId,
+        title: text.slice(0, 32) + (text.length > 32 ? '...' : ''),
+        timestamp: new Date().toLocaleDateString(),
+        messages: []
+      };
+      currentSessionId = newSessId;
+      currentSession = newSess;
+      currentSessionsList = [newSess, ...sessions];
+      
+      setSessions(currentSessionsList);
+      setActiveSessionId(newSessId);
+      
+      if (user) {
+        try {
+          await setDoc(doc(db, 'chat_sessions', newSessId), {
+            ...newSess,
+            userId: user.uid,
+            updatedAt: new Date().toISOString()
+          });
+        } catch (err) {
+          console.error("Dynamic session creation Firestore save error:", err);
+        }
+      } else {
+        localStorage.setItem('asrarhub_faq_sessions', JSON.stringify(currentSessionsList));
+      }
+    }
     
     // Add user message
     const userMsg: ChatMessage = { role: 'user', content: text };
-    let newTitle = activeSession.title;
-    if (activeSession.messages.length === 0 || activeSession.title.startsWith('Nouvelle') || activeSession.title.startsWith('New') || activeSession.title.startsWith('Sabuwar')) {
+    let newTitle = currentSession.title;
+    if (currentSession.messages.length === 0 || currentSession.title.startsWith('Nouvelle') || currentSession.title.startsWith('New') || currentSession.title.startsWith('Sabuwar')) {
       newTitle = text.slice(0, 32) + (text.length > 32 ? '...' : '');
     }
 
-    const updatedMessages = [...activeSession.messages, userMsg];
-    const updatedSessions = sessions.map(s => {
-      if (s.id === activeSessionId) {
+    const updatedMessages = [...currentSession.messages, userMsg];
+    const updatedSessions = currentSessionsList.map(s => {
+      if (s.id === currentSessionId) {
         return { ...s, messages: updatedMessages, title: newTitle };
       }
       return s;
@@ -275,11 +365,11 @@ export const FaqPage: React.FC = () => {
     // Save user message and potentially updated title to Firestore
     if (user) {
       try {
-        await setDoc(doc(db, 'chat_sessions', activeSessionId), {
-          id: activeSessionId,
+        await setDoc(doc(db, 'chat_sessions', currentSessionId), {
+          id: currentSessionId,
           title: newTitle,
           messages: updatedMessages,
-          timestamp: activeSession.timestamp,
+          timestamp: currentSession.timestamp,
           userId: user.uid,
           updatedAt: new Date().toISOString()
         });
@@ -310,7 +400,7 @@ export const FaqPage: React.FC = () => {
       const assistantMsg: ChatMessage = { role: 'assistant', content: answerText };
       const finalMessages = [...updatedMessages, assistantMsg];
       const sessionsWithReply = updatedSessions.map(s => {
-        if (s.id === activeSessionId) {
+        if (s.id === currentSessionId) {
           return { ...s, messages: finalMessages };
         }
         return s;
@@ -320,11 +410,11 @@ export const FaqPage: React.FC = () => {
       // Save assistant message to Firestore
       if (user) {
         try {
-          await setDoc(doc(db, 'chat_sessions', activeSessionId), {
-            id: activeSessionId,
+          await setDoc(doc(db, 'chat_sessions', currentSessionId), {
+            id: currentSessionId,
             title: newTitle,
             messages: finalMessages,
-            timestamp: activeSession.timestamp,
+            timestamp: currentSession.timestamp,
             userId: user.uid,
             updatedAt: new Date().toISOString()
           });
@@ -337,7 +427,7 @@ export const FaqPage: React.FC = () => {
       const errReply: ChatMessage = { role: 'assistant', content: "Erreur de connexion. Veuillez réessayer plus tard." };
       const finalMessagesWithError = [...updatedMessages, errReply];
       const sessionsWithError = updatedSessions.map(s => {
-        if (s.id === activeSessionId) {
+        if (s.id === currentSessionId) {
           return { ...s, messages: finalMessagesWithError };
         }
         return s;
@@ -346,11 +436,11 @@ export const FaqPage: React.FC = () => {
 
       if (user) {
         try {
-          await setDoc(doc(db, 'chat_sessions', activeSessionId), {
-            id: activeSessionId,
+          await setDoc(doc(db, 'chat_sessions', currentSessionId), {
+            id: currentSessionId,
             title: newTitle,
             messages: finalMessagesWithError,
-            timestamp: activeSession.timestamp,
+            timestamp: currentSession.timestamp,
             userId: user.uid,
             updatedAt: new Date().toISOString()
           });
@@ -592,7 +682,7 @@ export const FaqPage: React.FC = () => {
                   }
                 </p>
                 <div className="flex flex-wrap gap-2 justify-center max-w-full px-2">
-                  {predefinedQuestions.map((q, idx) => (
+                  {promptsToShow.map((q, idx) => (
                     <button 
                       key={idx}
                       onClick={() => handleAsk(q)}

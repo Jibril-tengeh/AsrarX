@@ -9,7 +9,7 @@ import {
   Clock, CheckCircle, XCircle, Globe, Grid, List, Mail, Phone, Lock, Bell, BellOff
 } from 'lucide-react';
 import { db } from '../../lib/firebase';
-import { collection, getDocs, doc, updateDoc, deleteDoc, addDoc, onSnapshot, query, orderBy, setDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, deleteDoc, addDoc, onSnapshot, query, orderBy, setDoc, writeBatch } from 'firebase/firestore';
 import { useAuth } from '../../contexts/AuthContext';
 import { TipTapEditor } from '../../components/TipTapEditor';
 // import SimpleEditor from 'react-simple-code-editor';
@@ -166,6 +166,12 @@ export const AdminDashboard: React.FC = () => {
   // Settings State
   const [audioEnabled, setAudioEnabled] = useState(false);
   const [maintenanceMode, setMaintenanceMode] = useState(false);
+
+  // Assistant Prompts State
+  const [adminPrompts, setAdminPrompts] = useState<{ id: string; text: string; lang: string }[]>([]);
+  const [editingPromptId, setEditingPromptId] = useState<string | null>(null);
+  const [newPromptText, setNewPromptText] = useState('');
+  const [newPromptLang, setNewPromptLang] = useState('fr');
 
   // Content State (Mocking Lexique Content Management)
   const [lexiqueTerms, setLexiqueTerms] = useState<Term[]>([]);
@@ -361,6 +367,10 @@ export const AdminDashboard: React.FC = () => {
       }
     }, (error) => console.error("Admin Features error", error));
 
+    const unsubscribePrompts = onSnapshot(collection(db, 'assistant_prompts'), (snapshot) => {
+      setAdminPrompts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as { id: string; text: string; lang: string })));
+    }, (error) => console.error("Admin Prompts error", error));
+
     return () => {
       unsubscribeUsers();
       unsubscribeLexique();
@@ -370,6 +380,7 @@ export const AdminDashboard: React.FC = () => {
       unsubscribeArticles();
       unsubscribeManualPayments();
       unsubscribeFeatures();
+      unsubscribePrompts();
     };
   }, []);
 
@@ -377,6 +388,91 @@ export const AdminDashboard: React.FC = () => {
     const newVal = !audioEnabled;
     setAudioEnabled(newVal);
     localStorage.setItem('admin_ruqyah_audio_enabled', String(newVal));
+  };
+
+  const handleAddPrompt = async () => {
+    if (!newPromptText.trim()) return;
+    try {
+      if (editingPromptId) {
+        await setDoc(doc(db, 'assistant_prompts', editingPromptId), {
+          text: newPromptText,
+          lang: newPromptLang
+        });
+        setEditingPromptId(null);
+        showToast("Prompt modifié avec succès.");
+      } else {
+        await addDoc(collection(db, 'assistant_prompts'), {
+          text: newPromptText,
+          lang: newPromptLang,
+          createdAt: new Date().toISOString()
+        });
+        showToast("Prompt créé avec succès.");
+      }
+      setNewPromptText('');
+    } catch (error) {
+      console.error("Error saving prompt", error);
+      showToast("Erreur lors de la sauvegarde du prompt.", "error");
+    }
+  };
+
+  const handleEditPrompt = (prompt: { id: string; text: string; lang: string }) => {
+    setEditingPromptId(prompt.id);
+    setNewPromptText(prompt.text);
+    setNewPromptLang(prompt.lang);
+  };
+
+  const handleDeletePrompt = async (id: string) => {
+    if (!window.confirm("Êtes-vous sûr de vouloir supprimer ce prompt ?")) return;
+    try {
+      await deleteDoc(doc(db, 'assistant_prompts', id));
+      showToast("Prompt supprimé avec succès.");
+    } catch (error) {
+      console.error("Error deleting prompt", error);
+      showToast("Erreur lors de la suppression.", "error");
+    }
+  };
+
+  const handleResetDefaultPrompts = async () => {
+    if (!window.confirm("Voulez-vous réinitialiser tous les prompts de l'assistant aux valeurs par défaut ?")) return;
+    try {
+      // First, delete existing ones
+      const batch = writeBatch(db);
+      const querySnapshot = await getDocs(collection(db, 'assistant_prompts'));
+      querySnapshot.forEach((docSnap) => {
+        batch.delete(docSnap.ref);
+      });
+      await batch.commit();
+
+      const defaultPrompts = [
+        // French
+        { text: "Qu'est-ce qu'un wird et comment le pratiquer ?", lang: 'fr' },
+        { text: "Comment me protéger contre le mauvais œil ?", lang: 'fr' },
+        { text: "Quel est le moment idéal pour faire le zikr ?", lang: 'fr' },
+        { text: "Quelle est la différence entre un secret et une recette ?", lang: 'fr' },
+        // English
+        { text: "What is a wird and how to practice it?", lang: 'en' },
+        { text: "How to protect myself from the evil eye?", lang: 'en' },
+        { text: "What is the best time for doing dhikr?", lang: 'en' },
+        { text: "What is the difference between a secret and a recipe?", lang: 'en' },
+        // Hausa
+        { text: "Mene ne wird kuma yaya ake yin sa?", lang: 'ha' },
+        { text: "Yaya zan kare kaina daga kakar maita ko miyagun idanu?", lang: 'ha' },
+        { text: "Wane lokaci ne ya fi dacewa don yin zikirai?", lang: 'ha' },
+        { text: "Menene bambanci tsakanin sirri da rubutu ko girke-girke?", lang: 'ha' }
+      ];
+
+      for (const p of defaultPrompts) {
+        await addDoc(collection(db, 'assistant_prompts'), {
+          text: p.text,
+          lang: p.lang,
+          createdAt: new Date().toISOString()
+        });
+      }
+      showToast("Prompts réinitialisés par défaut !");
+    } catch (error) {
+      console.error("Error resetting prompts", error);
+      showToast("Erreur lors de la réinitialisation.", "error");
+    }
   };
 
   const handleAddTerm = async () => {
@@ -2107,6 +2203,41 @@ export const AdminDashboard: React.FC = () => {
             )}
           </div>
 
+          {/* URL de l'API Backend */}
+          <div className="flex flex-col p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4">
+            <div>
+              <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <Globe size={18} className="text-emerald-500" />
+                URL de l'API Backend (Capacitor / Mobile)
+              </h4>
+              <p className="text-sm text-gray-500 mt-1">
+                Configurez l'adresse URL du serveur backend de production pour les applications mobiles et Capacitor.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2 mt-2">
+              <input
+                type="text"
+                value={featureToggles['backend_url'] || ''}
+                onChange={(e) => handleToggleFeature('backend_url', e.target.value)}
+                placeholder="https://votre-app-backend.run.app"
+                className="flex-1 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-650 rounded-xl text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 animate-none"
+              />
+              <button
+                onClick={() => {
+                  handleToggleFeature('backend_url', window.location.origin);
+                  showToast("URL réinitialisée à celle actuelle.");
+                }}
+                type="button"
+                className="px-4 py-2 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/30 dark:hover:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 font-semibold rounded-xl text-sm transition-colors cursor-pointer"
+              >
+                Utiliser l'URL actuelle
+              </button>
+            </div>
+            <p className="text-xs text-amber-600 dark:text-amber-400">
+              Note : L'application mobile se synchronisera automatiquement avec cette adresse pour toutes ses requêtes d'API (Assistant, etc.).
+            </p>
+          </div>
+
           <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4">
             <div>
               <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -2275,6 +2406,115 @@ export const AdminDashboard: React.FC = () => {
                 activeColor="border-indigo-500 text-indigo-500"
               />
             </div>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between mt-8 mb-4">
+          <h3 className="font-bold text-gray-900 dark:text-white">Prompts de l'Assistant IA</h3>
+          <button
+            onClick={handleResetDefaultPrompts}
+            type="button"
+            className="px-3 py-1.5 bg-red-50 hover:bg-red-100 dark:bg-red-950/30 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 font-bold rounded-xl text-xs transition-colors flex items-center gap-1 cursor-pointer"
+          >
+            Réinitialiser aux valeurs par défaut
+          </button>
+        </div>
+
+        <div className="p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl mb-8 space-y-4">
+          <p className="text-sm text-gray-500">
+            Créez, modifiez ou supprimez les questions pré-définies qui s'affichent sur l'écran d'accueil de l'Assistant AI en fonction de la langue sélectionnée par l'utilisateur.
+          </p>
+
+          {/* Form */}
+          <div className="bg-white dark:bg-gray-800 p-4 border border-gray-100 dark:border-gray-700 rounded-xl space-y-3">
+            <h4 className="font-semibold text-sm text-gray-900 dark:text-white">
+              {editingPromptId ? "Modifier le prompt" : "Ajouter un prompt"}
+            </h4>
+            <div className="flex flex-col sm:flex-row gap-3">
+              <input
+                type="text"
+                value={newPromptText}
+                onChange={(e) => setNewPromptText(e.target.value)}
+                placeholder="Exemple: Comment me protéger contre le mauvais œil ?"
+                className="flex-1 px-4 py-2 bg-gray-50 dark:bg-gray-750 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 animate-none"
+              />
+              <div className="flex gap-2 shrink-0">
+                <select
+                  value={newPromptLang}
+                  onChange={(e) => setNewPromptLang(e.target.value)}
+                  className="px-3 py-2 bg-gray-50 dark:bg-gray-750 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-white cursor-pointer"
+                >
+                  <option value="fr">Français (FR)</option>
+                  <option value="en">English (EN)</option>
+                  <option value="ha">Hausa (HA)</option>
+                </select>
+                <button
+                  onClick={handleAddPrompt}
+                  disabled={!newPromptText.trim()}
+                  type="button"
+                  className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white rounded-xl text-sm font-bold transition-colors cursor-pointer flex items-center gap-1"
+                >
+                  {editingPromptId ? <Save size={16} /> : <Plus size={16} />}
+                  {editingPromptId ? "Enregistrer" : "Ajouter"}
+                </button>
+                {editingPromptId && (
+                  <button
+                    onClick={() => {
+                      setEditingPromptId(null);
+                      setNewPromptText('');
+                    }}
+                    type="button"
+                    className="px-3 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-650 text-gray-700 dark:text-gray-300 rounded-xl text-sm font-bold transition-colors cursor-pointer"
+                  >
+                    Annuler
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* List grouped by language */}
+          <div className="space-y-4">
+            {['fr', 'en', 'ha'].map((lang) => {
+              const langPrompts = adminPrompts.filter(p => p.lang === lang);
+              const langLabel = lang === 'fr' ? 'Français' : lang === 'en' ? 'English' : 'Hausa';
+              return (
+                <div key={lang} className="space-y-2">
+                  <div className="flex items-center gap-2 border-b border-gray-100 dark:border-gray-700 pb-1">
+                    <span className="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">{langLabel} ({langPrompts.length})</span>
+                  </div>
+                  {langPrompts.length === 0 ? (
+                    <p className="text-xs text-gray-400 italic py-1">Aucun prompt pour cette langue.</p>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                      {langPrompts.map((p) => (
+                        <div key={p.id} className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl gap-2">
+                          <span className="text-sm text-gray-800 dark:text-gray-200 line-clamp-2">{p.text}</span>
+                          <div className="flex gap-1 shrink-0">
+                            <button
+                              onClick={() => handleEditPrompt(p)}
+                              type="button"
+                              className="p-1 rounded text-gray-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-all cursor-pointer"
+                              title="Modifier"
+                            >
+                              <Edit2 size={14} />
+                            </button>
+                            <button
+                              onClick={() => handleDeletePrompt(p.id)}
+                              type="button"
+                              className="p-1 rounded text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all cursor-pointer"
+                              title="Supprimer"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
 
