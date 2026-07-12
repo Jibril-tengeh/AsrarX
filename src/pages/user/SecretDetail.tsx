@@ -34,6 +34,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { AuthModal } from '../../components/AuthModal';
 import { InteractiveLexiconText } from "../../components/InteractiveLexiconText";
 import { PremiumWrapper } from "../../components/PremiumWrapper";
+import { getApiUrl } from "../../lib/api";
 
 const AccordionSection: React.FC<{ title: string, htmlContent: string, readingMode: boolean, style?: React.CSSProperties }> = ({ title, htmlContent, readingMode, style }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -80,7 +81,7 @@ export const SecretDetail: React.FC = () => {
   const [viewMode, setViewMode] = useState<'full' | 'accordion'>('full');
   const [articleFontSize, setArticleFontSize] = useState<number>(() => {
     const isAndroid = /Android/i.test(navigator.userAgent);
-    return isAndroid ? 14 : 18;
+    return isAndroid ? 12 : 18;
   });
   const [rating, setRating] = useState(0);
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -132,7 +133,7 @@ export const SecretDetail: React.FC = () => {
         const sourceHook = staticItem ? staticItem.hook : item.hook;
         const sourceBenefits = staticItem ? staticItem.benefits : item.benefits;
 
-        const res = await fetch('/api/translate-article', {
+        const res = await fetch(getApiUrl('/api/translate-article'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

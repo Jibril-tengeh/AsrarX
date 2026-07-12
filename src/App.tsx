@@ -373,7 +373,7 @@ export default function App() {
           </AnimatePresence>
         </React.Suspense>
       </main>
-        {featureToggles['tool_inspector'] !== 'inactive' && <LayoutTester />}
+        {featureToggles['tool_inspector'] === 'active' && <LayoutTester />}
         <FaqButton />
         <BottomNav />
       </div>

@@ -6,6 +6,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { db } from '../../../lib/firebase';
 import { collection, query, where, onSnapshot, setDoc, deleteDoc, doc } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
+import { getApiUrl } from '../../../lib/api';
 
 interface DreamEntry {
   id: string;
@@ -95,7 +96,7 @@ export const DreamJournal: React.FC = () => {
     }
     setIsInterpreting(true);
     try {
-      const res = await fetch('/api/dreams/interpret', {
+      const res = await fetch(getApiUrl('/api/dreams/interpret'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title, content, type, wirdDone })

@@ -20,6 +20,7 @@ import { TipTapEditor } from '../../components/TipTapEditor';
 // import 'prismjs/themes/prism-tomorrow.css';
 import ReactCrop, { type Crop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
+import { getApiUrl } from '../../lib/api';
 
 import { AdminStoreManager } from '../../components/AdminStoreManager';
 
@@ -566,7 +567,7 @@ export const AdminDashboard: React.FC = () => {
 
         const uniqueTokens = Array.from(new Set(allTokens));
         if (uniqueTokens.length > 0) {
-          await fetch('/api/send-push', {
+          await fetch(getApiUrl('/api/send-push'), {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json'
@@ -1415,7 +1416,7 @@ export const AdminDashboard: React.FC = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {filteredTools.map((tool) => {
-                const status = featureToggles[`tool_${tool.id}`] || 'active';
+                const status = featureToggles[`tool_${tool.id}`] || (tool.id === 'inspector' ? 'inactive' : 'active');
                 return (
                   <div key={tool.id} className="flex flex-col p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-3 hover:border-gray-250 dark:hover:border-gray-650 transition-all">
                     <div>

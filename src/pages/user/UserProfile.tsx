@@ -11,6 +11,7 @@ import { signOut, db, auth } from '../../lib/firebase';
 import { doc, setDoc, collection, deleteDoc, onSnapshot, updateDoc, query } from 'firebase/firestore';
 import { useNavigate, Link } from 'react-router-dom';
 import { getFCMToken, checkNotificationSupport, onMessageListener } from '../../lib/fcm';
+import { getApiUrl } from '../../lib/api';
 
 interface Reminder {
   id: string;
@@ -500,7 +501,7 @@ export const UserProfile: React.FC = () => {
     setIsTestingPush(true);
     setTestSuccess(null);
     try {
-      const res = await fetch('/api/send-push', {
+      const res = await fetch(getApiUrl('/api/send-push'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

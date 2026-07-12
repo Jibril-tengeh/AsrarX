@@ -1,5 +1,6 @@
 import { db } from '../lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
+import { getApiUrl } from '../lib/api';
 
 export class PaystackService {
   static loadScript(): Promise<void> {
@@ -73,7 +74,7 @@ export class PaystackService {
           // verify with backend
           (async () => {
             try {
-              const res = await fetch('/api/verify-paystack', {
+              const res = await fetch(getApiUrl('/api/verify-paystack'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ reference: response.reference, userId }),

@@ -18,7 +18,11 @@ export const FeatureProvider: React.FC<{ children: React.ReactNode }> = ({ child
       doc(db, "settings", "features"),
       (docSnap) => {
         if (docSnap.exists()) {
-          setFeatureToggles(docSnap.data());
+          const data = docSnap.data();
+          setFeatureToggles(data);
+          if (data && data.backend_url) {
+            localStorage.setItem('asrarhub_backend_url', data.backend_url);
+          }
         } else {
           setFeatureToggles({});
         }

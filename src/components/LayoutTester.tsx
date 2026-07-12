@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { Layout, Eye, EyeOff, AlertTriangle, FileText, RefreshCw, X, ChevronRight, Minimize2, Maximize2 } from 'lucide-react';
+import { BriefcaseIcon } from './BriefcaseIcon';
 
 export function LayoutTester() {
   const location = useLocation();
@@ -54,11 +55,11 @@ export function LayoutTester() {
           whileHover={{ scale: 1.1 }}
           whileTap={{ scale: 0.9 }}
           onClick={() => setIsOpen(true)}
-          className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-3.5 py-2.5 rounded-full shadow-2xl border border-red-500 animate-pulse"
+          className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-3.5 py-2.5 rounded-full shadow-2xl border border-red-500"
           title="Ouvrir le Débogueur de Mise en Page (?debug=true)"
           id="layout-tester-trigger"
         >
-          <Layout size={14} className="animate-spin" style={{ animationDuration: '6s' }} />
+          <BriefcaseIcon size={18} className="shrink-0" />
           <span>Inspecteur</span>
         </motion.button>
       </div>
@@ -77,7 +78,7 @@ export function LayoutTester() {
           {/* Header */}
           <div className="bg-red-600 text-white px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Layout size={16} />
+              <BriefcaseIcon size={18} />
               <span className="font-bold text-xs tracking-wide uppercase">Outil de Diagnostic Layout</span>
             </div>
             <div className="flex items-center gap-2">

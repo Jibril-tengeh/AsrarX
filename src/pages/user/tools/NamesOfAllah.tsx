@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { asmaListData } from '../../../data/asmaListData';
 import { countsBenefitsTranslations } from '../../../data/countsBenefitsData';
 import { asmaListDataTranslations } from '../../../data/asmaListDataTranslations';
+import { getApiUrl } from '../../../lib/api';
 
 
 // Helper to generate N x N Khatim / Magic Square (3x3 up to 10x10)
@@ -257,7 +258,7 @@ export const NamesOfAllah: React.FC = () => {
           context: activeName.quranOptions?.context || ''
         };
 
-        const res = await fetch('/api/translate-text', {
+        const res = await fetch(getApiUrl('/api/translate-text'), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

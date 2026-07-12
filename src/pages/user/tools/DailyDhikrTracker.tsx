@@ -5,6 +5,7 @@ import { useLanguage } from '../../../contexts/LanguageContext';
 import { app, auth, db } from '../../../lib/firebase';
 import { useAuth } from '../../../contexts/AuthContext';
 import { collection, query, where, onSnapshot, setDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { getApiUrl } from '../../../lib/api';
 
 interface DhikrGoal {
   id: string;
@@ -91,7 +92,7 @@ export const DailyDhikrTracker: React.FC = () => {
     setTestError('');
 
     try {
-      const response = await fetch('/api/send-push', {
+      const response = await fetch(getApiUrl('/api/send-push'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

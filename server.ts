@@ -441,8 +441,23 @@ ${JSON.stringify(textArray)}
     });
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
+  app.listen(PORT, "0.0.0.0", async () => {
     console.log(`Server running on http://localhost:${PORT}`);
+    
+    // Dynamically store the backend URL to Firestore settings/features
+    try {
+      const appUrl = process.env.APP_URL;
+      if (appUrl) {
+        const adminDb = getDb();
+        const settingsRef = adminDb.collection("settings").doc("features");
+        await settingsRef.set({
+          backend_url: appUrl
+        }, { merge: true });
+        console.log(`Saved dynamic backend_url to Firestore settings/features: ${appUrl}`);
+      }
+    } catch (e) {
+      console.error("Failed to store backend_url on startup:", e);
+    }
   });
 }
 

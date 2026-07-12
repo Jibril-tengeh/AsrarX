@@ -8,6 +8,7 @@ import remarkGfm from 'remark-gfm';
 import { collection, query, where, getDocs, doc, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
+import { getApiUrl } from '../lib/api';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -288,7 +289,7 @@ export const FaqPage: React.FC = () => {
     }
 
     try {
-      const response = await fetch('/api/assistant/faq', {
+      const response = await fetch(getApiUrl('/api/assistant/faq'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question: text, language })
