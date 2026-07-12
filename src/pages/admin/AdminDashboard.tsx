@@ -1320,9 +1320,9 @@ export const AdminDashboard: React.FC = () => {
     </div>
   );
 
-  const handleToggleFeature = async (featureId: string, currentValue: boolean | string) => {
+  const handleToggleFeature = async (featureId: string, currentValue: boolean | string | number) => {
     try {
-      // If it's a boolean (from toggle switch), invert it. If it's a string (from select), use it directly.
+      // If it's a boolean (from toggle switch), invert it. If it's a string or number, use it directly.
       const newValue = typeof currentValue === 'boolean' ? !currentValue : currentValue;
       await setDoc(doc(db, 'settings', 'features'), {
         [featureId]: newValue
@@ -1335,6 +1335,7 @@ export const AdminDashboard: React.FC = () => {
   };
 
   const ALL_USER_TOOLS = [
+    { id: 'inspector', label: 'Inspecteur de diagnostic', desc: 'Active ou désactive le bouton rouge Inspecteur / Débogueur de mise en page dans le coin inférieur droit' },
     { id: 'explore', label: 'Explore', desc: 'Dashboard explorer (Secrets, Lexique, etc)' },
     { id: 'store', label: 'Store (Boutique)', desc: 'Boutique en ligne' },
     { id: 'community', label: 'Communauté', desc: 'Forum communautaire' },
@@ -2147,6 +2148,62 @@ export const AdminDashboard: React.FC = () => {
                 }`}
               />
             </button>
+          </div>
+        </div>
+
+        <h3 className="font-bold text-gray-900 dark:text-white mb-4 mt-8">Tarifs d'Abonnement Premium</h3>
+        <div className="space-y-4 mb-8">
+          <div className="flex flex-col p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4">
+            <div>
+              <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <CreditCard size={18} className="text-emerald-500" />
+                Montants des abonnements (GHS ou autre devise)
+              </h4>
+              <p className="text-sm text-gray-500 mt-1">Configurez les tarifs affichés et facturés pour chaque plan d'abonnement.</p>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Devise d'affichage (ex: GHS, USD)</label>
+                <input
+                  type="text"
+                  value={featureToggles['premium_currency'] || 'GHS'}
+                  onChange={(e) => handleToggleFeature('premium_currency', e.target.value)}
+                  className="w-full px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-650 rounded-xl text-sm text-gray-900 dark:text-white"
+                  placeholder="GHS"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Prix Plan 3 Mois</label>
+                <input
+                  type="number"
+                  value={featureToggles['premium_price_3m'] ?? 150}
+                  onChange={(e) => handleToggleFeature('premium_price_3m', Number(e.target.value))}
+                  className="w-full px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-650 rounded-xl text-sm text-gray-900 dark:text-white"
+                  placeholder="150"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Prix Plan 6 Mois</label>
+                <input
+                  type="number"
+                  value={featureToggles['premium_price_6m'] ?? 280}
+                  onChange={(e) => handleToggleFeature('premium_price_6m', Number(e.target.value))}
+                  className="w-full px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-655 rounded-xl text-sm text-gray-900 dark:text-white"
+                  placeholder="280"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Prix Plan 12 Mois</label>
+                <input
+                  type="number"
+                  value={featureToggles['premium_price_12m'] ?? 520}
+                  onChange={(e) => handleToggleFeature('premium_price_12m', Number(e.target.value))}
+                  className="w-full px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-655 rounded-xl text-sm text-gray-900 dark:text-white"
+                  placeholder="520"
+                />
+              </div>
+            </div>
           </div>
         </div>
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useFeatures } from '../../contexts/FeatureContext';
 import { 
   Shield, Star, Check, Sparkles, ArrowLeft, CreditCard, Landmark, Bitcoin, Crown, 
   Copy, Upload, Clock, CheckCircle, XCircle, X, AlertCircle
@@ -11,19 +12,25 @@ import { AuthModal } from '../../components/AuthModal';
 import { db } from '../../lib/firebase';
 import { collection, addDoc, query, where, onSnapshot, orderBy, updateDoc, doc } from 'firebase/firestore';
 
-const detectUserCurrencyAndPrice = (priceUSD: number) => {
-  let price = 150; // Default for 13
-  if (priceUSD === 13) price = 150;
-  if (priceUSD === 25) price = 280;
-  if (priceUSD === 45) price = 520;
-  
-  return { currency: 'GHS', price: price, displayStr: `${price} GHS` };
-};
-
 export const PaymentPage: React.FC = () => {
   const { t } = useLanguage();
   const { user } = useAuth();
+  const { featureToggles } = useFeatures();
   const navigate = useNavigate();
+
+  const price3m = Number(featureToggles?.premium_price_3m) || 150;
+  const price6m = Number(featureToggles?.premium_price_6m) || 280;
+  const price12m = Number(featureToggles?.premium_price_12m) || 520;
+  const premiumCurrency = featureToggles?.premium_currency || 'GHS';
+
+  const detectUserCurrencyAndPrice = (priceUSD: number) => {
+    let price = price3m;
+    if (priceUSD === 13) price = price3m;
+    if (priceUSD === 25) price = price6m;
+    if (priceUSD === 45) price = price12m;
+    
+    return { currency: premiumCurrency, price: price, displayStr: `${price} ${premiumCurrency}` };
+  };
 
   const handleBack = () => {
     if (window.history.length > 1) {
@@ -59,8 +66,8 @@ export const PaymentPage: React.FC = () => {
   const [manualPayments, setManualPayments] = useState<any[]>([]);
 
   useEffect(() => {
-    setUserLocationInfo({ currency: detectUserCurrencyAndPrice(13).currency });
-  }, []);
+    setUserLocationInfo({ currency: premiumCurrency });
+  }, [premiumCurrency]);
 
   useEffect(() => {
     if (!user) return;

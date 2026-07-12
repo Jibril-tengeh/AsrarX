@@ -162,6 +162,7 @@ const ProtectedToolsLayout: React.FC = () => {
 
 export default function App() {
   const { user } = useAuth();
+  const { featureToggles } = useFeatures();
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = React.useState(
     localStorage.getItem('hasCompletedOnboarding') === 'true'
   );
@@ -186,18 +187,40 @@ export default function App() {
   }, [location.pathname]);
 
   React.useEffect(() => {
-    CapacitorApp.addListener('backButton', () => {
-      if (window.location.pathname !== '/' && window.location.pathname !== '/home') {
-        window.history.back();
-      } else {
+    const handleBackButton = () => {
+      const currentPath = window.location.pathname;
+      if (currentPath === '/user/dashboard' || currentPath === '/' || currentPath === '/home') {
         CapacitorApp.exitApp();
+      } else if (
+        currentPath === '/explore' ||
+        currentPath === '/tools' ||
+        currentPath === '/journal' ||
+        currentPath === '/saved' ||
+        currentPath === '/profile' ||
+        currentPath === '/community'
+      ) {
+        navigate('/user/dashboard');
+      } else {
+        if (window.history.state && window.history.state.idx > 0) {
+          navigate(-1);
+        } else {
+          if (currentPath.startsWith('/tools/')) {
+            navigate('/tools');
+          } else if (currentPath.startsWith('/explore/')) {
+            navigate('/explore');
+          } else {
+            navigate('/user/dashboard');
+          }
+        }
       }
-    });
+    };
+
+    CapacitorApp.addListener('backButton', handleBackButton);
 
     return () => {
       CapacitorApp.removeAllListeners();
     };
-  }, []);
+  }, [navigate]);
 
   React.useEffect(() => {
     let lastCheckedMinute = -1;
@@ -350,7 +373,7 @@ export default function App() {
           </AnimatePresence>
         </React.Suspense>
       </main>
-        <LayoutTester />
+        {featureToggles['tool_inspector'] !== 'inactive' && <LayoutTester />}
         <FaqButton />
         <BottomNav />
       </div>

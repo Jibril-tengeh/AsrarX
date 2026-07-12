@@ -363,10 +363,10 @@ export const FaqPage: React.FC = () => {
   };
 
   return (
-    <div className="pt-24 pb-20 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto min-h-screen flex flex-col md:flex-row gap-6 relative">
+    <div className="pt-2 pb-4 px-4 sm:px-6 lg:px-8 max-w-6xl mx-auto h-[calc(100vh-160px)] md:h-[calc(100vh-110px)] flex flex-col md:flex-row gap-6 relative overflow-hidden w-full">
       
       {/* SIDEBAR FOR DESKTOP */}
-      <aside className="hidden md:flex flex-col w-64 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl p-4 shrink-0 h-[calc(100vh-180px)] justify-between">
+      <aside className="hidden md:flex flex-col w-64 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-3xl p-4 shrink-0 h-full justify-between">
         <div className="flex flex-col flex-1 overflow-hidden">
           <button
             onClick={handleNewSession}
@@ -536,7 +536,7 @@ export const FaqPage: React.FC = () => {
       </AnimatePresence>
 
       {/* CHAT MAIN INTERFACE */}
-      <div className="flex-1 flex flex-col min-w-0 w-full h-[calc(100vh-180px)] overflow-hidden">
+      <div className="flex-1 flex flex-col min-w-0 w-full h-full overflow-hidden">
         
         {/* HEADER / ACTIONS BAR */}
         <div className="flex items-center justify-between gap-4 mb-4">
