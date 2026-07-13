@@ -1,3 +1,5 @@
+declare const __APP_URL__: string;
+
 export function getApiUrl(path: string): string {
   // If absolute, return as-is
   if (path.startsWith('http://') || path.startsWith('https://')) {
@@ -6,29 +8,46 @@ export function getApiUrl(path: string): string {
   
   // Clean path
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
-  
-  // In normal web environment, use window.location.origin if it's not localhost/capacitor
   const origin = window.location.origin;
-  const isCapacitorOrLocal = 
+
+  // Detect if we are running in a real mobile/Capacitor container (native/emulator)
+  const isNativeMobile = 
     origin.startsWith('capacitor:') || 
     origin.startsWith('file:') || 
-    origin.includes('localhost') || 
-    origin.includes('127.0.5.') || 
-    origin.includes('127.0.0.1') ||
-    !!(window as any).Capacitor;
-  
-  if (!isCapacitorOrLocal) {
-    return `${origin}${cleanPath}`;
+    (!!(window as any).Capacitor && !!(window as any).Capacitor.isNativePlatform);
+
+  if (!isNativeMobile) {
+    // Standard web browser environment (dev server, preview, or production website)
+    // Always use the relative/current origin to avoid cross-origin CORS/SSL issues
+    const resolved = `${origin}${cleanPath}`;
+    console.log(`[getApiUrl] Web environment detected. Resolving to relative path on current origin: "${resolved}"`);
+    return resolved;
   }
-  
-  // On mobile/Capacitor, look up the stored backend_url from FeatureToggles/localStorage
+
+  // Native Mobile/Capacitor environment:
+  // Since the page is loaded from capacitor:// or file://, we must fetch from a remote backend server.
   const storedUrl = localStorage.getItem('asrarhub_backend_url');
   if (storedUrl) {
-    // Remove trailing slash if present
     const base = storedUrl.endsWith('/') ? storedUrl.slice(0, -1) : storedUrl;
-    return `${base}${cleanPath}`;
+    const resolved = `${base}${cleanPath}`;
+    console.log(`[getApiUrl] Native Mobile: using stored backend URL: "${resolved}"`);
+    return resolved;
   }
-  
-  // Final fallback (e.g. if we don't have storedUrl yet)
-  return `https://ais-pre-zhlvo3fs5z5wltpspv6eub-789730332353.europe-west2.run.app${cleanPath}`;
+
+  try {
+    if (typeof __APP_URL__ !== 'undefined' && __APP_URL__) {
+      const base = __APP_URL__.endsWith('/') ? __APP_URL__.slice(0, -1) : __APP_URL__;
+      const resolved = `${base}${cleanPath}`;
+      console.log(`[getApiUrl] Native Mobile: using fallback __APP_URL__: "${resolved}"`);
+      return resolved;
+    }
+  } catch (err) {
+    // ignore
+  }
+
+  // Final fallback for mobile native if no URL is configured yet
+  const fallbackBase = 'https://ais-pre-zhlvo3fs5z5wltpspv6eub-789730332353.europe-west2.run.app';
+  const resolved = `${fallbackBase}${cleanPath}`;
+  console.log(`[getApiUrl] Native Mobile: final fallback to: "${resolved}"`);
+  return resolved;
 }

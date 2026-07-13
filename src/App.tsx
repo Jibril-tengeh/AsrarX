@@ -60,6 +60,7 @@ import { DailyRewardHandler } from './components/DailyRewardHandler';
 import { MaintenanceOverlay } from './components/MaintenanceOverlay';
 import { FloatingBackButton } from './components/FloatingBackButton';
 import { Link } from 'react-router-dom';
+import { ErrorToastContainer } from './components/ErrorToastContainer';
 
 const Store = React.lazy(() => import('./pages/user/Store').then(m => ({ default: m.Store })));
 const FaqPage = React.lazy(() => import('./pages/FaqPage').then(m => ({ default: m.FaqPage })));
@@ -97,11 +98,36 @@ const NetworkStatus = () => {
   const [isOnline, setIsOnline] = React.useState(navigator.onLine);
 
   React.useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
+    const handleOnline = () => {
+      setIsOnline(true);
+      console.log("[NetworkStatus] Device went online.");
+    };
+    const handleOffline = () => {
+      setIsOnline(false);
+      console.warn("[NetworkStatus] Device went offline. All API fetch calls will operate in fallback mode.");
+    };
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
+
+    // Capacitor / WebView specific environment logging for debugging
+    console.log(`[NetworkStatus] Diagnostic check on boot:`);
+    console.log(` - navigator.onLine: ${navigator.onLine}`);
+    console.log(` - window.location.origin: "${window.location.origin}"`);
+    console.log(` - window.location.protocol: "${window.location.protocol}"`);
+    console.log(` - navigator.userAgent: "${navigator.userAgent}"`);
+
+    if (
+      window.location.protocol === 'file:' || 
+      window.location.origin.includes('localhost') || 
+      window.location.origin.includes('capacitor:')
+    ) {
+      console.info(
+        `[NetworkStatus] Detected Mobile Capacitor WebView environment. ` +
+        `Ensure that target API server CORS headers allow "${window.location.origin}" ` +
+        `and that SSL certificates are fully valid (auto-signed or HTTP connections may be blocked by iOS/Android).`
+      );
+    }
 
     return () => {
       window.removeEventListener('online', handleOnline);
@@ -112,8 +138,9 @@ const NetworkStatus = () => {
   if (isOnline) return null;
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-50 bg-red-500 text-white text-center py-2 text-sm font-medium shadow-md">
-      Connexion Internet perdue. L'application fonctionne en mode hors ligne.
+    <div className="fixed top-0 left-0 right-0 z-[10001] bg-red-600 text-white text-center py-2 text-xs font-semibold shadow-md flex items-center justify-center gap-1.5 animate-bounce">
+      <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+      Connexion Internet perdue. Mode hors ligne activé.
     </div>
   );
 };
@@ -308,6 +335,7 @@ export default function App() {
   return (
     <MaintenanceOverlay>
       <NetworkStatus />
+      <ErrorToastContainer />
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors flex flex-col font-sans mb-16 sm:mb-0 w-full overflow-x-hidden">
         <FloatingBackButton />
         <Header />

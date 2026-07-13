@@ -16,6 +16,7 @@ import { AsrarItem, Category } from '../../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLocation, Link } from 'react-router-dom';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
+import { getApiUrl } from '../../lib/api';
 
 interface Props {
   initialFilter?: Category | 'all' | 'favoris';
@@ -115,7 +116,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
         availableItems: items.map(i => ({ id: i.id, title: i.title, category: i.category, hook: i.hook }))
       };
       
-      const res = await fetch("/api/assistant/search", {
+      const res = await fetch(getApiUrl("/api/assistant/search"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)

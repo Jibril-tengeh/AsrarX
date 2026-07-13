@@ -72,7 +72,7 @@ export const FaqPage: React.FC = () => {
         });
         setCustomPrompts(prompts);
       } catch (err) {
-        console.error("Error loading custom assistant prompts:", err);
+        console.warn("Could not load custom assistant prompts from Firestore (falling back to default presets):", err);
       }
     };
     fetchPrompts();
