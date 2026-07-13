@@ -481,11 +481,19 @@ export const UserProfile: React.FC = () => {
         localStorage.setItem('asrarhub_last_fcm_token', token);
         alert(t('profile.reminders.pushSuccess', 'Notifications push FCM activées avec succès !'));
       } else {
-        alert(t('profile.reminders.pushUnsupported', "Les notifications push ne sont pas supportées sur ce navigateur ou cet appareil."));
+        if (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'denied') {
+          alert(t('profile.reminders.pushDenied', "Les notifications ont été refusées. Veuillez les autoriser dans les paramètres de votre navigateur pour AsrarHub."));
+        } else {
+          alert(t('profile.reminders.pushUnsupported', "Les notifications push ne sont pas supportées sur ce navigateur ou cet appareil."));
+        }
       }
     } catch (e: any) {
-      console.error("FCM Token generation error", e);
-      alert(t('profile.reminders.pushError', 'Une erreur est survenue lors de la configuration FCM : ') + (e.message || e));
+      console.warn("FCM Token generation error (handled gracefully):", e);
+      if (String(e?.message || e).includes("permission") || String(e?.message || e).includes("refusée")) {
+        alert(t('profile.reminders.pushDenied', "Les notifications ont été refusées. Veuillez les autoriser dans les paramètres de votre navigateur pour AsrarHub."));
+      } else {
+        alert(t('profile.reminders.pushError', 'Une erreur est survenue lors de la configuration FCM : ') + (e.message || e));
+      }
     } finally {
       setIsFcmLoading(false);
     }
@@ -691,7 +699,12 @@ export const UserProfile: React.FC = () => {
         setNotifsSynced(true);
       }
     } catch (err: any) {
-      console.error("Error toggling notifications", err);
+      const errStr = String(err?.message || err);
+      if (errStr.includes("permission") || errStr.includes("Permission") || errStr.includes("denied") || errStr.includes("refusée")) {
+        console.warn("Notification toggle warning (permission issue handled):", errStr);
+      } else {
+        console.error("Error toggling notifications", err);
+      }
       try {
         const targetState = !fcmEnabled;
         const userRef = doc(db, 'users', user.uid);

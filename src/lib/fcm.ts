@@ -13,12 +13,23 @@ export const getFCMToken = async (userId: string): Promise<string | null> => {
 
     const messaging = getMessaging(app);
 
-    // Request permission from the browser
-    if (Notification.permission !== 'granted') {
-      const permission = await Notification.requestPermission();
-      if (permission !== 'granted') {
-        throw new Error("Permission de notification refusée par l'utilisateur.");
+    // Request permission from the browser with safety checks for sandbox/iframe environments
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission !== 'granted') {
+        try {
+          const permission = await Notification.requestPermission();
+          if (permission !== 'granted') {
+            console.warn("FCM Notification permission not granted: " + permission);
+            return null;
+          }
+        } catch (permError: any) {
+          console.warn("FCM Notification permission request failed (likely blocked by browser/iframe policy):", permError?.message || permError);
+          return null;
+        }
       }
+    } else {
+      console.warn("Notifications are not supported or available in this environment.");
+      return null;
     }
 
     // Try to register the service worker if not already registered
@@ -50,7 +61,12 @@ export const getFCMToken = async (userId: string): Promise<string | null> => {
       console.warn("No FCM token returned. Check Firebase configuration.");
       return null;
     }
-  } catch (error) {
+  } catch (error: any) {
+    const errorStr = String(error?.message || error);
+    if (errorStr.includes("permission") || errorStr.includes("Permission") || errorStr.includes("denied") || errorStr.includes("refusée")) {
+      console.warn("FCM Notification permission issue handled gracefully:", errorStr);
+      return null;
+    }
     console.error("Error in getFCMToken:", error);
     throw error;
   }

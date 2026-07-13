@@ -19,8 +19,22 @@ export default defineConfig(() => {
         manifest: {
           name: "AsrarHub",
           short_name: "AsrarHub",
-          theme_color: "#ffffff",
+          description: "Votre application de secrets et spiritualité.",
+          theme_color: "#0a0a0a",
+          background_color: "#0a0a0a",
+          display: "standalone",
+          start_url: "/",
           icons: [
+            {
+              src: "/icon-192.png",
+              sizes: "192x192",
+              type: "image/png",
+            },
+            {
+              src: "/icon-512.png",
+              sizes: "512x512",
+              type: "image/png",
+            },
             {
               src: "/pwa-192x192.png",
               sizes: "192x192",
