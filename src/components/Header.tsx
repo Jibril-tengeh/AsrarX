@@ -213,7 +213,7 @@ export const Header: React.FC = () => {
       >
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <Link to="/" className="flex items-center group">
-            <AsrarLogo variant="horizontal" size="md" className="text-white hover:opacity-90 transition-opacity" hideSymbol={true} />
+            <AsrarLogo variant="horizontal" size="md" className="text-white hover:opacity-90 transition-opacity" hideSymbol={false} />
           </Link>
           
           <div className="flex items-center space-x-1 sm:space-x-3">

@@ -217,38 +217,54 @@ export const AudioProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   useEffect(() => {
     let objectUrl: string | null = null;
+    let fallbackAttempted = false;
+
+    if (!audioRef.current || !currentTrack) return;
+
+    const activeUrl = (currentTrack.isCollection && currentTrack.subTracks) 
+      ? (currentTrack.subTracks[currentSubIndex]?.url || (currentTrack.subTracks[currentSubIndex] as any)?.audioUrl || (currentTrack.subTracks[currentSubIndex] as any)?.file || (currentTrack.subTracks[currentSubIndex] as any)?.src || currentTrack.url)
+      : currentTrack.url;
+
+    if (!activeUrl) return;
+
+    const handleError = () => {
+      const error = audioRef.current?.error;
+      if (error && !fallbackAttempted) {
+        console.warn("[AudioContext] Audio error encountered:", error.code, error.message);
+        if (audioRef.current && activeUrl) {
+          fallbackAttempted = true;
+          console.log("[AudioContext] Attempting fallback to direct network URL:", activeUrl);
+          audioRef.current.src = activeUrl;
+          audioRef.current.play().catch(playErr => {
+            console.error("[AudioContext] Fallback playback failed:", playErr);
+          });
+        }
+      }
+    };
 
     const loadAudio = async () => {
-      if (audioRef.current && currentTrack) {
-        const activeUrl = (currentTrack.isCollection && currentTrack.subTracks) 
-          ? (currentTrack.subTracks[currentSubIndex]?.url || (currentTrack.subTracks[currentSubIndex] as any)?.audioUrl || (currentTrack.subTracks[currentSubIndex] as any)?.file || (currentTrack.subTracks[currentSubIndex] as any)?.src || currentTrack.url)
-          : currentTrack.url;
-          
-        if (!activeUrl) return;
+      try {
+        if (objectUrl) {
+          URL.revokeObjectURL(objectUrl);
+          objectUrl = null;
+        }
 
+        let resolvedSrc = activeUrl;
+        
         try {
-          // Revoke previous object URL if any to free up memory
-          if (objectUrl) {
-            URL.revokeObjectURL(objectUrl);
-            objectUrl = null;
+          const cache = await caches.open('quran-audio-cache');
+          const matched = await cache.match(activeUrl);
+          if (matched) {
+            const blob = await matched.blob();
+            objectUrl = URL.createObjectURL(blob);
+            resolvedSrc = objectUrl;
+            console.log("[AudioContext] Serving audio from Cache Storage:", activeUrl);
           }
+        } catch (cacheErr) {
+          console.warn("[AudioContext] Offline cache check failed:", cacheErr);
+        }
 
-          let resolvedSrc = activeUrl;
-          
-          // Try to match the audio URL in the browser's Cache Storage API
-          try {
-            const cache = await caches.open('quran-audio-cache');
-            const matched = await cache.match(activeUrl);
-            if (matched) {
-              const blob = await matched.blob();
-              objectUrl = URL.createObjectURL(blob);
-              resolvedSrc = objectUrl;
-              console.log("[AudioContext] Serving audio from Cache Storage:", activeUrl);
-            }
-          } catch (cacheErr) {
-            console.warn("[AudioContext] Offline cache check failed:", cacheErr);
-          }
-
+        if (audioRef.current) {
           audioRef.current.src = resolvedSrc;
           const playPromise = audioRef.current.play();
           if (playPromise !== undefined) {
@@ -258,12 +274,13 @@ export const AudioProvider: React.FC<{ children: ReactNode }> = ({ children }) =
               }
             });
           }
-        } catch (error) {
-          console.error("Audio playback error:", error);
         }
+      } catch (error) {
+        console.error("Audio playback error:", error);
       }
     };
 
+    audioRef.current.addEventListener('error', handleError);
     loadAudio();
 
     // Media Session API Setup
@@ -282,6 +299,9 @@ export const AudioProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }
 
     return () => {
+      if (audioRef.current) {
+        audioRef.current.removeEventListener('error', handleError);
+      }
       if (objectUrl) {
         URL.revokeObjectURL(objectUrl);
       }

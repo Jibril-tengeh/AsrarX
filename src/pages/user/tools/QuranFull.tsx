@@ -1592,6 +1592,16 @@ export const QuranFull: React.FC = () => {
     const playAudioWithUrl = (url: string) => {
       const audio = new Audio(url);
       audioRef.current = audio;
+
+      let fallbackAttempted = false;
+      audio.onerror = () => {
+        if (url.startsWith('blob:') && ayah.audio && !fallbackAttempted) {
+          fallbackAttempted = true;
+          console.warn("[QuranFull] Blob URL failed, falling back to direct network URL:", ayah.audio);
+          audio.src = ayah.audio;
+          audio.play().catch(e => console.error("[QuranFull] Fallback playback error:", e));
+        }
+      };
       
       const playPromise = audio.play();
       if (playPromise !== undefined) {

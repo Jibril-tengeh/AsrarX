@@ -323,6 +323,52 @@ export const NamesOfAllah: React.FC = () => {
   const [quranData, setQuranData] = useState<any[]>([]);
   const [loadingQuran, setLoadingQuran] = useState(true);
 
+  // Online Quran search and detail states
+  const [onlineOccurrences, setOnlineOccurrences] = useState<any[]>([]);
+  const [loadingOnline, setLoadingOnline] = useState(false);
+  const [onlineCount, setOnlineCount] = useState<number | null>(null);
+  const [verseDetails, setVerseDetails] = useState<Record<string, { ar: string, fr: string, en: string, ha: string }>>({});
+  const [loadingDetailId, setLoadingDetailId] = useState<string | null>(null);
+  const [displayLimit, setDisplayLimit] = useState(30);
+
+  React.useEffect(() => {
+    if (!activeName || viewState !== 'quran') {
+      setOnlineOccurrences([]);
+      setOnlineCount(null);
+      return;
+    }
+
+    const fetchOnlineOccurrences = async () => {
+      setLoadingOnline(true);
+      try {
+        const cleanArabicName = activeName.ar.replace(/[\u064B-\u065F\u0670]/g, '').replace(/\u0671/g, '\u0627');
+        const url = `https://api.alquran.cloud/v1/search/${encodeURIComponent(cleanArabicName)}/all/quran-simple-clean`;
+        const res = await fetch(url);
+        if (res.ok) {
+          const json = await res.json();
+          if (json && json.code === 200 && json.data && Array.isArray(json.data.matches)) {
+            const formatted = json.data.matches.map((m: any) => ({
+              id: `${m.surah.number}:${m.numberInSurah}`,
+              inSurah: m.numberInSurah,
+              surahNumber: m.surah.number,
+              surahName: m.surah.name,
+              surahTransliteration: m.surah.englishName,
+              ar: m.text,
+            }));
+            setOnlineOccurrences(formatted);
+            setOnlineCount(json.data.count);
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to fetch online occurrences:", err);
+      } finally {
+        setLoadingOnline(false);
+      }
+    };
+
+    fetchOnlineOccurrences();
+  }, [activeName?.tr, viewState]);
+
   React.useEffect(() => {
     const loadQuranData = async () => {
       setLoadingQuran(true);
@@ -366,6 +412,10 @@ export const NamesOfAllah: React.FC = () => {
 
   const realOccurrences = React.useMemo(() => {
     if (!activeName) return [];
+    
+    if (onlineOccurrences.length > 0) {
+      return onlineOccurrences;
+    }
     
     if (quranData.length === 0) {
       if (loadingQuran) return [];
@@ -431,7 +481,12 @@ export const NamesOfAllah: React.FC = () => {
           
           if (cleanAyah.includes(searchWord)) {
             matches.push({
-              ...ayah,
+              id: `${surah.id}:${ayah.inSurah}`,
+              inSurah: ayah.inSurah,
+              ar: ayah.ar,
+              fr: ayah.fr,
+              en: ayah.en,
+              ha: ayah.ha,
               surahName: surah.name,
               surahTransliteration: surah.transliteration,
               surahNumber: surah.id
@@ -444,13 +499,48 @@ export const NamesOfAllah: React.FC = () => {
       console.error(e);
       return [];
     }
-  }, [activeName, quranData, loadingQuran]);
+  }, [activeName, quranData, loadingQuran, onlineOccurrences]);
 
-  const toggleVerse = (match: any) => {
-    if (expandedVerseId === match.id) {
+  const toggleVerse = async (match: any) => {
+    const detailId = match.id;
+    if (expandedVerseId === detailId) {
       setExpandedVerseId(null);
-    } else {
-      setExpandedVerseId(match.id);
+      return;
+    }
+    setExpandedVerseId(detailId);
+
+    // If it's a local mock fallback or already loaded, skip fetching
+    if (detailId.toString().startsWith('off-') || verseDetails[detailId]) {
+      return;
+    }
+
+    setLoadingDetailId(detailId);
+    try {
+      const url = `https://api.alquran.cloud/v1/ayah/${detailId}/editions/quran-simple,fr.hamidullah,en.sahih,ha.gumi`;
+      const res = await fetch(url);
+      if (res.ok) {
+        const json = await res.json();
+        if (json && json.code === 200 && Array.isArray(json.data)) {
+          const arText = json.data[0]?.text || '';
+          const frText = json.data[1]?.text || '';
+          const enText = json.data[2]?.text || '';
+          const haText = json.data[3]?.text || '';
+          
+          setVerseDetails(prev => ({
+            ...prev,
+            [detailId]: {
+              ar: arText,
+              fr: frText,
+              en: enText,
+              ha: haText
+            }
+          }));
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load verse details dynamically:", err);
+    } finally {
+      setLoadingDetailId(null);
     }
   };
 
@@ -465,6 +555,7 @@ export const NamesOfAllah: React.FC = () => {
     setViewState(type);
     setShowOtherVerses(false);
     setExpandedVerseId(null);
+    setDisplayLimit(30);
     if (type === 'zikr') {
       setZikrCount(0);
       setZikrTarget(item.abjad);
@@ -476,7 +567,7 @@ export const NamesOfAllah: React.FC = () => {
     setActiveName(null);
   };
 
-  const totalOccurrences = activeName?.quranOptions?.count || 0;
+  const totalOccurrences = onlineCount !== null ? onlineCount : (activeName?.quranOptions?.count || 0);
 
   return (
     <div className="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8 safe-area-pt pb-24 min-h-screen relative">
@@ -697,7 +788,16 @@ export const NamesOfAllah: React.FC = () => {
                                  >
                                    <div className="flex items-center gap-3">
                                      <Eye size={18} className="text-cyan-500" />
-                                     <span className="text-sm font-bold">{t('namesOfAllah.seeOccurrences')} {realOccurrences.length > 0 && `(${realOccurrences.length})`}</span>
+                                     <span className="text-sm font-bold">
+                                       {t('namesOfAllah.seeOccurrences')}{' '}
+                                       {realOccurrences.length > 0 && (
+                                         language === 'fr' 
+                                           ? `(${realOccurrences.length} sur ${totalOccurrences})` 
+                                           : language === 'ha' 
+                                             ? `(${realOccurrences.length} cikin ${totalOccurrences})` 
+                                             : `(${realOccurrences.length} of ${totalOccurrences})`
+                                       )}
+                                     </span>
                                    </div>
                                    <ChevronDown size={18} className={`transition-transform duration-300 ${showOtherVerses ? 'rotate-180' : ''}`} />
                                  </button>
@@ -710,20 +810,36 @@ export const NamesOfAllah: React.FC = () => {
                                        exit={{ height: 0, opacity: 0 }}
                                        className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
                                      >
-                                       <div className="p-4 space-y-3 max-h-80 overflow-y-auto custom-scrollbar">
-                                         {loadingQuran ? (
-                                           <div className="text-center py-6 flex flex-col items-center justify-center gap-3">
+                                       <div className="p-4 space-y-3 max-h-[360px] overflow-y-auto custom-scrollbar">
+                                         {loadingOnline ? (
+                                           <div className="text-center py-8 flex flex-col items-center justify-center gap-3">
                                              <div className="w-8 h-8 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
-                                             <p className="text-xs text-gray-500 font-medium">{dict.loadingOccurrences}</p>
+                                             <p className="text-xs text-gray-500 font-medium">
+                                               {language === 'fr' ? "Recherche en direct dans tout le Coran..." : language === 'ha' ? "Ana binciken dukan Alƙur'ani..." : "Searching the entire Quran in real-time..."}
+                                             </p>
                                            </div>
                                          ) : (
                                            <>
-                                             {quranData.length === 0 && (
-                                               <div className="text-center py-2 px-3 mb-3 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center justify-center gap-2">
-                                                 <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
-                                                 <span className="text-xs text-amber-700 dark:text-amber-400 font-medium">{dict.offlineMode}</span>
-                                               </div>
-                                             )}
+                                             <div className="p-3 bg-cyan-50/60 dark:bg-cyan-950/20 border border-cyan-100/50 dark:border-cyan-900/30 rounded-xl text-xs text-cyan-800 dark:text-cyan-300 font-medium">
+                                               {onlineCount !== null ? (
+                                                 language === 'fr' ? (
+                                                   `Recherche en direct : ${realOccurrences.length} occurrences exactes trouvées dans l'intégralité du Coran.`
+                                                 ) : language === 'ha' ? (
+                                                   `Binciken kai tsaye: An sami ayoyi guda ${realOccurrences.length} a cikin dukan Alƙur'ani.`
+                                                 ) : (
+                                                   `Live Search: Found ${realOccurrences.length} exact occurrences across the entire Quran.`
+                                                 )
+                                               ) : (
+                                                 language === 'fr' ? (
+                                                   `Mode Hors-ligne : Les versets sont recherchés dans les Sourates 1 à 12 (affichant ainsi ${realOccurrences.length} versets sur les ${totalOccurrences} occurrences totales du Coran entier).`
+                                                 ) : language === 'ha' ? (
+                                                   `Ba tare da Intanet ba: Ana bincika ayoyin a cikin Surori 1 zuwa 12 (yana nuna ayoyi ${realOccurrences.length} cikin jimillar sau ${totalOccurrences} a dukan Alƙur'ani).`
+                                                 ) : (
+                                                   `Offline Mode: Verses are searched within Surahs 1 to 12 (showing ${realOccurrences.length} verses out of ${totalOccurrences} total occurrences in the entire Quran).`
+                                                 )
+                                               )}
+                                             </div>
+                                             
                                              {realOccurrences.length === 0 && (
                                                <div className="text-center p-4">
                                                  <p className="text-sm text-gray-500">
@@ -731,48 +847,85 @@ export const NamesOfAllah: React.FC = () => {
                                                  </p>
                                                </div>
                                              )}
+
+                                             {realOccurrences.slice(0, displayLimit).map((occurrence) => {
+                                               const isExpanded = expandedVerseId === occurrence.id;
+                                               const isDetailLoading = loadingDetailId === occurrence.id;
+                                               const details = verseDetails[occurrence.id] || {
+                                                 ar: occurrence.ar,
+                                                 fr: occurrence.fr,
+                                                 en: occurrence.en,
+                                                 ha: occurrence.ha
+                                               };
+                                               
+                                               return (
+                                                 <div key={occurrence.id} className="rounded-xl overflow-hidden bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 transition-all">
+                                                   <button 
+                                                     type="button"
+                                                     onClick={() => toggleVerse(occurrence)}
+                                                     className="w-full flex justify-between items-center p-3 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-left"
+                                                   >
+                                                     <span className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 pr-2">
+                                                       {t('namesOfAllah.surah')} {occurrence.surahNumber} : {occurrence.surahTransliteration} {occurrence.surahName && `(${occurrence.surahName})`}
+                                                     </span>
+                                                     <div className="flex items-center gap-2 shrink-0">
+                                                       <span className="text-xs bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400 px-2 py-1 rounded font-bold">
+                                                         {t('namesOfAllah.verse')} {occurrence.inSurah}
+                                                       </span>
+                                                       <ChevronDown size={14} className={`text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                                                     </div>
+                                                   </button>
+                                                   <AnimatePresence>
+                                                     {isExpanded && (
+                                                       <motion.div
+                                                         initial={{ height: 0, opacity: 0 }}
+                                                         animate={{ height: 'auto', opacity: 1 }}
+                                                         exit={{ height: 0, opacity: 0 }}
+                                                         className="border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-850"
+                                                       >
+                                                         <div className="p-4 space-y-3">
+                                                           {isDetailLoading ? (
+                                                             <div className="text-center py-4 flex flex-col items-center justify-center gap-2">
+                                                               <div className="w-5 h-5 border-2 border-cyan-500 border-t-transparent rounded-full animate-spin"></div>
+                                                               <span className="text-xs text-gray-400">
+                                                                 {language === 'fr' ? "Chargement des traductions..." : language === 'ha' ? "Ana lura da fassarar..." : "Loading translations..."}
+                                                               </span>
+                                                             </div>
+                                                           ) : (
+                                                             <>
+                                                               <p className="font-arabic text-xl sm:text-2xl text-gray-900 dark:text-white leading-[2] text-center" dir="rtl">
+                                                                 {details.ar || occurrence.ar}
+                                                               </p>
+                                                               <p className="text-gray-600 dark:text-gray-400 font-serif italic text-sm text-center leading-relaxed">
+                                                                 "{details[language as 'fr' | 'en' | 'ha'] || details.fr || details.en || details.ha || occurrence[language as 'fr' | 'en' | 'ha'] || occurrence.fr || occurrence.en || occurrence.ha || ''}"
+                                                               </p>
+                                                             </>
+                                                           )}
+                                                         </div>
+                                                       </motion.div>
+                                                     )}
+                                                   </AnimatePresence>
+                                                 </div>
+                                               );
+                                             })}
+
+                                             {realOccurrences.length > displayLimit && (
+                                               <button 
+                                                 type="button"
+                                                 onClick={() => setDisplayLimit(prev => prev + 50)}
+                                                 className="w-full mt-3 py-2.5 bg-gray-50 dark:bg-gray-900/50 hover:bg-cyan-50 dark:hover:bg-cyan-950/20 text-cyan-600 dark:text-cyan-400 rounded-xl text-xs font-bold border border-dashed border-gray-200 dark:border-gray-800 transition-all flex items-center justify-center gap-2"
+                                               >
+                                                 <ChevronDown size={14} />
+                                                 {language === 'fr' 
+                                                   ? `Afficher 50 versets supplémentaires (sur ${realOccurrences.length - displayLimit} restants)` 
+                                                   : language === 'ha'
+                                                     ? `Nuna ƙarin ayoyi 50 (cikin ${realOccurrences.length - displayLimit} da suka rage)`
+                                                     : `Show 50 more verses (${realOccurrences.length - displayLimit} remaining)`
+                                                 }
+                                               </button>
+                                             )}
                                            </>
                                          )}
-                                         {!loadingQuran && realOccurrences.map((occurrence) => {
-                                           const isExpanded = expandedVerseId === occurrence.id;
-                                           return (
-                                             <div key={occurrence.id} className="rounded-xl overflow-hidden bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 transition-all">
-                                               <button 
-                                                 onClick={() => toggleVerse(occurrence)}
-                                                 className="w-full flex justify-between items-center p-3 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                                               >
-                                                 <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-                                                   {t('namesOfAllah.surah')} {occurrence.surahName} ({occurrence.surahTransliteration})
-                                                 </span>
-                                                 <div className="flex items-center gap-2">
-                                                   <span className="text-xs bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400 px-2 py-1 rounded font-bold">
-                                                     {t('namesOfAllah.verse')} {occurrence.inSurah}
-                                                   </span>
-                                                   <ChevronDown size={14} className={`text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
-                                                 </div>
-                                               </button>
-                                               <AnimatePresence>
-                                                 {isExpanded && (
-                                                   <motion.div
-                                                     initial={{ height: 0, opacity: 0 }}
-                                                     animate={{ height: 'auto', opacity: 1 }}
-                                                     exit={{ height: 0, opacity: 0 }}
-                                                     className="border-t border-gray-100 dark:border-gray-800"
-                                                   >
-                                                     <div className="p-4 space-y-3">
-                                                       <p className="font-arabic text-xl sm:text-2xl text-gray-900 dark:text-white leading-[2] text-center" dir="rtl">
-                                                         {occurrence.ar}
-                                                       </p>
-                                                       <p className="text-gray-600 dark:text-gray-400 font-serif italic text-sm text-center leading-relaxed">
-                                                         "{occurrence[language as 'fr' | 'en' | 'ha'] || occurrence.fr || occurrence.en || occurrence.ha || ''}"
-                                                       </p>
-                                                     </div>
-                                                   </motion.div>
-                                                 )}
-                                               </AnimatePresence>
-                                             </div>
-                                           );
-                                         })}
                                        </div>
                                        <div className="p-4 bg-gray-50 dark:bg-gray-900/50 border-t border-gray-100 dark:border-gray-800">
                                          <span className="text-[11px] bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-3 py-1.5 rounded-lg block leading-relaxed">

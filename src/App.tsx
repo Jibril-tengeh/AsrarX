@@ -175,8 +175,9 @@ export default function App() {
   const navigate = useNavigate();
   const isRuqyahPlayer = location.pathname === '/tools/ruqyah';
 
-  // Global scroll-to-top on route changes
+  // Global scroll-to-top and route changed logger on route changes
   React.useEffect(() => {
+    console.log(`[Navigation] Route transitioned to: "${location.pathname}"`);
     window.scrollTo(0, 0);
     if (document.documentElement) {
       document.documentElement.scrollTo({ top: 0 });
@@ -189,7 +190,10 @@ export default function App() {
   React.useEffect(() => {
     const handleBackButton = () => {
       const currentPath = window.location.pathname;
+      console.log(`[Navigation] Capacitor backButton event triggered on path: "${currentPath}"`);
+      
       if (currentPath === '/user/dashboard' || currentPath === '/' || currentPath === '/home') {
+        console.log(`[Navigation] Exiting app from home/dashboard.`);
         CapacitorApp.exitApp();
       } else if (
         currentPath === '/explore' ||
@@ -199,16 +203,21 @@ export default function App() {
         currentPath === '/profile' ||
         currentPath === '/community'
       ) {
+        console.log(`[Navigation] Root sub-page. Redirecting back to dashboard.`);
         navigate('/user/dashboard');
       } else {
         if (window.history.state && window.history.state.idx > 0) {
+          console.log(`[Navigation] Navigating -1 (previous history entry).`);
           navigate(-1);
         } else {
           if (currentPath.startsWith('/tools/')) {
+            console.log(`[Navigation] Sub-tool path. Redirecting to /tools.`);
             navigate('/tools');
           } else if (currentPath.startsWith('/explore/')) {
+            console.log(`[Navigation] Sub-explore path. Redirecting to /explore.`);
             navigate('/explore');
           } else {
+            console.log(`[Navigation] Fallback redirecting to /user/dashboard.`);
             navigate('/user/dashboard');
           }
         }

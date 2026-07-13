@@ -275,21 +275,21 @@ export const PaymentPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8 pt-8 pb-24">
+    <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8 pt-8 pb-40 sm:pb-24">
       <div className="mb-8 text-center sm:text-left">
         <button onClick={handleBack} className="flex items-center justify-center sm:justify-start gap-2 text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors mb-4 w-full sm:w-auto">
           <ArrowLeft size={20} />
           <span>{t('payment.back', 'Retour')}</span>
         </button>
-        <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center justify-center sm:justify-start gap-3 mb-2">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white flex items-center justify-center sm:justify-start gap-3 mb-2">
           <Sparkles className="text-amber-500" />
           {t('payment.title', "Débloquer l'Accès Premium")}
         </h1>
-        <p className="text-gray-500 dark:text-gray-400 max-w-2xl">
+        <p className="text-gray-500 dark:text-gray-400 max-w-2xl text-sm sm:text-base">
           {t('payment.subtitle', "Choisissez le plan qui correspond à vos besoins spirituels.")}
         </p>
         
-        <div className="mt-6 flex flex-wrap gap-4 items-center justify-center sm:justify-start text-sm font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 p-4 rounded-xl border border-emerald-100 dark:border-emerald-800/50">
+        <div className="mt-6 flex flex-wrap gap-4 items-center justify-center sm:justify-start text-xs sm:text-sm font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 p-3 sm:p-4 rounded-xl border border-emerald-100 dark:border-emerald-800/50">
           <span className="flex items-center gap-1.5"><CreditCard size={16} /> Paystack (Automatique : Cartes & Mobile Money)</span>
           <span className="text-emerald-300 hidden sm:inline">•</span>
           <span className="flex items-center gap-1.5"><Landmark size={16} /> Transfert Bancaire Direct (GCB Bank PLC)</span>
@@ -300,38 +300,38 @@ export const PaymentPage: React.FC = () => {
         {plans.map((plan) => {
           const pricing = detectUserCurrencyAndPrice(plan.priceNumber);
           return (
-            <div key={plan.id} className="bg-white dark:bg-gray-800 rounded-3xl p-6 lg:p-8 border border-gray-200 dark:border-gray-700 shadow-xl relative overflow-hidden group flex flex-col transition-transform hover:-translate-y-1">
+            <div key={plan.id} className="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 lg:p-8 border border-gray-200 dark:border-gray-700 shadow-xl relative overflow-hidden group flex flex-col transition-transform hover:-translate-y-1">
               <div className={`absolute top-0 left-0 w-full h-2 bg-gradient-to-r ${plan.color}`}></div>
-              <div className="flex flex-col items-center sm:items-start sm:flex-row gap-4 mb-6 text-center sm:text-left">
-                <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${plan.color} flex items-center justify-center text-white shadow-lg transform group-hover:scale-110 transition-transform shrink-0`}>
-                  <plan.icon size={28} />
+              <div className="flex flex-row items-center gap-3.5 mb-4 text-left">
+                <div className={`w-11 h-11 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br ${plan.color} flex items-center justify-center text-white shadow-lg transform group-hover:scale-110 transition-transform shrink-0`}>
+                  <plan.icon className="w-5 h-5 sm:w-7 sm:h-7" />
                 </div>
                 <div>
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">{plan.name}</h3>
-                  <p className="text-3xl font-black text-gray-900 dark:text-white mt-1">{pricing.displayStr}</p>
+                  <h3 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white leading-tight">{plan.name}</h3>
+                  <p className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white mt-0.5">{pricing.displayStr}</p>
                 </div>
               </div>
               
-              <p className="text-gray-600 dark:text-gray-300 mb-6 min-h-[48px] text-center sm:text-left text-sm">
+              <p className="text-gray-600 dark:text-gray-300 mb-4 sm:min-h-[48px] text-left text-xs sm:text-sm leading-relaxed">
                 {plan.description}
               </p>
 
-              <ul className="space-y-4 mb-8 flex-1">
+              <ul className="space-y-2.5 sm:space-y-4 mb-6 flex-1">
                 {plan.features.map((feature, idx) => (
-                  <li key={idx} className="flex items-start gap-3">
+                  <li key={idx} className="flex items-start gap-2.5">
                     <div className={`mt-0.5 p-1 rounded-full bg-gradient-to-r ${plan.color} text-white shrink-0`}>
-                      <Check size={12} strokeWidth={4} />
+                      <Check size={10} strokeWidth={4} />
                     </div>
-                    <span className="text-gray-700 dark:text-gray-300 font-medium text-sm leading-tight">{feature}</span>
+                    <span className="text-gray-700 dark:text-gray-300 font-medium text-xs sm:text-sm leading-tight">{feature}</span>
                   </li>
                 ))}
               </ul>
 
               <button
                 onClick={() => handleSubscribeClick(plan)}
-                className={`w-full mt-auto py-3.5 rounded-xl font-bold text-white shadow-lg transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 bg-gradient-to-r ${plan.color}`}
+                className={`w-full mt-auto py-2.5 sm:py-3.5 rounded-xl font-bold text-white shadow-lg transition-all transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2 bg-gradient-to-r ${plan.color} text-sm sm:text-base`}
               >
-                <Sparkles size={20} />
+                <Sparkles size={18} />
                 {t('payment.choosePlan', 'Choisir ce plan')}
               </button>
             </div>

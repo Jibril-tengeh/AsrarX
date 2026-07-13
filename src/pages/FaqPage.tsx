@@ -379,7 +379,10 @@ export const FaqPage: React.FC = () => {
     }
 
     try {
-      const response = await fetch(getApiUrl('/api/assistant/faq'), {
+      const targetUrl = getApiUrl('/api/assistant/faq');
+      console.log(`[Assistant] Sending prompt request to API: "${targetUrl}"`, { question: text, language });
+      
+      const response = await fetch(targetUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question: text, language })
@@ -387,6 +390,7 @@ export const FaqPage: React.FC = () => {
       
       let answerText = '';
       if (!response.ok) {
+        console.error(`[Assistant] API response error. Status: ${response.status} ${response.statusText}, Target URL: ${targetUrl}`);
         if (response.status === 503) {
           answerText = "Le service d'intelligence artificielle est actuellement très sollicité. Veuillez patienter quelques instants et réessayer.";
         } else {
@@ -394,6 +398,7 @@ export const FaqPage: React.FC = () => {
         }
       } else {
         const data = await response.json();
+        console.log(`[Assistant] API response success. Target URL: ${targetUrl}`, data);
         answerText = data.answer || "Désolé, je n'ai pas pu générer de réponse.";
       }
 
@@ -423,7 +428,7 @@ export const FaqPage: React.FC = () => {
         }
       }
     } catch (error) {
-      console.error(error);
+      console.error("[Assistant] Exception during assistant prompt dispatch:", error);
       const errReply: ChatMessage = { role: 'assistant', content: "Erreur de connexion. Veuillez réessayer plus tard." };
       const finalMessagesWithError = [...updatedMessages, errReply];
       const sessionsWithError = updatedSessions.map(s => {

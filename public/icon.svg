@@ -2,9 +2,9 @@
   <defs>
     <!-- Background Gradient -->
     <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#022c22" />
-      <stop offset="50%" stop-color="#064e3b" />
-      <stop offset="100%" stop-color="#0f766e" />
+      <stop offset="0%" stop-color="#020202" />
+      <stop offset="50%" stop-color="#0d0d0d" />
+      <stop offset="100%" stop-color="#151515" />
     </linearGradient>
 
     <!-- Gold Accent Gradient -->

@@ -30,5 +30,5 @@ export function getApiUrl(path: string): string {
   }
   
   // Final fallback (e.g. if we don't have storedUrl yet)
-  return `https://ais-dev-zhlvo3fs5z5wltpspv6eub-789730332353.europe-west2.run.app${cleanPath}`;
+  return `https://ais-pre-zhlvo3fs5z5wltpspv6eub-789730332353.europe-west2.run.app${cleanPath}`;
 }
