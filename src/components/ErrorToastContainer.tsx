@@ -524,11 +524,12 @@ export const ErrorToastContainer: React.FC = () => {
 
               {diagStatus === 'cors_ssl_error' && (
                 <div className="bg-red-950/20 border border-red-900/40 rounded-xl p-3.5 text-xs text-red-300">
-                  <span className="font-bold block mb-1">💡 Solution recommandées :</span>
+                  <span className="font-bold block mb-1">💡 Solutions recommandées :</span>
                   <ul className="list-disc pl-4 space-y-1">
-                    <li>Allez dans l'onglet <strong>Admin → Paramètres</strong> et assurez-vous d'avoir enregistré l'URL publique de votre backend.</li>
-                    <li>Vérifiez que votre serveur backend autorise les requêtes de l'origine de l'app mobile (<code>capacitor://localhost</code> ou <code>http://localhost</code>) avec des en-têtes CORS complets.</li>
-                    <li>Utilisez un certificat SSL valide (ex: Let's Encrypt). Les téléphones bloquent les certificats auto-signés.</li>
+                    <li>📅 <strong>Date & Heure du téléphone :</strong> Vérifiez que l'heure de votre téléphone est réglée en <strong>mode automatique</strong>. Si l'heure est décalée même de quelques minutes, Android bloque immédiatement toutes les connexions sécurisées (SSL) et Firestore !</li>
+                    <li>🌐 <strong>Réseau Wi-Fi / VPN :</strong> Si vous utilisez un réseau Wi-Fi public, un proxy scolaire/d'entreprise, ou un VPN, ils peuvent intercepter le trafic SSL. Essayez de passer sur vos données mobiles (4G/5G) pour tester.</li>
+                    <li>⚙️ <strong>Configuration de l'URL d'API :</strong> Allez dans l'onglet <strong>Admin → Paramètres</strong> et assurez-vous d'avoir enregistré l'URL publique correcte de votre backend.</li>
+                    <li>🔒 <strong>Certificat de serveur :</strong> Utilisez un certificat SSL valide (ex: Let's Encrypt). Les téléphones bloquent les certificats auto-signés par défaut.</li>
                   </ul>
                 </div>
               )}
