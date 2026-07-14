@@ -50,9 +50,12 @@ export const ErrorToastContainer: React.FC = () => {
     // Intercept standard errors
     const handleErrorEvent = (event: ErrorEvent) => {
       // Avoid spamming benign/internal vite websocket or extension errors
+      const lowerMsg = (event.message || '').toLowerCase();
       if (
-        event.message?.includes('websocket') || 
-        event.message?.includes('extension')
+        lowerMsg.includes('websocket') || 
+        lowerMsg.includes('extension') ||
+        lowerMsg.includes('hmr') ||
+        lowerMsg.includes('vite')
       ) return;
 
       const fbType = checkFirebaseError(event.message || '');
@@ -93,9 +96,11 @@ export const ErrorToastContainer: React.FC = () => {
       }
 
       // Avoid noise
+      const lowerMsg = msg.toLowerCase();
       if (
-        msg.includes('websocket') || 
-        msg.includes('HMR')
+        lowerMsg.includes('websocket') || 
+        lowerMsg.includes('hmr') ||
+        lowerMsg.includes('vite')
       ) return;
 
       const fbType = checkFirebaseError(msg);
@@ -137,13 +142,15 @@ export const ErrorToastContainer: React.FC = () => {
         })
         .join(' ');
 
+      const lowerMessage = message.toLowerCase();
       // Suppress noisy third party or development warnings
       if (
-        message.includes('Mismatched anonymous define') || 
-        message.includes('WebSocket') || 
-        message.includes('HMR') || 
-        message.includes('lucide') ||
-        message.includes('Google Maps')
+        lowerMessage.includes('mismatched anonymous define') || 
+        lowerMessage.includes('websocket') || 
+        lowerMessage.includes('hmr') || 
+        lowerMessage.includes('lucide') ||
+        lowerMessage.includes('google maps') ||
+        lowerMessage.includes('vite')
       ) {
         return;
       }

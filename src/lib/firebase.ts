@@ -12,17 +12,30 @@ import {
   updateProfile,
   User
 } from 'firebase/auth';
-import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, enableIndexedDbPersistence, doc, getDoc, setDoc, updateDoc, collection, getDocs, addDoc, deleteDoc, query, where, orderBy } from 'firebase/firestore';
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, persistentSingleTabManager, enableIndexedDbPersistence, doc, getDoc, setDoc, updateDoc, collection, getDocs, addDoc, deleteDoc, query, where, orderBy } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 
 export const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
 export const storage = getStorage(app);
+
+// Detect if running on mobile or in an iframe environment
+const isMobileOrIframe = typeof window !== 'undefined' && (
+  window.self !== window.top ||
+  window.location.origin.startsWith('capacitor:') ||
+  window.location.origin.startsWith('http://localhost') ||
+  window.location.origin.startsWith('https://localhost') ||
+  window.location.hostname === 'localhost' ||
+  (window as any).Capacitor !== undefined ||
+  (window as any).cordova !== undefined ||
+  /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent || '')
+);
+
 export const db = initializeFirestore(app, {
   experimentalForceLongPolling: true,
   localCache: persistentLocalCache({
-    tabManager: persistentMultipleTabManager()
+    tabManager: isMobileOrIframe ? persistentSingleTabManager({}) : persistentMultipleTabManager()
   }),
   ...({ useFetchStreams: false } as any)
 });
