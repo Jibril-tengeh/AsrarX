@@ -12,7 +12,7 @@ import {
   updateProfile,
   User
 } from 'firebase/auth';
-import { getFirestore, initializeFirestore, enableIndexedDbPersistence, doc, getDoc, setDoc, updateDoc, collection, getDocs, addDoc, deleteDoc, query, where, orderBy } from 'firebase/firestore';
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, enableIndexedDbPersistence, doc, getDoc, setDoc, updateDoc, collection, getDocs, addDoc, deleteDoc, query, where, orderBy } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 
 export const app = initializeApp(firebaseConfig);
@@ -21,6 +21,9 @@ export const auth = getAuth(app);
 export const storage = getStorage(app);
 export const db = initializeFirestore(app, {
   experimentalForceLongPolling: true,
+  localCache: persistentLocalCache({
+    tabManager: persistentMultipleTabManager()
+  }),
   ...({ useFetchStreams: false } as any)
 });
 
@@ -77,17 +80,9 @@ const checkIndexedDBFunctional = (): Promise<boolean> => {
   });
 };
 
-checkIndexedDBFunctional().then((functional) => {
-  if (functional) {
-    enableIndexedDbPersistence(db).catch((err) => {
-      if (err.code == 'failed-precondition') {
-          console.warn("Multiple tabs open, persistence can only be enabled in one tab at a time.");
-      } else if (err.code == 'unimplemented') {
-          console.warn("The current browser does not support all of the features required to enable persistence");
-      }
-    });
-  }
-});
+// Since we now initialize Firestore with persistentLocalCache directly,
+// there is no need to call enableIndexedDbPersistence asynchronously.
+console.log("[Firestore] Persistent IndexedDB cache configured successfully at initialization.");
 
 export const googleProvider = new GoogleAuthProvider();
 

@@ -6,7 +6,7 @@ import { getApiUrl } from '../lib/api';
 interface LoggedError {
   id: string;
   message: string;
-  type: 'error' | 'rejection' | 'console';
+  type: 'error' | 'rejection' | 'console' | 'firebase-conn' | 'firebase-perm';
   timestamp: Date;
   details?: string;
 }
@@ -25,19 +25,54 @@ export const ErrorToastContainer: React.FC = () => {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
+    // Helper to identify specific Firebase/Firestore connection or permission issues
+    const checkFirebaseError = (msg: string): 'firebase-conn' | 'firebase-perm' | null => {
+      if (!msg) return null;
+      const lowercaseMsg = msg.toLowerCase();
+      if (
+        lowercaseMsg.includes('could not reach cloud firestore backend') ||
+        lowercaseMsg.includes('code=unavailable') ||
+        lowercaseMsg.includes('firestore-backend') ||
+        lowercaseMsg.includes('unavailable')
+      ) {
+        return 'firebase-conn';
+      }
+      if (
+        lowercaseMsg.includes('permission-denied') ||
+        lowercaseMsg.includes('missing or insufficient permissions') ||
+        lowercaseMsg.includes('permission_denied')
+      ) {
+        return 'firebase-perm';
+      }
+      return null;
+    };
+
     // Intercept standard errors
     const handleErrorEvent = (event: ErrorEvent) => {
       // Avoid spamming benign/internal vite websocket or extension errors
-      if (event.message?.includes('websocket') || event.message?.includes('extension')) return;
+      if (
+        event.message?.includes('websocket') || 
+        event.message?.includes('extension')
+      ) return;
+
+      const fbType = checkFirebaseError(event.message || '');
       
       const newErr: LoggedError = {
-        id: `err-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-        message: event.message || "Erreur d'exécution inattendue",
-        type: 'error',
+        id: fbType ? `fb-${fbType}-${Date.now()}` : `err-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+        message: fbType === 'firebase-conn' 
+          ? "Connexion Firestore impossible. L'application utilise les données locales persistées de manière fluide." 
+          : fbType === 'firebase-perm' 
+            ? "Accès refusé par le serveur de sécurité. Vos droits d'accès ou votre session ont expiré."
+            : event.message || "Erreur d'exécution inattendue",
+        type: fbType || 'error',
         timestamp: new Date(),
         details: event.error ? String(event.error.stack || event.error) : `Fichier: ${event.filename}:${event.lineno}:${event.colno}`,
       };
-      setErrors(prev => [newErr, ...prev].slice(0, 5)); // Limit to last 5 errors
+      setErrors(prev => {
+        // Prevent duplicate firebase connection warning blocks to keep UI clean
+        if (fbType && prev.some(e => e.type === fbType)) return prev;
+        return [newErr, ...prev].slice(0, 5);
+      });
     };
 
     // Intercept unhandled promise rejections (very common in failed fetches)
@@ -58,16 +93,28 @@ export const ErrorToastContainer: React.FC = () => {
       }
 
       // Avoid noise
-      if (msg.includes('websocket') || msg.includes('HMR')) return;
+      if (
+        msg.includes('websocket') || 
+        msg.includes('HMR')
+      ) return;
+
+      const fbType = checkFirebaseError(msg);
 
       const newErr: LoggedError = {
-        id: `rej-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-        message: msg,
-        type: 'rejection',
+        id: fbType ? `fb-${fbType}-${Date.now()}` : `rej-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+        message: fbType === 'firebase-conn' 
+          ? "Connexion Firestore impossible. L'application utilise les données locales persistées de manière fluide." 
+          : fbType === 'firebase-perm' 
+            ? "Accès refusé par le serveur de sécurité. Vos droits d'accès ou votre session ont expiré."
+            : msg,
+        type: fbType || 'rejection',
         timestamp: new Date(),
         details: details || "Rejet de promesse asynchrone (ex: fetch échoué)",
       };
-      setErrors(prev => [newErr, ...prev].slice(0, 5));
+      setErrors(prev => {
+        if (fbType && prev.some(e => e.type === fbType)) return prev;
+        return [newErr, ...prev].slice(0, 5);
+      });
     };
 
     // Override console.error
@@ -101,15 +148,24 @@ export const ErrorToastContainer: React.FC = () => {
         return;
       }
 
+      const fbType = checkFirebaseError(message);
+
       const newErr: LoggedError = {
-        id: `console-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
-        message: message.length > 150 ? message.substring(0, 150) + "..." : message,
-        type: 'console',
+        id: fbType ? `fb-${fbType}-${Date.now()}` : `console-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+        message: fbType === 'firebase-conn'
+          ? "Connexion Firestore impossible. L'application utilise les données locales persistées de manière fluide."
+          : fbType === 'firebase-perm'
+            ? "Accès refusé par le serveur de sécurité. Vos droits d'accès ou votre session ont expiré."
+            : (message.length > 150 ? message.substring(0, 150) + "..." : message),
+        type: fbType || 'console',
         timestamp: new Date(),
         details: args.map(a => (a instanceof Error ? a.stack : String(a))).join('\n'),
       };
       
-      setErrors(prev => [newErr, ...prev].slice(0, 5));
+      setErrors(prev => {
+        if (fbType && prev.some(e => e.type === fbType)) return prev;
+        return [newErr, ...prev].slice(0, 5);
+      });
     };
 
     window.addEventListener('error', handleErrorEvent);
@@ -207,66 +263,129 @@ export const ErrorToastContainer: React.FC = () => {
   return (
     <>
       {/* Floating Error Stack */}
-      <div className="fixed bottom-20 left-4 right-4 sm:bottom-6 sm:left-auto sm:right-6 sm:w-96 z-[9999] flex flex-col gap-2 max-h-[40vh] overflow-y-auto">
+      <div className="fixed bottom-20 left-4 right-4 sm:bottom-6 sm:left-auto sm:right-6 sm:w-96 z-[9999] flex flex-col gap-2 max-h-[45vh] overflow-y-auto">
         <AnimatePresence>
-          {errors.map(err => (
-            <motion.div
-              key={err.id}
-              initial={{ opacity: 0, y: 50, scale: 0.9 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.85, transition: { duration: 0.15 } }}
-              className="bg-gray-900 border border-red-500/40 text-gray-100 rounded-xl p-3.5 shadow-2xl flex flex-col text-xs"
-            >
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex items-center gap-2 text-red-400 font-medium">
-                  <AlertTriangle size={14} className="shrink-0 animate-pulse" />
-                  <span className="uppercase tracking-wider text-[10px]">
-                    {err.type === 'rejection' ? 'Erreur Réseau / Promesse' : 'Erreur Application'}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={() => setExpandedId(expandedId === err.id ? null : err.id)}
-                    className="p-1 hover:bg-gray-800 rounded text-gray-400 hover:text-white transition-colors"
-                    title="Voir les détails"
-                  >
-                    {expandedId === err.id ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                  </button>
-                  <button
-                    onClick={() => removeError(err.id)}
-                    className="p-1 hover:bg-gray-800 rounded text-gray-400 hover:text-white transition-colors"
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-              </div>
+          {errors.map(err => {
+            const isFbConn = err.type === 'firebase-conn';
+            const isFbPerm = err.type === 'firebase-perm';
 
-              <div className="mt-1.5 font-medium text-gray-200 line-clamp-2">
-                {err.message}
-              </div>
+            let containerClass = "bg-gray-900 border border-red-500/40 text-gray-100 rounded-xl p-3.5 shadow-2xl flex flex-col text-xs";
+            let iconColor = "text-red-400";
+            let badgeText = "Erreur Application";
 
-              {expandedId === err.id && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  className="mt-2 pt-2 border-t border-gray-800 text-gray-400 font-mono text-[10px] overflow-x-auto max-h-32 whitespace-pre-wrap"
-                >
-                  {err.details}
-                  <div className="mt-3 flex gap-2">
+            if (isFbConn) {
+              containerClass = "bg-gray-900/95 border border-amber-500/50 text-gray-100 rounded-xl p-3.5 shadow-[0_4px_20px_rgba(245,158,11,0.2)] flex flex-col text-xs backdrop-blur-md";
+              iconColor = "text-amber-400";
+              badgeText = "Mode Hors Ligne Actif";
+            } else if (isFbPerm) {
+              containerClass = "bg-gray-900/95 border border-purple-500/50 text-gray-100 rounded-xl p-3.5 shadow-[0_4px_20px_rgba(168,85,247,0.2)] flex flex-col text-xs backdrop-blur-md";
+              iconColor = "text-purple-400";
+              badgeText = "Droits d'accès expirés";
+            } else if (err.type === 'rejection') {
+              badgeText = "Erreur Réseau / Promesse";
+            }
+
+            return (
+              <motion.div
+                key={err.id}
+                initial={{ opacity: 0, y: 50, scale: 0.9 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.85, transition: { duration: 0.15 } }}
+                className={containerClass}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className={`flex items-center gap-2 ${iconColor} font-medium`}>
+                    {isFbConn ? (
+                      <WifiOff size={14} className="shrink-0 animate-pulse" />
+                    ) : isFbPerm ? (
+                      <Database size={14} className="shrink-0 animate-pulse" />
+                    ) : (
+                      <AlertTriangle size={14} className="shrink-0 animate-pulse" />
+                    )}
+                    <span className="uppercase tracking-wider text-[10px] font-bold">
+                      {badgeText}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
                     <button
-                      onClick={() => {
-                        setShowDiagnosticModal(true);
-                        runDiagnostics();
-                      }}
-                      className="bg-emerald-600/30 hover:bg-emerald-600 text-emerald-400 hover:text-white px-2 py-1 rounded font-sans font-medium transition-colors cursor-pointer"
+                      onClick={() => setExpandedId(expandedId === err.id ? null : err.id)}
+                      className="p-1 hover:bg-gray-800 rounded text-gray-400 hover:text-white transition-colors"
+                      title="Voir les détails"
                     >
-                      Diagnostiquer la connexion API
+                      {expandedId === err.id ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                    </button>
+                    <button
+                      onClick={() => removeError(err.id)}
+                      className="p-1 hover:bg-gray-800 rounded text-gray-400 hover:text-white transition-colors"
+                    >
+                      <X size={14} />
                     </button>
                   </div>
-                </motion.div>
-              )}
-            </motion.div>
-          ))}
+                </div>
+
+                <div className="mt-1.5 font-medium text-gray-200 leading-relaxed">
+                  {err.message}
+                </div>
+
+                {/* Always show custom quick guide buttons for Firebase errors */}
+                {(isFbConn || isFbPerm) && (
+                  <div className="mt-2.5 pt-2 border-t border-gray-800/60 flex flex-wrap gap-2">
+                    {isFbConn ? (
+                      <>
+                        <button
+                          onClick={() => window.location.reload()}
+                          className="bg-amber-600/20 hover:bg-amber-600 text-amber-300 hover:text-white px-2.5 py-1 rounded-lg font-sans font-medium text-[10px] transition-colors cursor-pointer border border-amber-500/30"
+                        >
+                          🔄 Forcer la reconnexion
+                        </button>
+                        <span className="text-[9px] text-gray-400 self-center">
+                          Vos modifications sont en sécurité localement.
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => {
+                            localStorage.clear();
+                            window.location.href = '/';
+                          }}
+                          className="bg-purple-600/20 hover:bg-purple-600 text-purple-300 hover:text-white px-2.5 py-1 rounded-lg font-sans font-medium text-[10px] transition-colors cursor-pointer border border-purple-500/30"
+                        >
+                          🔐 Se Reconnecter
+                        </button>
+                        <span className="text-[9px] text-gray-400 self-center">
+                          Rafraîchit vos jetons de sécurité.
+                        </span>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {expandedId === err.id && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    className="mt-2 pt-2 border-t border-gray-800 text-gray-400 font-mono text-[10px] overflow-x-auto max-h-32 whitespace-pre-wrap"
+                  >
+                    {err.details}
+                    {!isFbConn && !isFbPerm && (
+                      <div className="mt-3 flex gap-2">
+                        <button
+                          onClick={() => {
+                            setShowDiagnosticModal(true);
+                            runDiagnostics();
+                          }}
+                          className="bg-emerald-600/30 hover:bg-emerald-600 text-emerald-400 hover:text-white px-2 py-1 rounded font-sans font-medium transition-colors cursor-pointer"
+                        >
+                          Diagnostiquer la connexion API
+                        </button>
+                      </div>
+                    )}
+                  </motion.div>
+                )}
+              </motion.div>
+            );
+          })}
         </AnimatePresence>
       </div>
 

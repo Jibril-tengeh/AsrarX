@@ -63,7 +63,7 @@ export const SecretCard: React.FC<SecretCardProps> = ({ item, layoutMode = 'grid
 
   if (layoutMode === 'list') {
     return (
-      <Link to={`/secret/${item.id}`} className="block w-full group">
+      <Link to={`/secret/${item.id}`} state={{ item }} className="block w-full group">
         <div className="flex flex-row h-[130px] sm:h-[150px] cursor-pointer bg-white dark:bg-gray-800 rounded-[1.25rem] shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden transition-all duration-300 group-hover:shadow-md group-hover:-translate-y-1">
           {/* Image Area */}
           <div className="w-[110px] sm:w-[140px] h-full relative bg-gray-100 dark:bg-gray-900 flex-shrink-0">
@@ -113,7 +113,7 @@ export const SecretCard: React.FC<SecretCardProps> = ({ item, layoutMode = 'grid
   const isGrid1 = layoutMode === 'grid1';
 
   return (
-    <Link to={`/secret/${item.id}`} className="block h-full group">
+    <Link to={`/secret/${item.id}`} state={{ item }} className="block h-full group">
        <div className="flex flex-col h-full cursor-pointer bg-white dark:bg-gray-800 rounded-[1.5rem] sm:rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden transition-all duration-300 group-hover:shadow-md group-hover:-translate-y-1">
           <div className={`w-full overflow-hidden relative bg-gray-100 dark:bg-gray-900 flex-shrink-0 ${isGrid1 ? 'aspect-video' : 'aspect-[4/5] sm:aspect-square'}`}>
              {item.imageUrl ? (

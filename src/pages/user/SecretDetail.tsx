@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useLanguage } from "../../contexts/LanguageContext";
 import {
   ArrowLeft,
@@ -63,6 +63,7 @@ const AccordionSection: React.FC<{ title: string, htmlContent: string, readingMo
 export const SecretDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { t, language } = useLanguage();
   const { user, loading: authLoading } = useAuth();
   const [item, setItem] = useState<AsrarItem | null>(null);
@@ -487,8 +488,9 @@ export const SecretDetail: React.FC = () => {
     } catch (e) {
       setBookmarkFolders([]);
     }
+    const locationState = location.state as { item?: AsrarItem } | null;
     const items = getAsrarItems();
-    const foundItem = items.find((i) => i.id === id);
+    const foundItem = locationState?.item || items.find((i) => i.id === id);
     
     const checkBookmark = (itemId: string) => {
       try {

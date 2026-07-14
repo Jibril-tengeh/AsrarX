@@ -51,3 +51,32 @@ export function getApiUrl(path: string): string {
   console.log(`[getApiUrl] Native Mobile: final fallback to: "${resolved}"`);
   return resolved;
 }
+
+// Global request interceptor to inspect mobile/Capacitor WebView HTTP status codes
+if (typeof window !== 'undefined' && !(window as any).__FETCH_INTERCEPTOR_MOUNTED__) {
+  (window as any).__FETCH_INTERCEPTOR_MOUNTED__ = true;
+  const originalFetch = window.fetch;
+  window.fetch = async function (...args) {
+    try {
+      const response = await originalFetch(...args);
+      const url = typeof args[0] === 'string' ? args[0] : (args[0] as Request).url;
+      
+      // Log non-2xx codes for diagnostic logs (especially 401, 403, 503)
+      if (response.status >= 400) {
+        console.error(
+          `[HTTP INTERCEPTOR] Status ${response.status} on URL: ${url}\n` +
+          `Diagnostic: ${
+            response.status === 401 ? "401 Non autorisé (Utilisateur non connecté ou session expirée)" :
+            response.status === 403 ? "403 Accès interdit (Vérifiez les autorisations CORS ou restrictions réseau IP)" :
+            response.status === 503 ? "503 Service indisponible (Le backend est en cours de maintenance ou surchargé)" :
+            `Code HTTP d'erreur ${response.status}`
+          }`
+        );
+      }
+      return response;
+    } catch (err: any) {
+      console.error(`[HTTP INTERCEPTOR] Network Failure fetching: ${args[0] || 'Unknown'}\nDetails: ${err?.message || err}`);
+      throw err;
+    }
+  };
+}
