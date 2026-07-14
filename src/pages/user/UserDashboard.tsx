@@ -232,14 +232,23 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
           createdAt: data.createdAt ? new Date(data.createdAt).toISOString() : new Date().toISOString()
         } as AsrarItem;
       });
-      setItems(firestoreItems);
-      setIsLoading(false);
-      // Update local offline cache
-      try {
-        localStorage.setItem('asrarhub_cached_articles_list', JSON.stringify(firestoreItems));
-      } catch (e) {
-        console.error("Error writing articles list to cache", e);
+      if (firestoreItems.length > 0) {
+        setItems(firestoreItems);
+        // Update local offline cache
+        try {
+          localStorage.setItem('asrarhub_cached_articles_list', JSON.stringify(firestoreItems));
+        } catch (e) {
+          console.error("Error writing articles list to cache", e);
+        }
+      } else {
+        // Fallback to static initialData if Firestore is empty
+        const defaultItems = getAsrarItems();
+        setItems(defaultItems);
+        try {
+          localStorage.setItem('asrarhub_cached_articles_list', JSON.stringify(defaultItems));
+        } catch (e) {}
       }
+      setIsLoading(false);
     }, (error) => {
       console.error("Error fetching articles for dashboard", error);
       setIsLoading(false);
@@ -248,9 +257,12 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
         const cached = localStorage.getItem('asrarhub_cached_articles_list');
         if (cached) {
           setItems(JSON.parse(cached));
+        } else {
+          setItems(getAsrarItems());
         }
       } catch (e) {
         console.error("Error on fallback to local articles cache", e);
+        setItems(getAsrarItems());
       }
     });
 

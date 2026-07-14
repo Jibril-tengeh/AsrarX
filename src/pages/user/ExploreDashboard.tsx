@@ -6,6 +6,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useFeatures } from '../../contexts/FeatureContext';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
+import { getAsrarItems } from '../../data/store';
 
 import { BannerAd } from '../../components/BannerAd';
 import { PremiumWrapper } from '../../components/PremiumWrapper';
@@ -95,8 +96,49 @@ export const ExploreDashboard: React.FC = () => {
       const allArticles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       // Support filtering by Published
       const publishedArticles = allArticles.filter((art: any) => art.status === 'Published');
-      setArticles(publishedArticles);
-    }, (error) => console.error("Error fetching articles", error));
+      if (publishedArticles.length > 0) {
+        setArticles(publishedArticles);
+        try {
+          localStorage.setItem('asrarhub_cached_explore_articles', JSON.stringify(publishedArticles));
+        } catch (e) {}
+      } else {
+        // Fallback to static articles from store.ts
+        const fallback = getAsrarItems().map(item => ({
+          id: item.id,
+          title: item.title,
+          content: item.content,
+          thumbnail: item.imageUrl,
+          status: 'Published'
+        }));
+        setArticles(fallback);
+      }
+    }, (error) => {
+      console.error("Error fetching articles", error);
+      try {
+        const cached = localStorage.getItem('asrarhub_cached_explore_articles');
+        if (cached) {
+          setArticles(JSON.parse(cached));
+        } else {
+          const fallback = getAsrarItems().map(item => ({
+            id: item.id,
+            title: item.title,
+            content: item.content,
+            thumbnail: item.imageUrl,
+            status: 'Published'
+          }));
+          setArticles(fallback);
+        }
+      } catch (e) {
+        const fallback = getAsrarItems().map(item => ({
+          id: item.id,
+          title: item.title,
+          content: item.content,
+          thumbnail: item.imageUrl,
+          status: 'Published'
+        }));
+        setArticles(fallback);
+      }
+    });
 
     return () => unsubscribe();
   }, []);

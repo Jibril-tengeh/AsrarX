@@ -94,8 +94,25 @@ const checkIndexedDBFunctional = (): Promise<boolean> => {
 };
 
 // Since we now initialize Firestore with persistentLocalCache directly,
-// there is no need to call enableIndexedDbPersistence asynchronously.
-console.log("[Firestore] Persistent IndexedDB cache configured successfully at initialization.");
+// we also explicitly configure enableIndexedDbPersistence to optimize local data caching
+// for mobile browser environments (Capacitor) and ensure maximum stability.
+try {
+  enableIndexedDbPersistence(db)
+    .then(() => {
+      console.log("[Firestore] Explicit IndexedDB persistence enabled successfully.");
+    })
+    .catch((err) => {
+      if (err.code === 'failed-precondition') {
+        console.warn('[Firestore] Persistence failed-precondition (multiple tabs open)');
+      } else if (err.code === 'unimplemented') {
+        console.warn('[Firestore] Persistence unimplemented in this browser');
+      } else {
+        console.error('[Firestore] Error enabling offline persistence:', err);
+      }
+    });
+} catch (e) {
+  console.warn("[Firestore] Error during explicit persistence initialization:", e);
+}
 
 export const googleProvider = new GoogleAuthProvider();
 

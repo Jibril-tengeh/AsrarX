@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { AlertTriangle, X, ChevronDown, ChevronUp, RefreshCw, Wifi, WifiOff, Globe, Database, HelpCircle } from 'lucide-react';
 import { getApiUrl } from '../lib/api';
+import { triggerBackgroundReconnect, addNetworkLog } from '../utils/networkLogger';
 
 interface LoggedError {
   id: string;
@@ -70,6 +71,13 @@ export const ErrorToastContainer: React.FC = () => {
 
       const fbType = checkFirebaseError(event.message || '');
       
+      if (fbType === 'firebase-conn') {
+        triggerBackgroundReconnect();
+        addNetworkLog('error', 'firestore', 'Connexion Firestore perdue ou impossible (Détecté par l\'intercepteur). Déclenchement de la reconnexion automatique...', event.message || '');
+      } else if (fbType === 'ssl-error') {
+        addNetworkLog('error', 'ssl_cors', 'Erreur de connexion sécurisée (SSL) interceptée.', event.message || '');
+      }
+      
       const newErr: LoggedError = {
         id: fbType ? `fb-${fbType}-${Date.now()}` : `err-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
         message: fbType === 'firebase-conn' 
@@ -116,6 +124,13 @@ export const ErrorToastContainer: React.FC = () => {
       ) return;
 
       const fbType = checkFirebaseError(msg);
+
+      if (fbType === 'firebase-conn') {
+        triggerBackgroundReconnect();
+        addNetworkLog('error', 'firestore', 'Connexion Firestore perdue ou impossible (Détecté par rejet de promesse). Déclenchement de la reconnexion automatique...', msg);
+      } else if (fbType === 'ssl-error') {
+        addNetworkLog('error', 'ssl_cors', 'Erreur de connexion sécurisée (SSL) interceptée par rejet de promesse.', msg);
+      }
 
       const newErr: LoggedError = {
         id: fbType ? `fb-${fbType}-${Date.now()}` : `rej-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
@@ -170,6 +185,13 @@ export const ErrorToastContainer: React.FC = () => {
       }
 
       const fbType = checkFirebaseError(message);
+
+      if (fbType === 'firebase-conn') {
+        triggerBackgroundReconnect();
+        addNetworkLog('error', 'firestore', 'Connexion Firestore perdue ou impossible (Détecté via console.error). Déclenchement de la reconnexion automatique...', message);
+      } else if (fbType === 'ssl-error') {
+        addNetworkLog('error', 'ssl_cors', 'Erreur de connexion sécurisée (SSL) interceptée via console.error.', message);
+      }
 
       const newErr: LoggedError = {
         id: fbType ? `fb-${fbType}-${Date.now()}` : `console-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
@@ -361,7 +383,10 @@ export const ErrorToastContainer: React.FC = () => {
                     {isFbConn ? (
                       <>
                         <button
-                          onClick={() => window.location.reload()}
+                          onClick={async () => {
+                            addNetworkLog('info', 'firestore', 'Reconnexion manuelle forcée par l\'utilisateur depuis le toast d\'erreur.');
+                            await triggerBackgroundReconnect();
+                          }}
                           className="bg-amber-600/20 hover:bg-amber-600 text-amber-300 hover:text-white px-2.5 py-1 rounded-lg font-sans font-medium text-[10px] transition-colors cursor-pointer border border-amber-500/30"
                         >
                           🔄 Forcer la reconnexion

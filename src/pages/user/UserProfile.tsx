@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { User, Bell, Clock, Save, Shield, Moon, Sun, Smartphone, Laptop, Tablet, Globe, Trash2, Award, Medal, Star, Target, LogOut, Camera, Image as ImageIcon, RefreshCw, Sparkles, LogIn, ChevronDown, Plus, XCircle, CheckCircle, FileText, BookOpen, ScrollText, Heart, X, Share2 } from 'lucide-react';
+import { User, Bell, Clock, Save, Shield, Moon, Sun, Smartphone, Laptop, Tablet, Globe, Trash2, Award, Medal, Star, Target, LogOut, Camera, Image as ImageIcon, RefreshCw, Sparkles, LogIn, ChevronDown, Plus, XCircle, CheckCircle, FileText, BookOpen, ScrollText, Heart, X, Share2, Wifi, Database, Activity, Terminal } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -12,6 +12,7 @@ import { doc, setDoc, collection, deleteDoc, onSnapshot, updateDoc, query } from
 import { useNavigate, Link } from 'react-router-dom';
 import { getFCMToken, checkNotificationSupport, onMessageListener } from '../../lib/fcm';
 import { getApiUrl } from '../../lib/api';
+import { pingFirestore, getNetworkLogs, clearNetworkLogs, addNetworkLog, triggerBackgroundReconnect, NetworkLog, PingResult } from '../../utils/networkLogger';
 
 interface Reminder {
   id: string;
@@ -158,6 +159,21 @@ export const UserProfile: React.FC = () => {
   const navigate = useNavigate();
   
   const [showAuthModal, setShowAuthModal] = useState(false);
+
+  // --- Network Diagnostics State ---
+  const [diagnosticLogs, setDiagnosticLogs] = useState<NetworkLog[]>(getNetworkLogs());
+  const [pingResult, setPingResult] = useState<PingResult | null>(null);
+  const [isPinging, setIsPinging] = useState(false);
+
+  useEffect(() => {
+    const handleLogsUpdate = () => {
+      setDiagnosticLogs(getNetworkLogs());
+    };
+    window.addEventListener('asrarhub_network_logs_updated', handleLogsUpdate);
+    return () => {
+      window.removeEventListener('asrarhub_network_logs_updated', handleLogsUpdate);
+    };
+  }, []);
 
   // --- Active Sessions State & Logic ---
   interface Session {
@@ -1529,7 +1545,166 @@ export const UserProfile: React.FC = () => {
           {isClearingCache ? 'Nettoyage...' : 'Vider le cache'}
         </button>
       </CollapsibleSection>
-      
+
+      <CollapsibleSection
+        title="Diagnostic & Connexion Firestore"
+        icon={<Activity className="text-emerald-500" size={20} />}
+      >
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-5 leading-relaxed">
+          Analysez l'état de la connexion en temps réel avec les serveurs de base de données Firestore. Ce panneau permet d'identifier les blocages réseau, SSL, CORS ou d'autres anomalies dans les environnements mobiles et de type Capacitor.
+        </p>
+
+        {/* Diagnostic Action Controls */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+          <button
+            onClick={async () => {
+              setIsPinging(true);
+              const res = await pingFirestore();
+              setPingResult(res);
+              setIsPinging(false);
+            }}
+            disabled={isPinging}
+            className="flex items-center justify-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 dark:bg-emerald-900/20 dark:hover:bg-emerald-900/40 dark:text-emerald-400 rounded-xl px-4 py-3 font-bold text-xs transition-colors cursor-pointer"
+          >
+            <Activity size={16} className={isPinging ? "animate-spin" : ""} />
+            {isPinging ? "Vérification en cours..." : "Tester la latence (Ping)"}
+          </button>
+
+          <button
+            onClick={async () => {
+              addNetworkLog('info', 'firestore', 'Reconnexion manuelle initiée par l\'utilisateur.');
+              await triggerBackgroundReconnect();
+            }}
+            className="flex items-center justify-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 dark:text-blue-400 rounded-xl px-4 py-3 font-bold text-xs transition-colors cursor-pointer"
+          >
+            <RefreshCw size={16} />
+            Forcer la reconnexion
+          </button>
+        </div>
+
+        {/* Ping / Latency Result Display */}
+        {pingResult && (
+          <div className={`mb-6 p-4 rounded-2xl border text-sm flex flex-col gap-2 ${
+            pingResult.reachable 
+              ? 'border-emerald-200 bg-emerald-50/20 dark:border-emerald-800/30 dark:bg-emerald-950/10 text-emerald-800 dark:text-emerald-300'
+              : 'border-red-200 bg-red-50/20 dark:border-red-900/30 dark:bg-red-950/10 text-red-800 dark:text-red-300'
+          }`}>
+            <div className="flex items-center justify-between font-bold text-xs uppercase tracking-wider">
+              <span>Résultat du Diagnostic :</span>
+              <span className={`px-2 py-0.5 rounded-full text-[10px] ${
+                pingResult.reachable 
+                  ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400' 
+                  : 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400'
+              }`}>
+                {pingResult.reachable ? 'Connecté / Réseau Ok' : 'Erreur Connexion'}
+              </span>
+            </div>
+            
+            <div className="grid grid-cols-2 gap-4 mt-1 text-xs text-gray-600 dark:text-gray-300">
+              <div>
+                <span className="opacity-70">Latence du serveur :</span>{' '}
+                <strong className={pingResult.reachable ? 'text-emerald-600 dark:text-emerald-400 font-mono text-sm' : 'font-mono'}>
+                  {pingResult.reachable ? `${pingResult.latencyMs} ms` : 'Indisponible'}
+                </strong>
+              </div>
+              <div>
+                <span className="opacity-70">Statut réseau local :</span>{' '}
+                <strong className={navigator.onLine ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}>
+                  {navigator.onLine ? 'En ligne' : 'Hors ligne'}
+                </strong>
+              </div>
+            </div>
+
+            {pingResult.errorMessage && (
+              <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-800 text-xs">
+                <span className="font-bold">Message :</span> {pingResult.errorMessage}
+              </div>
+            )}
+            
+            {pingResult.errorType === 'ssl_cors' && (
+              <div className="mt-1 text-[11px] bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 p-2.5 rounded-xl">
+                ⚠️ <strong>Anomalie SSL ou CORS détectée :</strong> Si vous utilisez une application mobile (Capacitor), assurez-vous que l'heure de votre appareil est parfaitement synchrone et que vous n'êtes pas connecté via un proxy / VPN filtrant.
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Real-time Connection State Summary card */}
+        <div className="bg-gray-50/50 dark:bg-gray-800/30 border border-gray-100 dark:border-gray-700 rounded-2xl p-4 mb-6">
+          <h4 className="font-bold text-gray-900 dark:text-white text-xs mb-3 uppercase tracking-wider flex items-center gap-1.5">
+            <Database size={14} /> Paramètres Réseau Actuels
+          </h4>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4 text-xs">
+            <div className="flex justify-between py-1 border-b border-gray-100 dark:border-gray-800">
+              <span className="text-gray-500">IndexedDB Persistance :</span>
+              <span className="font-semibold text-emerald-600 dark:text-emerald-400">Actif (Optimisé mobile)</span>
+            </div>
+            <div className="flex justify-between py-1 border-b border-gray-100 dark:border-gray-800">
+              <span className="text-gray-500">Long Polling (Capacitor) :</span>
+              <span className="font-semibold text-emerald-600 dark:text-emerald-400">Forcé (experimentalForceLongPolling)</span>
+            </div>
+            <div className="flex justify-between py-1 border-b border-gray-100 dark:border-gray-800">
+              <span className="text-gray-500">Protocole de la page :</span>
+              <span className="font-mono">{window.location.protocol}</span>
+            </div>
+            <div className="flex justify-between py-1 border-b border-gray-100 dark:border-gray-800">
+              <span className="text-gray-500">Origine :</span>
+              <span className="font-mono truncate max-w-[150px]" title={window.location.origin}>{window.location.origin}</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Live Diagnostics Console Log Display */}
+        <div className="border border-gray-100 dark:border-gray-700 rounded-2xl overflow-hidden bg-gray-950">
+          <div className="bg-gray-900 px-4 py-3 flex items-center justify-between border-b border-gray-800">
+            <span className="text-xs font-mono font-bold text-gray-300 flex items-center gap-1.5">
+              <Terminal size={14} className="text-emerald-500" /> Console de Diagnostics Réseau ({diagnosticLogs.length})
+            </span>
+            {diagnosticLogs.length > 0 && (
+              <button
+                onClick={() => clearNetworkLogs()}
+                className="text-[10px] text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 transition-colors px-2.5 py-1 rounded-lg font-mono font-bold cursor-pointer"
+              >
+                Vider
+              </button>
+            )}
+          </div>
+
+          <div className="p-3 font-mono text-[10px] leading-relaxed max-h-56 overflow-y-auto flex flex-col gap-2">
+            {diagnosticLogs.length === 0 ? (
+              <div className="text-center text-gray-500 py-4 italic">
+                Aucun log réseau enregistré pour le moment.
+              </div>
+            ) : (
+              diagnosticLogs.map((log) => {
+                let badgeColor = 'bg-blue-950/40 text-blue-400 border border-blue-500/20';
+                if (log.type === 'error') badgeColor = 'bg-red-950/40 text-red-400 border border-red-500/20';
+                if (log.type === 'success') badgeColor = 'bg-emerald-950/40 text-emerald-400 border border-emerald-500/20';
+                if (log.type === 'retry') badgeColor = 'bg-amber-950/40 text-amber-400 border border-amber-500/20';
+
+                return (
+                  <div key={log.id} className="border-b border-gray-900/50 pb-2 last:border-0 last:pb-0">
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-gray-500 font-light">[{new Date(log.timestamp).toLocaleTimeString()}]</span>
+                      <span className={`text-[8px] font-bold uppercase px-1 rounded ${badgeColor}`}>
+                        {log.type}
+                      </span>
+                      <span className="text-gray-400 font-bold">[{log.category}]</span>
+                      <span className="text-gray-200">{log.message}</span>
+                    </div>
+                    {log.details && (
+                      <div className="mt-1 pl-4 text-gray-500 break-all select-all">
+                        ↳ {log.details}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      </CollapsibleSection>
+
       {/* Article Modal */}
       {selectedFavArticle && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">

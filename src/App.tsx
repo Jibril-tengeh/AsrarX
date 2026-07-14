@@ -94,9 +94,12 @@ const FaqButton = () => {
 };
 
 import { App as CapacitorApp } from '@capacitor/app';
+import { pingFirestore } from './utils/networkLogger';
 
 const NetworkStatus = () => {
   const [isOnline, setIsOnline] = React.useState(navigator.onLine);
+  const [checking, setChecking] = React.useState(false);
+  const [statusFeedback, setStatusFeedback] = React.useState<string | null>(null);
 
   React.useEffect(() => {
     const handleOnline = () => {
@@ -136,12 +139,46 @@ const NetworkStatus = () => {
     };
   }, []);
 
+  const handleCheckStatus = async () => {
+    setChecking(true);
+    setStatusFeedback("Vérification...");
+    try {
+      const result = await pingFirestore();
+      if (result.reachable) {
+        setStatusFeedback(`Serveur OK (Latence: ${result.latencyMs}ms)`);
+      } else {
+        setStatusFeedback(`Serveur injoignable : ${result.errorMessage || 'Erreur réseau'}`);
+      }
+    } catch (err) {
+      setStatusFeedback("Échec du diagnostic de connexion.");
+    } finally {
+      setChecking(false);
+      setTimeout(() => setStatusFeedback(null), 6000);
+    }
+  };
+
   if (isOnline) return null;
 
   return (
-    <div className="fixed top-0 left-0 right-0 z-[10001] bg-red-600 text-white text-center py-2 text-xs font-semibold shadow-md flex items-center justify-center gap-1.5 animate-bounce">
-      <span className="w-2 h-2 rounded-full bg-white animate-ping" />
-      Connexion Internet perdue. Mode hors ligne activé.
+    <div className="fixed top-0 left-0 right-0 z-[10001] bg-red-600 text-white text-center py-2 text-xs font-semibold shadow-md flex flex-col sm:flex-row items-center justify-center gap-2 px-4 animate-bounce">
+      <div className="flex items-center gap-1.5">
+        <span className="w-2 h-2 rounded-full bg-white animate-ping" />
+        <span>Connexion Internet perdue. Mode hors ligne activé.</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <button 
+          onClick={handleCheckStatus}
+          disabled={checking}
+          className="px-2 py-0.5 bg-white text-red-600 hover:bg-red-50 disabled:bg-white/50 rounded text-[10px] font-bold transition-all cursor-pointer border-0 uppercase tracking-wider"
+        >
+          {checking ? "Analyse..." : "Vérifier le statut"}
+        </button>
+        {statusFeedback && (
+          <span className="text-[10px] bg-red-800 border border-red-700 px-2 py-0.5 rounded font-mono">
+            {statusFeedback}
+          </span>
+        )}
+      </div>
     </div>
   );
 };
