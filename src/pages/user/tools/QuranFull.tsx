@@ -15,6 +15,7 @@ import { downloadAudioForOffline } from '../../../lib/offlineAudio';
 import { DownloadCloud, CheckSquare } from 'lucide-react';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { AuthModal } from '../../../components/AuthModal';
+import { getApiUrl } from '../../../lib/api';
 
 const QURAN_RECITERS = [
   { id: 'alafasy', name: 'Mishary Rashid Alafasy', server: 'https://server8.mp3quran.net/afs/', apiId: 'ar.alafasy' },
@@ -190,7 +191,7 @@ export const QuranFull: React.FC = () => {
         }
 
         if (!quranData) {
-          const qResponse = await fetch('/quran.json');
+          const qResponse = await fetch(getApiUrl('/quran.json'));
           if (qResponse.ok) {
             quranData = await qResponse.json();
             if (quranData && Array.isArray(quranData)) {
@@ -479,7 +480,7 @@ export const QuranFull: React.FC = () => {
         }
 
         if (!quranData) {
-          const qResponse = await fetch('/quran.json');
+          const qResponse = await fetch(getApiUrl('/quran.json'));
           if (qResponse.ok) {
             quranData = await qResponse.json();
             if (quranData && Array.isArray(quranData)) {
@@ -613,7 +614,7 @@ export const QuranFull: React.FC = () => {
         }
 
         if (!quranData) {
-          const qResponse = await fetch('/quran.json');
+          const qResponse = await fetch(getApiUrl('/quran.json'));
           if (!qResponse.ok) return [];
           quranData = await qResponse.json();
           if (quranData && Array.isArray(quranData)) {
@@ -1224,7 +1225,7 @@ export const QuranFull: React.FC = () => {
       // console.log(`[QuranFull] Fetching targetUrl: ${targetUrl} (isLocalIntercept: ${isLocalIntercept})`);
       let data;
       try {
-        const res = await fetch(targetUrl);
+        const res = await fetch(getApiUrl(targetUrl));
         // console.log(`[QuranFull] Fetch res status for ${targetUrl}: ${res.status}`);
         
         if (!res.ok) {

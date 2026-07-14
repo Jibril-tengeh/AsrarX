@@ -380,7 +380,7 @@ export const NamesOfAllah: React.FC = () => {
           setLoadingQuran(false);
           // If online, refresh cache in background
           if (navigator.onLine) {
-            fetch('/quran.json')
+            fetch(getApiUrl('/quran.json'))
               .then(res => res.json())
               .then(freshData => {
                 if (Array.isArray(freshData)) {
@@ -394,7 +394,7 @@ export const NamesOfAllah: React.FC = () => {
         }
 
         // Fetch from network
-        const res = await fetch('/quran.json');
+        const res = await fetch(getApiUrl('/quran.json'));
         if (!res.ok) throw new Error("Failed to fetch quran.json");
         const data = await res.json();
         if (Array.isArray(data)) {

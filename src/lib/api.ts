@@ -10,6 +10,22 @@ export function getApiUrl(path: string): string {
   const cleanPath = path.startsWith('/') ? path : `/${path}`;
   const origin = window.location.origin;
 
+  // For static local assets (non-API endpoints like .json files),
+  // always resolve them relative to the current local origin (webview or browser).
+  // This keeps fetches local/offline-first and avoids CORS errors.
+  if (!cleanPath.startsWith('/api/')) {
+    return `${origin}${cleanPath}`;
+  }
+
+  // If the page is served over http:// or https://, we should ALWAYS use the current web origin as the API backend base.
+  // This completely avoids cross-origin CORS / SSL issues and ensures that a web preview or a web-hosted app
+  // (even if loaded inside a Capacitor webview via live-reload) communicates with its own matching backend server.
+  if (origin.startsWith('http://') || origin.startsWith('https://')) {
+    const resolved = `${origin}${cleanPath}`;
+    console.log(`[getApiUrl] HTTP/HTTPS origin detected. Resolving API to matching origin: "${resolved}"`);
+    return resolved;
+  }
+
   // Detect if we are running in a real mobile/Capacitor container (native/emulator)
   const isNativeMobile = 
     origin.startsWith('capacitor:') || 

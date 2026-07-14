@@ -58,6 +58,7 @@ import { Onboarding } from './pages/Onboarding';
 import { DailyRewardHandler } from './components/DailyRewardHandler';
 
 import { MaintenanceOverlay } from './components/MaintenanceOverlay';
+import { getApiUrl } from './lib/api';
 import { FloatingBackButton } from './components/FloatingBackButton';
 import { Link } from 'react-router-dom';
 import { ErrorToastContainer } from './components/ErrorToastContainer';
@@ -302,7 +303,7 @@ export default function App() {
       import('idb-keyval').then(({ get, set }) => {
         get('asrar_quran_full_json').then(cached => {
           if (!cached) {
-            fetch('/quran.json')
+            fetch(getApiUrl('/quran.json'))
               .then(res => {
                 if (res.ok) return res.json();
                 throw new Error();

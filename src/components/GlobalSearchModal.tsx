@@ -7,6 +7,7 @@ import { getAsrarItems } from '../data/store';
 import { db } from '../lib/firebase';
 import { collection, onSnapshot, query as fsQuery, where } from 'firebase/firestore';
 import { asmaListData } from '../data/asmaListData';
+import { getApiUrl } from '../lib/api';
 
 interface GlobalSearchModalProps {
   isOpen: boolean;
@@ -62,7 +63,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, on
 
   // Fetch surahs for search indexing
   useEffect(() => {
-    fetch('/data/quran/surahs.json')
+    fetch(getApiUrl('/data/quran/surahs.json'))
       .then((res) => res.json())
       .then((data) => {
         if (data && data.data) {
