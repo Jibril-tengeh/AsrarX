@@ -6,7 +6,7 @@ import { getApiUrl } from '../lib/api';
 interface LoggedError {
   id: string;
   message: string;
-  type: 'error' | 'rejection' | 'console' | 'firebase-conn' | 'firebase-perm';
+  type: 'error' | 'rejection' | 'console' | 'firebase-conn' | 'firebase-perm' | 'ssl-error';
   timestamp: Date;
   details?: string;
 }
@@ -25,10 +25,20 @@ export const ErrorToastContainer: React.FC = () => {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    // Helper to identify specific Firebase/Firestore connection or permission issues
-    const checkFirebaseError = (msg: string): 'firebase-conn' | 'firebase-perm' | null => {
+    // Helper to identify specific Firebase/Firestore connection, permission, or SSL issues
+    const checkFirebaseError = (msg: string): 'firebase-conn' | 'firebase-perm' | 'ssl-error' | null => {
       if (!msg) return null;
       const lowercaseMsg = msg.toLowerCase();
+      if (
+        lowercaseMsg.includes('sslhandshake') ||
+        lowercaseMsg.includes('ssl handshake') ||
+        lowercaseMsg.includes('cert_has_expired') ||
+        lowercaseMsg.includes('certificate') ||
+        lowercaseMsg.includes('sslhandshakeexception') ||
+        lowercaseMsg.includes('connection closed') && lowercaseMsg.includes('ssl')
+      ) {
+        return 'ssl-error';
+      }
       if (
         lowercaseMsg.includes('could not reach cloud firestore backend') ||
         lowercaseMsg.includes('code=unavailable') ||
@@ -66,7 +76,9 @@ export const ErrorToastContainer: React.FC = () => {
           ? "Connexion Firestore impossible. L'application utilise les données locales persistées de manière fluide." 
           : fbType === 'firebase-perm' 
             ? "Accès refusé par le serveur de sécurité. Vos droits d'accès ou votre session ont expiré."
-            : event.message || "Erreur d'exécution inattendue",
+            : fbType === 'ssl-error'
+              ? "Erreur de connexion sécurisée (SSL). Veuillez vérifier que la date/heure de votre téléphone est correcte, ou utilisez une autre connexion réseau."
+              : event.message || "Erreur d'exécution inattendue",
         type: fbType || 'error',
         timestamp: new Date(),
         details: event.error ? String(event.error.stack || event.error) : `Fichier: ${event.filename}:${event.lineno}:${event.colno}`,
@@ -111,7 +123,9 @@ export const ErrorToastContainer: React.FC = () => {
           ? "Connexion Firestore impossible. L'application utilise les données locales persistées de manière fluide." 
           : fbType === 'firebase-perm' 
             ? "Accès refusé par le serveur de sécurité. Vos droits d'accès ou votre session ont expiré."
-            : msg,
+            : fbType === 'ssl-error'
+              ? "Erreur de connexion sécurisée (SSL). Veuillez vérifier que la date/heure de votre téléphone est correcte, ou utilisez une autre connexion réseau."
+              : msg,
         type: fbType || 'rejection',
         timestamp: new Date(),
         details: details || "Rejet de promesse asynchrone (ex: fetch échoué)",
@@ -163,7 +177,9 @@ export const ErrorToastContainer: React.FC = () => {
           ? "Connexion Firestore impossible. L'application utilise les données locales persistées de manière fluide."
           : fbType === 'firebase-perm'
             ? "Accès refusé par le serveur de sécurité. Vos droits d'accès ou votre session ont expiré."
-            : (message.length > 150 ? message.substring(0, 150) + "..." : message),
+            : fbType === 'ssl-error'
+              ? "Erreur de connexion sécurisée (SSL). Veuillez vérifier que la date/heure de votre téléphone est correcte, ou utilisez une autre connexion réseau."
+              : (message.length > 150 ? message.substring(0, 150) + "..." : message),
         type: fbType || 'console',
         timestamp: new Date(),
         details: args.map(a => (a instanceof Error ? a.stack : String(a))).join('\n'),
@@ -275,6 +291,7 @@ export const ErrorToastContainer: React.FC = () => {
           {errors.map(err => {
             const isFbConn = err.type === 'firebase-conn';
             const isFbPerm = err.type === 'firebase-perm';
+            const isSslError = err.type === 'ssl-error';
 
             let containerClass = "bg-gray-900 border border-red-500/40 text-gray-100 rounded-xl p-3.5 shadow-2xl flex flex-col text-xs";
             let iconColor = "text-red-400";
@@ -288,6 +305,10 @@ export const ErrorToastContainer: React.FC = () => {
               containerClass = "bg-gray-900/95 border border-purple-500/50 text-gray-100 rounded-xl p-3.5 shadow-[0_4px_20px_rgba(168,85,247,0.2)] flex flex-col text-xs backdrop-blur-md";
               iconColor = "text-purple-400";
               badgeText = "Droits d'accès expirés";
+            } else if (isSslError) {
+              containerClass = "bg-gray-900/95 border border-amber-500/50 text-gray-100 rounded-xl p-3.5 shadow-[0_4px_20px_rgba(245,158,11,0.2)] flex flex-col text-xs backdrop-blur-md";
+              iconColor = "text-amber-400";
+              badgeText = "Sécurité Connexion (SSL)";
             } else if (err.type === 'rejection') {
               badgeText = "Erreur Réseau / Promesse";
             }
@@ -334,8 +355,8 @@ export const ErrorToastContainer: React.FC = () => {
                   {err.message}
                 </div>
 
-                {/* Always show custom quick guide buttons for Firebase errors */}
-                {(isFbConn || isFbPerm) && (
+                {/* Always show custom quick guide buttons for Firebase & SSL errors */}
+                {(isFbConn || isFbPerm || isSslError) && (
                   <div className="mt-2.5 pt-2 border-t border-gray-800/60 flex flex-wrap gap-2">
                     {isFbConn ? (
                       <>
@@ -349,7 +370,7 @@ export const ErrorToastContainer: React.FC = () => {
                           Vos modifications sont en sécurité localement.
                         </span>
                       </>
-                    ) : (
+                    ) : isFbPerm ? (
                       <>
                         <button
                           onClick={() => {
@@ -364,6 +385,21 @@ export const ErrorToastContainer: React.FC = () => {
                           Rafraîchit vos jetons de sécurité.
                         </span>
                       </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => {
+                            setShowDiagnosticModal(true);
+                            runDiagnostics();
+                          }}
+                          className="bg-amber-600/20 hover:bg-amber-600 text-amber-300 hover:text-white px-2.5 py-1 rounded-lg font-sans font-medium text-[10px] transition-colors cursor-pointer border border-amber-500/30"
+                        >
+                          ⚙️ Résoudre le problème SSL
+                        </button>
+                        <span className="text-[9px] text-gray-400 self-center">
+                          Cliquez pour lancer le diagnostic de sécurité.
+                        </span>
+                      </>
                     )}
                   </div>
                 )}
@@ -375,7 +411,7 @@ export const ErrorToastContainer: React.FC = () => {
                     className="mt-2 pt-2 border-t border-gray-800 text-gray-400 font-mono text-[10px] overflow-x-auto max-h-32 whitespace-pre-wrap"
                   >
                     {err.details}
-                    {!isFbConn && !isFbPerm && (
+                    {!isFbConn && !isFbPerm && !isSslError && (
                       <div className="mt-3 flex gap-2">
                         <button
                           onClick={() => {
