@@ -121,7 +121,7 @@ export const SecretDetail: React.FC = () => {
         return;
       }
     } catch (e) {
-      console.error("Error reading translation cache", e);
+      console.warn("Error reading translation cache", e);
     }
 
     const translateArticle = async () => {
@@ -148,7 +148,7 @@ export const SecretDetail: React.FC = () => {
           }),
         });
 
-        if (res.ok) {
+        if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
           const data = await res.json();
           if (data && data.title) {
             localStorage.setItem(cacheKey, JSON.stringify(data));
@@ -163,9 +163,11 @@ export const SecretDetail: React.FC = () => {
               };
             });
           }
+        } else {
+          console.warn("[SecretDetail] Translation request failed or returned invalid content format:", res.status);
         }
       } catch (err) {
-        console.error("Automatic translation error:", err);
+        console.warn("[SecretDetail] Background automatic translation warning (falling back to original):", err);
       } finally {
         setIsTranslating(false);
       }

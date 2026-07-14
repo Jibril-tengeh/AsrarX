@@ -245,7 +245,7 @@ export const NamesOfAllah: React.FC = () => {
         return;
       }
     } catch (e) {
-      console.error("Error reading Name of Allah translation cache:", e);
+      console.warn("Error reading Name of Allah translation cache:", e);
     }
 
     const translateFields = async () => {
@@ -269,15 +269,17 @@ export const NamesOfAllah: React.FC = () => {
           }),
         });
 
-        if (res.ok) {
+        if (res.ok && res.headers.get('content-type')?.includes('application/json')) {
           const data = await res.json();
           if (data) {
             localStorage.setItem(cacheKey, JSON.stringify(data));
             setTranslatedFields(data);
           }
+        } else {
+          console.warn("[NamesOfAllah] Translation request failed or returned invalid content:", res.status);
         }
       } catch (err) {
-        console.error("Name of Allah translation error:", err);
+        console.warn("[NamesOfAllah] Name of Allah translation warning:", err);
       } finally {
         setTranslatingName(false);
       }
