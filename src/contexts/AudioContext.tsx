@@ -41,6 +41,8 @@ interface AudioContextType {
   volume: number;
   quranRepeatCount: number;
   setQuranRepeatCount: (count: number) => void;
+  quranRangeRepeatCount: number;
+  setQuranRangeRepeatCount: (count: number) => void;
 }
 
 const AudioContext = createContext<AudioContextType | undefined>(undefined);
@@ -74,6 +76,24 @@ export const AudioProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       console.warn("Failed to save repeat count", e);
     }
   };
+
+  const [quranRangeRepeatCount, setQuranRangeRepeatCountState] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('asrarhub_quran_range_repeat_count');
+      return saved ? parseInt(saved, 10) : 0;
+    } catch {
+      return 0;
+    }
+  });
+
+  const setQuranRangeRepeatCount = (count: number) => {
+    setQuranRangeRepeatCountState(count);
+    try {
+      localStorage.setItem('asrarhub_quran_range_repeat_count', String(count));
+    } catch (e) {
+      console.warn("Failed to save range repeat count", e);
+    }
+  };
   const audioContextRef = useRef<AudioContext | null>(null);
   const sourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null);
   const delayNodeRef = useRef<DelayNode | null>(null);
@@ -81,15 +101,20 @@ export const AudioProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const filterNodeRef = useRef<BiquadFilterNode | null>(null);
   const webAudioInitialized = useRef(false);
   const globalRepeatLeftRef = useRef<number>(0);
+  const globalRangeRepeatLeftRef = useRef<number>(0);
 
   useEffect(() => {
     globalRepeatLeftRef.current = quranRepeatCount > 0 ? quranRepeatCount - 1 : 0;
   }, [quranRepeatCount]);
 
+  useEffect(() => {
+    globalRangeRepeatLeftRef.current = quranRangeRepeatCount > 0 ? quranRangeRepeatCount - 1 : 0;
+  }, [quranRangeRepeatCount]);
+
   const audioRef = useRef<HTMLAudioElement | null>(null);
   
   // Use refs for state accessed in event listeners
-  const stateRef = useRef({ playlist, currentIndex, loopMode, currentSubIndex, currentTrack });
+  const stateRef = useRef({ playlist, currentIndex, loopMode, currentSubIndex, currentTrack, quranRepeatCount, quranRangeRepeatCount });
 
   const initWebAudio = () => {
     if (webAudioInitialized.current || !audioRef.current) return;
@@ -172,8 +197,8 @@ export const AudioProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   };
 
   useEffect(() => {
-    stateRef.current = { playlist, currentIndex, loopMode, currentSubIndex, currentTrack };
-  }, [playlist, currentIndex, loopMode, currentSubIndex, currentTrack]);
+    stateRef.current = { playlist, currentIndex, loopMode, currentSubIndex, currentTrack, quranRepeatCount, quranRangeRepeatCount };
+  }, [playlist, currentIndex, loopMode, currentSubIndex, currentTrack, quranRepeatCount, quranRangeRepeatCount]);
 
   useEffect(() => {
     audioRef.current = new Audio();
@@ -191,7 +216,7 @@ export const AudioProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     };
 
     const handleEnded = () => {
-      const { playlist: currentPlaylist, currentIndex: currentIdx, loopMode: currentLoopMode, currentSubIndex: currSubIdx, currentTrack: currTrack } = stateRef.current;
+      const { playlist: currentPlaylist, currentIndex: currentIdx, loopMode: currentLoopMode, currentSubIndex: currSubIdx, currentTrack: currTrack, quranRepeatCount: currentRepeatCount } = stateRef.current;
       
       if (globalRepeatLeftRef.current > 0) {
         globalRepeatLeftRef.current -= 1;
@@ -214,6 +239,13 @@ export const AudioProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         setCurrentIndex(newIndex);
         setCurrentSubIndex(currentPlaylist[newIndex]?.isCollection ? 0 : -1);
         setCurrentTrack(currentPlaylist[newIndex]);
+        globalRepeatLeftRef.current = currentRepeatCount > 0 ? currentRepeatCount - 1 : 0;
+      } else if (globalRangeRepeatLeftRef.current > 0) {
+        globalRangeRepeatLeftRef.current -= 1;
+        setCurrentIndex(0);
+        setCurrentSubIndex(currentPlaylist[0]?.isCollection ? 0 : -1);
+        setCurrentTrack(currentPlaylist[0]);
+        globalRepeatLeftRef.current = currentRepeatCount > 0 ? currentRepeatCount - 1 : 0;
       } else if (currentLoopMode === 'playlist' && currentPlaylist.length > 0) {
         setCurrentIndex(0);
         setCurrentSubIndex(currentPlaylist[0]?.isCollection ? 0 : -1);
@@ -546,7 +578,9 @@ export const AudioProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       setVolume,
       volume,
       quranRepeatCount,
-      setQuranRepeatCount
+      setQuranRepeatCount,
+      quranRangeRepeatCount,
+      setQuranRangeRepeatCount
     }}>
       {children}
     </AudioContext.Provider>

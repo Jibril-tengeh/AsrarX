@@ -16,14 +16,7 @@ import { DownloadCloud, CheckSquare, Sparkles } from 'lucide-react';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { AuthModal } from '../../../components/AuthModal';
 import { getApiUrl } from '../../../lib/api';
-
-const QURAN_RECITERS = [
-  { id: 'alafasy', name: 'Mishary Rashid Alafasy', server: 'https://server8.mp3quran.net/afs/', apiId: 'ar.alafasy' },
-  { id: 'sudais', name: 'Abdur Rahman As-Sudais', server: 'https://server11.mp3quran.net/sds/', apiId: 'ar.abdurrahmaansudais' },
-  { id: 'shuraym', name: 'Saud Al-Shuraim', server: 'https://server7.mp3quran.net/shur/', apiId: 'ar.saoodshuraym' },
-  { id: 'husary', name: 'Mahmoud Khalil Al-Husary', server: 'https://server13.mp3quran.net/husr/', apiId: 'ar.husary' },
-  { id: 'maher', name: 'Maher Al Muaiqly', server: 'https://server12.mp3quran.net/maher/', apiId: 'ar.mahermuaiqly' }
-];
+import { QURAN_RECITERS } from '../../../data/reciters';
 
 const MUSHAF_OPTIONS = [
   { id: 'Amiri Quran', name: 'Uthmani (Amiri)', desc: 'Standard Uthmani script', preview: 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ\n\nأَرَءَيْتَ ٱلَّذِى يُكَذِّبُ بِٱلدِّينِ ﴿١﴾', style: {fontFamily: '"Amiri Quran", "Amiri", serif'} },
@@ -1124,19 +1117,44 @@ export const QuranFull: React.FC = () => {
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
 
   const [selectedReciterId, setSelectedReciterId] = useState(QURAN_RECITERS[0].id);
-  const { playTrack, playPlaylist, currentTrack, isPlaying: globalIsPlaying, pause: globalPause, resume: globalResume, quranRepeatCount: repeatCount, setQuranRepeatCount: setRepeatCount } = useAudio();
+  const { 
+    playTrack, 
+    playPlaylist, 
+    currentTrack, 
+    playlist,
+    isPlaying: globalIsPlaying, 
+    pause: globalPause, 
+    resume: globalResume, 
+    quranRepeatCount: repeatCount, 
+    setQuranRepeatCount: setRepeatCount,
+    quranRangeRepeatCount: rangeRepeatCountState,
+    setQuranRangeRepeatCount: setRangeRepeatCountState
+  } = useAudio();
 
   const [playingAyah, setPlayingAyah] = useState<number | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [autoPlayNext, setAutoPlayNext] = useState(true);
   const [autoPlayFirstAyah, setAutoPlayFirstAyah] = useState(false);
   const ROQYA_REPEAT_COUNTS = [0, 3, 7, 11, 21, 33, 41, 70, 71, 73, 111, 313, 666, 777, 786, 1000, 1111];
+
+  // Range-based repetition states
+  const [rangeStartVerse, setRangeStartVerse] = useState<number>(1);
+  const [rangeEndVerse, setRangeEndVerse] = useState<number>(1);
+  const [rangeRepeatValue, setRangeRepeatValue] = useState<number>(1); // default 1 play (no repeat)
+  const [rangeRepeatMode, setRangeRepeatMode] = useState<'verse' | 'range'>('range');
   
   // Custom Toast State
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const showToast = (msg: string) => {
     setToastMessage(msg);
   };
+
+  useEffect(() => {
+    if (surahArabic && surahArabic.ayahs && surahArabic.ayahs.length > 0) {
+      setRangeStartVerse(1);
+      setRangeEndVerse(surahArabic.ayahs.length);
+    }
+  }, [surahArabic]);
 
   useEffect(() => {
     if (toastMessage) {
@@ -1669,6 +1687,53 @@ export const QuranFull: React.FC = () => {
     }
   }, [selectedReciterId]);
 
+  // Instant switch recitation when reciter is changed
+  useEffect(() => {
+    if (currentTrack && globalIsPlaying) {
+      const reciter = QURAN_RECITERS.find(r => r.id === selectedReciterId) || QURAN_RECITERS[0];
+      const reciterApiId = reciter.apiId || 'ar.alafasy';
+      
+      if (currentTrack.id.startsWith("surah-")) {
+        // Continuous surah playback
+        const parts = currentTrack.id.split("-");
+        const currentPlayingSurahNum = parseInt(parts[1], 10);
+        if (currentPlayingSurahNum) {
+          const playlistTracks = surahs.map(s => {
+            const surahNumStr = String(s.number).padStart(3, '0');
+            return {
+              id: `surah-${s.number}-${reciter.id}`,
+              title: `Sourate ${s.englishName}`,
+              artist: reciter.name,
+              url: `${reciter.server}${surahNumStr}.mp3`
+            };
+          });
+          const startIndex = surahs.findIndex(s => s.number === currentPlayingSurahNum);
+          if (startIndex !== -1) {
+            playPlaylist(playlistTracks, startIndex);
+          }
+        }
+      } else if (currentTrack.id.startsWith("quran-") && surahArabic && surahArabic.ayahs) {
+        // Individual verse playlist or range playlist
+        // Update all URLs and artists of the current playlist with the new reciter
+        const currentIdx = playlist.findIndex(t => t.id === currentTrack.id);
+        const newPlaylist = playlist.map(t => {
+          if (t.id.startsWith("quran-") && t.surahNumber && t.ayahNumber) {
+            const globalAyahNum = surahArabic.ayahs.find(a => a.numberInSurah === t.ayahNumber)?.number || t.ayahNumber;
+            return {
+              ...t,
+              artist: reciter.name,
+              url: `https://cdn.islamic.network/quran/audio/128/${reciterApiId}/${globalAyahNum}.mp3`
+            };
+          }
+          return t;
+        });
+        if (currentIdx !== -1) {
+          playPlaylist(newPlaylist, currentIdx);
+        }
+      }
+    }
+  }, [selectedReciterId, surahArabic]);
+
   // Sync local playing state with global AudioPlayer
   useEffect(() => {
     if (globalIsPlaying && currentTrack?.isQuranVerse && currentTrack.surahNumber === activeSurah) {
@@ -2037,6 +2102,56 @@ export const QuranFull: React.FC = () => {
         });
       }
     }
+  };
+
+  const playSelectedRange = () => {
+    if (!surahArabic || !surahArabic.ayahs || surahArabic.ayahs.length === 0) return;
+
+    // Validate range
+    const start = Math.min(rangeStartVerse, rangeEndVerse);
+    const end = Math.max(rangeStartVerse, rangeEndVerse);
+
+    // Filter ayahs to play
+    const selectedAyahsToPlay = surahArabic.ayahs.filter(a => a.numberInSurah >= start && a.numberInSurah <= end);
+
+    if (selectedAyahsToPlay.length === 0) {
+      showToast("Aucun verset trouvé dans cette plage.");
+      return;
+    }
+
+    // Stop local individual player
+    if (audioRef.current) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+      setPlayingAyah(null);
+    }
+
+    // Map to Track structures
+    const playlistTracks = selectedAyahsToPlay.map(a => ({
+      id: `quran-${activeSurah}-${a.numberInSurah}`,
+      title: `Verset ${a.numberInSurah} - Sourate ${surahArabic.name || activeSurah}`,
+      url: a.audio || '',
+      artist: QURAN_RECITERS.find(r => r.id === selectedReciterId)?.name || 'Qari',
+      coverImage: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=500',
+      isQuranVerse: true,
+      surahNumber: activeSurah,
+      ayahNumber: a.numberInSurah
+    }));
+
+    // Configure repeat counts
+    if (rangeRepeatMode === 'verse') {
+      // Repeat each verse N times
+      setRepeatCount(rangeRepeatValue);
+      setRangeRepeatCountState(0);
+    } else {
+      // Repeat the whole range N times
+      setRepeatCount(0);
+      setRangeRepeatCountState(rangeRepeatValue);
+    }
+
+    // Play the playlist from the beginning (index 0)
+    playPlaylist(playlistTracks, 0);
+    showToast(`Lecture de la plage ${start}-${end} démarrée (${rangeRepeatMode === 'verse' ? 'Répétition par verset' : 'Répétition de la sélection'} : ${rangeRepeatValue === 0 ? 'aucune' : `${rangeRepeatValue}x`})`);
   };
 
   const filteredSurahs = surahs.filter(s => {
@@ -2705,8 +2820,20 @@ export const QuranFull: React.FC = () => {
                          onChange={(e) => setSelectedReciterId(e.target.value)}
                          className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
                        >
-                         {QURAN_RECITERS.map(r => (
-                           <option key={r.id} value={r.id}>{r.name}</option>
+                         {Object.entries(
+                           QURAN_RECITERS.reduce((acc, r) => {
+                             if (!acc[r.country]) acc[r.country] = [];
+                             acc[r.country].push(r);
+                             return acc;
+                           }, {} as Record<string, typeof QURAN_RECITERS>)
+                         ).map(([country, reciters]) => (
+                           <optgroup key={country} label={country} className="font-bold text-gray-950 dark:text-gray-100 bg-white dark:bg-gray-900">
+                             {reciters.map(r => (
+                               <option key={r.id} value={r.id} className="font-normal text-gray-700 dark:text-gray-300">
+                                 {r.name} {r.nameAr ? `(${r.nameAr})` : ''}
+                               </option>
+                             ))}
+                           </optgroup>
                          ))}
                        </select>
                      </div>
@@ -2992,6 +3119,97 @@ export const QuranFull: React.FC = () => {
                               ))}
                             </div>
                           </div>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+                          <Sliders size={18} className="text-emerald-500" /> Répétition d'une Sélection de Versets (Plage)
+                        </label>
+                        <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-5 border border-gray-100 dark:border-gray-800 space-y-4">
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            Sélectionnez une plage de versets à répéter (idéal pour mémoriser des passages spécifiques).
+                          </p>
+
+                          <div className="grid grid-cols-2 gap-4">
+                            <div>
+                              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Du verset (Début)</label>
+                              <select
+                                value={rangeStartVerse}
+                                onChange={(e) => setRangeStartVerse(Number(e.target.value))}
+                                className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-semibold"
+                              >
+                                {surahArabic?.ayahs?.map(a => (
+                                  <option key={`start-${a.numberInSurah}`} value={a.numberInSurah}>
+                                    Verset {a.numberInSurah}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">Au verset (Fin)</label>
+                              <select
+                                value={rangeEndVerse}
+                                onChange={(e) => setRangeEndVerse(Number(e.target.value))}
+                                className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-semibold"
+                              >
+                                {surahArabic?.ayahs?.map(a => (
+                                  <option key={`end-${a.numberInSurah}`} value={a.numberInSurah}>
+                                    Verset {a.numberInSurah}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 font-semibold">Mode de répétition</label>
+                            <div className="grid grid-cols-2 gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setRangeRepeatMode('range')}
+                                className={`px-3 py-2 rounded-lg text-xs font-bold border transition-colors ${rangeRepeatMode === 'range' ? 'bg-emerald-500 border-emerald-500 text-white shadow-sm' : 'bg-white border-gray-200 text-gray-600 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400'}`}
+                              >
+                                Répéter toute la sélection (ex: 1-3, 1-3, ...)
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setRangeRepeatMode('verse')}
+                                className={`px-3 py-2 rounded-lg text-xs font-bold border transition-colors ${rangeRepeatMode === 'verse' ? 'bg-emerald-500 border-emerald-500 text-white shadow-sm' : 'bg-white border-gray-200 text-gray-600 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400'}`}
+                              >
+                                Répéter chaque verset (ex: 1,1,1, 2,2,2, ...)
+                              </button>
+                            </div>
+                          </div>
+
+                          <div>
+                            <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-2 font-semibold">Nombre de répétitions</label>
+                            <div className="flex flex-wrap gap-1.5">
+                              {[1, 2, 3, 5, 10, 20, 50].map((count) => (
+                                <button
+                                  key={`range-rep-${count}`}
+                                  type="button"
+                                  onClick={() => setRangeRepeatValue(count)}
+                                  className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${rangeRepeatValue === count ? 'bg-amber-500 border-amber-500 text-white shadow-sm' : 'bg-white border-gray-200 text-gray-600 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-400 hover:border-amber-400'}`}
+                                >
+                                  {count === 1 ? 'Une seule fois' : `${count}x`}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              playSelectedRange();
+                              setShowSettings(false); // Close modal
+                            }}
+                            className="w-full mt-2 bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] transition-all text-white font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 shadow-md hover:shadow-emerald-600/25"
+                          >
+                            <Play size={18} fill="currentColor" />
+                            Lancer la lecture de la sélection ({rangeStartVerse}-{rangeEndVerse})
+                          </button>
                         </div>
                       </div>
 
