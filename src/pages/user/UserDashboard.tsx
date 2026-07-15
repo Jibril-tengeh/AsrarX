@@ -15,7 +15,7 @@ import { getAsrarItems } from '../../data/store';
 import { AsrarItem, Category } from '../../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLocation, Link } from 'react-router-dom';
-import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
+
 import { getApiUrl } from '../../lib/api';
 
 interface Props {
@@ -473,17 +473,6 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
             </motion.div>
           )}
         </AnimatePresence>
-
-        {featureToggles['tool_ruqyah'] !== 'inactive' && (
-          <Link
-            id="tour-ruqyah"
-            to="/tools/ruqyah"
-            className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800/50 hover:bg-blue-100 dark:hover:bg-blue-900/50 h-[34px] w-[34px] sm:h-[42px] sm:w-[42px] flex items-center justify-center shadow-sm flex-shrink-0 transition-opacity duration-200 ${isSearchOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
-            title="Roqya"
-          >
-            <Music className="w-[15px] h-[15px] sm:w-[18px] sm:h-[18px]" />
-          </Link>
-        )}
 
         {featureToggles['tool_store'] !== 'inactive' && (
           <Link

@@ -101,17 +101,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, on
         icon: <Sparkles className="text-emerald-500" size={16} />,
         keywords: ['wird', 'perso', 'personal', 'nom', 'divin', 'prenom', 'astral', 'resonance', 'names', 'allah']
       },
-      {
-        id: 'ruqyah',
-        title: isFr ? 'Ruqyah & Protection' : isHa ? 'Ruqyah da Tsari' : 'Ruqyah & Protection',
-        description: isFr 
-          ? 'Ecoutez et lisez des versets de guérison et des invocations de protection spirituelle.' 
-          : isHa ? 'Ayoyin waraka da kariya daga shafar aljani ko baki.' : 'Listen and read healing verses and spiritual protection prayers.',
-        category: 'tools',
-        path: '/tools/ruqyah',
-        icon: <Sparkles className="text-blue-500" size={16} />,
-        keywords: ['ruqyah', 'protection', 'guérison', 'shifa', 'roqya', 'mauvais oeil', 'sorcellerie', 'kariya', 'waraka']
-      },
+
       {
         id: 'dreams',
         title: isFr ? 'Journal des Rêves' : isHa ? 'Kundin Mafarkai' : 'Dream Journal',
@@ -426,7 +416,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, on
     if (query.trim() === '') {
       // Return a set of default popular suggestions when empty
       return all.filter(item => 
-        ['abjad', 'personal-wird', 'ruqyah', 'quran', 'tasbih'].includes(item.id) || item.id === 'surah-1' || item.id === 'surah-36'
+        ['abjad', 'personal-wird', 'quran', 'tasbih'].includes(item.id) || item.id === 'surah-1' || item.id === 'surah-36'
       ).slice(0, 8);
     }
 

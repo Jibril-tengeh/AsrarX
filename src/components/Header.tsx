@@ -37,8 +37,6 @@ export const Header: React.FC = () => {
   const langMenuRef = useRef<HTMLDivElement>(null);
   const notifMenuRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
-  const isRuqyahPlayer = location.pathname === '/tools/ruqyah';
-  const [ruqyahHeaderVisible, setRuqyahHeaderVisible] = useState(false);
 
   useEffect(() => {
     if ('Notification' in window) {
@@ -51,12 +49,6 @@ export const Header: React.FC = () => {
       return () => window.removeEventListener('focus', handleFocus);
     }
   }, []);
-
-  useEffect(() => {
-    if (!isRuqyahPlayer) {
-      setRuqyahHeaderVisible(false);
-    }
-  }, [isRuqyahPlayer]);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -191,18 +183,9 @@ export const Header: React.FC = () => {
 
   return (
     <>
-      {isRuqyahPlayer && !ruqyahHeaderVisible && (
-        <button
-          onClick={() => setRuqyahHeaderVisible(true)}
-          className="fixed top-4 right-4 z-[60] bg-emerald-600/50 dark:bg-emerald-800/50 backdrop-blur-md text-white p-2 rounded-full shadow-lg"
-        >
-          <ChevronDown size={24} />
-        </button>
-      )}
-
       <motion.header 
         initial={{ y: -100 }}
-        animate={{ y: isRuqyahPlayer && !ruqyahHeaderVisible ? -100 : 0 }}
+        animate={{ y: 0 }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
           scrolled 
@@ -355,20 +338,7 @@ export const Header: React.FC = () => {
               {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
             </motion.button>
 
-            {isRuqyahPlayer && (
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setRuqyahHeaderVisible(false);
-                }}
-                className="p-1.5 sm:p-2 rounded-full hover:bg-emerald-700 dark:hover:bg-emerald-900 text-white transition-colors"
-                aria-label="Hide header"
-              >
-                <ChevronUp size={18} />
-              </motion.button>
-            )}
+
 
             {featureToggles['tool_community'] !== 'inactive' && (
               <Link to="/community" className="sm:hidden">

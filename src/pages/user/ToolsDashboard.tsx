@@ -274,16 +274,7 @@ const tools = [
     comingSoon: false,
     level: "advanced",
   },
-  {
-    id: "ruqyah",
-    title: "Ruqyah Shari'ah",
-    description:
-      "Séances de traitement spirituel intensif avec répétitions ciblées (7 à 1000).",
-    icon: Music,
-    color: "from-blue-600 to-indigo-700",
-    path: "/tools/ruqyah",
-    level: "advanced",
-  },
+
   {
     id: "talsam",
     title: "Générateur de Talsam",
@@ -456,16 +447,7 @@ export const ToolsDashboard: React.FC = () => {
       color: "text-indigo-500",
       bg: "bg-indigo-100 dark:bg-indigo-900/30",
     },
-    {
-      title: t("toolsDashboard.guide.ruqyahTitle", "Ruqyah et Soins"),
-      description: t(
-        "toolsDashboard.guide.ruqyahDesc",
-        "Découvrez des versets et invocations pour la protection, la guérison et le traitement contre les maux mystiques avec des récitations ciblées.",
-      ),
-      icon: Music,
-      color: "text-rose-500",
-      bg: "bg-rose-100 dark:bg-rose-900/30",
-    },
+
     {
       title: t("toolsDashboard.guide.zikrTitle", "Compteur de Zikr"),
       description: t(
@@ -782,12 +764,14 @@ export const ToolsDashboard: React.FC = () => {
                   exit={{ opacity: 0, scale: 0.9 }}
                   transition={{ duration: 0.2, delay: index * 0.05 }}
                 >
-                  {tool.comingSoon || isMaintenance ? (
+                  {tool.comingSoon ? (
                     <div className="cursor-not-allowed">{content}</div>
                   ) : (
                     <div
                       onClick={() => {
-                        if (
+                        if (isMaintenance) {
+                          navigate(tool.path);
+                        } else if (
                           isPremium &&
                           user?.subscriptionTier !== "premium" &&
                           user?.subscriptionTier !== "pro"

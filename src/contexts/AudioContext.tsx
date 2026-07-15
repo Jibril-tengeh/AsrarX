@@ -9,6 +9,9 @@ export type Track = {
   backgroundImage?: string;
   isCollection?: boolean;
   subTracks?: Track[];
+  isQuranVerse?: boolean;
+  surahNumber?: number;
+  ayahNumber?: number;
 };
 
 export type LoopMode = 'off' | 'track' | 'playlist';
@@ -36,6 +39,8 @@ interface AudioContextType {
   clear: () => void;
   setVolume: (volume: number) => void;
   volume: number;
+  quranRepeatCount: number;
+  setQuranRepeatCount: (count: number) => void;
 }
 
 const AudioContext = createContext<AudioContextType | undefined>(undefined);
@@ -52,12 +57,34 @@ export const AudioProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [volume, setVolumeState] = useState(1);
   const [loopMode, setLoopMode] = useState<LoopMode>('off');
   const [currentEffect, setCurrentEffect] = useState<AudioEffect>('normal');
+  const [quranRepeatCount, setQuranRepeatCountState] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('asrarhub_quran_repeat_count');
+      return saved ? parseInt(saved, 10) : 0;
+    } catch {
+      return 0;
+    }
+  });
+
+  const setQuranRepeatCount = (count: number) => {
+    setQuranRepeatCountState(count);
+    try {
+      localStorage.setItem('asrarhub_quran_repeat_count', String(count));
+    } catch (e) {
+      console.warn("Failed to save repeat count", e);
+    }
+  };
   const audioContextRef = useRef<AudioContext | null>(null);
   const sourceNodeRef = useRef<MediaElementAudioSourceNode | null>(null);
   const delayNodeRef = useRef<DelayNode | null>(null);
   const feedbackNodeRef = useRef<GainNode | null>(null);
   const filterNodeRef = useRef<BiquadFilterNode | null>(null);
   const webAudioInitialized = useRef(false);
+  const globalRepeatLeftRef = useRef<number>(0);
+
+  useEffect(() => {
+    globalRepeatLeftRef.current = quranRepeatCount > 0 ? quranRepeatCount - 1 : 0;
+  }, [quranRepeatCount]);
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   
@@ -166,6 +193,15 @@ export const AudioProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     const handleEnded = () => {
       const { playlist: currentPlaylist, currentIndex: currentIdx, loopMode: currentLoopMode, currentSubIndex: currSubIdx, currentTrack: currTrack } = stateRef.current;
       
+      if (globalRepeatLeftRef.current > 0) {
+        globalRepeatLeftRef.current -= 1;
+        if (audioRef.current) {
+          audioRef.current.currentTime = 0;
+          audioRef.current.play().catch(console.error);
+        }
+        return;
+      }
+
       if (currentLoopMode === 'track') {
         if (audioRef.current) {
           audioRef.current.currentTime = 0;
@@ -221,24 +257,43 @@ export const AudioProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
     if (!audioRef.current || !currentTrack) return;
 
+    globalRepeatLeftRef.current = quranRepeatCount > 0 ? quranRepeatCount - 1 : 0;
+
     const activeUrl = (currentTrack.isCollection && currentTrack.subTracks) 
       ? (currentTrack.subTracks[currentSubIndex]?.url || (currentTrack.subTracks[currentSubIndex] as any)?.audioUrl || (currentTrack.subTracks[currentSubIndex] as any)?.file || (currentTrack.subTracks[currentSubIndex] as any)?.src || currentTrack.url)
       : currentTrack.url;
 
     if (!activeUrl) return;
 
+    const tryFallbackToCache = async () => {
+      if (fallbackAttempted || !audioRef.current) return;
+      fallbackAttempted = true;
+      try {
+        const cache = await caches.open('quran-audio-cache');
+        const matched = await cache.match(activeUrl);
+        if (matched) {
+          const blob = await matched.blob();
+          objectUrl = URL.createObjectURL(blob);
+          console.log("[AudioContext] Serving audio from fallback Cache Storage blob:", activeUrl);
+          if (audioRef.current) {
+            audioRef.current.src = objectUrl;
+            audioRef.current.play().catch(playErr => {
+              console.error("[AudioContext] Cache blob playback fallback failed:", playErr);
+            });
+          }
+        } else {
+          console.warn("[AudioContext] No cached audio found in quran-audio-cache for fallback:", activeUrl);
+        }
+      } catch (cacheErr) {
+        console.warn("[AudioContext] Offline cache fallback failed:", cacheErr);
+      }
+    };
+
     const handleError = () => {
       const error = audioRef.current?.error;
       if (error && !fallbackAttempted) {
-        console.warn("[AudioContext] Audio error encountered:", error.code, error.message);
-        if (audioRef.current && activeUrl) {
-          fallbackAttempted = true;
-          console.log("[AudioContext] Attempting fallback to direct network URL:", activeUrl);
-          audioRef.current.src = activeUrl;
-          audioRef.current.play().catch(playErr => {
-            console.error("[AudioContext] Fallback playback failed:", playErr);
-          });
-        }
+        console.warn("[AudioContext] Audio element error encountered:", error.code, error.message);
+        tryFallbackToCache();
       }
     };
 
@@ -249,20 +304,9 @@ export const AudioProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           objectUrl = null;
         }
 
-        let resolvedSrc = activeUrl;
-        
-        try {
-          const cache = await caches.open('quran-audio-cache');
-          const matched = await cache.match(activeUrl);
-          if (matched) {
-            const blob = await matched.blob();
-            objectUrl = URL.createObjectURL(blob);
-            resolvedSrc = objectUrl;
-            console.log("[AudioContext] Serving audio from Cache Storage:", activeUrl);
-          }
-        } catch (cacheErr) {
-          console.warn("[AudioContext] Offline cache check failed:", cacheErr);
-        }
+        // Standard: Always try to play the activeUrl first so the Service Worker can
+        // handle range requests and streaming natively.
+        const resolvedSrc = activeUrl;
 
         if (audioRef.current) {
           audioRef.current.src = resolvedSrc;
@@ -270,13 +314,15 @@ export const AudioProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           if (playPromise !== undefined) {
             playPromise.catch(e => {
               if (e.name !== 'AbortError' && e.name !== 'NotSupportedError') {
-                console.error("Audio playback error:", e);
+                console.warn("[AudioContext] Standard playback failed, trying cache fallback...", e);
+                tryFallbackToCache();
               }
             });
           }
         }
       } catch (error) {
         console.error("Audio playback error:", error);
+        tryFallbackToCache();
       }
     };
 
@@ -498,7 +544,9 @@ export const AudioProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       seek,
       clear,
       setVolume,
-      volume
+      volume,
+      quranRepeatCount,
+      setQuranRepeatCount
     }}>
       {children}
     </AudioContext.Provider>

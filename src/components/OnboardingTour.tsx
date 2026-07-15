@@ -1,123 +1,30 @@
-import React, { useState, useEffect } from 'react';
-import { Joyride, EventData, STATUS, Step, TooltipRenderProps } from 'react-joyride';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, ChevronRight, ChevronLeft, Check } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
 import { db, isAutoSaveEnabled } from '../lib/firebase';
 
+interface Step {
+  target: string;
+  title?: string;
+  content: string;
+  placement?: 'center' | 'bottom' | 'top' | 'left' | 'right' | 'top-end';
+  hideCloseButton?: boolean;
+}
+
 export const OnboardingTour: React.FC = () => {
   const [run, setRun] = useState(false);
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const { t } = useLanguage();
   const { user } = useAuth();
-
-  const CustomTooltip: React.FC<TooltipRenderProps> = ({
-    continuous,
-    index,
-    step,
-    backProps,
-    closeProps,
-    primaryProps,
-    tooltipProps,
-    isLastStep,
-  }) => {
-    return (
-      <motion.div
-        {...tooltipProps}
-        initial={{ opacity: 0, y: 10, scale: 0.95 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: -10, scale: 0.95 }}
-        transition={{ duration: 0.3, ease: 'easeOut' }}
-        className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl overflow-hidden max-w-sm w-full border border-gray-100 dark:border-gray-700"
-      >
-        <div className="p-5">
-          <div className="flex justify-between items-start mb-3">
-            <div className="flex items-center space-x-2">
-              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 text-xs font-bold">
-                {index + 1}
-              </span>
-              {step.title && (
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-                  {step.title}
-                </h3>
-              )}
-            </div>
-            {!step.hideCloseButton && (
-              <button
-                {...closeProps}
-                className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
-              >
-                <X size={16} />
-              </button>
-            )}
-          </div>
-          
-          <div className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed mb-6">
-            {step.content}
-          </div>
-
-          <div className="flex items-center justify-between mt-2 pt-4 border-t border-gray-100 dark:border-gray-700">
-            <div>
-              {index > 0 && (
-                <button
-                  {...backProps}
-                  className="flex items-center text-sm font-medium text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
-                >
-                  <ChevronLeft size={16} className="mr-1" />
-                  {t('onboardingTour.prev', 'Précédent')}
-                </button>
-              )}
-            </div>
-            
-            <button
-              {...primaryProps}
-              className="flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-medium rounded-lg transition-colors shadow-sm"
-            >
-              {isLastStep ? (
-                <>
-                  {t('onboardingTour.finish', 'Terminer')} <Check size={16} className="ml-1.5" />
-                </>
-              ) : (
-                <>
-                  {t('onboardingTour.next', 'Suivant')} <ChevronRight size={16} className="ml-1.5" />
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      </motion.div>
-    );
-  };
-
-  useEffect(() => {
-    // Check if user has seen the tour
-    const hasSeenTour = 
-      localStorage.getItem('asrarhub_tour_completed') === 'true' ||
-      sessionStorage.getItem('asrarhub_tour_completed') === 'true' ||
-      !!(user && (user as any).hasSeenTour);
-
-    if (!hasSeenTour) {
-      // Small delay to let the UI render completely
-      const timer = setTimeout(() => {
-        setRun(true);
-        localStorage.setItem('asrarhub_tour_completed', 'true');
-        sessionStorage.setItem('asrarhub_tour_completed', 'true');
-        if (user && isAutoSaveEnabled()) {
-          import('firebase/firestore').then(({ updateDoc, doc }) => {
-            updateDoc(doc(db, 'users', user.uid), { hasSeenTour: true }).catch(console.error);
-          });
-        }
-      }, 1500);
-      return () => clearTimeout(timer);
-    }
-  }, [user]);
+  const [coords, setCoords] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
 
   const steps: Step[] = [
     {
       target: 'body',
       content: t('onboardingTour.welcome', 'Bienvenue sur AsrarHub ! Laissez-nous vous guider à travers les fonctionnalités principales de notre application.'),
       placement: 'center',
-      skipBeacon: true,
     },
     {
       target: '#tour-community',
@@ -145,11 +52,6 @@ export const OnboardingTour: React.FC = () => {
       placement: 'bottom',
     },
     {
-      target: '#tour-ruqyah',
-      content: t('onboardingTour.ruqyah', 'Ici, vous trouverez des outils de Roqya et des invocations pour la protection spirituelle.'),
-      placement: 'bottom',
-    },
-    {
       target: '#tour-store',
       content: t('onboardingTour.store', 'La boutique vous permet d\'acquérir des éléments premium et des accès exclusifs.'),
       placement: 'bottom',
@@ -161,7 +63,7 @@ export const OnboardingTour: React.FC = () => {
     },
     {
       target: '#tour-quran',
-      content: t('onboardingTour.quran', 'Accédez au Saint Coran pour la lecture, la méditation et l\'écoute.'),
+      content: t('onboardingTour.quran', 'Accédez au Saint Coran pour la lecture, la mémorisation et l\'écoute.'),
       placement: 'bottom',
     },
     {
@@ -211,42 +113,235 @@ export const OnboardingTour: React.FC = () => {
     },
   ];
 
-  const handleJoyrideCallback = (data: EventData) => {
-    const { status, type } = data;
-    const finishedStatuses: string[] = [STATUS.FINISHED, STATUS.SKIPPED];
+  useEffect(() => {
+    // Check if user has seen the tour
+    const hasSeenTour = 
+      localStorage.getItem('asrarhub_tour_completed') === 'true' ||
+      sessionStorage.getItem('asrarhub_tour_completed') === 'true' ||
+      !!(user && (user as any).hasSeenTour);
 
-    if (finishedStatuses.includes(status) || type === 'tour:end') {
-      setRun(false);
-      localStorage.setItem('asrarhub_tour_completed', 'true');
-      sessionStorage.setItem('asrarhub_tour_completed', 'true');
-      if (user && isAutoSaveEnabled()) {
-        import('firebase/firestore').then(({ updateDoc, doc }) => {
-          updateDoc(doc(db, 'users', user.uid), { hasSeenTour: true }).catch(console.error);
-        });
+    if (!hasSeenTour) {
+      const timer = setTimeout(() => {
+        setRun(true);
+        localStorage.setItem('asrarhub_tour_completed', 'true');
+        sessionStorage.setItem('asrarhub_tour_completed', 'true');
+        if (user && isAutoSaveEnabled()) {
+          import('firebase/firestore').then(({ updateDoc, doc }) => {
+            updateDoc(doc(db, 'users', user.uid), { hasSeenTour: true }).catch(console.error);
+          });
+        }
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (!run) return;
+    const step = steps[currentStepIndex];
+    if (step.target === 'body') {
+      setCoords(null);
+      return;
+    }
+
+    const updatePosition = () => {
+      const el = document.querySelector(step.target);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        setTimeout(() => {
+          const rect = el.getBoundingClientRect();
+          setCoords({
+            top: rect.top + window.scrollY,
+            left: rect.left + window.scrollX,
+            width: rect.width,
+            height: rect.height,
+          });
+        }, 150);
+      } else {
+        setCoords(null);
       }
+    };
+
+    updatePosition();
+    window.addEventListener('resize', updatePosition);
+    window.addEventListener('scroll', updatePosition);
+    return () => {
+      window.removeEventListener('resize', updatePosition);
+      window.removeEventListener('scroll', updatePosition);
+    };
+  }, [currentStepIndex, run]);
+
+  const handleNext = () => {
+    if (currentStepIndex < steps.length - 1) {
+      setCurrentStepIndex(prev => prev + 1);
+    } else {
+      handleEnd();
     }
   };
 
-  return (
-    <Joyride
-      steps={steps}
-      run={run}
-      continuous
-      scrollToFirstStep
-      tooltipComponent={CustomTooltip}
-      onEvent={handleJoyrideCallback}
-      options={{
-        primaryColor: '#10b981', // emerald-500
+  const handleBack = () => {
+    if (currentStepIndex > 0) {
+      setCurrentStepIndex(prev => prev - 1);
+    }
+  };
+
+  const handleEnd = () => {
+    setRun(false);
+    localStorage.setItem('asrarhub_tour_completed', 'true');
+    sessionStorage.setItem('asrarhub_tour_completed', 'true');
+    if (user && isAutoSaveEnabled()) {
+      import('firebase/firestore').then(({ updateDoc, doc }) => {
+        updateDoc(doc(db, 'users', user.uid), { hasSeenTour: true }).catch(console.error);
+      });
+    }
+  };
+
+  if (!run) return null;
+
+  const step = steps[currentStepIndex];
+  const isLastStep = currentStepIndex === steps.length - 1;
+
+  const getTooltipStyle = (): React.CSSProperties => {
+    if (!coords) {
+      return {
+        position: 'fixed',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
         zIndex: 10000,
-        showProgress: true,
-      }}
-      locale={{
-        back: t('onboardingTour.prev', 'Précédent'),
-        close: t('onboardingTour.finish', 'Fermer'),
-        last: t('onboardingTour.finish', 'Terminer'),
-        next: t('onboardingTour.next', 'Suivant'),
-        skip: t('onboardingTour.finish', 'Passer'),
-      }}
-    />
+      };
+    }
+
+    const placement = step.placement || 'bottom';
+    const gap = 12;
+    const style: React.CSSProperties = {
+      position: 'absolute',
+      zIndex: 10000,
+    };
+
+    if (placement.startsWith('top')) {
+      style.top = coords.top - gap;
+      style.left = coords.left + coords.width / 2;
+      style.transform = 'translate(-50%, -100%)';
+    } else if (placement.startsWith('bottom')) {
+      style.top = coords.top + coords.height + gap;
+      style.left = coords.left + coords.width / 2;
+      style.transform = 'translate(-50%, 0)';
+    } else {
+      style.top = coords.top + coords.height + gap;
+      style.left = coords.left + coords.width / 2;
+      style.transform = 'translate(-50%, 0)';
+    }
+
+    // Safeguard viewport bounds
+    const tooltipWidth = 320;
+    const padding = 16;
+    if (typeof style.left === 'number') {
+      const targetCenter = coords.left + coords.width / 2;
+      if (targetCenter - tooltipWidth / 2 < padding) {
+        style.left = padding + tooltipWidth / 2;
+      } else if (targetCenter + tooltipWidth / 2 > window.innerWidth - padding) {
+        style.left = window.innerWidth - padding - tooltipWidth / 2;
+      }
+    }
+
+    return style;
+  };
+
+  return (
+    <div className="absolute inset-0 pointer-events-none z-[9999]">
+      {/* Dim overlay */}
+      <div 
+        className="fixed inset-0 bg-black/45 dark:bg-black/60 backdrop-blur-[0.5px] pointer-events-auto z-[9998]"
+        onClick={handleEnd}
+      />
+
+      {/* Target Highlight */}
+      {coords && (
+        <div 
+          className="absolute border-2 border-emerald-500 rounded-xl animate-pulse z-[9999] pointer-events-none shadow-[0_0_15px_rgba(16,185,129,0.5)]"
+          style={{
+            top: coords.top - 4,
+            left: coords.left - 4,
+            width: coords.width + 8,
+            height: coords.height + 8,
+          }}
+        />
+      )}
+
+      {/* Animated Popover */}
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={currentStepIndex}
+          initial={{ opacity: 0, scale: 0.95, y: coords ? 5 : 0 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: coords ? -5 : 0 }}
+          transition={{ duration: 0.2, ease: 'easeOut' }}
+          style={getTooltipStyle()}
+          className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden max-w-sm w-[320px] sm:w-[340px] border border-gray-100 dark:border-gray-700 pointer-events-auto z-[10000]"
+        >
+          <div className="p-5">
+            <div className="flex justify-between items-start mb-3">
+              <div className="flex items-center space-x-2">
+                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 text-xs font-bold">
+                  {currentStepIndex + 1}
+                </span>
+                <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider">
+                  GUIDE ASRARHUB
+                </h3>
+              </div>
+              {!step.hideCloseButton && (
+                <button
+                  onClick={handleEnd}
+                  className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+            
+            <div className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed mb-6 font-medium">
+              {step.content}
+            </div>
+
+            <div className="flex items-center justify-between mt-2 pt-4 border-t border-gray-100 dark:border-gray-700">
+              <div>
+                {currentStepIndex > 0 && (
+                  <button
+                    onClick={handleBack}
+                    className="flex items-center text-sm font-semibold text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
+                  >
+                    <ChevronLeft size={16} className="mr-1" />
+                    {t('onboardingTour.prev', 'Précédent')}
+                  </button>
+                )}
+              </div>
+              
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleEnd}
+                  className="text-xs font-bold text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 px-2 py-1 transition-colors"
+                >
+                  {t('onboardingTour.skip', 'Passer')}
+                </button>
+                <button
+                  onClick={handleNext}
+                  className="flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl transition-colors shadow-sm"
+                >
+                  {isLastStep ? (
+                    <>
+                      {t('onboardingTour.finish', 'Terminer')} <Check size={16} className="ml-1.5" />
+                    </>
+                  ) : (
+                    <>
+                      {t('onboardingTour.next', 'Suivant')} <ChevronRight size={16} className="ml-1.5" />
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      </AnimatePresence>
+    </div>
   );
 };

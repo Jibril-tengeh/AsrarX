@@ -5,11 +5,12 @@ import { LayoutTester } from './components/LayoutTester';
 import { useAuth } from './contexts/AuthContext';
 import { useLanguage } from './contexts/LanguageContext';
 import { AuthModal } from './components/AuthModal';
-import { ShieldAlert, LogIn } from 'lucide-react';
+import { ShieldAlert, LogIn, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { db, isAutoSaveEnabled } from './lib/firebase';
 import { BottomNav } from './components/BottomNav';
 import { AsrarHubLoader } from './components/AsrarHubLoader';
+import { useAudio } from './contexts/AudioContext';
 const UserDashboard = React.lazy(() => import('./pages/user/UserDashboard').then(m => ({ default: m.UserDashboard })));
 const SecretDetail = React.lazy(() => import('./pages/user/SecretDetail').then(m => ({ default: m.SecretDetail })));
 const ToolsDashboard = React.lazy(() => import('./pages/user/ToolsDashboard').then(m => ({ default: m.ToolsDashboard })));
@@ -20,7 +21,6 @@ const KhatimGenerator = React.lazy(() => import('./pages/user/tools/KhatimGenera
 const Asma = React.lazy(() => import('./pages/user/tools/Asma').then(m => ({ default: m.Asma })));
 const Talsam = React.lazy(() => import('./pages/user/tools/Talsam').then(m => ({ default: m.Talsam })));
 const Istikhara = React.lazy(() => import('./pages/user/tools/Istikhara').then(m => ({ default: m.Istikhara })));
-const Ruqyah = React.lazy(() => import('./pages/user/tools/Ruqyah').then(m => ({ default: m.Ruqyah })));
 const SirrAlAsrar = React.lazy(() => import('./pages/user/tools/SirrAlAsrar').then(m => ({ default: m.SirrAlAsrar })));
 const Zairja = React.lazy(() => import('./pages/user/tools/Zairja').then(m => ({ default: m.Zairja })));
 const ZakatCalculator = React.lazy(() => import('./pages/user/tools/ZakatCalculator').then(m => ({ default: m.ZakatCalculator })));
@@ -77,7 +77,7 @@ const PlaceholderPage = ({ title }: { title: string }) => (
 const FaqButton = () => {
   const { featureToggles } = useFeatures();
   
-  if (featureToggles['tool_faq'] === 'inactive') return null;
+  if (featureToggles['tool_faq'] === 'inactive' || featureToggles['assistantIconVisible'] === false) return null;
   
   return (
     <Link 
@@ -228,6 +228,7 @@ const ProtectedToolsLayout: React.FC = () => {
 export default function App() {
   const { user } = useAuth();
   const { featureToggles } = useFeatures();
+  const { isPlaying: globalIsPlaying, currentTrack, quranRepeatCount: repeatCount, setQuranRepeatCount: setRepeatCount } = useAudio();
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = React.useState(
     localStorage.getItem('hasCompletedOnboarding') === 'true'
   );
@@ -238,7 +239,6 @@ export default function App() {
   
   const location = useLocation();
   const navigate = useNavigate();
-  const isRuqyahPlayer = location.pathname === '/tools/ruqyah';
 
   // Global scroll-to-top and route changed logger on route changes
   React.useEffect(() => {
@@ -378,7 +378,7 @@ export default function App() {
         <FloatingBackButton />
         <Header />
         <DailyRewardHandler />
-        <main className={`flex flex-col min-h-screen w-full overflow-x-hidden flex-1 text-gray-900 dark:text-gray-100 pb-20 ${isRuqyahPlayer ? '' : 'pt-20'}`}>
+        <main className="flex flex-col min-h-screen w-full overflow-x-hidden flex-1 text-gray-900 dark:text-gray-100 pb-20 pt-20">
           <React.Suspense fallback={
             <div className="flex items-center justify-center min-h-[60vh] w-full">
               <div className="w-10 h-10 border-4 border-emerald-500/10 border-t-emerald-600 rounded-full animate-spin" />
@@ -411,7 +411,6 @@ export default function App() {
                   <Route path="/tools/asma" element={<Asma />} />
                   <Route path="/tools/talsam" element={<Talsam />} />
                   <Route path="/tools/istikhara" element={<Istikhara />} />
-                  <Route path="/tools/ruqyah" element={<Ruqyah />} />
                   <Route path="/tools/sirr" element={<SirrAlAsrar />} />
                   <Route path="/tools/zairja" element={<Zairja />} />
                   <Route path="/tools/zakat" element={<ZakatCalculator />} />
@@ -451,6 +450,45 @@ export default function App() {
         {featureToggles['tool_inspector'] === 'active' && <LayoutTester />}
         <FaqButton />
         <BottomNav />
+
+        {/* Global Floating Repeat Mode (visible only when Quran is playing and NOT on the Quran page itself) */}
+        <AnimatePresence>
+          {globalIsPlaying && currentTrack?.isQuranVerse && location.pathname !== '/tools/quran' && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.8, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.8, y: 15 }}
+              className="fixed bottom-[152px] right-4 sm:bottom-[92px] sm:right-6 z-50"
+            >
+              <div className="relative">
+                <motion.button 
+                  whileHover={{ scale: 1.1, rotate: 15 }}
+                  whileTap={{ scale: 0.9 }}
+                  className={`p-3.5 rounded-full transition-all shadow-xl border-2 ${repeatCount > 0 ? 'bg-emerald-500 text-white border-emerald-400' : 'bg-white text-gray-700 hover:text-emerald-600 dark:bg-gray-800 dark:text-gray-300 border-gray-200 dark:border-gray-700 dark:hover:bg-gray-700 hover:border-emerald-500'}`}
+                  title="Mode Répétition"
+                >
+                  <RefreshCw size={22} className={repeatCount > 0 ? "animate-spin" : ""} style={{ animationDuration: '4s' }} />
+                  {repeatCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-amber-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full animate-bounce shadow-sm border-2 border-white dark:border-gray-900">
+                      {repeatCount}
+                    </span>
+                  )}
+                </motion.button>
+                <select
+                  value={repeatCount}
+                  onChange={(e) => setRepeatCount(Number(e.target.value))}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  title="Mode Répétition"
+                >
+                  <option value={0}>Sans répétition</option>
+                  {[3, 7, 11, 21, 33, 41, 70, 71, 73, 111, 313, 666, 777, 786, 1000, 1111].map(c => (
+                    <option key={c} value={c}>{c} fois</option>
+                  ))}
+                </select>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </MaintenanceOverlay>
   );

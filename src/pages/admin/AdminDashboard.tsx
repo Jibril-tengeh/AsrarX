@@ -6,7 +6,7 @@ import {
   Settings, Users, BarChart3, Database, Shield, LayoutDashboard, 
   Book, ToggleLeft, Volume2, Save, Search, Plus, Trash2, Edit2, FileText,
   Eye, Image as ImageIcon, Crop as CropIcon, X, Upload, ShoppingBag, CreditCard,
-  Clock, CheckCircle, XCircle, Globe, Grid, List, Mail, Phone, Lock, Bell, BellOff
+  Clock, CheckCircle, XCircle, Globe, Grid, List, Mail, Phone, Lock, Bell, BellOff, Sparkles
 } from 'lucide-react';
 import { db } from '../../lib/firebase';
 import { collection, getDocs, doc, updateDoc, deleteDoc, addDoc, onSnapshot, query, orderBy, setDoc, writeBatch } from 'firebase/firestore';
@@ -838,7 +838,6 @@ export const AdminDashboard: React.FC = () => {
       { id: 'community', label: 'Communauté', icon: Users },
       { id: 'notifications', label: 'Notifications', icon: Volume2 },
       { id: 'features', label: 'Fonctionnalités', icon: ToggleLeft },
-      { id: 'ruqyah', label: 'Audio Ruqyah', icon: Volume2 },
       { id: 'content', label: 'CMS (Lexique)', icon: Database },
       { id: 'settings', label: 'Paramètres', icon: Settings },
     ];
@@ -2171,7 +2170,7 @@ export const AdminDashboard: React.FC = () => {
                 <p className="text-sm text-gray-500 mt-1">Afficher une annonce sur la page d'accueil (force la mise à jour).</p>
               </div>
               <button
-                onClick={() => handleToggleFeature('announcementVisible', !featureToggles['announcementVisible'])}
+                onClick={() => handleToggleFeature('announcementVisible', !!featureToggles['announcementVisible'])}
                 className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors ${
                   featureToggles['announcementVisible'] ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
                 }`}
@@ -2208,6 +2207,31 @@ export const AdminDashboard: React.FC = () => {
                 </div>
               </div>
             )}
+          </div>
+
+          {/* Icône de l'Assistante IA Flottante */}
+          <div className="flex flex-col p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <Sparkles size={18} className="text-amber-500" />
+                  Icône d'Assistante Flottante
+                </h4>
+                <p className="text-sm text-gray-500 mt-1">Afficher l'icône d'assistante IA flottante (bouton vert en bas à droite) sur l'application.</p>
+              </div>
+              <button
+                onClick={() => handleToggleFeature('assistantIconVisible', featureToggles['assistantIconVisible'] !== false)}
+                className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors ${
+                  featureToggles['assistantIconVisible'] !== false ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
+                }`}
+              >
+                <div
+                  className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${
+                    featureToggles['assistantIconVisible'] !== false ? 'translate-x-6' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
           </div>
 
           {/* URL de l'API Backend */}

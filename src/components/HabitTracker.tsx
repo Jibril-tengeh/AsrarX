@@ -8,7 +8,7 @@ export const HabitTracker = () => {
   const { user } = useAuth();
   const [reminders, setReminders] = useState<{id: string, text: string, time: string}[]>([
     { id: '1', text: 'Rappel quotidien pour mon Wird', time: '18:00' },
-    { id: '2', text: 'Écoute de la Rouqya', time: '08:00' }
+    { id: '2', text: 'Lecture du Coran', time: '08:00' }
   ]);
   const [showReminders, setShowReminders] = useState(false);
   const [isNotificationsEnabled, setIsNotificationsEnabled] = useState(false);
@@ -48,23 +48,13 @@ export const HabitTracker = () => {
       }
 
       try {
-        // Fetch from ruqyah_playlists as proxy for activity (or user_activity if we had it)
-        // For demonstration of "real data", we fetch their playlists
-        const playlistsRef = collection(db, 'ruqyah_playlists');
-        const q = query(playlistsRef, where('userId', '==', user.uid));
+        // Fetch user activity from journal entries
+        const journalRef = collection(db, 'journal_entries');
+        const q = query(journalRef, where('userId', '==', user.uid));
         const snapshot = await getDocs(q);
-        
-        // Also fetch from ruqyah_collections
-        const collectionsRef = collection(db, 'ruqyah_collections');
-        const cq = query(collectionsRef, where('userId', '==', user.uid));
-        const cSnapshot = await getDocs(cq);
 
         const allDates: Date[] = [];
         snapshot.forEach(doc => {
-          const dt = doc.data().createdAt?.toDate();
-          if (dt) allDates.push(dt);
-        });
-        cSnapshot.forEach(doc => {
           const dt = doc.data().createdAt?.toDate();
           if (dt) allDates.push(dt);
         });
@@ -162,7 +152,7 @@ export const HabitTracker = () => {
             <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 p-4 rounded-2xl border border-blue-100/50 dark:border-blue-800/30">
               <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-2">
                 <Clock size={18} />
-                <span className="font-semibold text-sm">Rouqya</span>
+                <span className="font-semibold text-sm">Lecture</span>
               </div>
               <div className="text-2xl font-bold text-gray-900 dark:text-white mb-1">{activeDays > 0 ? (activeDays * 0.5).toFixed(1) : 0} <span className="text-sm font-normal text-gray-500">heures</span></div>
               <p className="text-xs text-gray-500">Cette semaine</p>

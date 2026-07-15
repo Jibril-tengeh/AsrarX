@@ -50,6 +50,78 @@ async function startServer() {
     }
   };
 
+  // AI Quran Tafsir & Spiritual Secrets (Asrar)
+  app.post("/api/quran/tafsir", async (req, res) => {
+    try {
+      const { surahNumber, surahName, ayahNumber, arabicText, translationText, language } = req.body;
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ error: "Gemini API key is not configured" });
+      }
+
+      const ai = new GoogleGenAI({
+        apiKey,
+        httpOptions: {
+          headers: {
+            'User-Agent': 'aistudio-build',
+          }
+        }
+      });
+
+      const langName = language === 'en' ? 'English' : language === 'ha' ? 'Hausa (or French if accurate Hausa terms for exegesis are missing)' : 'French';
+
+      const prompt = `
+Vous êtes un exégète coranique d'une immense érudition et un guide spirituel islamique accompli (expert en "Asrar" - secrets spirituels et bienfaits des lettres et versets).
+Analysez le verset suivant :
+- Sourate : ${surahNumber} (${surahName || "Inconnue"})
+- Verset (Ayah) : ${ayahNumber}
+- Texte Arabe : ${arabicText}
+- Traduction fournie : ${translationText || "Non fournie"}
+
+Tâche :
+Générez un contenu extrêmement riche, détaillé, précis et inspirant rédigé entièrement en ${langName} pour l'application spirituelle AsrarHub.
+Le résultat doit correspondre STRICTEMENT à la structure JSON spécifiée ci-dessous.
+
+Champs requis dans le JSON final :
+1. "exegesis": Une exégèse (Tafsir) théologique claire, concise et profonde de ce verset, s'appuyant sur les commentaires classiques (Ibn Kathir, Al-Jalalayn) ou spirituels. Expliquez le contexte de révélation (Asbab al-Nuzul) si applicable, et la signification profonde des mots.
+2. "secrets": Les secrets spirituels ("Asrar") et bienfaits du verset dans la tradition ésotérique islamique. Quelles sont les bénédictions liées à sa récitation (ex: protection, sérénité, ouverture spirituelle, subsistance, soulagement) ? Citez les traditions ou enseignements spirituels correspondants.
+3. "actionable": Un tableau de 3 à 4 points concrets montrant comment un croyant peut appliquer ce verset ou s'en inspirer dans sa vie spirituelle et quotidienne moderne.
+4. "dua": Une invocation (Doua) inspirée ou liée à ce verset. Écrivez le texte de l'invocation en arabe, sa transcription phonétique (si applicable), et sa traduction.
+
+Format de réponse attendu : Un objet JSON valide respectant cette structure exacte. Ne mettez aucun texte d'enrobage avant ou après le JSON.
+`;
+
+      const response = await generateWithRetry(ai, {
+        model: "gemini-3.5-flash",
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: "OBJECT",
+            properties: {
+              exegesis: { type: "STRING", description: "Detailed exegesis of the verse" },
+              secrets: { type: "STRING", description: "Esoteric and spiritual benefits/blessings (Asrar) of the verse" },
+              actionable: {
+                type: "ARRAY",
+                items: { type: "STRING" },
+                description: "3-4 actionable practical lessons from the verse"
+              },
+              dua: { type: "STRING", description: "An associated prayer or invocation with Arabic text and translation" }
+            },
+            required: ["exegesis", "secrets", "actionable", "dua"]
+          }
+        }
+      });
+
+      const resultText = response?.text?.trim() || "{}";
+      const tafsirData = JSON.parse(resultText);
+      res.json(tafsirData);
+    } catch (error: any) {
+      console.error("Quran Tafsir generation error:", error);
+      res.status(500).json({ error: "Failed to generate Quranic Tafsir & Secrets" });
+    }
+  });
+
   // Dream Interpretation via Gemini
   app.post("/api/dreams/interpret", async (req, res) => {
     try {

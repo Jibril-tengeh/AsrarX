@@ -5,14 +5,14 @@ import { useLanguage } from '../../../contexts/LanguageContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { toCanvas } from 'html-to-image';
-import { useAudio } from '../../../contexts/AudioContext';
+import { useAudio, Track } from '../../../contexts/AudioContext';
 import { get, set } from 'idb-keyval';
 import { surahTranslations } from '../../../data/surahTranslations';
 import { db } from '../../../lib/firebase';
 import { collection, query, where, onSnapshot, addDoc, updateDoc, doc, serverTimestamp, getDocs } from 'firebase/firestore';
 import { Share } from '@capacitor/share';
 import { downloadAudioForOffline } from '../../../lib/offlineAudio';
-import { DownloadCloud, CheckSquare } from 'lucide-react';
+import { DownloadCloud, CheckSquare, Sparkles } from 'lucide-react';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { AuthModal } from '../../../components/AuthModal';
 import { getApiUrl } from '../../../lib/api';
@@ -39,6 +39,33 @@ const toArabicNumeral = (num: number | undefined | null) => {
   if (num === null || num === undefined) return '';
   const arabicNumbers = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
   return num.toString().split('').map(digit => arabicNumbers[parseInt(digit)]).join('');
+};
+
+const AyahMarker = ({ number }: { number: number }) => {
+  return (
+    <span 
+      className="inline-flex items-center justify-center relative select-none font-semibold text-[#8b1a1a] dark:text-[#f87171]" 
+      style={{ 
+        width: '32px', 
+        height: '32px', 
+        verticalAlign: 'middle',
+        display: 'inline-flex',
+        margin: '0 6px'
+      }}
+      dir="ltr"
+    >
+      <svg className="absolute inset-0 w-full h-full fill-none text-[#9a2121] dark:text-[#ef4444]" viewBox="0 0 40 40" aria-hidden="true">
+        <circle cx="20" cy="20" r="16" stroke="currentColor" strokeWidth="1.5" strokeDasharray="3,2" className="opacity-80" />
+        <circle cx="20" cy="20" r="14" stroke="currentColor" strokeWidth="1.2" />
+        <path d="M20 1 L20 4 M20 36 L20 39 M1 20 L4 20 M36 20 L39 20" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <path d="M7 7 L9 9 M31 31 L33 33 M7 31 L9 29 M31 7 L33 9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <polygon points="20,8 24,14 31,13 28,20 31,27 24,26 20,32 16,26 9,27 12,20 9,13 16,14" stroke="currentColor" strokeWidth="0.8" className="opacity-40" />
+      </svg>
+      <span className="relative z-10 font-arabic text-sm text-gray-900 dark:text-gray-100" style={{ top: '-0.5px' }}>
+        {toArabicNumeral(number)}
+      </span>
+    </span>
+  );
 };
 
 const TAJWEED_COLORS: Record<string, string> = {
@@ -1097,14 +1124,105 @@ export const QuranFull: React.FC = () => {
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
 
   const [selectedReciterId, setSelectedReciterId] = useState(QURAN_RECITERS[0].id);
-  const { playTrack, playPlaylist, currentTrack, isPlaying: globalIsPlaying, pause: globalPause, resume: globalResume } = useAudio();
+  const { playTrack, playPlaylist, currentTrack, isPlaying: globalIsPlaying, pause: globalPause, resume: globalResume, quranRepeatCount: repeatCount, setQuranRepeatCount: setRepeatCount } = useAudio();
 
   const [playingAyah, setPlayingAyah] = useState<number | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [autoPlayNext, setAutoPlayNext] = useState(true);
   const [autoPlayFirstAyah, setAutoPlayFirstAyah] = useState(false);
   const ROQYA_REPEAT_COUNTS = [0, 3, 7, 11, 21, 33, 41, 70, 71, 73, 111, 313, 666, 777, 786, 1000, 1111];
-  const [repeatCount, setRepeatCount] = useState<number>(0);
+  
+  // Custom Toast State
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+  };
+
+  useEffect(() => {
+    if (toastMessage) {
+      const timer = setTimeout(() => setToastMessage(null), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [toastMessage]);
+
+  // Hifz (Memorization) State
+  const [hifzMode, setHifzMode] = useState<boolean>(false);
+  const [hideTranslation, setHideTranslation] = useState<boolean>(false);
+  const [hideArabic, setHideArabic] = useState<boolean>(false);
+  const [revealedAyahs, setRevealedAyahs] = useState<number[]>([]);
+  const [hifzStatus, setHifzStatus] = useState<Record<string, 'not_started' | 'memorizing' | 'memorized' | 'review'>>(() => {
+    try {
+      const saved = localStorage.getItem('asrarhub_quran_hifz_status');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const updateHifzStatus = (surahNum: number, ayahNum: number, status: 'not_started' | 'memorizing' | 'memorized' | 'review') => {
+    const key = `${surahNum}_${ayahNum}`;
+    const updated = { ...hifzStatus, [key]: status };
+    setHifzStatus(updated);
+    try {
+      localStorage.setItem('asrarhub_quran_hifz_status', JSON.stringify(updated));
+    } catch (e) {
+      console.warn("Failed to save hifz progress", e);
+    }
+    showToast(
+      language === 'fr' 
+        ? `Statut de mémorisation mis à jour : ${status === 'memorized' ? 'Mémorisé 🎉' : status === 'memorizing' ? 'En cours 📖' : status === 'review' ? 'À réviser 🔄' : 'Non commencé'}`
+        : `Memorization status updated!`
+    );
+  };
+
+  // Tafsir (AI Exegesis) State
+  const [activeTafsirAyah, setActiveTafsirAyah] = useState<any | null>(null);
+  const [tafsirLoading, setTafsirLoading] = useState<boolean>(false);
+  const [tafsirData, setTafsirData] = useState<{ exegesis: string; secrets: string; actionable: string[]; dua: string } | null>(null);
+  const [activeTafsirTab, setActiveTafsirTab] = useState<'exegesis' | 'secrets' | 'actionable' | 'dua'>('exegesis');
+  const [tafsirError, setTafsirError] = useState<string | null>(null);
+
+  const fetchTafsir = async (ayah: any, surahNum: number, surahName: string) => {
+    setActiveTafsirAyah(ayah);
+    setTafsirLoading(true);
+    setTafsirError(null);
+    setTafsirData(null);
+    setActiveTafsirTab('exegesis');
+
+    try {
+      const translationText = surahFrench?.ayahs.find((a: any) => a.numberInSurah === ayah.numberInSurah)?.text || ayah.text;
+      const response = await fetch('/api/quran/tafsir', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          surahNumber: surahNum,
+          surahName,
+          ayahNumber: ayah.numberInSurah,
+          arabicText: ayah.text,
+          translationText,
+          language
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to load exegesis");
+      }
+
+      const data = await response.json();
+      setTafsirData(data);
+    } catch (err: any) {
+      console.error("Tafsir error", err);
+      setTafsirError(
+        language === 'fr' 
+          ? "Une erreur est survenue lors de la génération de l'exégèse spirituelle. Veuillez réessayer."
+          : "An error occurred while loading spiritual Tafsir. Please try again."
+      );
+    } finally {
+      setTafsirLoading(false);
+    }
+  };
   const [contentRepeatCount, setContentRepeatCount] = useState<number>(0);
   const repeatLeftRef = useRef<number>(0);
   const contentRepeatLeftRef = useRef<number>(0);
@@ -1551,134 +1669,70 @@ export const QuranFull: React.FC = () => {
     }
   }, [selectedReciterId]);
 
-  const playAudio = async (ayah: Ayah, isRepeat = false, playOnlyOne = false) => {
-    if (!ayah.audio) return;
-    
-    if (audioRef.current) {
-      audioRef.current.pause();
-    }
-    if (objectUrlRef.current) {
-      URL.revokeObjectURL(objectUrlRef.current);
-      objectUrlRef.current = null;
-    }
-
-    if (!isRepeat && playingAyah === ayah.number && isPlaying) {
+  // Sync local playing state with global AudioPlayer
+  useEffect(() => {
+    if (globalIsPlaying && currentTrack?.isQuranVerse && currentTrack.surahNumber === activeSurah) {
+      setIsPlaying(true);
+      if (currentTrack.ayahNumber !== undefined && surahArabic && surahArabic.ayahs) {
+        const foundAyah = surahArabic.ayahs.find(a => a.numberInSurah === currentTrack.ayahNumber);
+        if (foundAyah) {
+          setPlayingAyah(foundAyah.number);
+          
+          // Auto-scroll to active ayah
+          if (ayahRefs.current[foundAyah.number]) {
+            ayahRefs.current[foundAyah.number]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }
+      }
+    } else {
       setIsPlaying(false);
       setPlayingAyah(null);
-      repeatLeftRef.current = 0;
-      playOnlyOneRef.current = false;
+    }
+  }, [globalIsPlaying, currentTrack, activeSurah, surahArabic]);
+
+  const playAudio = async (ayah: Ayah, isRepeat = false, playOnlyOne = false) => {
+    if (!ayah.audio) return;
+
+    if (globalIsPlaying && currentTrack?.isQuranVerse && currentTrack.surahNumber === activeSurah && currentTrack.ayahNumber === ayah.numberInSurah) {
+      globalPause();
       return;
     }
 
-    if (!isRepeat) {
-      repeatLeftRef.current = repeatCount > 0 ? repeatCount - 1 : 0;
-      playOnlyOneRef.current = playOnlyOne;
+    if (!globalIsPlaying && currentTrack?.isQuranVerse && currentTrack.surahNumber === activeSurah && currentTrack.ayahNumber === ayah.numberInSurah) {
+      globalResume();
+      return;
     }
 
-    let loadedFromCache = false;
-    let blob: Blob | null = null;
-    try {
-      const cache = await caches.open('quran-audio-cache');
-      const response = await cache.match(ayah.audio);
-      if (response) {
-        blob = await response.blob();
-        loadedFromCache = true;
-      }
-    } catch (e) {
-      console.warn('Failed to load audio from cache', e);
-    }
-    
-    setIsPlayingFromCache(loadedFromCache);
-
-    const playAudioWithUrl = (url: string) => {
-      const audio = new Audio(url);
-      audioRef.current = audio;
-
-      let fallbackAttempted = false;
-      audio.onerror = () => {
-        if (url.startsWith('blob:') && ayah.audio && !fallbackAttempted) {
-          fallbackAttempted = true;
-          console.warn("[QuranFull] Blob URL failed, falling back to direct network URL:", ayah.audio);
-          audio.src = ayah.audio;
-          audio.play().catch(e => console.error("[QuranFull] Fallback playback error:", e));
-        }
-      };
-      
-      const playPromise = audio.play();
-      if (playPromise !== undefined) {
-        playPromise.then(() => {
-          setIsPlaying(true);
-          setPlayingAyah(ayah.number);
-          
-          // Auto-scroll to active ayah
-          if (ayahRefs.current[ayah.number] && !isRepeat) {
-            ayahRefs.current[ayah.number]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }
-        }).catch(err => {
-          if (err.name !== 'AbortError') {
-            console.error("Audio playback error:", err);
-          }
-        });
-      }
-
-      audio.onended = () => {
-        if (repeatLeftRef.current > 0) {
-        repeatLeftRef.current -= 1;
-        playAudio(ayah, true, playOnlyOneRef.current);
-        return;
-      }
-
-      if (playOnlyOneRef.current) {
-        setIsPlaying(false);
-        setPlayingAyah(null);
-        return;
-      }
-
-      if (autoPlayNext && surahArabic) {
-        const currentIndex = surahArabic.ayahs.findIndex(a => a.number === ayah.number);
-        if (currentIndex !== -1 && currentIndex < surahArabic.ayahs.length - 1) {
-          const nextAyah = surahArabic.ayahs[currentIndex + 1];
-          playAudio(nextAyah, false);
-        } else {
-          // Finished current content
-          if (contentRepeatLeftRef.current > 0) {
-            contentRepeatLeftRef.current -= 1;
-            // Play from the beginning of the current content
-            playAudio(surahArabic.ayahs[0], false);
-            return;
-          }
-
-          // Go to next
-          let nextId = activeSurah + 1;
-          let maxId = 114;
-          if (activeViewMode === 'page') maxId = 604;
-          if (activeViewMode === 'juz') maxId = 30;
-          if (activeViewMode === 'hizb') maxId = 60;
-          if (activeViewMode === 'rub') maxId = 240;
-
-          if (activeSurah < maxId) {
-            // We are changing content, reset content repeat left
-            contentRepeatLeftRef.current = contentRepeatCount > 0 ? contentRepeatCount - 1 : 0;
-            setAutoPlayFirstAyah(true);
-            loadContent(activeViewMode, nextId);
-          } else {
-            setIsPlaying(false);
-            setPlayingAyah(null);
-          }
-        }
-      } else {
-        setIsPlaying(false);
-        setPlayingAyah(null);
-      }
-    };
-  };
-
-    if (blob) {
-      const url = URL.createObjectURL(blob);
-      objectUrlRef.current = url;
-      playAudioWithUrl(url);
+    let tracksToPlay: Track[] = [];
+    if (playOnlyOne) {
+      tracksToPlay = [{
+        id: `quran-${activeSurah}-${ayah.numberInSurah}`,
+        title: `Verset ${ayah.numberInSurah} - Sourate ${surahArabic?.name || activeSurah}`,
+        url: ayah.audio,
+        artist: QURAN_RECITERS.find(r => r.id === selectedReciterId)?.name || 'Qari',
+        coverImage: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=500',
+        isQuranVerse: true,
+        surahNumber: activeSurah,
+        ayahNumber: ayah.numberInSurah
+      }];
+      playPlaylist(tracksToPlay, 0);
     } else {
-      playAudioWithUrl(ayah.audio);
+      if (surahArabic && surahArabic.ayahs) {
+        const startIndex = surahArabic.ayahs.findIndex(a => a.number === ayah.number);
+        if (startIndex !== -1) {
+          const playlistTracks = surahArabic.ayahs.map(a => ({
+            id: `quran-${activeSurah}-${a.numberInSurah}`,
+            title: `Verset ${a.numberInSurah} - Sourate ${surahArabic.name}`,
+            url: a.audio || '',
+            artist: QURAN_RECITERS.find(r => r.id === selectedReciterId)?.name || 'Qari',
+            coverImage: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=500',
+            isQuranVerse: true,
+            surahNumber: activeSurah,
+            ayahNumber: a.numberInSurah
+          }));
+          playPlaylist(playlistTracks, startIndex);
+        }
+      }
     }
   };
 
@@ -1826,7 +1880,7 @@ export const QuranFull: React.FC = () => {
         number: 999,
         name: playingPlaylist.name,
         englishName: playingPlaylist.name,
-        englishNameTranslation: "Playlist Roqya",
+        englishNameTranslation: "Playlist Coranique",
         revelationType: "Meccan",
         numberOfAyahs: pseudoAyahs.length,
         ayahs: pseudoAyahs
@@ -2016,7 +2070,7 @@ export const QuranFull: React.FC = () => {
       onTouchEnd={onTouchEndEvent}
     >
       {/* Floating Exit/Back Arrow (Middle Left) */}
-      {activeSurah && (
+      {activeSurah && fullScreenMode && (
         <motion.button
           initial={{ x: -50, opacity: 0 }}
           animate={{ x: 0, opacity: 1 }}
@@ -2024,21 +2078,13 @@ export const QuranFull: React.FC = () => {
           whileHover={{ x: 5, scale: 1.05 }}
           whileTap={{ scale: 0.95 }}
           onClick={() => {
-            if (fullScreenMode) {
-              setFullScreenMode(false);
-            } else {
-              setActiveSurah(null);
-            }
+            setFullScreenMode(false);
           }}
           className="fixed left-0 top-24 z-[110] p-3 sm:p-4 bg-white/40 dark:bg-gray-800/40 backdrop-blur-xl rounded-r-3xl border border-l-0 border-white/60 dark:border-gray-700/60 shadow-[4px_0_24px_-4px_rgba(0,0,0,0.15)] text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all duration-300 group overflow-hidden"
-          title={fullScreenMode ? "Quitter le plein écran" : "Retour"}
+          title="Quitter le plein écran"
         >
           <div className="absolute inset-0 bg-gradient-to-r from-transparent to-emerald-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-r-3xl pointer-events-none"></div>
-          {fullScreenMode ? (
-            <Minimize2 className="relative z-10 group-hover:scale-110 transition-transform" size={24} />
-          ) : (
-            <ArrowLeft className="relative z-10 group-hover:-translate-x-1 transition-transform" size={24} />
-          )}
+          <Minimize2 className="relative z-10 group-hover:scale-110 transition-transform" size={24} />
         </motion.button>
       )}
 
@@ -2377,30 +2423,8 @@ export const QuranFull: React.FC = () => {
                      </div>
                    </div>
 
-                   {/* Right: Repeat Mode */}
-                   <div className="flex justify-end flex-1">
-                     <div className="relative">
-                       <motion.button 
-                         whileHover={{ scale: 1.1, rotate: 15 }}
-                         whileTap={{ scale: 0.9 }}
-                         className={`p-3 rounded-full transition-all shadow-sm border-2 ${repeatCount > 0 ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400 border-emerald-500/30' : 'bg-white text-gray-600 hover:text-emerald-600 hover:bg-emerald-50 dark:bg-gray-800 dark:text-gray-300 border-gray-200 dark:border-gray-700 dark:hover:bg-gray-700 hover:border-emerald-500/30 dark:hover:border-emerald-500/30 hover:shadow-md'}`}
-                       >
-                         <Shield size={22} className={repeatCount > 0 ? "animate-pulse" : ""} style={{ animationDuration: '3s' }} />
-                         {repeatCount > 0 && <span className="absolute -top-1 -right-1 bg-emerald-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full animate-bounce shadow-sm border-2 border-white dark:border-gray-900">{repeatCount}</span>}
-                       </motion.button>
-                       <select
-                         value={repeatCount}
-                         onChange={(e) => setRepeatCount(Number(e.target.value))}
-                         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                         title="Mode Répétition"
-                       >
-                         <option value={0}>Sans répétition</option>
-                         {ROQYA_REPEAT_COUNTS.filter(c => c > 0).map(c => (
-                           <option key={c} value={c}>{c} fois</option>
-                         ))}
-                       </select>
-                     </div>
-                   </div>
+                   {/* Right: Empty placeholder to keep title centered */}
+                    <div className="flex justify-end flex-1" />
                  </div>
 
                  {/* Verses Search Bar (Collapsible) */}
@@ -2432,7 +2456,40 @@ export const QuranFull: React.FC = () => {
            </div>
 
            {/* Floating Action Bar */}
-           <div className={`fixed bottom-24 sm:bottom-28 z-50 flex flex-col gap-3 transition-all duration-500 ${toolbarPosition === 'right' ? 'right-4 sm:right-8 items-end' : 'left-4 sm:left-8 items-start'} ${fullScreenMode ? 'hidden' : ''}`}>
+           <div className={`fixed bottom-[152px] sm:bottom-[92px] z-50 flex flex-col gap-3 transition-all duration-500 ${toolbarPosition === 'right' ? 'right-4 sm:right-6 items-end' : 'left-4 sm:left-6 items-start'} ${fullScreenMode ? 'hidden' : ''}`}>
+              
+              {/* Floating Repeat Mode (visible only when Quran is playing) */}
+              <AnimatePresence>
+                {(isPlaying || globalIsPlaying) && (
+                  <motion.div 
+                    initial={{ opacity: 0, scale: 0.8, y: 15 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.8, y: 15 }}
+                    className="relative"
+                  >
+                    <motion.button 
+                      whileHover={{ scale: 1.1, rotate: 15 }}
+                      whileTap={{ scale: 0.9 }}
+                      className={`p-3.5 rounded-full transition-all shadow-xl border-2 ${repeatCount > 0 ? 'bg-emerald-500 text-white border-emerald-400' : 'bg-white text-gray-700 hover:text-emerald-600 dark:bg-gray-800 dark:text-gray-300 border-gray-200 dark:border-gray-700 dark:hover:bg-gray-700 hover:border-emerald-500'}`}
+                      title="Mode Répétition"
+                    >
+                      <RefreshCw size={22} className={repeatCount > 0 ? "animate-spin" : ""} style={{ animationDuration: '4s' }} />
+                      {repeatCount > 0 && <span className="absolute -top-1 -right-1 bg-amber-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full animate-bounce shadow-sm border-2 border-white dark:border-gray-900">{repeatCount}</span>}
+                    </motion.button>
+                    <select
+                      value={repeatCount}
+                      onChange={(e) => setRepeatCount(Number(e.target.value))}
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      title="Mode Répétition"
+                    >
+                      <option value={0}>Sans répétition</option>
+                      {ROQYA_REPEAT_COUNTS.filter(c => c > 0).map(c => (
+                        <option key={c} value={c}>{c} fois</option>
+                      ))}
+                    </select>
+                  </motion.div>
+                )}
+              </AnimatePresence>
              
              <AnimatePresence>
                {isToolbarExpanded && (
@@ -2530,7 +2587,7 @@ export const QuranFull: React.FC = () => {
                      <Bookmark size={20} />
                    </button>
 
-                   <button onClick={() => setShowPlaylistsModal(true)} className="p-3 rounded-xl transition-all flex flex-col items-center justify-center gap-1 bg-gray-50 dark:bg-gray-800/50 text-gray-700 dark:text-gray-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 hover:text-emerald-600 dark:hover:text-emerald-400" title="Mes Playlists Roqya">
+                   <button onClick={() => setShowPlaylistsModal(true)} className="p-3 rounded-xl transition-all flex flex-col items-center justify-center gap-1 bg-gray-50 dark:bg-gray-800/50 text-gray-700 dark:text-gray-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 hover:text-emerald-600 dark:hover:text-emerald-400" title="Mes Playlists">
                      <ListMusic size={20} />
                    </button>
 
@@ -2874,11 +2931,11 @@ export const QuranFull: React.FC = () => {
 
                      <div>
                        <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                         <Volume2 size={18} className="text-emerald-500" /> Mode Roqya (Répétition)
+                         <Volume2 size={18} className="text-emerald-500" /> Mode Mémorisation (Répétition)
                        </label>
                        <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 border border-gray-100 dark:border-gray-800">
                          <div className="flex flex-col gap-3">
-                           <p className="text-sm text-gray-600 dark:text-gray-400">Répéter chaque verset (utile pour la roqya et la mémorisation) :</p>
+                           <p className="text-sm text-gray-600 dark:text-gray-400">Répéter chaque verset (utile pour la mémorisation) :</p>
                            <div className="flex flex-wrap gap-2">
                              {ROQYA_REPEAT_COUNTS.map(count => (
                                <button
@@ -3370,7 +3427,7 @@ export const QuranFull: React.FC = () => {
                                });
                              }}
                              className="p-3 bg-white dark:bg-gray-800 rounded-full shadow-sm border border-gray-200 dark:border-gray-700 text-gray-500 hover:text-emerald-600 transition-colors"
-                             title="Ajouter à la playlist Roqya"
+                             title="Ajouter à ma Playlist"
                            >
                              <ListPlus size={20} />
                            </button>
@@ -3825,17 +3882,29 @@ export const QuranFull: React.FC = () => {
                   const isAr = /[\u0600-\u06FF]/.test(rawQuery);
                   const cleanQuery = isAr ? normalizeAr(rawQuery) : queryLower;
 
-                  const filteredAyahs = surahArabic.ayahs.filter(ayah => {
+                  const filteredAyahs = surahArabic.ayahs.filter((ayah, idx) => {
                     if (!rawQuery) return true;
                     if (ayah.numberInSurah.toString() === rawQuery) return true;
                     
-                    const textMatch = ayah.text && ayah.text.toLowerCase().includes(queryLower);
-                    
-                    const ayahAr = ayah.ar || '';
+                    const ayahAr = ayah.text || ayah.ar || '';
                     const ayahClean = normalizeAr(ayahAr);
                     const arabicMatch = isAr && ayahClean.includes(cleanQuery);
-                    
-                    return textMatch || arabicMatch;
+                    if (arabicMatch) return true;
+
+                    // French translation search
+                    const frText = surahFrench?.ayahs[idx]?.text || '';
+                    if (frText.toLowerCase().includes(queryLower)) return true;
+
+                    // English translation search
+                    const enText = surahEnglish?.ayahs[idx]?.text || '';
+                    if (enText.toLowerCase().includes(queryLower)) return true;
+
+                    // Hausa translation search
+                    const haText = surahHausa?.ayahs[idx]?.text || '';
+                    if (haText.toLowerCase().includes(queryLower)) return true;
+
+                    const textMatch = ayah.text && ayah.text.toLowerCase().includes(queryLower);
+                    return textMatch;
                   });
 
                   if (filteredAyahs.length === 0) {
@@ -3938,9 +4007,7 @@ export const QuranFull: React.FC = () => {
                                   >
                                     {isTajweed ? renderTajweed(ayahText) : ayahText}
                                   </span>
-                                  <span className="text-gray-600 dark:text-gray-400 mx-1.5 font-normal select-none" style={{ fontSize: '0.9em' }} dir="rtl">
-                                    ﴿{toArabicNumeral(ayah.numberInSurah)}﴾
-                                  </span>
+                                  <AyahMarker number={ayah.numberInSurah} />
                                 </span>
                               </React.Fragment>
                             );
@@ -3955,78 +4022,109 @@ export const QuranFull: React.FC = () => {
                       {filteredAyahs.map((ayah) => {
                         const i = surahArabic.ayahs.findIndex(a => a.number === ayah.number);
                         const prevAyah = i > 0 ? surahArabic.ayahs[i - 1] : null;
-                    const frAyah = surahFrench?.ayahs[i];
-                    const enAyah = surahEnglish?.ayahs[i];
-                    const haAyah = surahHausa?.ayahs[i];
-                    
-                    let markerText = "";
-                    if (showMarkers) {
-                      let parts = [];
-                      if (!prevAyah || ayah.juz !== prevAyah.juz) parts.push(`Juz ${ayah.juz}`);
-                      if (!prevAyah || ayah.page !== prevAyah.page) parts.push(`Page ${ayah.page}`);
-                      if (!prevAyah || ayah.hizbQuarter !== prevAyah.hizbQuarter) {
-                        const hizb = Math.ceil(ayah.hizbQuarter / 4);
-                        const q = ayah.hizbQuarter % 4;
-                        if (q === 1) parts.push(`Hizb ${hizb}`);
-                        else if (q === 2) parts.push(`Roubu' Hizb ${hizb}`);
-                        else if (q === 3) parts.push(`Nisf Hizb ${hizb}`);
-                        else if (q === 0) parts.push(`3/4 Hizb ${hizb}`);
-                      }
-                      markerText = parts.join(' • ');
-                    }
-                    
-                    const isNewSurah = ayah.numberInSurah === 1;
-                    const surahInfo = ayah.surah || surahArabic;
-                    const isTajweed = MUSHAF_OPTIONS.find(m => m.id === fontFamily)?.isTajweed;
-                    const isNewPage = !prevAyah || ayah.page !== prevAyah.page;
+                        const frAyah = surahFrench?.ayahs[i];
+                        const enAyah = surahEnglish?.ayahs[i];
+                        const haAyah = surahHausa?.ayahs[i];
+                        
+                        let markerText = "";
+                        if (showMarkers) {
+                          let parts = [];
+                          if (!prevAyah || ayah.juz !== prevAyah.juz) parts.push(`Juz ${ayah.juz}`);
+                          if (!prevAyah || ayah.page !== prevAyah.page) parts.push(`Page ${ayah.page}`);
+                          if (!prevAyah || ayah.hizbQuarter !== prevAyah.hizbQuarter) {
+                            const hizb = Math.ceil(ayah.hizbQuarter / 4);
+                            const q = ayah.hizbQuarter % 4;
+                            if (q === 1) parts.push(`Hizb ${hizb}`);
+                            else if (q === 2) parts.push(`Roubu' Hizb ${hizb}`);
+                            else if (q === 3) parts.push(`Nisf Hizb ${hizb}`);
+                            else if (q === 0) parts.push(`3/4 Hizb ${hizb}`);
+                          }
+                          markerText = parts.join(' • ');
+                        }
+                        
+                        const isNewSurah = ayah.numberInSurah === 1;
+                        const surahInfo = ayah.surah || surahArabic;
+                        const isTajweed = MUSHAF_OPTIONS.find(m => m.id === fontFamily)?.isTajweed;
+                        const isNewPage = !prevAyah || ayah.page !== prevAyah.page;
 
-                    return (
-                    <div key={ayah.number} className="flex flex-col gap-4">
-                      {isNewPage && i > 0 && (
-                        <div className="w-full flex items-center justify-center my-6 opacity-60 select-none">
-                          <div className="h-px bg-emerald-500/30 flex-grow"></div>
-                          <span className="px-4 text-xs font-sans text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 rounded-full bg-emerald-50 dark:bg-emerald-900/20 mx-2 whitespace-nowrap">Page {ayah.page}</span>
-                          <div className="h-px bg-emerald-500/30 flex-grow"></div>
-                        </div>
-                      )}
-                      {isNewSurah && showArabic && (
-                        <div className="w-full my-6 flex flex-col items-center">
-                          <div className="w-full">
-                            <SurahBanner number={surahInfo.number} name={surahInfo.name} numberOfAyahs={surahInfo.numberOfAyahs || 0} fontFamily={getArabicStyle().fontFamily} fontSizePx={17 + fontSize} />
-                          </div>
-                          {surahInfo.number !== 1 && surahInfo.number !== 9 && (
-                            <div className="text-center mt-6 mb-2 text-gray-900 dark:text-[#e4e4e7] font-arabic" style={getArabicStyle()}>
-                              {isTajweed ? renderTajweed("بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ") : "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"}
+                        return (
+                        <div key={ayah.number} className="flex flex-col gap-4">
+                          {isNewPage && i > 0 && (
+                            <div className="w-full flex items-center justify-center my-6 opacity-60 select-none">
+                              <div className="h-px bg-emerald-500/30 flex-grow"></div>
+                              <span className="px-4 text-xs font-sans text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 rounded-full bg-emerald-50 dark:bg-emerald-900/20 mx-2 whitespace-nowrap">Page {ayah.page}</span>
+                              <div className="h-px bg-emerald-500/30 flex-grow"></div>
                             </div>
                           )}
-                        </div>
-                      )}
-                      <div 
-                        ref={(el) => ayahRefs.current[ayah.number] = el}
-                        data-ayah-number={ayah.number}
-                        className={`bg-white dark:bg-gray-800 border ${playingAyah === ayah.number ? 'border-emerald-500 dark:border-emerald-500 ring-2 ring-emerald-500/20 shadow-md' : 'border-gray-100 dark:border-gray-700'} rounded-2xl p-5 sm:p-8 shadow-sm flex flex-col space-y-6 transition-all duration-300`}
-                      >
+                          {isNewSurah && showArabic && (
+                            <div className="w-full my-6 flex flex-col items-center">
+                              <div className="w-full">
+                                <SurahBanner number={surahInfo.number} name={surahInfo.name} numberOfAyahs={surahInfo.numberOfAyahs || 0} fontFamily={getArabicStyle().fontFamily} fontSizePx={17 + fontSize} />
+                              </div>
+                              {surahInfo.number !== 1 && surahInfo.number !== 9 && (
+                                <div className="text-center mt-6 mb-2 text-gray-900 dark:text-[#e4e4e7] font-arabic" style={getArabicStyle()}>
+                                  {isTajweed ? renderTajweed("بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ") : "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          <div 
+                            ref={(el) => ayahRefs.current[ayah.number] = el}
+                            data-ayah-number={ayah.number}
+                            className={`bg-white dark:bg-gray-800 border ${playingAyah === ayah.number ? 'border-emerald-500 dark:border-emerald-500 ring-2 ring-emerald-500/20 shadow-md' : 'border-gray-100 dark:border-gray-700'} rounded-2xl p-5 sm:p-8 shadow-sm flex flex-col space-y-6 transition-all duration-300`}
+                          >
                        {showArabic && (
                          <div className="w-full text-right" dir="rtl">
-                           <p 
-                             className={`font-arabic text-gray-900 dark:text-white ${getJustifyClass(ayah.text)}`} 
-                             style={getArabicStyle()}
-                             /* Long press disabled */
-                           >
-                             {(() => {
-                               const isTajweed = MUSHAF_OPTIONS.find(m => m.id === fontFamily)?.isTajweed;
-                               const rawText = isTajweed && surahTajweed?.ayahs[i] ? surahTajweed.ayahs[i].text : ayah.text;
-                               const text = ayah.numberInSurah === 1 && (ayah.surah?.number || surahArabic.number) !== 1 && (ayah.surah?.number || surahArabic.number) !== 9 
-                                 ? rawText.replace(/^بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ\s*/, '').replace(/^بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ\s*/, '').replace(/^بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ\s*/, '').replace(/^بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ\s*/, '') 
-                                 : rawText;
-                               return isTajweed ? renderTajweed(text) : text;
-                             })()} 
-                             <span className="text-emerald-600 dark:text-emerald-400 mx-2 font-normal text-2xl select-none" dir="rtl">﴿{toArabicNumeral(ayah.numberInSurah)}﴾</span>
-                           </p>
+                           {hifzMode && hideArabic && !revealedAyahs.includes(ayah.number) ? (
+                             <div 
+                               onClick={() => setRevealedAyahs(prev => [...prev, ayah.number])}
+                               className="filter blur-md select-none cursor-pointer transition-all hover:bg-emerald-50 dark:hover:bg-emerald-950/20 p-6 rounded-2xl border border-dashed border-emerald-500/30 text-center flex items-center justify-center gap-3 text-emerald-600 dark:text-emerald-400 font-sans text-sm font-semibold w-full"
+                             >
+                               <span className="text-xl">👁️‍QN</span> Cliquer pour dévoiler l'arabe (Mode Voilé Hifz)
+                             </div>
+                           ) : (
+                             <p 
+                               className={`font-arabic text-gray-900 dark:text-white ${getJustifyClass(ayah.text)}`} 
+                               style={getArabicStyle()}
+                             >
+                               {(() => {
+                                 const isTajweed = MUSHAF_OPTIONS.find(m => m.id === fontFamily)?.isTajweed;
+                                 const rawText = isTajweed && surahTajweed?.ayahs[i] ? surahTajweed.ayahs[i].text : ayah.text;
+                                 const text = ayah.numberInSurah === 1 && (ayah.surah?.number || surahArabic.number) !== 1 && (ayah.surah?.number || surahArabic.number) !== 9 
+                                   ? rawText.replace(/^بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ\s*/, '').replace(/^بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ\s*/, '').replace(/^بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ\s*/, '').replace(/^بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ\s*/, '') 
+                                   : rawText;
+                                 return isTajweed ? renderTajweed(text) : text;
+                               })()} 
+                               <AyahMarker number={ayah.numberInSurah} />
+                               {hifzMode && hideArabic && (
+                                 <button
+                                   onClick={(e) => {
+                                     e.stopPropagation();
+                                     setRevealedAyahs(prev => prev.filter(num => num !== ayah.number));
+                                   }}
+                                   className="mr-3 p-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 text-xs hover:bg-emerald-100 dark:hover:bg-emerald-900/50 inline-flex items-center gap-1 font-sans font-medium select-none"
+                                   title="Voiler à nouveau"
+                                 >
+                                   🔒 Masquer
+                                 </button>
+                               )}
+                             </p>
+                           )}
                          </div>
                        )}
                        
-                       {(showFrench || showEnglish || showHausa) && (
+                       {hifzMode && hideTranslation ? (
+                         <div className="pt-3 border-t border-dashed border-gray-100 dark:border-gray-700">
+                           <button
+                             onClick={() => {
+                               showToast("Traductions masquées par le mode Hifz");
+                             }}
+                             className="text-xs text-gray-400 hover:text-gray-500 flex items-center gap-1.5 font-sans"
+                           >
+                             📖 Traductions masquées par le mode Mémorisation
+                           </button>
+                         </div>
+                       ) : (showFrench || showEnglish || showHausa) && (
                          <div className="pt-4 border-t border-gray-100 dark:border-gray-700 space-y-4">
                            {showFrench && frAyah && (
                              <div>
@@ -4055,11 +4153,32 @@ export const QuranFull: React.FC = () => {
                          </div>
                        )}
                        
-                       <div className="flex items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-700 mt-auto">
-                         <div className="w-10 h-10 rounded-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 flex items-center justify-center font-bold text-gray-500">
-                           {ayah.numberInSurah}
+                       <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center justify-between pt-4 border-t border-gray-100 dark:border-gray-700 mt-auto">
+                         <div className="flex items-center gap-3">
+                           <div className="w-10 h-10 rounded-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 flex items-center justify-center font-bold text-gray-500 font-sans">
+                             {ayah.numberInSurah}
+                           </div>
+
+                           {hifzMode && (
+                             <div className="relative">
+                               <select
+                                 value={hifzStatus[`${surahInfo.number}_${ayah.numberInSurah}`] || 'not_started'}
+                                 onChange={(e) => updateHifzStatus(surahInfo.number, ayah.numberInSurah, e.target.value as any)}
+                                 className="appearance-none pl-3 pr-8 py-1.5 rounded-full text-xs font-bold border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer shadow-sm font-sans"
+                               >
+                                 <option value="not_started">⚪ Non commencé</option>
+                                 <option value="memorizing">🔵 En cours</option>
+                                 <option value="memorized">🟢 Mémorisé</option>
+                                 <option value="review">🟡 À réviser</option>
+                               </select>
+                               <div className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                                 <ChevronDown size={12} />
+                               </div>
+                             </div>
+                           )}
                          </div>
-                         <div className="flex items-center gap-2">
+                         
+                         <div className="flex items-center gap-2 flex-wrap">
                            {ayah.audio && (
                              <>
                                <button 
@@ -4080,54 +4199,14 @@ export const QuranFull: React.FC = () => {
                                </button>
                              </>
                            )}
+                           
+                           {/* Gemini AI Tafsir & Spiritual Secrets button */}
                            <button
-                             onClick={() => {
-                               if (!user) {
-                                 setShowAuthModal(true);
-                                 return;
-                               }
-                               const existing = bookmarks.find(b => b.ayahNumber === ayah.number);
-                               setBookmarkNote(existing ? existing.note : '');
-                               setBookmarkModalAyah(ayah);
-                             }}
-                             className={`relative w-10 h-10 rounded-full flex items-center justify-center transition-colors ${bookmarks.some(b => b.ayahNumber === ayah.number) ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400' : 'bg-gray-50 text-gray-400 hover:bg-gray-100 hover:text-emerald-500 dark:bg-gray-900 dark:text-gray-500 dark:hover:bg-gray-800 dark:hover:text-emerald-400'}`}
-                             title="Ajouter un signet / note"
+                             onClick={() => fetchTafsir(ayah, surahInfo.number, surahInfo.name)}
+                             className="w-10 h-10 rounded-full flex items-center justify-center transition-colors bg-amber-50 hover:bg-amber-100 text-amber-600 dark:bg-amber-950/40 dark:text-amber-400 dark:hover:bg-amber-900/40 border border-amber-200/30"
+                             title="Tafsir & Secrets (AI)"
                            >
-                             {bookmarks.some(b => b.ayahNumber === ayah.number) ? <BookmarkCheck size={18} /> : <Bookmark size={18} />}
-                           </button>
-                           <button
-                             onClick={() => {
-                               if (!user) {
-                                 setShowAuthModal(true);
-                                 return;
-                               }
-                               setPlaylistModalAyah(ayah);
-                             }}
-                             className="w-10 h-10 rounded-full flex items-center justify-center transition-colors bg-gray-50 text-gray-400 hover:bg-gray-100 hover:text-emerald-500 dark:bg-gray-900 dark:text-gray-500 dark:hover:bg-gray-800 dark:hover:text-emerald-400"
-                             title="Ajouter à la playlist Roqya"
-                           >
-                             <ListPlus size={18} />
-                           </button>
-                           <button
-                              onClick={() => {
-                                const isTajweed = MUSHAF_OPTIONS.find(m => m.id === fontFamily)?.isTajweed;
-                                const rawText = isTajweed && surahTajweed?.ayahs[i] ? surahTajweed.ayahs[i].text : ayah.text;
-                                const text = ayah.numberInSurah === 1 && (ayah.surah?.number || surahArabic.number) !== 1 && (ayah.surah?.number || surahArabic.number) !== 9 
-                                  ? rawText.replace(/^بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ\s*/, '').replace(/^بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ\s*/, '').replace(/^بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ\s*/, '').replace(/^بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ\s*/, '') 
-                                  : rawText;
-                                setZoomedAyah({ 
-                                  text, 
-                                  numberInSurah: ayah.numberInSurah, 
-                                  isTajweed: !!isTajweed, 
-                                  surahName: surahInfo.name, 
-                                  surahNumber: surahInfo.number, 
-                                  ayahNumber: ayah.number 
-                                });
-                              }}
-                              className="w-10 h-10 rounded-full flex items-center justify-center transition-colors bg-gray-50 text-gray-400 hover:bg-gray-100 hover:text-emerald-500 dark:bg-gray-900 dark:text-gray-500 dark:hover:bg-gray-800 dark:hover:text-emerald-400"
-                              title="Partager et créer image/vidéo"
-                            >
-                              <Share2 size={18} />
+                             <Sparkles size={18} />
                             </button>
                            <button
                              onClick={() => {
@@ -4166,7 +4245,7 @@ export const QuranFull: React.FC = () => {
                          <X size={20} />
                        </button>
                        <h3 className="font-bold text-xl text-gray-900 dark:text-white flex items-center gap-2 mb-4">
-                         <ListPlus className="text-emerald-500" /> Ajouter à la Playlist Roqya
+                         <ListPlus className="text-emerald-500" /> Ajouter à ma Playlist
                        </h3>
                        <div className="space-y-4">
                             <div className="space-y-4">
@@ -4292,7 +4371,7 @@ export const QuranFull: React.FC = () => {
                <motion.div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-3xl p-6 shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
                  <div className="flex justify-between items-center mb-6">
                    <h3 className="font-bold text-xl text-gray-900 dark:text-white flex items-center gap-2">
-                     <ListMusic className="text-emerald-500" /> Playlists Roqya
+                     <ListMusic className="text-emerald-500" /> Mes Playlists
                    </h3>
                    <button onClick={() => setShowPlaylistsModal(false)} className="p-2 text-gray-500 hover:text-gray-900 dark:hover:text-white">
                      <X size={20} />
@@ -4312,7 +4391,7 @@ export const QuranFull: React.FC = () => {
                                const tracks = p.ayahs.map(a => ({
                                  id: `roqya-${a.number}`,
                                  title: `Sourate ${a.surahNumber}, Verset ${a.ayahNumberInSurah}`,
-                                 artist: "Roqya",
+                                 artist: "Coran",
                                  url: `https://cdn.islamic.network/quran/audio/128/${reciterApiId}/${a.number}.mp3`
                                }));
                                playPlaylist(tracks, 0);
@@ -4325,7 +4404,7 @@ export const QuranFull: React.FC = () => {
                                const url = URL.createObjectURL(blob);
                                const a = document.createElement('a');
                                a.href = url;
-                               a.download = `Roqya_${p.name}.txt`;
+                               a.download = `Playlist_${p.name}.txt`;
                                a.click();
                              }} className="p-2 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 hover:text-emerald-500" title="Télécharger le texte de la playlist">
                                <Download size={16} />

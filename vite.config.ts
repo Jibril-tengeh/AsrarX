@@ -143,6 +143,21 @@ export default defineConfig(() => {
               },
             },
             {
+              urlPattern: /^https:\/\/.*\.mp3quran\.net\/.*/i,
+              handler: "CacheFirst",
+              options: {
+                cacheName: "quran-audio-cache",
+                expiration: {
+                  maxEntries: 200,
+                  maxAgeSeconds: 60 * 60 * 24 * 30, // 30 days
+                },
+                cacheableResponse: {
+                  statuses: [0, 200],
+                },
+                rangeRequests: true,
+              },
+            },
+            {
               urlPattern: /^https:\/\/(images\.unsplash\.com|firebasestorage\.googleapis\.com)\/.*/i,
               handler: "CacheFirst",
               options: {

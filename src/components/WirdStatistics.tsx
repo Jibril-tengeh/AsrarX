@@ -10,7 +10,6 @@ interface StatData {
 
 const mockData: StatData[] = [
   { tool: 'Tasbih', timeSpent: 45 },
-  { tool: 'Roqya', timeSpent: 30 },
   { tool: 'Quran', timeSpent: 60 },
   { tool: 'Zairja', timeSpent: 15 },
   { tool: 'Asma', timeSpent: 25 },
