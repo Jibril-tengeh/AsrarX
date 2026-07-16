@@ -57,8 +57,8 @@ export const RouhaniyyaExtractor: React.FC = () => {
     // Suffixes:
     // Celestial (Malaikah): ـائيل (A'il)
     // Terrestrial (Rouhan): ـطيش ou ـيوش (Tish / Yush)
-    const celestial = coreLetters + 'ائيل';
-    const terrestrial = coreLetters + 'طيش';
+    const celestial = coreLetters + 'َائِيلُ';
+    const terrestrial = coreLetters + 'طَيْشُ';
 
     setResult({
       letters: coreLetters,

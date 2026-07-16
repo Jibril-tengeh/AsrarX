@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useLanguage } from "../../contexts/LanguageContext";
+import { useFeatures } from "../../contexts/FeatureContext";
 import {
   ArrowLeft,
   BookOpen,
@@ -66,6 +67,7 @@ export const SecretDetail: React.FC = () => {
   const location = useLocation();
   const { t, language } = useLanguage();
   const { user, loading: authLoading } = useAuth();
+  const { featureToggles } = useFeatures();
   const [item, setItem] = useState<AsrarItem | null>(null);
   const [notFound, setNotFound] = useState(false);
 
@@ -80,6 +82,12 @@ export const SecretDetail: React.FC = () => {
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [bookmarkFolders, setBookmarkFolders] = useState<any[]>([]);
   const [viewMode, setViewMode] = useState<'full' | 'accordion'>('full');
+
+  useEffect(() => {
+    if (featureToggles?.lockArticleViewmode && featureToggles?.defaultArticleViewmode) {
+      setViewMode(featureToggles.defaultArticleViewmode);
+    }
+  }, [featureToggles?.lockArticleViewmode, featureToggles?.defaultArticleViewmode]);
   const [articleFontSize, setArticleFontSize] = useState<number>(() => {
     const isAndroid = /Android/i.test(navigator.userAgent);
     return isAndroid ? 12 : 18;
@@ -704,11 +712,8 @@ export const SecretDetail: React.FC = () => {
       >
         <button
           onClick={() => {
-            if (window.history.state && window.history.state.idx > 0) {
-              navigate(-1);
-            } else {
-              navigate('/user/dashboard');
-            }
+            const backPath = sessionStorage.getItem('last_active_main_path') || '/user/dashboard';
+            navigate(backPath);
           }}
           className={`flex items-center space-x-2 px-3 py-2 -ml-3 rounded-lg transition-colors ${readingMode ? "text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800" : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
         >
@@ -717,22 +722,24 @@ export const SecretDetail: React.FC = () => {
         </button>
 
         <div className="flex items-center gap-1.5 sm:gap-2">
-          <div className="flex items-center bg-gray-100 dark:bg-gray-800 p-1 rounded-full mr-1 sm:mr-2">
-            <button
-              onClick={() => setViewMode('full')}
-              className={`p-1.5 rounded-full transition-colors ${viewMode === 'full' ? 'bg-white dark:bg-gray-700 shadow-sm text-emerald-600 dark:text-emerald-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
-              title="Vue complète"
-            >
-              <AlignLeft size={18} />
-            </button>
-            <button
-              onClick={() => setViewMode('accordion')}
-              className={`p-1.5 rounded-full transition-colors ${viewMode === 'accordion' ? 'bg-white dark:bg-gray-700 shadow-sm text-emerald-600 dark:text-emerald-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
-              title="Vue par sections"
-            >
-              <ListTree size={18} />
-            </button>
-          </div>
+          {!featureToggles?.lockArticleViewmode && (
+            <div className="flex items-center bg-gray-100 dark:bg-gray-800 p-1 rounded-full mr-1 sm:mr-2">
+              <button
+                onClick={() => setViewMode('full')}
+                className={`p-1.5 rounded-full transition-colors ${viewMode === 'full' ? 'bg-white dark:bg-gray-700 shadow-sm text-emerald-600 dark:text-emerald-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
+                title="Vue complète"
+              >
+                <AlignLeft size={18} />
+              </button>
+              <button
+                onClick={() => setViewMode('accordion')}
+                className={`p-1.5 rounded-full transition-colors ${viewMode === 'accordion' ? 'bg-white dark:bg-gray-700 shadow-sm text-emerald-600 dark:text-emerald-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
+                title="Vue par sections"
+              >
+                <ListTree size={18} />
+              </button>
+            </div>
+          )}
           <button
             onClick={() => setReadingMode(!readingMode)}
             className={`p-2 rounded-full transition-colors flex items-center gap-2 ${readingMode ? "bg-[#f4ebd0] text-[#8b6e3f] dark:bg-[#383120] dark:text-[#d4c39c]" : "hover:bg-emerald-50 dark:hover:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"}`}

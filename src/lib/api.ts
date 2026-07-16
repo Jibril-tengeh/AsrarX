@@ -17,6 +17,45 @@ export function getApiUrl(path: string): string {
     return `${origin}${cleanPath}`;
   }
 
+  // Detect if we are running in a real mobile/Capacitor container (native/emulator)
+  // Capacitor on Android serves from 'http://localhost' or 'https://localhost' (no port, or custom schema).
+  // Capacitor on iOS serves from 'capacitor://localhost'.
+  const isNativeMobile = 
+    origin.startsWith('capacitor:') || 
+    origin.startsWith('file:') || 
+    origin === 'http://localhost' || 
+    origin === 'https://localhost' ||
+    (!!(window as any).Capacitor && !!(window as any).Capacitor.isNativePlatform);
+
+  if (isNativeMobile) {
+    // Native Mobile/Capacitor environment:
+    // Since the page is loaded from capacitor:// or file:// or local webview localhost, we must fetch from a remote backend server.
+    const storedUrl = localStorage.getItem('asrarhub_backend_url');
+    if (storedUrl) {
+      const base = storedUrl.endsWith('/') ? storedUrl.slice(0, -1) : storedUrl;
+      const resolved = `${base}${cleanPath}`;
+      console.log(`[getApiUrl] Native Mobile: using stored backend URL: "${resolved}"`);
+      return resolved;
+    }
+
+    try {
+      if (typeof __APP_URL__ !== 'undefined' && __APP_URL__) {
+        const base = __APP_URL__.endsWith('/') ? __APP_URL__.slice(0, -1) : __APP_URL__;
+        const resolved = `${base}${cleanPath}`;
+        console.log(`[getApiUrl] Native Mobile: using fallback __APP_URL__: "${resolved}"`);
+        return resolved;
+      }
+    } catch (err) {
+      // ignore
+    }
+
+    // Final fallback for mobile native if no URL is configured yet
+    const fallbackBase = 'https://ais-pre-zhlvo3fs5z5wltpspv6eub-789730332353.europe-west2.run.app';
+    const resolved = `${fallbackBase}${cleanPath}`;
+    console.log(`[getApiUrl] Native Mobile: final fallback to: "${resolved}"`);
+    return resolved;
+  }
+
   // If the page is served over http:// or https://, we should ALWAYS use the current web origin as the API backend base.
   // This completely avoids cross-origin CORS / SSL issues and ensures that a web preview or a web-hosted app
   // (even if loaded inside a Capacitor webview via live-reload) communicates with its own matching backend server.
@@ -25,47 +64,6 @@ export function getApiUrl(path: string): string {
     console.log(`[getApiUrl] HTTP/HTTPS origin detected. Resolving API to matching origin: "${resolved}"`);
     return resolved;
   }
-
-  // Detect if we are running in a real mobile/Capacitor container (native/emulator)
-  const isNativeMobile = 
-    origin.startsWith('capacitor:') || 
-    origin.startsWith('file:') || 
-    (!!(window as any).Capacitor && !!(window as any).Capacitor.isNativePlatform);
-
-  if (!isNativeMobile) {
-    // Standard web browser environment (dev server, preview, or production website)
-    // Always use the relative/current origin to avoid cross-origin CORS/SSL issues
-    const resolved = `${origin}${cleanPath}`;
-    console.log(`[getApiUrl] Web environment detected. Resolving to relative path on current origin: "${resolved}"`);
-    return resolved;
-  }
-
-  // Native Mobile/Capacitor environment:
-  // Since the page is loaded from capacitor:// or file://, we must fetch from a remote backend server.
-  const storedUrl = localStorage.getItem('asrarhub_backend_url');
-  if (storedUrl) {
-    const base = storedUrl.endsWith('/') ? storedUrl.slice(0, -1) : storedUrl;
-    const resolved = `${base}${cleanPath}`;
-    console.log(`[getApiUrl] Native Mobile: using stored backend URL: "${resolved}"`);
-    return resolved;
-  }
-
-  try {
-    if (typeof __APP_URL__ !== 'undefined' && __APP_URL__) {
-      const base = __APP_URL__.endsWith('/') ? __APP_URL__.slice(0, -1) : __APP_URL__;
-      const resolved = `${base}${cleanPath}`;
-      console.log(`[getApiUrl] Native Mobile: using fallback __APP_URL__: "${resolved}"`);
-      return resolved;
-    }
-  } catch (err) {
-    // ignore
-  }
-
-  // Final fallback for mobile native if no URL is configured yet
-  const fallbackBase = 'https://ais-pre-zhlvo3fs5z5wltpspv6eub-789730332353.europe-west2.run.app';
-  const resolved = `${fallbackBase}${cleanPath}`;
-  console.log(`[getApiUrl] Native Mobile: final fallback to: "${resolved}"`);
-  return resolved;
 }
 
 // Global request interceptor to inspect mobile/Capacitor WebView HTTP status codes
@@ -79,7 +77,7 @@ if (typeof window !== 'undefined' && !(window as any).__FETCH_INTERCEPTOR_MOUNTE
       
       // Log non-2xx codes for diagnostic logs (especially 401, 403, 503)
       if (response.status >= 400) {
-        console.error(
+        console.warn(
           `[HTTP INTERCEPTOR] Status ${response.status} on URL: ${url}\n` +
           `Diagnostic: ${
             response.status === 401 ? "401 Non autorisé (Utilisateur non connecté ou session expirée)" :
@@ -91,7 +89,7 @@ if (typeof window !== 'undefined' && !(window as any).__FETCH_INTERCEPTOR_MOUNTE
       }
       return response;
     } catch (err: any) {
-      console.error(`[HTTP INTERCEPTOR] Network Failure fetching: ${args[0] || 'Unknown'}\nDetails: ${err?.message || err}`);
+      console.warn(`[HTTP INTERCEPTOR] Network Failure fetching: ${args[0] || 'Unknown'}\nDetails: ${err?.message || err}`);
       throw err;
     }
   };

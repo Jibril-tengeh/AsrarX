@@ -65,23 +65,47 @@ try {
       
       const start = performance.now();
       
-      try {
-        console.log(`[Fetch Debug] 🚀 Tentative de requête vers: "${url}"`, {
-          method: init?.method || 'GET',
-          hasHeaders: !!init?.headers,
-          hasBody: !!init?.body
-        });
+      let attempt = 0;
+      const maxAttempts = 3;
+      const delayMs = 1500;
+      let lastError: any;
 
-        const response = await originalFetch(input, init);
-        
-        const duration = (performance.now() - start).toFixed(1);
-        console.log(`[Fetch Debug] ✅ Réponse reçue de "${url}" en ${duration}ms (Status: ${response.status})`);
-        
-        return response;
-      } catch (error: any) {
-        const duration = (performance.now() - start).toFixed(1);
-        const isOnline = navigator.onLine;
-        const errorStr = String(error?.message || error);
+      while (attempt < maxAttempts) {
+        try {
+          attempt++;
+          if (attempt > 1) {
+            console.log(`[Fetch Debug] 🔄 Tentative de reconnexion ${attempt}/${maxAttempts} vers: "${url}"`);
+          } else {
+            console.log(`[Fetch Debug] 🚀 Tentative de requête vers: "${url}"`, {
+              method: init?.method || 'GET',
+              hasHeaders: !!init?.headers,
+              hasBody: !!init?.body
+            });
+          }
+
+          const response = await originalFetch(input, init);
+          
+          const duration = (performance.now() - start).toFixed(1);
+          console.log(`[Fetch Debug] ✅ Réponse reçue de "${url}" en ${duration}ms (Status: ${response.status})`);
+          
+          return response;
+        } catch (error: any) {
+          lastError = error;
+          const isGet = !init?.method || init.method.toUpperCase() === 'GET';
+          if (isGet && attempt < maxAttempts) {
+            console.warn(`[Fetch Debug] ⚠️ Échec de la tentative ${attempt} pour "${url}". Nouvelle tentative dans ${delayMs}ms...`, error?.message || error);
+            await new Promise(resolve => setTimeout(resolve, delayMs));
+            continue;
+          }
+          break;
+        }
+      }
+
+      // If we got here, all allowed attempts failed
+      const error = lastError;
+      const duration = (performance.now() - start).toFixed(1);
+      const isOnline = navigator.onLine;
+      const errorStr = String(error?.message || error);
         
         // Extract host and protocol for precise diagnostic
         let parsedUrl: URL | null = null;
@@ -154,7 +178,6 @@ try {
         }
         
         throw error;
-      }
     };
 
     Object.defineProperty(window, 'fetch', {

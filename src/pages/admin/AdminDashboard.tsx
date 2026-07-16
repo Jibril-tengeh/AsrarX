@@ -4,12 +4,12 @@ import { useNavigate } from 'react-router-dom';
 import { AuthModal } from '../../components/AuthModal';
 import { 
   Settings, Users, BarChart3, Database, Shield, LayoutDashboard, 
-  Book, ToggleLeft, Volume2, Save, Search, Plus, Trash2, Edit2, FileText,
+  Book, BookOpen, ToggleLeft, Volume2, Save, Search, Plus, Trash2, Edit2, FileText,
   Eye, Image as ImageIcon, Crop as CropIcon, X, Upload, ShoppingBag, CreditCard,
-  Clock, CheckCircle, XCircle, Globe, Grid, List, Mail, Phone, Lock, Bell, BellOff, Sparkles
+  Clock, CheckCircle, XCircle, Globe, Grid, List, Mail, Phone, Lock, Bell, BellOff, Sparkles, Star
 } from 'lucide-react';
 import { db } from '../../lib/firebase';
-import { collection, getDocs, doc, updateDoc, deleteDoc, addDoc, onSnapshot, query, orderBy, setDoc, writeBatch } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, updateDoc, deleteDoc, addDoc, onSnapshot, query, orderBy, setDoc, writeBatch } from 'firebase/firestore';
 import { useAuth } from '../../contexts/AuthContext';
 import { TipTapEditor } from '../../components/TipTapEditor';
 // import SimpleEditor from 'react-simple-code-editor';
@@ -23,6 +23,7 @@ import 'react-image-crop/dist/ReactCrop.css';
 import { getApiUrl } from '../../lib/api';
 
 import { AdminStoreManager } from '../../components/AdminStoreManager';
+import { DEFAULT_OATHS } from '../user/tools/GrandOaths';
 
 const LayoutSelector = ({ value, onChange, activeColor = 'emerald' }: { value: string, onChange: (val: string) => void, activeColor?: string }) => {
   const isEmerald = activeColor.includes('emerald');
@@ -96,7 +97,7 @@ const LayoutSelector = ({ value, onChange, activeColor = 'emerald' }: { value: s
   );
 };
 
-type AdminTab = 'overview' | 'users' | 'payments' | 'community' | 'features' | 'ruqyah' | 'content' | 'notifications' | 'settings' | 'articles' | 'store';
+type AdminTab = 'overview' | 'users' | 'payments' | 'community' | 'features' | 'ruqyah' | 'content' | 'notifications' | 'settings' | 'articles' | 'store' | 'grand_oaths';
 
 interface Article {
   id: string;
@@ -182,6 +183,24 @@ export const AdminDashboard: React.FC = () => {
     category: 'Général' 
   });
 
+  // Grand Oaths State
+  const [adminGrandOaths, setAdminGrandOaths] = useState<any[]>([]);
+  const [editingOath, setEditingOath] = useState<any | null>(null);
+  const [newOath, setNewOath] = useState<any>({
+    title: '', title_en: '', title_ha: '',
+    arabicTitle: '',
+    desc: '', desc_en: '', desc_ha: '',
+    incense: '', incense_en: '', incense_ha: '',
+    day: '', day_en: '', day_ha: '',
+    content: '',
+    isMaintenance: false,
+    syriacNames: []
+  });
+  const [newSyriacName, setNewSyriacName] = useState<any>({
+    name: '', arabic: '', meaning: '', meaning_en: '', meaning_ha: ''
+  });
+  const [restoringOaths, setRestoringOaths] = useState(false);
+
   // Users State
   const [users, setUsers] = useState<User[]>([]);
   const [userSearch, setUserSearch] = useState('');
@@ -198,6 +217,21 @@ export const AdminDashboard: React.FC = () => {
   const [manualPayments, setManualPayments] = useState<any[]>([]);
   const [selectedProofPayment, setSelectedProofPayment] = useState<any>(null);
   const [paymentsFilter, setPaymentsFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+
+  // Promo Codes State
+  const [promoCodes, setPromoCodes] = useState<any[]>([]);
+  const [storeProducts, setStoreProducts] = useState<any[]>([]);
+  const [newPromo, setNewPromo] = useState<any>({
+    code: '',
+    type: 'discount',
+    discountType: 'percent',
+    discountValue: 0,
+    subscriptionMonths: 3,
+    productId: '',
+    maxUses: 100,
+    expiryDate: '',
+    isActive: true
+  });
 
   // Ruqyah Audio State
   const [ruqyahAudios, setRuqyahAudios] = useState<RuqyahAudio[]>([]);
@@ -335,6 +369,29 @@ export const AdminDashboard: React.FC = () => {
     // Load settings
     const isAudioEnabled = localStorage.getItem('admin_ruqyah_audio_enabled') === 'true';
     setAudioEnabled(isAudioEnabled);
+
+    // Seed Grand Oaths if not already done
+    const seedOathsIfNeeded = async () => {
+      try {
+        const setupRef = doc(db, 'settings', 'grand_oaths_setup');
+        const setupSnap = await getDoc(setupRef);
+        if (!setupSnap.exists() || !setupSnap.data()?.seeded) {
+          const qSnap = await getDocs(collection(db, "grand_oaths"));
+          if (qSnap.empty) {
+            for (const item of DEFAULT_OATHS) {
+              await addDoc(collection(db, "grand_oaths"), {
+                ...item,
+                createdAt: item.createdAt || Date.now()
+              });
+            }
+          }
+          await setDoc(setupRef, { seeded: true, seededAt: Date.now() }, { merge: true });
+        }
+      } catch (err) {
+        console.error("Admin seeding error", err);
+      }
+    };
+    seedOathsIfNeeded();
     
     const unsubscribeUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
       setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
@@ -378,6 +435,22 @@ export const AdminDashboard: React.FC = () => {
       setAdminPrompts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as { id: string; text: string; lang: string })));
     }, (error) => console.error("Admin Prompts error", error));
 
+    const unsubscribeGrandOaths = onSnapshot(collection(db, 'grand_oaths'), (snapshot) => {
+      const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      list.sort((a: any, b: any) => (a.createdAt || 0) - (b.createdAt || 0));
+      setAdminGrandOaths(list);
+    }, (error) => console.error("Admin Grand Oaths error", error));
+
+    const unsubscribePromoCodes = onSnapshot(collection(db, 'promo_codes'), (snapshot) => {
+      const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setPromoCodes(list);
+    }, (error) => console.error("Admin Promo Codes error", error));
+
+    const unsubscribeStoreProducts = onSnapshot(collection(db, 'store_products'), (snapshot) => {
+      const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setStoreProducts(list);
+    }, (error) => console.error("Admin Store Products error", error));
+
     return () => {
       unsubscribeUsers();
       unsubscribeLexique();
@@ -388,6 +461,9 @@ export const AdminDashboard: React.FC = () => {
       unsubscribeManualPayments();
       unsubscribeFeatures();
       unsubscribePrompts();
+      unsubscribeGrandOaths();
+      unsubscribePromoCodes();
+      unsubscribeStoreProducts();
     };
   }, []);
 
@@ -544,6 +620,18 @@ export const AdminDashboard: React.FC = () => {
       await updateDoc(doc(db, 'manual_payments', payment.id), {
         status: 'approved'
       });
+
+      // 3. Increment promo code uses if applicable
+      if (payment.appliedPromoCode) {
+        try {
+          const { increment } = await import('firebase/firestore');
+          await updateDoc(doc(db, 'promo_codes', payment.appliedPromoCode.toUpperCase()), {
+            uses: increment(1)
+          });
+        } catch (promoErr) {
+          console.warn("Failed to increment promo uses upon approval:", promoErr);
+        }
+      }
 
       showToast(`Paiement de ${payment.senderName} approuvé ! Abonnement Premium de ${months} mois activé.`, 'success');
     } catch (error) {
@@ -838,6 +926,7 @@ export const AdminDashboard: React.FC = () => {
       { id: 'community', label: 'Communauté', icon: Users },
       { id: 'notifications', label: 'Notifications', icon: Volume2 },
       { id: 'features', label: 'Fonctionnalités', icon: ToggleLeft },
+      { id: 'grand_oaths', label: 'Grands Sermons', icon: Shield },
       { id: 'content', label: 'CMS (Lexique)', icon: Database },
       { id: 'settings', label: 'Paramètres', icon: Settings },
     ];
@@ -1320,6 +1409,224 @@ export const AdminDashboard: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* Section de Gestion des Codes Promo */}
+        <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+          <div className="border-b border-gray-100 dark:border-gray-700 pb-4 mb-6">
+            <h3 className="font-bold text-gray-900 dark:text-white text-lg flex items-center gap-2">
+              <Sparkles className="text-amber-500" />
+              Générateur & Gestion de Codes Promo
+            </h3>
+            <p className="text-xs text-gray-500 mt-1">
+              Créez des codes promotionnels pour réduire le coût des abonnements, débloquer directement un abonnement (3, 6, 12 mois), ou débloquer automatiquement un article spécifique de la boutique.
+            </p>
+          </div>
+
+          <form onSubmit={handleCreatePromoCode} className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 bg-gray-50 dark:bg-gray-750 p-5 rounded-2xl border border-gray-100 dark:border-gray-700">
+            <div className="md:col-span-3">
+              <h4 className="text-xs uppercase font-bold text-gray-500 tracking-wider mb-2">Créer un nouveau code promo</h4>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Code Promo (Unique) *</label>
+              <input
+                type="text"
+                required
+                placeholder="Ex: ASRAR50, FREE3M"
+                value={newPromo.code}
+                onChange={(e) => setNewPromo({ ...newPromo, code: e.target.value })}
+                className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Type de Promo *</label>
+              <select
+                value={newPromo.type}
+                onChange={(e) => setNewPromo({ ...newPromo, type: e.target.value })}
+                className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none"
+              >
+                <option value="discount">Réduction de prix (Abonnement)</option>
+                <option value="unlock_subscription">Débloquer Inscription (3, 6, 12 mois)</option>
+                <option value="unlock_product">Débloquer un article de la Boutique</option>
+              </select>
+            </div>
+
+            {newPromo.type === 'discount' && (
+              <>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Type de réduction *</label>
+                  <select
+                    value={newPromo.discountType}
+                    onChange={(e) => setNewPromo({ ...newPromo, discountType: e.target.value })}
+                    className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none"
+                  >
+                    <option value="percent">Pourcentage (%)</option>
+                    <option value="flat">Montant fixe</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Valeur de réduction *</label>
+                  <input
+                    type="number"
+                    required
+                    min="0"
+                    placeholder="Ex: 50 pour 50% ou 50 GHS"
+                    value={newPromo.discountValue || ''}
+                    onChange={(e) => setNewPromo({ ...newPromo, discountValue: Number(e.target.value) })}
+                    className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none"
+                  />
+                </div>
+              </>
+            )}
+
+            {newPromo.type === 'unlock_subscription' && (
+              <div>
+                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Durée de l'abonnement *</label>
+                <select
+                  value={newPromo.subscriptionMonths}
+                  onChange={(e) => setNewPromo({ ...newPromo, subscriptionMonths: Number(e.target.value) })}
+                  className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none"
+                >
+                  <option value={3}>3 Mois</option>
+                  <option value={6}>6 Mois</option>
+                  <option value={12}>12 Mois</option>
+                </select>
+              </div>
+            )}
+
+            {newPromo.type === 'unlock_product' && (
+              <div>
+                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Sélectionner l'article de la Boutique *</label>
+                <select
+                  required
+                  value={newPromo.productId}
+                  onChange={(e) => setNewPromo({ ...newPromo, productId: e.target.value })}
+                  className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none"
+                >
+                  <option value="">-- Choisir un article --</option>
+                  {storeProducts.map((p) => (
+                    <option key={p.id} value={p.id}>{p.name} ({p.pointsCost} points / {p.price || 0} USD)</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            <div>
+              <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Nombre d'utilisations Max (Optionnel)</label>
+              <input
+                type="number"
+                placeholder="Laisser vide pour illimité"
+                value={newPromo.maxUses || ''}
+                onChange={(e) => setNewPromo({ ...newPromo, maxUses: e.target.value ? Number(e.target.value) : '' })}
+                className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Date d'Expiration (Optionnelle)</label>
+              <input
+                type="date"
+                value={newPromo.expiryDate}
+                onChange={(e) => setNewPromo({ ...newPromo, expiryDate: e.target.value })}
+                className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none"
+              />
+            </div>
+
+            <div className="md:col-span-3 flex justify-end pt-2">
+              <button
+                type="submit"
+                className="py-3 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition-all flex items-center gap-2"
+              >
+                <Plus size={16} />
+                Enregistrer le code promo
+              </button>
+            </div>
+          </form>
+
+          {/* Liste des codes promos actifs */}
+          <div className="space-y-4">
+            <h4 className="text-xs uppercase font-bold text-gray-500 tracking-wider">Codes Promos Existants ({promoCodes.length})</h4>
+            
+            {promoCodes.length === 0 ? (
+              <div className="text-center py-8 text-gray-500 border border-dashed rounded-2xl">
+                Aucun code promo configuré pour le moment.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-gray-200 dark:border-gray-700 text-xs uppercase font-bold text-gray-500 dark:text-gray-400">
+                      <th className="py-3 px-4">Code</th>
+                      <th className="py-3 px-4">Type</th>
+                      <th className="py-3 px-4">Avantage</th>
+                      <th className="py-3 px-4">Utilisations / Max</th>
+                      <th className="py-3 px-4">Date Exp.</th>
+                      <th className="py-3 px-4">Statut</th>
+                      <th className="py-3 px-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 dark:divide-gray-750 text-xs sm:text-sm">
+                    {promoCodes.map((promo) => {
+                      let benefit = '';
+                      if (promo.type === 'discount') {
+                        benefit = promo.discountType === 'percent' ? `-${promo.discountValue}%` : `-${promo.discountValue} ${featureToggles?.premium_currency || 'GHS'}`;
+                      } else if (promo.type === 'unlock_subscription') {
+                        benefit = `Abonnement ${promo.subscriptionMonths} Mois`;
+                      } else if (promo.type === 'unlock_product') {
+                        const prod = storeProducts.find((p: any) => p.id === promo.productId);
+                        benefit = `Débloque : ${prod ? prod.name : promo.productId}`;
+                      }
+
+                      const isExpired = promo.expiryDate && Date.now() > promo.expiryDate;
+
+                      return (
+                        <tr key={promo.code} className="text-gray-700 dark:text-gray-300">
+                          <td className="py-3 px-4 font-black text-gray-900 dark:text-white font-mono">{promo.code}</td>
+                          <td className="py-3 px-4">
+                            <span className="capitalize text-xs font-semibold px-2 py-1 rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
+                              {promo.type === 'discount' ? 'Réduction' : promo.type === 'unlock_subscription' ? 'Abonnement direct' : 'Article gratuit'}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 font-bold text-emerald-600 dark:text-emerald-400">{benefit}</td>
+                          <td className="py-3 px-4 font-mono">{promo.uses || 0} / {promo.maxUses || '∞'}</td>
+                          <td className="py-3 px-4 text-xs">
+                            {promo.expiryDate ? (
+                              <span className={isExpired ? "text-red-500 font-bold" : "text-gray-500"}>
+                                {new Date(promo.expiryDate).toLocaleDateString('fr-FR')} {isExpired && "(Expiré)"}
+                              </span>
+                            ) : 'Jamais'}
+                          </td>
+                          <td className="py-3 px-4">
+                            <button
+                              onClick={() => handleTogglePromoCodeActive(promo.code, promo.isActive)}
+                              className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                promo.isActive && !isExpired
+                                  ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400'
+                                  : 'bg-red-100 text-red-700 dark:bg-red-950/50 dark:text-red-400'
+                              }`}
+                            >
+                              {promo.isActive && !isExpired ? 'Actif' : 'Inactif'}
+                            </button>
+                          </td>
+                          <td className="py-3 px-4 text-right">
+                            <button
+                              onClick={() => handleDeletePromoCode(promo.code)}
+                              className="p-1.5 text-gray-400 hover:text-red-500 transition-colors rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600"
+                              title="Supprimer"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     );
   };
@@ -1434,6 +1741,78 @@ export const AdminDashboard: React.FC = () => {
     } catch (error) {
       console.error("Error toggling feature", error);
       showToast("Erreur lors de la mise à jour.", "error");
+    }
+  };
+
+  const handleCreatePromoCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newPromo.code || !newPromo.code.trim()) {
+      showToast("Veuillez entrer un code promo.", "error");
+      return;
+    }
+
+    const codeUpper = newPromo.code.trim().toUpperCase();
+
+    try {
+      const expiryTimestamp = newPromo.expiryDate ? new Date(newPromo.expiryDate).getTime() : null;
+      
+      const promoData = {
+        code: codeUpper,
+        type: newPromo.type,
+        discountType: newPromo.type === 'discount' ? newPromo.discountType : null,
+        discountValue: newPromo.type === 'discount' ? Number(newPromo.discountValue) : 0,
+        subscriptionMonths: newPromo.type === 'unlock_subscription' ? Number(newPromo.subscriptionMonths) : null,
+        productId: newPromo.type === 'unlock_product' ? newPromo.productId : null,
+        maxUses: newPromo.maxUses ? Number(newPromo.maxUses) : null,
+        uses: 0,
+        expiryDate: expiryTimestamp,
+        isActive: newPromo.isActive !== false,
+        createdAt: Date.now()
+      };
+
+      await setDoc(doc(db, 'promo_codes', codeUpper), promoData);
+      showToast(`Code promo ${codeUpper} créé avec succès !`);
+      
+      // Reset form
+      setNewPromo({
+        code: '',
+        type: 'discount',
+        discountType: 'percent',
+        discountValue: 0,
+        subscriptionMonths: 3,
+        productId: '',
+        maxUses: 100,
+        expiryDate: '',
+        isActive: true
+      });
+    } catch (err) {
+      console.error("Error creating promo code:", err);
+      showToast("Erreur lors de la création du code promo.", "error");
+    }
+  };
+
+  const handleDeletePromoCode = async (code: string) => {
+    if (!window.confirm(`Voulez-vous vraiment supprimer le code promo ${code} ?`)) {
+      return;
+    }
+    try {
+      await deleteDoc(doc(db, 'promo_codes', code));
+      showToast(`Code promo ${code} supprimé.`);
+    } catch (err) {
+      console.error("Error deleting promo code:", err);
+      showToast("Erreur lors de la suppression.", "error");
+    }
+  };
+
+  const handleTogglePromoCodeActive = async (code: string, currentStatus: boolean) => {
+    try {
+      await updateDoc(doc(db, 'promo_codes', code), {
+        isActive: !currentStatus
+      });
+      showToast(`Statut du code promo ${code} mis à jour.`);
+    } catch (err) {
+      console.error("Error toggling promo code active status:", err);
+      showToast("Erreur lors de la mise à jour du statut.", "error");
     }
   };
 
@@ -1568,6 +1947,44 @@ export const AdminDashboard: React.FC = () => {
                 </div>
                 <button
                   onClick={() => handleToggleFeature(`admin_tool_${tool.id}`, active)}
+                  className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors ${
+                    active ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
+                  }`}
+                >
+                  <div
+                    className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${
+                      active ? 'translate-x-6' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Configuration des Moyens de Paiement */}
+      <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+        <h3 className="font-bold text-gray-900 dark:text-white text-lg flex items-center gap-2 mb-2">
+          <CreditCard className="text-emerald-500" />
+          Moyens de Paiement Autorisés (Utilisateurs)
+        </h3>
+        <p className="text-xs text-gray-500 mb-6">
+          Désactivez ou activez les méthodes de paiement disponibles pour les utilisateurs sur la page de paiement.
+        </p>
+        <div className="space-y-4">
+          {[
+            { id: 'paystack_enabled', label: 'Autoriser Paystack (Cartes & Mobile Money automatique)' },
+            { id: 'bank_transfer_enabled', label: 'Autoriser Transfert Bancaire Direct (GCB Bank PLC manuel)' }
+          ].map((method) => {
+             const active = featureToggles[method.id] !== false; // Active by default
+             return (
+              <div key={method.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4">
+                <div>
+                  <h4 className="font-bold text-gray-950 dark:text-white text-sm">{method.label}</h4>
+                </div>
+                <button
+                  onClick={() => handleToggleFeature(method.id, active)}
                   className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors ${
                     active ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
                   }`}
@@ -2154,6 +2571,478 @@ export const AdminDashboard: React.FC = () => {
     </div>
   );
 
+  const handleAddSyriacName = () => {
+    if (!newSyriacName.name || !newSyriacName.arabic) {
+      showToast("Nom et version arabe requis pour le nom syriaque", "error");
+      return;
+    }
+    const updatedNames = [...(newOath.syriacNames || []), { ...newSyriacName }];
+    setNewOath({ ...newOath, syriacNames: updatedNames });
+    setNewSyriacName({ name: '', arabic: '', meaning: '', meaning_en: '', meaning_ha: '' });
+    showToast("Nom syriaque ajouté à la liste locale", "success");
+  };
+
+  const handleRemoveSyriacName = (index: number) => {
+    const updatedNames = [...(newOath.syriacNames || [])];
+    updatedNames.splice(index, 1);
+    setNewOath({ ...newOath, syriacNames: updatedNames });
+    showToast("Nom syriaque retiré", "info");
+  };
+
+  const handleSaveOath = async () => {
+    // Validate title and content for first language (FR/Default)
+    if (!newOath.title || !newOath.content || !newOath.arabicTitle) {
+      showToast("Le titre (FR), le titre arabe et le texte de l'invocation sont obligatoires.", "error");
+      return;
+    }
+    try {
+      const payload = {
+        title: newOath.title,
+        title_en: newOath.title_en || '',
+        title_ha: newOath.title_ha || '',
+        arabicTitle: newOath.arabicTitle,
+        desc: newOath.desc || '',
+        desc_en: newOath.desc_en || '',
+        desc_ha: newOath.desc_ha || '',
+        incense: newOath.incense || '',
+        incense_en: newOath.incense_en || '',
+        incense_ha: newOath.incense_ha || '',
+        day: newOath.day || '',
+        day_en: newOath.day_en || '',
+        day_ha: newOath.day_ha || '',
+        content: newOath.content,
+        isMaintenance: !!newOath.isMaintenance,
+        syriacNames: newOath.syriacNames || [],
+        updatedAt: Date.now()
+      };
+
+      if (editingOath) {
+        await updateDoc(doc(db, 'grand_oaths', editingOath.id), payload);
+        showToast("Le Grand Sermon a été mis à jour.", "success");
+      } else {
+        await addDoc(collection(db, 'grand_oaths'), {
+          ...payload,
+          createdAt: Date.now()
+        });
+        showToast("Le Grand Sermon a été créé.", "success");
+      }
+
+      // Reset form
+      setEditingOath(null);
+      setNewOath({
+        title: '', title_en: '', title_ha: '',
+        arabicTitle: '',
+        desc: '', desc_en: '', desc_ha: '',
+        incense: '', incense_en: '', incense_ha: '',
+        day: '', day_en: '', day_ha: '',
+        content: '',
+        isMaintenance: false,
+        syriacNames: []
+      });
+    } catch (error) {
+      console.error("Error saving grand oath", error);
+      showToast("Erreur lors de l'enregistrement.", "error");
+    }
+  };
+
+  const handleDeleteOath = async (id: string) => {
+    if (window.confirm("Voulez-vous vraiment supprimer ce Grand Sermon ? Cette action est irréversible.")) {
+      try {
+        await deleteDoc(doc(db, 'grand_oaths', id));
+        showToast("Le Grand Sermon a été supprimé.", "success");
+        if (editingOath?.id === id) {
+          setEditingOath(null);
+          setNewOath({
+            title: '', title_en: '', title_ha: '',
+            arabicTitle: '',
+            desc: '', desc_en: '', desc_ha: '',
+            incense: '', incense_en: '', incense_ha: '',
+            day: '', day_en: '', day_ha: '',
+            content: '',
+            isMaintenance: false,
+            syriacNames: []
+          });
+        }
+      } catch (error) {
+        console.error("Error deleting grand oath", error);
+        showToast("Erreur lors de la suppression.", "error");
+      }
+    }
+  };
+
+  const handleEditOathClick = (oath: any) => {
+    setEditingOath(oath);
+    setNewOath({
+      title: oath.title || '',
+      title_en: oath.title_en || '',
+      title_ha: oath.title_ha || '',
+      arabicTitle: oath.arabicTitle || '',
+      desc: oath.desc || '',
+      desc_en: oath.desc_en || '',
+      desc_ha: oath.desc_ha || '',
+      incense: oath.incense || '',
+      incense_en: oath.incense_en || '',
+      incense_ha: oath.incense_ha || '',
+      day: oath.day || '',
+      day_en: oath.day_en || '',
+      day_ha: oath.day_ha || '',
+      content: oath.content || '',
+      isMaintenance: !!oath.isMaintenance,
+      syriacNames: oath.syriacNames || []
+    });
+    showToast("Mode édition activé pour : " + oath.title, "info");
+  };
+
+  const handleRestoreDefaultOaths = async () => {
+    if (window.confirm("Voulez-vous vraiment restaurer les sermons par défaut ? Cela supprimera tous les sermons actuels et réinstallera les sermons d'origine.")) {
+      try {
+        setRestoringOaths(true);
+        // Delete all current ones first
+        const snapshot = await getDocs(collection(db, 'grand_oaths'));
+        for (const docSnap of snapshot.docs) {
+          await deleteDoc(doc(db, 'grand_oaths', docSnap.id));
+        }
+
+        // Add defaults
+        for (const item of DEFAULT_OATHS) {
+          await addDoc(collection(db, 'grand_oaths'), {
+            ...item,
+            createdAt: item.createdAt || Date.now()
+          });
+        }
+
+        // Update setup document to seeded: true
+        await setDoc(doc(db, 'settings', 'grand_oaths_setup'), {
+          seeded: true,
+          seededAt: Date.now()
+        }, { merge: true });
+
+        showToast("Les sermons par défaut ont été restaurés avec succès !", "success");
+      } catch (err) {
+        console.error("Error restoring default oaths:", err);
+        showToast("Erreur lors de la restauration.", "error");
+      } finally {
+        setRestoringOaths(false);
+      }
+    }
+  };
+
+  const renderGrandOaths = () => {
+    return (
+      <div className="space-y-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white dark:bg-gray-800 p-6 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <Shield className="text-amber-500" />
+              Gestion des Grands Sermons (Da'awat & Azayim)
+            </h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Ajoutez, modifiez, supprimez ou mettez en maintenance les invocations majeures de l'application.
+            </p>
+          </div>
+          <button
+            onClick={handleRestoreDefaultOaths}
+            disabled={restoringOaths}
+            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:bg-amber-500/50 text-white font-bold text-xs shadow-md transition-all shrink-0"
+          >
+            <Sparkles size={16} />
+            {restoringOaths ? "Restauration..." : "Restaurer les sermons par défaut"}
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* List Section */}
+          <div className="lg:col-span-1 space-y-4">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm">
+              <h3 className="font-bold text-gray-900 dark:text-white mb-4">Sermons Enregistrés</h3>
+              <div className="space-y-3 max-h-[700px] overflow-y-auto pr-2">
+                {adminGrandOaths.length === 0 ? (
+                  <p className="text-sm text-gray-500 text-center py-6">Aucun sermon trouvé. Vous pouvez cliquer sur "Restaurer les sermons par défaut" ci-dessus pour charger les sermons d'origine, ou en créer un nouveau à droite.</p>
+                ) : (
+                  adminGrandOaths.map((oath) => (
+                    <div 
+                      key={oath.id}
+                      className={`p-4 rounded-2xl border transition-all ${
+                        editingOath?.id === oath.id 
+                          ? 'border-amber-500 bg-amber-50/50 dark:bg-amber-900/10' 
+                          : 'border-gray-150 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/10'
+                      }`}
+                    >
+                      <div className="flex justify-between items-start gap-2 mb-2">
+                        <div className="min-w-0 flex-1">
+                          <h4 className="font-bold text-sm text-gray-900 dark:text-white truncate">{oath.title || oath.title_en || 'Sans titre'}</h4>
+                          <span className="text-xs text-gray-500 font-medium truncate block">Jour: {oath.day || 'Non défini'}</span>
+                        </div>
+                        <div className="flex gap-1 flex-shrink-0">
+                          <button 
+                            onClick={() => handleEditOathClick(oath)}
+                            className="p-1.5 bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 hover:bg-blue-100 rounded-lg transition-colors"
+                            title="Modifier"
+                          >
+                            <Edit2 size={14} />
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteOath(oath.id)}
+                            className="p-1.5 bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-100 rounded-lg transition-colors"
+                            title="Supprimer"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 mt-2">
+                        {oath.isMaintenance && (
+                          <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                            <Settings size={10} className="animate-spin-slow" />
+                            Maintenance active
+                          </span>
+                        )}
+                        <span className="text-xs font-arabic text-gray-400 ml-auto" dir="rtl">{oath.arabicTitle}</span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Form Section */}
+          <div className="lg:col-span-2 space-y-6">
+            <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="font-bold text-gray-900 dark:text-white">
+                  {editingOath ? "Modifier le Grand Sermon" : "Créer un nouveau Grand Sermon"}
+                </h3>
+                {editingOath && (
+                  <button 
+                    onClick={() => {
+                      setEditingOath(null);
+                      setNewOath({
+                        title: '', title_en: '', title_ha: '',
+                        arabicTitle: '',
+                        desc: '', desc_en: '', desc_ha: '',
+                        incense: '', incense_en: '', incense_ha: '',
+                        day: '', day_en: '', day_ha: '',
+                        content: '',
+                        isMaintenance: false,
+                        syriacNames: []
+                      });
+                    }}
+                    className="text-xs text-red-500 hover:underline font-bold"
+                  >
+                    Annuler l'édition
+                  </button>
+                )}
+              </div>
+
+              {renderLanguageTabs()}
+
+              <div className="space-y-4">
+                {/* Localized Fields based on activeLangTab */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+                      Titre du Sermon ({activeLangTab.toUpperCase()}) *
+                    </label>
+                    <input 
+                      type="text"
+                      value={activeLangTab === 'fr' ? newOath.title : (activeLangTab === 'en' ? newOath.title_en : newOath.title_ha)}
+                      onChange={(e) => {
+                        const field = activeLangTab === 'fr' ? 'title' : (activeLangTab === 'en' ? 'title_en' : 'title_ha');
+                        setNewOath({ ...newOath, [field]: e.target.value });
+                      }}
+                      placeholder={`Ex: Da'wat al-Birhatiyya (${activeLangTab})`}
+                      className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+                      Titre en Arabe (Ex: الدعوة البرهتية) *
+                    </label>
+                    <input 
+                      type="text"
+                      value={newOath.arabicTitle || ''}
+                      onChange={(e) => setNewOath({ ...newOath, arabicTitle: e.target.value })}
+                      placeholder="Ex: الدعوة البرهتية"
+                      className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-right font-arabic text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
+                      dir="rtl"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+                      Encens préconisé ({activeLangTab.toUpperCase()})
+                    </label>
+                    <input 
+                      type="text"
+                      value={activeLangTab === 'fr' ? newOath.incense : (activeLangTab === 'en' ? newOath.incense_en : newOath.incense_ha)}
+                      onChange={(e) => {
+                        const field = activeLangTab === 'fr' ? 'incense' : (activeLangTab === 'en' ? 'incense_en' : 'incense_ha');
+                        setNewOath({ ...newOath, [field]: e.target.value });
+                      }}
+                      placeholder="Ex: Encens Mâle (Oliban)"
+                      className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+                      Jour et planète ({activeLangTab.toUpperCase()})
+                    </label>
+                    <input 
+                      type="text"
+                      value={activeLangTab === 'fr' ? newOath.day : (activeLangTab === 'en' ? newOath.day_en : newOath.day_ha)}
+                      onChange={(e) => {
+                        const field = activeLangTab === 'fr' ? 'day' : (activeLangTab === 'en' ? 'day_en' : 'day_ha');
+                        setNewOath({ ...newOath, [field]: e.target.value });
+                      }}
+                      placeholder="Ex: Dimanche (Soleil)"
+                      className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+                    Description ({activeLangTab.toUpperCase()})
+                  </label>
+                  <textarea 
+                    value={activeLangTab === 'fr' ? newOath.desc : (activeLangTab === 'en' ? newOath.desc_en : newOath.desc_ha)}
+                    onChange={(e) => {
+                      const field = activeLangTab === 'fr' ? 'desc' : (activeLangTab === 'en' ? 'desc_en' : 'desc_ha');
+                      setNewOath({ ...newOath, [field]: e.target.value });
+                    }}
+                    placeholder={`Description du sermon en ${activeLangTab}...`}
+                    className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none h-20 resize-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
+                    Texte Complet de l'Invocation (Arabe) *
+                  </label>
+                  <textarea 
+                    value={newOath.content || ''}
+                    onChange={(e) => setNewOath({ ...newOath, content: e.target.value })}
+                    placeholder="Saisissez ou collez le texte en arabe..."
+                    className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-center font-arabic text-2xl leading-[2] text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none h-44"
+                    dir="rtl"
+                  />
+                </div>
+
+                {/* Maintenance Toggle */}
+                <div className="flex items-center gap-3 p-4 bg-amber-50/50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/20 rounded-2xl">
+                  <input 
+                    type="checkbox"
+                    id="isMaintenanceOath"
+                    checked={!!newOath.isMaintenance}
+                    onChange={(e) => setNewOath({ ...newOath, isMaintenance: e.target.checked })}
+                    className="w-5 h-5 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500 cursor-pointer"
+                  />
+                  <label htmlFor="isMaintenanceOath" className="text-sm font-bold text-amber-800 dark:text-amber-400 cursor-pointer">
+                    Mettre ce Grand Sermon en maintenance
+                  </label>
+                </div>
+
+                {/* Syriac Names sub-form */}
+                <div className="border border-gray-200 dark:border-gray-700 rounded-2xl p-4 bg-gray-50/30 dark:bg-gray-900/10">
+                  <h4 className="text-sm font-bold text-gray-800 dark:text-white mb-3 flex items-center gap-2">
+                    <Star size={16} className="text-amber-500" />
+                    Lexique des Noms Cachés (Optionnel)
+                  </h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-3">
+                    <input 
+                      type="text"
+                      placeholder="Nom (Translit)"
+                      value={newSyriacName.name}
+                      onChange={(e) => setNewSyriacName({ ...newSyriacName, name: e.target.value })}
+                      className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-emerald-500 outline-none"
+                    />
+                    <input 
+                      type="text"
+                      placeholder="Nom (Arabe)"
+                      value={newSyriacName.arabic}
+                      onChange={(e) => setNewSyriacName({ ...newSyriacName, arabic: e.target.value })}
+                      className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2 text-xs text-right font-arabic text-gray-900 dark:text-white focus:ring-1 focus:ring-emerald-500 outline-none"
+                      dir="rtl"
+                    />
+                    <input 
+                      type="text"
+                      placeholder="Sens (FR)"
+                      value={newSyriacName.meaning}
+                      onChange={(e) => setNewSyriacName({ ...newSyriacName, meaning: e.target.value })}
+                      className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-emerald-500 outline-none"
+                    />
+                    <input 
+                      type="text"
+                      placeholder="Sens (EN)"
+                      value={newSyriacName.meaning_en}
+                      onChange={(e) => setNewSyriacName({ ...newSyriacName, meaning_en: e.target.value })}
+                      className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-emerald-500 outline-none"
+                    />
+                    <input 
+                      type="text"
+                      placeholder="Sens (HA)"
+                      value={newSyriacName.meaning_ha}
+                      onChange={(e) => setNewSyriacName({ ...newSyriacName, meaning_ha: e.target.value })}
+                      className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-emerald-500 outline-none"
+                    />
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={handleAddSyriacName}
+                    className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1"
+                  >
+                    <Plus size={14} /> Ajouter ce Nom syriaque
+                  </button>
+
+                  {/* Added Syriac Names List */}
+                  {newOath.syriacNames && newOath.syriacNames.length > 0 && (
+                    <div className="mt-4 border-t border-gray-150 dark:border-gray-800 pt-3">
+                      <p className="text-xs font-bold text-gray-500 mb-2">Noms ajoutés dans le sermon ({newOath.syriacNames.length}) :</p>
+                      <div className="space-y-2">
+                        {newOath.syriacNames.map((name: any, idx: number) => (
+                          <div key={idx} className="flex justify-between items-center bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-150 dark:border-gray-700 text-xs shadow-sm">
+                            <div className="space-y-1">
+                              <p className="font-bold text-gray-900 dark:text-white">{name.name} <span className="text-amber-500 font-arabic text-sm ml-2" dir="rtl">{name.arabic}</span></p>
+                              <p className="text-gray-500">
+                                <span className="font-semibold text-gray-700 dark:text-gray-400">Sens FR:</span> {name.meaning || '-'} | 
+                                <span className="font-semibold text-gray-700 dark:text-gray-400 ml-1">EN:</span> {name.meaning_en || '-'} | 
+                                <span className="font-semibold text-gray-700 dark:text-gray-400 ml-1">HA:</span> {name.meaning_ha || '-'}
+                              </p>
+                            </div>
+                            <button 
+                              type="button" 
+                              onClick={() => handleRemoveSyriacName(idx)}
+                              className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="pt-4 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-2">
+                  <button 
+                    onClick={handleSaveOath}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-colors shadow-sm"
+                  >
+                    <Save size={16} />
+                    {editingOath ? "Mettre à jour le sermon" : "Enregistrer le sermon"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderSettings = () => (
     <div className="space-y-6">
       <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
@@ -2202,6 +3091,83 @@ export const AdminDashboard: React.FC = () => {
                     onChange={(e) => handleToggleFeature('announcementText', e.target.value)}
                     className="w-full px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl"
                     placeholder="Découvrez la nouvelle version..."
+                    rows={3}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Campagne d'Annonce de Souscription Premium */}
+          <div className="flex flex-col p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <Sparkles size={18} className="text-purple-500 fill-purple-100 dark:fill-transparent" />
+                  Campagne Promotionnelle Premium
+                </h4>
+                <p className="text-sm text-gray-500 mt-1">Afficher une annonce incitant les utilisateurs gratuits à s'abonner au Premium.</p>
+              </div>
+              <button
+                onClick={() => handleToggleFeature('premiumPromoActive', !!featureToggles['premiumPromoActive'])}
+                className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors ${
+                  featureToggles['premiumPromoActive'] ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
+                }`}
+              >
+                <div
+                  className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${
+                    featureToggles['premiumPromoActive'] ? 'translate-x-6' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+            
+            {featureToggles['premiumPromoActive'] && (
+              <div className="space-y-4 mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold uppercase text-gray-500 dark:text-gray-400 mb-1">Titre de la promotion</label>
+                    <input
+                      type="text"
+                      value={featureToggles['premiumPromoTitle'] || ''}
+                      onChange={(e) => handleToggleFeature('premiumPromoTitle', e.target.value)}
+                      className="w-full px-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl text-sm"
+                      placeholder="Devenez membre Premium !"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold uppercase text-gray-500 dark:text-gray-400 mb-1">Texte du bouton d'action</label>
+                    <input
+                      type="text"
+                      value={featureToggles['premiumPromoBtnText'] || ''}
+                      onChange={(e) => handleToggleFeature('premiumPromoBtnText', e.target.value)}
+                      className="w-full px-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl text-sm"
+                      placeholder="Passer au Premium"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase text-gray-500 dark:text-gray-400 mb-1">Thème Visuel de la bannière</label>
+                  <select
+                    value={featureToggles['premiumPromoTheme'] || 'violet'}
+                    onChange={(e) => handleToggleFeature('premiumPromoTheme', e.target.value)}
+                    className="w-full px-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-white"
+                  >
+                    <option value="violet">Ambiance Violette (Indigo, Purple, Pink)</option>
+                    <option value="gold">Ambiance Royale (Ambre, Or, Jaune)</option>
+                    <option value="cosmic">Ambiance Cosmique (Slate sombre, Purple profond, Indigo nuit)</option>
+                    <option value="emerald">Ambiance Forêt Sacrée (Teal, Émeraude)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold uppercase text-gray-500 dark:text-gray-400 mb-1">Texte / Description de l'appel à l'action</label>
+                  <textarea
+                    value={featureToggles['premiumPromoText'] || ''}
+                    onChange={(e) => handleToggleFeature('premiumPromoText', e.target.value)}
+                    className="w-full px-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl text-sm"
+                    placeholder="Débloquez tous les secrets de l'Asrar, l'assistant IA et tous les outils spirituels majeurs sans aucune limitation."
                     rows={3}
                   />
                 </div>
@@ -2417,19 +3383,102 @@ export const AdminDashboard: React.FC = () => {
         <div className="space-y-4 mb-8">
           {/* Articles display mode */}
           <div className="flex flex-col p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4">
-            <div>
-              <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                <FileText size={18} className="text-emerald-500" />
-                Affichage des articles (Page d'accueil)
-              </h4>
-              <p className="text-sm text-gray-500 mt-1">Choisissez comment les articles s'affichent sur la page d'accueil.</p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <FileText size={18} className="text-emerald-500" />
+                  Mise en page des articles (Page d'accueil)
+                </h4>
+                <p className="text-sm text-gray-500 mt-1">Configurez l'affichage par défaut des articles et bloquez-le si nécessaire.</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-gray-500">
+                  {featureToggles['lockArticlesDisplayMode'] ? 'Mise en page bloquée' : 'Mise en page libre'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleToggleFeature('lockArticlesDisplayMode', featureToggles['lockArticlesDisplayMode'] === true)}
+                  className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors ${
+                    featureToggles['lockArticlesDisplayMode'] ? 'bg-red-500' : 'bg-gray-300 dark:bg-gray-600'
+                  }`}
+                  title="Bloquer la mise en page pour les utilisateurs"
+                >
+                  <div
+                    className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${
+                      featureToggles['lockArticlesDisplayMode'] ? 'translate-x-6' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
             </div>
-            <div className="flex justify-start">
-              <LayoutSelector
-                value={featureToggles['articlesDisplayMode'] || 'grid'}
-                onChange={(newValue) => handleToggleFeature('articlesDisplayMode', newValue)}
-                activeColor="border-emerald-500 text-emerald-500"
-              />
+            <div className="flex flex-col gap-2">
+              <span className="text-xs font-medium text-gray-500">Disposition par défaut (ou forcée si bloquée) :</span>
+              <div className="flex justify-start">
+                <LayoutSelector
+                  value={featureToggles['articlesDisplayMode'] || 'grid'}
+                  onChange={(newValue) => handleToggleFeature('articlesDisplayMode', newValue)}
+                  activeColor="border-emerald-500 text-emerald-500"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Article reading mode / viewMode */}
+          <div className="flex flex-col p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <BookOpen size={18} className="text-emerald-500" />
+                  Mode de lecture de l'article / secret
+                </h4>
+                <p className="text-sm text-gray-500 mt-1">Configurez le mode d'affichage par défaut (Vue complète ou par sections / accordéon).</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-gray-500">
+                  {featureToggles['lockArticleViewmode'] ? 'Mode de lecture bloqué' : 'Mode de lecture libre'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleToggleFeature('lockArticleViewmode', featureToggles['lockArticleViewmode'] === true)}
+                  className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors ${
+                    featureToggles['lockArticleViewmode'] ? 'bg-red-500' : 'bg-gray-300 dark:bg-gray-600'
+                  }`}
+                  title="Bloquer le mode de lecture pour les utilisateurs"
+                >
+                  <div
+                    className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${
+                      featureToggles['lockArticleViewmode'] ? 'translate-x-6' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+            </div>
+            <div className="flex flex-col gap-2">
+              <span className="text-xs font-medium text-gray-500">Mode par défaut (ou forcé si bloqué) :</span>
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="defaultArticleViewmode"
+                    value="full"
+                    checked={(featureToggles['defaultArticleViewmode'] || 'full') === 'full'}
+                    onChange={() => handleToggleFeature('defaultArticleViewmode', 'full')}
+                    className="text-emerald-500 focus:ring-emerald-500 h-4 w-4 border-gray-300"
+                  />
+                  <span>Vue complète</span>
+                </label>
+                <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                  <input
+                    type="radio"
+                    name="defaultArticleViewmode"
+                    value="accordion"
+                    checked={featureToggles['defaultArticleViewmode'] === 'accordion'}
+                    onChange={() => handleToggleFeature('defaultArticleViewmode', 'accordion')}
+                    className="text-emerald-500 focus:ring-emerald-500 h-4 w-4 border-gray-300"
+                  />
+                  <span>Vue par sections (accordéon)</span>
+                </label>
+              </div>
             </div>
           </div>
 
@@ -2660,6 +3709,7 @@ export const AdminDashboard: React.FC = () => {
         {activeTab === 'notifications' && renderNotifications()}
         {activeTab === 'features' && renderFeatures()}
         {activeTab === 'ruqyah' && renderRuqyah()}
+        {activeTab === 'grand_oaths' && renderGrandOaths()}
         {activeTab === 'content' && renderContent()}
         {activeTab === 'settings' && renderSettings()}
       </motion.div>

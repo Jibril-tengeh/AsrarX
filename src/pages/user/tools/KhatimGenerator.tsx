@@ -335,37 +335,41 @@ export const KhatimGenerator: React.FC = () => {
                 </span>
               </div>
               
-              <motion.div 
-                variants={container}
-                initial="hidden"
-                animate="show"
-                className={`grid gap-1.5 sm:gap-2.5 relative z-10 ${gridColsClassMap[gridSize] || 'grid-cols-3'}`}
-              >
-                {/* Horizontal & Vertical internal lines simulating ancient draw only for 3x3 */}
-                {gridSize === 3 && (
-                  <>
-                    <div className="absolute top-1/3 left-0 right-0 h-1 bg-zinc-800/50 rounded-full"></div>
-                    <div className="absolute top-2/3 left-0 right-0 h-1 bg-zinc-800/50 rounded-full"></div>
-                    <div className="absolute left-1/3 top-0 bottom-0 w-1 bg-zinc-800/50 rounded-full"></div>
-                    <div className="absolute left-2/3 top-0 bottom-0 w-1 bg-zinc-800/50 rounded-full"></div>
-                  </>
-                )}
+              <div className="w-full overflow-x-auto pb-2 scrollbar-thin">
+                <div className="min-w-[280px] max-w-full mx-auto">
+                  <motion.div 
+                    variants={container}
+                    initial="hidden"
+                    animate="show"
+                    className={`grid gap-1.5 sm:gap-2.5 relative z-10 ${gridColsClassMap[gridSize] || 'grid-cols-3'}`}
+                  >
+                    {/* Horizontal & Vertical internal lines simulating ancient draw only for 3x3 */}
+                    {gridSize === 3 && (
+                      <>
+                        <div className="absolute top-1/3 left-0 right-0 h-1 bg-zinc-800/50 rounded-full"></div>
+                        <div className="absolute top-2/3 left-0 right-0 h-1 bg-zinc-800/50 rounded-full"></div>
+                        <div className="absolute left-1/3 top-0 bottom-0 w-1 bg-zinc-800/50 rounded-full"></div>
+                        <div className="absolute left-2/3 top-0 bottom-0 w-1 bg-zinc-800/50 rounded-full"></div>
+                      </>
+                    )}
 
-                {grid.map((row, i) => (
-                  row.map((val, j) => (
-                    <motion.div 
-                      key={`${i}-${j}`}
-                      variants={item}
-                      className={`${gridCellPaddingMap[gridSize] || 'p-2 aspect-square'} bg-zinc-800/80 backdrop-blur-sm rounded-xl flex items-center justify-center relative group`}
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
-                      <span className={`font-black text-white tabular-nums drop-shadow-md z-10 ${textPercentSizeMap[gridSize] || 'text-xl'}`}>
-                        {val}
-                      </span>
-                    </motion.div>
-                  ))
-                ))}
-              </motion.div>
+                    {grid.map((row, i) => (
+                      row.map((val, j) => (
+                        <motion.div 
+                          key={`${i}-${j}`}
+                          variants={item}
+                          className={`${gridCellPaddingMap[gridSize] || 'p-2 aspect-square'} bg-zinc-800/80 backdrop-blur-sm rounded-xl flex items-center justify-center relative group`}
+                        >
+                          <div className="absolute inset-0 bg-gradient-to-br from-purple-500/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-xl"></div>
+                          <span className={`font-black text-white tabular-nums drop-shadow-md z-10 ${textPercentSizeMap[gridSize] || 'text-xl'}`}>
+                            {val}
+                          </span>
+                        </motion.div>
+                      ))
+                    ))}
+                  </motion.div>
+                </div>
+              </div>
 
               <div className="text-center mt-8 relative z-10">
                  <p className="text-xs text-zinc-500 font-bold tracking-widest uppercase mb-1">{t('tools.khatim.sacredHarmony', 'Harmonie Sacrée')}</p>

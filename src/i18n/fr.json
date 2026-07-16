@@ -275,7 +275,17 @@
     },
     "grand-oaths": {
       "title": "Grands Serments",
-      "description": "Da'awat & Azayim: Bibliothèque des invocations majeures."
+      "description": "Da'awat & Azayim: Bibliothèque des invocations majeures.",
+      "backToDashboard": "au tableau de bord",
+      "incenseLabel": "Encens",
+      "dayLabel": "Jour",
+      "invocationText": "Texte de l'Invocation",
+      "lexiconTitle": "Lexique des Noms Cachés",
+      "lexiconMeaning": "Sens",
+      "selectSermon": "Sélectionnez un Serment",
+      "selectSermonDesc": "Choisissez une Da'wa dans le menu de gauche pour lire ses instructions, son encens et ses secrets.",
+      "underMaintenance": "Sermon en maintenance",
+      "underMaintenanceDesc": "Ce sermon est temporairement en maintenance pour des ajustements spirituels. Veuillez réessayer plus tard."
     },
     "elemental": {
       "title": "Analyseur Élémentaire",
@@ -627,7 +637,9 @@
   },
   "dailyReward": {
     "rewardTitle": "Point Spirituel Gagné !",
-    "rewardDesc": "Temps d'activité récompensé : {earned}/5 points aujourd'hui."
+    "rewardDesc": "Temps d'activité récompensé : {earned}/10 points aujourd'hui.",
+    "daily10Title": "Cadeau Quotidien de 10 Points ! 🌟",
+    "daily10Desc": "Vous avez reçu vos 10 points spirituels du jour automatiquement !"
   },
   "payment": {
     "back": "Retour",

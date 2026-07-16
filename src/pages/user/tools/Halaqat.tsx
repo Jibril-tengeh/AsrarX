@@ -406,7 +406,7 @@ export const Halaqat = () => {
               if (activeCircle) {
                 setActiveCircle(null);
               } else {
-                navigate('/tools');
+                navigate('/user/dashboard');
               }
             }}
             className="p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 transition-colors cursor-pointer"

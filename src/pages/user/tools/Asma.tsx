@@ -4,26 +4,134 @@ import { Link } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { asmaListData } from '../../../data/asmaListData';
+import { applyTashkeel } from '../../../utils/tashkeel';
 
-// Helper to generate a 3x3 Vifiq (Muthallath)
-const generateVifiq3x3 = (total: number) => {
-  const base = Math.floor((total - 12) / 3);
-  return [
-    [base + 3, base + 8, base + 1],
-    [base + 2, base + 4, base + 6],
-    [base + 7, base + 0, base + 5]
-  ];
+// Helper to generate dynamic Vifiq (3x3 to 10x10) based on Abjad total
+const oddMagicSquare = (n: number): number[][] => {
+  const grid = Array.from({ length: n }, () => Array(n).fill(0));
+  let r = 0;
+  let c = Math.floor(n / 2);
+  for (let num = 1; num <= n * n; num++) {
+    grid[r][c] = num;
+    let nextR = (r - 1 + n) % n;
+    let nextC = (c + 1) % n;
+    if (grid[nextR][nextC] !== 0) {
+      r = (r + 1) % n;
+    } else {
+      r = nextR;
+      c = nextC;
+    }
+  }
+  return grid;
 };
 
-// Helper for 4x4 (Murabba')
-const generateVifiq4x4 = (total: number) => {
-  const base = Math.floor((total - 30) / 4);
-  return [
-    [base + 7, base + 10, base + 1, base + 12],
-    [base + 2, base + 11, base + 8, base + 9],
-    [base + 14, base + 3, base + 16, base + 5],
-    [base + 4, base + 13, base + 6, base + 15]
-  ];
+const doublyEvenMagicSquare = (n: number): number[][] => {
+  const grid = Array.from({ length: n }, () => Array(n).fill(0));
+  let num = 1;
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      const isDiagonal = (i % 4 === j % 4) || ((i % 4) + (j % 4) === 3);
+      if (isDiagonal) {
+        grid[i][j] = n * n + 1 - num;
+      } else {
+        grid[i][j] = num;
+      }
+      num++;
+    }
+  }
+  return grid;
+};
+
+const singlyEvenMagicSquare = (n: number): number[][] => {
+  const k = n / 2;
+  const grid = Array.from({ length: n }, () => Array(n).fill(0));
+  const sub = oddMagicSquare(k);
+  for (let i = 0; i < k; i++) {
+    for (let j = 0; j < k; j++) {
+      grid[i][j] = sub[i][j];
+      grid[i + k][j + k] = sub[i][j] + k * k;
+      grid[i][j + k] = sub[i][j] + 2 * k * k;
+      grid[i + k][j] = sub[i][j] + 3 * k * k;
+    }
+  }
+  const m = Math.floor(k / 2);
+  for (let i = 0; i < k; i++) {
+    for (let j = 0; j < m; j++) {
+      let swapCol = j;
+      if (i === m && j === 0) swapCol = m;
+      const temp = grid[i][swapCol];
+      grid[i][swapCol] = grid[i + k][swapCol];
+      grid[i + k][swapCol] = temp;
+    }
+  }
+  for (let i = 0; i < k; i++) {
+    for (let j = k - (m - 1); j < k; j++) {
+      const temp = grid[i][j + k];
+      grid[i][j + k] = grid[i + k][j + k];
+      grid[i + k][j + k] = temp;
+    }
+  }
+  return grid;
+};
+
+const getMagicSquare = (n: number): number[][] => {
+  if (n % 2 !== 0) return oddMagicSquare(n);
+  if (n % 4 === 0) return doublyEvenMagicSquare(n);
+  return singlyEvenMagicSquare(n);
+};
+
+const generateDynamicVifiq = (n: number, total: number) => {
+  const stdSum = (n * (n * n + 1)) / 2;
+  const base = Math.max(0, total - stdSum);
+  const step = Math.floor(base / n);
+  const rem = base % n;
+
+  const stdGrid = getMagicSquare(n);
+  const customGrid = Array.from({ length: n }, () => Array(n).fill(0));
+
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      let val = stdGrid[i][j] + step;
+      if (rem > 0 && ((i - j + n) % n < rem)) {
+        val += 1;
+      }
+      customGrid[i][j] = val;
+    }
+  }
+  return customGrid;
+};
+
+const gridColsClassMap: Record<number, string> = {
+  3: 'grid-cols-3',
+  4: 'grid-cols-4',
+  5: 'grid-cols-5',
+  6: 'grid-cols-6',
+  7: 'grid-cols-7',
+  8: 'grid-cols-8',
+  9: 'grid-cols-9',
+  10: 'grid-cols-10',
+};
+
+const textPercentSizeMap: Record<number, string> = {
+  3: 'text-base sm:text-lg',
+  4: 'text-xs sm:text-sm',
+  5: 'text-[11px] sm:text-xs',
+  6: 'text-[10px] sm:text-[11px]',
+  7: 'text-[9px] sm:text-[10px]',
+  8: 'text-[8px] sm:text-[9px]',
+  9: 'text-[7px] sm:text-[8px]',
+  10: 'text-[6px] sm:text-[7px]',
+};
+
+const gridCellPaddingMap: Record<number, string> = {
+  3: 'p-2 aspect-square',
+  4: 'p-1.5 aspect-square',
+  5: 'p-1 aspect-square',
+  6: 'p-0.5 aspect-square',
+  7: 'p-0.5 aspect-square',
+  8: 'p-0.5 aspect-square',
+  9: 'p-0.5 aspect-square',
+  10: 'p-0.5 aspect-square',
 };
 
 const divineNamesDeep = [
@@ -498,6 +606,7 @@ export const Asma: React.FC = () => {
   const [val, setVal] = useState('');
   const [result, setResult] = useState<typeof divineNamesDeep>([]);
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [selectedGridSize, setSelectedGridSize] = useState<number>(3);
 
   // Gamification hook on load
   useEffect(() => {
@@ -585,7 +694,10 @@ export const Asma: React.FC = () => {
                 <motion.div
                   key={idx}
                   layout
-                  onClick={() => setExpandedId(isExpanded ? null : idx)}
+                  onClick={() => {
+                    setExpandedId(isExpanded ? null : idx);
+                    setSelectedGridSize(3);
+                  }}
                   className="bg-white dark:bg-gray-800 rounded-3xl overflow-hidden shadow-sm border border-gray-100 dark:border-gray-700 cursor-pointer hover:border-indigo-300 dark:hover:border-indigo-700 transition-colors"
                 >
                   <div className="p-6 md:p-8 flex items-center justify-between gap-4">
@@ -605,7 +717,7 @@ export const Asma: React.FC = () => {
                          </span>
                       </div>
                       <h4 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-2 tracking-tight">
-                        {localizedItem.name.replace(/^Ya\s+/, '')} <span className="font-arabic font-normal text-indigo-600 dark:text-indigo-400 ml-2">{localizedItem.ar.replace(/^يَا\s+/, '').replace(/^يَا/, '')}</span>
+                        {localizedItem.name.replace(/^Ya\s+/, '')} <span className="font-arabic font-normal text-indigo-600 dark:text-indigo-400 ml-2">{applyTashkeel(localizedItem.ar.replace(/^يَا\s+/, '').replace(/^يَا/, ''))}</span>
                       </h4>
                       <p className="text-sm font-medium text-gray-600 dark:text-gray-300">{localizedItem.meaning}</p>
                     </div>
@@ -686,46 +798,117 @@ export const Asma: React.FC = () => {
                                   </p>
                                </div>
                             </div>
-
-                             {/* Talsam & Khatim Box */}
-                             <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-5 mt-4">
+                             <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-5 mt-4" onClick={(e) => e.stopPropagation()}>
                                 <h5 className="text-sm font-bold uppercase tracking-widest text-indigo-600 dark:text-indigo-400 mb-4 text-center">{t("tools.asma.theurgic")}</h5>
                                 
                                 <div className="mb-6 bg-indigo-50 dark:bg-indigo-900/10 p-4 rounded-xl text-center">
                                   <span className="block text-xs uppercase font-bold text-indigo-800 dark:text-indigo-300 mb-1">{t("tools.asma.talsamCode")}</span>
-                                  <span className="font-arabic text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">طمشلش {localizedItem.ar.replace('يَا ', '').replace('يَا', '')} كضهيوش</span>
+                                  <span className="font-arabic text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">{applyTashkeel(`طَمْشَلَشٍ ${localizedItem.ar.replace('يَا ', '').replace('يَا', '')} كَضْهَيُوشٍ`)}</span>
                                   <p className="text-xs text-indigo-600/70 dark:text-indigo-400/70 mt-2 font-mono">{t("tools.asma.talsamDesc")} {localizedItem.val}</p>
                                 </div>
 
-                                <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                                  <div className="text-center">
-                                    <h6 className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 mb-2">{t("tools.asma.muthallath")}</h6>
-                                    <div className="grid grid-cols-3 mx-auto max-w-[12rem] gap-1 p-2 bg-gray-100 dark:bg-gray-900 rounded-xl">
-                                      {generateVifiq3x3(localizedItem.val).map((row, i) => 
-                                        row.map((cell, j) => (
-                                          <div key={`${i}-${j}`} className="aspect-square bg-white dark:bg-gray-800 rounded-lg flex items-center justify-center font-mono font-bold text-sm sm:text-base text-gray-900 dark:text-white shadow-sm border border-gray-50 dark:border-gray-700">
-                                            {cell}
-                                          </div>
-                                        ))
-                                      )}
-                                    </div>
-                                  </div>
-
-                                  <div className="text-center">
-                                    <h6 className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 mb-2">{t("tools.asma.murabba")}</h6>
-                                    <div className="grid grid-cols-4 mx-auto max-w-[16rem] gap-1 p-2 bg-gray-100 dark:bg-gray-900 rounded-xl">
-                                      {generateVifiq4x4(localizedItem.val).map((row, i) => 
-                                        row.map((cell, j) => (
-                                          <div key={`${i}-${j}`} className="aspect-square bg-white dark:bg-gray-800 rounded-lg flex items-center justify-center font-mono font-bold text-xs sm:text-sm text-gray-900 dark:text-white shadow-sm border border-gray-50 dark:border-gray-700">
-                                            {cell}
-                                          </div>
-                                        ))
-                                      )}
-
-                                    </div>
+                                <div className="mb-6">
+                                  <label className="block text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 mb-2 text-center">
+                                    {language === 'fr' ? 'Dimension du Carré Magique (Khatim)' : language === 'ha' ? 'Girman Carré Magique' : 'Magic Square Dimension'}
+                                  </label>
+                                  <div className="flex flex-wrap justify-center gap-1.5">
+                                    {[
+                                      { size: 3, name: '3x3' },
+                                      { size: 4, name: '4x4' },
+                                      { size: 5, name: '5x5' },
+                                      { size: 6, name: '6x6' },
+                                      { size: 7, name: '7x7' },
+                                      { size: 8, name: '8x8' },
+                                      { size: 9, name: '9x9' },
+                                      { size: 10, name: '10x10' }
+                                    ].map(({ size, name }) => (
+                                      <button
+                                        key={size}
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setSelectedGridSize(size);
+                                        }}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all cursor-pointer ${selectedGridSize === size ? 'bg-indigo-600 border-indigo-500 text-white shadow-sm' : 'bg-gray-50 hover:bg-gray-100 border-gray-200 text-gray-700 dark:bg-gray-900 dark:hover:bg-gray-800 dark:border-gray-700 dark:text-gray-300'}`}
+                                      >
+                                        {name}
+                                      </button>
+                                    ))}
                                   </div>
                                 </div>
 
+                                <div className="text-center">
+                                  <h6 className="text-[11px] uppercase font-bold text-gray-500 dark:text-gray-400 mb-3">
+                                    {selectedGridSize === 3 ? 'Muthallath' : selectedGridSize === 4 ? "Murabba'" : selectedGridSize === 5 ? 'Mukhammas' : selectedGridSize === 6 ? 'Musaddas' : selectedGridSize === 7 ? "Musabba'" : selectedGridSize === 8 ? 'Muthamman' : selectedGridSize === 9 ? "Mutassa'" : "Mu'ashshar"} ({selectedGridSize}x{selectedGridSize})
+                                  </h6>
+                                  <div className="w-full overflow-x-auto pb-2 scrollbar-thin">
+                                    <div className={`grid mx-auto max-w-[20rem] min-w-[240px] gap-1 p-2 bg-gray-100 dark:bg-gray-900 rounded-xl relative ${gridColsClassMap[selectedGridSize] || 'grid-cols-3'}`}>
+                                      {generateDynamicVifiq(selectedGridSize, localizedItem.val).map((row, i) => 
+                                        row.map((cell, j) => (
+                                          <div 
+                                            key={`${i}-${j}`} 
+                                            className={`${gridCellPaddingMap[selectedGridSize] || 'p-2'} bg-white dark:bg-gray-800 rounded-md flex items-center justify-center font-mono font-bold text-gray-900 dark:text-white shadow-sm border border-gray-50 dark:border-gray-700 ${textPercentSizeMap[selectedGridSize] || 'text-sm'}`}
+                                          >
+                                            {cell}
+                                          </div>
+                                        ))
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                             </div>
+
+                             {/* Guide de Prospérité Professionnelle */}
+                             <div className="bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950/20 dark:to-amber-900/10 border border-amber-200 dark:border-amber-800/40 rounded-2xl p-5 mt-6" onClick={(e) => e.stopPropagation()}>
+                               <h5 className="text-sm font-bold uppercase tracking-widest text-amber-700 dark:text-amber-400 mb-4 flex items-center gap-2">
+                                 🔑 Cabinet d'Asrar : Stratégies de Prospérité et Usages Avancés
+                               </h5>
+                               
+                               <div className="space-y-4 text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
+                                 <p>
+                                   L'usage professionnel de l'énergie spirituelle du Nom <strong>{localizedItem.name}</strong> permet aux praticiens sincères d'offrir des services d'accompagnement vibratoire de haute valeur. Voici comment intégrer ce thème pour développer votre activité et générer des revenus éthiques :
+                                 </p>
+
+                                 <div className="bg-white dark:bg-gray-900/60 p-4 rounded-xl border border-amber-100 dark:border-amber-950">
+                                   <h6 className="font-bold text-amber-800 dark:text-amber-400 mb-1">1. Confection de Supports Sacrés (Khawatim/Wafq) sur Métal</h6>
+                                   <p className="mb-2">
+                                     Le Wafq {selectedGridSize}x{selectedGridSize} ci-dessus peut être gravé sur une plaque de métal noble durant les heures planétaires associées au Nom (généralement sous l'égide de la lune ou du soleil, selon la nature du Nom). 
+                                   </p>
+                                   <ul className="list-disc pl-4 space-y-1">
+                                     <li><strong>Métaux :</strong> Argent pour la protection et la clarté spirituelle ; Cuivre rouge pour l'attraction d'affection et de clientèle ; Laiton/Or pour la souveraineté et l'expansion financière.</li>
+                                     <li><strong>Méthode de monétisation :</strong> Vous pouvez proposer ces supports gravés sur mesure à vos clients sous forme d'amulettes de poche ou d'objets d'harmonisation de l'espace de travail. Un support authentique activé se vend entre 150 € et 500 € selon la complexité astrologique.</li>
+                                   </ul>
+                                 </div>
+
+                                 <div className="bg-white dark:bg-gray-900/60 p-4 rounded-xl border border-amber-100 dark:border-amber-950">
+                                   <h6 className="font-bold text-amber-800 dark:text-amber-400 mb-1">2. Profiling Vibratoire et Consulting d'Âme (Kashf)</h6>
+                                   <p className="mb-2">
+                                     En combinant la valeur Abjad de votre client avec celle de son projet de vie, vous déterminez s'il résonne harmonieusement avec la vibration <strong>{localizedItem.val}</strong>.
+                                   </p>
+                                   <ul className="list-disc pl-4 space-y-1">
+                                     <li><strong>Méthode de calcul :</strong> Si l'Abjad cumulé de votre client et de son activité économique équivaut ou s'approche d'un multiple de {localizedItem.val}, cette synergie est hautement propice.</li>
+                                     <li><strong>Service proposé :</strong> Proposez des séances de "diagnostic de blocages énergétiques" (Kashf) en cabinet ou en ligne. Facturez ces consultations de 80 € à 150 € l'heure, en fournissant un Wird d'alignement et d'activation précis basé sur ce Nom.</li>
+                                   </ul>
+                                 </div>
+
+                                 <div className="bg-white dark:bg-gray-900/60 p-4 rounded-xl border border-amber-100 dark:border-amber-950">
+                                   <h6 className="font-bold text-amber-800 dark:text-amber-400 mb-1">3. Recettes Spécifiques de Prospérité Commerciale (Jalbi al-Arzaq)</h6>
+                                   <p className="mb-2">
+                                     Pour les commerces physiques ou en ligne souffrant d'un manque de clients, le secret de <strong>{localizedItem.name}</strong> s'applique ainsi :
+                                   </p>
+                                   <ul className="list-disc pl-4 space-y-1">
+                                     <li>Rédigez le code talsamique ci-dessus <strong>(طَمْشَلَشٍ {localizedItem.ar.replace('يَا ', '').replace('يَا', '')} كَضْهَيُوشٍ)</strong> à l'encre de safran et d'eau de rose sur un parchemin vierge un jeudi à l'aube.</li>
+                                     <li>Baignez légèrement le parchemin dans l'eau de source pour en dissoudre l'encre sacrée, puis aspergez discrètement les quatre coins du local commercial ou du bureau. Cela élimine instantanément les vibrations stagnantes ("Nazar" ou jalousies d'affaires) et ouvre les portes de l'abondance.</li>
+                                   </ul>
+                                 </div>
+
+                                 <div className="bg-white dark:bg-gray-900/60 p-4 rounded-xl border border-amber-100 dark:border-amber-950">
+                                   <h6 className="font-bold text-amber-800 dark:text-amber-400 mb-1">4. Pratiques Méditatives Avancées (Khalwa & Riyada)</h6>
+                                   <p>
+                                     Pour acquérir l'autorité spirituelle nécessaire au bon fonctionnement de ces recettes (le "Tassarouf"), le praticien doit lui-même accomplir une retraite de jeûne partiel (Riyada) en récitant ce Nom {localizedItem.val} fois chaque nuit pendant 7, 21 ou 40 jours consécutifs, jusqu'à ressentir une clarté mentale et un magnétisme accrus.
+                                   </p>
+                                 </div>
+                               </div>
                              </div>
 
                          </div>

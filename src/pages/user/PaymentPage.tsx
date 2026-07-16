@@ -29,7 +29,27 @@ export const PaymentPage: React.FC = () => {
     if (priceUSD === 25) price = price6m;
     if (priceUSD === 45) price = price12m;
     
-    return { currency: premiumCurrency, price: price, displayStr: `${price} ${premiumCurrency}` };
+    let originalPrice = price;
+    if (appliedPromo && appliedPromo.type === 'discount') {
+      if (appliedPromo.discountType === 'percent') {
+        price = Math.round(price * (1 - (appliedPromo.discountValue || 0) / 100));
+      } else {
+        price = Math.max(0, price - (appliedPromo.discountValue || 0));
+      }
+    }
+
+    const wasDiscounted = price < originalPrice;
+    const displayStr = wasDiscounted 
+      ? `${price} ${premiumCurrency} (au lieu de ${originalPrice} ${premiumCurrency})` 
+      : `${price} ${premiumCurrency}`;
+
+    return { 
+      currency: premiumCurrency, 
+      price: price, 
+      originalPrice: originalPrice, 
+      wasDiscounted: wasDiscounted, 
+      displayStr: displayStr 
+    };
   };
 
   const handleBack = () => {
@@ -48,6 +68,13 @@ export const PaymentPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [userLocationInfo, setUserLocationInfo] = useState({ currency: 'USD' });
+  
+  // Promo Code States
+  const [promoCodeInput, setPromoCodeInput] = useState('');
+  const [appliedPromo, setAppliedPromo] = useState<any>(null);
+  const [promoError, setPromoError] = useState<string | null>(null);
+  const [promoSuccess, setPromoSuccess] = useState<string | null>(null);
+  const [applyingPromo, setApplyingPromo] = useState(false);
   
   // Direct Payment / Modal State
   const [selectedPlan, setSelectedPlan] = useState<any>(null);
@@ -148,6 +175,167 @@ export const PaymentPage: React.FC = () => {
     setReceiptFileName('');
   };
 
+  const incrementPromoUses = async (code: string) => {
+    try {
+      const { increment } = await import('firebase/firestore');
+      await updateDoc(doc(db, 'promo_codes', code.toUpperCase()), {
+        uses: increment(1)
+      });
+    } catch (err) {
+      console.warn("Failed to increment promo uses:", err);
+    }
+  };
+
+  const handleApplyPromoCode = async () => {
+    if (!user) {
+      setShowAuthModal(true);
+      return;
+    }
+    if (!promoCodeInput.trim()) return;
+
+    setApplyingPromo(true);
+    setPromoError(null);
+    setPromoSuccess(null);
+
+    try {
+      const { getDoc } = await import('firebase/firestore');
+      const docRef = doc(db, 'promo_codes', promoCodeInput.trim().toUpperCase());
+      const docSnap = await getDoc(docRef);
+
+      if (!docSnap.exists()) {
+        setPromoError(t('payment.promoInvalid', "Code promo invalide ou inexistant."));
+        setAppliedPromo(null);
+        return;
+      }
+
+      const promo = docSnap.data();
+
+      if (!promo.isActive) {
+        setPromoError(t('payment.promoInactive', "Ce code promo n'est plus actif."));
+        setAppliedPromo(null);
+        return;
+      }
+
+      if (promo.expiryDate && Date.now() > promo.expiryDate) {
+        setPromoError(t('payment.promoExpired', "Ce code promo a expiré."));
+        setAppliedPromo(null);
+        return;
+      }
+
+      if (promo.maxUses && (promo.uses || 0) >= promo.maxUses) {
+        setPromoError(t('payment.promoLimit', "Ce code promo a atteint sa limite d'utilisations."));
+        setAppliedPromo(null);
+        return;
+      }
+
+      // Valid promo!
+      setAppliedPromo({ code: docSnap.id, ...promo });
+      
+      let successMsg = "";
+      if (promo.type === 'discount') {
+        successMsg = promo.discountType === 'percent' 
+          ? `Code promo appliqué ! Vous bénéficiez de -${promo.discountValue}% sur tous les abonnements.`
+          : `Code promo appliqué ! Vous bénéficiez d'une réduction de -${promo.discountValue} ${premiumCurrency}.`;
+      } else if (promo.type === 'unlock_subscription') {
+        successMsg = `Code promo valide ! Vous pouvez débloquer directement un abonnement Premium de ${promo.subscriptionMonths} mois gratuitement.`;
+      } else if (promo.type === 'unlock_product') {
+        successMsg = `Code promo valide ! Vous pouvez débloquer gratuitement l'article correspondant de la boutique.`;
+      }
+
+      setPromoSuccess(successMsg);
+    } catch (err) {
+      console.error(err);
+      setPromoError("Une erreur est survenue lors de la validation du code.");
+    } finally {
+      setApplyingPromo(false);
+    }
+  };
+
+  const handleActivateDirectPromo = async () => {
+    if (!user || !appliedPromo) return;
+    setLoading(true);
+
+    try {
+      const { doc, getDoc, updateDoc } = await import('firebase/firestore');
+
+      if (appliedPromo.type === 'unlock_subscription') {
+        const months = Number(appliedPromo.subscriptionMonths) || 3;
+        const premiumUntil = new Date();
+        premiumUntil.setMonth(premiumUntil.getMonth() + months);
+
+        await updateDoc(doc(db, 'users', user.uid), {
+          subscriptionTier: 'premium',
+          premiumUntil: premiumUntil
+        });
+
+        await incrementPromoUses(appliedPromo.code);
+        alert(`Félicitations! Votre abonnement Premium de ${months} mois a été activé gratuitement.`);
+        setAppliedPromo(null);
+        setPromoCodeInput('');
+        navigate('/user/dashboard');
+      } else if (appliedPromo.type === 'unlock_product') {
+        const prodId = appliedPromo.productId;
+        if (!prodId) {
+          alert("ID de l'article manquant dans la configuration du code promo.");
+          setLoading(false);
+          return;
+        }
+
+        const prodSnap = await getDoc(doc(db, 'store_products', prodId));
+        const prodName = prodSnap.exists() ? prodSnap.data().name : "votre article";
+
+        const { arrayUnion } = await import('firebase/firestore');
+        await updateDoc(doc(db, 'users', user.uid), {
+          purchasedItems: arrayUnion(prodId)
+        });
+
+        await incrementPromoUses(appliedPromo.code);
+        alert(`Félicitations! L'article "${prodName}" a été débloqué et ajouté à votre compte gratuitement.`);
+        setAppliedPromo(null);
+        setPromoCodeInput('');
+        navigate('/user/store');
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Une erreur est survenue lors de l'activation du code promo.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFreeActivation = async () => {
+    if (!user || !selectedPlan) return;
+    setLoading(true);
+
+    try {
+      let months = 3;
+      if (selectedPlan.id === 'premium_6m') months = 6;
+      if (selectedPlan.id === 'premium_12m') months = 12;
+
+      const premiumUntil = new Date();
+      premiumUntil.setMonth(premiumUntil.getMonth() + months);
+
+      await updateDoc(doc(db, 'users', user.uid), {
+        subscriptionTier: 'premium',
+        premiumUntil: premiumUntil
+      });
+
+      if (appliedPromo) {
+        await incrementPromoUses(appliedPromo.code);
+      }
+
+      alert(t('payment.success', `Félicitations! Vous êtes maintenant abonné au plan ${selectedPlan.name}.`).replace('{plan}', selectedPlan.name));
+      setAppliedPromo(null);
+      setSelectedPlan(null);
+      navigate('/user/dashboard');
+    } catch (dbErr) {
+      console.error("Failed to update premium status in DB:", dbErr);
+      alert("Erreur lors de l'activation.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handlePaystackPayment = async () => {
     if (!user || !selectedPlan) return;
     
@@ -173,6 +361,10 @@ export const PaymentPage: React.FC = () => {
               subscriptionTier: 'premium',
               premiumUntil: premiumUntil
             });
+
+            if (appliedPromo) {
+              await incrementPromoUses(appliedPromo.code);
+            }
           } catch (dbErr) {
             console.error("Failed to update premium status in DB:", dbErr);
           }
@@ -237,6 +429,7 @@ export const PaymentPage: React.FC = () => {
         senderName: senderName.trim(),
         transactionRef: transactionRef.trim(),
         proofImage: receiptBase64 || '',
+        appliedPromoCode: appliedPromo ? appliedPromo.code : null,
         createdAt: Date.now()
       });
 
@@ -289,11 +482,63 @@ export const PaymentPage: React.FC = () => {
           {t('payment.subtitle', "Choisissez le plan qui correspond à vos besoins spirituels.")}
         </p>
         
-        <div className="mt-6 flex flex-wrap gap-4 items-center justify-center sm:justify-start text-xs sm:text-sm font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 p-3 sm:p-4 rounded-xl border border-emerald-100 dark:border-emerald-800/50">
-          <span className="flex items-center gap-1.5"><CreditCard size={16} /> Paystack (Automatique : Cartes & Mobile Money)</span>
+        <div className="mt-6 flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 items-center justify-center sm:justify-start text-xs sm:text-sm font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 p-3 sm:p-4 rounded-xl border border-emerald-100 dark:border-emerald-800/50 w-full overflow-hidden">
+          <span className="flex items-center gap-2 text-center sm:text-left"><CreditCard size={16} className="shrink-0" /><span className="leading-tight">Paystack (Automatique : Cartes & Mobile Money)</span></span>
           <span className="text-emerald-300 hidden sm:inline">•</span>
-          <span className="flex items-center gap-1.5"><Landmark size={16} /> Transfert Bancaire Direct (GCB Bank PLC)</span>
+          <span className="flex items-center gap-2 text-center sm:text-left"><Landmark size={16} className="shrink-0" /><span className="leading-tight">Transfert Bancaire Direct (GCB Bank PLC)</span></span>
         </div>
+      </div>
+
+      {/* Promo Code Validation Panel */}
+      <div className="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 mb-8 border border-gray-200 dark:border-gray-700 shadow-sm text-left">
+        <h3 className="font-bold text-gray-900 dark:text-white text-base flex items-center gap-2 mb-2">
+          <Sparkles className="text-amber-500" />
+          {t('payment.promoCodeHeader', "Avez-vous un Code Promo ?")}
+        </h3>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+          Saisissez votre code promotionnel pour bénéficier de réductions immédiates sur nos abonnements, débloquer directement un abonnement ou débloquer gratuitement un article spécifique de la boutique.
+        </p>
+
+        <div className="flex flex-col sm:flex-row gap-3 max-w-xl">
+          <input
+            type="text"
+            placeholder="Saisir le code (ex: ASRAR50)"
+            value={promoCodeInput}
+            onChange={(e) => setPromoCodeInput(e.target.value)}
+            disabled={applyingPromo}
+            className="flex-1 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl p-3 text-sm text-gray-900 dark:text-white uppercase font-mono font-bold focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none disabled:opacity-55"
+          />
+          <button
+            onClick={handleApplyPromoCode}
+            disabled={applyingPromo || !promoCodeInput.trim()}
+            className="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:bg-emerald-600/50 text-white text-xs font-bold shadow-md transition-all whitespace-nowrap"
+          >
+            {applyingPromo ? t('payment.applying', "Validation...") : t('payment.apply', "Appliquer le code")}
+          </button>
+        </div>
+
+        {promoError && (
+          <p className="text-xs font-semibold text-red-500 mt-2 flex items-center gap-1">
+            ⚠️ {promoError}
+          </p>
+        )}
+
+        {promoSuccess && (
+          <div className="mt-3 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900 p-3.5 rounded-xl">
+            <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5 mb-2">
+              ✅ {promoSuccess}
+            </p>
+            {appliedPromo && appliedPromo.type !== 'discount' && (
+              <button
+                onClick={handleActivateDirectPromo}
+                disabled={loading}
+                className="py-2 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow transition-all flex items-center gap-1.5"
+              >
+                {loading ? "Activation..." : "Débloquer et Activer maintenant"}
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
@@ -420,34 +665,63 @@ export const PaymentPage: React.FC = () => {
 
             <div className="flex-1 overflow-y-auto p-6 space-y-6 hide-scrollbar">
               {!paymentMethod ? (
-                <div className="space-y-4">
-                  <h4 className="font-bold text-gray-900 dark:text-white mb-2">{t('payment.modalSelectMethod', 'Sélectionnez votre méthode de paiement')}</h4>
-                  
-                  <button
-                    onClick={() => setPaymentMethod('paystack')}
-                    className="w-full flex items-center gap-4 p-4 border-2 border-gray-100 hover:border-emerald-500 dark:border-gray-800 dark:hover:border-emerald-500 rounded-2xl text-left hover:bg-emerald-50/20 dark:hover:bg-emerald-900/10 transition-all group"
-                  >
-                    <div className="p-3 rounded-xl bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 group-hover:scale-110 transition-transform">
-                      <CreditCard size={24} />
+                <div className="space-y-4 text-left">
+                  {detectUserCurrencyAndPrice(selectedPlan.priceNumber).price === 0 ? (
+                    <div className="text-center py-6 space-y-4 bg-emerald-50 dark:bg-emerald-950/20 rounded-2xl p-4 border border-emerald-100 dark:border-emerald-900/50">
+                      <Sparkles className="mx-auto text-emerald-500 animate-bounce" size={48} />
+                      <h4 className="font-bold text-lg text-gray-900 dark:text-white">Abonnement gratuit avec code promo !</h4>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 max-w-sm mx-auto">Votre code promo réduit le coût de cet abonnement à 0. Vous pouvez l'activer instantanément sans frais.</p>
+                      <button
+                        onClick={handleFreeActivation}
+                        disabled={loading}
+                        className="py-3 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md transition-all"
+                      >
+                        {loading ? "Activation..." : "Activer mon abonnement gratuitement"}
+                      </button>
                     </div>
-                    <div className="flex-1">
-                      <h5 className="font-bold text-gray-900 dark:text-white">{t('payment.modalAuto', 'Paiement Automatique')}</h5>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('payment.modalAutoDesc', 'Payez instantanément par Carte Bancaire ou Mobile Money automatique via Paystack.')}</p>
-                    </div>
-                  </button>
+                  ) : (
+                    <>
+                      <h4 className="font-bold text-gray-900 dark:text-white mb-2">{t('payment.modalSelectMethod', 'Sélectionnez votre méthode de paiement')}</h4>
+                      
+                      {featureToggles?.paystack_enabled === false && featureToggles?.bank_transfer_enabled === false ? (
+                        <div className="text-center py-8 text-gray-500 border border-dashed rounded-2xl p-4">
+                          ⚠️ Les méthodes de paiement en ligne sont temporairement désactivées par l'administrateur. Veuillez réessayer plus tard.
+                        </div>
+                      ) : (
+                        <>
+                          {featureToggles?.paystack_enabled !== false && (
+                            <button
+                              onClick={() => setPaymentMethod('paystack')}
+                              className="w-full flex items-center gap-4 p-4 border-2 border-gray-100 hover:border-emerald-500 dark:border-gray-800 dark:hover:border-emerald-500 rounded-2xl text-left hover:bg-emerald-50/20 dark:hover:bg-emerald-900/10 transition-all group animate-fade-in"
+                            >
+                              <div className="p-3 rounded-xl bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 group-hover:scale-110 transition-transform shrink-0">
+                                <CreditCard size={24} />
+                              </div>
+                              <div className="flex-1">
+                                <h5 className="font-bold text-gray-900 dark:text-white">{t('payment.modalAuto', 'Paiement Automatique')}</h5>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('payment.modalAutoDesc', 'Payez instantanément par Carte Bancaire ou Mobile Money automatique via Paystack.')}</p>
+                              </div>
+                            </button>
+                          )}
 
-                  <button
-                    onClick={() => setPaymentMethod('direct')}
-                    className="w-full flex items-center gap-4 p-4 border-2 border-gray-100 hover:border-emerald-500 dark:border-gray-800 dark:hover:border-emerald-500 rounded-2xl text-left hover:bg-emerald-50/20 dark:hover:bg-emerald-900/10 transition-all group"
-                  >
-                    <div className="p-3 rounded-xl bg-amber-100 dark:bg-amber-900/50 text-amber-600 group-hover:scale-110 transition-transform">
-                      <Landmark size={24} />
-                    </div>
-                    <div className="flex-1">
-                      <h5 className="font-bold text-gray-900 dark:text-white">{t('payment.modalDirect', 'Paiement Direct (Sans Commission)')}</h5>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('payment.modalDirectDesc', 'Transférez directement sur mon compte GCB Bank PLC, puis soumettez le reçu.')}</p>
-                    </div>
-                  </button>
+                          {featureToggles?.bank_transfer_enabled !== false && (
+                            <button
+                              onClick={() => setPaymentMethod('direct')}
+                              className="w-full flex items-center gap-4 p-4 border-2 border-gray-100 hover:border-emerald-500 dark:border-gray-800 dark:hover:border-emerald-500 rounded-2xl text-left hover:bg-emerald-50/20 dark:hover:bg-emerald-900/10 transition-all group animate-fade-in"
+                            >
+                              <div className="p-3 rounded-xl bg-amber-100 dark:bg-amber-900/50 text-amber-600 group-hover:scale-110 transition-transform shrink-0">
+                                <Landmark size={24} />
+                              </div>
+                              <div className="flex-1">
+                                <h5 className="font-bold text-gray-900 dark:text-white">{t('payment.modalDirect', 'Paiement Direct (Sans Commission)')}</h5>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{t('payment.modalDirectDesc', 'Transférez directement sur mon compte GCB Bank PLC, puis soumettez le reçu.')}</p>
+                              </div>
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </>
+                  )}
                 </div>
               ) : paymentMethod === 'paystack' ? (
                 <div className="text-center py-6 space-y-4">

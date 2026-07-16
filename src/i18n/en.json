@@ -275,7 +275,17 @@
     },
     "grand-oaths": {
       "title": "Grand Oaths",
-      "description": "Da'awat & Azayim: Library of major invocations."
+      "description": "Da'awat & Azayim: Library of major invocations.",
+      "backToDashboard": "to the dashboard",
+      "incenseLabel": "Incense",
+      "dayLabel": "Day",
+      "invocationText": "Text of the Invocation",
+      "lexiconTitle": "Lexicon of Hidden Names",
+      "lexiconMeaning": "Meaning",
+      "selectSermon": "Select an Oath",
+      "selectSermonDesc": "Choose a Da'wa from the left menu to read its instructions, incense, and secrets.",
+      "underMaintenance": "Oath under maintenance",
+      "underMaintenanceDesc": "This oath is temporarily under maintenance for spiritual adjustments. Please try again later."
     },
     "elemental": {
       "title": "Elemental Analyzer",
@@ -627,7 +637,9 @@
   },
   "dailyReward": {
     "rewardTitle": "Spiritual Point Earned!",
-    "rewardDesc": "Activity time rewarded: {earned}/5 points today."
+    "rewardDesc": "Activity time rewarded: {earned}/10 points today.",
+    "daily10Title": "Daily 10 Points Gift! 🌟",
+    "daily10Desc": "You have received your daily 10 spiritual points automatically!"
   },
   "payment": {
     "back": "Back",

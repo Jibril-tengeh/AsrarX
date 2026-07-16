@@ -156,19 +156,21 @@ const gridCellPaddingMap: Record<number, string> = {
   10: 'p-0.5',
 };
 
+import { applyTashkeel } from '../../../utils/tashkeel';
+
 // Helper to return the Name in its pure Quranic form without "Ya" (يَا) prefix
 const getZikrName = (arName: string) => {
-  return arName;
+  return applyTashkeel(arName);
 };
 
 // Helper to return the Name preceded by "Ya" (يَا) with proper Arabic rules
 const getVocativeName = (arName: string) => {
   const clean = arName.trim();
   if (clean.includes("اللَّ") || clean.includes("الله")) {
-    return "يَا الله";
+    return "يَا ٱللَّهُ";
   }
   const withoutAl = clean.replace(/^ال[َّْ]?/, "");
-  return `يَا ${withoutAl}`;
+  return applyTashkeel(`يَا ${withoutAl}`);
 };
 
 const namesOfAllahDict = {
@@ -1037,21 +1039,23 @@ export const NamesOfAllah: React.FC = () => {
                         </div>
                       ) : (
                         grid && (
-                          <div className="space-y-4 w-full flex flex-col items-center overflow-x-auto">
+                          <div className="space-y-4 w-full flex flex-col items-center">
                             <h4 className="text-xs font-bold uppercase tracking-widest text-purple-600 dark:text-purple-400 text-center">
                               {khatimNamesMap[khatimSize]} ({khatimSize}x{khatimSize})
                             </h4>
-                            <div className={`grid mx-auto gap-1 p-2 bg-gray-100 dark:bg-gray-900 rounded-2xl ${gridColsClassMap[khatimSize]}`}>
-                              {grid.map((row, i) =>
-                                row.map((cell, j) => (
-                                  <div
-                                    key={`${i}-${j}`}
-                                    className={`aspect-square bg-white dark:bg-gray-800 rounded-xl flex items-center justify-center font-mono font-bold text-gray-900 dark:text-white shadow-sm ${gridCellPaddingMap[khatimSize]} ${textPercentSizeMap[khatimSize]}`}
-                                  >
-                                    {cell}
-                                  </div>
-                                ))
-                              )}
+                            <div className="w-full overflow-x-auto pb-2 scrollbar-thin flex justify-start sm:justify-center">
+                              <div className={`grid mx-auto gap-1 p-2 bg-gray-100 dark:bg-gray-900 rounded-2xl ${gridColsClassMap[khatimSize]} min-w-[280px]`}>
+                                {grid.map((row, i) =>
+                                  row.map((cell, j) => (
+                                    <div
+                                      key={`${i}-${j}`}
+                                      className={`aspect-square bg-white dark:bg-gray-800 rounded-xl flex items-center justify-center font-mono font-bold text-gray-900 dark:text-white shadow-sm ${gridCellPaddingMap[khatimSize]} ${textPercentSizeMap[khatimSize]}`}
+                                    >
+                                      {cell}
+                                    </div>
+                                  ))
+                                )}
+                              </div>
                             </div>
                           </div>
                         )

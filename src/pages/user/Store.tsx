@@ -3,7 +3,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { db } from '../../lib/firebase';
 import { doc, updateDoc, increment, collection, onSnapshot } from 'firebase/firestore';
-import { ShoppingBag, Star, Shield, Zap, Sparkles, Book, LayoutGrid, Square, List, Heart, Search, ChevronDown, X, Share2, Play, Pause } from 'lucide-react';
+import { ShoppingBag, Star, Shield, Zap, Sparkles, Book, LayoutGrid, Square, List, Heart, Search, ChevronDown, X, Share2, Play, Pause, CheckCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { PremiumBadge } from '../../components/PremiumBadge';
 import { PaystackService } from '../../services/PaystackService';
@@ -552,58 +552,67 @@ export const Store: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-4">
-                  {selectedProduct.pointsCost && (
-                    <button 
-                      onClick={() => handlePurchase(selectedProduct, true)}
-                      className="flex-1 py-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-xl font-bold text-lg transition-colors flex items-center justify-center gap-2 shadow-md"
-                    >
-                      <Sparkles size={20} />
-                      Utiliser {selectedProduct.pointsCost} pts
-                    </button>
-                  )}
-                  {selectedProduct.category === 'Abonnements' ? (
-                    <div className="flex flex-col flex-1 gap-2">
+                {user?.purchasedItems?.includes(selectedProduct.id) ? (
+                  <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/50 p-5 rounded-2xl text-center mb-4">
+                    <p className="text-emerald-700 dark:text-emerald-400 font-bold flex items-center justify-center gap-2">
+                      <CheckCircle size={20} /> Article Débloqué (Acquis)
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">Vous possédez déjà cet article sur votre compte.</p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col sm:flex-row gap-4 flex-1">
+                    {selectedProduct.pointsCost && (
                       <button 
-                        onClick={() => handlePurchase(selectedProduct, false, 'paystack')}
-                        className="py-3 bg-[#0BA4DB] text-white rounded-xl font-bold transition-colors shadow-md hover:bg-[#0983AF]"
+                        onClick={() => handlePurchase(selectedProduct, true)}
+                        className="flex-1 py-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-xl font-bold text-lg transition-colors flex items-center justify-center gap-2 shadow-md"
                       >
-                        Payer avec Paystack
+                        <Sparkles size={20} />
+                        Utiliser {selectedProduct.pointsCost} pts
                       </button>
+                    )}
+                    {selectedProduct.category === 'Abonnements' ? (
+                      <div className="flex flex-col flex-1 gap-2">
+                        <button 
+                          onClick={() => handlePurchase(selectedProduct, false, 'paystack')}
+                          className="py-3 bg-[#0BA4DB] text-white rounded-xl font-bold transition-colors shadow-md hover:bg-[#0983AF]"
+                        >
+                          Payer avec Paystack
+                        </button>
+                        <button 
+                          onClick={() => handlePurchase(selectedProduct, false, 'visa')}
+                          className="py-3 bg-[#1434CB] text-white rounded-xl font-bold transition-colors shadow-md hover:bg-[#0F289F]"
+                        >
+                          Payer avec Carte Visa / Mastercard
+                        </button>
+                        <button 
+                          onClick={() => handlePurchase(selectedProduct, false, 'crypto')}
+                          className="py-3 bg-[#F7931A] text-white rounded-xl font-bold transition-colors shadow-md hover:bg-[#D98115]"
+                        >
+                          Payer en Crypto-monnaie
+                        </button>
+                      </div>
+                    ) : (
                       <button 
-                        onClick={() => handlePurchase(selectedProduct, false, 'visa')}
-                        className="py-3 bg-[#1434CB] text-white rounded-xl font-bold transition-colors shadow-md hover:bg-[#0F289F]"
+                        onClick={() => handlePurchase(selectedProduct, false)}
+                        className="flex-1 py-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl font-bold text-lg transition-colors flex items-center justify-center gap-2 shadow-md hover:bg-gray-800 dark:hover:bg-gray-100"
                       >
-                        Payer avec Carte Visa / Mastercard
+                        Acheter ({selectedProduct.price})
                       </button>
+                    )}
+                    <div className="flex gap-2">
                       <button 
-                        onClick={() => handlePurchase(selectedProduct, false, 'crypto')}
-                        className="py-3 bg-[#F7931A] text-white rounded-xl font-bold transition-colors shadow-md hover:bg-[#D98115]"
+                        onClick={() => toggleFavorite(selectedProduct.id, { stopPropagation: () => {} } as any)}
+                        className={`w-14 sm:w-16 flex items-center justify-center rounded-xl border-2 transition-colors ${
+                          favorites.includes(selectedProduct.id) 
+                            ? 'border-red-500 bg-red-50 dark:bg-red-500/10' 
+                            : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
+                        }`}
                       >
-                        Payer en Crypto-monnaie
+                        <Heart size={24} className={favorites.includes(selectedProduct.id) ? "fill-red-500 text-red-500" : "text-gray-400"} />
                       </button>
                     </div>
-                  ) : (
-                    <button 
-                      onClick={() => handlePurchase(selectedProduct, false)}
-                      className="flex-1 py-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl font-bold text-lg transition-colors flex items-center justify-center gap-2 shadow-md hover:bg-gray-800 dark:hover:bg-gray-100"
-                    >
-                      Acheter ({selectedProduct.price})
-                    </button>
-                  )}
-                  <div className="flex gap-2">
-                    <button 
-                      onClick={() => toggleFavorite(selectedProduct.id, { stopPropagation: () => {} } as any)}
-                      className={`w-14 sm:w-16 flex items-center justify-center rounded-xl border-2 transition-colors ${
-                        favorites.includes(selectedProduct.id) 
-                          ? 'border-red-500 bg-red-50 dark:bg-red-500/10' 
-                          : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
-                      }`}
-                    >
-                      <Heart size={24} className={favorites.includes(selectedProduct.id) ? "fill-red-500 text-red-500" : "text-gray-400"} />
-                    </button>
                   </div>
-                </div>
+                )}
               </div>
             </motion.div>
           </div>

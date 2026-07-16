@@ -4,7 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useFeatures } from '../../contexts/FeatureContext';
 import { db } from '../../lib/firebase';
 import { collection, query, orderBy, onSnapshot, doc } from 'firebase/firestore';
-import { Search, LayoutGrid, Square, List, Filter, X, BookOpen, Store, Award, MapPin, Trophy, ShieldCheck, ChevronDown, Bookmark, Flame, Shield, RefreshCw, Quote, Folder, Plus, Library, Music, Pencil, Trash2, Sliders } from 'lucide-react';
+import { Search, LayoutGrid, Square, List, Filter, X, BookOpen, Store, Award, MapPin, Trophy, ShieldCheck, ChevronDown, Bookmark, Flame, Shield, RefreshCw, Quote, Folder, Plus, Library, Music, Pencil, Trash2, Sliders, Sparkles } from 'lucide-react';
 import { SecretCard, LayoutMode } from '../../components/SecretCard';
 import { HabitTracker } from '../../components/HabitTracker';
 import { DailyGoalsTracker } from '../../components/DailyGoalsTracker';
@@ -65,6 +65,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
   const [isAiSearching, setIsAiSearching] = useState(false);
   const [announcement, setAnnouncement] = useState<{ title: string, text: string, visible: boolean } | null>(null);
   const [isAnnouncementDismissed, setIsAnnouncementDismissed] = useState(false);
+  const [isPremiumPromoDismissed, setIsPremiumPromoDismissed] = useState(false);
 
   const [affirmation, setAffirmation] = useState({ verse: '', reference: '' });
   const [scrolled, setScrolled] = useState(false);
@@ -357,6 +358,19 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
   }, []);
 
   useEffect(() => {
+    if (featureToggles?.premiumPromoText) {
+      const dismissedPromoText = localStorage.getItem('asrarhub_dismissed_premium_promo_text');
+      if (dismissedPromoText !== featureToggles.premiumPromoText) {
+        setIsPremiumPromoDismissed(false);
+      } else {
+        setIsPremiumPromoDismissed(true);
+      }
+    } else {
+      setIsPremiumPromoDismissed(false);
+    }
+  }, [featureToggles?.premiumPromoText]);
+
+  useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (filterRef.current && !filterRef.current.contains(event.target as Node)) {
         setIsFilterOpen(false);
@@ -564,29 +578,31 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
           </AnimatePresence>
         </div>
 
-        <div id="tour-layout" className={`flex bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-0.5 sm:p-1 flex-shrink-0 h-[34px] sm:h-[42px] items-center transition-opacity duration-200 ${isSearchOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
-          <button 
-            onClick={() => setLayoutMode('grid2')}
-            className={`p-1 sm:p-1.5 rounded-md sm:rounded-lg transition-colors ${layoutMode === 'grid2' ? 'bg-gray-100 dark:bg-gray-700 text-emerald-600 dark:text-emerald-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
-            title="2 Colonnes"
-          >
-            <LayoutGrid className="w-[15px] h-[15px] sm:w-[18px] sm:h-[18px]" />
-          </button>
-          <button 
-            onClick={() => setLayoutMode('grid1')}
-            className={`p-1 sm:p-1.5 rounded-md sm:rounded-lg transition-colors ${layoutMode === 'grid1' ? 'bg-gray-100 dark:bg-gray-700 text-emerald-600 dark:text-emerald-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
-            title="1 Colonne"
-          >
-            <Square className="w-[15px] h-[15px] sm:w-[18px] sm:h-[18px]" />
-          </button>
-          <button 
-            onClick={() => setLayoutMode('list')}
-            className={`p-1 sm:p-1.5 rounded-md sm:rounded-lg transition-colors ${layoutMode === 'list' ? 'bg-gray-100 dark:bg-gray-700 text-emerald-600 dark:text-emerald-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
-            title="Liste"
-          >
-            <List className="w-[15px] h-[15px] sm:w-[18px] sm:h-[18px]" />
-          </button>
-        </div>
+        {!featureToggles?.lockArticlesDisplayMode && (
+          <div id="tour-layout" className={`flex bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-0.5 sm:p-1 flex-shrink-0 h-[34px] sm:h-[42px] items-center transition-opacity duration-200 ${isSearchOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+            <button 
+              onClick={() => setLayoutMode('grid2')}
+              className={`p-1 sm:p-1.5 rounded-md sm:rounded-lg transition-colors ${layoutMode === 'grid2' ? 'bg-gray-100 dark:bg-gray-700 text-emerald-600 dark:text-emerald-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+              title="2 Colonnes"
+            >
+              <LayoutGrid className="w-[15px] h-[15px] sm:w-[18px] sm:h-[18px]" />
+            </button>
+            <button 
+              onClick={() => setLayoutMode('grid1')}
+              className={`p-1 sm:p-1.5 rounded-md sm:rounded-lg transition-colors ${layoutMode === 'grid1' ? 'bg-gray-100 dark:bg-gray-700 text-emerald-600 dark:text-emerald-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+              title="1 Colonne"
+            >
+              <Square className="w-[15px] h-[15px] sm:w-[18px] sm:h-[18px]" />
+            </button>
+            <button 
+              onClick={() => setLayoutMode('list')}
+              className={`p-1 sm:p-1.5 rounded-md sm:rounded-lg transition-colors ${layoutMode === 'list' ? 'bg-gray-100 dark:bg-gray-700 text-emerald-600 dark:text-emerald-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
+              title="Liste"
+            >
+              <List className="w-[15px] h-[15px] sm:w-[18px] sm:h-[18px]" />
+            </button>
+          </div>
+        )}
         </div>
       </div>
 
@@ -638,6 +654,55 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
               >
                 OK
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* Annonce d'incitation Premium */}
+        {!(user?.subscriptionTier === 'premium' || user?.subscriptionTier === 'pro') && featureToggles?.premiumPromoActive && !isPremiumPromoDismissed && (
+          <div className={`rounded-3xl p-5 sm:p-6 shadow-xl relative overflow-hidden text-white flex flex-col justify-between ${
+            featureToggles.premiumPromoTheme === 'gold' 
+              ? 'bg-gradient-to-br from-amber-600 via-amber-500 to-yellow-500 border border-amber-400/30' 
+              : featureToggles.premiumPromoTheme === 'cosmic' 
+              ? 'bg-gradient-to-br from-gray-950 via-purple-950 to-indigo-950 border border-purple-800/30'
+              : featureToggles.premiumPromoTheme === 'emerald'
+              ? 'bg-gradient-to-br from-teal-500 to-emerald-700 border border-teal-400/30'
+              : 'bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-500 border border-purple-500/30' // default violet
+          }`}>
+            {/* Arrière-plan stylisé */}
+            <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+            <div className="absolute bottom-[-10%] left-[-5%] w-48 h-48 bg-black/15 rounded-full blur-xl pointer-events-none" />
+            
+            <div className="relative z-10 flex flex-col justify-center mb-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="bg-white/20 px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider backdrop-blur-sm flex items-center gap-1">
+                  <Sparkles size={12} className="text-yellow-300 animate-pulse" /> Offre Spéciale
+                </span>
+                
+                <button 
+                  onClick={() => {
+                    localStorage.setItem('asrarhub_dismissed_premium_promo_text', featureToggles.premiumPromoText || '');
+                    setIsPremiumPromoDismissed(true);
+                  }}
+                  className="bg-black/10 hover:bg-black/20 text-white/80 hover:text-white p-1.5 rounded-full transition-colors"
+                  title="Fermer la promotion"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+              <h3 className="text-xl sm:text-2xl font-black mb-2 flex items-center gap-2">
+                {featureToggles.premiumPromoTitle || "Devenez membre Premium !"}
+              </h3>
+              <p className="text-white/95 max-w-2xl text-sm sm:text-base leading-relaxed">
+                {featureToggles.premiumPromoText || "Débloquez tous les secrets de l'Asrar, l'assistant IA et tous les outils spirituels."}
+              </p>
+            </div>
+            
+            <div className="relative z-10 mt-auto flex flex-wrap items-center gap-3 pt-2">
+              <Link to="/payment" className="inline-flex items-center gap-2 bg-white text-gray-950 hover:bg-gray-100 font-extrabold px-5 py-2.5 rounded-xl text-sm transition-all shadow-md transform hover:-translate-y-0.5">
+                <Sparkles size={16} className="text-purple-600 fill-purple-200" />
+                {featureToggles.premiumPromoBtnText || "Passer au Premium"}
+              </Link>
             </div>
           </div>
         )}

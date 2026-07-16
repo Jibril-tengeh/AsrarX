@@ -151,5 +151,26 @@ body {
   background-color: rgba(239, 68, 68, 0.05) !important;
 }
 
+/* Fix mobile horizontal scrolling and boundaries on all pages and tools */
+*, ::before, ::after {
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+
+/* Protect layouts from elements with fixed widths larger than mobile screens */
+@media (max-width: 640px) {
+  .min-w-\[280px\], .min-w-\[320px\], .min-w-\[5rem\], .min-w-\[200px\], .min-w-\[20rem\] {
+    min-width: 0 !important;
+  }
+}
+
+/* Ensure code blocks, tables, and special containers are scrollable horizontally if they exceed bounds */
+pre, code, table, .overflow-x-auto-mobile {
+  max-width: 100% !important;
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch;
+}
+
+
 
 

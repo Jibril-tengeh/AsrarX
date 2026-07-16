@@ -267,6 +267,19 @@ export default function App() {
     if (document.body) {
       document.body.scrollTo({ top: 0 });
     }
+
+    const mainPaths = [
+      '/user/dashboard',
+      '/tools',
+      '/explore',
+      '/journal',
+      '/saved',
+      '/profile',
+      '/community'
+    ];
+    if (mainPaths.includes(location.pathname)) {
+      sessionStorage.setItem('last_active_main_path', location.pathname);
+    }
   }, [location.pathname]);
 
   React.useEffect(() => {
@@ -288,14 +301,15 @@ export default function App() {
         console.log(`[Navigation] Root sub-page. Redirecting back to dashboard.`);
         navigate('/user/dashboard');
       } else {
-        if (window.history.state && window.history.state.idx > 0) {
+        if (currentPath.startsWith('/tools/') || currentPath.startsWith('/secret/')) {
+          const backPath = sessionStorage.getItem('last_active_main_path') || '/user/dashboard';
+          console.log(`[Navigation] Sub-tool or secret path. Redirecting to last active: ${backPath}`);
+          navigate(backPath);
+        } else if (window.history.state && window.history.state.idx > 0) {
           console.log(`[Navigation] Navigating -1 (previous history entry).`);
           navigate(-1);
         } else {
-          if (currentPath.startsWith('/tools/')) {
-            console.log(`[Navigation] Sub-tool path. Redirecting to /tools.`);
-            navigate('/tools');
-          } else if (currentPath.startsWith('/explore/')) {
+          if (currentPath.startsWith('/explore/')) {
             console.log(`[Navigation] Sub-explore path. Redirecting to /explore.`);
             navigate('/explore');
           } else {

@@ -342,6 +342,27 @@ export const ToolsDashboard: React.FC = () => {
   useEffect(() => {
     localStorage.setItem("active_tools_tab", activeTab);
   }, [activeTab]);
+
+  useEffect(() => {
+    const savedScrollPos = localStorage.getItem("tools_scroll_pos");
+    if (savedScrollPos) {
+      const y = parseInt(savedScrollPos, 10);
+      if (!isNaN(y)) {
+        const timer = setTimeout(() => {
+          window.scrollTo({ top: y, behavior: "instant" as ScrollBehavior });
+        }, 100);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      localStorage.setItem("tools_scroll_pos", String(window.scrollY));
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
   const [searchQuery, setSearchQuery] = useState("");
   const [featureToggles, setFeatureToggles] = useState<any>({});
   const [isLoading, setIsLoading] = useState(true);

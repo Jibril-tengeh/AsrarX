@@ -26,6 +26,36 @@ import { useLanguage } from '../../../contexts/LanguageContext';
 import { motion } from 'motion/react';
 import { calculateAbjadValue } from '../../../utils/abjad';
 import { ASMA_AL_HUSNA } from '../../../utils/asmaData';
+import { asmaListData } from '../../../data/asmaListData';
+import { asmaListDataTranslations } from '../../../data/asmaListDataTranslations';
+import { applyTashkeel } from '../../../utils/tashkeel';
+
+const cleanArabic = (str: string) => {
+  return str.replace(/[\u064B-\u065F\u0670]/g, "").replace(/\s+/g, "");
+};
+
+const getAsmaDetails = (plainName: string) => {
+  const cleanedTarget = cleanArabic(plainName);
+  return asmaListData.find(item => cleanArabic(item.ar) === cleanedTarget);
+};
+
+const getVocativeArabic = (arName: string) => {
+  if (arName === "الله" || arName === "اللَّهُ") return "يَا ٱللَّهُ";
+  let base = arName.replace(/^الْ/, "").replace(/^ال/, "");
+  if (base.length > 1 && base[1] === "\u0651") {
+    base = base[0] + base.substring(2);
+  }
+  return applyTashkeel(`يَا ${base}`);
+};
+
+const getVocativeTransliteration = (tr: string) => {
+  if (tr.toLowerCase() === "allah") return "Ya Allah";
+  const hyphenIndex = tr.indexOf("-");
+  if (hyphenIndex !== -1) {
+    return "Ya " + tr.substring(hyphenIndex + 1);
+  }
+  return "Ya " + tr;
+};
 
 interface MatchResult {
   names: string[];
@@ -51,7 +81,45 @@ const wirdDict = {
     minorGap: (diff: number) => `Écart mineur: ${diff}`,
     recitationGuideline: (weight: number) => `Réciter ce Wird ${weight} fois chaque jour (de préférence après la prière du matin ou de la nuit) activera des ouvertures (Fath) et un alignement spirituel profond.`,
     waitingTitle: "En attente de calcul",
-    waitingDesc: "Saisissez votre prénom et celui de votre mère en arabe pour découvrir votre Wird de résonance."
+    waitingDesc: "Saisissez votre prénom et celui de votre mère en arabe pour découvrir votre Wird de résonance.",
+    
+    // Saved Wirds Translation
+    savedTitle: "Mes Wirds Enregistrés",
+    savedDesc: "Glissez-déposez vos wirds dans les dossiers pour les organiser (ou utilisez le sélecteur)",
+    createFolder: "+ Créer un dossier",
+    folderPlaceholder: "Nom du dossier...",
+    addBtn: "Ajouter",
+    cancelBtn: "Annuler",
+    dragHere: "Glissez des wirds ici",
+    frequency: "Fréquence",
+    moveTo: "Vers",
+    deleteFolder: "Supprimer le dossier",
+    deleteWird: "Supprimer de mes wirds",
+    alreadySaved: "Ce Wird est déjà enregistré.",
+    saveSuccess: "Wird enregistré avec succès !",
+    savedInUncategorized: "dans 'Non classés' ! Retrouvez-le ci-dessous.",
+
+    // Folder translations
+    folderDaily: "Quotidien",
+    folderSpecial: "Occasions Spéciales",
+    folderHealing: "Guérison",
+    folderUncategorized: "Non classés",
+
+    // Detailed Zikr sections
+    zikrGuideTitle: "Guide d'accomplissement du Zikr",
+    preparationTitle: "1. Préparation Physique et Spirituelle",
+    preparationDesc: "Faites vos ablutions (Wudu), portez des vêtements propres et asseyez-vous dans un endroit calme en faisant face à la Qibla (direction de la Mecque). Allumez un encens doux si possible pour purifier l'atmosphère.",
+    openingTitle: "2. Formules d'Ouverture (Prière d'initiation)",
+    openingDesc: "Commencez par réciter l'Istighfar (demande de pardon) 11 fois pour purifier le cœur : 'Astaghfirullah al-Adheem'. Ensuite, récitez la Salawat (bénédiction sur le Prophète) 11 fois : 'Allahumma salli 'ala Sayyidina Muhammadin wa 'ala alihi wa sahbihi wa sallim'.",
+    intentionTitle: "3. Intention de Résonance (Niyyah)",
+    intentionDesc: "Formulez clairement votre intention dans votre cœur. Connectez votre conscience à la vibration divine des Noms d'Allah générés.",
+    recitationTitle: "4. Récitation Active (Le Nombre exact)",
+    recitationDesc: (weight: number) => `Récitez la formule sacrée combinée exactement ${weight} fois. Utilisez un chapelet (Tasbih) ou les phalanges de votre main droite pour compter avec dévotion et concentration.`,
+    closingTitle: "5. Scellement et Doua (Clôture)",
+    closingDesc: "Terminez en récitant à nouveau la Salawat 3 fois, puis faites vos douas (prières personnelles) en demandant à Allah de matérialiser les lumières et les bienfaits de ces nobles noms dans votre vie. Passez vos mains sur votre visage pour clore la séance.",
+    optimalTimesTitle: "Moments Optimaux",
+    optimalTimesDesc: "Après la prière de l'Aube (Fajr) pour l'énergie spirituelle de la journée, ou durant le dernier tiers de la nuit (Tahajjud) pour une intimité mystique maximale.",
+    meaningTitle: "Signification & Secrets Spirituels"
   },
   en: {
     back: "Back to dashboard",
@@ -70,7 +138,45 @@ const wirdDict = {
     minorGap: (diff: number) => `Minor gap: ${diff}`,
     recitationGuideline: (weight: number) => `Reciting this Dhikr ${weight} times daily (preferably after morning or night prayer) will activate openings (Fath) and a deep spiritual alignment.`,
     waitingTitle: "Awaiting calculation",
-    waitingDesc: "Enter your first name and your mother's first name in Arabic to discover your resonance Dhikr."
+    waitingDesc: "Enter your first name and your mother's first name in Arabic to discover your resonance Dhikr.",
+    
+    // Saved Wirds Translation
+    savedTitle: "My Saved Wirds",
+    savedDesc: "Drag and drop your wirds into folders to organize them (or use the selector)",
+    createFolder: "+ Create a folder",
+    folderPlaceholder: "Folder name...",
+    addBtn: "Add",
+    cancelBtn: "Cancel",
+    dragHere: "Drag wirds here",
+    frequency: "Frequency",
+    moveTo: "Move to",
+    deleteFolder: "Delete folder",
+    deleteWird: "Delete from my wirds",
+    alreadySaved: "This Wird is already saved.",
+    saveSuccess: "Wird successfully saved!",
+    savedInUncategorized: "in 'Uncategorized'! Find it below.",
+
+    // Folder translations
+    folderDaily: "Daily",
+    folderSpecial: "Special Occasions",
+    folderHealing: "Healing",
+    folderUncategorized: "Uncategorized",
+
+    // Detailed Zikr sections
+    zikrGuideTitle: "Zikr Performance Guide",
+    preparationTitle: "1. Physical and Spiritual Preparation",
+    preparationDesc: "Perform your ablutions (Wudu), wear clean clothes, and sit in a quiet place facing the Qibla (direction of Mecca). Light a mild incense if possible to purify the atmosphere.",
+    openingTitle: "2. Opening Formulas (Initiation Prayer)",
+    openingDesc: "Begin by reciting Istighfar (seeking forgiveness) 11 times to purify the heart: 'Astaghfirullah al-Adheem'. Then, recite Salawat (blessings upon the Prophet) 11 times: 'Allahumma salli 'ala Sayyidina Muhammadin wa 'ala alihi wa sahbihi wa sallim'.",
+    intentionTitle: "3. Resonance Intention (Niyyah)",
+    intentionDesc: "Formulate your intention clearly in your heart. Connect your consciousness to the divine vibration of the generated Names of Allah.",
+    recitationTitle: "4. Active Recitation (The Exact Count)",
+    recitationDesc: (weight: number) => `Recite the combined sacred formula exactly ${weight} times. Use a rosary (Tasbih) or the joints of your right hand to count with devotion and concentration.`,
+    closingTitle: "5. Sealing and Dua (Closing)",
+    closingDesc: "Finish by reciting Salawat 3 times, then make your duas (personal supplications) asking Allah to manifest the lights and blessings of these noble names in your life. Wipe your hands over your face to conclude the session.",
+    optimalTimesTitle: "Optimal Times",
+    optimalTimesDesc: "After Dawn prayer (Fajr) for the day's spiritual energy, or during the last third of the night (Tahajjud) for maximum mystical intimacy.",
+    meaningTitle: "Meaning & Spiritual Secrets"
   },
   ha: {
     back: "Koma baya",
@@ -89,7 +195,45 @@ const wirdDict = {
     minorGap: (diff: number) => `Girma kadan: ${diff}`,
     recitationGuideline: (weight: number) => `Karanta wannan Wird sau ${weight} kowace rana (zai fi kyau bayan sallar asuba ko dare) zai haifar da budi (Fath) da daidaituwar ruhaniya mai zurfi.`,
     waitingTitle: "Ana jiran lissafi",
-    waitingDesc: "Shigar da sunanka da na mahaifiyarka da harshen Larabci don gano Wirdin da ya dace da kai."
+    waitingDesc: "Shigar da sunanka da na mahaifiyarka da harshen Larabci don gano Wirdin da ya dace da kai.",
+    
+    // Saved Wirds Translation
+    savedTitle: "Wirdodina da aka Ajiye",
+    savedDesc: "Ja kuma ajiye wirdodinka a cikin manyan fayiloli don tsara su (ko amfani da mai zaɓe)",
+    createFolder: "+ Ƙirƙiri babban fayil",
+    folderPlaceholder: "Sunan babban fayil...",
+    addBtn: "Ƙara",
+    cancelBtn: "Soke",
+    dragHere: "Ja wirdodi a nan",
+    frequency: "Mitar zikiri",
+    moveTo: "Koma ga",
+    deleteFolder: "Goge babban fayil",
+    deleteWird: "Goge daga wirdodina",
+    alreadySaved: "An riga an ajiye wannan Wird.",
+    saveSuccess: "An ajiye Wird cikin nasara !",
+    savedInUncategorized: "a cikin 'Mara rabo'! Same shi a ƙasa.",
+
+    // Folder translations
+    folderDaily: "Kullum",
+    folderSpecial: "Lokuta na Musamman",
+    folderHealing: "Warkarwa",
+    folderUncategorized: "Mara rabo",
+
+    // Detailed Zikr sections
+    zikrGuideTitle: "Jagoran Yin Zikiri",
+    preparationTitle: "1. Shiri na Jiki da Ruhi",
+    preparationDesc: "Yi alwala (Wudu), sanya tufafi masu tsarki, kuma ka zauna a wuri mai natsuwa kana fuskantar Alqibla. Idan zai yiwu, sanya turare mai dadi don tsarkake wajen.",
+    openingTitle: "2. Addu'ar Farko (Mabudin Zikiri)",
+    openingDesc: "Fara da karanta Istigfari sau 11 don tsarkake zuciya: 'Astaghfirullah al-Adheem'. Bayan haka, karanta Salatin Annabi sau 11: 'Allahumma salli 'ala Sayyidina Muhammadin wa 'ala alihi wa sahbihi wa sallim'.",
+    intentionTitle: "3. Niyyar Zikiri (Niyyah)",
+    intentionDesc: "Kullu niyya ta gaskiya a cikin zuciyarka. Haɗa hankalinka da girman Sunayen Allah da aka fitar maka.",
+    recitationTitle: "4. Karatun Zikiri (Adadin da ya dace)",
+    recitationDesc: (weight: number) => `Karanta wannan zikiri sau ${weight} daidai. Yi amfani da carbi (Tasbih) ko gabbai na hannun dama don kirgawa cikin tsautsayi da natsuwa.`,
+    closingTitle: "5. Rufewa da Addu'a (Kammalawa)",
+    closingDesc: "Kammala da karanta Salatin Annabi sau 3, sannan ka yi addu'o'in kanka kana rokon Allah Ya sanya albarka da hasken wadannan sunaye a rayuwarka. Shafa fuskarka don kammalawa.",
+    optimalTimesTitle: "Mafi kyawun Lokaci",
+    optimalTimesDesc: "Bayan Sallar Asuba don samun hasken rana, ko kuma a kashi na uku na karshen dare (Tahajjud) don samun kusanci mafi girma ga Ubangiji.",
+    meaningTitle: "Ma'ana & Sirrin Ruhaniya"
   }
 };
 
@@ -128,16 +272,21 @@ export const PersonalWird: React.FC = () => {
 
   const saveWird = () => {
     if (!result || weight === null) return;
-    const nameStr = `Ya ${result.names.join(', Ya ')}`;
-    const isAlreadySaved = savedWirds.some(w => w.name === nameStr && w.weight === weight);
+    
+    const matchedDetailsList = result.names.map(n => getAsmaDetails(n)).filter((d): d is NonNullable<typeof d> => d !== undefined);
+    const arabicVocativeStr = applyTashkeel(matchedDetailsList.map(d => getVocativeArabic(d.ar)).join(' '));
+    const translitVocativeStr = matchedDetailsList.map(d => getVocativeTransliteration(d.tr)).join(', ');
+
+    const isAlreadySaved = savedWirds.some(w => w.weight === weight && (w.name === translitVocativeStr || w.arabic === arabicVocativeStr));
     if (isAlreadySaved) {
-      alert("Ce Wird est déjà enregistré.");
+      alert(dict.alreadySaved);
       return;
     }
+    
     const newWird: SavedWird = {
       id: Date.now().toString(),
-      name: nameStr,
-      arabic: `يا ${result.names.join(' يا ')}`,
+      name: translitVocativeStr,
+      arabic: arabicVocativeStr,
       weight,
       folderId: 'uncategorized',
       dateSaved: new Date().toISOString()
@@ -145,7 +294,15 @@ export const PersonalWird: React.FC = () => {
     const updated = [...savedWirds, newWird];
     setSavedWirds(updated);
     localStorage.setItem('asrar_saved_wirds', JSON.stringify(updated));
-    alert("Wird enregistré avec succès dans 'Non classés' ! Retrouvez-le ci-dessous.");
+    alert(`${dict.saveSuccess} ${dict.savedInUncategorized}`);
+  };
+
+  const getFolderName = (folderId: string, defaultName: string) => {
+    if (folderId === 'daily') return dict.folderDaily || "Quotidien";
+    if (folderId === 'special') return dict.folderSpecial || "Occasions Spéciales";
+    if (folderId === 'healing') return dict.folderHealing || "Guérison";
+    if (folderId === 'uncategorized') return dict.folderUncategorized || "Non classés";
+    return defaultName;
   };
 
   const deleteWird = (id: string) => {
@@ -275,7 +432,8 @@ export const PersonalWird: React.FC = () => {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Ex: محمد"
-                    className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-right font-arabic text-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
+                    className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-right text-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
+                    style={{ fontFamily: "'Amiri', 'Traditional Arabic', system-ui, sans-serif" }}
                     dir="rtl"
                   />
                 </div>
@@ -289,7 +447,8 @@ export const PersonalWird: React.FC = () => {
                     value={motherName}
                     onChange={(e) => setMotherName(e.target.value)}
                     placeholder="Ex: فاطمة"
-                    className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-right font-arabic text-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
+                    className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-right text-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
+                    style={{ fontFamily: "'Amiri', 'Traditional Arabic', system-ui, sans-serif" }}
                     dir="rtl"
                   />
                 </div>
@@ -299,7 +458,7 @@ export const PersonalWird: React.FC = () => {
               <button
                 onClick={calculateWird}
                 disabled={!name || !motherName || isCalculating}
-                className="w-full mt-4 bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                className="w-full mt-4 bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm cursor-pointer"
               >
                 {isCalculating ? (
                   <>
@@ -317,50 +476,195 @@ export const PersonalWird: React.FC = () => {
           </div>
         </div>
 
-        <div>
+        <div className="space-y-6">
           {result && weight !== null ? (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-2xl p-8 shadow-lg text-white"
+              className="space-y-6"
             >
-              <div className="text-center mb-8">
-                <p className="text-emerald-100 mb-2 font-medium">{dict.weightTitle}</p>
-                <div className="text-6xl font-bold font-serif mb-2">{weight}</div>
-                <p className="text-emerald-100 text-sm">{dict.weightDesc}</p>
+              {/* Mystical Weight Card */}
+              <div className="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-3xl p-6 sm:p-8 shadow-md text-white text-center">
+                <p className="text-emerald-100 mb-1 font-medium text-sm sm:text-base">{dict.weightTitle}</p>
+                <div className="text-5xl sm:text-6xl font-bold font-serif mb-2 tracking-tight">{weight}</div>
+                <p className="text-emerald-100 text-xs sm:text-sm">{dict.weightDesc}</p>
               </div>
 
-              <div className="bg-white/10 backdrop-blur-md rounded-xl p-6 border border-white/20 text-center relative">
-                <p className="text-emerald-100 mb-4 font-medium flex items-center justify-center gap-2">
-                  <Sparkles size={18} />
+              {/* Supreme Wird Card */}
+              <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 border border-emerald-100 dark:border-emerald-900/40 shadow-sm relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full -mr-10 -mt-10 pointer-events-none"></div>
+                
+                <p className="text-emerald-600 dark:text-emerald-400 font-bold text-xs sm:text-sm uppercase tracking-wider mb-4 flex items-center justify-center gap-2">
+                  <Sparkles size={16} />
                   {dict.supremeWird}
                 </p>
-                <div className="text-4xl sm:text-5xl font-arabic font-bold mb-4 leading-tight" dir="rtl">
-                  يا {result.names.join(' يا ')}
-                </div>
-                <p className="text-lg font-medium mb-1">Ya {result.names.join(', Ya ')}</p>
+
+                {(() => {
+                  const matchedDetailsList = result.names.map(n => getAsmaDetails(n)).filter((d): d is NonNullable<typeof d> => d !== undefined);
+                  const arabicVocativeStr = applyTashkeel(matchedDetailsList.map(d => getVocativeArabic(d.ar)).join(' '));
+                  const translitVocativeStr = matchedDetailsList.map(d => getVocativeTransliteration(d.tr)).join(', ');
+
+                  return (
+                    <div className="text-center">
+                      {/* Arabic Zikr with Tashkeel and Amiri font */}
+                      <div 
+                        className="text-4xl sm:text-5xl font-bold mb-4 leading-relaxed text-gray-900 dark:text-white"
+                        style={{ fontFamily: "'Amiri', 'Traditional Arabic', system-ui, sans-serif" }}
+                        dir="rtl"
+                      >
+                        {arabicVocativeStr}
+                      </div>
+                      
+                      <p className="text-lg sm:text-xl font-bold text-emerald-700 dark:text-emerald-400 mb-4 font-sans">
+                        {translitVocativeStr}
+                      </p>
+
+                      <div className="inline-block px-4 py-1.5 bg-emerald-50 dark:bg-emerald-950/40 rounded-full text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-6">
+                        {dict.valueZikr(result.totalAbjad)} • {result.diff === 0 ? dict.perfectMatch : `${dict.minorGap(result.diff)}`}
+                      </div>
+
+                      <button
+                        onClick={saveWird}
+                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2 text-sm cursor-pointer shadow-sm active:scale-98"
+                      >
+                        <Save size={18} />
+                        {dict.saveSuccess} (Save)
+                      </button>
+                    </div>
+                  );
+                })()}
+              </div>
+
+              {/* Develop Each Name in Detail */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2 border-b border-gray-100 dark:border-gray-800 pb-2">
+                  <BookOpen size={20} className="text-emerald-500" />
+                  {dict.meaningTitle}
+                </h3>
                 
-                <div className="mt-6 pt-6 border-t border-white/20 text-sm text-emerald-50 mb-4">
-                  <p>{dict.valueZikr(result.totalAbjad)}</p>
-                  {result.diff === 0 ? (
-                    <p className="mt-2 text-yellow-300 font-medium">{dict.perfectMatch}</p>
-                  ) : (
-                    <p className="mt-2">{dict.minorGap(result.diff)}</p>
-                  )}
+                {result.names.map((plainName, idx) => {
+                  const details = getAsmaDetails(plainName);
+                  if (!details) return null;
+
+                  let meaning = details.fr;
+                  let context = details.quranOptions.context || "";
+                  let transltrans = details.tr;
+
+                  if (language === 'en' || language === 'ha') {
+                    const translationSet = asmaListDataTranslations[details.tr];
+                    if (translationSet && translationSet[language]) {
+                      meaning = translationSet[language].fr;
+                      context = translationSet[language].context;
+                    }
+                  }
+
+                  return (
+                    <div 
+                      key={idx}
+                      className="bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-5 space-y-3"
+                    >
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-2.5">
+                          <span className="w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xs font-bold">
+                            {idx + 1}
+                          </span>
+                          <div>
+                            <h4 className="font-bold text-gray-900 dark:text-white text-base">
+                              {transltrans}
+                            </h4>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">
+                              {meaning}
+                            </p>
+                          </div>
+                        </div>
+                        {/* Vocalized name in card header */}
+                        <div 
+                          className="text-2xl font-bold text-emerald-600 dark:text-emerald-400"
+                          style={{ fontFamily: "'Amiri', 'Traditional Arabic', system-ui, sans-serif" }}
+                          dir="rtl"
+                        >
+                          {details.ar}
+                        </div>
+                      </div>
+
+                      <div className="text-xs text-gray-400 dark:text-gray-500 font-mono flex items-center gap-4">
+                        <span>Abjad: <strong className="text-gray-700 dark:text-gray-300 font-bold">{details.abjad}</strong></span>
+                        <span>Quran: <strong className="text-gray-700 dark:text-gray-300 font-bold">{details.quranOptions.surah} {details.quranOptions.verse}</strong></span>
+                      </div>
+
+                      {context && (
+                        <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed bg-white dark:bg-gray-800/50 p-3 rounded-xl border border-gray-100 dark:border-gray-800">
+                          {context}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Step-by-Step Zikr Protocol */}
+              <div className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-3xl p-5 sm:p-6 space-y-6">
+                <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2 border-b border-gray-200 dark:border-gray-800 pb-3">
+                  <Sparkles size={20} className="text-emerald-500 shrink-0" />
+                  {dict.zikrGuideTitle}
+                </h3>
+
+                <div className="space-y-4">
+                  {/* Preparation */}
+                  <div className="flex gap-3">
+                    <div className="w-1.5 bg-emerald-500 rounded-full my-1 shrink-0"></div>
+                    <div>
+                      <h4 className="font-bold text-gray-900 dark:text-white text-xs sm:text-sm">{dict.preparationTitle}</h4>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 leading-relaxed">{dict.preparationDesc}</p>
+                    </div>
+                  </div>
+
+                  {/* Opening */}
+                  <div className="flex gap-3">
+                    <div className="w-1.5 bg-emerald-500 rounded-full my-1 shrink-0"></div>
+                    <div>
+                      <h4 className="font-bold text-gray-900 dark:text-white text-xs sm:text-sm">{dict.openingTitle}</h4>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 leading-relaxed">{dict.openingDesc}</p>
+                    </div>
+                  </div>
+
+                  {/* Intention */}
+                  <div className="flex gap-3">
+                    <div className="w-1.5 bg-emerald-500 rounded-full my-1 shrink-0"></div>
+                    <div>
+                      <h4 className="font-bold text-gray-900 dark:text-white text-xs sm:text-sm">{dict.intentionTitle}</h4>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 leading-relaxed">{dict.intentionDesc}</p>
+                    </div>
+                  </div>
+
+                  {/* Recitation */}
+                  <div className="flex gap-3">
+                    <div className="w-1.5 bg-emerald-500 rounded-full my-1 shrink-0"></div>
+                    <div>
+                      <h4 className="font-bold text-gray-900 dark:text-white text-xs sm:text-sm">{dict.recitationTitle}</h4>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 leading-relaxed">{dict.recitationDesc(weight)}</p>
+                    </div>
+                  </div>
+
+                  {/* Closing */}
+                  <div className="flex gap-3">
+                    <div className="w-1.5 bg-emerald-500 rounded-full my-1 shrink-0"></div>
+                    <div>
+                      <h4 className="font-bold text-gray-900 dark:text-white text-xs sm:text-sm">{dict.closingTitle}</h4>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 leading-relaxed">{dict.closingDesc}</p>
+                    </div>
+                  </div>
                 </div>
 
-                <button
-                  onClick={saveWird}
-                  className="w-full bg-white text-emerald-700 hover:bg-emerald-50 active:scale-95 transition-all font-bold py-2.5 px-4 rounded-xl shadow-md flex items-center justify-center gap-2 text-sm"
-                >
-                  <Save size={18} />
-                  Enregistrer ce Wird
-                </button>
-              </div>
-              
-              <div className="mt-6 bg-emerald-800/50 rounded-xl p-4 text-sm text-emerald-100 flex items-start gap-3">
-                <BookOpen size={20} className="shrink-0 mt-0.5 text-emerald-300" />
-                <p>{dict.recitationGuideline(weight)}</p>
+                <div className="bg-emerald-50 dark:bg-emerald-950/20 rounded-2xl p-4 border border-emerald-100 dark:border-emerald-900/30 flex gap-3">
+                  <div className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5">
+                    <Shield size={18} />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-emerald-800 dark:text-emerald-300 text-xs">{dict.optimalTimesTitle}</h4>
+                    <p className="text-[11px] text-emerald-700 dark:text-emerald-400 mt-0.5 leading-relaxed">{dict.optimalTimesDesc}</p>
+                  </div>
+                </div>
               </div>
             </motion.div>
           ) : (
@@ -383,10 +687,10 @@ export const PersonalWird: React.FC = () => {
           <div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
               <FolderIcon className="text-emerald-500" size={24} />
-              Mes Wirds Enregistrés
+              {dict.savedTitle}
             </h2>
             <p className="text-sm text-gray-500 dark:text-gray-400">
-              Glissez-déposez vos wirds dans les dossiers pour les organiser (ou utilisez le sélecteur)
+              {dict.savedDesc}
             </p>
           </div>
           
@@ -396,7 +700,7 @@ export const PersonalWird: React.FC = () => {
               <div className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 p-1.5 rounded-xl border border-gray-200 dark:border-gray-700">
                 <input
                   type="text"
-                  placeholder="Nom du dossier..."
+                  placeholder={dict.folderPlaceholder}
                   value={newFolderName}
                   onChange={e => setNewFolderName(e.target.value)}
                   className="bg-transparent text-sm px-2 py-1 outline-none text-gray-900 dark:text-white max-w-[150px]"
@@ -406,21 +710,21 @@ export const PersonalWird: React.FC = () => {
                   onClick={addFolder}
                   className="px-2.5 py-1 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700"
                 >
-                  Ajouter
+                  {dict.addBtn}
                 </button>
                 <button
                   onClick={() => setIsAddingFolder(false)}
                   className="text-gray-400 text-xs hover:text-gray-600 px-1"
                 >
-                  Annuler
+                  {dict.cancelBtn}
                 </button>
               </div>
             ) : (
               <button
                 onClick={() => setIsAddingFolder(true)}
-                className="px-4 py-2 bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 font-bold rounded-xl text-sm border border-emerald-100 dark:border-emerald-900/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors"
+                className="px-4 py-2 bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 font-bold rounded-xl text-sm border border-emerald-100 dark:border-emerald-900/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors cursor-pointer"
               >
-                + Créer un dossier
+                {dict.createFolder}
               </button>
             )}
           </div>
@@ -443,7 +747,7 @@ export const PersonalWird: React.FC = () => {
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
                     <div className="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
-                    <h3 className="font-bold text-gray-800 dark:text-white text-sm">{folder.name}</h3>
+                    <h3 className="font-bold text-gray-800 dark:text-white text-sm">{getFolderName(folder.id, folder.name)}</h3>
                   </div>
                   <div className="flex items-center gap-1.5">
                     <span className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-2 py-0.5 rounded-full font-bold">
@@ -453,7 +757,7 @@ export const PersonalWird: React.FC = () => {
                       <button
                         onClick={() => deleteFolder(folder.id)}
                         className="text-gray-400 hover:text-red-500 p-0.5 rounded-md hover:bg-gray-50 dark:hover:bg-gray-950 transition-colors"
-                        title="Supprimer le dossier"
+                        title={dict.deleteFolder}
                       >
                         <Trash2 size={14} />
                       </button>
@@ -465,7 +769,7 @@ export const PersonalWird: React.FC = () => {
                 <div className="flex-1 space-y-3 overflow-y-auto max-h-[250px] pr-1">
                   {folderWirds.length === 0 ? (
                     <div className="h-full flex items-center justify-center text-xs text-gray-400 dark:text-gray-500 text-center italic py-8">
-                      Glissez des wirds ici
+                      {dict.dragHere}
                     </div>
                   ) : (
                     folderWirds.map(wird => (
@@ -479,19 +783,23 @@ export const PersonalWird: React.FC = () => {
                       >
                         <button
                           onClick={() => deleteWird(wird.id)}
-                          className="absolute top-2 right-2 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded"
-                          title="Supprimer de mes wirds"
+                          className="absolute top-2 right-2 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded cursor-pointer"
+                          title={dict.deleteWird}
                         >
                           <Trash2 size={13} />
                         </button>
-                        <div className="font-arabic text-right text-emerald-700 dark:text-emerald-400 font-bold text-sm mb-1" dir="rtl">
+                        <div 
+                          className="text-right text-emerald-700 dark:text-emerald-400 font-bold text-sm mb-1" 
+                          style={{ fontFamily: "'Amiri', 'Traditional Arabic', system-ui, sans-serif" }}
+                          dir="rtl"
+                        >
                           {wird.arabic}
                         </div>
                         <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 truncate pr-4">
                           {wird.name}
                         </div>
                         <div className="text-[10px] text-gray-400 mt-1 flex items-center justify-between">
-                          <span>Fréquence : {wird.weight}</span>
+                          <span>{dict.frequency} : {wird.weight}</span>
                           
                           {/* Selector fallback for accessibility and mobile */}
                           <select
@@ -502,7 +810,7 @@ export const PersonalWird: React.FC = () => {
                           >
                             {folders.map(f => (
                               <option key={f.id} value={f.id} className="text-gray-800 dark:text-gray-200">
-                                Vers : {f.name}
+                                {dict.moveTo} : {getFolderName(f.id, f.name)}
                               </option>
                             ))}
                           </select>

@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { ToolInfoTooltip } from '../../../components/ToolInfoTooltip';
 import { motion } from 'motion/react';
+import { applyTashkeel } from '../../../utils/tashkeel';
 
 // Abjad calculation helper
 const abjadMap: Record<string, number> = {
@@ -70,9 +71,9 @@ export const KhouddamExtractor: React.FC = () => {
     setCalculation({
       original: pm,
       angelicVal,
-      angelicName: angelicLetters ? angelicLetters + 'ائيل' : '',
+      angelicName: angelicLetters ? applyTashkeel(angelicLetters) + 'َائِيلُ' : '',
       earthlyVal,
-      earthlyName: earthlyLetters ? earthlyLetters + 'يوش' : 'Impossible (Valeur < 316)'
+      earthlyName: earthlyLetters ? applyTashkeel(earthlyLetters) + 'يُوشُ' : 'Impossible (Valeur < 316)'
     });
   };
 

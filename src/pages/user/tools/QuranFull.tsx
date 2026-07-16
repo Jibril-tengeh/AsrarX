@@ -1534,7 +1534,7 @@ export const QuranFull: React.FC = () => {
 
     try {
       const translationText = surahFrench?.ayahs.find((a: any) => a.numberInSurah === ayah.numberInSurah)?.text || ayah.text;
-      const response = await fetch('/api/quran/tafsir', {
+      const response = await fetch(getApiUrl('/api/quran/tafsir'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

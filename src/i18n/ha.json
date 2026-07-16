@@ -275,7 +275,17 @@
     },
     "grand-oaths": {
       "title": "Manyan Rantsuwowi",
-      "description": "Da'awat & Azayim: Kundin manyan addu'o'i."
+      "description": "Da'awat & Azayim: Kundin manyan addu'o'i.",
+      "backToDashboard": "zuwa shafin gudanarwa",
+      "incenseLabel": "Turare",
+      "dayLabel": "Rana",
+      "invocationText": "Rubutun Addu'a",
+      "lexiconTitle": "Kamush na Boyayyun Sunaye",
+      "lexiconMeaning": "Ma'ana",
+      "selectSermon": "Zaɓi Rantsuwa",
+      "selectSermonDesc": "Zaɓi ɗayan Da'wa daga menu na hagu don karanta umarninta, turarenta, da asirinta.",
+      "underMaintenance": "Sermon yana fuskantar gyara",
+      "underMaintenanceDesc": "Wannan rantsuwar tana fuskantar gyara na ɗan lokaci don gyare-gyaren ruhaniya. Da fatan za a sake gwadawa daga baya."
     },
     "elemental": {
       "title": "Mai Binciken Halitta",
@@ -627,7 +637,9 @@
   },
   "dailyReward": {
     "rewardTitle": "An sami maki na ibada!",
-    "rewardDesc": "An ba da ladan lokacin aiki: maki {earned}/5 a yau."
+    "rewardDesc": "An ba da ladan lokacin aiki: maki {earned}/10 a yau.",
+    "daily10Title": "Kyautar Kullum Ta Maki 10! 🌟",
+    "daily10Desc": "Kuna karbar maki na ibada 10 a yau ta atomatik!"
   },
   "payment": {
     "back": "Koma baya",

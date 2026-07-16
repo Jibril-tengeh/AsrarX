@@ -219,7 +219,8 @@ export const AbjadCalculator: React.FC = () => {
             placeholder={t("tools.abjad.inputPlaceholder")}
             dir="rtl"
             rows={4}
-            className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 text-xl sm:text-2xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none font-arabic"
+            className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 text-xl sm:text-2xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+            style={{ fontFamily: "'Amiri', 'Traditional Arabic', system-ui, sans-serif" }}
           />
           <div className="flex justify-between items-center mt-3">
             <div className="flex gap-4 text-xs font-medium text-gray-500 dark:text-gray-400">

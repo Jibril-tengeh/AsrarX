@@ -273,21 +273,23 @@ export const AwfaqAdvanced: React.FC = () => {
       </div>
 
       {grid.length > 0 && (
-        <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 sm:p-8 border border-gray-100 dark:border-gray-700 shadow-sm flex flex-col items-center max-w-full overflow-x-auto">
+        <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 sm:p-8 border border-gray-100 dark:border-gray-700 shadow-sm flex flex-col items-center max-w-full">
           <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-6">{dict.yourWafq(gridSize)}</h3>
           
-          <div className="p-2 bg-gray-100 dark:bg-gray-900/55 rounded-3xl border border-gray-200 dark:border-gray-700/50">
-            <div className={`grid gap-1.5 sm:gap-2`} style={{ gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))` }}>
-              {grid.map((row, i) => (
-                row.map((cell, j) => (
-                  <div 
-                    key={`${i}-${j}`}
-                    className={`${cellSizeClass} bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center font-bold text-gray-900 dark:text-white hover:bg-fuchsia-50 dark:hover:bg-fuchsia-950/20 transition-colors shadow-sm`}
-                  >
-                    {cell}
-                  </div>
-                ))
-              ))}
+          <div className="w-full overflow-x-auto pb-2 scrollbar-thin flex justify-start sm:justify-center">
+            <div className="p-2 bg-gray-100 dark:bg-gray-900/55 rounded-3xl border border-gray-200 dark:border-gray-700/50 min-w-[280px]">
+              <div className={`grid gap-1.5 sm:gap-2`} style={{ gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))` }}>
+                {grid.map((row, i) => (
+                  row.map((cell, j) => (
+                    <div 
+                      key={`${i}-${j}`}
+                      className={`${cellSizeClass} bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center justify-center font-bold text-gray-900 dark:text-white hover:bg-fuchsia-50 dark:hover:bg-fuchsia-950/20 transition-colors shadow-sm`}
+                    >
+                      {cell}
+                    </div>
+                  ))
+                ))}
+              </div>
             </div>
           </div>
 
