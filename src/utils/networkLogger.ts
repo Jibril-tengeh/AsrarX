@@ -83,7 +83,7 @@ if (typeof window !== 'undefined') {
     addNetworkLog('info', 'network', 'Le navigateur signale que l\'appareil est en ligne.');
   });
   window.addEventListener('offline', () => {
-    addNetworkLog('error', 'network', 'Le navigateur signale que l\'appareil est hors ligne.');
+    addNetworkLog('info', 'network', 'Le navigateur signale que l\'appareil est hors ligne.');
   });
 }
 
@@ -100,12 +100,17 @@ export interface PingResult {
 
 export const pingFirestore = async (): Promise<PingResult> => {
   if (typeof navigator !== 'undefined' && !navigator.onLine) {
-    return {
-      reachable: false,
-      latencyMs: 0,
-      errorType: 'offline',
-      errorMessage: 'L\'appareil est actuellement hors-ligne (signalé par le système).',
-    };
+    try {
+      // Double check if we are truly offline or if it is a false-negative
+      await fetch('https://www.google.com/favicon.ico', { method: 'HEAD', mode: 'no-cors' });
+    } catch (e) {
+      return {
+        reachable: false,
+        latencyMs: 0,
+        errorType: 'offline',
+        errorMessage: 'L\'appareil est actuellement hors-ligne (signalé par le système et validé par ping).',
+      };
+    }
   }
 
   const start = performance.now();

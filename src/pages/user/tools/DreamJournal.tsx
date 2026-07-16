@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Moon, ArrowLeft, Plus, Calendar, Save, Trash2, ChevronDown, CheckCircle2, RefreshCw, Cloud } from 'lucide-react';
+import { Moon, ArrowLeft, Plus, Calendar, Save, Trash2, ChevronDown, CheckCircle2, RefreshCw, Cloud, Download } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -7,6 +7,7 @@ import { db } from '../../../lib/firebase';
 import { collection, query, where, onSnapshot, setDoc, deleteDoc, doc } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
 import { getApiUrl } from '../../../lib/api';
+import { jsPDF } from 'jspdf';
 
 interface DreamEntry {
   id: string;
@@ -32,6 +33,289 @@ export const DreamJournal: React.FC = () => {
   const [wirdDone, setWirdDone] = useState('');
   const [type, setType] = useState<DreamEntry['type']>('unknown');
   const [isInterpreting, setIsInterpreting] = useState(false);
+
+  // PDF Export helper for single dream
+  const exportSingleToPDF = (dream: DreamEntry) => {
+    try {
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 20;
+      const contentWidth = pageWidth - (margin * 2);
+
+      // Header Banner (Indigo-600)
+      doc.setFillColor(79, 70, 229);
+      doc.rect(0, 0, pageWidth, 40, 'F');
+
+      // Title inside banner
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(20);
+      doc.text('Asrar - Journal des Reves', margin, 25);
+
+      let y = 55;
+
+      // Title of the dream
+      doc.setTextColor(31, 41, 55);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(16);
+      const titleLines = doc.splitTextToSize(dream.title, contentWidth);
+      doc.text(titleLines, margin, y);
+      y += (titleLines.length * 8) + 5;
+
+      // Date and type
+      doc.setTextColor(107, 114, 128);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      const formattedDate = new Date(dream.date).toLocaleDateString('fr-FR', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+      const typeLabel = dream.type === 'rahmani' ? 'Rahmani (Veridique)' :
+                        dream.type === 'nafsani' ? 'Nafsani (Psychologique)' :
+                        dream.type === 'shaytani' ? 'Shaytani (Cauchemar)' : 'Non defini';
+      doc.text(`Date : ${formattedDate}   |   Type : ${typeLabel}`, margin, y);
+      y += 10;
+
+      // Divider
+      doc.setDrawColor(229, 231, 235);
+      doc.setLineWidth(0.3);
+      doc.line(margin, y, pageWidth - margin, y);
+      y += 10;
+
+      // Prelude Wird
+      if (dream.wirdDone) {
+        doc.setFillColor(243, 244, 246);
+        doc.rect(margin, y, contentWidth, 12, 'F');
+        doc.setTextColor(79, 70, 229);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(10);
+        doc.text(` Prelude (Wird) : ${dream.wirdDone}`, margin + 3, y + 8);
+        y += 18;
+      }
+
+      // Content (Récit)
+      doc.setTextColor(55, 65, 81);
+      doc.setFont('times', 'normal');
+      doc.setFontSize(11.5);
+      const contentLines = doc.splitTextToSize(dream.content, contentWidth);
+      
+      contentLines.forEach((line: string) => {
+        if (y > pageHeight - 30) {
+          doc.addPage();
+          y = 20;
+        }
+        doc.text(line, margin, y);
+        y += 6;
+      });
+      y += 10;
+
+      // Interpretation
+      if (dream.interpretation) {
+        if (y > pageHeight - 60) {
+          doc.addPage();
+          y = 20;
+        }
+
+        doc.setFillColor(240, 242, 254);
+        doc.setDrawColor(129, 140, 248);
+        doc.setLineWidth(1);
+        
+        const interpretationLines = doc.splitTextToSize(dream.interpretation, contentWidth - 10);
+        const boxHeight = (interpretationLines.length * 6) + 12;
+
+        doc.rect(margin, y, contentWidth, boxHeight, 'F');
+        doc.line(margin, y, margin, y + boxHeight);
+
+        doc.setTextColor(79, 70, 229);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(11);
+        doc.text("INTERPRETATION (TA'BIR)", margin + 5, y + 8);
+
+        doc.setTextColor(30, 41, 59);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(10);
+        
+        let tempY = y + 14;
+        interpretationLines.forEach((line: string) => {
+          doc.text(line, margin + 5, tempY);
+          tempY += 6;
+        });
+      }
+
+      // Footer
+      const totalPages = (doc.internal as any).pages.length - 1;
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        doc.setTextColor(156, 163, 175);
+        doc.setFont('helvetica', 'italic');
+        doc.setFontSize(8);
+        doc.text(`Genere par Asrar - Page ${i} sur ${totalPages}`, margin, pageHeight - 10);
+      }
+
+      doc.save(`reve-${dream.id}.pdf`);
+    } catch (err) {
+      console.error("PDF export error:", err);
+      alert("Erreur lors de la generation du PDF");
+    }
+  };
+
+  // PDF Export helper for all dreams
+  const exportAllToPDF = () => {
+    if (dreams.length === 0) {
+      alert("Aucun reve a exporter.");
+      return;
+    }
+
+    try {
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 20;
+      const contentWidth = pageWidth - (margin * 2);
+
+      // Header Banner (Indigo-600)
+      doc.setFillColor(79, 70, 229);
+      doc.rect(0, 0, pageWidth, 45, 'F');
+
+      // Title inside banner
+      doc.setTextColor(255, 255, 255);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(22);
+      doc.text('ASRAR - JOURNAL DES REVES', margin, 25);
+      
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Recueil complet - ${dreams.length} reve(s) documente(s)`, margin, 35);
+
+      let y = 60;
+
+      dreams.forEach((dream, index) => {
+        if (index > 0) {
+          doc.addPage();
+          y = 20;
+        }
+
+        // Title of the dream
+        doc.setTextColor(31, 41, 55);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(15);
+        const titleLines = doc.splitTextToSize(`${index + 1}. ${dream.title}`, contentWidth);
+        doc.text(titleLines, margin, y);
+        y += (titleLines.length * 7) + 4;
+
+        // Date and type
+        doc.setTextColor(107, 114, 128);
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9.5);
+        const formattedDate = new Date(dream.date).toLocaleDateString('fr-FR', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric'
+        });
+        const typeLabel = dream.type === 'rahmani' ? 'Rahmani (Veridique)' :
+                          dream.type === 'nafsani' ? 'Nafsani (Psychologique)' :
+                          dream.type === 'shaytani' ? 'Shaytani (Cauchemar)' : 'Non defini';
+        doc.text(`Date : ${formattedDate}   |   Type : ${typeLabel}`, margin, y);
+        y += 8;
+
+        // Divider
+        doc.setDrawColor(229, 231, 235);
+        doc.setLineWidth(0.3);
+        doc.line(margin, y, pageWidth - margin, y);
+        y += 10;
+
+        // Prelude Wird
+        if (dream.wirdDone) {
+          doc.setFillColor(243, 244, 246);
+          doc.rect(margin, y, contentWidth, 10, 'F');
+          doc.setTextColor(79, 70, 229);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(9);
+          doc.text(` Prelude (Wird) : ${dream.wirdDone}`, margin + 3, y + 7);
+          y += 15;
+        }
+
+        // Content
+        doc.setTextColor(55, 65, 81);
+        doc.setFont('times', 'normal');
+        doc.setFontSize(11);
+        const contentLines = doc.splitTextToSize(dream.content, contentWidth);
+        
+        contentLines.forEach((line: string) => {
+          if (y > pageHeight - 30) {
+            doc.addPage();
+            y = 20;
+          }
+          doc.text(line, margin, y);
+          y += 5.5;
+        });
+        y += 8;
+
+        // Interpretation
+        if (dream.interpretation) {
+          if (y > pageHeight - 50) {
+            doc.addPage();
+            y = 20;
+          }
+
+          doc.setFillColor(240, 242, 254);
+          doc.setDrawColor(129, 140, 248);
+          doc.setLineWidth(0.8);
+          
+          const interpretationLines = doc.splitTextToSize(dream.interpretation, contentWidth - 10);
+          const boxHeight = (interpretationLines.length * 5) + 10;
+
+          doc.rect(margin, y, contentWidth, boxHeight, 'F');
+          doc.line(margin, y, margin, y + boxHeight);
+
+          doc.setTextColor(79, 70, 229);
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(10);
+          doc.text("INTERPRETATION (TA'BIR)", margin + 4, y + 6);
+
+          doc.setTextColor(30, 41, 59);
+          doc.setFont('helvetica', 'normal');
+          doc.setFontSize(9.5);
+          
+          let tempY = y + 11;
+          interpretationLines.forEach((line: string) => {
+            doc.text(line, margin + 4, tempY);
+            tempY += 5;
+          });
+          y += boxHeight + 10;
+        }
+      });
+
+      // Footer
+      const totalPages = (doc.internal as any).pages.length - 1;
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        doc.setTextColor(156, 163, 175);
+        doc.setFont('helvetica', 'italic');
+        doc.setFontSize(8);
+        doc.text(`Genere par Asrar - Page ${i} sur ${totalPages}`, margin, pageHeight - 10);
+      }
+
+      doc.save('journal-reves-complet.pdf');
+    } catch (err) {
+      console.error("PDF export error:", err);
+      alert("Erreur lors de la generation du PDF");
+    }
+  };
 
   const toggleDream = (id: string) => {
     const newSet = new Set(expandedDreamIds);
@@ -222,12 +506,24 @@ export const DreamJournal: React.FC = () => {
             </div>
           </div>
         </div>
-        <button 
-          onClick={() => setIsEditorOpen(true)}
-          className="w-12 h-12 bg-indigo-600 rounded-full text-white flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-transform"
-        >
-          <Plus size={24} />
-        </button>
+        <div className="flex items-center gap-3">
+          {dreams.length > 0 && (
+            <button 
+              onClick={exportAllToPDF}
+              className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-750 rounded-xl text-gray-700 dark:text-gray-300 flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all shadow-sm font-semibold text-sm active:scale-95"
+              title="Exporter tout en PDF"
+            >
+              <Download size={18} className="text-indigo-500" />
+              <span className="hidden sm:inline">Exporter PDF</span>
+            </button>
+          )}
+          <button 
+            onClick={() => setIsEditorOpen(true)}
+            className="w-12 h-12 bg-indigo-600 rounded-full text-white flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-transform"
+          >
+            <Plus size={24} />
+          </button>
+        </div>
       </div>
 
       <AnimatePresence>
@@ -345,6 +641,16 @@ export const DreamJournal: React.FC = () => {
               onClick={() => toggleDream(dream.id)}
             >
               <div className="absolute top-6 right-6 flex items-center gap-2">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    exportSingleToPDF(dream);
+                  }}
+                  className="text-gray-400 hover:text-indigo-500 transition-colors p-1 rounded-lg"
+                  title="Exporter ce rêve en PDF"
+                >
+                  <Download size={18} />
+                </button>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();

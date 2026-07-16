@@ -150,8 +150,8 @@ export const OnboardingTour: React.FC = () => {
         setTimeout(() => {
           const rect = el.getBoundingClientRect();
           setCoords({
-            top: rect.top + window.scrollY,
-            left: rect.left + window.scrollX,
+            top: rect.top,
+            left: rect.left,
             width: rect.width,
             height: rect.height,
           });
@@ -201,54 +201,105 @@ export const OnboardingTour: React.FC = () => {
   const isLastStep = currentStepIndex === steps.length - 1;
 
   const getTooltipStyle = (): React.CSSProperties => {
-    if (!coords) {
-      return {
-        position: 'fixed',
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)',
-        zIndex: 10000,
-      };
-    }
+    if (!coords) return {};
 
     const placement = step.placement || 'bottom';
     const gap = 12;
+    // Ensure width fits on small smartphone screens
+    const tooltipWidth = Math.min(window.innerWidth - 24, window.innerWidth < 640 ? 310 : 340);
+    const padding = 12;
+
     const style: React.CSSProperties = {
-      position: 'absolute',
+      position: 'fixed',
       zIndex: 10000,
+      width: tooltipWidth,
     };
 
+    // Calculate left centering manually relative to the viewport
+    let leftPos = coords.left + (coords.width - tooltipWidth) / 2;
+    if (leftPos < padding) {
+      leftPos = padding;
+    } else if (leftPos + tooltipWidth > window.innerWidth - padding) {
+      leftPos = window.innerWidth - padding - tooltipWidth;
+    }
+    style.left = leftPos;
+
+    // Calculate top positioning
     if (placement.startsWith('top')) {
       style.top = coords.top - gap;
-      style.left = coords.left + coords.width / 2;
-      style.transform = 'translate(-50%, -100%)';
-    } else if (placement.startsWith('bottom')) {
-      style.top = coords.top + coords.height + gap;
-      style.left = coords.left + coords.width / 2;
-      style.transform = 'translate(-50%, 0)';
     } else {
       style.top = coords.top + coords.height + gap;
-      style.left = coords.left + coords.width / 2;
-      style.transform = 'translate(-50%, 0)';
-    }
-
-    // Safeguard viewport bounds
-    const tooltipWidth = 320;
-    const padding = 16;
-    if (typeof style.left === 'number') {
-      const targetCenter = coords.left + coords.width / 2;
-      if (targetCenter - tooltipWidth / 2 < padding) {
-        style.left = padding + tooltipWidth / 2;
-      } else if (targetCenter + tooltipWidth / 2 > window.innerWidth - padding) {
-        style.left = window.innerWidth - padding - tooltipWidth / 2;
-      }
     }
 
     return style;
   };
 
+  const renderContent = () => (
+    <div className="p-5">
+      <div className="flex justify-between items-start mb-3">
+        <div className="flex items-center space-x-2">
+          <span className="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 text-xs font-bold">
+            {currentStepIndex + 1}
+          </span>
+          <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider">
+            GUIDE ASRARHUB
+          </h3>
+        </div>
+        {!step.hideCloseButton && (
+          <button
+            onClick={handleEnd}
+            className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+          >
+            <X size={16} />
+          </button>
+        )}
+      </div>
+      
+      <div className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed mb-6 font-medium">
+        {step.content}
+      </div>
+
+      <div className="flex items-center justify-between mt-2 pt-4 border-t border-gray-100 dark:border-gray-700">
+        <div>
+          {currentStepIndex > 0 && (
+            <button
+              onClick={handleBack}
+              className="flex items-center text-sm font-semibold text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
+            >
+              <ChevronLeft size={16} className="mr-1" />
+              {t('onboardingTour.prev', 'Précédent')}
+            </button>
+          )}
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleEnd}
+            className="text-xs font-bold text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 px-2 py-1 transition-colors"
+          >
+            {t('onboardingTour.skip', 'Passer')}
+          </button>
+          <button
+            onClick={handleNext}
+            className="flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl transition-colors shadow-sm"
+          >
+            {isLastStep ? (
+              <>
+                {t('onboardingTour.finish', 'Terminer')} <Check size={16} className="ml-1.5" />
+              </>
+            ) : (
+              <>
+                {t('onboardingTour.next', 'Suivant')} <ChevronRight size={16} className="ml-1.5" />
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
-    <div className="absolute inset-0 pointer-events-none z-[9999]">
+    <div className="fixed inset-0 pointer-events-none z-[9999]">
       {/* Dim overlay */}
       <div 
         className="fixed inset-0 bg-black/45 dark:bg-black/60 backdrop-blur-[0.5px] pointer-events-auto z-[9998]"
@@ -258,7 +309,7 @@ export const OnboardingTour: React.FC = () => {
       {/* Target Highlight */}
       {coords && (
         <div 
-          className="absolute border-2 border-emerald-500 rounded-xl animate-pulse z-[9999] pointer-events-none shadow-[0_0_15px_rgba(16,185,129,0.5)]"
+          className="fixed border-2 border-emerald-500 rounded-xl animate-pulse z-[9999] pointer-events-none shadow-[0_0_15px_rgba(16,185,129,0.5)]"
           style={{
             top: coords.top - 4,
             left: coords.left - 4,
@@ -270,77 +321,50 @@ export const OnboardingTour: React.FC = () => {
 
       {/* Animated Popover */}
       <AnimatePresence mode="wait">
-        <motion.div
-          key={currentStepIndex}
-          initial={{ opacity: 0, scale: 0.95, y: coords ? 5 : 0 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: coords ? -5 : 0 }}
-          transition={{ duration: 0.2, ease: 'easeOut' }}
-          style={getTooltipStyle()}
-          className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden max-w-sm w-[320px] sm:w-[340px] border border-gray-100 dark:border-gray-700 pointer-events-auto z-[10000]"
-        >
-          <div className="p-5">
-            <div className="flex justify-between items-start mb-3">
-              <div className="flex items-center space-x-2">
-                <span className="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 text-xs font-bold">
-                  {currentStepIndex + 1}
-                </span>
-                <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider">
-                  GUIDE ASRARHUB
-                </h3>
-              </div>
-              {!step.hideCloseButton && (
-                <button
-                  onClick={handleEnd}
-                  className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
-                >
-                  <X size={16} />
-                </button>
-              )}
-            </div>
-            
-            <div className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed mb-6 font-medium">
-              {step.content}
-            </div>
-
-            <div className="flex items-center justify-between mt-2 pt-4 border-t border-gray-100 dark:border-gray-700">
-              <div>
-                {currentStepIndex > 0 && (
-                  <button
-                    onClick={handleBack}
-                    className="flex items-center text-sm font-semibold text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
-                  >
-                    <ChevronLeft size={16} className="mr-1" />
-                    {t('onboardingTour.prev', 'Précédent')}
-                  </button>
-                )}
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleEnd}
-                  className="text-xs font-bold text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 px-2 py-1 transition-colors"
-                >
-                  {t('onboardingTour.skip', 'Passer')}
-                </button>
-                <button
-                  onClick={handleNext}
-                  className="flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl transition-colors shadow-sm"
-                >
-                  {isLastStep ? (
-                    <>
-                      {t('onboardingTour.finish', 'Terminer')} <Check size={16} className="ml-1.5" />
-                    </>
-                  ) : (
-                    <>
-                      {t('onboardingTour.next', 'Suivant')} <ChevronRight size={16} className="ml-1.5" />
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          </div>
-        </motion.div>
+        {coords ? (
+          <motion.div
+            key={currentStepIndex}
+            initial={{ 
+              opacity: 0, 
+              scale: 0.95, 
+              y: step.placement?.startsWith('top') ? "-100%" : 5 
+            }}
+            animate={{ 
+              opacity: 1, 
+              scale: 1, 
+              y: step.placement?.startsWith('top') ? "-100%" : 0 
+            }}
+            exit={{ 
+              opacity: 0, 
+              scale: 0.95, 
+              y: step.placement?.startsWith('top') ? "-100%" : -5 
+            }}
+            transition={{ duration: 0.2, ease: 'easeOut' }}
+            style={getTooltipStyle()}
+            className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden border border-gray-100 dark:border-gray-700 pointer-events-auto z-[10000]"
+          >
+            {renderContent()}
+          </motion.div>
+        ) : (
+          <motion.div
+            key={currentStepIndex}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed inset-0 flex items-center justify-center p-4 pointer-events-none z-[10000]"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden max-w-sm w-[310px] sm:w-[340px] border border-gray-100 dark:border-gray-700 pointer-events-auto"
+            >
+              {renderContent()}
+            </motion.div>
+          </motion.div>
+        )}
       </AnimatePresence>
     </div>
   );

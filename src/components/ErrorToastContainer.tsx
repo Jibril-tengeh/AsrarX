@@ -21,10 +21,25 @@ export const ErrorToastContainer: React.FC = () => {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   useEffect(() => {
+    const doubleCheckOnline = () => {
+      fetch('https://www.google.com/favicon.ico', { method: 'HEAD', mode: 'no-cors' })
+        .then(() => setIsOnline(true))
+        .catch(() => setIsOnline(false));
+    };
+
     const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
+    const handleOffline = () => {
+      // Double check before showing offline
+      doubleCheckOnline();
+    };
+
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
+
+    // Initial check on mount
+    if (!navigator.onLine) {
+      doubleCheckOnline();
+    }
 
     // Helper to identify specific Firebase/Firestore connection, permission, or SSL issues
     const checkFirebaseError = (msg: string): 'firebase-conn' | 'firebase-perm' | 'ssl-error' | null => {
@@ -179,7 +194,8 @@ export const ErrorToastContainer: React.FC = () => {
         lowerMessage.includes('hmr') || 
         lowerMessage.includes('lucide') ||
         lowerMessage.includes('google maps') ||
-        lowerMessage.includes('vite')
+        lowerMessage.includes('vite') ||
+        lowerMessage.includes('networkdiag')
       ) {
         return;
       }
@@ -238,8 +254,20 @@ export const ErrorToastContainer: React.FC = () => {
     addLog("Démarrage du test de diagnostic...");
     addLog(`Statut navigateur en ligne : ${navigator.onLine ? "OUI" : "NON"}`);
     
+    let reallyOffline = false;
     if (!navigator.onLine) {
-      addLog("Erreur: Votre appareil se déclare déconnecté d'Internet.");
+      addLog("Le système signale une absence de réseau (navigator.onLine = false). Double-vérification de la connectivité via un ping...");
+      try {
+        await fetch('https://www.google.com/favicon.ico', { method: 'HEAD', mode: 'no-cors' });
+        addLog("Double-vérification réussie : L'appareil a accès à Internet malgré le signalement offline du système !");
+        setIsOnline(true);
+      } catch (e) {
+        reallyOffline = true;
+      }
+    }
+
+    if (reallyOffline) {
+      addLog("Erreur: L'appareil est effectivement déconnecté d'Internet.");
       setDiagLogs(logs);
       setDiagStatus('offline');
       return;

@@ -102,17 +102,34 @@ const NetworkStatus = () => {
   const [statusFeedback, setStatusFeedback] = React.useState<string | null>(null);
 
   React.useEffect(() => {
+    const doubleCheckOnline = () => {
+      fetch('https://www.google.com/favicon.ico', { method: 'HEAD', mode: 'no-cors' })
+        .then(() => {
+          setIsOnline(true);
+          console.log("[NetworkStatus] Connection verified successfully via fetch.");
+        })
+        .catch(() => {
+          setIsOnline(false);
+          console.warn("[NetworkStatus] Connection failed verification.");
+        });
+    };
+
     const handleOnline = () => {
       setIsOnline(true);
       console.log("[NetworkStatus] Device went online.");
     };
     const handleOffline = () => {
-      setIsOnline(false);
-      console.warn("[NetworkStatus] Device went offline. All API fetch calls will operate in fallback mode.");
+      // Double check before showing offline
+      doubleCheckOnline();
     };
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
+
+    // Initial check on mount
+    if (!navigator.onLine) {
+      doubleCheckOnline();
+    }
 
     // Capacitor / WebView specific environment logging for debugging
     console.log(`[NetworkStatus] Diagnostic check on boot:`);

@@ -28,6 +28,305 @@ const MUSHAF_OPTIONS = [
   { id: 'KFGQPC Uthman Taha Naskh', name: 'Adwa (Uthman Taha)', desc: 'Standard printed script', preview: 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ\n\nأَرَءَيْتَ ٱلَّذِى يُكَذِّبُ بِٱلدِّينِ ﴿١﴾', style: {fontFamily: '"KFGQPC Uthman Taha Naskh", "Amiri", serif'} }
 ];
 
+const normalizeAr = (text: string): string => {
+  return text
+    .replace(/[\u064B-\u0652\u0670\u0653\u0654\u0655]/g, '') // remove harakat / diacritics
+    .replace(/\u0671/g, '\u0627') // normalize alif wasla to alif
+    .replace(/[\u0622\u0623\u0625]/g, '\u0627') // normalize all kinds of alif to plain alif
+    .replace(/\u0629/g, '\u0647') // normalize teh marbuta to heh
+    .replace(/\u0649/g, '\u064A') // normalize alef maksura to yeh
+    .toLowerCase();
+};
+
+const highlightTranslationText = (text: string, search: string) => {
+  if (!search) return text;
+  const parts = text.split(new RegExp(`(${search.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')})`, 'gi'));
+  return (
+    <>
+      {parts.map((part, i) => 
+        part.toLowerCase() === search.toLowerCase() ? (
+          <mark key={i} className="bg-amber-100 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 px-0.5 rounded font-semibold">
+            {part}
+          </mark>
+        ) : (
+          part
+        )
+      )}
+    </>
+  );
+};
+
+const highlightArabicText = (originalText: string, query: string) => {
+  if (!query) return originalText;
+  
+  const normQuery = normalizeAr(query);
+  if (!normQuery) return originalText;
+
+  const cleanChars: string[] = [];
+  const originalIndices: number[] = [];
+  
+  for (let idx = 0; idx < originalText.length; idx++) {
+    const char = originalText[idx];
+    if (!/[\u064B-\u0652\u0670\u0653\u0654\u0655]/.test(char)) {
+      let normChar = char;
+      if (char === '\u0671') normChar = '\u0627';
+      cleanChars.push(normChar.toLowerCase());
+      originalIndices.push(idx);
+    }
+  }
+  
+  const cleanString = cleanChars.join('');
+  const elements: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let searchIndex = 0;
+  
+  while (true) {
+    const matchIndex = cleanString.indexOf(normQuery, searchIndex);
+    if (matchIndex === -1) {
+      break;
+    }
+    
+    const origStart = originalIndices[matchIndex];
+    const cleanEndIndex = matchIndex + normQuery.length - 1;
+    const origEnd = originalIndices[cleanEndIndex] + 1;
+    
+    if (origStart > lastIndex) {
+      elements.push(originalText.substring(lastIndex, origStart));
+    }
+    
+    elements.push(
+      <mark key={matchIndex} className="bg-amber-100 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 px-0.5 rounded font-arabic">
+        {originalText.substring(origStart, origEnd)}
+      </mark>
+    );
+    
+    lastIndex = origEnd;
+    searchIndex = matchIndex + normQuery.length;
+  }
+  
+  if (lastIndex < originalText.length) {
+    elements.push(originalText.substring(lastIndex));
+  }
+  
+  return elements.length > 0 ? <>{elements}</> : originalText;
+};
+
+const QURAN_THEMES = [
+  { id: 'Mercy', labelFr: 'Miséricorde', labelEn: 'Mercy', emoji: '💖', color: 'from-pink-500 to-rose-600' },
+  { id: 'Guidance', labelFr: 'Guidance', labelEn: 'Guidance', emoji: '🧭', color: 'from-emerald-500 to-teal-600' },
+  { id: 'Patience', labelFr: 'Patience', labelEn: 'Patience', emoji: '⏳', color: 'from-amber-500 to-orange-600' },
+  { id: 'Forgiveness', labelFr: 'Pardon', labelEn: 'Forgiveness', emoji: '🕊️', color: 'from-blue-500 to-indigo-600' },
+  { id: 'Gratitude', labelFr: 'Gratitude', labelEn: 'Gratitude', emoji: '🤲', color: 'from-purple-500 to-violet-600' }
+];
+
+const QURAN_THEME_METADATA = [
+  // Mercy
+  {
+    theme: "Mercy",
+    number: 1,
+    numberInSurah: 1,
+    text: "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ",
+    frenchText: "Au nom d'Allah, le Tout Miséricordieux, le Très Miséricordieux.",
+    englishText: "In the name of Allah, the Entirely Merciful, the Especially Merciful.",
+    surah: {
+      number: 1,
+      name: "الفاتحة",
+      englishName: "Al-Fatihah",
+      englishNameTranslation: "L'Ouverture"
+    }
+  },
+  {
+    theme: "Mercy",
+    number: 3,
+    numberInSurah: 3,
+    text: "ٱلرَّحْمَٰنِ ٱلرَّحِيمِ",
+    frenchText: "Le Tout Miséricordieux, le Très Miséricordieux.",
+    englishText: "The Entirely Merciful, the Especially Merciful.",
+    surah: {
+      number: 1,
+      name: "الفاتحة",
+      englishName: "Al-Fatihah",
+      englishNameTranslation: "L'Ouverture"
+    }
+  },
+  {
+    theme: "Mercy",
+    number: 1099,
+    numberInSurah: 156,
+    text: "وَرَحْمَتِي وَسِعَتْ كُلَّ شَيْءٍ",
+    frenchText: "Et Ma miséricorde embrasse toute chose.",
+    englishText: "My mercy encompasses all things.",
+    surah: {
+      number: 7,
+      name: "الأعراف",
+      englishName: "Al-A'raf",
+      englishNameTranslation: "Les Murailles"
+    }
+  },
+  {
+    theme: "Mercy",
+    number: 4136,
+    numberInSurah: 53,
+    text: "قُلْ يَا عِبَادِيَ الَّذِينَ أَسْرَفُوا عَلَىٰ أَنْفُسِهِمْ لَا تَقْنَطُوا مِنْ رَحْمَةِ اللَّهِ ۚ إِنَّ اللَّهَ يَغْفِرُ الذُّنُوبَ جَمِيعًا",
+    frenchText: "Dis : Ô Mes serviteurs qui avez commis des excès à votre propre détriment, ne désespérez pas de la miséricorde d'Allah. Car Allah pardonne tous les péchés.",
+    englishText: "Say, O My servants who have transgressed against themselves, do not despair of the mercy of Allah. Indeed, Allah forgives all sins.",
+    surah: {
+      number: 39,
+      name: "الزmer",
+      englishName: "Az-Zumar",
+      englishNameTranslation: "Les Groupes"
+    }
+  },
+  
+  // Guidance
+  {
+    theme: "Guidance",
+    number: 6,
+    numberInSurah: 6,
+    text: "ٱهْدِنَا ٱلصِّرَٰطَ ٱلْمُسْتَقِيمَ",
+    frenchText: "Guide-nous dans le droit chemin.",
+    englishText: "Guide us to the straight path.",
+    surah: {
+      number: 1,
+      name: "الفاتحة",
+      englishName: "Al-Fatihah",
+      englishNameTranslation: "L'Ouverture"
+    }
+  },
+  {
+    theme: "Guidance",
+    number: 9,
+    numberInSurah: 2,
+    text: "ذَٰلِكَ ٱلْكِتَٰبُ لَا رَيْبَ ۛ فِيهِ ۛ هُدًى لِّلْمُتَّقِينَ",
+    frenchText: "C'est le Livre au sujet duquel il n'y a aucun doute, c'est une guidance pour les pieux.",
+    englishText: "This is the Book about which there is no doubt, a guidance for those conscious of Allah.",
+    surah: {
+      number: 2,
+      name: "البقرة",
+      englishName: "Al-Baqarah",
+      englishNameTranslation: "La Vache"
+    }
+  },
+  {
+    theme: "Guidance",
+    number: 2048,
+    numberInSurah: 9,
+    text: "إِنَّ هَٰذَا الْقُرْآنَ يَهْدِي لِلَّتِي هِيَ أَقْوَمُ",
+    frenchText: "Certes, ce Coran guide vers ce qu'il y a de plus droit.",
+    englishText: "Indeed, this Qur'an guides to that which is most suitable.",
+    surah: {
+      number: 17,
+      name: "الإسراء",
+      englishName: "Al-Isra",
+      englishNameTranslation: "Le Voyage Nocturne"
+    }
+  },
+
+  // Patience
+  {
+    theme: "Patience",
+    number: 160,
+    numberInSurah: 153,
+    text: "يَا أَيُّهَا الَّEN_AMINO_STAEENU_BI_SABR_WA_SALAT_INNA_ALLAHA_MA'A_SABIREEN",
+    frenchText: "Ô vous qui croyez ! Cherchez secours dans l'endurance et la prière. Car Allah est avec ceux qui endurent.",
+    englishText: "O you who have believed, seek help through patience and prayer. Indeed, Allah is with the patient.",
+    surah: {
+      number: 2,
+      name: "البقرة",
+      englishName: "Al-Baqarah",
+      englishNameTranslation: "La Vache"
+    }
+  },
+  {
+    theme: "Patience",
+    number: 162,
+    numberInSurah: 155,
+    text: "وَبَشِّرِ الصَّابِرِينَ",
+    frenchText: "Et fais la bonne annonce aux endurants.",
+    englishText: "And give good tidings to the patient.",
+    surah: {
+      number: 2,
+      name: "البقرة",
+      englishName: "Al-Baqarah",
+      englishNameTranslation: "La Vache"
+    }
+  },
+  {
+    theme: "Patience",
+    number: 6189,
+    numberInSurah: 3,
+    text: "وَتَوَاصَوْا بِالْصَّبْرِ",
+    frenchText: "Et s'enjoignent mutuellement l'endurance.",
+    englishText: "And advised each other to patience.",
+    surah: {
+      number: 103,
+      name: "العصر",
+      englishName: "Al-Asr",
+      englishNameTranslation: "Le Temps"
+    }
+  },
+
+  // Forgiveness
+  {
+    theme: "Forgiveness",
+    number: 428,
+    numberInSurah: 135,
+    text: "وَمَنْ يَغْفِرُ الذُّنُوبَ إِلَّا اللَّهُ",
+    frenchText: "Et qui pardonne les péchés sinon Allah ?",
+    englishText: "And who can forgive sins except Allah?",
+    surah: {
+      number: 3,
+      name: "آل عمران",
+      englishName: "Al-Imran",
+      englishNameTranslation: "La Famille d'Imran"
+    }
+  },
+  {
+    theme: "Forgiveness",
+    number: 603,
+    numberInSurah: 110,
+    text: "وَمَنْ يَعْمَلْ سُوءًا أَوْ يَظْلِمْ نَفْسَهُ ثُمَّ يَسْتَغْفِرِ اللَّهَ يَجِدِ اللَّهَ غَفُورًا رَحِيمًا",
+    frenchText: "Quiconque agit mal ou se fait du tort à lui-même, puis implore le pardon d'Allah, trouvera Allah Pardonneur et Miséricordieux.",
+    englishText: "And whoever does a wrong or wrongs himself but then seeks forgiveness of Allah will find Allah Forgiving and Merciful.",
+    surah: {
+      number: 4,
+      name: "النساء",
+      englishName: "An-Nisa",
+      englishNameTranslation: "Les Femmes"
+    }
+  },
+
+  // Gratitude
+  {
+    theme: "Gratitude",
+    number: 1710,
+    numberInSurah: 7,
+    text: "وَإِذْ تَأَذَّنَ رَبُّكُمْ لَئِنْ شَكَرْتُمْ لَأَزِيدَنَّكُمْ",
+    frenchText: "Et lorsque votre Seigneur proclama : 'Si vous êtes reconnaissants, très certainement J'augmenterai Mes bienfaits pour vous.'",
+    englishText: "And [remember] when your Lord proclaimed, 'If you are grateful, I will surely increase you [in favor].'",
+    surah: {
+      number: 14,
+      name: "ابراهيم",
+      englishName: "Ibrahim",
+      englishNameTranslation: "Abraham"
+    }
+  },
+  {
+    theme: "Gratitude",
+    number: 159,
+    numberInSurah: 152,
+    text: "فَاذْكُرُونِي أَذْكُرْكُمْ وَاشْكُرُوا لِي وَلَا تَكْفُرُونِ",
+    frenchText: "Souvenez-vous de Moi donc, Je Me souviendrai de vous. Soyez reconnaissants envers Moi et ne soyez pas ingrats.",
+    englishText: "So remember Me; I will remember you. And be grateful to Me and do not deny Me.",
+    surah: {
+      number: 2,
+      name: "البقرة",
+      englishName: "Al-Baqarah",
+      englishNameTranslation: "La Vache"
+    }
+  }
+];
+
 const toArabicNumeral = (num: number | undefined | null) => {
   if (num === null || num === undefined) return '';
   const arabicNumbers = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
@@ -467,10 +766,36 @@ export const QuranFull: React.FC = () => {
   const [advancedSearchQuery, setAdvancedSearchQuery] = useState('');
   const [advancedSearchResults, setAdvancedSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [selectedTheme, setSelectedTheme] = useState<string | null>(null);
+
+  const handleThemeClick = (themeId: string) => {
+    if (selectedTheme === themeId) {
+      setSelectedTheme(null);
+      setAdvancedSearchResults([]);
+    } else {
+      setSelectedTheme(themeId);
+      setAdvancedSearchQuery(''); // Clear text search
+      
+      // Filter indexed metadata
+      const matches = QURAN_THEME_METADATA.filter(item => item.theme === themeId).map(item => ({
+        number: item.number,
+        text: language === 'fr' ? item.frenchText : item.englishText,
+        arabicText: item.text,
+        numberInSurah: item.numberInSurah,
+        matchLang: language === 'fr' ? 'fr' : 'en',
+        surah: item.surah
+      }));
+      setAdvancedSearchResults(matches);
+    }
+  };
 
   useEffect(() => {
+    if (advancedSearchQuery.trim().length > 0) {
+      setSelectedTheme(null);
+    }
+    
     if (!advancedSearchQuery || advancedSearchQuery.trim().length < 2) {
-      if (advancedSearchQuery.trim().length === 0) {
+      if (advancedSearchQuery.trim().length === 0 && !selectedTheme) {
         setAdvancedSearchResults([]);
       }
       return;
@@ -2179,7 +2504,6 @@ export const QuranFull: React.FC = () => {
   return (
     <div 
       className={`${fullScreenMode ? 'fixed inset-0 z-[100] bg-white dark:bg-gray-900 overflow-y-auto w-full max-w-none p-4 sm:p-8 overflow-x-hidden' : 'w-full max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 safe-area-pt pb-24 overflow-x-hidden'}`} 
-      style={applyEyeComfort ? { filter: 'sepia(0.3) brightness(0.9) contrast(0.95)' } : {}}
       onTouchStart={onTouchStartEvent}
       onTouchMove={onTouchMoveEvent}
       onTouchEnd={onTouchEndEvent}
@@ -2203,6 +2527,7 @@ export const QuranFull: React.FC = () => {
         </motion.button>
       )}
 
+      <div style={applyEyeComfort ? { filter: 'sepia(0.3) brightness(0.9) contrast(0.95)' } : {}} className="w-full flex flex-col">
       {/* Header */}
       {!activeSurah ? (
         <>
@@ -2394,10 +2719,10 @@ export const QuranFull: React.FC = () => {
                             </div>
                             <div className="flex flex-col gap-2">
                               <p className="font-arabic text-right text-lg sm:text-xl text-gray-900 dark:text-white leading-loose" style={{ fontFamily: '"Amiri", serif' }} dir="rtl">
-                                {match.text}
+                                {highlightArabicText(match.text, searchTerm)}
                               </p>
                               <p className="text-left text-xs sm:text-sm text-gray-500 dark:text-gray-400 italic">
-                                {match.translationText}
+                                {highlightTranslationText(match.translationText, searchTerm)}
                               </p>
                             </div>
                           </div>
@@ -2540,7 +2865,7 @@ export const QuranFull: React.FC = () => {
 
                    {/* Right: Empty placeholder to keep title centered */}
                     <div className="flex justify-end flex-1" />
-                 </div>
+                  </div>
 
                  {/* Verses Search Bar (Collapsible) */}
                  <AnimatePresence>
@@ -2566,12 +2891,19 @@ export const QuranFull: React.FC = () => {
                    )}
 
             </AnimatePresence>
-               </div>
-             )}
-           </div>
-
+                </div>
+              )}
+            </div>
            {/* Floating Action Bar */}
-           <div className={`fixed bottom-[152px] sm:bottom-[92px] z-50 flex flex-col gap-3 transition-all duration-500 ${toolbarPosition === 'right' ? 'right-4 sm:right-6 items-end' : 'left-4 sm:left-6 items-start'} ${fullScreenMode ? 'hidden' : ''}`}>
+           <motion.div 
+             animate={isToolbarExpanded ? { y: 0 } : { y: [0, -8, 0] }}
+             transition={{ 
+               repeat: isToolbarExpanded ? 0 : Infinity, 
+               duration: 3.5, 
+               ease: "easeInOut" 
+             }}
+             className={`fixed bottom-[152px] sm:bottom-[92px] z-50 flex flex-col gap-3 transition-all duration-500 ${toolbarPosition === 'right' ? 'right-4 sm:right-6 items-end' : 'left-4 sm:left-6 items-start'} ${fullScreenMode ? 'hidden' : ''}`}
+           >
               
               {/* Floating Repeat Mode (visible only when Quran is playing) */}
               <AnimatePresence>
@@ -2585,7 +2917,7 @@ export const QuranFull: React.FC = () => {
                     <motion.button 
                       whileHover={{ scale: 1.1, rotate: 15 }}
                       whileTap={{ scale: 0.9 }}
-                      className={`p-3.5 rounded-full transition-all shadow-xl border-2 ${repeatCount > 0 ? 'bg-emerald-500 text-white border-emerald-400' : 'bg-white text-gray-700 hover:text-emerald-600 dark:bg-gray-800 dark:text-gray-300 border-gray-200 dark:border-gray-700 dark:hover:bg-gray-700 hover:border-emerald-500'}`}
+                      className={`p-3.5 rounded-full transition-all shadow-xl border-2 ${repeatCount > 0 ? 'bg-emerald-500 text-white border-emerald-400' : 'bg-white/90 text-gray-700 hover:text-emerald-600 dark:bg-gray-800/90 dark:text-gray-300 border-gray-200 dark:border-gray-700 dark:hover:bg-gray-700 hover:border-emerald-500 backdrop-blur-md'}`}
                       title="Mode Répétition"
                     >
                       <RefreshCw size={22} className={repeatCount > 0 ? "animate-spin" : ""} style={{ animationDuration: '4s' }} />
@@ -2718,9 +3050,11 @@ export const QuranFull: React.FC = () => {
                )}
              </AnimatePresence>
 
-             <button 
+             <motion.button 
+               whileHover={{ scale: 1.1, rotate: 15 }}
+               whileTap={{ scale: 0.9 }}
                onClick={() => setIsToolbarExpanded(!isToolbarExpanded)}
-               className="p-4 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full shadow-xl transition-transform hover:scale-105 active:scale-95 z-50 flex items-center justify-center relative w-14 h-14 shrink-0"
+               className="p-4 bg-emerald-500/90 hover:bg-emerald-600 text-white rounded-full shadow-xl z-50 flex items-center justify-center relative w-14 h-14 shrink-0 backdrop-blur-md"
              >
                <div className={`absolute transition-all duration-300 ${isToolbarExpanded ? 'rotate-90 opacity-0 scale-50' : 'rotate-0 opacity-100 scale-100'}`}>
                  <Settings size={24} />
@@ -2728,8 +3062,8 @@ export const QuranFull: React.FC = () => {
                <div className={`absolute transition-all duration-300 ${isToolbarExpanded ? 'rotate-0 opacity-100 scale-100' : '-rotate-90 opacity-0 scale-50'}`}>
                  <X size={24} />
                </div>
-             </button>
-           </div>
+             </motion.button>
+           </motion.div>
 
            <AnimatePresence>
              {showMushafSelector && (
@@ -2818,8 +3152,9 @@ export const QuranFull: React.FC = () => {
                        <select
                          value={selectedReciterId}
                          onChange={(e) => setSelectedReciterId(e.target.value)}
-                         className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
-                       >
+                          className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-[13.5px] text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
+                          style={{ fontSize: '13.5px' }}
+                        >
                          {Object.entries(
                            QURAN_RECITERS.reduce((acc, r) => {
                              if (!acc[r.country]) acc[r.country] = [];
@@ -2827,9 +3162,9 @@ export const QuranFull: React.FC = () => {
                              return acc;
                            }, {} as Record<string, typeof QURAN_RECITERS>)
                          ).map(([country, reciters]) => (
-                           <optgroup key={country} label={country} className="font-bold text-gray-950 dark:text-gray-100 bg-white dark:bg-gray-900">
+                           <optgroup key={country} label={country} className="font-bold text-gray-950 dark:text-gray-100 bg-white dark:bg-gray-900 text-[12.5px]" style={{ fontSize: "12.5px" }}>
                              {reciters.map(r => (
-                               <option key={r.id} value={r.id} className="font-normal text-gray-700 dark:text-gray-300">
+                               <option key={r.id} value={r.id} className="font-normal text-gray-700 dark:text-gray-300 text-[13.5px]" style={{ fontSize: "13.5px" }}>
                                  {r.name} {r.nameAr ? `(${r.nameAr})` : ''}
                                </option>
                              ))}
@@ -3953,7 +4288,7 @@ export const QuranFull: React.FC = () => {
                       </button>
                     </div>
 
-                    <form onSubmit={(e) => e.preventDefault()} className="mb-6 relative">
+                    <form onSubmit={(e) => e.preventDefault()} className="mb-4 relative">
                       <input
                         type="text"
                         value={advancedSearchQuery}
@@ -3973,6 +4308,32 @@ export const QuranFull: React.FC = () => {
                         </button>
                       )}
                     </form>
+
+                    {/* Theme Filter Badges */}
+                    <div className="mb-6">
+                      <p className="text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider mb-2">
+                        {language === 'fr' ? 'Rechercher par Thèmes' : 'Search by Themes'}
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {QURAN_THEMES.map(theme => {
+                          const isSelected = selectedTheme === theme.id;
+                          return (
+                            <button
+                              key={theme.id}
+                              onClick={() => handleThemeClick(theme.id)}
+                              className={`px-3 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all active:scale-95 shadow-sm border ${
+                                isSelected
+                                  ? `bg-gradient-to-r ${theme.color} text-white border-transparent`
+                                  : 'bg-gray-50 hover:bg-gray-100 dark:bg-gray-900 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700'
+                              }`}
+                            >
+                              <span>{theme.emoji}</span>
+                              <span>{language === 'fr' ? theme.labelFr : theme.labelEn}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
 
                     <div className="overflow-y-auto flex-1 pr-2 space-y-4">
                       {!advancedSearchQuery && searchHistory.length > 0 && (
@@ -4031,13 +4392,21 @@ export const QuranFull: React.FC = () => {
                                   Aller au verset <ArrowRight size={12} />
                                 </button>
                               </div>
+                              {match.arabicText && (
+                                <p className="font-arabic text-right text-lg text-emerald-800 dark:text-emerald-300 leading-loose mb-2" dir="rtl">
+                                  {match.arabicText}
+                                </p>
+                              )}
                               <p className={`${!match.matchLang ? 'font-arabic text-right text-lg' : 'text-left text-sm'} text-gray-900 dark:text-white leading-loose`} dir={!match.matchLang ? 'rtl' : 'ltr'}>{match.text}</p>
                             </div>
                           ))}
                         </>
-                      ) : advancedSearchQuery && !isSearching ? (
+                      ) : (advancedSearchQuery || selectedTheme) && !isSearching ? (
                         <div className="text-center py-10 text-gray-500">
-                          Aucun résultat trouvé pour "{advancedSearchQuery}". Essayez d'autres mots-clés.
+                          {selectedTheme 
+                            ? (language === 'fr' ? `Aucun résultat trouvé pour le thème "${selectedTheme}"` : `No results found for theme "${selectedTheme}"`)
+                            : (language === 'fr' ? `Aucun résultat trouvé pour "${advancedSearchQuery}". Essayez d'autres mots-clés.` : `No results found for "${advancedSearchQuery}". Try other keywords.`)
+                          }
                         </div>
                       ) : (
                         <div className="text-center py-10 text-gray-500 flex flex-col items-center">
@@ -4090,13 +4459,6 @@ export const QuranFull: React.FC = () => {
                   const rawQuery = surahSearchQuery.trim();
                   const queryLower = rawQuery.toLowerCase();
                   
-                  const normalizeAr = (text: string): string => {
-                    return text
-                      .replace(/[\u064B-\u0652\u0670\u0653\u0654\u0655]/g, '')
-                      .replace(/\u0671/g, '\u0627')
-                      .toLowerCase();
-                  };
-
                   const isAr = /[\u0600-\u06FF]/.test(rawQuery);
                   const cleanQuery = isAr ? normalizeAr(rawQuery) : queryLower;
 
@@ -4104,7 +4466,14 @@ export const QuranFull: React.FC = () => {
                     if (!rawQuery) return true;
                     if (ayah.numberInSurah.toString() === rawQuery) return true;
                     
-                    const ayahAr = ayah.text || ayah.ar || '';
+                    let ayahAr = ayah.text || ayah.ar || '';
+                    if (ayah.numberInSurah === 1 && (ayah.surah?.number || surahArabic.number) !== 1 && (ayah.surah?.number || surahArabic.number) !== 9) {
+                      ayahAr = ayahAr
+                        .replace(/^[\s\ufeff]*بِسْمِ\s+ٱللَّهِ\s+ٱلرَّحْمَٰنِ\s+ٱلرَّحِيمِ\s*/, '')
+                        .replace(/^[\s\ufeff]*بِسْمِ\s+اللَّهِ\s+الرَّحْمَٰنِ\s+الرَّحِيمِ\s*/, '')
+                        .replace(/^[\s\ufeff]*بِسْمِ\s+اللَّهِ\s+الرَّحْمَٰنِ\s+الرَّحِيمِ\s*/, '')
+                        .replace(/^[\s\ufeff]*بِسْمِ\s+اللَّهِ\s+الرَّحْمَنِ\s+الرَّحِيمِ\s*/, '');
+                    }
                     const ayahClean = normalizeAr(ayahAr);
                     const arabicMatch = isAr && ayahClean.includes(cleanQuery);
                     if (arabicMatch) return true;
@@ -4311,7 +4680,10 @@ export const QuranFull: React.FC = () => {
                                  const text = ayah.numberInSurah === 1 && (ayah.surah?.number || surahArabic.number) !== 1 && (ayah.surah?.number || surahArabic.number) !== 9 
                                    ? rawText.replace(/^بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ\s*/, '').replace(/^بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ\s*/, '').replace(/^بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ\s*/, '').replace(/^بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ\s*/, '') 
                                    : rawText;
-                                 return isTajweed ? renderTajweed(text) : text;
+                                  if (surahSearchQuery && !isTajweed) {
+                                    return highlightArabicText(text, surahSearchQuery);
+                                  }
+                                  return isTajweed ? renderTajweed(text) : text;
                                })()} 
                                <AyahMarker number={ayah.numberInSurah} />
                                {hifzMode && hideArabic && (
@@ -4348,7 +4720,7 @@ export const QuranFull: React.FC = () => {
                              <div>
                                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-1 block">Français</span>
                                <p className="text-gray-600 dark:text-gray-300 font-serif leading-relaxed" style={getTranslationStyle()}>
-                                 {frAyah.text}
+                                 {highlightTranslationText(frAyah.text, surahSearchQuery)}
                                </p>
                              </div>
                            )}
@@ -4356,7 +4728,7 @@ export const QuranFull: React.FC = () => {
                              <div>
                                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-1 block">English</span>
                                <p className="text-gray-600 dark:text-gray-300 font-serif leading-relaxed" style={getTranslationStyle()}>
-                                 {enAyah.text}
+                                 {highlightTranslationText(enAyah.text, surahSearchQuery)}
                                </p>
                              </div>
                            )}
@@ -4364,7 +4736,7 @@ export const QuranFull: React.FC = () => {
                              <div>
                                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-1 block">Hausa</span>
                                <p className="text-gray-600 dark:text-gray-300 font-serif leading-relaxed" style={getTranslationStyle()}>
-                                 {haAyah.text}
+                                 {highlightTranslationText(haAyah.text, surahSearchQuery)}
                                </p>
                              </div>
                            )}
@@ -4745,6 +5117,7 @@ export const QuranFull: React.FC = () => {
       </AnimatePresence>
 
       <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
+    </div>
     </div>
   );
 };

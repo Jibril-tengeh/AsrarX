@@ -58,6 +58,33 @@ export const Tasbih: React.FC = () => {
   const [newZikrArabic, setNewZikrArabic] = useState('');
   const [newZikrTarget, setNewZikrTarget] = useState(100);
 
+  // Auto-increment feature state
+  const [isAutoIncrementing, setIsAutoIncrementing] = useState(false);
+  const [autoIncrementSpeed, setAutoIncrementSpeed] = useState(1500); // ms
+
+  // Auto-increment interval handler using the "useLatest" ref pattern to avoid stale closures
+  const handleIncrementRef = React.useRef<() => void>(() => {});
+  React.useEffect(() => {
+    handleIncrementRef.current = handleIncrement;
+  });
+
+  React.useEffect(() => {
+    let intervalId: NodeJS.Timeout | null = null;
+    if (isAutoIncrementing) {
+      intervalId = setInterval(() => {
+        handleIncrementRef.current();
+      }, autoIncrementSpeed);
+    }
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [isAutoIncrementing, autoIncrementSpeed]);
+
+  // Turn off auto-increment if user changes tab or zikr
+  React.useEffect(() => {
+    setIsAutoIncrementing(false);
+  }, [activeTab, activeZikr]);
+
   useEffect(() => {
     // Load state from local storage
     try {
@@ -114,19 +141,22 @@ export const Tasbih: React.FC = () => {
     localStorage.setItem('tasbih_settings', JSON.stringify({ sound, vibe, lastActiveId: activeId }));
   };
 
-  const triggerVibration = async (type: 'tap' | 'success') => {
+  const triggerVibration = async (type: 'tap' | 'success' | 'hundred') => {
     if (!vibrationEnabled) return;
     try {
       if (type === 'tap') {
         await Haptics.impact({ style: ImpactStyle.Light });
       } else if (type === 'success') {
         await Haptics.notification({ type: 'SUCCESS' as any });
+      } else if (type === 'hundred') {
+        await Haptics.notification({ type: 'HEAVY' as any });
       }
     } catch (e) {
       // Fallback to web API if Capacitor is not available
       if (navigator.vibrate) {
         if (type === 'tap') navigator.vibrate(40);
         if (type === 'success') navigator.vibrate([100, 50, 100, 50, 100]);
+        if (type === 'hundred') navigator.vibrate([150, 80, 150]); // Distinct vibration for every 100 counts
       }
     }
   };
@@ -168,7 +198,9 @@ export const Tasbih: React.FC = () => {
     setDailyTotal(newDaily);
     localStorage.setItem(`tasbih_daily_${new Date().toDateString()}`, newDaily.toString());
 
-    if (newCount === target && target > 0) {
+    if (newCount > 0 && newCount % 100 === 0) {
+      triggerVibration('hundred');
+    } else if (newCount === target && target > 0) {
       triggerVibration('success');
     } else {
       triggerVibration('tap');
@@ -353,6 +385,50 @@ export const Tasbih: React.FC = () => {
                 <div className="absolute inset-0 bg-white opacity-0 group-active:opacity-20 transition-opacity"></div>
                 <span className="text-2xl sm:text-3xl font-black tracking-[0.2em] uppercase relative z-10 drop-shadow-md">TAP</span>
               </button>
+            </div>
+          </div>
+
+          {/* Auto-increment Controls */}
+          <div className="w-full max-w-[320px] mt-6 bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-750 flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                Incrément Auto
+              </span>
+              <button
+                onClick={() => setIsAutoIncrementing(!isAutoIncrementing)}
+                className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm ${
+                  isAutoIncrementing 
+                    ? 'bg-amber-500 text-white hover:bg-amber-600 animate-pulse' 
+                    : 'bg-emerald-500 text-white hover:bg-emerald-600'
+                }`}
+              >
+                {isAutoIncrementing ? 'Désactiver' : 'Activer'}
+              </button>
+            </div>
+            <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400">
+              <span>Intervalle de temps</span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setAutoIncrementSpeed(prev => Math.max(250, prev - 250))}
+                  className="w-6 h-6 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700 flex items-center justify-center font-bold text-sm hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-90 transition-all text-gray-700 dark:text-gray-300"
+                  disabled={isAutoIncrementing}
+                >
+                  -
+                </button>
+                <span className="font-mono font-bold text-gray-700 dark:text-gray-300 w-12 text-center">
+                  {(autoIncrementSpeed / 1000).toFixed(2)}s
+                </span>
+                <button
+                  onClick={() => setAutoIncrementSpeed(prev => Math.min(5000, prev + 250))}
+                  className="w-6 h-6 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700 flex items-center justify-center font-bold text-sm hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-90 transition-all text-gray-700 dark:text-gray-300"
+                  disabled={isAutoIncrementing}
+                >
+                  +
+                </button>
+              </div>
+            </div>
+            <div className="text-[10px] text-gray-400 dark:text-gray-500 text-center italic mt-1">
+              Vibration haptique toutes les 100 répétitions
             </div>
           </div>
         </motion.div>
