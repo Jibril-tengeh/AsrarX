@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { useFeatures } from "../../contexts/FeatureContext";
 import {
@@ -71,6 +71,82 @@ export const SecretDetail: React.FC = () => {
   const [item, setItem] = useState<AsrarItem | null>(null);
   const [notFound, setNotFound] = useState(false);
 
+  const getTeaserContent = (htmlContent: string) => {
+    if (!htmlContent) return { html: "", isTruncated: false };
+    
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(htmlContent, 'text/html');
+      const teaserNodes: string[] = [];
+      let isTruncated = false;
+      
+      const normalize = (str: string) => 
+        str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+      const lockedKeywords = [
+        'secret', 'recette', 'pratique', 'methode', 'wird', 'zikr', 'dhikr', 
+        'ingredient', 'etape', 'preparation', 'utilisation', 'application', 
+        'activation', 'rituel', 'formule', 'confection', 'recitation'
+      ];
+
+      const allowedKeywords = ['objectif', 'exemple', 'introduction', 'intro', 'definition'];
+
+      for (let i = 0; i < doc.body.childNodes.length; i++) {
+        const node = doc.body.childNodes[i] as HTMLElement;
+        
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          const text = normalize(node.textContent || '');
+          const isHeader = /^H[1-6]$/i.test(node.nodeName);
+          const hasStrong = node.querySelector && (node.querySelector('strong') || node.querySelector('b'));
+          
+          let shouldStop = false;
+          
+          let headingText = '';
+          if (isHeader) {
+            headingText = normalize(node.textContent || '');
+          } else if (hasStrong) {
+            const strongEl = node.querySelector('strong') || node.querySelector('b');
+            if (strongEl) {
+              headingText = normalize(strongEl.textContent || '');
+            }
+          }
+          
+          if (headingText) {
+            const hasLockedWord = lockedKeywords.some(kw => headingText.includes(kw));
+            const hasAllowedWord = allowedKeywords.some(kw => headingText.includes(kw));
+            
+            if (hasLockedWord || (!hasAllowedWord && headingText.length > 2)) {
+              shouldStop = true;
+            }
+          }
+          
+          if (shouldStop) {
+            isTruncated = true;
+            break;
+          }
+        }
+        
+        if (node.nodeType === Node.ELEMENT_NODE) {
+          teaserNodes.push(node.outerHTML);
+        } else if (node.nodeType === Node.TEXT_NODE) {
+          teaserNodes.push(node.textContent || '');
+        }
+      }
+      
+      return {
+        html: teaserNodes.join(''),
+        isTruncated: isTruncated || teaserNodes.length < doc.body.childNodes.length
+      };
+    } catch (e) {
+      console.error("Error generating teaser content", e);
+      return { html: htmlContent, isTruncated: false };
+    }
+  };
+
+  const isUserPremium = user?.subscriptionTier === 'premium' || user?.subscriptionTier === 'pro';
+  const isShowingTeaserOnly = !!item?.isPremium && !isUserPremium;
+  const displayContent = (item && isShowingTeaserOnly) ? getTeaserContent(item.content).html : (item?.content || '');
+
   const [readingMode, setReadingMode] = useState(false);
   const [zenMode, setZenMode] = useState(false);
   const [zenFontSize, setZenFontSize] = useState<'sm' | 'md' | 'lg' | 'xl'>('lg');
@@ -101,7 +177,45 @@ export const SecretDetail: React.FC = () => {
   const [isTranslating, setIsTranslating] = useState(false);
 
   useEffect(() => {
-    if (!item || language === 'fr') {
+    if (!item) {
+      setIsTranslating(false);
+      return;
+    }
+
+    if (language === 'fr') {
+      setIsTranslating(false);
+      if (item.content_fr && item.content !== item.content_fr) {
+        setItem(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            title: prev.title_fr || prev.title,
+            content: prev.content_fr || prev.content,
+            hook: prev.hook_fr || prev.hook,
+          };
+        });
+      }
+      return;
+    }
+
+    // Use manual translation if available
+    const manualContent = language === 'en' ? item.content_en : item.content_ha;
+    const manualTitle = language === 'en' ? item.title_en : item.title_ha;
+    const manualHook = language === 'en' ? item.hook_en : item.hook_ha;
+
+    if (manualContent && manualContent.trim().length > 0) {
+      if (item.content !== manualContent) {
+        setItem(prev => {
+          if (!prev || prev.id !== item.id) return prev;
+          return {
+            ...prev,
+            title: manualTitle || prev.title,
+            content: manualContent,
+            hook: manualHook || prev.hook,
+            hasManualTranslation: true
+          };
+        });
+      }
       setIsTranslating(false);
       return;
     }
@@ -111,22 +225,35 @@ export const SecretDetail: React.FC = () => {
       const cached = localStorage.getItem(cacheKey);
       if (cached) {
         const parsed = JSON.parse(cached);
-        if (item.title === parsed.title) {
+        
+        // Self-correction: if target language is not French but the cached content is identical to original French,
+        // it means a previous run failed to translate the body. We should clear cache and translate again.
+        const originalContent = item.content || '';
+        const cachedContent = parsed.content || '';
+        const isBadCache = originalContent.length > 20 && 
+                           cachedContent === originalContent;
+
+        if (isBadCache) {
+          console.log("[SecretDetail] Incomplete cached translation detected. Clearing bad cache...");
+          localStorage.removeItem(cacheKey);
+        } else {
+          if (item.title === parsed.title && item.content === parsed.content) {
+            setIsTranslating(false);
+            return;
+          }
+          setItem(prev => {
+            if (!prev || prev.id !== item.id) return prev;
+            return {
+              ...prev,
+              title: parsed.title,
+              hook: parsed.hook,
+              content: parsed.content,
+              benefits: parsed.benefits,
+            };
+          });
           setIsTranslating(false);
           return;
         }
-        setItem(prev => {
-          if (!prev || prev.id !== item.id) return prev;
-          return {
-            ...prev,
-            title: parsed.title,
-            hook: parsed.hook,
-            content: parsed.content,
-            benefits: parsed.benefits,
-          };
-        });
-        setIsTranslating(false);
-        return;
       }
     } catch (e) {
       console.warn("Error reading translation cache", e);
@@ -137,10 +264,10 @@ export const SecretDetail: React.FC = () => {
       try {
         const staticItems = getAsrarItems();
         const staticItem = staticItems.find(i => i.id === item.id);
-        const sourceTitle = staticItem ? staticItem.title : item.title;
-        const sourceContent = staticItem ? staticItem.content : item.content;
-        const sourceHook = staticItem ? staticItem.hook : item.hook;
-        const sourceBenefits = staticItem ? staticItem.benefits : item.benefits;
+        const sourceTitle = item.title_fr || (staticItem ? staticItem.title : item.title);
+        const sourceContent = item.content_fr || (staticItem ? staticItem.content : item.content);
+        const sourceHook = item.hook_fr || (staticItem ? staticItem.hook : item.hook);
+        const sourceBenefits = staticItem ? staticItem.benefits : (item.benefits || []);
 
         const res = await fetch(getApiUrl('/api/translate-article'), {
           method: 'POST',
@@ -302,7 +429,7 @@ export const SecretDetail: React.FC = () => {
     words: WordToken[];
   }
 
-  const buildSpokenSegments = (currentItem: AsrarItem): SpokenParagraph[] => {
+  const buildSpokenSegments = (currentItem: AsrarItem, customContent?: string): SpokenParagraph[] => {
     const segments: SpokenParagraph[] = [];
     let globalIndex = 0;
 
@@ -323,7 +450,7 @@ export const SecretDetail: React.FC = () => {
     }
 
     // Content paragraphs
-    const cleanContent = stripHtml(currentItem.content);
+    const cleanContent = stripHtml(customContent !== undefined ? customContent : currentItem.content);
     const paragraphs = cleanContent.split('\n').filter(p => p.trim().length > 0);
     paragraphs.forEach(para => {
       const paraWords = para.split(/\s+/).filter(w => w.length > 0).map(text => ({
@@ -358,7 +485,7 @@ export const SecretDetail: React.FC = () => {
       return;
     }
 
-    const segments = buildSpokenSegments(item);
+    const segments = buildSpokenSegments(item, displayContent);
     const allWords = segments.flatMap(s => s.words);
     const textToRead = allWords.map(w => w.text).join(' ');
 
@@ -515,21 +642,38 @@ export const SecretDetail: React.FC = () => {
       }
     };
 
+    let initialItem: AsrarItem | null = null;
     if (foundItem) {
-      setItem(foundItem);
-      checkBookmark(foundItem.id);
+      initialItem = {
+        ...foundItem,
+        title_fr: foundItem.title_fr || foundItem.title,
+        content_fr: foundItem.content_fr || foundItem.content,
+        hook_fr: foundItem.hook_fr || foundItem.hook,
+      };
     } else if (id) {
       // Pre-load from local offline details cache for instant view
       try {
         const cachedDetails = JSON.parse(localStorage.getItem('asrarhub_cached_article_details') || '{}');
         if (cachedDetails[id]) {
-          setItem(cachedDetails[id]);
-          checkBookmark(id);
+          const cachedItem = cachedDetails[id];
+          initialItem = {
+            ...cachedItem,
+            title_fr: cachedItem.title_fr || cachedItem.title,
+            content_fr: cachedItem.content_fr || cachedItem.content,
+            hook_fr: cachedItem.hook_fr || cachedItem.hook,
+          };
         }
       } catch (e) {
         console.error("Error reading cached article detail", e);
       }
+    }
 
+    if (initialItem) {
+      setItem(initialItem);
+      checkBookmark(initialItem.id);
+    }
+
+    if (id) {
       // Try to fetch from Firestore
       const fetchFromFirestore = async () => {
         try {
@@ -545,6 +689,7 @@ export const SecretDetail: React.FC = () => {
               activeHook = activeContent.replace(/<[^>]+>/g, '').substring(0, 120) + '...';
             }
             
+            const hasManual = language !== 'fr' && !!(data[`title_${language}`] || data[`content_${language}`]);
             const fetchedItem: AsrarItem = {
               id: docSnap.id,
               title: activeTitle,
@@ -554,7 +699,17 @@ export const SecretDetail: React.FC = () => {
               benefits: data.benefits || [],
               imageUrl: data.thumbnail,
               isPremium: data.isPremium || false,
-              createdAt: data.createdAt ? new Date(data.createdAt).toISOString() : new Date().toISOString()
+              createdAt: data.createdAt ? new Date(data.createdAt).toISOString() : new Date().toISOString(),
+              title_en: data.title_en,
+              content_en: data.content_en,
+              hook_en: data.hook_en,
+              title_ha: data.title_ha,
+              content_ha: data.content_ha,
+              hook_ha: data.hook_ha,
+              title_fr: data.title,
+              content_fr: data.content,
+              hook_fr: data.hook,
+              hasManualTranslation: hasManual
             };
 
             setItem(fetchedItem);
@@ -563,32 +718,66 @@ export const SecretDetail: React.FC = () => {
             // Save to local cache
             try {
               const cachedDetails = JSON.parse(localStorage.getItem('asrarhub_cached_article_details') || '{}');
-              cachedDetails[id] = fetchedItem;
-              localStorage.setItem('asrarhub_cached_article_details', JSON.stringify(cachedDetails));
+              
+              // Add a timestamp to the item we are caching
+              const itemToCache = {
+                ...fetchedItem,
+                cachedAt: Date.now()
+              };
+              cachedDetails[id] = itemToCache;
+              
+              // Limit the cache size to the 8 most recently viewed articles to prevent QuotaExceededError
+              const entries = Object.entries(cachedDetails);
+              if (entries.length > 8) {
+                entries.sort((a: any, b: any) => {
+                  const tA = a[1]?.cachedAt || 0;
+                  const tB = b[1]?.cachedAt || 0;
+                  return tB - tA; // Sort descending (newest first)
+                });
+                
+                const trimmedDetails: Record<string, any> = {};
+                entries.slice(0, 8).forEach(([k, v]) => {
+                  trimmedDetails[k] = v;
+                });
+                localStorage.setItem('asrarhub_cached_article_details', JSON.stringify(trimmedDetails));
+              } else {
+                localStorage.setItem('asrarhub_cached_article_details', JSON.stringify(cachedDetails));
+              }
             } catch (e) {
               console.error("Error saving article to offline cache", e);
+              // Fallback: if we STILL fail, try clearing the cache completely and just save the current one
+              try {
+                const singleCache = { [id]: { ...fetchedItem, cachedAt: Date.now() } };
+                localStorage.setItem('asrarhub_cached_article_details', JSON.stringify(singleCache));
+              } catch (retryError) {
+                console.error("Critical: Failed to save single article to cache", retryError);
+              }
             }
           } else {
-            // Check if we have a cached version
-            const cachedDetails = JSON.parse(localStorage.getItem('asrarhub_cached_article_details') || '{}');
-            if (cachedDetails[id]) {
-              setItem(cachedDetails[id]);
-            } else {
-              setNotFound(true);
+            if (!initialItem) {
+              // Check if we have a cached version
+              const cachedDetails = JSON.parse(localStorage.getItem('asrarhub_cached_article_details') || '{}');
+              if (cachedDetails[id]) {
+                setItem(cachedDetails[id]);
+              } else {
+                setNotFound(true);
+              }
             }
           }
         } catch (error) {
           console.error("Error fetching article from Firestore", error);
-          // Fallback to offline cache
-          try {
-            const cachedDetails = JSON.parse(localStorage.getItem('asrarhub_cached_article_details') || '{}');
-            if (cachedDetails[id]) {
-              setItem(cachedDetails[id]);
-            } else {
+          if (!initialItem) {
+            // Fallback to offline cache
+            try {
+              const cachedDetails = JSON.parse(localStorage.getItem('asrarhub_cached_article_details') || '{}');
+              if (cachedDetails[id]) {
+                setItem(cachedDetails[id]);
+              } else {
+                setNotFound(true);
+              }
+            } catch (e) {
               setNotFound(true);
             }
-          } catch (e) {
-            setNotFound(true);
           }
         }
       };
@@ -602,20 +791,47 @@ export const SecretDetail: React.FC = () => {
 
   useEffect(() => {
     if (item) {
-      if (item.isPremium) {
-        if (authLoading) {
-           setIsCheckingPremium(true);
-        } else if (!user) {
-           setIsCheckingPremium(true);
-           setShowAuthModal(true);
-        } else {
-           setIsCheckingPremium(false);
+      setIsCheckingPremium(authLoading);
+    }
+  }, [item, authLoading]);
+
+  // Log to reading history when viewed
+  useEffect(() => {
+    if (item && item.id) {
+      try {
+        const historyKey = 'asrar_reading_history';
+        const rawHistory = localStorage.getItem(historyKey);
+        let history = [];
+        try {
+          if (rawHistory) {
+            history = JSON.parse(rawHistory);
+          }
+        } catch (e) {
+          history = [];
         }
-      } else {
-        setIsCheckingPremium(false);
+        if (!Array.isArray(history)) history = [];
+        
+        history = history.filter((h: any) => h.id !== item.id);
+        
+        history.unshift({
+          id: item.id,
+          title: item.title,
+          category: item.category,
+          imageUrl: item.imageUrl || '',
+          viewedAt: Date.now(),
+          isPremium: !!item.isPremium
+        });
+        
+        if (history.length > 6) {
+          history = history.slice(0, 6);
+        }
+        
+        localStorage.setItem(historyKey, JSON.stringify(history));
+      } catch (err) {
+        console.warn("Failed to save reading history:", err);
       }
     }
-  }, [item, user, authLoading]);
+  }, [item?.id]);
 
   const toggleBookmark = () => {
     if (!item) return;
@@ -703,7 +919,7 @@ export const SecretDetail: React.FC = () => {
   }
 
   return (
-    <PremiumWrapper enabled={item.isPremium} requiredTier="premium" fallbackTitle="Lecture Secrète Premium">
+    <PremiumWrapper enabled={false} requiredTier="premium" fallbackTitle="Lecture Secrète Premium">
       <div
         className={`w-full max-w-3xl mx-auto px-4 pt-0 sm:px-6 sm:pt-2 lg:px-8 pb-24 transition-colors duration-500 ${readingMode ? "bg-[#fdfbf7] dark:bg-[#1a1917] min-h-screen" : ""}`}
       >
@@ -867,9 +1083,22 @@ export const SecretDetail: React.FC = () => {
               {item.title}
             </h1>
             {language !== 'fr' && (
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50/75 dark:bg-emerald-900/20 border border-emerald-100/50 dark:border-emerald-800/30 px-2.5 py-1 rounded-full w-fit mt-1 select-none mx-auto sm:mx-0">
-                <Sparkles size={14} className={isTranslating ? "animate-spin text-emerald-500" : "text-emerald-500"} />
-                <span>{isTranslating ? t("translating", "Traduction automatique en cours...") : t("translated", "Traduit automatiquement par IA")}</span>
+              <div className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full w-fit mt-1 select-none mx-auto sm:mx-0 ${
+                item.hasManualTranslation 
+                  ? "text-emerald-700 dark:text-emerald-300 bg-emerald-100/70 dark:bg-emerald-950/40 border border-emerald-200/50 dark:border-emerald-800/40" 
+                  : "text-amber-600 dark:text-amber-400 bg-amber-50/75 dark:bg-amber-900/20 border border-amber-100/50 dark:border-amber-800/30"
+              }`}>
+                {item.hasManualTranslation ? (
+                  <>
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    <span>{t("official_translation", "Traduction officielle")}</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={14} className={isTranslating ? "animate-spin text-amber-500" : "text-amber-500"} />
+                    <span>{isTranslating ? t("translating", "Traduction automatique en cours...") : t("translated", "Traduit automatiquement par l'IA")}</span>
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -992,7 +1221,7 @@ export const SecretDetail: React.FC = () => {
               >
                 {isSpeaking ? (
                   <div className="space-y-6 select-text transition-all" style={{ fontSize: `${articleFontSize}px` }}>
-                    {buildSpokenSegments(item).map((segment, sIdx) => {
+                    {buildSpokenSegments(item, displayContent).map((segment, sIdx) => {
                       if (segment.type === 'title') {
                         return (
                           <h2 key={sIdx} className="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white mb-4">
@@ -1051,21 +1280,21 @@ export const SecretDetail: React.FC = () => {
                     })}
                   </div>
                 ) : (() => {
-                  const isHtml = /<[a-z][\s\S]*>/i.test(item.content);
+                  const isHtml = /<[a-z][\s\S]*>/i.test(displayContent);
 
                   if (viewMode === 'full') {
-                    return <InteractiveLexiconText content={item.content} isHtml={isHtml} style={{ fontSize: `${articleFontSize}px` }} />;
+                    return <InteractiveLexiconText content={displayContent} isHtml={isHtml} style={{ fontSize: `${articleFontSize}px` }} />;
                   }
 
                   if (viewMode === 'accordion') {
                     if (!isHtml) {
-                      return item.content.split("\n").map((paragraph, idx) => (
+                      return displayContent.split("\n").map((paragraph, idx) => (
                         <p key={idx} className="mb-6" style={{ fontSize: `${articleFontSize}px` }}>{paragraph}</p>
                       ));
                     }
 
                     const parser = new DOMParser();
-                    const doc = parser.parseFromString(item.content, 'text/html');
+                    const doc = parser.parseFromString(displayContent, 'text/html');
                     const sections: { title: string, htmlContent: string }[] = [];
                     let currentTitle = 'Introduction';
                     let currentHtml = '';
@@ -1100,6 +1329,37 @@ export const SecretDetail: React.FC = () => {
                     );
                   }
                 })()}
+
+                {isShowingTeaserOnly && (
+                  <div className="mt-8 p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-amber-600 via-amber-500 to-yellow-500 text-white shadow-2xl relative overflow-hidden border border-amber-400/30">
+                    <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+                    <div className="absolute bottom-[-10%] left-[-5%] w-48 h-48 bg-black/15 rounded-full blur-xl pointer-events-none" />
+                    
+                    <div className="relative z-10 flex flex-col items-center text-center">
+                      <div className="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center shadow-md mb-4 backdrop-blur-sm">
+                        <Crown size={28} className="text-yellow-300 animate-pulse fill-yellow-300" />
+                      </div>
+                      
+                      <h3 className="text-xl sm:text-2xl font-black mb-3 text-white">
+                        Révélez le Secret Complet
+                      </h3>
+                      
+                      <p className="text-white/95 max-w-lg text-sm sm:text-base leading-relaxed mb-6">
+                        La suite de ce secret (les formules exactes, la méthode d'activation spirituelle et les détails de pratique) est réservée aux membres Premium de l'AsrarHub.
+                      </p>
+                      
+                      <div className="flex flex-wrap items-center justify-center gap-4">
+                        <Link 
+                          to="/payment" 
+                          className="inline-flex items-center gap-2 bg-white text-gray-950 hover:bg-gray-100 font-extrabold px-6 py-3 rounded-xl text-sm sm:text-base transition-all shadow-lg transform hover:-translate-y-0.5"
+                        >
+                          <Sparkles size={18} className="text-amber-600 fill-amber-200" />
+                          Passer au Premium
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </section>
 
@@ -1404,8 +1664,8 @@ export const SecretDetail: React.FC = () => {
                 }}
               >
                 <InteractiveLexiconText 
-                  content={item.content} 
-                  isHtml={/<[a-z][\s\S]*>/i.test(item.content)} 
+                  content={displayContent} 
+                  isHtml={/<[a-z][\s\S]*>/i.test(displayContent)} 
                   style={{ 
                     fontSize: `${zenFontSizePx}px`,
                     fontFamily: `var(--font-${zenFont === 'serif' ? 'serif' : zenFont === 'sans' ? 'sans' : zenFont})`,

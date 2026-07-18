@@ -82,11 +82,16 @@ Tâche :
 Générez un contenu extrêmement riche, détaillé, précis et inspirant rédigé entièrement en ${langName} pour l'application spirituelle AsrarHub.
 Le résultat doit correspondre STRICTEMENT à la structure JSON spécifiée ci-dessous.
 
+RÈGLES CRUCIALES DE TRADUCTION ET GÉNÉRATION (SANS TRANSLITTÉRATION) :
+1. PAS DE TRANSLITTÉRATION : Ne générez JAMAIS de translittération phonétique latine pour les versets coraniques, les invocations ou les mots arabes (ex: ne pas écrire "Wadammarnā..." ou d'autres mots arabes écrits avec l'alphabet latin).
+2. ARABE ORIGINAL : Écrivez TOUJOURS les versets et les invocations directement en alphabet arabe original (avec tashkeel complet si possible).
+3. TRADUCTION DIRECTE : Fournissez une traduction claire, fluide et entièrement en ${langName} (Français/English/Hausa) juste en dessous du texte arabe original, sans insérer de mots translittérés de l'arabe.
+
 Champs requis dans le JSON final :
 1. "exegesis": Une exégèse (Tafsir) théologique claire, concise et profonde de ce verset, s'appuyant sur les commentaires classiques (Ibn Kathir, Al-Jalalayn) ou spirituels. Expliquez le contexte de révélation (Asbab al-Nuzul) si applicable, et la signification profonde des mots.
 2. "secrets": Les secrets spirituels ("Asrar") et bienfaits du verset dans la tradition ésotérique islamique. Quelles sont les bénédictions liées à sa récitation (ex: protection, sérénité, ouverture spirituelle, subsistance, soulagement) ? Citez les traditions ou enseignements spirituels correspondants.
 3. "actionable": Un tableau de 3 à 4 points concrets montrant comment un croyant peut appliquer ce verset ou s'en inspirer dans sa vie spirituelle et quotidienne moderne.
-4. "dua": Une invocation (Doua) inspirée ou liée à ce verset. Écrivez le texte de l'invocation en arabe, sa transcription phonétique (si applicable), et sa traduction.
+4. "dua": Une invocation (Doua) inspirée ou liée à ce verset. Écrivez le texte de l'invocation en arabe original (script arabe), suivi directement de sa traduction en ${langName}, sans aucune translittération phonétique en caractères latins.
 
 Format de réponse attendu : Un objet JSON valide respectant cette structure exacte. Ne mettez aucun texte d'enrobage avant ou après le JSON.
 `;
@@ -164,6 +169,71 @@ Règles d'éthique spirituelle :
     } catch (error: any) {
       console.error("Dream interpretation error:", error);
       res.status(500).json({ error: "Failed to generate interpretation" });
+    }
+  });
+
+  // AI-Powered Personalized Guidance (L'Asrar Génératif)
+  app.post("/api/gemini/asrar-conseil", async (req, res) => {
+    try {
+      const { task, hijriDay, hijriMonth, hijriYear, moonPhase, eventTitle } = req.body;
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ error: "Gemini API key is not configured" });
+      }
+
+      const ai = new GoogleGenAI({
+        apiKey,
+        httpOptions: {
+          headers: {
+            'User-Agent': 'aistudio-build',
+          }
+        }
+      });
+
+      const prompt = `
+Vous êtes un sage spirituel de grande sagesse ("Asrar"), un guide d'orientation comportementale et de préparation mentale.
+L'utilisateur sollicite votre conseil de posture mentale et de préparation spirituelle personnalisé pour une tâche professionnelle ou personnelle importante qu'il doit accomplir aujourd'hui.
+
+Contexte temporel, traditionnel et cosmique du jour :
+- Tâche à accomplir : "${task}"
+- Date de l'agenda traditionnel : ${hijriDay} ${hijriMonth} ${hijriYear} AH
+- Phase de la Lune : "${moonPhase || "Non spécifiée"}"
+- Événement ou influence spirituelle de ce jour de l'année : "${eventTitle || "Aucun événement particulier"}"
+
+Tâche :
+Générez une orientation spirituelle, philosophique, bienveillante et inspirante, et un conseil de préparation mentale unique pour cette journée en français.
+Le conseil doit lier subtilement la nature du défi/projet avec la lune ou le jour spirituel traditionnel pour en extraire une recommandation de sagesse ou de posture (ex: focus intérieur, courage bienveillant, silence attentif).
+
+Renvoyez STRICTEMENT un objet JSON valide contenant les champs suivants :
+1. "guidance": Un conseil spirituel de 3-4 phrases en français, rédigé avec élégance poétique et profondeur, pour guider la posture mentale de l'utilisateur.
+2. "focusKeyword": Un mot-clé de focus spirituel unique pour la journée (ex: "Clarté", "Discernement", "Audace douce", "Silence", "Résilience", "Alignement céleste").
+3. "spiritualPractice": Une pratique concrète et discrète recommandée pour cette journée (ex: "Récitation intérieure de 33 fois 'Ya Latif' avant d'entrer en réunion", "S'accorder 5 minutes de silence absolu avant de parler", "Une marche consciente d'ancrage").
+
+Ne mettez aucun texte d'enrobage avant ou après le JSON.
+      `;
+
+      const response = await generateWithRetry(ai, {
+        model: "gemini-3.5-flash",
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: "OBJECT",
+            properties: {
+              guidance: { type: "STRING", description: "Personalized spiritual and mental guidance" },
+              focusKeyword: { type: "STRING", description: "One or two words representing the core focus" },
+              spiritualPractice: { type: "STRING", description: "A simple, concrete recommendation/practice" }
+            },
+            required: ["guidance", "focusKeyword", "spiritualPractice"]
+          }
+        }
+      });
+
+      const resultText = response?.text?.trim() || "{}";
+      res.json(JSON.parse(resultText));
+    } catch (error: any) {
+      console.error("Asrar Conseil generation error:", error);
+      res.status(500).json({ error: "Failed to generate AI counsel" });
     }
   });
 
@@ -298,20 +368,29 @@ Règles de comportement et formatage (TRÈS IMPORTANT) :
       const languageName = targetLanguage === 'ha' ? 'Hausa' : 'English';
       
       const prompt = `
-You are a professional translator specializing in spiritual, Islamic, and esoteric literature.
-Translate the following article fields from French into ${languageName} (language code: "${targetLanguage}").
+You are an expert translator specializing in spiritual, Islamic, and esoteric literature.
+Your task is to translate ALL the text fields of the provided article from French into ${languageName} (language code: "${targetLanguage}").
 
-Strict Rules:
-1. Retain all Arabic text, Quranic verses, and Names of Allah written in Arabic script EXACTLY as they are. Do not translate or alter Arabic script.
-2. Translate all French/non-Arabic text into highly professional, elegant ${languageName}.
-3. Preserve all HTML formatting tags (like <p>, <strong>, <br>, <li>, etc.) inside the "content" field exactly as they are.
-4. Output the translation in JSON matching the requested schema.
+Strict translation mandates:
+1. ARABIC TEXT: Do NOT translate, modify, or romanize any Arabic script, Quranic verses, or Names of Allah written in Arabic. Keep them exactly as they are.
+2. TRANSLATE EVERYTHING ELSE: Every single French word, phrase, and sentence in the title, hook, content, and benefits MUST be translated into elegant, professional ${languageName}.
+3. NO TRANSLITERATION: You MUST NOT generate or use Latin/Roman transliterations of Arabic words or verses (e.g., do not write Arabic words like 'Bismillah', 'Alhamdulillah', or entire Quranic verses using the Latin alphabet).
+4. COMPLETE CONTENT BODY: You MUST translate the ENTIRE "content" body. Do NOT summarize it, do NOT leave any sections in French, and do NOT skip any paragraphs.
+5. HTML PRESERVATION: The "content" body contains HTML tags (like <p>, <strong>, <br>, <li>, <ul>, etc.). You must keep all these tags exactly in their original positions and structure, while translating the French text inside or between them.
+6. PROTECTED WORDS (CRITICAL): The words "arabe", "verset", "douas" (or "doua") MUST remain completely intact and untranslated (do not translate "arabe" to "Arabic" or "verset" to "verse" or "douas" to "prayers"/"supplications"). Keep these specific terms exactly as "arabe", "verset", "doua" or "douas" in the final output.
+7. JSON OUTPUT: Your output must match the requested JSON schema.
 
-Input Fields:
+Input Article to Translate:
+---
 Title: ${title || ""}
+---
 Hook: ${hook || ""}
-Content: ${content || ""}
+---
+Content (Body to translate while keeping HTML tags): 
+${content || ""}
+---
 Benefits: ${JSON.stringify(benefits || [])}
+---
 `;
 
       const response = await generateWithRetry(ai, {
@@ -377,7 +456,9 @@ Translate the following texts from French into ${languageName} (language code: "
 Strict Rules:
 1. Retain all Arabic text, Quranic verses, and Names of Allah written in Arabic script EXACTLY as they are. Do not translate or alter Arabic script.
 2. Translate all French/non-Arabic text into highly professional, elegant ${languageName}.
-3. Keep the keys exactly as they are.
+3. Do NOT translate the words "arabe", "verset", and "douas" (or "doua"). Keep these specific terms completely intact and unchanged (e.g., do not translate "arabe" to "Arabic", "verset" to "verse", or "doua" to "prayer").
+4. NO TRANSLITERATION: Do NOT use or produce Latin/Roman transliterations of any Arabic words or Quranic verses (e.g., do not write out Arabic words or verses using the Latin/Roman alphabet). Keep Arabic script as-is, translate French, but never add Latin phonetic transliterations.
+5. Keep the keys exactly as they are.
 
 Texts to translate:
 ${JSON.stringify(textArray)}

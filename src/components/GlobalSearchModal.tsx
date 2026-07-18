@@ -182,18 +182,24 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, on
     ];
   };
 
-  // Local Wirds & Recettes & Secrets
+  // Local/Cached/Firestore Wirds & Recettes & Secrets
   const getLocalAsrarItems = (): SearchItem[] => {
     try {
-      const items = getAsrarItems();
-      return items.map((item) => ({
+      let items = [];
+      const cached = localStorage.getItem('asrarhub_cached_articles_list');
+      if (cached) {
+        items = JSON.parse(cached);
+      } else {
+        items = getAsrarItems();
+      }
+      return items.map((item: any) => ({
         id: `asrar-${item.id}`,
         title: item.title,
-        description: item.content || '',
+        description: item.content || item.hook || '',
         category: 'quran' as const, // Wirds & Recipes grouped under Quran
         path: `/secret/${item.id}`,
         icon: <Sparkles className="text-emerald-500" size={16} />,
-        keywords: [item.title.toLowerCase(), item.content.toLowerCase(), item.category, 'wird', 'recette', 'secret']
+        keywords: [item.title.toLowerCase(), (item.content || '').toLowerCase(), item.category, 'wird', 'recette', 'secret']
       }));
     } catch (e) {
       console.warn("Error getting asrar items for search index:", e);

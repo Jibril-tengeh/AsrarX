@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Moon, Sun, Languages, User, Users, Shield, LogOut, LogIn, Bell, BellOff, Store, ChevronDown, ChevronUp, Megaphone, X, ExternalLink, MessageCircle } from 'lucide-react';
+import { Moon, Sun, Languages, User, Users, Shield, LogOut, LogIn, Bell, BellOff, Store, ChevronDown, ChevronUp, Megaphone, X, ExternalLink, MessageCircle, Search } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useFeatures } from '../contexts/FeatureContext';
@@ -336,6 +336,17 @@ export const Header: React.FC = () => {
               aria-label="Toggle dark mode"
             >
               {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+            </motion.button>
+
+            <motion.button
+              id="tour-search-global"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setSearchModalOpen(true)}
+              className="p-1.5 sm:p-2 rounded-full hover:bg-emerald-700 dark:hover:bg-emerald-900 text-white transition-colors"
+              aria-label="Global Search"
+            >
+              <Search size={18} />
             </motion.button>
 
 

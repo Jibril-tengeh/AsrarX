@@ -468,7 +468,7 @@ export const PaymentPage: React.FC = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8 pt-8 pb-40 sm:pb-24">
+    <div className="max-w-6xl mx-auto pl-4 pr-6 sm:px-6 lg:px-8 pt-8 pb-40 sm:pb-24">
       <div className="mb-8 text-center sm:text-left">
         <button onClick={handleBack} className="flex items-center justify-center sm:justify-start gap-2 text-gray-500 hover:text-gray-900 dark:hover:text-white transition-colors mb-4 w-full sm:w-auto">
           <ArrowLeft size={20} />
@@ -545,7 +545,7 @@ export const PaymentPage: React.FC = () => {
         {plans.map((plan) => {
           const pricing = detectUserCurrencyAndPrice(plan.priceNumber);
           return (
-            <div key={plan.id} className="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 lg:p-8 border border-gray-200 dark:border-gray-700 shadow-xl relative overflow-hidden group flex flex-col transition-transform hover:-translate-y-1">
+            <div key={plan.id} className="bg-white dark:bg-gray-800 rounded-3xl p-4 sm:p-6 lg:p-8 border border-gray-200 dark:border-gray-700 shadow-xl relative overflow-hidden group flex flex-col transition-transform hover:-translate-y-1">
               <div className={`absolute top-0 left-0 w-full h-2 bg-gradient-to-r ${plan.color}`}></div>
               <div className="flex flex-row items-center gap-3.5 mb-4 text-left">
                 <div className={`w-11 h-11 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br ${plan.color} flex items-center justify-center text-white shadow-lg transform group-hover:scale-110 transition-transform shrink-0`}>

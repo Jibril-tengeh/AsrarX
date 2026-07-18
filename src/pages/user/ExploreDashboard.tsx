@@ -12,7 +12,7 @@ import { BannerAd } from '../../components/BannerAd';
 import { PremiumWrapper } from '../../components/PremiumWrapper';
 
 export const ExploreDashboard: React.FC = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { featureToggles } = useFeatures();
 
   const categories = [
@@ -93,7 +93,22 @@ export const ExploreDashboard: React.FC = () => {
 
     const q = query(collection(db, 'articles'), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const allArticles = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const allArticles = snapshot.docs.map(doc => {
+        const data = doc.data();
+        const activeTitle = language === 'fr' ? data.title : data[`title_${language}`] || data.title;
+        const activeContent = language === 'fr' ? data.content : data[`content_${language}`] || data.content;
+        let activeHook = language === 'fr' ? data.hook : data[`hook_${language}`] || data.hook || '';
+        if (!activeHook && activeContent) {
+          activeHook = activeContent.replace(/<[^>]+>/g, '').substring(0, 120) + '...';
+        }
+        return {
+          id: doc.id,
+          ...data,
+          title: activeTitle,
+          content: activeContent,
+          hook: activeHook
+        };
+      });
       // Support filtering by Published
       const publishedArticles = allArticles.filter((art: any) => art.status === 'Published');
       if (publishedArticles.length > 0) {
@@ -141,7 +156,7 @@ export const ExploreDashboard: React.FC = () => {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [language]);
 
   const toggleBookmarkArticle = (articleId: string) => {
     let currentBookmarks = [];

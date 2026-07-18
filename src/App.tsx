@@ -202,7 +202,9 @@ const NetworkStatus = () => {
 
 const ProtectedToolsLayout: React.FC = () => {
   const { user } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const { featureToggles } = useFeatures();
+  const location = useLocation();
   const [showAuthModal, setShowAuthModal] = React.useState(false);
 
   if (!user) {
@@ -239,11 +241,98 @@ const ProtectedToolsLayout: React.FC = () => {
     );
   }
 
+  const isSubTool = location.pathname.startsWith('/tools/') && location.pathname !== '/tools';
+  if (isSubTool) {
+    const pathParts = location.pathname.split('/');
+    const toolId = pathParts[pathParts.length - 1];
+    const status = featureToggles[`tool_${toolId}`] || "active";
+    const isMaintenance = status === "maintenance";
+    
+    const advancedToolIds = [
+      "personal-wird", "lunar-mansions", "spiritual-compatibility", "ilm-jafar",
+      "grand-oaths", "elemental", "geomancy", "letters", "rouhaniyya", "taksir",
+      "sirr", "zairja", "khatim", "talsam", "istikhara", "khouddam", "awfaq", "quranic-faal"
+    ];
+    const isAdvanced = advancedToolIds.includes(toolId);
+    const isBlocked = (user?.mysteryToolsDisabled && isAdvanced) || status === "disabled";
+
+    if (isBlocked) {
+      return (
+        <div className="max-w-md mx-auto p-6 sm:p-8 text-center flex flex-col items-center justify-center min-h-[70vh]">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-xl border border-red-100 dark:border-red-900/30 w-full"
+          >
+            <div className="w-16 h-16 bg-red-100 dark:bg-red-900/40 rounded-full flex items-center justify-center text-red-600 dark:text-red-400 mb-6 mx-auto">
+              <ShieldAlert size={32} />
+            </div>
+            
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
+              {language === 'fr' ? 'Accès Bloqué' : language === 'ha' ? 'An Rufe Hanya' : 'Access Blocked'}
+            </h2>
+            
+            <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed mb-8">
+              {language === 'fr' 
+                ? 'Cet outil a été bloqué pour votre compte. Veuillez contacter l\'administrateur pour plus d\'informations.' 
+                : language === 'ha'
+                ? 'An rufe wannan kayan aiki ga asusunka. Tuntuɓi mai gudanarwa don ƙarin bayani.'
+                : 'This tool has been blocked for your account. Please contact the administrator for more information.'}
+            </p>
+            
+            <Link
+              to="/tools"
+              className="w-full flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-bold py-3 px-6 rounded-2xl transition-all"
+            >
+              {language === 'fr' ? 'Retour aux Outils' : language === 'ha' ? 'Koma ga Kayan Aiki' : 'Back to Tools'}
+            </Link>
+          </motion.div>
+        </div>
+      );
+    }
+
+    if (isMaintenance) {
+      return (
+        <div className="max-w-md mx-auto p-6 sm:p-8 text-center flex flex-col items-center justify-center min-h-[70vh]">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-xl border border-amber-100 dark:border-amber-900/30 w-full"
+          >
+            <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/40 rounded-full flex items-center justify-center text-amber-600 dark:text-amber-400 mb-6 mx-auto animate-pulse">
+              <RefreshCw size={32} />
+            </div>
+            
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
+              {language === 'fr' ? 'Outil en Maintenance' : language === 'ha' ? 'Kayan Aiki a Gyara' : 'Tool under Maintenance'}
+            </h2>
+            
+            <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed mb-8">
+              {language === 'fr' 
+                ? 'Cet outil est temporairement en maintenance pour des ajustements techniques ou spirituels. Veuillez réessayer plus tard.' 
+                : language === 'ha'
+                ? 'Wannan kayan aiki yana fuskantar gyara na ɗan lokaci. Da fatan za a sake gwadawa daga baya.'
+                : 'This tool is temporarily under maintenance for technical or spiritual adjustments. Please try again later.'}
+            </p>
+            
+            <Link
+              to="/tools"
+              className="w-full flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-bold py-3 px-6 rounded-2xl transition-all"
+            >
+              {language === 'fr' ? 'Retour aux Outils' : language === 'ha' ? 'Koma ga Kayan Aiki' : 'Back to Tools'}
+            </Link>
+          </motion.div>
+        </div>
+      );
+    }
+  }
+
   return <Outlet />;
 };
 
 export default function App() {
   const { user } = useAuth();
+  const { language } = useLanguage();
   const { featureToggles } = useFeatures();
   const { isPlaying: globalIsPlaying, currentTrack, quranRepeatCount: repeatCount, setQuranRepeatCount: setRepeatCount } = useAudio();
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = React.useState(
@@ -330,6 +419,7 @@ export default function App() {
   React.useEffect(() => {
     let lastCheckedMinute = -1;
     const interval = setInterval(() => {
+      // 1. Process custom manually created reminders (asrar_reminders)
       let reminders = [];
       try {
         const parsed = JSON.parse(localStorage.getItem('asrar_reminders') || '[]');
@@ -339,26 +429,94 @@ export default function App() {
       } catch (e) {
         console.error("Error parsing reminders", e);
       }
+
+      // 2. Process automatic prayer times and recurring Dhikr reminders (asrar_reminders_config)
+      let autoRemindersConfig: any = null;
+      try {
+        const saved = localStorage.getItem('asrar_reminders_config');
+        if (saved) {
+          autoRemindersConfig = JSON.parse(saved);
+        }
+      } catch (e) {
+        console.error("Error parsing auto reminders config", e);
+      }
+
       const now = new Date();
       const currentMinute = now.getMinutes();
+      const todayDateStr = now.toDateString();
+
+      // Trigger standard notifications using the service worker if available, falling back to window.Notification
+      const dispatchNotification = (title: string, body: string) => {
+        try {
+          if ('Notification' in window && window.Notification && window.Notification.permission === 'granted') {
+            if ('serviceWorker' in navigator) {
+              navigator.serviceWorker.ready.then((registration) => {
+                registration.showNotification(title, {
+                  body,
+                  icon: '/icon-192.png',
+                  badge: '/icon-192.png'
+                });
+              }).catch(() => {
+                new Notification(title, { body });
+              });
+            } else {
+              new Notification(title, { body });
+            }
+          }
+        } catch (e) {
+          console.error("Notification dispatch error", e);
+        }
+      };
 
       if (currentMinute !== lastCheckedMinute) {
         lastCheckedMinute = currentMinute;
         const currentTimeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
         
+        // Custom manually created reminders
         reminders.forEach((rem: any) => {
           if (rem.enabled && rem.time === currentTimeString) {
-            try {
-              if ('Notification' in window && window.Notification && window.Notification.permission === 'granted') {
-                const title = rem.isZikr ? 'Rappel de Zikr Quotidien 📿' : 'AsrarHub';
-                const body = rem.isZikr ? `Il est temps pour votre Zikr : ${rem.label}` : `Il est temps pour : ${rem.label}`;
-                new Notification(title, { body });
-              }
-            } catch (e) {
-              console.error("Notification access error", e);
-            }
+            const title = rem.isZikr ? 'Rappel de Zikr Quotidien 📿' : 'AsrarHub';
+            const body = rem.isZikr ? `Il est temps pour votre Zikr : ${rem.label}` : `Il est temps pour : ${rem.label}`;
+            dispatchNotification(title, body);
           }
         });
+
+        // Automatic Prayer Times reminders
+        if (autoRemindersConfig && autoRemindersConfig.prayerEnabled && autoRemindersConfig.prayers) {
+          Object.entries(autoRemindersConfig.prayers).forEach(([prayer, time]) => {
+            if (time === currentTimeString) {
+              const lastPrayerDate = autoRemindersConfig.lastPrayerReminders?.[prayer];
+              if (lastPrayerDate !== todayDateStr) {
+                // Trigger notification
+                const title = `Heure de la Prière 🕌`;
+                const body = `C'est l'heure de la prière de ${prayer} (${time}). Prenez un moment sacré pour invoquer Dieu.`;
+                dispatchNotification(title, body);
+
+                // Update last triggering date
+                if (!autoRemindersConfig.lastPrayerReminders) {
+                  autoRemindersConfig.lastPrayerReminders = {};
+                }
+                autoRemindersConfig.lastPrayerReminders[prayer] = todayDateStr;
+                localStorage.setItem('asrar_reminders_config', JSON.stringify(autoRemindersConfig));
+              }
+            }
+          });
+        }
+      }
+
+      // 3. Process periodic recurring Dhikr reminders
+      if (autoRemindersConfig && autoRemindersConfig.dhikrEnabled) {
+        const lastDhikrTime = autoRemindersConfig.lastDhikrReminder || 0;
+        const intervalMs = (autoRemindersConfig.dhikrInterval || 60) * 60 * 1000;
+        if (Date.now() - lastDhikrTime >= intervalMs) {
+          const title = `Rappel de Dhikr Récurrent 📿`;
+          const body = `C'est l'heure d'évoquer Allah. Prenez une minute pour faire votre Zikr et purifier votre esprit.`;
+          dispatchNotification(title, body);
+
+          // Update last triggering time
+          autoRemindersConfig.lastDhikrReminder = Date.now();
+          localStorage.setItem('asrar_reminders_config', JSON.stringify(autoRemindersConfig));
+        }
       }
     }, 10000); // Check every 10 seconds
 
@@ -387,6 +545,44 @@ export default function App() {
       });
     }
   }, []);
+
+  // Banned User Intercept
+  if (user && (user as any).isBanned) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-3xl p-8 max-w-md w-full shadow-2xl border border-red-100 dark:border-red-900/30 text-center">
+          <div className="w-16 h-16 bg-red-100 dark:bg-red-900/40 rounded-full flex items-center justify-center text-red-600 dark:text-red-400 mb-6 mx-auto animate-bounce">
+            <ShieldAlert size={32} />
+          </div>
+          <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-3">
+            {language === 'fr' ? 'Compte Suspendu' : language === 'ha' ? 'An Dakatar da Asusunka' : 'Account Suspended'}
+          </h2>
+          <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed mb-6">
+            {language === 'fr' 
+              ? 'Votre compte a été banni par l\'administrateur. Vous n\'avez plus accès aux contenus, secrets et outils spirituels.' 
+              : language === 'ha'
+              ? 'An dakatar da asusunka ta hannun mai gudanarwa. Ba ka da damar shiga cikin abubuwan asiri da kayan aiki.'
+              : 'Your account has been banned by the administrator. You no longer have access to content, secrets, and spiritual tools.'}
+          </p>
+          <div className="text-xs text-red-500 font-semibold border border-red-100 dark:border-red-900/20 bg-red-50/50 dark:bg-red-900/10 rounded-xl p-3 mb-6">
+            {language === 'fr'
+              ? 'Si vous pensez qu\'il s\'agit d\'une erreur, veuillez contacter l\'administrateur.'
+              : language === 'ha'
+              ? 'Idan kana tunanin wannan kuskure ne, tuntuɓi mai gudanarwa.'
+              : 'If you think this is an error, please contact the administrator.'}
+          </div>
+          <button 
+            onClick={() => {
+              import('./lib/firebase').then(({ auth }) => auth.signOut());
+            }}
+            className="w-full py-3 px-4 rounded-xl bg-gray-150 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors cursor-pointer"
+          >
+            {language === 'fr' ? 'Se Déconnecter' : language === 'ha' ? 'Fita daga Asusun' : 'Sign Out'}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (!isCompletedOnboarding) {
     return <Onboarding onComplete={() => {
@@ -429,6 +625,7 @@ export default function App() {
                 <Route path="/user/dashboard" element={<UserDashboard />} />
                 <Route path="/secret/:id" element={<SecretDetail />} />
                 <Route path="/explore" element={<ExploreDashboard />} />
+                <Route path="/explore/:categoryId" element={<UserDashboard />} />
                 <Route path="/store" element={<Store />} />
                 <Route path="/explore/quizz" element={<Quizz />} />
                 <Route path="/explore/lexique" element={<Lexique />} />

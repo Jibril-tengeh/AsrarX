@@ -95,24 +95,33 @@ const checkIndexedDBFunctional = (): Promise<boolean> => {
 
 // Since we now initialize Firestore with persistentLocalCache directly,
 // we also explicitly configure enableIndexedDbPersistence to optimize local data caching
-// for mobile browser environments (Capacitor) and ensure maximum stability.
-try {
-  enableIndexedDbPersistence(db)
-    .then(() => {
-      console.log("[Firestore] Explicit IndexedDB persistence enabled successfully.");
-    })
-    .catch((err) => {
-      if (err.code === 'failed-precondition') {
-        console.warn('[Firestore] Persistence failed-precondition (multiple tabs open)');
-      } else if (err.code === 'unimplemented') {
-        console.warn('[Firestore] Persistence unimplemented in this browser');
-      } else {
-        console.error('[Firestore] Error enabling offline persistence:', err);
-      }
-    });
-} catch (e) {
-  console.warn("[Firestore] Error during explicit persistence initialization:", e);
-}
+// for mobile browser environments (Capacitor) and ensure maximum stability,
+// but only if IndexedDB is verified functional and we are not in an iframe sandbox.
+checkIndexedDBFunctional().then((functional) => {
+  if (functional && !isMobileOrIframe) {
+    try {
+      enableIndexedDbPersistence(db)
+        .then(() => {
+          console.log("[Firestore] Explicit IndexedDB persistence enabled successfully.");
+        })
+        .catch((err) => {
+          if (err.code === 'failed-precondition') {
+            console.warn('[Firestore] Persistence failed-precondition (multiple tabs open)');
+          } else if (err.code === 'unimplemented') {
+            console.warn('[Firestore] Persistence unimplemented in this browser');
+          } else {
+            console.error('[Firestore] Error enabling offline persistence:', err);
+          }
+        });
+    } catch (e) {
+      console.warn("[Firestore] Error during explicit persistence initialization:", e);
+    }
+  } else {
+    console.log("[Firestore] Skipping explicit enableIndexedDbPersistence to avoid iframe sandbox connection hangs.");
+  }
+}).catch((e) => {
+  console.warn("[Firestore] Error during persistence check:", e);
+});
 
 export const googleProvider = new GoogleAuthProvider();
 

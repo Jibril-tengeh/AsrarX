@@ -33,6 +33,42 @@ export const DailyDhikrTracker: React.FC = () => {
   const [testSuccess, setTestSuccess] = useState<boolean | null>(null);
   const [testError, setTestError] = useState('');
 
+  // Reminders Configuration
+  const [remindersConfig, setRemindersConfig] = useState(() => {
+    try {
+      const saved = localStorage.getItem('asrar_reminders_config');
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    return {
+      prayerEnabled: true,
+      dhikrEnabled: false,
+      dhikrInterval: 60, // in minutes
+      prayers: {
+        Fajr: "05:30",
+        Dhuhr: "12:45",
+        Asr: "16:15",
+        Maghrib: "18:45",
+        Isha: "20:15"
+      },
+      lastPrayerReminders: {
+        Fajr: "",
+        Dhuhr: "",
+        Asr: "",
+        Maghrib: "",
+        Isha: ""
+      },
+      lastDhikrReminder: 0
+    };
+  });
+
+  useEffect(() => {
+    localStorage.setItem('asrar_reminders_config', JSON.stringify(remindersConfig));
+  }, [remindersConfig]);
+
   // Automatically attempt to retrieve/refresh token if permission is already granted and token isn't stored
   useEffect(() => {
     if ('Notification' in window && Notification.permission === 'granted' && !fcmToken) {
@@ -478,6 +514,130 @@ export const DailyDhikrTracker: React.FC = () => {
                 >
                   Copier
                 </button>
+              </div>
+            </div>
+
+            {/* Automatic Scheduled Reminders Section */}
+            <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-700/50 space-y-6">
+              <div>
+                <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                  {language === 'fr' ? 'Configuration des Rappels Automatiques' : language === 'ha' ? 'Saita Tunasarwa ta Atomatik' : 'Automatic Reminders Setup'}
+                </h3>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+                  {language === 'fr' 
+                    ? 'Définissez des rappels basés sur les horaires de vos prières ou des rappels réguliers pour invoquer Dieu.' 
+                    : 'Configure reminders for your daily prayer hours or set standard recurring intervals for Dhikr.'}
+                </p>
+              </div>
+
+              {/* Prayer Reminders */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-xs font-bold text-gray-800 dark:text-gray-200">
+                      {language === 'fr' ? '🕌 Rappels des Horaires de Prière' : '🕌 Prayer Hour Reminders'}
+                    </h4>
+                    <p className="text-[10px] text-gray-500">
+                      {language === 'fr' ? 'Recevoir une alerte pour chaque prière obligatoire' : 'Get notified at each mandatory prayer time'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setRemindersConfig((prev: any) => ({ ...prev, prayerEnabled: !prev.prayerEnabled }))}
+                    className={`w-10 h-6 rounded-full p-1 transition-colors duration-200 focus:outline-none ${remindersConfig.prayerEnabled ? 'bg-emerald-505' : 'bg-gray-300 dark:bg-gray-600'}`}
+                    style={{ backgroundColor: remindersConfig.prayerEnabled ? '#10b981' : undefined }}
+                  >
+                    <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${remindersConfig.prayerEnabled ? 'translate-x-4' : 'translate-x-0'}`} />
+                  </button>
+                </div>
+
+                {remindersConfig.prayerEnabled && (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 p-3.5 bg-gray-50 dark:bg-gray-900/40 rounded-2xl border border-gray-100 dark:border-gray-800/80"
+                  >
+                    {Object.entries(remindersConfig.prayers).map(([prayer, time]) => (
+                      <div key={prayer} className="flex flex-col gap-1">
+                        <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500 capitalize">{prayer}</span>
+                        <input
+                          type="time"
+                          value={time as string}
+                          onChange={(e) => {
+                            const newTime = e.target.value;
+                            setRemindersConfig((prev: any) => ({
+                              ...prev,
+                              prayers: {
+                                ...prev.prayers,
+                                [prayer]: newTime
+                              }
+                            }));
+                          }}
+                          className="w-full bg-white dark:bg-gray-800 border border-gray-150 dark:border-gray-700 rounded-lg px-2 py-1 text-xs font-semibold text-gray-700 dark:text-gray-300 outline-none focus:border-emerald-500"
+                        />
+                      </div>
+                    ))}
+                  </motion.div>
+                )}
+              </div>
+
+              {/* Dhikr Reminders */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="text-xs font-bold text-gray-800 dark:text-gray-200">
+                      {language === 'fr' ? '📿 Rappels de Dhikr Récurrents' : '📿 Recurring Dhikr Reminders'}
+                    </h4>
+                    <p className="text-[10px] text-gray-500">
+                      {language === 'fr' ? 'Recevoir une alerte à intervalle régulier pour invoquer Dieu' : 'Get periodic triggers to remember God throughout the day'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setRemindersConfig((prev: any) => ({ ...prev, dhikrEnabled: !prev.dhikrEnabled, lastDhikrReminder: Date.now() }))}
+                    className={`w-10 h-6 rounded-full p-1 transition-colors duration-200 focus:outline-none ${remindersConfig.dhikrEnabled ? 'bg-emerald-505' : 'bg-gray-300 dark:bg-gray-600'}`}
+                    style={{ backgroundColor: remindersConfig.dhikrEnabled ? '#10b981' : undefined }}
+                  >
+                    <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${remindersConfig.dhikrEnabled ? 'translate-x-4' : 'translate-x-0'}`} />
+                  </button>
+                </div>
+
+                {remindersConfig.dhikrEnabled && (
+                  <motion.div 
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    className="p-3.5 bg-gray-50 dark:bg-gray-900/40 rounded-2xl border border-gray-100 dark:border-gray-800/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3"
+                  >
+                    <div className="flex-1">
+                      <span className="text-[10px] font-bold text-gray-400 dark:text-gray-500">
+                        {language === 'fr' ? 'Intervalle de rappel' : 'Reminder Interval'}
+                      </span>
+                      <p className="text-[11px] text-gray-500 mt-0.5">
+                        {language === 'fr' ? 'Sélectionnez le rythme idéal pour vos invocations.' : 'Select the optimal interval for your daily chants.'}
+                      </p>
+                    </div>
+
+                    <select
+                      value={remindersConfig.dhikrInterval}
+                      onChange={(e) => {
+                        const interval = parseInt(e.target.value);
+                        setRemindersConfig((prev: any) => ({
+                          ...prev,
+                          dhikrInterval: interval,
+                          lastDhikrReminder: Date.now() // reset counter
+                        }));
+                      }}
+                      className="bg-white dark:bg-gray-800 border border-gray-150 dark:border-gray-700 rounded-xl px-3 py-2 text-xs font-bold text-gray-700 dark:text-gray-300 outline-none focus:border-emerald-500 cursor-pointer min-w-[120px]"
+                    >
+                      <option value="15">{language === 'fr' ? 'Toutes les 15 min' : 'Every 15 min'}</option>
+                      <option value="30">{language === 'fr' ? 'Toutes les 30 min' : 'Every 30 min'}</option>
+                      <option value="60">{language === 'fr' ? 'Chaque heure' : 'Every 1 hour'}</option>
+                      <option value="120">{language === 'fr' ? 'Toutes les 2 h' : 'Every 2 hours'}</option>
+                      <option value="180">{language === 'fr' ? 'Toutes les 3 h' : 'Every 3 hours'}</option>
+                      <option value="240">{language === 'fr' ? 'Toutes les 4 h' : 'Every 4 hours'}</option>
+                      <option value="360">{language === 'fr' ? 'Toutes les 6 h' : 'Every 6 hours'}</option>
+                    </select>
+                  </motion.div>
+                )}
               </div>
             </div>
           </div>

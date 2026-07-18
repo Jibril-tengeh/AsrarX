@@ -4,17 +4,18 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useFeatures } from '../../contexts/FeatureContext';
 import { db } from '../../lib/firebase';
 import { collection, query, orderBy, onSnapshot, doc } from 'firebase/firestore';
-import { Search, LayoutGrid, Square, List, Filter, X, BookOpen, Store, Award, MapPin, Trophy, ShieldCheck, ChevronDown, Bookmark, Flame, Shield, RefreshCw, Quote, Folder, Plus, Library, Music, Pencil, Trash2, Sliders, Sparkles } from 'lucide-react';
+import { Search, LayoutGrid, Square, List, Filter, X, BookOpen, Store, Award, MapPin, Trophy, ShieldCheck, ChevronDown, Bookmark, Flame, Shield, RefreshCw, Quote, Folder, Plus, Library, Music, Pencil, Trash2, Sliders, Sparkles, Calendar } from 'lucide-react';
 import { SecretCard, LayoutMode } from '../../components/SecretCard';
 import { HabitTracker } from '../../components/HabitTracker';
 import { DailyGoalsTracker } from '../../components/DailyGoalsTracker';
 import { HijriCalendarWidget } from '../../components/HijriCalendarWidget';
 import { OnboardingTour } from '../../components/OnboardingTour';
 import { GlobalSearchModal } from '../../components/GlobalSearchModal';
+import { MysticCalendarModal } from '../../components/MysticCalendarModal';
 import { getAsrarItems } from '../../data/store';
 import { AsrarItem, Category } from '../../types';
 import { motion, AnimatePresence } from 'motion/react';
-import { useLocation, Link } from 'react-router-dom';
+import { useLocation, Link, useParams } from 'react-router-dom';
 
 import { getApiUrl } from '../../lib/api';
 
@@ -27,6 +28,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
   const { user } = useAuth();
   const { featureToggles } = useFeatures();
   const location = useLocation();
+  const { categoryId } = useParams<{ categoryId?: string }>();
   const [items, setItems] = useState<AsrarItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -50,6 +52,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isTopContributorsOpen, setIsTopContributorsOpen] = useState(false);
   const filterRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -59,6 +62,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
   const [quranBookmarks, setQuranBookmarks] = useState<any[]>([]);
   const [lastReadPosition, setLastReadPosition] = useState<{ surahNumber: number, ayahNumberInSurah: number, surahName: string } | null>(null);
   const [activityData, setActivityData] = useState<{ [date: string]: number }>({});
+  const [readingHistory, setReadingHistory] = useState<any[]>([]);
 
   const [aiSearchResults, setAiSearchResults] = useState<string[] | null>(null);
   const [aiMessage, setAiMessage] = useState<string | null>(null);
@@ -138,8 +142,12 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
   };
 
   useEffect(() => {
-    setFilter(initialFilter);
-  }, [initialFilter, location.pathname]);
+    if (categoryId) {
+      setFilter(categoryId as any);
+    } else {
+      setFilter(initialFilter);
+    }
+  }, [categoryId, initialFilter, location.pathname]);
 
   // Pull to refresh logic
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -221,16 +229,27 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
         if (language === 'en' && data.title_en) titleText = data.title_en;
         if (language === 'ha' && data.title_ha) titleText = data.title_ha;
 
+        const hasManual = language !== 'fr' && !!(data[`title_${language}`] || data[`content_${language}`]);
         return {
           id: doc.id,
           title: titleText,
           hook: hookText,
           category: data.category || 'recette',
-          content: data.content,
-          benefits: [],
+          content: activeContent,
+          benefits: data.benefits || [],
           imageUrl: data.thumbnail,
           isPremium: data.isPremium || false,
-          createdAt: data.createdAt ? new Date(data.createdAt).toISOString() : new Date().toISOString()
+          createdAt: data.createdAt ? new Date(data.createdAt).toISOString() : new Date().toISOString(),
+          title_en: data.title_en,
+          content_en: data.content_en,
+          hook_en: data.hook_en,
+          title_ha: data.title_ha,
+          content_ha: data.content_ha,
+          hook_ha: data.hook_ha,
+          title_fr: data.title,
+          content_fr: data.content,
+          hook_fr: data.hook,
+          hasManualTranslation: hasManual
         } as AsrarItem;
       });
       if (firestoreItems.length > 0) {
@@ -294,6 +313,15 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
         setLastReadPosition(JSON.parse(savedRead));
       }
     } catch(e) {}
+
+    try {
+      const rawHistory = localStorage.getItem('asrar_reading_history');
+      if (rawHistory) {
+        setReadingHistory(JSON.parse(rawHistory));
+      }
+    } catch (e) {
+      setReadingHistory([]);
+    }
     
     // Mock activity data or generate from stats
     try {
@@ -325,6 +353,14 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
         setBookmarks(Array.isArray(parsed) ? parsed : []);
       } catch (e) {
         setBookmarks([]);
+      }
+      try {
+        const rawHistory = localStorage.getItem('asrar_reading_history');
+        if (rawHistory) {
+          setReadingHistory(JSON.parse(rawHistory));
+        }
+      } catch (e) {
+        setReadingHistory([]);
       }
     };
     window.addEventListener('focus', handleFocus);
@@ -522,6 +558,15 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
         )}
 
         <button
+          id="tour-calendar-mystic"
+          onClick={() => setIsCalendarOpen(true)}
+          className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50 hover:bg-amber-100 dark:hover:bg-amber-900/50 h-[34px] w-[34px] sm:h-[42px] sm:w-[42px] flex items-center justify-center shadow-sm flex-shrink-0 transition-opacity duration-200 ${isSearchOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+          title="Calendrier Mystique"
+        >
+          <Calendar className="w-[15px] h-[15px] sm:w-[18px] sm:h-[18px]" />
+        </button>
+
+        <button
           id="tour-search"
           onClick={() => setIsGlobalSearchOpen(true)}
           className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 h-[34px] w-[34px] sm:h-[42px] sm:w-[42px] flex items-center justify-center shadow-sm flex-shrink-0 transition-opacity duration-200 ${isSearchOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
@@ -712,6 +757,112 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
       <div className="mb-4">
         <DailyGoalsTracker />
       </div>
+
+      {/* Reading History */}
+      {readingHistory.length > 0 && (
+        <div className="mb-4 bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+          <div className="flex justify-between items-center mb-4">
+            <div>
+              <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <RefreshCw className="text-emerald-500 animate-spin-slow" size={18} />
+                {language === 'fr' ? 'Dernières lectures' : language === 'ha' ? 'Tarihin Karatu' : 'Reading History'}
+              </h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                {language === 'fr' ? 'Reprenez rapidement la lecture de vos derniers secrets ou wirds consultés.' :
+                 language === 'ha' ? 'Koma baya cikin sauƙi don duba sirruka da zikirai na baya.' :
+                 'Quickly resume reading your recently viewed secrets or wirds.'}
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                if (confirm(language === 'fr' ? 'Voulez-vous effacer votre historique de lecture ?' : language === 'ha' ? 'Shin kuna son goge tarihin karatun ku?' : 'Do you want to clear your reading history?')) {
+                  localStorage.removeItem('asrar_reading_history');
+                  setReadingHistory([]);
+                }
+              }}
+              className="text-xs text-red-500 hover:text-red-600 dark:hover:text-red-400 font-medium px-2.5 py-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20 transition-all"
+            >
+              {language === 'fr' ? "Effacer" : language === 'ha' ? "Goge" : "Clear"}
+            </button>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {readingHistory.map((item) => {
+              const formatTimeAgo = (timestamp: number) => {
+                const seconds = Math.floor((Date.now() - timestamp) / 1000);
+                const minutes = Math.floor(seconds / 60);
+                const hours = Math.floor(minutes / 60);
+                const days = Math.floor(hours / 24);
+
+                if (language === 'fr') {
+                  if (seconds < 60) return "À l'instant";
+                  if (minutes < 60) return `Il y a ${minutes} min`;
+                  if (hours < 24) return `Il y a ${hours} h`;
+                  return `Il y a ${days} j`;
+                } else if (language === 'ha') {
+                  if (seconds < 60) return "Yanzu-yanzu";
+                  if (minutes < 60) return `Minti ${minutes} da suka wuce`;
+                  if (hours < 24) return `Awanni ${hours} da suka wuce`;
+                  return `Kwana ${days} da suka wuce`;
+                } else {
+                  if (seconds < 60) return "Just now";
+                  if (minutes < 60) return `${minutes}m ago`;
+                  if (hours < 24) return `${hours}h ago`;
+                  return `${days}d ago`;
+                }
+              };
+
+              const categoryColors: Record<string, string> = {
+                secret: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-amber-100 dark:border-amber-900/50',
+                wird: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400 border-indigo-100 dark:border-indigo-900/50',
+                recette: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-100 dark:border-emerald-900/50',
+              };
+
+              return (
+                <Link
+                  key={item.id}
+                  to={`/secret/${item.id}`}
+                  className="flex items-center gap-3 p-3 bg-gray-50/50 dark:bg-gray-750/30 hover:bg-emerald-50/50 dark:hover:bg-emerald-900/10 rounded-2xl border border-gray-100 dark:border-gray-700/50 hover:border-emerald-100 dark:hover:border-emerald-800 transition-all group"
+                >
+                  <div className="w-10 h-10 rounded-xl overflow-hidden bg-emerald-500/10 flex-shrink-0 flex items-center justify-center relative">
+                    {item.imageUrl ? (
+                      <img
+                        referrerPolicy="no-referrer"
+                        src={item.imageUrl}
+                        alt=""
+                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                      />
+                    ) : (
+                      <BookOpen className="text-emerald-500 w-5 h-5" />
+                    )}
+                    {item.isPremium && (
+                      <div className="absolute top-0 right-0 bg-amber-500 text-white p-0.5 rounded-bl-lg text-[8px] font-bold">
+                        ★
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                      <span className={`text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-md border ${categoryColors[item.category] || categoryColors.secret}`}>
+                        {item.category === 'wird' ? (language === 'fr' ? 'Verset' : language === 'ha' ? 'Wirdi' : 'Verse') :
+                         item.category === 'secret' ? 'Secret' :
+                         (language === 'fr' ? 'Recette' : language === 'ha' ? 'Girke-girke' : 'Recipe')}
+                      </span>
+                      <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">
+                        {formatTimeAgo(item.viewedAt)}
+                      </span>
+                    </div>
+                    <h4 className="font-semibold text-sm text-gray-900 dark:text-white truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                      {item.title}
+                    </h4>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="mb-4 grid grid-cols-1 gap-4">
         {/* My Quran Bookmarks */}
@@ -954,6 +1105,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
         )}
       </div>
       <GlobalSearchModal isOpen={isGlobalSearchOpen} onClose={() => setIsGlobalSearchOpen(false)} />
+      <MysticCalendarModal isOpen={isCalendarOpen} onClose={() => setIsCalendarOpen(false)} />
     </div>
   );
 };

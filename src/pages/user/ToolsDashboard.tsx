@@ -27,6 +27,8 @@ import {
   X,
   Search,
   Share2,
+  ShieldAlert,
+  RefreshCw,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useLanguage } from "../../contexts/LanguageContext";
@@ -330,7 +332,7 @@ const tools = [
 import { BannerAd } from "../../components/BannerAd";
 
 export const ToolsDashboard: React.FC = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [showGuide, setShowGuide] = useState(false);
@@ -367,6 +369,16 @@ export const ToolsDashboard: React.FC = () => {
   const [featureToggles, setFeatureToggles] = useState<any>({});
   const [isLoading, setIsLoading] = useState(true);
   const [premiumModalOpen, setPremiumModalOpen] = useState<{
+    isOpen: boolean;
+    title: string;
+  }>({ isOpen: false, title: "" });
+
+  const [maintenanceModalOpen, setMaintenanceModalOpen] = useState<{
+    isOpen: boolean;
+    title: string;
+  }>({ isOpen: false, title: "" });
+
+  const [blockedModalOpen, setBlockedModalOpen] = useState<{
     isOpen: boolean;
     title: string;
   }>({ isOpen: false, title: "" });
@@ -709,20 +721,21 @@ export const ToolsDashboard: React.FC = () => {
               const status = featureToggles[`tool_${tool.id}`] || "active";
               const isMaintenance = status === "maintenance";
               const isPremium = status === "premium";
+              const isBlockedForUser = (user?.mysteryToolsDisabled && tool.level === "advanced") || status === "disabled";
 
               const content = (
                 <div
-                  className={`h-full rounded-2xl bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 p-4 transition-all duration-300 relative overflow-hidden group ${!tool.comingSoon && !isMaintenance ? "hover:shadow-md hover:-translate-y-1" : "opacity-75"}`}
+                  className={`h-full rounded-2xl bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 p-4 transition-all duration-300 relative overflow-hidden group ${!tool.comingSoon && !isMaintenance && !isBlockedForUser ? "hover:shadow-md hover:-translate-y-1" : "opacity-75"}`}
                 >
                   {/* Background Decoration */}
                   <div
-                    className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${tool.color} rounded-bl-full opacity-10 transition-opacity ${!tool.comingSoon && !isMaintenance ? "group-hover:opacity-20" : ""}`}
+                    className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${tool.color} rounded-bl-full opacity-10 transition-opacity ${!tool.comingSoon && !isMaintenance && !isBlockedForUser ? "group-hover:opacity-20" : ""}`}
                   ></div>
 
                   <div className="relative z-10 flex flex-col h-full">
                     <div className="flex items-center gap-3 mb-2">
                       <div
-                        className={`w-10 h-10 shrink-0 rounded-xl bg-gradient-to-br ${tool.color} text-white flex items-center justify-center shadow-sm ${!tool.comingSoon && !isMaintenance ? "group-hover:scale-110 transition-transform relative" : "relative"}`}
+                        className={`w-10 h-10 shrink-0 rounded-xl bg-gradient-to-br ${tool.color} text-white flex items-center justify-center shadow-sm ${!tool.comingSoon && !isMaintenance && !isBlockedForUser ? "group-hover:scale-110 transition-transform relative" : "relative"}`}
                       >
                         <tool.icon size={20} />
                         {isPremium && (
@@ -745,7 +758,12 @@ export const ToolsDashboard: React.FC = () => {
                             Maintenance
                           </span>
                         )}
-                        {isPremium && !tool.comingSoon && !isMaintenance && (
+                        {isBlockedForUser && !tool.comingSoon && (
+                          <span className="bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 text-[9px] px-1.5 py-0.5 rounded-full font-semibold uppercase tracking-widest shrink-0">
+                            {language === 'fr' ? 'Bloqué' : language === 'ha' ? 'Kulle' : 'Blocked'}
+                          </span>
+                        )}
+                        {isPremium && !tool.comingSoon && !isMaintenance && !isBlockedForUser && (
                           <span className="bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-400 text-[9px] px-1.5 py-0.5 rounded-full font-semibold uppercase tracking-widest shrink-0">
                             Premium
                           </span>
@@ -790,8 +808,20 @@ export const ToolsDashboard: React.FC = () => {
                   ) : (
                     <div
                       onClick={() => {
-                        if (isMaintenance) {
-                          navigate(tool.path);
+                        if (isBlockedForUser) {
+                          setBlockedModalOpen({
+                            isOpen: true,
+                            title: t(`tools.${tool.id}.title`) !== `tools.${tool.id}.title`
+                              ? t(`tools.${tool.id}.title`)
+                              : tool.title,
+                          });
+                        } else if (isMaintenance) {
+                          setMaintenanceModalOpen({
+                            isOpen: true,
+                            title: t(`tools.${tool.id}.title`) !== `tools.${tool.id}.title`
+                              ? t(`tools.${tool.id}.title`)
+                              : tool.title,
+                          });
                         } else if (
                           isPremium &&
                           user?.subscriptionTier !== "premium" &&
@@ -836,18 +866,80 @@ export const ToolsDashboard: React.FC = () => {
                 onClick={() =>
                   setPremiumModalOpen({ isOpen: false, title: "" })
                 }
-                className="flex-1 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 font-bold hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-gray-900 dark:text-white"
+                className="flex-1 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 font-bold hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-gray-900 dark:text-white cursor-pointer"
               >
                 Annuler
               </button>
               <button
                 onClick={() => navigate("/payment")}
-                className="flex-1 py-3 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-white font-bold hover:from-amber-500 hover:to-orange-600 transition-colors shadow-md flex items-center justify-center gap-2"
+                className="flex-1 py-3 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-white font-bold hover:from-amber-500 hover:to-orange-600 transition-colors shadow-md flex items-center justify-center gap-2 cursor-pointer"
               >
                 Débloquer
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Maintenance Modal */}
+      {maintenanceModalOpen.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white dark:bg-gray-900 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl flex flex-col items-center text-center border border-amber-100 dark:border-amber-900/30"
+          >
+            <div className="w-20 h-20 bg-amber-100 dark:bg-amber-900/40 rounded-full flex items-center justify-center text-amber-600 dark:text-amber-400 mb-6">
+              <RefreshCw size={32} className="animate-spin-slow" />
+            </div>
+            <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-2">
+              {maintenanceModalOpen.title}
+            </h2>
+            <p className="text-gray-600 dark:text-gray-300 mb-8 leading-relaxed text-sm">
+              {language === 'fr' 
+                ? 'Cet outil est actuellement en maintenance pour des améliorations techniques ou spirituelles. Veuillez réessayer plus tard.'
+                : language === 'ha'
+                ? 'Wannan kayan aiki yana fuskantar gyara a halin yanzu. Da fatan za a sake gwadawa daga baya.'
+                : 'This tool is currently undergoing maintenance for technical or spiritual improvements. Please try again later.'}
+            </p>
+            <button
+              onClick={() => setMaintenanceModalOpen({ isOpen: false, title: "" })}
+              className="w-full py-3 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 font-bold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+            >
+              {language === 'fr' ? 'Fermer' : language === 'ha' ? 'Rufe' : 'Close'}
+            </button>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Blocked Tool Modal */}
+      {blockedModalOpen.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-white dark:bg-gray-900 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl flex flex-col items-center text-center border border-red-100 dark:border-red-900/30"
+          >
+            <div className="w-20 h-20 bg-red-100 dark:bg-red-900/40 rounded-full flex items-center justify-center text-red-600 dark:text-red-400 mb-6">
+              <ShieldAlert size={32} />
+            </div>
+            <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-2">
+              {blockedModalOpen.title}
+            </h2>
+            <p className="text-gray-600 dark:text-gray-300 mb-8 leading-relaxed text-sm">
+              {language === 'fr' 
+                ? 'L\'accès à cette fonctionnalité ou outil spirituel est bloqué pour votre compte. Veuillez contacter l\'administrateur.'
+                : language === 'ha'
+                ? 'An rufe damar shiga wannan kayan aiki ga asusunka. Da fatan za a tuntuɓi mai gudanarwa.'
+                : 'Access to this feature or spiritual tool is blocked for your account. Please contact the administrator.'}
+            </p>
+            <button
+              onClick={() => setBlockedModalOpen({ isOpen: false, title: "" })}
+              className="w-full py-3 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 font-bold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+            >
+              {language === 'fr' ? 'Fermer' : language === 'ha' ? 'Rufe' : 'Close'}
+            </button>
+          </motion.div>
         </div>
       )}
     </div>
