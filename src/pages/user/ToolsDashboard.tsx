@@ -721,7 +721,7 @@ export const ToolsDashboard: React.FC = () => {
               const status = featureToggles[`tool_${tool.id}`] || "active";
               const isMaintenance = status === "maintenance";
               const isPremium = status === "premium";
-              const isBlockedForUser = (user?.mysteryToolsDisabled && tool.level === "advanced") || status === "disabled";
+              const isBlockedForUser = (user?.mysteryToolsDisabled && tool.level === "advanced") || user?.blockedTools?.includes(tool.id) || status === "disabled";
 
               const content = (
                 <div
@@ -782,13 +782,15 @@ export const ToolsDashboard: React.FC = () => {
                       <span className="text-emerald-600 dark:text-emerald-400 font-bold text-sm">
                         {t("tools.access", "Accéder")} →
                       </span>
-                      <button
-                        onClick={(e) => handleShareTool(e, tool)}
-                        className="p-2 text-gray-400 hover:text-blue-500 transition-colors rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
-                        title="Partager l'outil"
-                      >
-                        <Share2 size={16} />
-                      </button>
+                      {featureToggles.share_tools_enabled !== false && (
+                        <button
+                          onClick={(e) => handleShareTool(e, tool)}
+                          className="p-2 text-gray-400 hover:text-blue-500 transition-colors rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                          title="Partager l'outil"
+                        >
+                          <Share2 size={16} />
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>

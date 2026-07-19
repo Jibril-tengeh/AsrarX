@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { get, set } from 'idb-keyval';
 import { useLanguage } from '../../../contexts/LanguageContext';
+import { useTheme } from '../../../contexts/ThemeContext';
 import { ListTodo, ArrowLeft, Search, Info, BookOpen, PlayCircle, Grid, Sparkles, X, ChevronRight, Hash, ChevronDown, Eye, Calculator } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
@@ -193,6 +194,7 @@ const namesOfAllahDict = {
 
 export const NamesOfAllah: React.FC = () => {
   const { t, language } = useLanguage();
+  const { theme } = useTheme();
   const dict = namesOfAllahDict[(language as 'fr' | 'en' | 'ha') || 'fr'] || namesOfAllahDict.fr;
   const [searchQuery, setSearchQuery] = useState('');
   
@@ -326,6 +328,8 @@ export const NamesOfAllah: React.FC = () => {
 
   const [quranData, setQuranData] = useState<any[]>([]);
   const [loadingQuran, setLoadingQuran] = useState(true);
+  const [includeBasmala, setIncludeBasmala] = useState(true);
+  const [exactMatch, setExactMatch] = useState(true);
 
   // Online Quran search and detail states
   const [onlineOccurrences, setOnlineOccurrences] = useState<any[]>([]);
@@ -417,93 +421,134 @@ export const NamesOfAllah: React.FC = () => {
   const realOccurrences = React.useMemo(() => {
     if (!activeName) return [];
     
+    // Helper function for Arabic stem matching
+    const isNameMatch = (token: string, searchWord: string): boolean => {
+      const normToken = token.replace(/[\u064B-\u065F\u0670]/g, '').replace(/\u0671/g, '\u0627');
+      const normSearch = searchWord.replace(/[\u064B-\u065F\u0670]/g, '').replace(/\u0671/g, '\u0627');
+      
+      if (normToken === normSearch) return true;
+      if (normSearch === "الله" && normToken === "اللهم") return true;
+      
+      let stem = normToken;
+      if (stem.startsWith("لل")) {
+        stem = "ال" + stem.substring(2);
+      } else if (stem.startsWith("وال") || stem.startsWith("بال") || stem.startsWith("فال") || stem.startsWith("كال")) {
+        stem = stem.substring(1);
+      } else if (stem.startsWith("و") || stem.startsWith("ف") || stem.startsWith("ب") || stem.startsWith("ت")) {
+        stem = stem.substring(1);
+      }
+      
+      if (stem === normSearch) return true;
+      
+      const searchWithoutAl = normSearch.startsWith("ال") ? normSearch.substring(2) : normSearch;
+      const stemWithoutAl = stem.startsWith("ال") ? stem.substring(2) : stem;
+      
+      let cleanStem = stemWithoutAl;
+      if (cleanStem.endsWith("ين") || cleanStem.endsWith("ون") || cleanStem.endsWith("ان") || cleanStem.endsWith("ات")) {
+        cleanStem = cleanStem.slice(0, -2);
+      } else if (cleanStem.endsWith("ا") || cleanStem.endsWith("ة") || cleanStem.endsWith("ت")) {
+        cleanStem = cleanStem.slice(0, -1);
+      }
+      
+      if (cleanStem === searchWithoutAl) return true;
+      return false;
+    };
+
+    const hasWordMatch = (cleanAyah: string, searchWord: string, isExact: boolean): boolean => {
+      if (!isExact) {
+        return cleanAyah.includes(searchWord);
+      }
+      // Split into word tokens
+      const tokens = cleanAyah.split(/[\s()\[\]{}.,:;"'«»؛؟،!ـ\-]+/);
+      return tokens.some(tok => isNameMatch(tok, searchWord));
+    };
+
+    // 1. If local quranData is loaded, use it exclusively as it is extremely accurate, contains all translations, and handles the Basmala perfectly.
+    if (quranData && quranData.length > 0) {
+      try {
+        const rawSearchWord = activeName.ar;
+        const searchWord = rawSearchWord.replace(/[\u064B-\u065F\u0670]/g, '').replace(/\u0671/g, '\u0627');
+        const matches = [];
+        const isBasmalaTarget = searchWord === "الله" || searchWord === "الرحمن" || searchWord === "الرحيم";
+        
+        for (const surah of quranData) {
+          // Add unnumbered Basmala if enabled
+          if (includeBasmala && isBasmalaTarget && surah.id !== 1 && surah.id !== 9) {
+            matches.push({
+              id: `${surah.id}:basmala`,
+              inSurah: 0,
+              isBasmala: true,
+              ar: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
+              fr: language === 'fr' 
+                ? "Au nom d'Allah, le Tout Miséricordieux, le Très Miséricordieux. (Introduction non numérotée)" 
+                : language === 'ha'
+                  ? "Da sūnandububū na Allāh, Mai rahama, Mai jin ƙai. (Bismillah)"
+                  : "In the name of Allah, the Entirely Merciful, the Especially Merciful. (Unnumbered Introduction)",
+              en: "In the name of Allah, the Entirely Merciful, the Especially Merciful. (Unnumbered Introduction)",
+              ha: "Da sūnandububū na Allāh, Mai rahama, Mai jin ƙai. (Bismillah)",
+              surahName: surah.name,
+              surahTransliteration: surah.transliteration || surah.name_en || '',
+              surahNumber: surah.id
+            });
+          }
+
+          for (const ayah of surah.ayahs) {
+            const rawAyah = ayah.arClean || ayah.ar || '';
+            let cleanAyah = rawAyah.replace(/[\u064B-\u065F\u0670]/g, '').replace(/\u0671/g, '\u0627');
+            
+            // Strip Bismillah prefix from the start of the first verse of all surahs except Surah 1 (Al-Fatiha)
+            const isFirstVerse = ayah.inSurah === 1 || ayah.numberInSurah === 1;
+            if (surah.id !== 1 && isFirstVerse) {
+              cleanAyah = cleanAyah.replace(/^بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ\s*/, "")
+                                   .replace(/^Ref:.*$/, "")
+                                   .replace(/^بسم الله الرحمن الرحيم\s*/, "")
+                                   .replace(/^بِسمِ اللَّهِ الرَّحمٰنِ الرَّحيمِ\s*/, "")
+                                   .replace(/^بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ\s*/, "");
+            }
+            
+            if (hasWordMatch(cleanAyah, searchWord, exactMatch)) {
+              matches.push({
+                id: `${surah.id}:${ayah.inSurah || ayah.numberInSurah || 1}`,
+                inSurah: ayah.inSurah || ayah.numberInSurah || 1,
+                ar: ayah.ar,
+                fr: ayah.fr || ayah.text || '',
+                en: ayah.en || ayah.text || '',
+                ha: ayah.ha || ayah.text || '',
+                surahName: surah.name,
+                surahTransliteration: surah.transliteration || surah.name_en || '',
+                surahNumber: surah.id
+              });
+            }
+          }
+        }
+        return matches;
+      } catch (e) {
+        console.error("Local occurrences search error:", e);
+      }
+    }
+
+    // 2. Fallback to online API search results if quranData is not yet loaded
     if (onlineOccurrences.length > 0) {
       return onlineOccurrences;
     }
     
-    if (quranData.length === 0) {
-      if (loadingQuran) return [];
-      
-      // Offline fallback mode
-      const occurrences = [];
-      if (activeName.quranOptions) {
-        occurrences.push({
-          id: `off-1-${activeName.tr}`,
-          inSurah: parseInt(activeName.quranOptions.verse || "1"),
-          ar: activeName.quranOptions.excerptAr || activeName.ar,
-          fr: activeName.quranOptions.excerptFr || activeName.fr,
-          en: asmaListDataTranslations?.[activeName.tr]?.en?.excerptFr || activeName.quranOptions.excerptFr || activeName.tr,
-          ha: asmaListDataTranslations?.[activeName.tr]?.ha?.excerptFr || activeName.quranOptions.excerptFr || activeName.tr,
-          surahName: activeName.quranOptions.surah || "Coran",
-          surahTransliteration: activeName.quranOptions.surah || "Coran",
-          surahNumber: 1
-        });
-      }
-      
-      const count = activeName.quranOptions?.count || 1;
-      if (count > 1) {
-        occurrences.push({
-          id: `off-2-${activeName.tr}`,
-          inSurah: 180,
-          ar: "وَلِلَّهِ الْأَسْمَاءُ الْحُسْنَىٰ فَادْعُوهُ بِهَا ۖ وَذَرُوا الَّذِينَ يُلْحِدُونَ فِي أَسْمَائِهِ",
-          fr: "C'est à Allah qu'appartiennent les noms les plus beaux. Invoquez-Le par ces noms et laissez ceux qui profanent Ses noms.",
-          en: "To Allah belong the best names, so invoke Him by them.",
-          ha: "Kuma Allah yanã da sũnãye mãsu kyau ƙwarai, sai ku rũƙe Shi da sũ.",
-          surahName: "Al-A'raf",
-          surahTransliteration: "Al-A'raf",
-          surahNumber: 7
-        });
-      }
-      if (count > 10) {
-        occurrences.push({
-          id: `off-3-${activeName.tr}`,
-          inSurah: 23,
-          ar: "هُوَ اللَّهُ الَّذِي لَا إِلَٰهَ إِلَّا هُوَ الْمَلِكِ الْقُدُّوسُ السَّلَامُ الْمُؤْمِنُ الْمُهَيْمِنُ الْعَزِيزُ الْجَبَّارُ الْمُتَكَبِّرُ",
-          fr: "C'est Lui Allah. Nulle divinité autre que Lui, le Souverain, le Pur, l'Apaisant, le Rassurant, le Prédominant, le Tout-Puissant, le Contraignant, le Superbe.",
-          en: "He is Allah, other than whom there is no deity, the Sovereign, the Pure, the Perfection, the Bestower of Faith.",
-          ha: "Shĩ ne Allah, wanda bã bu wani abun bautãwa sai Shĩ, Mai mulki, Mai tsarki, Mai aminci, Mai amintarwa.",
-          surahName: "Al-Hashr",
-          surahTransliteration: "Al-Hashr",
-          surahNumber: 59
-        });
-      }
-      return occurrences;
+    // 3. Fallback to static offline single entry if offline and data not loaded
+    const occurrences = [];
+    if (activeName.quranOptions) {
+      occurrences.push({
+        id: `off-1-${activeName.tr}`,
+        inSurah: parseInt(activeName.quranOptions.verse || "1"),
+        ar: activeName.quranOptions.excerptAr || activeName.ar,
+        fr: activeName.quranOptions.excerptFr || activeName.fr,
+        en: asmaListDataTranslations?.[activeName.tr]?.en?.excerptFr || activeName.quranOptions.excerptFr || activeName.tr,
+        ha: asmaListDataTranslations?.[activeName.tr]?.ha?.excerptFr || activeName.quranOptions.excerptFr || activeName.tr,
+        surahName: activeName.quranOptions.surah || "Coran",
+        surahTransliteration: activeName.quranOptions.surah || "Coran",
+        surahNumber: 1
+      });
     }
-    
-    try {
-      const searchWord = activeName.ar.replace(/[\u064B-\u065F\u0670]/g, '').replace(/\u0671/g, '\u0627');
-      const matches = [];
-      
-      for (const surah of quranData) {
-        for (const ayah of surah.ayahs) {
-          let cleanAyah = (ayah.arClean || ayah.ar).replace(/[\u064B-\u065F\u0670]/g, '').replace(/\u0671/g, '\u0627');
-          
-          // Strip Bismillah prefix if it is not Al-Fatihah (Surah 1)
-          if (surah.id !== 1 && cleanAyah.startsWith("بسم الله الرحمن الرحيم")) {
-            cleanAyah = cleanAyah.replace(/^بسم الله الرحمن الرحيم\s*/, "");
-          }
-          
-          if (cleanAyah.includes(searchWord)) {
-            matches.push({
-              id: `${surah.id}:${ayah.inSurah}`,
-              inSurah: ayah.inSurah,
-              ar: ayah.ar,
-              fr: ayah.fr,
-              en: ayah.en,
-              ha: ayah.ha,
-              surahName: surah.name,
-              surahTransliteration: surah.transliteration,
-              surahNumber: surah.id
-            });
-          }
-        }
-      }
-      return matches;
-    } catch (e) {
-      console.error(e);
-      return [];
-    }
-  }, [activeName, quranData, loadingQuran, onlineOccurrences]);
+    return occurrences;
+  }, [activeName, quranData, loadingQuran, onlineOccurrences, includeBasmala, exactMatch, language]);
 
   const toggleVerse = async (match: any) => {
     const detailId = match.id;
@@ -571,7 +616,9 @@ export const NamesOfAllah: React.FC = () => {
     setActiveName(null);
   };
 
-  const totalOccurrences = onlineCount !== null ? onlineCount : (activeName?.quranOptions?.count || 0);
+  const totalOccurrences = (quranData && quranData.length > 0)
+    ? realOccurrences.length
+    : (onlineCount !== null ? onlineCount : (activeName?.quranOptions?.count || 0));
 
   return (
     <div className="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8 safe-area-pt pb-24 min-h-screen relative">
@@ -714,6 +761,53 @@ export const NamesOfAllah: React.FC = () => {
                       </p>
                     </div>
 
+                    {/* Highly-Verifiable Quranic Linguistic Controls */}
+                    <div className="bg-gray-50 dark:bg-gray-900/40 rounded-2xl p-4 sm:p-5 border border-gray-100 dark:border-gray-800 space-y-4">
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex-1">
+                          <h5 className="text-xs sm:text-sm font-bold text-gray-800 dark:text-gray-200">
+                            {language === 'fr' ? 'Filtre anti-ambiguïté (Mots exacts)' : language === 'ha' ? 'Tace kalmomin da ba su dace ba' : 'Anti-ambiguity (Exact words)'}
+                          </h5>
+                          <p className="text-[11px] text-gray-500 mt-0.5">
+                            {language === 'fr' ? 'Exclut les faux positifs (ex: Al-Aliyy ne correspondra pas à Al-Alim).' :
+                             language === 'ha' ? 'Yana hana hada sunaye daban-daban a cikin bincike.' :
+                             'Excludes false positives (e.g., Al-Aliyy will not match Al-Alim).'}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setExactMatch(!exactMatch)}
+                          className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors shrink-0 ${
+                            exactMatch ? 'bg-cyan-500' : 'bg-gray-300 dark:bg-gray-700'
+                          }`}
+                        >
+                          <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${exactMatch ? 'translate-x-6' : 'translate-x-0'}`} />
+                        </button>
+                      </div>
+
+                      <div className="flex items-center justify-between gap-4 border-t border-gray-100 dark:border-gray-800 pt-3">
+                        <div className="flex-1">
+                          <h5 className="text-xs sm:text-sm font-bold text-gray-800 dark:text-gray-200">
+                            {language === 'fr' ? 'Inclure la Basmala' : language === 'ha' ? 'Haɗa da Basmala' : 'Include Basmala'}
+                          </h5>
+                          <p className="text-[11px] text-gray-500 mt-0.5">
+                            {language === 'fr' ? "Inclut la formule d'ouverture non numérotée au début des sourates (+112)." :
+                             language === 'ha' ? 'Hada da adduar budewa ta kowace surah (+112).' :
+                             'Includes the unnumbered opening formula at surah beginnings (+112).'}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setIncludeBasmala(!includeBasmala)}
+                          className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors shrink-0 ${
+                            includeBasmala ? 'bg-cyan-500' : 'bg-gray-300 dark:bg-gray-700'
+                          }`}
+                        >
+                          <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${includeBasmala ? 'translate-x-6' : 'translate-x-0'}`} />
+                        </button>
+                      </div>
+                    </div>
+
                     {totalOccurrences > 0 ? (
                       <div className="bg-white dark:bg-gray-800 rounded-2xl space-y-6">
                         
@@ -769,17 +863,17 @@ export const NamesOfAllah: React.FC = () => {
                            <h4 className="text-xs uppercase font-bold text-gray-500 dark:text-gray-400 mb-4 tracking-widest pl-2">{t('namesOfAllah.versesAndSurahs')}</h4>
                            <div className="space-y-4 max-h-[350px] overflow-y-auto pr-2 custom-scrollbar">
                              {/* Primary verse */}
-                             <div className="p-5 bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm">
-                               <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-200 dark:border-gray-800">
-                                  <span className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                             <div className={`p-5 rounded-2xl border shadow-sm transition-colors ${theme === 'dark' ? 'bg-gray-900 border-gray-700' : 'bg-gray-50 border-gray-200'}`}>
+                               <div className={`flex justify-between items-center mb-4 pb-4 border-b ${theme === 'dark' ? 'border-gray-800' : 'border-gray-200'}`}>
+                                  <span className={`font-bold flex items-center gap-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
                                      <BookOpen size={16} className="text-cyan-500" />
                                      {t('namesOfAllah.surah')} {activeName.quranOptions.surah}
                                   </span>
                                   <span className="bg-cyan-100 dark:bg-cyan-900/50 text-cyan-800 dark:text-cyan-300 px-3 py-1 rounded-lg text-xs font-bold">{t('namesOfAllah.verse')} {activeName.quranOptions.verse}</span>
                                </div>
                                <>
-                                 <p className="font-arabic text-2xl sm:text-3xl text-gray-900 dark:text-white leading-[2] mb-4 text-center" dir="rtl">{(activeName as any).quranOptions.excerptAr}</p>
-                                 <p className="text-gray-600 dark:text-gray-400 font-serif italic text-sm text-center leading-relaxed">" {translatedFields.excerptFr || (activeName as any).quranOptions.excerptFr} "</p>
+                                 <p className={`font-arabic text-2xl sm:text-3xl leading-[2] mb-4 text-center ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`} dir="rtl">{(activeName as any).quranOptions.excerptAr}</p>
+                                 <p className={`font-serif italic text-sm text-center leading-relaxed ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>" {translatedFields.excerptFr || (activeName as any).quranOptions.excerptFr} "</p>
                                </>
                              </div>
 
@@ -863,18 +957,18 @@ export const NamesOfAllah: React.FC = () => {
                                                };
                                                
                                                return (
-                                                 <div key={occurrence.id} className="rounded-xl overflow-hidden bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 transition-all">
+                                                 <div key={occurrence.id} className={`rounded-xl overflow-hidden border transition-all ${theme === 'dark' ? 'bg-gray-950 border-gray-800' : 'bg-gray-50 border-gray-100'}`}>
                                                    <button 
                                                      type="button"
                                                      onClick={() => toggleVerse(occurrence)}
-                                                     className="w-full flex justify-between items-center p-3 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-left"
+                                                     className={`w-full flex justify-between items-center p-3 transition-colors text-left ${theme === 'dark' ? 'hover:bg-gray-900' : 'hover:bg-gray-100'}`}
                                                    >
                                                      <span className="text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 pr-2">
                                                        {t('namesOfAllah.surah')} {occurrence.surahNumber} : {occurrence.surahTransliteration} {occurrence.surahName && `(${occurrence.surahName})`}
                                                      </span>
                                                      <div className="flex items-center gap-2 shrink-0">
                                                        <span className="text-xs bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-400 px-2 py-1 rounded font-bold">
-                                                         {t('namesOfAllah.verse')} {occurrence.inSurah}
+                                                         {occurrence.inSurah === 0 ? "Basmala" : `${t('namesOfAllah.verse')} ${occurrence.inSurah}`}
                                                        </span>
                                                        <ChevronDown size={14} className={`text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
                                                      </div>
@@ -885,7 +979,7 @@ export const NamesOfAllah: React.FC = () => {
                                                          initial={{ height: 0, opacity: 0 }}
                                                          animate={{ height: 'auto', opacity: 1 }}
                                                          exit={{ height: 0, opacity: 0 }}
-                                                         className="border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-850"
+                                                         className={`border-t transition-colors ${theme === 'dark' ? 'border-gray-800 bg-gray-900' : 'border-gray-100 bg-white'}`}
                                                        >
                                                          <div className="p-4 space-y-3">
                                                            {isDetailLoading ? (

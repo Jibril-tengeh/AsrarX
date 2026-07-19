@@ -4,6 +4,24 @@ import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { useLanguage } from '../../../contexts/LanguageContext';
 
+const ISLAMIC_MONTHS: Record<'fr' | 'en' | 'ha', string[]> = {
+  fr: [
+    "Muharram", "Safar", "Rabi' al-awwal", "Rabi' ath-thani", 
+    "Jumada al-awwal", "Jumada ath-thani", "Rajab", "Sha'ban", 
+    "Ramadan", "Shawwal", "Dhu al-qi'dah", "Dhu al-hijjah"
+  ],
+  en: [
+    "Muharram", "Safar", "Rabi' al-awwal", "Rabi' al-thani", 
+    "Jumada al-awwal", "Jumada al-thani", "Rajab", "Sha'ban", 
+    "Ramadan", "Shawwal", "Dhu al-qi'dah", "Dhu al-hijjah"
+  ],
+  ha: [
+    "Muharram", "Safar", "Rabi'ul Awwal", "Rabi'us Sani", 
+    "Jimada Awwal", "Jimada Sani", "Rajab", "Sha'aban", 
+    "Ramadan", "Shawwal", "Zul-Ƙida", "Zul-Hajji"
+  ]
+};
+
 export const CalendarConverter: React.FC = () => {
   const { t, language } = useLanguage();
   const [date, setDate] = useState<string>(new Date().toISOString().split('T')[0]);
@@ -13,36 +31,33 @@ export const CalendarConverter: React.FC = () => {
 
   useEffect(() => {
     convertDate();
-  }, [date]);
+  }, [date, language]);
 
   const convertDate = () => {
     if (!date) return;
     try {
       const gDate = new Date(date);
       
-      const locale = language === 'ha' ? 'ha-NG' : (language === 'en' ? 'en-US' : 'fr-FR');
-      // Using Intl.DateTimeFormat for Hijri conversion
-      const hijriFormatter = new Intl.DateTimeFormat(`${locale}-u-ca-islamic-umalqura`, {
+      const parts = new Intl.DateTimeFormat('en-US-u-ca-islamic-umalqura', {
         day: 'numeric',
-        month: 'long',
-        year: 'numeric'
-      });
-      
-      const parts = new Intl.DateTimeFormat(`${locale}-u-ca-islamic-umalqura`, {
-        day: 'numeric',
-        month: 'long',
+        month: 'numeric',
         year: 'numeric'
       }).formatToParts(gDate);
 
-      let day = '', month = '', year = '';
+      let day = '', monthStr = '', year = '';
       parts.forEach(part => {
         if (part.type === 'day') day = part.value;
-        if (part.type === 'month') month = part.value;
+        if (part.type === 'month') monthStr = part.value;
         if (part.type === 'year') year = part.value;
       });
 
-      setHijriDate(`${day} ${month} ${year} AH`);
-      setIslamicMonth(month);
+      const monthIndex = parseInt(monthStr, 10) - 1;
+      const currentLang = (language === 'ha' || language === 'en' || language === 'fr') ? language : 'fr';
+      const monthName = ISLAMIC_MONTHS[currentLang][monthIndex] || monthStr;
+      const eraSuffix = currentLang === 'fr' ? 'H' : (currentLang === 'ha' ? 'B.H.' : 'AH');
+
+      setHijriDate(`${day} ${monthName} ${year} ${eraSuffix}`);
+      setIslamicMonth(monthName);
       setIslamicYear(year);
     } catch (error) {
       setHijriDate(t('calendar.conversionError'));

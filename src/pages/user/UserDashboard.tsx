@@ -4,7 +4,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useFeatures } from '../../contexts/FeatureContext';
 import { db } from '../../lib/firebase';
 import { collection, query, orderBy, onSnapshot, doc } from 'firebase/firestore';
-import { Search, LayoutGrid, Square, List, Filter, X, BookOpen, Store, Award, MapPin, Trophy, ShieldCheck, ChevronDown, Bookmark, Flame, Shield, RefreshCw, Quote, Folder, Plus, Library, Music, Pencil, Trash2, Sliders, Sparkles, Calendar } from 'lucide-react';
+import { Search, LayoutGrid, Square, List, Filter, X, BookOpen, Store, Award, MapPin, Trophy, ShieldCheck, ChevronDown, Bookmark, Flame, Shield, RefreshCw, Quote, Folder, Plus, Library, Music, Pencil, Trash2, Sliders, Sparkles, Calendar, FolderOpen, Star } from 'lucide-react';
+import * as Icons from 'lucide-react';
 import { SecretCard, LayoutMode } from '../../components/SecretCard';
 import { HabitTracker } from '../../components/HabitTracker';
 import { DailyGoalsTracker } from '../../components/DailyGoalsTracker';
@@ -12,10 +13,18 @@ import { HijriCalendarWidget } from '../../components/HijriCalendarWidget';
 import { OnboardingTour } from '../../components/OnboardingTour';
 import { GlobalSearchModal } from '../../components/GlobalSearchModal';
 import { MysticCalendarModal } from '../../components/MysticCalendarModal';
+
+const LucideIcon = ({ name, className, size }: { name: string; className?: string; size?: number }) => {
+  const IconComponent = (Icons as any)[name];
+  if (!IconComponent) {
+    return <Icons.FolderOpen className={className} size={size} />;
+  }
+  return <IconComponent className={className} size={size} />;
+};
 import { getAsrarItems } from '../../data/store';
 import { AsrarItem, Category } from '../../types';
 import { motion, AnimatePresence } from 'motion/react';
-import { useLocation, Link, useParams } from 'react-router-dom';
+import { useLocation, Link, useParams, useNavigate } from 'react-router-dom';
 
 import { getApiUrl } from '../../lib/api';
 
@@ -28,6 +37,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
   const { user } = useAuth();
   const { featureToggles } = useFeatures();
   const location = useLocation();
+  const navigate = useNavigate();
   const { categoryId } = useParams<{ categoryId?: string }>();
   const [items, setItems] = useState<AsrarItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -52,7 +62,23 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [selectedSubCategory, setSelectedSubCategory] = useState<string>('');
+  const isCalendarOpen = location.search.includes('calendar=true');
+  const setIsCalendarOpen = (open: boolean) => {
+    const params = new URLSearchParams(location.search);
+    if (open) {
+      params.set('calendar', 'true');
+    } else {
+      params.delete('calendar');
+    }
+    const newSearch = params.toString();
+    navigate({
+      pathname: location.pathname,
+      search: newSearch ? `?${newSearch}` : '',
+    }, { replace: true });
+  };
   const [isTopContributorsOpen, setIsTopContributorsOpen] = useState(false);
   const filterRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -63,6 +89,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
   const [lastReadPosition, setLastReadPosition] = useState<{ surahNumber: number, ayahNumberInSurah: number, surahName: string } | null>(null);
   const [activityData, setActivityData] = useState<{ [date: string]: number }>({});
   const [readingHistory, setReadingHistory] = useState<any[]>([]);
+  const [isHistoryExpanded, setIsHistoryExpanded] = useState(false);
 
   const [aiSearchResults, setAiSearchResults] = useState<string[] | null>(null);
   const [aiMessage, setAiMessage] = useState<string | null>(null);
@@ -156,6 +183,10 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
   const currentY = useRef(0);
 
   useEffect(() => {
+    // Only register and handle pull-to-refresh on actual dashboard/home routes
+    const isDashboardRoute = window.location.pathname === '/user/dashboard' || window.location.pathname === '/';
+    if (!isDashboardRoute) return;
+
     const handleTouchStart = (e: TouchEvent) => {
       if (window.scrollY === 0) {
         startY.current = e.touches[0].clientY;
@@ -422,6 +453,68 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
     }
   }, [isSearchOpen]);
 
+  useEffect(() => {
+    try {
+      const cached = localStorage.getItem('asrarhub_cached_categories');
+      if (cached) {
+        setCategories(JSON.parse(cached));
+      }
+    } catch (e) {
+      console.error("Error pre-loading categories from cache", e);
+    }
+
+    const unsubscribe = onSnapshot(collection(db, 'categories'), (snapshot) => {
+      if (!snapshot.empty) {
+        const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        list.sort((a: any, b: any) => (a.createdAt || 0) - (b.createdAt || 0));
+        setCategories(list);
+        try {
+          localStorage.setItem('asrarhub_cached_categories', JSON.stringify(list));
+        } catch (e) {}
+      } else {
+        const defaultCats = [
+          {
+            id: 'wird',
+            name: 'Versets & Wirds',
+            name_en: 'Verses & Wirds',
+            name_ha: 'Wirdoshi & Ayoyi',
+            iconName: 'BookOpen',
+            subCategories: [
+              { id: 'wird-protection', name: 'Protection', name_en: 'Protection', name_ha: 'Kariya' },
+              { id: 'wird-guerison', name: 'Guérison', name_en: 'Healing', name_ha: 'Waraka' }
+            ]
+          },
+          {
+            id: 'secret',
+            name: "Secrets d'Asrar",
+            name_en: 'Secrets of Asrar',
+            name_ha: 'Asrarai',
+            iconName: 'Sparkles',
+            subCategories: [
+              { id: 'secret-richesse', name: 'Prospérité', name_en: 'Prosperity', name_ha: 'Arziki' },
+              { id: 'secret-amour', name: 'Affection', name_en: 'Affection', name_ha: 'Soyayya' }
+            ]
+          },
+          {
+            id: 'recette',
+            name: 'Recettes Spirituelles',
+            name_en: 'Spiritual Recipes',
+            name_ha: 'Hanyoyi',
+            iconName: 'Shield',
+            subCategories: [
+              { id: 'recette-sante', name: 'Santé', name_en: 'Health', name_ha: 'Lafiya' }
+            ]
+          }
+        ];
+        setCategories(defaultCats);
+      }
+    }, (error) => {
+      console.error("Error fetching categories", error);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   const filteredItems = items.filter(item => {
     let matchesSearch = true;
     
@@ -449,7 +542,9 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
         matchesFilter = bookmarks.includes(item.id);
       }
     }
-    else matchesFilter = item.category === filter;
+    else {
+      matchesFilter = item.category === filter && (!selectedSubCategory || (item as any).subCategory === selectedSubCategory);
+    }
 
     return matchesSearch && matchesFilter;
   });
@@ -575,16 +670,17 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
           <Search className="w-[15px] h-[15px] sm:w-[18px] sm:h-[18px]" />
         </button>
 
-        <div className={`relative transition-opacity duration-200 ${isSearchOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`} ref={filterRef}>
+        <div className={`relative transition-opacity duration-200 ${isSearchOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
           <button
             id="tour-filter"
-            onClick={() => setIsFilterOpen(!isFilterOpen)}
+            onClick={() => setIsCategoryModalOpen(true)}
             className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl border h-[34px] w-[34px] sm:h-[42px] sm:w-[42px] flex items-center justify-center transition-colors shadow-sm flex-shrink-0 relative ${
-              filter !== 'all' || isFilterOpen
+              filter !== 'all' || isCategoryModalOpen
                 ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
                 : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
             }`}
             aria-label="Filter"
+            title="Catégories"
           >
             <Filter className="w-[15px] h-[15px] sm:w-[18px] sm:h-[18px]" />
             {filter !== 'all' && (
@@ -592,33 +688,188 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
             )}
           </button>
 
+          {/* Categories Filter Modal */}
           <AnimatePresence>
-            {isFilterOpen && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                transition={{ duration: 0.15 }}
-                className="absolute right-0 sm:left-1/2 sm:-translate-x-1/2 top-full mt-2 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden z-50 flex flex-col py-1"
-              >
-                {(['all', 'favoris', 'secret', 'wird', 'recette'] as const).map((cat) => (
-                  <button
-                    key={cat}
-                    onClick={() => {
-                      setFilter(cat);
-                      setIsFilterOpen(false);
-                    }}
-                    className={`px-4 py-2.5 text-left text-sm font-medium hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center justify-between
-                      ${filter === cat 
-                        ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-50/50 dark:bg-emerald-900/10' 
-                        : 'text-gray-700 dark:text-gray-200'
-                      }`}
-                  >
-                    <span>{cat === 'all' ? t('all') : cat === 'favoris' ? t('favorites', 'Favoris') : cat === 'wird' ? t('wirds', 'Versets') : cat === 'secret' ? t('secrets', 'Secrets') : t('recettes', 'Recettes')}</span>
-                    {filter === cat && <span className="text-emerald-500 text-[10px]">●</span>}
-                  </button>
-                ))}
-              </motion.div>
+            {isCategoryModalOpen && (
+              <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+                {/* Backdrop */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  onClick={() => setIsCategoryModalOpen(false)}
+                  className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+                />
+
+                {/* Modal container */}
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                  transition={{ type: 'spring', duration: 0.35 }}
+                  className="relative w-full max-w-lg bg-white dark:bg-gray-800 rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden flex flex-col max-h-[85vh] z-[120]"
+                >
+                  {/* Header */}
+                  <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700/50 flex justify-between items-center bg-gray-50 dark:bg-gray-800/80 backdrop-blur-md">
+                    <div>
+                      <h3 className="font-bold text-lg text-gray-900 dark:text-white">
+                        {t('filterByCategory', 'Filtrer par Catégorie')}
+                      </h3>
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                        {t('filterByCategoryDesc', 'Explorez les articles par thématiques spirituelles')}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setIsCategoryModalOpen(false)}
+                      className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors"
+                    >
+                      <X size={20} />
+                    </button>
+                  </div>
+
+                  {/* Content */}
+                  <div className="flex-1 p-6 overflow-y-auto space-y-4 max-h-[60vh] scrollbar-thin">
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        onClick={() => {
+                          setFilter('all');
+                          setSelectedSubCategory('');
+                          setIsCategoryModalOpen(false);
+                        }}
+                        className={`p-4 rounded-2xl border flex flex-col items-center justify-center gap-2 transition-all shadow-sm ${
+                          filter === 'all'
+                            ? 'bg-emerald-50 border-emerald-200 text-emerald-600 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-400'
+                            : 'bg-white border-gray-200 text-gray-650 hover:bg-gray-50 dark:bg-gray-850 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        <FolderOpen size={22} />
+                        <span className="text-xs font-bold">{t('all', 'Tout')}</span>
+                        <span className="text-[10px] text-gray-400 dark:text-gray-500">{items.length} {t('articles', 'articles')}</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setFilter('favoris');
+                          setSelectedSubCategory('');
+                          setIsCategoryModalOpen(false);
+                        }}
+                        className={`p-4 rounded-2xl border flex flex-col items-center justify-center gap-2 transition-all shadow-sm ${
+                          filter === 'favoris'
+                            ? 'bg-emerald-50 border-emerald-200 text-emerald-600 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-400'
+                            : 'bg-white border-gray-200 text-gray-650 hover:bg-gray-50 dark:bg-gray-850 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        <Star size={22} />
+                        <span className="text-xs font-bold">{t('favorites', 'Favoris')}</span>
+                        <span className="text-[10px] text-gray-400 dark:text-gray-500">{bookmarks.length} {t('saved', 'enregistrés')}</span>
+                      </button>
+                    </div>
+
+                    <div className="h-px bg-gray-100 dark:bg-gray-700/50 my-2" />
+
+                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('categories', 'Thématiques')}</h4>
+                    
+                    <div className="space-y-3">
+                      {categories.map((cat) => {
+                        const isSelected = filter === cat.id;
+                        const artCount = items.filter(a => a.category === cat.id).length;
+                        
+                        let displayName = cat.name;
+                        if (language === 'en' && cat.name_en) displayName = cat.name_en;
+                        if (language === 'ha' && cat.name_ha) displayName = cat.name_ha;
+
+                        return (
+                          <div key={cat.id} className={`rounded-2xl border transition-all ${
+                            isSelected 
+                              ? 'border-emerald-200 dark:border-emerald-800 bg-emerald-50/10 dark:bg-emerald-900/5'
+                              : 'border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30'
+                          }`}>
+                            <button
+                              onClick={() => {
+                                setFilter(cat.id);
+                                setSelectedSubCategory('');
+                              }}
+                              className="w-full p-4 flex items-center justify-between text-left transition-colors hover:bg-emerald-50/5 dark:hover:bg-emerald-900/5 rounded-t-2xl"
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className={`p-2.5 rounded-xl ${
+                                  isSelected 
+                                    ? 'bg-emerald-500 text-white' 
+                                    : 'bg-white dark:bg-gray-850 text-gray-500 dark:text-gray-400 border border-gray-100 dark:border-gray-700'
+                                }`}>
+                                  <LucideIcon name={cat.iconName || 'FolderOpen'} size={20} />
+                                </div>
+                                <div>
+                                  <span className={`text-sm font-bold block ${isSelected ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-800 dark:text-gray-200'}`}>
+                                    {displayName}
+                                  </span>
+                                  <span className="text-xs text-gray-400 dark:text-gray-500">
+                                    {artCount} {artCount > 1 ? t('articlesCountPlural', 'articles') : t('articlesCountSingular', 'article')}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                {isSelected && <span className="w-2 h-2 rounded-full bg-emerald-500" />}
+                              </div>
+                            </button>
+
+                            {isSelected && (cat.subCategories || []).length > 0 && (
+                              <div className="px-4 pb-4 pt-1 flex flex-wrap gap-2 border-t border-dashed border-gray-100 dark:border-gray-700/50">
+                                <button
+                                  onClick={() => {
+                                    setSelectedSubCategory('');
+                                    setIsCategoryModalOpen(false);
+                                  }}
+                                  className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
+                                    !selectedSubCategory
+                                      ? 'bg-emerald-600 text-white shadow-sm'
+                                      : 'bg-white border border-gray-150 text-gray-600 hover:bg-gray-50 dark:bg-gray-850 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700'
+                                  }`}
+                                >
+                                  {t('allSub', 'Tout')}
+                                </button>
+                                {(cat.subCategories || []).map((sub: any) => {
+                                  const isSubSelected = selectedSubCategory === sub.id;
+                                  let subDisplayName = sub.name;
+                                  if (language === 'en' && sub.name_en) subDisplayName = sub.name_en;
+                                  if (language === 'ha' && sub.name_ha) subDisplayName = sub.name_ha;
+
+                                  return (
+                                    <button
+                                      key={sub.id}
+                                      onClick={() => {
+                                        setSelectedSubCategory(sub.id);
+                                        setIsCategoryModalOpen(false);
+                                      }}
+                                      className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
+                                        isSubSelected
+                                          ? 'bg-emerald-600 text-white shadow-sm'
+                                          : 'bg-white border border-gray-150 text-gray-600 hover:bg-gray-50 dark:bg-gray-850 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700'
+                                      }`}
+                                    >
+                                      {subDisplayName}
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Footer */}
+                  <div className="px-6 py-4 border-t border-gray-100 dark:border-gray-700/50 bg-gray-50 dark:bg-gray-800/80 backdrop-blur-md flex justify-end">
+                    <button
+                      onClick={() => setIsCategoryModalOpen(false)}
+                      className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-xl font-bold text-sm transition-colors shadow-sm"
+                    >
+                      {t('apply', 'Appliquer')}
+                    </button>
+                  </div>
+                </motion.div>
+              </div>
             )}
           </AnimatePresence>
         </div>
@@ -761,18 +1012,26 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
       {/* Reading History */}
       {readingHistory.length > 0 && (
         <div className="mb-4 bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-          <div className="flex justify-between items-center mb-4">
-            <div>
-              <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                <RefreshCw className="text-emerald-500 animate-spin-slow" size={18} />
-                {language === 'fr' ? 'Dernières lectures' : language === 'ha' ? 'Tarihin Karatu' : 'Reading History'}
-              </h3>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                {language === 'fr' ? 'Reprenez rapidement la lecture de vos derniers secrets ou wirds consultés.' :
-                 language === 'ha' ? 'Koma baya cikin sauƙi don duba sirruka da zikirai na baya.' :
-                 'Quickly resume reading your recently viewed secrets or wirds.'}
-              </p>
-            </div>
+          <div className="flex justify-between items-center">
+            <button
+              onClick={() => setIsHistoryExpanded(!isHistoryExpanded)}
+              className="flex items-start gap-3 text-left focus:outline-none select-none flex-1 group"
+            >
+              <div className="mt-1 p-2 bg-emerald-50 dark:bg-emerald-950/30 rounded-xl text-emerald-600 dark:text-emerald-400 group-hover:scale-105 transition-transform shrink-0">
+                <RefreshCw className="animate-spin-slow" size={18} />
+              </div>
+              <div className="flex-1 min-w-0 pr-2">
+                <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 text-base sm:text-lg">
+                  {language === 'fr' ? 'Dernières lectures' : language === 'ha' ? 'Tarihin Karatu' : 'Reading History'}
+                  <ChevronDown size={18} className={`text-gray-400 transition-transform duration-250 shrink-0 ${isHistoryExpanded ? 'rotate-180' : ''}`} />
+                </h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  {language === 'fr' ? 'Reprenez rapidement la lecture de vos derniers secrets ou wirds consultés.' :
+                   language === 'ha' ? 'Koma baya cikin sauƙi don duba sirruka da zikirai na baya.' :
+                   'Quickly resume reading your recently viewed secrets or wirds.'}
+                </p>
+              </div>
+            </button>
             <button
               onClick={() => {
                 if (confirm(language === 'fr' ? 'Voulez-vous effacer votre historique de lecture ?' : language === 'ha' ? 'Shin kuna son goge tarihin karatun ku?' : 'Do you want to clear your reading history?')) {
@@ -780,87 +1039,98 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
                   setReadingHistory([]);
                 }
               }}
-              className="text-xs text-red-500 hover:text-red-600 dark:hover:text-red-400 font-medium px-2.5 py-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20 transition-all"
+              className="text-xs text-red-500 hover:text-red-600 dark:hover:text-red-400 font-medium px-2.5 py-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/20 transition-all shrink-0 ml-2"
             >
               {language === 'fr' ? "Effacer" : language === 'ha' ? "Goge" : "Clear"}
             </button>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {readingHistory.map((item) => {
-              const formatTimeAgo = (timestamp: number) => {
-                const seconds = Math.floor((Date.now() - timestamp) / 1000);
-                const minutes = Math.floor(seconds / 60);
-                const hours = Math.floor(minutes / 60);
-                const days = Math.floor(hours / 24);
+          <AnimatePresence initial={false}>
+            {isHistoryExpanded && (
+              <motion.div
+                initial={{ height: 0, opacity: 0, marginTop: 0 }}
+                animate={{ height: 'auto', opacity: 1, marginTop: 16 }}
+                exit={{ height: 0, opacity: 0, marginTop: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                  {readingHistory.map((item) => {
+                    const formatTimeAgo = (timestamp: number) => {
+                      const seconds = Math.floor((Date.now() - timestamp) / 1000);
+                      const minutes = Math.floor(seconds / 60);
+                      const hours = Math.floor(minutes / 60);
+                      const days = Math.floor(hours / 24);
 
-                if (language === 'fr') {
-                  if (seconds < 60) return "À l'instant";
-                  if (minutes < 60) return `Il y a ${minutes} min`;
-                  if (hours < 24) return `Il y a ${hours} h`;
-                  return `Il y a ${days} j`;
-                } else if (language === 'ha') {
-                  if (seconds < 60) return "Yanzu-yanzu";
-                  if (minutes < 60) return `Minti ${minutes} da suka wuce`;
-                  if (hours < 24) return `Awanni ${hours} da suka wuce`;
-                  return `Kwana ${days} da suka wuce`;
-                } else {
-                  if (seconds < 60) return "Just now";
-                  if (minutes < 60) return `${minutes}m ago`;
-                  if (hours < 24) return `${hours}h ago`;
-                  return `${days}d ago`;
-                }
-              };
+                      if (language === 'fr') {
+                        if (seconds < 60) return "À l'instant";
+                        if (minutes < 60) return `Il y a ${minutes} min`;
+                        if (hours < 24) return `Il y a ${hours} h`;
+                        return `Il y a ${days} j`;
+                      } else if (language === 'ha') {
+                        if (seconds < 60) return "Yanzu-yanzu";
+                        if (minutes < 60) return `Minti ${minutes} da suka wuce`;
+                        if (hours < 24) return `Awanni ${hours} da suka wuce`;
+                        return `Kwana ${days} da suka wuce`;
+                      } else {
+                        if (seconds < 60) return "Just now";
+                        if (minutes < 60) return `${minutes}m ago`;
+                        if (hours < 24) return `${hours}h ago`;
+                        return `${days}d ago`;
+                      }
+                    };
 
-              const categoryColors: Record<string, string> = {
-                secret: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-amber-100 dark:border-amber-900/50',
-                wird: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400 border-indigo-100 dark:border-indigo-900/50',
-                recette: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-100 dark:border-emerald-900/50',
-              };
+                    const categoryColors: Record<string, string> = {
+                      secret: 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 border-amber-100 dark:border-amber-900/50',
+                      wird: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400 border-indigo-100 dark:border-indigo-900/50',
+                      recette: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-emerald-100 dark:border-emerald-900/50',
+                    };
 
-              return (
-                <Link
-                  key={item.id}
-                  to={`/secret/${item.id}`}
-                  className="flex items-center gap-3 p-3 bg-gray-50/50 dark:bg-gray-750/30 hover:bg-emerald-50/50 dark:hover:bg-emerald-900/10 rounded-2xl border border-gray-100 dark:border-gray-700/50 hover:border-emerald-100 dark:hover:border-emerald-800 transition-all group"
-                >
-                  <div className="w-10 h-10 rounded-xl overflow-hidden bg-emerald-500/10 flex-shrink-0 flex items-center justify-center relative">
-                    {item.imageUrl ? (
-                      <img
-                        referrerPolicy="no-referrer"
-                        src={item.imageUrl}
-                        alt=""
-                        className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                      />
-                    ) : (
-                      <BookOpen className="text-emerald-500 w-5 h-5" />
-                    )}
-                    {item.isPremium && (
-                      <div className="absolute top-0 right-0 bg-amber-500 text-white p-0.5 rounded-bl-lg text-[8px] font-bold">
-                        ★
-                      </div>
-                    )}
-                  </div>
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5 mb-1 flex-wrap">
-                      <span className={`text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-md border ${categoryColors[item.category] || categoryColors.secret}`}>
-                        {item.category === 'wird' ? (language === 'fr' ? 'Verset' : language === 'ha' ? 'Wirdi' : 'Verse') :
-                         item.category === 'secret' ? 'Secret' :
-                         (language === 'fr' ? 'Recette' : language === 'ha' ? 'Girke-girke' : 'Recipe')}
-                      </span>
-                      <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">
-                        {formatTimeAgo(item.viewedAt)}
-                      </span>
-                    </div>
-                    <h4 className="font-semibold text-sm text-gray-900 dark:text-white truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-                      {item.title}
-                    </h4>
-                  </div>
-                </Link>
-              );
-            })}
-          </div>
+                    return (
+                      <Link
+                        key={item.id}
+                        to={`/secret/${item.id}`}
+                        className="flex items-center gap-3 p-3 bg-gray-50/50 dark:bg-gray-750/30 hover:bg-emerald-50/50 dark:hover:bg-emerald-900/10 rounded-2xl border border-gray-100 dark:border-gray-700/50 hover:border-emerald-100 dark:hover:border-emerald-800 transition-all group"
+                      >
+                        <div className="w-10 h-10 rounded-xl overflow-hidden bg-emerald-500/10 flex-shrink-0 flex items-center justify-center relative">
+                          {item.imageUrl ? (
+                            <img
+                              referrerPolicy="no-referrer"
+                              src={item.imageUrl}
+                              alt=""
+                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                            />
+                          ) : (
+                            <BookOpen className="text-emerald-500 w-5 h-5" />
+                          )}
+                          {item.isPremium && (
+                            <div className="absolute top-0 right-0 bg-amber-500 text-white p-0.5 rounded-bl-lg text-[8px] font-bold">
+                              ★
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 mb-1 flex-wrap">
+                            <span className={`text-[10px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded-md border ${categoryColors[item.category] || categoryColors.secret}`}>
+                              {item.category === 'wird' ? (language === 'fr' ? 'Verset' : language === 'ha' ? 'Wirdi' : 'Verse') :
+                               item.category === 'secret' ? 'Secret' :
+                               (language === 'fr' ? 'Recette' : language === 'ha' ? 'Girke-girke' : 'Recipe')}
+                            </span>
+                            <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">
+                              {formatTimeAgo(item.viewedAt)}
+                            </span>
+                          </div>
+                          <h4 className="font-semibold text-sm text-gray-900 dark:text-white truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                            {item.title}
+                          </h4>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       )}
 

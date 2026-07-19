@@ -6,8 +6,18 @@ import {
   Settings, Users, BarChart3, Database, Shield, LayoutDashboard, 
   Book, BookOpen, ToggleLeft, Volume2, Save, Search, Plus, Trash2, Edit2, FileText,
   Eye, Image as ImageIcon, Crop as CropIcon, X, Upload, ShoppingBag, CreditCard,
-  Clock, CheckCircle, XCircle, Globe, Grid, List, Mail, Phone, Lock, Bell, BellOff, Sparkles, Star
+  Clock, CheckCircle, XCircle, Globe, Grid, List, Mail, Phone, Lock, Bell, BellOff, Sparkles, Star, Share, ShieldAlert,
+  FolderOpen
 } from 'lucide-react';
+import * as Icons from 'lucide-react';
+
+const LucideIcon = ({ name, className, size }: { name: string; className?: string; size?: number }) => {
+  const IconComponent = (Icons as any)[name];
+  if (!IconComponent) {
+    return <Icons.FolderOpen className={className} size={size} />;
+  }
+  return <IconComponent className={className} size={size} />;
+};
 import { db } from '../../lib/firebase';
 import { collection, getDocs, doc, getDoc, updateDoc, deleteDoc, addDoc, onSnapshot, query, orderBy, setDoc, writeBatch } from 'firebase/firestore';
 import { useAuth } from '../../contexts/AuthContext';
@@ -97,7 +107,7 @@ const LayoutSelector = ({ value, onChange, activeColor = 'emerald' }: { value: s
   );
 };
 
-type AdminTab = 'overview' | 'users' | 'payments' | 'community' | 'features' | 'ruqyah' | 'content' | 'notifications' | 'settings' | 'articles' | 'store' | 'grand_oaths';
+type AdminTab = 'overview' | 'users' | 'payments' | 'community' | 'features' | 'ruqyah' | 'content' | 'notifications' | 'settings' | 'articles' | 'store' | 'grand_oaths' | 'categories';
 
 interface Article {
   id: string;
@@ -130,6 +140,7 @@ interface User {
   phone?: string;
   password?: string;
   pushNotificationsEnabled?: boolean;
+  blockedTools?: string[];
 }
 
 interface RuqyahAudio {
@@ -209,6 +220,7 @@ export const AdminDashboard: React.FC = () => {
   // Content/Lexique pagination and search
   const [lexiqueSearch, setLexiqueSearch] = useState('');
   const [lexiqueLimit, setLexiqueLimit] = useState(15);
+  const [blockingToolsUser, setBlockingToolsUser] = useState<User | null>(null);
 
   // Feature Search
   const [featureSearch, setFeatureSearch] = useState('');
@@ -261,11 +273,20 @@ export const AdminDashboard: React.FC = () => {
     title_ha: '', message_ha: ''
   });
 
+  // Categories State
+  const [categories, setCategories] = useState<any[]>([]);
+  const [newCategory, setNewCategory] = useState({ name: '', name_en: '', name_ha: '' });
+  const [newSubCategory, setNewSubCategory] = useState({ categoryId: '', name: '', name_en: '', name_ha: '' });
+  const [showQuickCategoryForm, setShowQuickCategoryForm] = useState(false);
+  const [showQuickSubCategoryForm, setShowQuickSubCategoryForm] = useState(false);
+  const [quickCat, setQuickCat] = useState({ name: '', name_en: '', name_ha: '' });
+  const [quickSub, setQuickSub] = useState({ name: '', name_en: '', name_ha: '' });
+
   // Articles State
   const [articles, setArticles] = useState<Article[]>([]);
   const [editingArticle, setEditingArticle] = useState<Article | null>(null);
   const [newArticle, setNewArticle] = useState<Partial<Article>>({
-    title: '', hook: '', thumbnail: '', content: '', type: 'richtext'
+    title: '', hook: '', thumbnail: '', content: '', type: 'richtext', category: '', subCategory: ''
   });
   const [showPreview, setShowPreview] = useState(false);
   const [draftSavedMessage, setDraftSavedMessage] = useState('');
@@ -417,6 +438,50 @@ export const AdminDashboard: React.FC = () => {
       setArticles(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Article)));
     }, (error) => console.error("Admin Articles error", error));
 
+    const unsubscribeCategories = onSnapshot(collection(db, 'categories'), (snapshot) => {
+      if (!snapshot.empty) {
+        const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        list.sort((a: any, b: any) => (a.createdAt || 0) - (b.createdAt || 0));
+        setCategories(list);
+      } else {
+        const defaultCats = [
+          {
+            id: 'wird',
+            name: 'Versets & Wirds',
+            name_en: 'Verses & Wirds',
+            name_ha: 'Wirdoshi & Ayoyi',
+            iconName: 'BookOpen',
+            subCategories: [
+              { id: 'wird-protection', name: 'Protection', name_en: 'Protection', name_ha: 'Kariya' },
+              { id: 'wird-guerison', name: 'Guérison', name_en: 'Healing', name_ha: 'Waraka' }
+            ]
+          },
+          {
+            id: 'secret',
+            name: "Secrets d'Asrar",
+            name_en: 'Secrets of Asrar',
+            name_ha: 'Asrarai',
+            iconName: 'Sparkles',
+            subCategories: [
+              { id: 'secret-richesse', name: 'Prospérité', name_en: 'Prosperity', name_ha: 'Arziki' },
+              { id: 'secret-amour', name: 'Affection', name_en: 'Affection', name_ha: 'Soyayya' }
+            ]
+          },
+          {
+            id: 'recette',
+            name: 'Recettes Spirituelles',
+            name_en: 'Spiritual Recipes',
+            name_ha: 'Hanyoyi',
+            iconName: 'Shield',
+            subCategories: [
+              { id: 'recette-sante', name: 'Santé', name_en: 'Health', name_ha: 'Lafiya' }
+            ]
+          }
+        ];
+        setCategories(defaultCats);
+      }
+    }, (error) => console.error("Admin Categories error", error));
+
     const unsubscribeManualPayments = onSnapshot(collection(db, 'manual_payments'), (snapshot) => {
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       list.sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
@@ -458,6 +523,7 @@ export const AdminDashboard: React.FC = () => {
       unsubscribePosts();
       unsubscribeNotifs();
       unsubscribeArticles();
+      unsubscribeCategories();
       unsubscribeManualPayments();
       unsubscribeFeatures();
       unsubscribePrompts();
@@ -652,13 +718,29 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
-  const handleToggleMysteryTools = async (id: string) => {
+  const handleToggleMysteryTools = (id: string) => {
     const user = users.find(u => u.id === id);
     if (!user) return;
+    setBlockingToolsUser(user);
+  };
+
+  const handleToggleIndividualToolBlock = async (userId: string, toolId: string) => {
+    const user = users.find(u => u.id === userId);
+    if (!user) return;
+    const currentBlocked = user.blockedTools || [];
+    let updatedBlocked = [];
+    if (currentBlocked.includes(toolId)) {
+      updatedBlocked = currentBlocked.filter((id: string) => id !== toolId);
+    } else {
+      updatedBlocked = [...currentBlocked, toolId];
+    }
+    
     try {
-      await updateDoc(doc(db, 'users', id), { mysteryToolsDisabled: !user.mysteryToolsDisabled });
+      await updateDoc(doc(db, 'users', userId), { blockedTools: updatedBlocked });
+      showToast("Paramètre d'accès de l'outil mis à jour.", "success");
     } catch (error) {
-      console.error("Error updating user", error);
+      console.error("Error updating blocked tools:", error);
+      showToast("Une erreur est survenue.", "error");
     }
   };
 
@@ -841,7 +923,9 @@ export const AdminDashboard: React.FC = () => {
           type: newArticle.type || 'richtext',
           status: newArticle.status || 'Draft',
           publishDate: newArticle.publishDate || '',
-          isPremium: newArticle.isPremium || false
+          isPremium: newArticle.isPremium || false,
+          category: newArticle.category || 'wird',
+          subCategory: (newArticle as any).subCategory || ''
         });
         setEditingArticle(null);
         showToast("Article mis à jour avec succès !");
@@ -862,11 +946,13 @@ export const AdminDashboard: React.FC = () => {
           status: newArticle.status || 'Draft',
           publishDate: newArticle.publishDate || '',
           isPremium: newArticle.isPremium || false,
+          category: newArticle.category || 'wird',
+          subCategory: (newArticle as any).subCategory || '',
           createdAt: Date.now()
         });
         showToast("Article publié avec succès !");
       }
-      setNewArticle({ title: '', hook: '', thumbnail: '', content: '', type: 'richtext', status: 'Draft', publishDate: '', benefits: [] } as any);
+      setNewArticle({ title: '', hook: '', thumbnail: '', content: '', type: 'richtext', status: 'Draft', publishDate: '', benefits: [], category: '', subCategory: '' } as any);
       localStorage.removeItem('asrarhub_article_draft');
     } catch (error: any) {
       console.error("Error saving article:", error);
@@ -911,7 +997,9 @@ export const AdminDashboard: React.FC = () => {
       type: article.type,
       status: article.status || 'Draft',
       publishDate: article.publishDate || '',
-      isPremium: (article as any).isPremium || false
+      isPremium: (article as any).isPremium || false,
+      category: (article as any).category || '',
+      subCategory: (article as any).subCategory || ''
     });
     setActiveTab('articles');
   };
@@ -922,6 +1010,7 @@ export const AdminDashboard: React.FC = () => {
       { id: 'users', label: 'Utilisateurs', icon: Users },
       { id: 'payments', label: 'Paiements Directs', icon: CreditCard },
       { id: 'articles', label: 'Articles', icon: FileText },
+      { id: 'categories', label: 'Catégories', icon: FolderOpen },
       { id: 'store', label: 'Boutique', icon: ShoppingBag },
       { id: 'community', label: 'Communauté', icon: Users },
       { id: 'notifications', label: 'Notifications', icon: Volume2 },
@@ -970,6 +1059,95 @@ export const AdminDashboard: React.FC = () => {
         </div>
       </div>
     );
+  };
+
+  const handleQuickCreateCategory = async (name: string, nameEn: string, nameHa: string) => {
+    if (!name.trim()) {
+      showToast("Le nom de la catégorie est requis", "error");
+      return null;
+    }
+    try {
+      const catId = name.toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .trim()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+        
+      if (!catId) {
+        showToast("Nom de catégorie invalide", "error");
+        return null;
+      }
+
+      const iconName = getAutoIconForCategory(name);
+
+      await setDoc(doc(db, 'categories', catId), {
+        name: name.trim(),
+        name_en: nameEn.trim() || name.trim(),
+        name_ha: nameHa.trim() || name.trim(),
+        iconName,
+        subCategories: [],
+        createdAt: Date.now()
+      });
+
+      showToast("Catégorie créée avec succès !");
+      return catId;
+    } catch (err: any) {
+      console.error("Error creating category", err);
+      showToast(`Erreur: ${err.message}`, "error");
+      return null;
+    }
+  };
+
+  const handleQuickCreateSubCategory = async (catId: string, name: string, nameEn: string, nameHa: string) => {
+    if (!catId) {
+      showToast("Sélectionnez d'abord une catégorie", "error");
+      return null;
+    }
+    const subName = name.trim();
+    if (!subName) {
+      showToast("Le nom de la sous-catégorie est requis", "error");
+      return null;
+    }
+
+    try {
+      const parentCat = categories.find(c => c.id === catId);
+      if (!parentCat) {
+        showToast("Catégorie parente introuvable", "error");
+        return null;
+      }
+
+      const subId = `${catId}-${subName.toLowerCase()
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .trim()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')}`;
+
+      const existingSubs = parentCat.subCategories || [];
+      if (existingSubs.some((s: any) => s.id === subId)) {
+        showToast("Cette sous-catégorie existe déjà", "error");
+        return null;
+      }
+
+      const newSub = {
+        id: subId,
+        name: subName,
+        name_en: nameEn.trim() || subName,
+        name_ha: nameHa.trim() || subName
+      };
+
+      const updatedSubs = [...existingSubs, newSub];
+
+      await updateDoc(doc(db, 'categories', catId), {
+        subCategories: updatedSubs
+      });
+
+      showToast("Sous-catégorie ajoutée avec succès !");
+      return subId;
+    } catch (err: any) {
+      console.error("Error creating subcategory", err);
+      showToast(`Erreur: ${err.message}`, "error");
+      return null;
+    }
   };
 
   const renderOverview = () => (
@@ -2000,6 +2178,35 @@ export const AdminDashboard: React.FC = () => {
           })}
         </div>
       </div>
+
+      {/* Options de Partage */}
+      <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+        <h3 className="font-bold text-gray-900 dark:text-white text-lg flex items-center gap-2 mb-2">
+          <Share className="text-emerald-500" size={20} />
+          Options de Partage des Outils
+        </h3>
+        <p className="text-xs text-gray-500 mb-6">
+          Désactivez ou activez l'icône de partage des outils pour les utilisateurs finaux de l'application.
+        </p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4">
+          <div>
+            <h4 className="font-bold text-gray-950 dark:text-white text-sm">Afficher l'icône de partage sur les outils</h4>
+            <p className="text-xs text-gray-500 mt-0.5">Permet aux utilisateurs de partager des liens vers les outils spirituels de l'application.</p>
+          </div>
+          <button
+            onClick={() => handleToggleFeature('share_tools_enabled', featureToggles.share_tools_enabled !== false)}
+            className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors shrink-0 ${
+              featureToggles.share_tools_enabled !== false ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
+            }`}
+          >
+            <div
+              className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${
+                featureToggles.share_tools_enabled !== false ? 'translate-x-6' : 'translate-x-0'
+              }`}
+            />
+          </button>
+        </div>
+      </div>
     </div>
     );
   };
@@ -2164,6 +2371,226 @@ export const AdminDashboard: React.FC = () => {
               Article Premium (Réservé aux abonnés)
             </label>
           </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Catégorie de l'article</label>
+              <select
+                value={newArticle.category || ''}
+                onChange={(e) => {
+                  const catId = e.target.value;
+                  setNewArticle({ ...newArticle, category: catId, subCategory: '' });
+                }}
+                className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
+              >
+                <option value="">-- Sélectionner une Catégorie --</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+              <div className="mt-1.5 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowQuickCategoryForm(!showQuickCategoryForm);
+                    setShowQuickSubCategoryForm(false);
+                  }}
+                  className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 flex items-center gap-1 font-bold"
+                >
+                  <Plus size={12} /> + Créer une catégorie
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Sous-Catégorie de l'article</label>
+              <select
+                value={(newArticle as any).subCategory || ''}
+                onChange={(e) => setNewArticle({ ...newArticle, subCategory: e.target.value })}
+                disabled={!newArticle.category}
+                className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 disabled:opacity-50"
+              >
+                <option value="">-- Sélectionner une Sous-Catégorie --</option>
+                {categories
+                  .find((cat) => cat.id === newArticle.category)
+                  ?.subCategories?.map((sub: any) => (
+                    <option key={sub.id} value={sub.id}>
+                      {sub.name}
+                    </option>
+                  ))}
+              </select>
+              <div className="mt-1.5 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!newArticle.category) {
+                      showToast("Veuillez sélectionner une catégorie d'abord", "error");
+                      return;
+                    }
+                    setShowQuickSubCategoryForm(!showQuickSubCategoryForm);
+                    setShowQuickCategoryForm(false);
+                  }}
+                  disabled={!newArticle.category}
+                  className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 flex items-center gap-1 font-bold disabled:opacity-40 disabled:no-underline"
+                >
+                  <Plus size={12} /> + Créer une sous-catégorie
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Quick Category Form */}
+          {showQuickCategoryForm && (
+            <div className="bg-emerald-50/40 dark:bg-emerald-950/10 border border-emerald-500/20 rounded-2xl p-4 space-y-3">
+              <div className="flex justify-between items-center">
+                <h4 className="text-xs font-black text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">
+                  Création Rapide de Catégorie
+                </h4>
+                <button 
+                  type="button" 
+                  onClick={() => setShowQuickCategoryForm(false)} 
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Nom (FR) *</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Protection, Richesse..."
+                    value={quickCat.name}
+                    onChange={(e) => setQuickCat({ ...quickCat, name: e.target.value })}
+                    className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white outline-none focus:ring-1 focus:ring-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Nom (EN - Optionnel)</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Protection, Wealth..."
+                    value={quickCat.name_en}
+                    onChange={(e) => setQuickCat({ ...quickCat, name_en: e.target.value })}
+                    className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white outline-none focus:ring-1 focus:ring-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Nom (HA - Optionnel)</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Kariya, Arziki..."
+                    value={quickCat.name_ha}
+                    onChange={(e) => setQuickCat({ ...quickCat, name_ha: e.target.value })}
+                    className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white outline-none focus:ring-1 focus:ring-emerald-500"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowQuickCategoryForm(false)}
+                  className="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-xl text-xs font-bold transition-all"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const createdId = await handleQuickCreateCategory(quickCat.name, quickCat.name_en, quickCat.name_ha);
+                    if (createdId) {
+                      setNewArticle({ ...newArticle, category: createdId, subCategory: '' });
+                      setQuickCat({ name: '', name_en: '', name_ha: '' });
+                      setShowQuickCategoryForm(false);
+                    }
+                  }}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all"
+                >
+                  Créer et Sélectionner
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Quick Subcategory Form */}
+          {showQuickSubCategoryForm && newArticle.category && (
+            <div className="bg-emerald-50/40 dark:bg-emerald-950/10 border border-emerald-500/20 rounded-2xl p-4 space-y-3">
+              <div className="flex justify-between items-center">
+                <h4 className="text-xs font-black text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">
+                  Création Rapide de Sous-Catégorie pour "{categories.find(c => c.id === newArticle.category)?.name}"
+                </h4>
+                <button 
+                  type="button" 
+                  onClick={() => setShowQuickSubCategoryForm(false)} 
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Nom (FR) *</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Protection Spécifique..."
+                    value={quickSub.name}
+                    onChange={(e) => setQuickSub({ ...quickSub, name: e.target.value })}
+                    className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white outline-none focus:ring-1 focus:ring-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Nom (EN - Optionnel)</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Specific Protection..."
+                    value={quickSub.name_en}
+                    onChange={(e) => setQuickSub({ ...quickSub, name_en: e.target.value })}
+                    className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white outline-none focus:ring-1 focus:ring-emerald-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Nom (HA - Optionnel)</label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Musamman Kariya..."
+                    value={quickSub.name_ha}
+                    onChange={(e) => setQuickSub({ ...quickSub, name_ha: e.target.value })}
+                    className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white outline-none focus:ring-1 focus:ring-emerald-500"
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowQuickSubCategoryForm(false)}
+                  className="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-xl text-xs font-bold transition-all"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const createdSubId = await handleQuickCreateSubCategory(
+                      newArticle.category!,
+                      quickSub.name,
+                      quickSub.name_en,
+                      quickSub.name_ha
+                    );
+                    if (createdSubId) {
+                      setNewArticle({ ...newArticle, subCategory: createdSubId });
+                      setQuickSub({ name: '', name_en: '', name_ha: '' });
+                      setShowQuickSubCategoryForm(false);
+                    }
+                  }}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all"
+                >
+                  Créer et Sélectionner
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-bold text-gray-900 dark:text-white">Nouvel Article</h2>
@@ -2463,6 +2890,15 @@ export const AdminDashboard: React.FC = () => {
                     >
                       {article.isPremium ? '★ Premium' : '☆ Standard'}
                     </button>
+
+                    {((article as any).category || (article as any).subCategory) && (
+                      <span className="text-[10px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400 px-2 py-0.5 rounded-full whitespace-nowrap">
+                        {categories.find(c => c.id === (article as any).category)?.name || (article as any).category}
+                        {(article as any).subCategory && ` / ${
+                          categories.find(c => c.id === (article as any).category)?.subCategories?.find((s: any) => s.id === (article as any).subCategory)?.name || (article as any).subCategory
+                        }`}
+                      </span>
+                    )}
                   </div>
                   {article.publishDate && (
                     <p className="text-xs text-gray-500 mt-1">Plannifié: {new Date(article.publishDate).toLocaleDateString()}</p>
@@ -2486,6 +2922,31 @@ export const AdminDashboard: React.FC = () => {
 
   const renderCommunity = () => (
     <div className="space-y-6">
+      {/* Maintenance Controls for Community */}
+      <div className="bg-amber-50/55 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h4 className="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-2">
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
+            Mode d'accès de la Communauté
+          </h4>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            Mettez le forum communautaire en maintenance, réservez-le aux membres premium, ou laissez-le ouvert à tous.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <select
+            value={featureToggles['tool_community'] || 'active'}
+            onChange={(e) => handleToggleFeature('tool_community', e.target.value)}
+            className="text-xs font-bold px-3 py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer text-gray-900 dark:text-white"
+          >
+            <option value="active">🟢 Active (Ouverte à tous)</option>
+            <option value="premium">⭐ Premium (Membres uniquement)</option>
+            <option value="maintenance">🛠️ En maintenance (Bloquée)</option>
+            <option value="inactive">🔴 Inactive (Désactivée)</option>
+          </select>
+        </div>
+      </div>
+
       <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
         <h3 className="font-bold text-gray-900 dark:text-white mb-6">Modération de la Communauté</h3>
         <div className="space-y-4">
@@ -3626,6 +4087,335 @@ export const AdminDashboard: React.FC = () => {
     </div>
   );
 
+  const getAutoIconForCategory = (name: string): string => {
+    const norm = name.toLowerCase().trim();
+    if (norm.includes('wird') || norm.includes('verset') || norm.includes('coran') || norm.includes('ay') || norm.includes('priere') || norm.includes('invoc')) {
+      return 'BookOpen';
+    }
+    if (norm.includes('protect') || norm.includes('kare') || norm.includes('evil') || norm.includes('blind') || norm.includes('combat') || norm.includes('pacte')) {
+      return 'Shield';
+    }
+    if (norm.includes('secret') || norm.includes('sirr') || norm.includes('myst') || norm.includes('magic') || norm.includes('asrar')) {
+      return 'Sparkles';
+    }
+    if (norm.includes('recette') || norm.includes('medecine') || norm.includes('sante') || norm.includes('cure') || norm.includes('plant')) {
+      return 'Activity';
+    }
+    if (norm.includes('rich') || norm.includes('argent') || norm.includes('or') || norm.includes('reussite') || norm.includes('succes') || norm.includes('finance') || norm.includes('travail') || norm.includes('emploi')) {
+      return 'Crown';
+    }
+    if (norm.includes('amour') || norm.includes('mariage') || norm.includes('couple') || norm.includes('affection') || norm.includes('aimer') || norm.includes('unio')) {
+      return 'Heart';
+    }
+    
+    const icons = ['BookOpen', 'Shield', 'Sparkles', 'Activity', 'Crown', 'Heart', 'Sun', 'Moon', 'Flame', 'Compass', 'Library', 'Anchor', 'Feather', 'Award', 'Trophy', 'Infinity'];
+    let sum = 0;
+    for (let i = 0; i < name.length; i++) {
+      sum += name.charCodeAt(i);
+    }
+    return icons[sum % icons.length];
+  };
+
+  const renderCategories = () => {
+    const getArticleCount = (categoryId: string) => {
+      return articles.filter(art => (art as any).category === categoryId).length;
+    };
+
+    const handleCreateCategory = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!newCategory.name.trim()) {
+        showToast("Le nom de la catégorie est requis", "error");
+        return;
+      }
+      
+      try {
+        const catId = newCategory.name.toLowerCase()
+          .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+          .trim()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '');
+          
+        if (!catId) {
+          showToast("Nom de catégorie invalide", "error");
+          return;
+        }
+
+        const iconName = getAutoIconForCategory(newCategory.name);
+
+        await setDoc(doc(db, 'categories', catId), {
+          name: newCategory.name.trim(),
+          name_en: newCategory.name_en.trim() || newCategory.name.trim(),
+          name_ha: newCategory.name_ha.trim() || newCategory.name.trim(),
+          iconName,
+          subCategories: [],
+          createdAt: Date.now()
+        });
+
+        setNewCategory({ name: '', name_en: '', name_ha: '' });
+        showToast("Catégorie créée avec succès !");
+      } catch (err: any) {
+        console.error("Error creating category", err);
+        showToast(`Erreur: ${err.message}`, "error");
+      }
+    };
+
+    const handleDeleteCategory = async (catId: string) => {
+      if (['wird', 'secret', 'recette'].includes(catId)) {
+        if (!window.confirm("Cette catégorie est une catégorie système par défaut. La supprimer pourrait affecter l'affichage des articles existants. Voulez-vous vraiment continuer ?")) {
+          return;
+        }
+      } else {
+        if (!window.confirm("Êtes-vous sûr de vouloir supprimer cette catégorie et toutes ses sous-catégories ?")) {
+          return;
+        }
+      }
+
+      try {
+        await deleteDoc(doc(db, 'categories', catId));
+        showToast("Catégorie supprimée avec succès !");
+      } catch (err: any) {
+        console.error("Error deleting category", err);
+        showToast(`Erreur: ${err.message}`, "error");
+      }
+    };
+
+    const handleCreateSubCategory = async (catId: string, e: React.FormEvent) => {
+      e.preventDefault();
+      const subName = newSubCategory.name.trim();
+      if (!subName) {
+        showToast("Le nom de la sous-catégorie est requis", "error");
+        return;
+      }
+
+      try {
+        const parentCat = categories.find(c => c.id === catId);
+        if (!parentCat) return;
+
+        const subId = `${catId}-${subName.toLowerCase()
+          .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+          .trim()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '')}`;
+
+        const existingSubs = parentCat.subCategories || [];
+        if (existingSubs.some((s: any) => s.id === subId)) {
+          showToast("Cette sous-catégorie existe déjà", "error");
+          return;
+        }
+
+        const newSub = {
+          id: subId,
+          name: subName,
+          name_en: newSubCategory.name_en.trim() || subName,
+          name_ha: newSubCategory.name_ha.trim() || subName
+        };
+
+        const updatedSubs = [...existingSubs, newSub];
+
+        await updateDoc(doc(db, 'categories', catId), {
+          subCategories: updatedSubs
+        });
+
+        setNewSubCategory({ categoryId: '', name: '', name_en: '', name_ha: '' });
+        showToast("Sous-catégorie ajoutée avec succès !");
+      } catch (err: any) {
+        console.error("Error creating subcategory", err);
+        showToast(`Erreur: ${err.message}`, "error");
+      }
+    };
+
+    const handleDeleteSubCategory = async (catId: string, subId: string) => {
+      if (!window.confirm("Voulez-vous vraiment supprimer cette sous-catégorie ?")) return;
+
+      try {
+        const parentCat = categories.find(c => c.id === catId);
+        if (!parentCat) return;
+
+        const updatedSubs = (parentCat.subCategories || []).filter((s: any) => s.id !== subId);
+
+        await updateDoc(doc(db, 'categories', catId), {
+          subCategories: updatedSubs
+        });
+
+        showToast("Sous-catégorie supprimée !");
+      } catch (err: any) {
+        console.error("Error deleting subcategory", err);
+        showToast(`Erreur: ${err.message}`, "error");
+      }
+    };
+
+    return (
+      <div className="space-y-6 text-gray-900 dark:text-white">
+        {/* Create Category Panel */}
+        <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+          <h3 className="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+            <Plus size={20} className="text-emerald-500" />
+            Créer une Nouvelle Catégorie
+          </h3>
+          <form onSubmit={handleCreateCategory} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Nom (FR)</label>
+                <input
+                  type="text"
+                  placeholder="Ex: Protection, Richesse..."
+                  value={newCategory.name}
+                  onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
+                  className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Nom (EN - Optionnel)</label>
+                <input
+                  type="text"
+                  placeholder="Ex: Protection, Wealth..."
+                  value={newCategory.name_en}
+                  onChange={(e) => setNewCategory({ ...newCategory, name_en: e.target.value })}
+                  className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Nom (HA - Optionnel)</label>
+                <input
+                  type="text"
+                  placeholder="Ex: Kariya, Arziki..."
+                  value={newCategory.name_ha}
+                  onChange={(e) => setNewCategory({ ...newCategory, name_ha: e.target.value })}
+                  className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
+                />
+              </div>
+            </div>
+            <button
+              type="submit"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-colors"
+            >
+              <Plus size={16} /> Créer la catégorie (icône auto-générée)
+            </button>
+          </form>
+        </div>
+
+        {/* Categories List */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {categories.map((cat) => {
+            const artCount = getArticleCount(cat.id);
+            const isEditingSub = newSubCategory.categoryId === cat.id;
+
+            return (
+              <div key={cat.id} className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col justify-between">
+                <div>
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-2xl">
+                        <LucideIcon name={cat.iconName || 'FolderOpen'} size={24} />
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-lg text-gray-900 dark:text-white flex items-center gap-2">
+                          {cat.name}
+                          <span className="text-xs font-semibold bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded-full">
+                            {artCount} {artCount > 1 ? 'articles' : 'article'}
+                          </span>
+                        </h4>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                          EN: {cat.name_en || cat.name} | HA: {cat.name_ha || cat.name}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteCategory(cat.id)}
+                      className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors"
+                      title="Supprimer la catégorie"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+
+                  {/* Subcategories */}
+                  <div className="mt-4 space-y-3">
+                    <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Sous-Catégories</h5>
+                    {(cat.subCategories || []).length === 0 ? (
+                      <p className="text-sm text-gray-400 italic">Aucune sous-catégorie</p>
+                    ) : (
+                      <div className="flex flex-wrap gap-2">
+                        {(cat.subCategories || []).map((sub: any) => (
+                          <div
+                            key={sub.id}
+                            className="flex items-center gap-1.5 px-3 py-1 bg-gray-50 dark:bg-gray-900 border border-gray-150 dark:border-gray-700 rounded-xl text-xs font-semibold text-gray-700 dark:text-gray-300"
+                          >
+                            <span>{sub.name}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteSubCategory(cat.id, sub.id)}
+                              className="text-gray-400 hover:text-red-500 transition-colors"
+                            >
+                              <X size={12} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Add Subcategory Form */}
+                <div className="mt-6 pt-4 border-t border-gray-50 dark:border-gray-700/50">
+                  {isEditingSub ? (
+                    <form onSubmit={(e) => handleCreateSubCategory(cat.id, e)} className="space-y-3">
+                      <div className="grid grid-cols-1 gap-2">
+                        <input
+                          type="text"
+                          placeholder="Sous-catégorie (FR)"
+                          value={newSubCategory.name}
+                          onChange={(e) => setNewSubCategory({ ...newSubCategory, name: e.target.value })}
+                          className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-emerald-500 outline-none"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Sous-catégorie (EN - Optionnel)"
+                          value={newSubCategory.name_en}
+                          onChange={(e) => setNewSubCategory({ ...newSubCategory, name_en: e.target.value })}
+                          className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-emerald-500 outline-none"
+                        />
+                        <input
+                          type="text"
+                          placeholder="Sous-catégorie (HA - Optionnel)"
+                          value={newSubCategory.name_ha}
+                          onChange={(e) => setNewSubCategory({ ...newSubCategory, name_ha: e.target.value })}
+                          className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-emerald-500 outline-none"
+                        />
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          type="submit"
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg font-bold text-xs transition-colors"
+                        >
+                          Ajouter
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setNewSubCategory({ categoryId: '', name: '', name_en: '', name_ha: '' })}
+                          className="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-3 py-1.5 rounded-lg font-bold text-xs transition-colors"
+                        >
+                          Annuler
+                        </button>
+                      </div>
+                    </form>
+                  ) : (
+                    <button
+                      onClick={() => setNewSubCategory({ categoryId: cat.id, name: '', name_en: '', name_ha: '' })}
+                      className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1"
+                    >
+                      <Plus size={14} /> Ajouter une sous-catégorie
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
   const { user } = useAuth();
   const navigate = useNavigate();
   
@@ -3679,9 +4469,107 @@ export const AdminDashboard: React.FC = () => {
     );
   };
 
+  const renderBlockingToolsModal = () => {
+    if (!blockingToolsUser) return null;
+    const activeUser = users.find(u => u.id === blockingToolsUser.id) || blockingToolsUser;
+    const userBlockedList = activeUser.blockedTools || [];
+
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+        <div className="bg-white dark:bg-gray-900 rounded-3xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl">
+          <div className="p-4 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center bg-gray-50 dark:bg-gray-800">
+            <div>
+              <h3 className="font-bold text-lg text-gray-900 dark:text-white flex items-center gap-2">
+                <ShieldAlert size={20} className="text-red-500" /> Gérer l'accès aux outils
+              </h3>
+              <p className="text-xs text-gray-500 mt-0.5">Utilisateur : <span className="font-semibold text-gray-700 dark:text-gray-300">{activeUser.name || activeUser.email}</span></p>
+            </div>
+            <button onClick={() => setBlockingToolsUser(null)} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors text-gray-500">
+              <X size={20} />
+            </button>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            {/* Master block switch */}
+            <div className="bg-red-50 dark:bg-red-950/20 rounded-2xl p-4 border border-red-100 dark:border-red-900/40 flex items-center justify-between gap-4">
+              <div>
+                <h4 className="text-sm font-bold text-red-800 dark:text-red-300">Bloquer TOUS les outils avancés d'un coup</h4>
+                <p className="text-xs text-red-600/80 dark:text-red-400/80 mt-0.5">
+                  Bascule le statut général de blocage des outils avancés (mysteryToolsDisabled).
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await updateDoc(doc(db, 'users', activeUser.id), { 
+                      mysteryToolsDisabled: !activeUser.mysteryToolsDisabled 
+                    });
+                    showToast("Paramètre général de blocage mis à jour.", "success");
+                  } catch (e) {
+                    console.error(e);
+                  }
+                }}
+                className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors shrink-0 ${
+                  activeUser.mysteryToolsDisabled ? 'bg-red-500' : 'bg-gray-300 dark:bg-gray-750'
+                }`}
+              >
+                <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${activeUser.mysteryToolsDisabled ? 'translate-x-6' : 'translate-x-0'}`} />
+              </button>
+            </div>
+
+            {/* Individual Tools Grid */}
+            <div className="space-y-3">
+              <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Liste complète des outils</h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[45vh] overflow-y-auto pr-1">
+                {ALL_USER_TOOLS.map((tool) => {
+                  const isBlocked = userBlockedList.includes(tool.id);
+                  return (
+                    <div 
+                      key={tool.id} 
+                      className={`p-3 rounded-xl border flex items-center justify-between gap-3 transition-colors ${
+                        isBlocked 
+                          ? 'bg-red-50/50 border-red-100 dark:bg-red-950/10 dark:border-red-900/30' 
+                          : 'bg-gray-50 border-gray-100 dark:bg-gray-800/40 dark:border-gray-800'
+                      }`}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs sm:text-sm font-bold text-gray-800 dark:text-gray-200 truncate">{tool.label}</p>
+                        <p className="text-[10px] text-gray-500 truncate mt-0.5">{tool.desc}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleIndividualToolBlock(activeUser.id, tool.id)}
+                        className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors shrink-0 ${
+                          isBlocked ? 'bg-red-500' : 'bg-gray-300 dark:bg-gray-700'
+                        }`}
+                      >
+                        <div className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ${isBlocked ? 'translate-x-5' : 'translate-x-0'}`} />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+          
+          <div className="p-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/60 flex justify-end">
+            <button
+              onClick={() => setBlockingToolsUser(null)}
+              className="px-5 py-2 bg-gray-250 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-xl text-xs font-bold transition-all"
+            >
+              Fermer
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="w-full max-w-5xl mx-auto p-4 sm:p-6 lg:p-8 safe-area-pt pb-24 border-none min-h-screen overflow-x-hidden">
       {renderArticlePreviewModal()}
+      {renderBlockingToolsModal()}
       <div className="flex items-center gap-4 mb-8">
         <div className="p-3 bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 rounded-2xl">
           <Shield size={28} />
@@ -3704,7 +4592,8 @@ export const AdminDashboard: React.FC = () => {
         {activeTab === 'users' && renderUsers()}
         {activeTab === 'payments' && renderPayments()}
         {activeTab === 'articles' && renderArticles()}
-        {activeTab === 'store' && <AdminStoreManager />}
+        {activeTab === 'categories' && renderCategories()}
+        {activeTab === 'store' && <AdminStoreManager featureToggles={featureToggles} handleToggleFeature={handleToggleFeature} />}
         {activeTab === 'community' && renderCommunity()}
         {activeTab === 'notifications' && renderNotifications()}
         {activeTab === 'features' && renderFeatures()}

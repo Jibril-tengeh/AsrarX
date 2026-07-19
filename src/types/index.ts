@@ -1,4 +1,4 @@
-export type Category = 'wird' | 'secret' | 'recette';
+export type Category = string;
 
 export interface AsrarItem {
   id: string;

@@ -32,6 +32,8 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, on
   const [storeProducts, setStoreProducts] = useState<any[]>([]);
   const [communityPosts, setCommunityPosts] = useState<any[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
+  const backdropRef = useRef<HTMLDivElement>(null);
+  const modalContentRef = useRef<HTMLDivElement>(null);
 
   // Load store products and community posts dynamically from Firestore
   useEffect(() => {
@@ -58,6 +60,28 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, on
   useEffect(() => {
     if (isOpen) {
       setTimeout(() => inputRef.current?.focus(), 100);
+    }
+  }, [isOpen]);
+
+  // Lock background scroll and disable pull-to-refresh when search is open
+  useEffect(() => {
+    if (isOpen) {
+      const originalOverflowBody = document.body.style.overflow;
+      const originalOverscrollBody = document.body.style.overscrollBehavior;
+      const originalOverflowHtml = document.documentElement.style.overflow;
+      const originalOverscrollHtml = document.documentElement.style.overscrollBehavior;
+
+      document.body.style.overflow = 'hidden';
+      document.body.style.overscrollBehavior = 'none';
+      document.documentElement.style.overflow = 'hidden';
+      document.documentElement.style.overscrollBehavior = 'none';
+
+      return () => {
+        document.body.style.overflow = originalOverflowBody;
+        document.body.style.overscrollBehavior = originalOverscrollBody;
+        document.documentElement.style.overflow = originalOverflowHtml;
+        document.documentElement.style.overscrollBehavior = originalOverscrollHtml;
+      };
     }
   }, [isOpen]);
 
@@ -455,7 +479,7 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, on
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-start justify-center p-4 sm:p-6 md:p-10 safe-area-pt">
+        <div ref={backdropRef} className="fixed inset-0 z-[100] flex items-start justify-center p-4 sm:p-6 md:p-10 safe-area-pt">
           {/* Backdrop Blur */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -467,11 +491,12 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, on
 
           {/* Search Box Card */}
           <motion.div
+            ref={modalContentRef}
             initial={{ scale: 0.95, y: -20, opacity: 0 }}
             animate={{ scale: 1, y: 0, opacity: 1 }}
             exit={{ scale: 0.95, y: -20, opacity: 0 }}
             transition={{ type: 'spring', duration: 0.35 }}
-            className="relative w-full max-w-2xl bg-white dark:bg-gray-950 rounded-3xl shadow-2xl overflow-hidden border border-gray-100 dark:border-gray-800 flex flex-col max-h-[85vh] sm:max-h-[75vh]"
+            className="relative w-full max-w-2xl bg-white dark:bg-gray-950 rounded-3xl shadow-2xl overflow-hidden border border-gray-100 dark:border-gray-800 flex flex-col max-h-[85vh] sm:max-h-[75vh] overscroll-contain"
           >
             {/* Search Input Header */}
             <div className="relative border-b border-gray-100 dark:border-gray-800 flex items-center px-4 sm:px-6 py-4">

@@ -52,6 +52,7 @@ interface UserData {
   role: string;
   isBanned: boolean;
   mysteryToolsDisabled: boolean;
+  blockedTools?: string[];
   isTrusted: boolean;
   emailVerified: boolean;
   photoURL?: string | null;
@@ -180,6 +181,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               role: currentRole,
               isBanned: data.isBanned || false,
               mysteryToolsDisabled: data.mysteryToolsDisabled || false,
+              blockedTools: data.blockedTools || [],
               isTrusted: data.isTrusted || false,
               emailVerified: firebaseUser.emailVerified,
               photoURL: data.photoURL || firebaseUser.photoURL || null,
@@ -202,6 +204,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               role: currentRole,
               isBanned: false,
               mysteryToolsDisabled: false,
+              blockedTools: [],
               isTrusted: false,
               emailVerified: firebaseUser.emailVerified,
               photoURL: firebaseUser.photoURL || null,

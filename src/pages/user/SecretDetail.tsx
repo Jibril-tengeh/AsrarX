@@ -1341,11 +1341,11 @@ export const SecretDetail: React.FC = () => {
                       </div>
                       
                       <h3 className="text-xl sm:text-2xl font-black mb-3 text-white">
-                        Révélez le Secret Complet
+                        {t("secretDetail.unlockSecretTitle", "Révélez le Secret Complet")}
                       </h3>
                       
                       <p className="text-white/95 max-w-lg text-sm sm:text-base leading-relaxed mb-6">
-                        La suite de ce secret (les formules exactes, la méthode d'activation spirituelle et les détails de pratique) est réservée aux membres Premium de l'AsrarHub.
+                        {t("secretDetail.unlockSecretDesc", "La suite de ce secret (les formules exactes, la méthode d'activation spirituelle et les détails de pratique) est réservée aux membres Premium de l'AsrarHub.")}
                       </p>
                       
                       <div className="flex flex-wrap items-center justify-center gap-4">
@@ -1354,7 +1354,7 @@ export const SecretDetail: React.FC = () => {
                           className="inline-flex items-center gap-2 bg-white text-gray-950 hover:bg-gray-100 font-extrabold px-6 py-3 rounded-xl text-sm sm:text-base transition-all shadow-lg transform hover:-translate-y-0.5"
                         >
                           <Sparkles size={18} className="text-amber-600 fill-amber-200" />
-                          Passer au Premium
+                          {t("secretDetail.unlockSecretBtn", "Passer au Premium")}
                         </Link>
                       </div>
                     </div>

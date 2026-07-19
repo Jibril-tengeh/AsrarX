@@ -22,7 +22,7 @@ interface MysticCalendarModalProps {
 
 
 export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen, onClose }) => {
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
   const HIJRI_MONTHS = getLocalizedHijriMonths(language);
   
   // Safe mathematical & astronomical conversion from Hijri to Gregorian
@@ -178,6 +178,8 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
 
   // Feature 7: Intention Journal & Synchronicities
   const [isJournalExpanded, setIsJournalExpanded] = useState<boolean>(false);
+  const [isSolarClocksExpanded, setIsSolarClocksExpanded] = useState<boolean>(false);
+  const [isSacredWavesExpanded, setIsSacredWavesExpanded] = useState<boolean>(false);
   const [morningIntention, setMorningIntention] = useState<string>('');
   const [eveningGratitude, setEveningGratitude] = useState<string>('');
   const [journalMood, setJournalMood] = useState<string>('peaceful');
@@ -224,6 +226,9 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
   const synthOscLRef = React.useRef<OscillatorNode | null>(null);
   const synthOscRRef = React.useRef<OscillatorNode | null>(null);
   const synthGainRef = React.useRef<GainNode | null>(null);
+
+  const backdropRef = React.useRef<HTMLDivElement>(null);
+  const modalContentRef = React.useRef<HTMLDivElement>(null);
 
   // Calculate Solar Times based on selected/stored coordinates
   useEffect(() => {
@@ -462,6 +467,28 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
       stopSynth();
     };
   }, []);
+
+  // Lock background scroll and disable pull-to-refresh when calendar is open
+  useEffect(() => {
+    if (isOpen) {
+      const originalOverflowBody = document.body.style.overflow;
+      const originalOverscrollBody = document.body.style.overscrollBehavior;
+      const originalOverflowHtml = document.documentElement.style.overflow;
+      const originalOverscrollHtml = document.documentElement.style.overscrollBehavior;
+
+      document.body.style.overflow = 'hidden';
+      document.body.style.overscrollBehavior = 'none';
+      document.documentElement.style.overflow = 'hidden';
+      document.documentElement.style.overscrollBehavior = 'none';
+
+      return () => {
+        document.body.style.overflow = originalOverflowBody;
+        document.body.style.overscrollBehavior = originalOverscrollBody;
+        document.documentElement.style.overflow = originalOverflowHtml;
+        document.documentElement.style.overscrollBehavior = originalOverscrollHtml;
+      };
+    }
+  }, [isOpen]);
 
   // Load journal for selected day
   useEffect(() => {
@@ -774,21 +801,45 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
 
   const gregorianMonths = language === 'fr'
     ? ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"]
+    : language === 'ha'
+    ? ["Janairu", "Fabrairu", "Maris", "Afrilu", "Mayu", "Yuni", "Yuli", "Agusta", "Satumba", "Oktoba", "Nuwamba", "Disamba"]
     : ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
   const daysOfWeek = language === 'fr'
     ? ["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"]
+    : language === 'ha'
+    ? ["Lit", "Tal", "Lar", "Alh", "Jum", "Asa", "Lah"]
     : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-  const islamicWeekDays = [
-    { arabic: "الْأَحَد", french: "Dimanche" },
-    { arabic: "الاِثْنَيْن", french: "Lundi" },
-    { arabic: "الثُّلَاثَاء", french: "Mardi" },
-    { arabic: "الْأَرْبِعَاء", french: "Mercredi" },
-    { arabic: "الْخَمِيس", french: "Jeudi" },
-    { arabic: "الْجُمُعَة", french: "Vendredi" },
-    { arabic: "السَّبْت", french: "Samedi" }
-  ];
+  const islamicWeekDays = language === 'ha'
+    ? [
+        { arabic: "الْأَحَد", french: "Lahadi" },
+        { arabic: "الاِثْنَيْن", french: "Litinin" },
+        { arabic: "الثُّلَاثَاء", french: "Talata" },
+        { arabic: "الْأَرْبِعَاء", french: "Laraba" },
+        { arabic: "الْخَمِيس", french: "Alhamis" },
+        { arabic: "الْجُمُعَة", french: "Juma'a" },
+        { arabic: "السَّبْت", french: "Asabar" }
+      ]
+    : language === 'fr'
+    ? [
+        { arabic: "الْأَحَد", french: "Dimanche" },
+        { arabic: "الاِثْنَيْن", french: "Lundi" },
+        { arabic: "الثُّلَاثَاء", french: "Mardi" },
+        { arabic: "الْأَرْبِعَاء", french: "Mercredi" },
+        { arabic: "الْخَمِيس", french: "Jeudi" },
+        { arabic: "الْجُمُعَة", french: "Vendredi" },
+        { arabic: "السَّبْت", french: "Samedi" }
+      ]
+    : [
+        { arabic: "الْأَحَد", french: "Sunday" },
+        { arabic: "الاِثْنَيْن", french: "Monday" },
+        { arabic: "الثُّلَاثَاء", french: "Tuesday" },
+        { arabic: "الْأَرْبِعَاء", french: "Wednesday" },
+        { arabic: "الْخَمِيس", french: "Thursday" },
+        { arabic: "الْجُمُعَة", french: "Friday" },
+        { arabic: "السَّبْت", french: "Saturday" }
+      ];
 
   // Helper: starting day of the week for Hijri day 1 (adjusted to Monday start)
   const firstDayGregorian = getGregorianDateForHijri(hijriYear, hijriMonthIndex, 1);
@@ -1024,7 +1075,10 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[120] flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-md">
+      <div 
+        ref={backdropRef} 
+        className="fixed inset-0 z-[120] overflow-hidden bg-black/70 backdrop-blur-md p-3 sm:p-4 flex justify-center items-center"
+      >
         
         {/* Outer click protection */}
         <motion.div 
@@ -1032,19 +1086,20 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className="absolute inset-0 cursor-default"
+          className="fixed inset-0 cursor-default z-0"
         />
 
         {/* Modal Outer Container */}
         <motion.div
+          ref={modalContentRef}
           initial={{ scale: 0.95, opacity: 0, y: 15 }}
           animate={{ scale: 1, opacity: 1, y: 0 }}
           exit={{ scale: 0.95, opacity: 0, y: 15 }}
           transition={{ type: "spring", stiffness: 300, damping: 26 }}
-          className={`relative border rounded-3xl p-4 sm:p-6 shadow-2xl max-w-xl w-full max-h-[95vh] overflow-y-auto z-10 flex flex-col scrollbar-thin transition-colors duration-300 ${
+          className={`relative border rounded-3xl p-4 sm:p-6 shadow-2xl max-w-xl w-full max-h-[90vh] sm:max-h-[85vh] overflow-y-auto overscroll-contain my-4 sm:my-8 z-10 flex flex-col transition-colors duration-300 scrollbar-thin scrollbar-track-transparent ${
             isReadingMode
-              ? 'bg-[#0f0d0b] border-amber-950/40 text-amber-100/90 shadow-amber-950/20 scrollbar-thumb-amber-950'
-              : 'bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800 scrollbar-thumb-gray-200 dark:scrollbar-thumb-gray-800'
+              ? 'bg-[#0f0d0b] border-amber-950/40 text-amber-100/90 shadow-amber-950/20'
+              : 'bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800'
           }`}
         >
           {/* Header section with title */}
@@ -1061,12 +1116,12 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                 <h2 className={`font-extrabold text-base sm:text-lg flex items-center gap-1.5 leading-tight transition-colors ${
                   isReadingMode ? 'text-amber-100' : 'text-gray-900 dark:text-white'
                 }`}>
-                  Calendrier Mystique d'Asrar
+                  {t('mysticCalendar.title')}
                 </h2>
                 <p className={`text-[11px] font-medium transition-colors ${
                   isReadingMode ? 'text-amber-400/60' : 'text-gray-500'
                 }`}>
-                  Phases de la lune, wirds et invocations sacrés
+                  {t('mysticCalendar.description')}
                 </p>
               </div>
             </div>
@@ -1079,10 +1134,10 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                     ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30 shadow-inner'
                     : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 border border-transparent'
                 }`}
-                title="Basculez le Mode Lecture (nocturne et immersif)"
+                title={t('mysticCalendar.readingModeTitle')}
               >
                 {isReadingMode ? <Eye size={12} /> : <EyeOff size={12} />}
-                Mode Lecture
+                {t('mysticCalendar.readingMode')}
               </button>
 
               <button
@@ -1103,7 +1158,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
             <button
               onClick={handlePrevMonth}
               className="p-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm text-gray-700 dark:text-gray-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 transition-colors cursor-pointer"
-              aria-label="Mois précédent"
+              aria-label={t('mysticCalendar.prevMonth')}
             >
               <ChevronLeft size={16} />
             </button>
@@ -1125,14 +1180,14 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
               </motion.span>
 
               <span className="text-[10px] sm:text-[11px] text-emerald-600/70 dark:text-emerald-400/70 font-bold tracking-wide">
-                Mois de l'Année Hijri • {hijriMonthIndex + 1}ème mois
+                {t('mysticCalendar.hijriMonthSuffix').replace('{month}', String(hijriMonthIndex + 1))}
               </span>
             </div>
 
             <button
               onClick={handleNextMonth}
               className="p-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm text-gray-700 dark:text-gray-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/20 transition-colors cursor-pointer"
-              aria-label="Mois suivant"
+              aria-label={t('mysticCalendar.nextMonth')}
             >
               <ChevronRight size={16} />
             </button>
@@ -1192,7 +1247,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                       <Sparkles size={13} className="fill-amber-400/20" />
                     </div>
                     <span className="text-[12px] sm:text-xs font-extrabold uppercase tracking-wider">
-                      Événement & Invocations ({selectedEvent.type})
+                      {t('mysticCalendar.accordion1')} ({selectedEvent.type})
                     </span>
                   </div>
                   <motion.div animate={{ rotate: isEventExpanded ? 180 : 0 }}>
@@ -1231,7 +1286,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                             }`}
                           >
                             <Download size={9} />
-                            Synchro .ics
+                            {t('mysticCalendar.icsSync')}
                           </button>
                         </div>
 
@@ -1318,7 +1373,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                     <Compass size={13} />
                   </div>
                   <span className="text-[12px] sm:text-xs font-extrabold uppercase tracking-wider">
-                    L'Asrar du Jour (Sagesse spirituelle)
+                    {t('mysticCalendar.accordion2')}
                   </span>
                 </div>
                 <motion.div animate={{ rotate: isQuoteExpanded ? 180 : 0 }}>
@@ -1384,7 +1439,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                     <Moon size={13} />
                   </div>
                   <span className="text-[12px] sm:text-xs font-extrabold uppercase tracking-wider">
-                    Position Céleste & Astrolabe Interactif
+                    {t('mysticCalendar.accordion3')}
                   </span>
                 </div>
                 <motion.div animate={{ rotate: isAstrolabeExpanded ? 180 : 0 }}>
@@ -1436,7 +1491,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                     <Brain size={13} />
                   </div>
                   <span className="text-[12px] sm:text-xs font-extrabold uppercase tracking-wider flex items-center gap-1.5">
-                    Guidage IA (L'Asrar Génératif)
+                    {t('mysticCalendar.accordion4')}
                     <span className="bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 text-[8px] font-bold px-1 py-0.2 rounded">BETA</span>
                   </span>
                 </div>
@@ -1459,19 +1514,19 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                         : 'bg-gradient-to-br from-emerald-500/[0.01] to-amber-500/[0.01] border-gray-100 dark:border-gray-800'
                     }`}>
                       <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-2.5">
-                        L'intelligence artificielle d'Asrar croise vos tâches professionnelles avec l'énergie cosmique du jour (${selectedHijriDay} ${HIJRI_MONTHS[hijriMonthIndex].french}) pour générer un conseil de posture mentale unique et privé.
+                        {t('mysticCalendar.aiDescription').replace('{day}', String(selectedHijriDay)).replace('{month}', HIJRI_MONTHS[hijriMonthIndex].french)}
                       </p>
 
                       <div className="space-y-3">
                         <div>
                           <label className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 block mb-1">
-                            Votre défi / tâche importante du jour
+                            {t('mysticCalendar.aiTaskLabel')}
                           </label>
                           <input 
                             type="text" 
                             value={aiTask}
                             onChange={(e) => setAiTask(e.target.value)}
-                            placeholder="Ex: Réunion de négociation importante de 14h, ou Créer la maquette artistique..."
+                            placeholder={t('mysticCalendar.aiTaskPlaceholder')}
                             className={`w-full p-2.5 rounded-xl text-xs border focus:outline-none focus:ring-1 transition-all ${
                               isReadingMode
                                 ? 'bg-[#151310] border-amber-950/40 text-amber-100 focus:ring-amber-500 focus:border-amber-500'
@@ -1497,12 +1552,12 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                               </svg>
-                              Calcul des influences en cours...
+                              {t('mysticCalendar.aiGenerating')}
                             </>
                           ) : (
                             <>
                               <Sparkles size={13} />
-                              Générer mon orientation spirituelle d'Asrar
+                              {t('mysticCalendar.aiGenerateBtn')}
                             </>
                           )}
                         </button>
@@ -1521,7 +1576,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                             
                             <div className="flex items-center gap-1.5 mb-1.5">
                               <span className="text-[10px] font-black uppercase tracking-wider text-amber-500">
-                                Focus du jour :
+                                {t('mysticCalendar.focusOfDay')}
                               </span>
                               <span className="bg-amber-400/20 text-amber-700 dark:text-amber-400 text-[10px] font-extrabold px-1.5 py-0.5 rounded">
                                 {aiCounsel.focusKeyword}
@@ -1541,7 +1596,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
 
                             <div className="pt-2 border-t border-dashed border-gray-200 dark:border-gray-800 text-[10px]">
                               <span className="font-bold text-emerald-600 dark:text-emerald-400 block mb-0.5 uppercase tracking-wider">
-                                Pratique d'ancrage recommandée :
+                                {t('mysticCalendar.groundingPractice')}
                               </span>
                               <span className="text-gray-600 dark:text-gray-300">
                                 {aiCounsel.spiritualPractice}
@@ -1581,7 +1636,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                     <Activity size={13} />
                   </div>
                   <span className="text-[12px] sm:text-xs font-extrabold uppercase tracking-wider">
-                    Synchronicité Biométrique (Wearables)
+                    {t('mysticCalendar.accordion5')}
                   </span>
                 </div>
                 <motion.div animate={{ rotate: isBiometricsExpanded ? 180 : 0 }}>
@@ -1603,7 +1658,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                         : 'bg-gradient-to-br from-emerald-500/[0.01] to-amber-500/[0.01] border-gray-100 dark:border-gray-800'
                     }`}>
                       <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-3 text-left">
-                        Analyse de corrélation entre vos cycles physiologiques (Sommeil, VRC, Stress) issus de vos objets connectés (Garmin, Apple Watch, Oura) et les énergies temporelles du calendrier.
+                        {t('mysticCalendar.biometricDesc')}
                       </p>
 
                       {!isBiometricsConnected ? (
@@ -1622,12 +1677,12 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                               </svg>
-                              Synchronisation Cloud en cours...
+                              {t('mysticCalendar.biometricSyncing')}
                             </>
                           ) : (
                             <>
                               <Activity size={13} />
-                              Synchroniser mes données physiologiques
+                              {t('mysticCalendar.biometricSyncBtn')}
                             </>
                           )}
                         </button>
@@ -1639,35 +1694,35 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                         >
                           <div className="grid grid-cols-2 gap-2">
                             <div className="bg-emerald-500/[0.02] dark:bg-emerald-500/[0.01] border border-gray-150 dark:border-gray-850 rounded-xl p-2.5 text-center">
-                              <span className="text-[9px] text-gray-400 block">SCORE SOMMEIL</span>
+                              <span className="text-[9px] text-gray-400 block">{t('mysticCalendar.sleepScore')}</span>
                               <span className="text-base font-extrabold text-emerald-600 dark:text-emerald-400">{biometricData.sleep}%</span>
-                              <span className="text-[8px] text-emerald-600 block">Sommeil réparateur</span>
+                              <span className="text-[8px] text-emerald-600 block">{t('mysticCalendar.sleepRestful')}</span>
                             </div>
 
                             <div className="bg-amber-500/[0.02] dark:bg-amber-500/[0.01] border border-gray-150 dark:border-gray-850 rounded-xl p-2.5 text-center">
-                              <span className="text-[9px] text-gray-400 block">VRC (HRV)</span>
+                              <span className="text-[9px] text-gray-400 block">{t('mysticCalendar.hrvLabel')}</span>
                               <span className="text-base font-extrabold text-amber-500">{biometricData.hrv} ms</span>
-                              <span className="text-[8px] text-amber-500 block">Système parasympathique</span>
+                              <span className="text-[8px] text-amber-500 block">{t('mysticCalendar.parasympathetic')}</span>
                             </div>
 
                             <div className="bg-emerald-500/[0.02] dark:bg-emerald-500/[0.01] border border-gray-150 dark:border-gray-850 rounded-xl p-2.5 text-center">
-                              <span className="text-[9px] text-gray-400 block">INDICE DE STRESS</span>
+                              <span className="text-[9px] text-gray-400 block">{t('mysticCalendar.stressIndex')}</span>
                               <span className="text-base font-extrabold text-emerald-500">{biometricData.stress}/100</span>
-                              <span className="text-[8px] text-emerald-500 block">Statut : Calme serein</span>
+                              <span className="text-[8px] text-emerald-500 block">{t('mysticCalendar.calmStatus')}</span>
                             </div>
 
                             <div className="bg-purple-500/[0.02] dark:bg-purple-500/[0.01] border border-gray-150 dark:border-gray-850 rounded-xl p-2.5 text-center">
-                              <span className="text-[9px] text-gray-400 block">COHÉRENCE D'ÉNERGIE</span>
+                              <span className="text-[9px] text-gray-400 block">{t('mysticCalendar.energyCoherence')}</span>
                               <span className="text-base font-extrabold text-purple-400">{biometricData.energy}%</span>
-                              <span className="text-[8px] text-purple-400 block">Optimal pour l'action</span>
+                              <span className="text-[8px] text-purple-400 block">{t('mysticCalendar.optimalAction')}</span>
                             </div>
                           </div>
 
                           <div className={`p-3 rounded-xl border text-xs leading-relaxed text-left ${
                             isReadingMode ? 'bg-[#151310] border-amber-950/40 text-amber-100' : 'bg-amber-50/30 border-amber-500/10 text-gray-750'
                           }`}>
-                            <strong className="text-amber-500">Analyse de Synchronie : </strong>
-                            Votre variabilité cardiaque élevée ({biometricData.hrv}ms) indique une excellente résilience émotionnelle, alignée harmonieusement avec l'énergie apaisée du {selectedHijriDay} {HIJRI_MONTHS[hijriMonthIndex].french}. C'est une journée parfaite pour l'apprentissage et les wirds d'illumination céleste.
+                            <strong className="text-amber-500">{t('mysticCalendar.syncAnalysis')} </strong>
+                            {t('mysticCalendar.biometricSuccessText').replace('{hrv}', String(biometricData.hrv)).replace('{day}', String(selectedHijriDay)).replace('{month}', HIJRI_MONTHS[hijriMonthIndex].french)}
                           </div>
                         </motion.div>
                       )}
@@ -1702,7 +1757,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                     <Zap size={13} />
                   </div>
                   <span className="text-[12px] sm:text-xs font-extrabold uppercase tracking-wider">
-                    Superposition de Transits Personnels (Thème Natal)
+                    {t('mysticCalendar.accordion6')}
                   </span>
                 </div>
                 <motion.div animate={{ rotate: isTransitsExpanded ? 180 : 0 }}>
@@ -1724,14 +1779,14 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                         : 'bg-gradient-to-br from-purple-500/[0.01] to-emerald-500/[0.01] border-gray-100 dark:border-gray-800'
                     }`}>
                       <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-3 text-left">
-                        Configurez vos coordonnées de naissance célestes pour identifier vos Jours de Pouvoir (Jaune), de Créativité (Violet) et de Vigilance (Rose) directement sur la grille du calendrier.
+                        {t('mysticCalendar.transitDesc')}
                       </p>
 
                       <div className="space-y-3">
                         <div className="grid grid-cols-2 gap-2">
                           <div>
                             <label className="text-[9px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 block mb-1">
-                              Date de Naissance
+                              {t('mysticCalendar.birthDate')}
                             </label>
                             <input 
                               type="date" 
@@ -1747,7 +1802,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
 
                           <div>
                             <label className="text-[9px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 block mb-1">
-                              Heure (Optionnel)
+                              {t('mysticCalendar.birthTime')}
                             </label>
                             <input 
                               type="time" 
@@ -1764,13 +1819,13 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
 
                         <div>
                           <label className="text-[9px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 block mb-1">
-                            Lieu de Naissance
+                            {t('mysticCalendar.birthPlace')}
                           </label>
                           <input 
                             type="text" 
                             value={birthPlace}
                             onChange={(e) => setBirthPlace(e.target.value)}
-                            placeholder="Ex: Paris, France ou Fès, Maroc"
+                            placeholder={t('mysticCalendar.birthPlacePlaceholder')}
                             className={`w-full p-2 rounded-xl text-xs border focus:outline-none focus:ring-1 transition-all ${
                               isReadingMode
                                 ? 'bg-[#151310] border-amber-950/40 text-amber-100 focus:ring-amber-500'
@@ -1791,7 +1846,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                           }`}
                         >
                           <Zap size={13} />
-                          Enregistrer et Superposer les Transits
+                          {t('mysticCalendar.saveTransitBtn')}
                         </button>
 
                         {isTransitsCalculated && (
@@ -1801,28 +1856,28 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                             className="space-y-2 mt-3 pt-3 border-t border-dashed border-gray-200 dark:border-gray-800 text-left"
                           >
                             <span className="text-[10px] font-bold text-amber-500 block uppercase tracking-wider">
-                              Légende & Statut des Transits :
+                              {t('mysticCalendar.transitLegendTitle')}
                             </span>
 
                             <div className="space-y-1.5">
                               <div className="flex items-center gap-2">
                                 <span className="w-2.5 h-2.5 rounded-full bg-amber-400 block shrink-0" />
                                 <span className="text-[10px] text-gray-600 dark:text-gray-300 leading-tight">
-                                  <strong>Pouvoir Personnel (Or) :</strong> Journée propice aux prises de parole, à l'affirmation de soi et à l'action d'envergure.
+                                  <strong>{t('mysticCalendar.powerDay')}</strong> {t('mysticCalendar.powerDayDesc')}
                                 </span>
                               </div>
 
                               <div className="flex items-center gap-2">
                                 <span className="w-2.5 h-2.5 rounded-full bg-purple-400 block shrink-0" />
                                 <span className="text-[10px] text-gray-600 dark:text-gray-300 leading-tight">
-                                  <strong>Créativité Inspirée (Violet) :</strong> Journée idéale pour écrire, dessiner, imaginer et prier en profondeur.
+                                  <strong>{t('mysticCalendar.creativeDay')}</strong> {t('mysticCalendar.creativeDayDesc')}
                                 </span>
                               </div>
 
                               <div className="flex items-center gap-2">
                                 <span className="w-2.5 h-2.5 rounded-full bg-rose-400 block shrink-0" />
                                 <span className="text-[10px] text-gray-600 dark:text-gray-300 leading-tight">
-                                  <strong>Vigilance Spécifique (Rose) :</strong> Journée pour ralentir, cultiver le silence d'ancrage et la pondération.
+                                  <strong>{t('mysticCalendar.vigilanceDay')}</strong> {t('mysticCalendar.vigilanceDayDesc')}
                                 </span>
                               </div>
                             </div>
@@ -1831,7 +1886,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                               <div className={`p-2.5 rounded-lg border text-[10px] leading-relaxed mt-2.5 ${
                                 isReadingMode ? 'bg-[#151310] border-amber-950/40 text-amber-200' : 'bg-purple-500/[0.03] border-purple-500/15 text-purple-900 dark:text-purple-200'
                               }`}>
-                                <strong className="text-purple-500">Transit actif ce jour : </strong>
+                                <strong className="text-purple-500">{t('mysticCalendar.activeTransit')} </strong>
                                 {transitDays[selectedHijriDay].description}
                               </div>
                             )}
@@ -1869,7 +1924,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                     <Timer size={13} />
                   </div>
                   <span className="text-[12px] sm:text-xs font-extrabold uppercase tracking-wider">
-                    Espace de "Focus Sacré" (Pomodoro & Ondes Alpha)
+                    {t('mysticCalendar.accordion7')}
                   </span>
                 </div>
                 <motion.div animate={{ rotate: isFocusExpanded ? 180 : 0 }}>
@@ -1891,13 +1946,13 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                         : 'bg-gradient-to-br from-amber-500/[0.01] to-purple-500/[0.01] border-gray-100 dark:border-gray-800'
                     }`}>
                       <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-3 text-left">
-                        Entrez dans un cocon de productivité spirituelle. Active des ondes sonores Alpha binaurales (différence de 10Hz) pour synchroniser vos hémisphères cérébraux et focaliser votre attention sur vos wirds ou votre travail.
+                        {t('mysticCalendar.focusDescription')}
                       </p>
 
                       <div className="flex flex-col gap-3">
                         <div>
                           <label className="text-[9px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 block mb-1">
-                            Durée de la Session de Focus
+                            {t('mysticCalendar.focusDurationLabel')}
                           </label>
                           <div className="grid grid-cols-3 gap-2">
                             {[15, 25, 45].map((mins) => (
@@ -1927,7 +1982,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                           }`}
                         >
                           <Flame size={13} className="animate-pulse text-amber-400" />
-                          Entrer dans l'Espace "Focus Sacré"
+                          {t('mysticCalendar.enterFocusBtn')}
                         </button>
                       </div>
                     </div>
@@ -1961,7 +2016,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                     <Compass size={13} />
                   </div>
                   <span className="text-[12px] sm:text-xs font-extrabold uppercase tracking-wider">
-                    Cosmic Alignment (Synergie & Productivité)
+                    {t('mysticCalendar.accordion8')}
                   </span>
                 </div>
                 <motion.div animate={{ rotate: isCosmicExpanded ? 180 : 0 }}>
@@ -1983,21 +2038,21 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                         : 'bg-gradient-to-br from-amber-500/[0.01] to-emerald-500/[0.01] border-gray-100 dark:border-gray-800'
                     }`}>
                       <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-3 text-left">
-                        Notre algorithme ésotérique associe vos types de tâches aux transitions célestes (Nouvelle lune, pleine lune, etc.) pour vous indiquer les moments parfaits de productivité et de repos.
+                        {t('mysticCalendar.cosmicAlignDesc')}
                       </p>
 
                       <div className="space-y-3">
                         <div>
                           <label className="text-[9px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 block mb-1">
-                            Type de tâche planifiée aujourd'hui :
+                            {t('mysticCalendar.plannedTaskType')}
                           </label>
                           <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
                             {[
-                              { id: 'analytical', label: 'Analyse & Chiffres', icon: '📊' },
-                              { id: 'negotiation', label: 'Négociation & Ventes', icon: '🤝' },
-                              { id: 'creative', label: 'Création & Design', icon: '🎨' },
-                              { id: 'introspection', label: 'Méditation / Recueil', icon: '👁️' },
-                              { id: 'rest', label: 'Repos & Récupération', icon: '💤' },
+                              { id: 'analytical', label: t('mysticCalendar.cosmicTaskAnalytical'), icon: '📊' },
+                              { id: 'negotiation', label: t('mysticCalendar.cosmicTaskNegotiation'), icon: '🤝' },
+                              { id: 'creative', label: t('mysticCalendar.cosmicTaskCreative'), icon: '🎨' },
+                              { id: 'introspection', label: t('mysticCalendar.cosmicTaskIntrospection'), icon: '👁️' },
+                              { id: 'rest', label: t('mysticCalendar.cosmicTaskRest'), icon: '💤' },
                             ].map((cat) => (
                               <button
                                 key={cat.id}
@@ -2057,20 +2112,20 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                             {/* Verdict and dynamic text */}
                             <div className="text-xs">
                               <span className="font-extrabold uppercase text-[10px] tracking-wider text-amber-500 block mb-0.5">
-                                Alignement de Synergie Céleste :
+                                {t('mysticCalendar.cosmicAlignmentTitle')}
                               </span>
                               <p className="leading-relaxed">
-                                {selectedCategory === 'analytical' && (selectedHijriDay >= 4 && selectedHijriDay <= 12) && "Excellent! La Lune montante favorise le discernement logique et la clarté d'esprit analytique."}
-                                {selectedCategory === 'negotiation' && (selectedHijriDay >= 13 && selectedHijriDay <= 16) && "Parfait! La Pleine Lune décuple votre charisme et votre force d'argumentation diplomatique."}
-                                {selectedCategory === 'creative' && (selectedHijriDay >= 11 && selectedHijriDay <= 15) && "Idéal! Les énergies d'illumination de la lune gibbeuse ouvrent les canaux de l'inspiration."}
-                                {selectedCategory === 'introspection' && (selectedHijriDay >= 26 || selectedHijriDay <= 3) && "Serein. Le vide de la Nouvelle Lune est propice aux retraites, bilans et quêtes d'essence."}
-                                {selectedCategory === 'rest' && (selectedHijriDay >= 27 || selectedHijriDay <= 2) && "Ressourcement. Énergie vitale basse, propice à la reconstruction psychologique et physique."}
+                                {selectedCategory === 'analytical' && (selectedHijriDay >= 4 && selectedHijriDay <= 12) && t('mysticCalendar.cosmicVerdictAnalytical')}
+                                {selectedCategory === 'negotiation' && (selectedHijriDay >= 13 && selectedHijriDay <= 16) && t('mysticCalendar.cosmicVerdictNegotiation')}
+                                {selectedCategory === 'creative' && (selectedHijriDay >= 11 && selectedHijriDay <= 15) && t('mysticCalendar.cosmicVerdictCreative')}
+                                {selectedCategory === 'introspection' && (selectedHijriDay >= 26 || selectedHijriDay <= 3) && t('mysticCalendar.cosmicVerdictIntrospection')}
+                                {selectedCategory === 'rest' && (selectedHijriDay >= 27 || selectedHijriDay <= 2) && t('mysticCalendar.cosmicVerdictRest')}
                                 {!((selectedCategory === 'analytical' && (selectedHijriDay >= 4 && selectedHijriDay <= 12)) ||
                                   (selectedCategory === 'negotiation' && (selectedHijriDay >= 13 && selectedHijriDay <= 16)) ||
                                   (selectedCategory === 'creative' && (selectedHijriDay >= 11 && selectedHijriDay <= 15)) ||
                                   (selectedCategory === 'introspection' && (selectedHijriDay >= 26 || selectedHijriDay <= 3)) ||
                                   (selectedCategory === 'rest' && (selectedHijriDay >= 27 || selectedHijriDay <= 2))) && 
-                                  "Alignement modéré. Des forces opposées peuvent solliciter votre attention; cultivez le calme intérieur pour canaliser l'influence."}
+                                  t('mysticCalendar.cosmicVerdictModerate')}
                               </p>
                             </div>
                           </div>
@@ -2107,7 +2162,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                     <BookOpen size={13} />
                   </div>
                   <span className="text-[12px] sm:text-xs font-extrabold uppercase tracking-wider">
-                    Journal d'Intention & Synchronicités
+                    {t('mysticCalendar.accordion9')}
                   </span>
                 </div>
                 <motion.div animate={{ rotate: isJournalExpanded ? 180 : 0 }}>
@@ -2129,20 +2184,20 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                         : 'bg-gradient-to-br from-purple-500/[0.01] to-amber-500/[0.01] border-gray-100 dark:border-gray-800'
                     }`}>
                       <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-3 text-left">
-                        Loggez votre intention du matin et vos synchronicités de fin de journée. Un graphique discret étudie votre alignement vibratoire avec les phases de la Lune au fil des mois.
+                        {t('mysticCalendar.journalDesc')}
                       </p>
 
                       <div className="space-y-3">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                           <div>
                             <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 block mb-1">
-                              ☀️ Intention Matinale
+                              {t('mysticCalendar.morningIntention')}
                             </span>
                             <input 
                               type="text"
                               value={morningIntention}
                               onChange={(e) => setMorningIntention(e.target.value)}
-                              placeholder="Ex: Cultiver la patience..."
+                              placeholder={t('mysticCalendar.morningIntentionPlaceholder')}
                               className={`w-full p-2 rounded-xl text-xs border focus:outline-none focus:ring-1 transition-all ${
                                 isReadingMode
                                   ? 'bg-[#151310] border-amber-950/40 text-amber-100 focus:ring-amber-500'
@@ -2153,13 +2208,13 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
 
                           <div>
                             <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 block mb-1">
-                              🌙 Synchronicité / Gratitude du soir
+                              {t('mysticCalendar.eveningGratitude')}
                             </span>
                             <input 
                               type="text"
                               value={eveningGratitude}
                               onChange={(e) => setEveningGratitude(e.target.value)}
-                              placeholder="Ex: Rencontre inattendue de..."
+                              placeholder={t('mysticCalendar.eveningGratitudePlaceholder')}
                               className={`w-full p-2 rounded-xl text-xs border focus:outline-none focus:ring-1 transition-all ${
                                 isReadingMode
                                   ? 'bg-[#151310] border-amber-950/40 text-amber-100 focus:ring-amber-500'
@@ -2171,14 +2226,14 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
 
                         <div>
                           <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 block mb-1">
-                            État vibratoire / Humeur générale du jour :
+                            {t('mysticCalendar.vibrationalState')}
                           </span>
                           <div className="grid grid-cols-4 gap-1.5">
                             {[
-                              { id: 'peaceful', label: 'Paisible 🍃' },
-                              { id: 'energized', label: 'Énergique ⚡' },
-                              { id: 'contemplative', label: 'Recueilli 👁️' },
-                              { id: 'tired', label: 'Fatigué 💤' },
+                              { id: 'peaceful', label: t('mysticCalendar.moodPeaceful') },
+                              { id: 'energized', label: t('mysticCalendar.moodEnergized') },
+                              { id: 'contemplative', label: t('mysticCalendar.moodContemplative') },
+                              { id: 'tired', label: t('mysticCalendar.moodTired') },
                             ].map((moodItem) => (
                               <button
                                 key={moodItem.id}
@@ -2205,16 +2260,16 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                               : 'bg-purple-600 hover:bg-purple-700 text-white'
                           }`}
                         >
-                          <Check size={12} /> Enregistrer mon Journal Spirituel
+                          <Check size={12} /> {t('mysticCalendar.saveJournalBtn')}
                         </button>
 
                         {/* Miniature Trend Tracker based on active Hijri Month */}
                         <div className="pt-3.5 border-t border-dashed border-gray-200 dark:border-gray-800 text-left">
                           <span className="text-[9px] font-bold text-purple-500 block uppercase tracking-wider mb-1">
-                            Corrélation Lunaire Mensuelle (Analyse d'Alignement) :
+                            {t('mysticCalendar.lunarCorrelationTitle')}
                           </span>
                           <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-2 leading-relaxed">
-                            Votre humeur montre une corrélation forte (74%) avec l'évolution de la luminosité lunaire du mois de {HIJRI_MONTHS[hijriMonthIndex].french}.
+                            {t('mysticCalendar.lunarCorrelationDesc').replace('{month}', HIJRI_MONTHS[hijriMonthIndex].french)}
                           </p>
 
                           {/* Beautiful miniature grid timeline */}
@@ -2238,7 +2293,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                                         'bg-slate-500/20 text-slate-700 dark:text-slate-400'
                                       : 'bg-gray-100 dark:bg-gray-800/40 text-gray-400'
                                   }`}
-                                  title={`Jour {dayNum} AH`}
+                                  title={t('mysticCalendar.daySuffix').replace('{day}', String(dayNum))}
                                 >
                                   <span>{dayNum}</span>
                                   {dayLog && (
@@ -2257,243 +2312,303 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
               </AnimatePresence>
             </div>
 
-            {/* FEATURE REQUEST: GEOLOCATION SOLAR CLOCKS CARD */}
-            <div className={`mt-4 rounded-2xl border p-4 transition-all duration-300 ${
-              isReadingMode
-                ? 'bg-[#12100e] border-amber-950/40 text-amber-100'
-                : 'bg-gradient-to-br from-amber-500/5 via-transparent to-purple-500/5 border-gray-100 dark:border-gray-800'
-            }`}>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3 pb-2.5 border-b border-dashed border-gray-100 dark:border-gray-800/60">
-                <div className="flex items-center gap-2">
-                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
-                    isReadingMode ? 'bg-amber-500/10 text-amber-400' : 'bg-amber-100 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400'
-                  }`}>
-                    <Compass size={14} className="animate-spin-slow" />
-                  </div>
-                  <div>
-                    <h3 className="text-xs font-black uppercase tracking-wider">
-                      {language === 'fr' ? "Horloges Solaire & Invitations d'Asrar" : language === 'ha' ? "Kayan Lokacin Rana da Addu'o'i" : "Solar Clocks & Meditation Invitations"}
-                    </h3>
-                    <p className={`text-[10px] ${isReadingMode ? 'text-amber-500/60' : 'text-gray-400'}`}>
-                      {language === 'fr' ? "Synchronisez vos méditations avec les rythmes célestes" : language === 'ha' ? "Daidaita addu'o'inka da lokutan sama" : "Synchronize your meditations with celestial hours"}
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  onClick={requestGeolocation}
-                  className={`text-[10px] font-extrabold px-3 py-1.5 rounded-xl cursor-pointer transition-all flex items-center gap-1 shrink-0 ${
-                    isReadingMode 
-                      ? 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20'
-                      : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'
-                  }`}
-                >
-                  <Sparkles size={11} />
-                  {language === 'fr' ? "Détecter ma Position" : language === 'ha' ? "Nemo inda nake" : "Detect my Position"}
-                </button>
-              </div>
-
-              {/* Coordinates status badge */}
-              <div className="mb-4 flex items-center justify-between text-[10px]">
-                <span className={isReadingMode ? 'text-amber-400/60' : 'text-gray-400'}>
-                  {solarCoordsSource === 'gps'
-                    ? (language === 'fr' ? "Source : GPS Localisé" : language === 'ha' ? "Asali: An gano GPS" : "Source: GPS Localized")
-                    : (language === 'fr' ? "Source : Référence Cosmique (La Mecque)" : language === 'ha' ? "Asali: Babban Asalin Sararin Samaniya (Makkah)" : "Source: Cosmic Reference (Mecca)")
-                  }
-                </span>
-                <span className="font-mono text-gray-500">
-                  {solarCoords ? `${solarCoords.lat.toFixed(4)}°N, ${solarCoords.lng.toFixed(4)}°E` : ''}
-                </span>
-              </div>
-
-              {/* Computed Solar Times Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3.5">
-                {[
-                  { id: 'sunrise', icon: '🌅', label: language === 'fr' ? 'Lever' : language === 'ha' ? 'Fitowa' : 'Sunrise', time: solarTimes.sunrise },
-                  { id: 'zenith', icon: '☀️', label: language === 'fr' ? 'Zénith' : language === 'ha' ? 'Zénith' : 'Zenith', time: solarTimes.zenith },
-                  { id: 'goldenHour', icon: '🌟', label: language === 'fr' ? 'H. Dorée' : language === 'ha' ? 'Lokacin Zinariya' : 'Golden Hour', time: solarTimes.goldenHour },
-                  { id: 'sunset', icon: '🌇', label: language === 'fr' ? 'Coucher' : language === 'ha' ? 'Faɗuwa' : 'Sunset', time: solarTimes.sunset },
-                ].map((item) => (
-                  <div key={item.id} className={`rounded-xl p-2.5 border text-center transition-all ${
-                    isReadingMode
-                      ? 'bg-amber-950/20 border-amber-950/40 text-amber-100'
-                      : 'bg-white dark:bg-gray-850 border-gray-100 dark:border-gray-800 shadow-sm'
-                  }`}>
-                    <span className="text-lg block mb-0.5">{item.icon}</span>
-                    <span className={`text-[9px] block uppercase tracking-wider font-bold ${isReadingMode ? 'text-amber-500/60' : 'text-gray-400 dark:text-gray-500'}`}>
-                      {item.label}
-                    </span>
-                    <span className="text-xs font-black font-mono block mt-0.5">
-                      {item.time}
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              {/* Notification Toggle button */}
+            {/* Accordion 10: Horloges Solaires & Invitations d'Asrar */}
+            <div className="mt-3">
               <button
-                onClick={enableLocalNotifications}
-                className={`w-full py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer border ${
-                  meditationNotificationsEnabled
-                    ? isReadingMode
-                      ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                      : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20'
-                    : 'bg-gray-50 dark:bg-gray-800/40 text-gray-500 dark:text-gray-400 border-transparent hover:bg-gray-100 dark:hover:bg-gray-800/80'
+                onClick={() => setIsSolarClocksExpanded(!isSolarClocksExpanded)}
+                className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all duration-300 cursor-pointer ${
+                  isReadingMode
+                    ? isSolarClocksExpanded
+                      ? 'bg-[#181512] border-amber-950/60 text-amber-100 shadow-[0_0_12px_rgba(245,158,11,0.06)]'
+                      : 'bg-[#0f0d0b] border-amber-200/60 text-amber-200/60 hover:text-amber-100'
+                    : isSolarClocksExpanded
+                    ? 'bg-amber-500/[0.03] dark:bg-amber-500/[0.02] border-amber-500/20 text-gray-900 dark:text-white shadow-sm'
+                    : 'bg-gray-50/70 dark:bg-gray-850/40 border-gray-100 dark:border-gray-800/60 text-gray-700 dark:text-gray-300 hover:bg-gray-100/50'
                 }`}
               >
-                <Heart size={13} className={meditationNotificationsEnabled ? "fill-current animate-pulse" : ""} />
-                {meditationNotificationsEnabled
-                  ? (language === 'fr' ? "Notifications Méditation Activées" : language === 'ha' ? "An kunna Sanarwar Addu'a" : "Meditation Notifications Active")
-                  : (language === 'fr' ? "Activer les Invitations de Méditation" : language === 'ha' ? "Kunna Sanarwar Addu'a" : "Activate Meditation Invitations")
-                }
-              </button>
-            </div>
-
-            {/* FEATURE REQUEST: MINI AUDIO FREQUENCY PLAYER */}
-            <div className={`mt-3 rounded-2xl border p-4 transition-all duration-300 ${
-              isReadingMode
-                ? 'bg-[#12100e] border-amber-950/40 text-amber-100'
-                : 'bg-gradient-to-br from-purple-500/5 via-transparent to-emerald-500/5 border-gray-100 dark:border-gray-800'
-            }`}>
-              <div className="flex items-center justify-between mb-3 pb-2.5 border-b border-dashed border-gray-100 dark:border-gray-800/60">
-                <div className="flex items-center gap-2">
-                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
-                    isReadingMode ? 'bg-amber-500/10 text-amber-400' : 'bg-purple-100 dark:bg-purple-950/20 text-purple-600 dark:text-purple-400'
+                <div className="flex items-center gap-2 text-left">
+                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
+                    isReadingMode
+                      ? isSolarClocksExpanded ? 'bg-amber-500/25 text-amber-400' : 'bg-amber-500/10 text-amber-500/40'
+                      : isSolarClocksExpanded
+                      ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-500'
                   }`}>
-                    <Activity size={14} className={isSynthPlaying ? "animate-pulse" : ""} />
+                    <Compass size={13} className={isSolarClocksExpanded ? "animate-spin-slow" : ""} />
                   </div>
                   <div>
-                    <h3 className="text-xs font-black uppercase tracking-wider">
-                      {language === 'fr' ? "Ondes Sacrées & Fréquences d'Asrar" : language === 'ha' ? "Sautin Tsarki & Mitocin Asrar" : "Sacred Waves & Asrar Frequencies"}
-                    </h3>
-                    <p className={`text-[10px] ${isReadingMode ? 'text-amber-500/60' : 'text-gray-400'}`}>
-                      {language === 'fr' ? "Solfeggio & Binaural Beats pour la concentration" : language === 'ha' ? "Solfeggio da Binaural Beats don mayar da hankali" : "Solfeggio & Binaural Beats for concentration"}
-                    </p>
-                  </div>
-                </div>
-
-                {isSynthPlaying && (
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-500"></span>
-                  </span>
-                )}
-              </div>
-
-              {/* Suggested Preset Sync Badge */}
-              <div className={`mb-3 p-2 rounded-xl text-[10px] leading-relaxed flex items-center gap-1.5 border ${
-                isReadingMode
-                  ? 'bg-amber-950/10 border-amber-950/20 text-amber-200/80'
-                  : 'bg-purple-500/5 border-purple-500/10 text-purple-800 dark:text-purple-300'
-              }`}>
-                <Sparkles size={11} className="text-amber-500 animate-pulse shrink-0" />
-                <span>
-                  {language === 'fr' ? (
-                    <>Tâche active : <strong className="uppercase">{selectedCategory}</strong> • Fréquence recommandée détectée.</>
-                  ) : language === 'ha' ? (
-                    <>Aikin yau : <strong className="uppercase">{selectedCategory}</strong> • An bada shawarar mitar da ta dace.</>
-                  ) : (
-                    <>Active task: <strong className="uppercase">{selectedCategory}</strong> • Tailored frequency recommendation loaded.</>
-                  )}
-                </span>
-              </div>
-
-              {/* Playing state visualizer */}
-              {isSynthPlaying && activeSynthPreset ? (
-                <div className={`mb-3.5 p-3 rounded-xl border transition-all ${
-                  isReadingMode
-                    ? 'bg-amber-950/30 border-amber-950/40 text-amber-100'
-                    : 'bg-white dark:bg-gray-850 border-gray-100 dark:border-gray-800 shadow-sm'
-                }`}>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-extrabold text-xs text-purple-600 dark:text-purple-400">
-                      {activeSynthPreset.name}
+                    <span className="text-[12px] sm:text-xs font-extrabold uppercase tracking-wider block">
+                      {t('mysticCalendar.solarClocksTitle')}
                     </span>
-                    <span className="text-[10px] font-mono text-gray-400">
-                      {activeSynthPreset.baseFreq}Hz {activeSynthPreset.beatFreq > 0 ? `+ ${activeSynthPreset.beatFreq}Hz (Beat)` : ''}
+                    <span className={`text-[9px] block ${isReadingMode ? 'text-amber-500/50' : 'text-gray-400'}`}>
+                      {t('mysticCalendar.solarClocksSubtitle')}
                     </span>
                   </div>
-                  <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-relaxed italic">
-                    "{activeSynthPreset.desc}"
-                  </p>
                 </div>
-              ) : (
-                <div className="mb-3.5 py-4 text-center text-[10px] text-gray-400 italic">
-                  {language === 'fr' ? "Sélectionnez une onde ci-dessous pour démarrer la diffusion" : language === 'ha' ? "Zabi sautin da kake so a kasa don farawa" : "Select a sound wave below to start the transmission"}
-                </div>
-              )}
+                <motion.div animate={{ rotate: isSolarClocksExpanded ? 180 : 0 }}>
+                  <ChevronDown size={14} />
+                </motion.div>
+              </button>
 
-              {/* Volume Slider Control */}
-              <div className="mb-4 flex items-center gap-3">
-                <span className={`text-[10px] uppercase font-bold shrink-0 ${isReadingMode ? 'text-amber-400/60' : 'text-gray-400'}`}>
-                  {language === 'fr' ? "Volume d'onde" : language === 'ha' ? "Karfin Sauti" : "Wave Volume"}
-                </span>
-                <input
-                  type="range"
-                  min="0.01"
-                  max="0.4"
-                  step="0.01"
-                  value={synthVolume}
-                  onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
-                  className="flex-grow accent-purple-500 h-1 bg-gray-200 dark:bg-gray-800 rounded-lg appearance-none cursor-pointer"
-                />
-                <span className="font-mono text-[10px] text-gray-500 w-8 text-right">
-                  {Math.round(synthVolume * 250)}%
-                </span>
-              </div>
-
-              {/* Preset Selector Buttons Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 mb-2.5">
-                {getFreqPresets().map((preset) => {
-                  const isCurrent = activeSynthPreset?.id === preset.id;
-                  const isSyncedWithTask = selectedCategory === preset.id;
-                  
-                  return (
-                    <button
-                      key={preset.id}
-                      onClick={() => isCurrent && isSynthPlaying ? stopSynth() : startSynth(preset)}
-                      className={`py-1.5 px-2 rounded-xl text-[9px] font-extrabold transition-all cursor-pointer border flex flex-col justify-center items-center text-center leading-tight relative ${
-                        isCurrent && isSynthPlaying
-                          ? isReadingMode
-                            ? 'bg-amber-500/20 border-amber-400 text-amber-200'
-                            : 'bg-purple-600 text-white border-purple-500 shadow-sm'
-                          : isReadingMode
-                          ? 'bg-amber-950/10 border-amber-950/30 text-amber-300 hover:bg-amber-950/20'
-                          : 'bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-100 dark:border-gray-800'
-                      }`}
-                    >
-                      <span>{preset.id === 'rest' ? '💤' : preset.id === 'introspection' ? '🧘' : preset.id === 'creative' ? '🎨' : preset.id === 'negotiation' ? '🗣️' : '🧠'}</span>
-                      <span className="mt-0.5 truncate max-w-full">{preset.name.split(' ')[0]}</span>
+              <AnimatePresence initial={false}>
+                {isSolarClocksExpanded && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <div className={`rounded-xl p-4 border mb-2 mt-1.5 transition-all duration-300 ${
+                      isReadingMode
+                        ? 'bg-[#181512] border-amber-950/40 text-amber-100'
+                        : 'bg-gradient-to-br from-amber-500/[0.01] to-purple-500/[0.01] border-gray-100 dark:border-gray-800'
+                    }`}>
                       
-                      {isSyncedWithTask && !isCurrent && (
-                        <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-500 animate-pulse" title="Recommandé !" />
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3 pb-2.5 border-b border-dashed border-gray-100 dark:border-gray-800/60">
+                        <span className={`text-[10px] ${isReadingMode ? 'text-amber-400/60' : 'text-gray-400'}`}>
+                          {solarCoordsSource === 'gps'
+                            ? t('mysticCalendar.gpsSource')
+                            : t('mysticCalendar.cosmicSource')
+                          }
+                          <span className="font-mono text-gray-500 ml-2">
+                            {solarCoords ? `${solarCoords.lat.toFixed(4)}°N, ${solarCoords.lng.toFixed(4)}°E` : ''}
+                          </span>
+                        </span>
 
-              {/* Play/Pause Main Control */}
-              {isSynthPlaying ? (
-                <button
-                  onClick={stopSynth}
-                  className={`w-full py-2 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer bg-rose-600/10 hover:bg-rose-600/20 text-rose-600 border border-rose-500/20`}
-                >
-                  <Pause size={12} className="fill-current" />
-                  {language === 'fr' ? "Désactiver la Fréquence" : language === 'ha' ? "Dakatar da Sauti" : "Disable Frequency"}
-                </button>
-              ) : (
-                <button
-                  onClick={() => {
-                    const preset = getFreqPresets().find(p => p.id === selectedCategory) || getFreqPresets()[0];
-                    startSynth(preset);
-                  }}
-                  className={`w-full py-2 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer bg-purple-600 hover:bg-purple-700 text-white shadow-sm shadow-purple-600/10`}
-                >
-                  <Play size={12} className="fill-current" />
-                  {language === 'fr' ? "Activer l'Onde Adaptée" : language === 'ha' ? "Kunna Sautin da ya Dace" : "Activate Optimal Wave"}
-                </button>
-              )}
+                        <button
+                          onClick={requestGeolocation}
+                          className={`text-[10px] font-extrabold px-3 py-1.5 rounded-xl cursor-pointer transition-all flex items-center gap-1 shrink-0 ${
+                            isReadingMode 
+                              ? 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20'
+                              : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm'
+                          }`}
+                        >
+                          <Sparkles size={11} />
+                          {t('mysticCalendar.detectPositionBtn')}
+                        </button>
+                      </div>
+
+                      {/* Computed Solar Times Grid */}
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3.5">
+                        {[
+                          { id: 'sunrise', icon: '🌅', label: t('mysticCalendar.sunriseLabel'), time: solarTimes.sunrise },
+                          { id: 'zenith', icon: '☀️', label: t('mysticCalendar.zenithLabel'), time: solarTimes.zenith },
+                          { id: 'goldenHour', icon: '🌟', label: t('mysticCalendar.goldenHourLabel'), time: solarTimes.goldenHour },
+                          { id: 'sunset', icon: '🌇', label: t('mysticCalendar.sunsetLabel'), time: solarTimes.sunset },
+                        ].map((item) => (
+                          <div key={item.id} className={`rounded-xl p-2.5 border text-center transition-all ${
+                            isReadingMode
+                              ? 'bg-amber-950/20 border-amber-950/40 text-amber-100'
+                              : 'bg-white dark:bg-gray-850 border-gray-100 dark:border-gray-800 shadow-sm'
+                          }`}>
+                            <span className="text-lg block mb-0.5">{item.icon}</span>
+                            <span className={`text-[9px] block uppercase tracking-wider font-bold ${isReadingMode ? 'text-amber-500/60' : 'text-gray-400 dark:text-gray-500'}`}>
+                              {item.label}
+                            </span>
+                            <span className="text-xs font-black font-mono block mt-0.5">
+                              {item.time}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Notification Toggle button */}
+                      <button
+                        onClick={enableLocalNotifications}
+                        className={`w-full py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer border ${
+                          meditationNotificationsEnabled
+                            ? isReadingMode
+                              ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                              : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20'
+                            : 'bg-gray-50 dark:bg-gray-800/40 text-gray-500 dark:text-gray-400 border-transparent hover:bg-gray-100 dark:hover:bg-gray-800/80'
+                        }`}
+                      >
+                        <Heart size={13} className={meditationNotificationsEnabled ? "fill-current animate-pulse" : ""} />
+                        {meditationNotificationsEnabled
+                          ? t('mysticCalendar.meditationNotifActive')
+                          : t('mysticCalendar.activateMeditationNotif')
+                        }
+                      </button>
+
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Accordion 11: Ondes Sacrées & Fréquences d'Asrar */}
+            <div className="mt-3">
+              <button
+                onClick={() => setIsSacredWavesExpanded(!isSacredWavesExpanded)}
+                className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all duration-300 cursor-pointer ${
+                  isReadingMode
+                    ? isSacredWavesExpanded
+                      ? 'bg-[#181512] border-amber-950/60 text-amber-100 shadow-[0_0_12px_rgba(245,158,11,0.06)]'
+                      : 'bg-[#0f0d0b] border-amber-200/60 text-amber-200/60 hover:text-amber-100'
+                    : isSacredWavesExpanded
+                    ? 'bg-amber-500/[0.03] dark:bg-amber-500/[0.02] border-amber-500/20 text-gray-900 dark:text-white shadow-sm'
+                    : 'bg-gray-50/70 dark:bg-gray-850/40 border-gray-100 dark:border-gray-800/60 text-gray-700 dark:text-gray-300 hover:bg-gray-100/50'
+                }`}
+              >
+                <div className="flex items-center gap-2 text-left">
+                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
+                    isReadingMode
+                      ? isSacredWavesExpanded ? 'bg-amber-500/25 text-amber-400' : 'bg-amber-500/10 text-amber-500/40'
+                      : isSacredWavesExpanded
+                      ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-500'
+                  }`}>
+                    <Activity size={13} className={isSynthPlaying ? "animate-pulse" : ""} />
+                  </div>
+                  <div>
+                    <span className="text-[12px] sm:text-xs font-extrabold uppercase tracking-wider block">
+                      {t('mysticCalendar.sacredWavesTitle')}
+                    </span>
+                    <span className={`text-[9px] block ${isReadingMode ? 'text-amber-500/50' : 'text-gray-400'}`}>
+                      {t('mysticCalendar.sacredWavesSubtitle')}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {isSynthPlaying && (
+                    <span className="relative flex h-2 w-2 mr-1">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-purple-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-purple-500"></span>
+                    </span>
+                  )}
+                  <motion.div animate={{ rotate: isSacredWavesExpanded ? 180 : 0 }}>
+                    <ChevronDown size={14} />
+                  </motion.div>
+                </div>
+              </button>
+
+              <AnimatePresence initial={false}>
+                {isSacredWavesExpanded && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <div className={`rounded-xl p-4 border mb-2 mt-1.5 transition-all duration-300 ${
+                      isReadingMode
+                        ? 'bg-[#181512] border-amber-950/40 text-amber-100'
+                        : 'bg-gradient-to-br from-purple-500/[0.01] to-emerald-500/[0.01] border-gray-100 dark:border-gray-800'
+                    }`}>
+
+                      {/* Suggested Preset Sync Badge */}
+                      <div className={`mb-3 p-2 rounded-xl text-[10px] leading-relaxed flex items-center gap-1.5 border ${
+                        isReadingMode
+                          ? 'bg-amber-950/10 border-amber-950/20 text-amber-200/80'
+                          : 'bg-purple-500/5 border-purple-500/10 text-purple-800 dark:text-purple-300'
+                      }`}>
+                        <Sparkles size={11} className="text-amber-500 animate-pulse shrink-0" />
+                        <span>
+                          {t('mysticCalendar.activeTaskSync').replace('{task}', selectedCategory)}
+                        </span>
+                      </div>
+
+                      {/* Playing state visualizer */}
+                      {isSynthPlaying && activeSynthPreset ? (
+                        <div className={`mb-3.5 p-3 rounded-xl border transition-all ${
+                          isReadingMode
+                            ? 'bg-amber-950/30 border-amber-950/40 text-amber-100'
+                            : 'bg-white dark:bg-gray-850 border-gray-100 dark:border-gray-800 shadow-sm'
+                        }`}>
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-extrabold text-xs text-purple-600 dark:text-purple-400">
+                              {activeSynthPreset.name}
+                            </span>
+                            <span className="text-[10px] font-mono text-gray-400">
+                              {activeSynthPreset.baseFreq}Hz {activeSynthPreset.beatFreq > 0 ? `+ ${activeSynthPreset.beatFreq}Hz (Beat)` : ''}
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-relaxed italic">
+                            "{activeSynthPreset.desc}"
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="mb-3.5 py-4 text-center text-[10px] text-gray-400 italic">
+                          {t('mysticCalendar.selectSoundWarning')}
+                        </div>
+                      )}
+
+                      {/* Volume Slider Control */}
+                      <div className="mb-4 flex items-center gap-3">
+                        <span className={`text-[10px] uppercase font-bold shrink-0 ${isReadingMode ? 'text-amber-400/60' : 'text-gray-400'}`}>
+                          {t('mysticCalendar.waveVolumeLabel')}
+                        </span>
+                        <input
+                          type="range"
+                          min="0.01"
+                          max="0.4"
+                          step="0.01"
+                          value={synthVolume}
+                          onChange={(e) => handleVolumeChange(parseFloat(e.target.value))}
+                          className="flex-grow accent-purple-500 h-1 bg-gray-200 dark:bg-gray-800 rounded-lg appearance-none cursor-pointer"
+                        />
+                        <span className="font-mono text-[10px] text-gray-500 w-8 text-right">
+                          {Math.round(synthVolume * 250)}%
+                        </span>
+                      </div>
+
+                      {/* Preset Selector Buttons Grid */}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 mb-2.5">
+                        {getFreqPresets().map((preset) => {
+                          const isCurrent = activeSynthPreset?.id === preset.id;
+                          const isSyncedWithTask = selectedCategory === preset.id;
+                          
+                          return (
+                            <button
+                              key={preset.id}
+                              onClick={() => isCurrent && isSynthPlaying ? stopSynth() : startSynth(preset)}
+                              className={`py-1.5 px-2 rounded-xl text-[9px] font-extrabold transition-all cursor-pointer border flex flex-col justify-center items-center text-center leading-tight relative ${
+                                isCurrent && isSynthPlaying
+                                  ? isReadingMode
+                                    ? 'bg-amber-500/20 border-amber-400 text-amber-200'
+                                    : 'bg-purple-600 text-white border-purple-500 shadow-sm'
+                                  : isReadingMode
+                                  ? 'bg-amber-950/10 border-amber-950/30 text-amber-300 hover:bg-amber-950/20'
+                                  : 'bg-gray-50 hover:bg-gray-100 dark:bg-gray-850 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-100 dark:border-gray-800'
+                              }`}
+                            >
+                              <span>{preset.id === 'rest' ? '💤' : preset.id === 'introspection' ? '🧘' : preset.id === 'creative' ? '🎨' : preset.id === 'negotiation' ? '🗣️' : '🧠'}</span>
+                              <span className="mt-0.5 truncate max-w-full">{preset.name.split(' ')[0]}</span>
+                              
+                              {isSyncedWithTask && !isCurrent && (
+                                <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-500 animate-pulse" title="Recommandé !" />
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Play/Pause Main Control */}
+                      {isSynthPlaying ? (
+                        <button
+                          onClick={stopSynth}
+                          className={`w-full py-2 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer bg-rose-600/10 hover:bg-rose-600/20 text-rose-600 border border-rose-500/20`}
+                        >
+                          <Pause size={12} className="fill-current" />
+                          {t('mysticCalendar.disableFrequencyBtn')}
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            const preset = getFreqPresets().find(p => p.id === selectedCategory) || getFreqPresets()[0];
+                            startSynth(preset);
+                          }}
+                          className={`w-full py-2 px-3 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-1.5 cursor-pointer bg-purple-600 hover:bg-purple-700 text-white shadow-sm shadow-purple-600/10`}
+                        >
+                          <Play size={12} className="fill-current" />
+                          {t('mysticCalendar.activateOptimalWaveBtn')}
+                        </button>
+                      )}
+
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
           </div>
@@ -2506,7 +2621,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.28, ease: "easeOut" }}
-                className="absolute inset-0 z-[130] bg-gray-950 text-white rounded-3xl p-5 sm:p-6 flex flex-col justify-between overflow-y-auto"
+                className="absolute inset-0 z-[130] bg-gray-950 text-white rounded-3xl p-5 sm:p-6 flex flex-col justify-between overflow-y-auto overscroll-contain"
               >
                 {/* Mystic Starfield Design */}
                 <div className="absolute inset-0 opacity-15 pointer-events-none bg-[radial-gradient(#f59e0b_1.2px,transparent_1.2px)] [background-size:20px_20px]" />
@@ -2520,7 +2635,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                       <div className="flex items-center gap-1.5 text-amber-400">
                         <Moon size={13} className="fill-amber-400/20" />
                         <span className="text-[10px] font-extrabold uppercase tracking-widest">
-                          Mystère de l'Énergie Lunaire
+                          {t('mysticCalendar.moonMysteryTitle')}
                         </span>
                       </div>
                       
@@ -2528,7 +2643,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                         onClick={() => setSelectedMoonPhaseDay(null)}
                         className="px-2.5 py-1 text-[10px] font-extrabold bg-white/10 hover:bg-white/20 text-gray-200 rounded-lg cursor-pointer transition-colors"
                       >
-                        Retour au calendrier
+                        {t('mysticCalendar.backToCalendar')}
                       </button>
                     </div>
 
@@ -2550,7 +2665,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         <div className="bg-white/5 border border-white/10 rounded-xl p-3">
                           <span className="text-[9px] font-bold uppercase tracking-wider text-amber-300 block mb-0.5 flex items-center gap-1">
-                            <Info size={10} /> Station Lunaire (Manzil)
+                            <Info size={10} /> {t('mysticCalendar.manzil')}
                           </span>
                           <p className="text-xs text-gray-100 font-semibold">
                             {activeMoonMystery.manzil}
@@ -2559,7 +2674,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
 
                         <div className="bg-white/5 border border-white/10 rounded-xl p-3">
                           <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-300 block mb-0.5 flex items-center gap-1">
-                            <Sparkles size={10} /> Énergie et Influence
+                            <Sparkles size={10} /> {t('mysticCalendar.energyInfluence')}
                           </span>
                           <p className="text-xs text-gray-100 font-semibold">
                             {activeMoonMystery.energy}
@@ -2569,7 +2684,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
 
                       <div className="bg-white/5 border border-white/10 rounded-xl p-3">
                         <span className="text-[9px] font-bold uppercase tracking-wider text-amber-400 block mb-1">
-                          Signification Mystique Profonde
+                          {t('mysticCalendar.deepMysticMeaning')}
                         </span>
                         <p 
                           className={`leading-relaxed font-light transition-all ${
@@ -2583,7 +2698,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
 
                       <div className="bg-white/5 border border-white/10 rounded-xl p-3">
                         <span className="text-[9px] font-bold uppercase tracking-wider text-purple-400 block mb-1">
-                          Secret Spirituel d'Asrar (Secret profond)
+                          {t('mysticCalendar.spiritualSecret')}
                         </span>
                         <p 
                           className={`leading-relaxed font-medium transition-all ${
@@ -2597,7 +2712,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
 
                       <div className="bg-white/5 border border-white/10 rounded-xl p-3">
                         <span className="text-[9px] font-bold uppercase tracking-wider text-sky-400 block mb-1">
-                          Astronomie & Visibilité Cosmique
+                          {t('mysticCalendar.astronomyCosmic')}
                         </span>
                         <p 
                           className={`leading-relaxed font-light transition-all ${
@@ -2611,7 +2726,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
 
                       <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3">
                         <span className="text-[9px] font-bold uppercase tracking-wider text-amber-400 block mb-1">
-                          Noms d'Allah recommandés pour cette phase
+                          {t('mysticCalendar.recommendedNames')}
                         </span>
                         <div className="flex flex-wrap gap-1.5 mt-1">
                           {activeMoonMystery.recommendedAsma.map((name, idx) => (
@@ -2624,7 +2739,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
 
                       <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3">
                         <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-400 block mb-0.5 flex items-center gap-1">
-                          <BookOpen size={10} /> Pratique Recommandée & Secrets d'Asrar
+                          <BookOpen size={10} /> {t('mysticCalendar.recommendedPractice')}
                         </span>
                         <p 
                           className={`leading-relaxed font-semibold transition-all ${
@@ -2635,7 +2750,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                           {activeMoonMystery.recommendedPractice}
                         </p>
                         <div className="mt-2 pt-2 border-t border-emerald-500/10 text-[10px] text-emerald-300 italic">
-                          <strong>Clé de l'âme :</strong> {activeMoonMystery.spiritualKey}
+                          <strong>{t('mysticCalendar.soulKey')}</strong> {activeMoonMystery.spiritualKey}
                         </div>
                       </div>
                     </div>
@@ -2644,7 +2759,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                   {/* Vibration label in footer */}
                   <div className="border-t border-white/10 pt-3 flex justify-between items-center mt-2">
                     <span className="text-[10px] text-gray-400 font-medium">
-                      Influence vibratoire :
+                      {t('mysticCalendar.vibrationalInfluence')}
                     </span>
                     <span className="text-[10px] text-amber-300 font-extrabold italic">
                       "{activeMoonMystery.vibration}"

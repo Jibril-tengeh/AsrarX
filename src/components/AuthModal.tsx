@@ -234,6 +234,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
   const [isSelectingCountry, setIsSelectingCountry] = useState(false);
   const [countrySearch, setCountrySearch] = useState('');
 
+  const backdropRef = React.useRef<HTMLDivElement>(null);
+  const modalContentRef = React.useRef<HTMLDivElement>(null);
+
   const filteredCountries = countriesData.filter(c =>
     c.name.toLowerCase().includes(countrySearch.toLowerCase()) ||
     c.code.includes(countrySearch)
@@ -255,6 +258,28 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
       } else {
         setPassword('');
       }
+    }
+  }, [isOpen]);
+
+  // Lock background scroll and disable pull-to-refresh when authentication is open
+  React.useEffect(() => {
+    if (isOpen) {
+      const originalOverflowBody = document.body.style.overflow;
+      const originalOverscrollBody = document.body.style.overscrollBehavior;
+      const originalOverflowHtml = document.documentElement.style.overflow;
+      const originalOverscrollHtml = document.documentElement.style.overscrollBehavior;
+
+      document.body.style.overflow = 'hidden';
+      document.body.style.overscrollBehavior = 'none';
+      document.documentElement.style.overflow = 'hidden';
+      document.documentElement.style.overscrollBehavior = 'none';
+
+      return () => {
+        document.body.style.overflow = originalOverflowBody;
+        document.body.style.overscrollBehavior = originalOverscrollBody;
+        document.documentElement.style.overflow = originalOverflowHtml;
+        document.documentElement.style.overscrollBehavior = originalOverscrollHtml;
+      };
     }
   }, [isOpen]);
 
@@ -402,12 +427,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
   return createPortal(
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-black/50 backdrop-blur-sm overflow-hidden">
+        <div ref={backdropRef} className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 bg-black/50 backdrop-blur-sm overflow-hidden">
           <motion.div
+            ref={modalContentRef}
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-md overflow-y-auto max-h-[calc(100dvh-2rem)] sm:max-h-[85vh] relative border border-gray-100 dark:border-gray-800"
+            className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl w-full max-w-md overflow-y-auto max-h-[calc(100dvh-2rem)] sm:max-h-[85vh] relative border border-gray-100 dark:border-gray-800 overscroll-contain"
           >
             <button
               onClick={onClose}

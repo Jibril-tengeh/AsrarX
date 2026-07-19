@@ -3,7 +3,13 @@ import { db } from '../lib/firebase';
 import { collection, onSnapshot, doc, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
 import { Edit2, Trash2, Plus, X, ShoppingBag, Grid, List } from 'lucide-react';
 
-export const AdminStoreManager = () => {
+export const AdminStoreManager = ({
+  featureToggles,
+  handleToggleFeature
+}: {
+  featureToggles?: any;
+  handleToggleFeature?: (featureId: string, value: any) => Promise<void>;
+}) => {
   const [products, setProducts] = useState<any[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -92,7 +98,35 @@ export const AdminStoreManager = () => {
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+    <div className="space-y-6">
+      {/* Maintenance Controls */}
+      {featureToggles && handleToggleFeature && (
+        <div className="bg-amber-50/55 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h4 className="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
+              Mode d'accès de la Boutique
+            </h4>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              Mettez la boutique en maintenance, réservez-la aux abonnés premium, ou laissez-la ouverte à tous.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <select
+              value={featureToggles['tool_store'] || 'active'}
+              onChange={(e) => handleToggleFeature('tool_store', e.target.value)}
+              className="text-xs font-bold px-3 py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer text-gray-900 dark:text-white"
+            >
+              <option value="active">🟢 Active (Ouverte à tous)</option>
+              <option value="premium">⭐ Premium (Membres uniquement)</option>
+              <option value="maintenance">🛠️ En maintenance (Bloquée)</option>
+              <option value="inactive">🔴 Inactive (Désactivée)</option>
+            </select>
+          </div>
+        </div>
+      )}
+
+      <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
       <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
         <div className="flex items-center gap-4">
           <h2 className="text-xl font-bold flex items-center gap-2"><ShoppingBag className="text-emerald-500" /> Gestion Boutique</h2>
@@ -219,6 +253,7 @@ export const AdminStoreManager = () => {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 };

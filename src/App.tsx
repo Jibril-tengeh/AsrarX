@@ -254,7 +254,7 @@ const ProtectedToolsLayout: React.FC = () => {
       "sirr", "zairja", "khatim", "talsam", "istikhara", "khouddam", "awfaq", "quranic-faal"
     ];
     const isAdvanced = advancedToolIds.includes(toolId);
-    const isBlocked = (user?.mysteryToolsDisabled && isAdvanced) || status === "disabled";
+    const isBlocked = (user?.mysteryToolsDisabled && isAdvanced) || user?.blockedTools?.includes(toolId) || status === "disabled";
 
     if (isBlocked) {
       return (
