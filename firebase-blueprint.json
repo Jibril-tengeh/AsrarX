@@ -58,6 +58,23 @@
           { "name": "message", "type": "string" },
           { "name": "createdAt", "type": "timestamp" }
         ]
+      },
+      {
+        "name": "promo_codes",
+        "document_id": "code",
+        "fields": [
+          { "name": "code", "type": "string" },
+          { "name": "type", "type": "string" },
+          { "name": "discountType", "type": "string" },
+          { "name": "discountValue", "type": "number" },
+          { "name": "subscriptionMonths", "type": "number" },
+          { "name": "productId", "type": "string" },
+          { "name": "maxUses", "type": "number" },
+          { "name": "uses", "type": "number" },
+          { "name": "expiryDate", "type": "number" },
+          { "name": "isActive", "type": "boolean" },
+          { "name": "createdAt", "type": "number" }
+        ]
       }
     ]
   }

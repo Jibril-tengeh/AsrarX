@@ -898,6 +898,40 @@ export const SecretDetail: React.FC = () => {
     );
   }
 
+  if (!user && !authLoading) {
+    return (
+      <div className="min-h-[70vh] flex flex-col items-center justify-center text-center p-6 max-w-lg mx-auto">
+        <div className="w-16 h-16 bg-amber-50 dark:bg-amber-950/30 text-amber-600 dark:text-amber-400 rounded-full flex items-center justify-center mb-6 border border-amber-200 dark:border-amber-800/40 shadow-inner">
+          <Shield size={32} />
+        </div>
+        <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-3">
+          {t("authRequiredTitle", "Création de compte requise")}
+        </h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-8 leading-relaxed">
+          {t("authRequiredDesc", "Pour lire nos secrets spirituels, recettes de sagesse et wirds sacrés, veuillez vous connecter ou créer un compte gratuit en quelques secondes.")}
+        </p>
+        <div className="flex flex-col sm:flex-row gap-3 w-full justify-center">
+          <button
+            onClick={() => navigate(-1)}
+            className="flex items-center justify-center gap-2 px-5 py-3 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-2xl font-bold text-sm transition-all"
+          >
+            <ArrowLeft size={16} />
+            <span>{t("back", "Retour")}</span>
+          </button>
+          <button
+            onClick={() => setShowAuthModal(true)}
+            className="flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-2xl font-bold text-sm hover:shadow-lg transition-all"
+          >
+            <Sparkles size={16} />
+            <span>{t("createAccountOrLogin", "Créer un compte / Se connecter")}</span>
+          </button>
+        </div>
+        
+        <AuthModal isOpen={showAuthModal || !user} onClose={() => setShowAuthModal(false)} />
+      </div>
+    );
+  }
+
   if (!item || (item.isPremium && (authLoading || isCheckingPremium))) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center">

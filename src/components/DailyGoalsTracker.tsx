@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { db, isAutoSaveEnabled } from '../lib/firebase';
-import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
+import { doc, onSnapshot, updateDoc, collection } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
+import { useNavigate } from 'react-router-dom';
 import { 
   CalendarCheck, 
   Plus, 
@@ -16,7 +17,11 @@ import {
   Heart, 
   Flame,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Users,
+  MapPin,
+  X,
+  Bell
 } from 'lucide-react';
 
 interface DailyGoal {
@@ -25,11 +30,56 @@ interface DailyGoal {
   completed: boolean;
 }
 
+const localTranslations: Record<string, Record<string, string>> = {
+  fr: {
+    modalTitle: "Cercles de Zikr Collectifs",
+    recentLaunch: "Lancement Récent :",
+    from: "de",
+    launchedText: "a lancé le zikr collectif",
+    times: "fois !",
+    descriptionText: "Rejoignez n’importe quel cercle actif pour réciter ensemble et contribuer à atteindre les objectifs sacrés.",
+    createdBy: "Lancé par",
+    joinBtn: "Rejoindre",
+    createCircle: "Créer un Cercle",
+    closeBtn: "Fermer",
+    tooltipJoin: "Rejoindre un Cercle de Zikr Collectif"
+  },
+  en: {
+    modalTitle: "Collective Zikr Circles",
+    recentLaunch: "Recent Launch:",
+    from: "from",
+    launchedText: "launched the collective zikr",
+    times: "times!",
+    descriptionText: "Join any active circle to recite together and contribute to reaching the holy targets.",
+    createdBy: "Created by",
+    joinBtn: "Join",
+    createCircle: "Create a Circle",
+    closeBtn: "Close",
+    tooltipJoin: "Join a Collective Zikr Circle"
+  },
+  ha: {
+    modalTitle: "Halaƙobin Zikiri na Al'umma",
+    recentLaunch: "Sabuwar Sanarwa:",
+    from: "daga",
+    launchedText: "ya ƙaddamar da zikiri na haɗin gwiwa",
+    times: "sau kuɗi!",
+    descriptionText: "Shiga kowane da'ira mai aiki don yin karatu tare da bayar da gudunmawa don cimma burin tsarki.",
+    createdBy: "Wanda ya samar",
+    joinBtn: "Shiga",
+    createCircle: "Ƙirƙiri Da'ira",
+    closeBtn: "Rufe",
+    tooltipJoin: "Shiga Tsarin Zikiri na Haɗin Gwiwa"
+  }
+};
+
 const DEFAULT_GOALS: DailyGoal[] = [];
 
 export const DailyGoalsTracker: React.FC = () => {
   const { user } = useAuth();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const lang = language === 'en' || language === 'ha' ? language : 'fr';
+  const tLocal = (key: string) => localTranslations[lang][key] || localTranslations['fr'][key] || key;
+  const navigate = useNavigate();
   const [goals, setGoals] = useState<DailyGoal[]>([]);
   const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'local'>('local');
   const [newGoalText, setNewGoalText] = useState('');
@@ -38,6 +88,49 @@ export const DailyGoalsTracker: React.FC = () => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [showProgress, setShowProgress] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+
+  // Collective Circles integration
+  const [activeCircles, setActiveCircles] = useState<any[]>([]);
+  const [isCollectiveModalOpen, setIsCollectiveModalOpen] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, 'halaqat'), (snapshot) => {
+      const list: any[] = [];
+      snapshot.forEach((doc) => {
+        list.push({ id: doc.id, ...doc.data() });
+      });
+      list.sort((a, b) => b.createdAt - a.createdAt);
+      setActiveCircles(list);
+    }, (error) => {
+      console.warn("Using offline fallback mock for collective circles in DailyGoalsTracker:", error);
+      // Fallback
+      setActiveCircles([
+        {
+          id: 'mock_1',
+          title: language === 'en' ? 'Mawlid Salawat Unified Circle' : language === 'ha' ? 'Halaqar Salawat na Mawlidi' : 'Grand Cercle Salawat du Mawlid',
+          target: 100000,
+          count: 42150,
+          type: 'Salawat (Allāhumma ṣalli ʿalā Muḥammad)',
+          creatorName: 'Seydou Diop',
+          creatorCountry: 'Sénégal',
+          creatorCity: 'Dakar',
+          createdAt: Date.now() - 86400000
+        },
+        {
+          id: 'mock_2',
+          title: language === 'en' ? 'Istighfar Circle for Peace' : language === 'ha' ? 'Halaqar Istighfari Don Zaman Lafiya' : 'Cercle Istighfar de la Paix',
+          target: 70000,
+          count: 31200,
+          type: 'Istighfar (Astaghfirullāh al-ʿAẓīm)',
+          creatorName: 'Amina Al-Hassan',
+          creatorCountry: 'Nigeria',
+          creatorCity: 'Kano',
+          createdAt: Date.now() - 43200000
+        }
+      ]);
+    });
+    return () => unsubscribe();
+  }, [language]);
 
   // Get current date string: YYYY-MM-DD
   const getTodayStr = () => {
@@ -266,7 +359,36 @@ export const DailyGoalsTracker: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+          {activeCircles.length > 0 && (
+            <motion.button
+              type="button"
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ 
+                scale: [1, 1.15, 1],
+                opacity: 1
+              }}
+              transition={{
+                scale: {
+                  repeat: Infinity,
+                  duration: 2,
+                  ease: "easeInOut"
+                },
+                opacity: { duration: 0.3 }
+              }}
+              onClick={() => setIsCollectiveModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-500/10 dark:bg-rose-500/20 hover:bg-rose-500/20 border border-rose-500/30 rounded-full cursor-pointer transition-colors shadow-sm shrink-0 mr-1"
+              title={tLocal('tooltipJoin')}
+            >
+              <div className="flex -space-x-1.5 items-center">
+                <div className="w-2.5 h-2.5 rounded-full bg-red-500 border border-white dark:border-gray-800 shadow-sm" />
+                <div className="w-2.5 h-2.5 rounded-full bg-blue-500 border border-white dark:border-gray-800 shadow-sm" />
+                <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 border border-white dark:border-gray-800 shadow-sm" />
+              </div>
+              <span className="text-[9px] font-black text-rose-600 dark:text-rose-400 uppercase tracking-wider pl-0.5">Live</span>
+            </motion.button>
+          )}
+
           {!isExpanded && total > 0 && (
             <div className="w-16 bg-gray-100 dark:bg-gray-700 h-1.5 rounded-full overflow-hidden hidden sm:block">
               <div 
@@ -275,7 +397,13 @@ export const DailyGoalsTracker: React.FC = () => {
               />
             </div>
           )}
-          {isExpanded ? <ChevronUp size={20} className="text-gray-400" /> : <ChevronDown size={20} className="text-gray-400" />}
+          <button
+            type="button"
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 focus:outline-none"
+          >
+            {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+          </button>
         </div>
       </div>
 
@@ -444,6 +572,166 @@ export const DailyGoalsTracker: React.FC = () => {
               </div>
             )}
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Collective Circles Modal */}
+      <AnimatePresence>
+        {isCollectiveModalOpen && (
+          <div className="fixed inset-0 z-[150] flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsCollectiveModalOpen(false)}
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+            />
+
+            {/* Modal Body */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-lg bg-white dark:bg-gray-850 rounded-3xl shadow-2xl border border-gray-150 dark:border-gray-700 overflow-hidden flex flex-col max-h-[85vh]"
+            >
+              {/* Header */}
+              <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700/50 flex justify-between items-center bg-gray-50 dark:bg-gray-800/80 backdrop-blur-md">
+                <div className="flex items-center gap-2">
+                  <div className="flex -space-x-1 items-center shrink-0">
+                    <div className="w-2.5 h-2.5 rounded-full bg-red-500 border border-white dark:border-gray-800 shadow-sm" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-blue-500 border border-white dark:border-gray-800 shadow-sm" />
+                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 border border-white dark:border-gray-800 shadow-sm" />
+                  </div>
+                  <h3 className="font-bold text-base sm:text-lg text-gray-900 dark:text-white">
+                    {tLocal('modalTitle')}
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsCollectiveModalOpen(false)}
+                  className="p-1.5 text-gray-400 hover:text-gray-650 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-xl transition-colors cursor-pointer"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Content body */}
+              <div className="p-6 overflow-y-auto space-y-4 max-h-[60vh] scrollbar-thin">
+                {/* Notification alert / header notice */}
+                {activeCircles.length > 0 && (
+                  <div className="bg-rose-500/10 dark:bg-rose-500/20 border border-rose-500/30 rounded-2xl p-4 flex items-start gap-3 shadow-inner">
+                    <div className="p-2 bg-rose-500 text-white rounded-xl shrink-0 animate-bounce">
+                      <Bell size={16} />
+                    </div>
+                    <div className="text-xs sm:text-sm text-rose-800 dark:text-rose-300 leading-relaxed">
+                      <span className="font-black">📢 {tLocal('recentLaunch')}</span>{' '}
+                      <span className="font-bold text-rose-950 dark:text-rose-100">
+                        {activeCircles[0].creatorName}
+                      </span>{' '}
+                      {tLocal('from')}{' '}
+                      <span className="font-bold text-rose-950 dark:text-rose-100">
+                        {activeCircles[0].creatorCountry}
+                      </span>{' '}
+                      {tLocal('launchedText')}{' '}
+                      <span className="italic font-bold">"{activeCircles[0].title}"</span>{' '}
+                      <span className="font-bold text-rose-950 dark:text-rose-100">
+                        {Number(activeCircles[0].target).toLocaleString()}
+                      </span>{' '}
+                      {tLocal('times')}
+                    </div>
+                  </div>
+                )}
+
+                {/* Sub-header text */}
+                <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed px-1">
+                  {tLocal('descriptionText')}
+                </p>
+
+                {/* Active Circles List */}
+                <div className="space-y-3">
+                  {activeCircles.map((circle) => {
+                    const progressPercent = Math.min(Math.round((circle.count / circle.target) * 100), 100);
+                    return (
+                      <div
+                        key={circle.id}
+                        className="p-4 rounded-2xl border border-gray-150 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/40 hover:bg-white dark:hover:bg-gray-800 hover:shadow-md transition-all space-y-3"
+                      >
+                        <div className="flex justify-between items-start gap-3">
+                          <div className="min-w-0 flex-1">
+                            <h4 className="font-bold text-sm sm:text-base text-gray-900 dark:text-white leading-tight truncate">
+                              {circle.title}
+                            </h4>
+                            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-1 font-mono">
+                              <span className="italic truncate">{circle.type}</span>
+                            </p>
+                            <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1 flex items-center gap-1">
+                              <MapPin size={12} className="text-rose-500 shrink-0" />
+                              <span className="truncate">
+                                {tLocal('createdBy')}{' '}
+                                <span className="font-bold text-gray-600 dark:text-gray-300">{circle.creatorName}</span>{' '}
+                                ({circle.creatorCountry})
+                              </span>
+                            </p>
+                          </div>
+                          
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsCollectiveModalOpen(false);
+                              navigate('/tools/halaqat', { state: { autoJoinId: circle.id } });
+                            }}
+                            className="shrink-0 bg-rose-500 hover:bg-rose-600 text-white text-xs font-black px-3.5 py-2 rounded-xl transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <Users size={12} />
+                            {tLocal('joinBtn')}
+                          </button>
+                        </div>
+
+                        {/* Progress bar */}
+                        <div className="space-y-1">
+                          <div className="flex justify-between text-[11px] font-bold">
+                            <span className="text-gray-500 dark:text-gray-400">
+                              {Number(circle.count).toLocaleString()} / {Number(circle.target).toLocaleString()}
+                            </span>
+                            <span className="text-rose-500 dark:text-rose-400">{progressPercent}%</span>
+                          </div>
+                          <div className="w-full bg-gray-200 dark:bg-gray-750 h-2 rounded-full overflow-hidden">
+                            <div
+                              className="bg-gradient-to-r from-rose-500 via-purple-500 to-emerald-500 h-full rounded-full transition-all duration-500"
+                              style={{ width: `${progressPercent}%` }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="px-6 py-4 border-t border-gray-100 dark:border-gray-700/50 bg-gray-50 dark:bg-gray-800/80 backdrop-blur-md flex justify-between items-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsCollectiveModalOpen(false);
+                    navigate('/tools/halaqat');
+                  }}
+                  className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Users size={14} />
+                  {tLocal('createCircle')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsCollectiveModalOpen(false)}
+                  className="bg-gray-200 hover:bg-gray-300 dark:bg-gray-750 dark:hover:bg-gray-700 text-gray-800 dark:text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-colors cursor-pointer"
+                >
+                  {tLocal('closeBtn')}
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>

@@ -463,16 +463,81 @@ export const NamesOfAllah: React.FC = () => {
       return tokens.some(tok => isNameMatch(tok, searchWord));
     };
 
-    // 1. If local quranData is loaded, use it exclusively as it is extremely accurate, contains all translations, and handles the Basmala perfectly.
+    const rawSearchWord = activeName.ar;
+    const searchWord = rawSearchWord.replace(/[\u064B-\u065F\u0670]/g, '').replace(/\u0671/g, '\u0627');
+    const isBasmalaTarget = searchWord === "الله" || searchWord === "الرحمن" || searchWord === "الرحيم";
+
+    // 1. If we have online occurrences (which contain the ENTIRE Quran's raw search matches), we filter and return them (covers all 114 surahs)
+    if (onlineOccurrences && onlineOccurrences.length > 0) {
+      try {
+        const matches = [];
+        
+        // Add unnumbered Basmala if enabled
+        if (includeBasmala && isBasmalaTarget) {
+          for (let s = 2; s <= 114; s++) {
+            if (s === 9) continue;
+            const localSurah = quranData ? quranData.find(su => su.id === s) : null;
+            const surahName = localSurah ? localSurah.name : `السورة ${s}`;
+            const surahTrans = localSurah ? (localSurah.transliteration || localSurah.name_en) : `Sourate ${s}`;
+            
+            matches.push({
+              id: `${s}:basmala`,
+              inSurah: 0,
+              isBasmala: true,
+              ar: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
+              fr: language === 'fr' 
+                ? "Au nom d'Allah, le Tout Miséricordieux, le Très Miséricordieux. (Introduction non numérotée)" 
+                : language === 'ha'
+                  ? "Da sūnandububū na Allāh, Mai rahama, Mai jin ƙai. (Bismillah)"
+                  : "In the name of Allah, the Entirely Merciful, the Especially Merciful. (Unnumbered Introduction)",
+              en: "In the name of Allah, the Entirely Merciful, the Especially Merciful. (Unnumbered Introduction)",
+              ha: "Da sūnandububū na Allāh, Mai rahama, Mai jin ƙai. (Bismillah)",
+              surahName: surahName,
+              surahTransliteration: surahTrans,
+              surahNumber: s
+            });
+          }
+        }
+
+        for (const item of onlineOccurrences) {
+          const rawAyah = item.ar || '';
+          let cleanAyah = rawAyah.replace(/[\u064B-\u065F\u0670]/g, '').replace(/\u0671/g, '\u0627');
+          
+          const isFirstVerse = item.inSurah === 1;
+          if (item.surahNumber !== 1 && isFirstVerse) {
+            cleanAyah = cleanAyah.replace(/^بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ\s*/, "")
+                                 .replace(/^Ref:.*$/, "")
+                                 .replace(/^بسم الله الرحمن الرحيم\s*/, "")
+                                 .replace(/^بِسمِ اللَّهِ الرَّحمٰنِ الرَّحيمِ\s*/, "")
+                                 .replace(/^بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ\s*/, "");
+          }
+          
+          if (hasWordMatch(cleanAyah, searchWord, exactMatch)) {
+            matches.push({
+              id: item.id,
+              inSurah: item.inSurah,
+              ar: item.ar,
+              fr: verseDetails[item.id]?.fr || item.fr || '',
+              en: verseDetails[item.id]?.en || item.en || '',
+              ha: verseDetails[item.id]?.ha || item.ha || '',
+              surahName: item.surahName,
+              surahTransliteration: item.surahTransliteration,
+              surahNumber: item.surahNumber
+            });
+          }
+        }
+        return matches;
+      } catch (e) {
+        console.error("Online occurrences filtering error:", e);
+      }
+    }
+
+    // 2. Fallback to local quranData (Surahs 1 to 12) if offline
     if (quranData && quranData.length > 0) {
       try {
-        const rawSearchWord = activeName.ar;
-        const searchWord = rawSearchWord.replace(/[\u064B-\u065F\u0670]/g, '').replace(/\u0671/g, '\u0627');
         const matches = [];
-        const isBasmalaTarget = searchWord === "الله" || searchWord === "الرحمن" || searchWord === "الرحيم";
         
         for (const surah of quranData) {
-          // Add unnumbered Basmala if enabled
           if (includeBasmala && isBasmalaTarget && surah.id !== 1 && surah.id !== 9) {
             matches.push({
               id: `${surah.id}:basmala`,
@@ -496,7 +561,6 @@ export const NamesOfAllah: React.FC = () => {
             const rawAyah = ayah.arClean || ayah.ar || '';
             let cleanAyah = rawAyah.replace(/[\u064B-\u065F\u0670]/g, '').replace(/\u0671/g, '\u0627');
             
-            // Strip Bismillah prefix from the start of the first verse of all surahs except Surah 1 (Al-Fatiha)
             const isFirstVerse = ayah.inSurah === 1 || ayah.numberInSurah === 1;
             if (surah.id !== 1 && isFirstVerse) {
               cleanAyah = cleanAyah.replace(/^بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ\s*/, "")
@@ -527,11 +591,6 @@ export const NamesOfAllah: React.FC = () => {
       }
     }
 
-    // 2. Fallback to online API search results if quranData is not yet loaded
-    if (onlineOccurrences.length > 0) {
-      return onlineOccurrences;
-    }
-    
     // 3. Fallback to static offline single entry if offline and data not loaded
     const occurrences = [];
     if (activeName.quranOptions) {
@@ -616,9 +675,7 @@ export const NamesOfAllah: React.FC = () => {
     setActiveName(null);
   };
 
-  const totalOccurrences = (quranData && quranData.length > 0)
-    ? realOccurrences.length
-    : (onlineCount !== null ? onlineCount : (activeName?.quranOptions?.count || 0));
+  const totalOccurrences = activeName?.quranOptions?.count || 0;
 
   return (
     <div className="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8 safe-area-pt pb-24 min-h-screen relative">

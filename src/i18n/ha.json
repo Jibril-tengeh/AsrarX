@@ -532,6 +532,8 @@
     "verifyEmailTitle": "Tabbatar da imel ɗinka",
     "verifyEmailDesc": "Mun aika hanyar tabbatarwa zuwa",
     "verifyEmailAction": "Da fatan za a danna wannan hanyar don kunna asusunka.",
+    "spamWarningTitle": "Duba babban fayil na SPAM!",
+    "spamWarningDesc": "Idan imel ɗin bai bayyana ba cikin 'yan mintoci, da fatan za a duba babban fayil ɗin ku na SPAM (Saƙonnin banza) da kyau don samun hanyar tabbatarwar.",
     "backToLogin": "Koma zuwa shiga",
     "email": "Imel",
     "password": "Kalmar sirri",

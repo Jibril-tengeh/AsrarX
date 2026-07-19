@@ -29,6 +29,18 @@ export interface MoonPhaseMystery {
   astronomicalInfo: string; // Details scientifique/calculs de visibilite
   recommendedAsma: string[]; // Les Noms d'Allah conseilles
   spiritualKey: string; // Cle d'elevation spirituelle
+  wirdDetails?: {
+    title: string;
+    formula: string;
+    count: number;
+    description: string;
+  };
+  talsamDetails?: {
+    formula: string;
+    graphicSymbol: string;
+    spiritualUtility: string;
+    description: string;
+  };
 }
 
 export interface InspirationalQuote {
@@ -627,7 +639,19 @@ export const getLocalizedMoonDayMystery = (hDay: number, lang: 'fr' | 'en' | 'ha
                      : ["يَا بَادِئُ (Ya Badi' - O Originator)", "يَا خَالِقُ (Ya Khaliq - O Creator)", "يَا هَادِي (Ya Hadi - O Guide)"],
       spiritualKey: lang === 'fr' ? "La clé réside dans le renouvellement sincère du pacte de servitude spirituelle ('Ubudiyyah)."
                   : lang === 'ha' ? "Mabuɗin yana cikin sabunta alkawari na bautar ruhaniya da gaskiya ('Ubudiyyah)."
-                  : "The key lies in the sincere renewal of the pact of spiritual servitude ('Ubudiyyah)."
+                  : "The key lies in the sincere renewal of the pact of spiritual servitude ('Ubudiyyah).",
+      wirdDetails: {
+        title: lang === 'fr' ? "Wird du Commencement Sacré (Ya Badî')" : "Wird of the Sacred Beginning (Ya Badi')",
+        formula: "Yâ Badî'al-Aja'ibi bil-Khayri Yâ Badî'",
+        count: 111,
+        description: lang === 'fr' ? "Formule d'origine céleste pour planter des semences spirituelles fortes. À réciter dans un endroit calme juste après la prière de l'Isha." : "Celestial formula to plant strong spiritual seeds. Recite in a quiet place right after Isha prayer."
+      },
+      talsamDetails: {
+        formula: "ب د و ح (B-D-W-H / Buduh) - ٨ ٦ ٤ ٢",
+        graphicSymbol: "┌───────────┐\n│ 2   9   4 │\n│ 7   5   3 │\n│ 6   1   8 │\n└───────────┘",
+        spiritualUtility: lang === 'fr' ? "Harmonie primordiale, attirance des ondes positives et protection des nouveaux départs" : "Primordial harmony, attraction of positive waves and protection of new beginnings",
+        description: lang === 'fr' ? "Le talsam de Buduh est un carré magique de proportion parfaite (3x3). Il agit comme un transmetteur d'ondes bienveillantes, facilitant la sympathie et l'aboutissement des intentions naissantes." : "The Buduh talisman is a perfectly proportioned 3x3 magic square. It acts as a benevolence transmitter, facilitating sympathy and success for nascent intentions."
+      }
     };
   } else if (hDay >= 2 && hDay <= 6) {
     return {
@@ -655,7 +679,19 @@ export const getLocalizedMoonDayMystery = (hDay: number, lang: 'fr' | 'en' | 'ha
                      : ["يَا نُورُ (Ya Nur - O Divine Light)", "يَا مُبِينُ (Ya Mubin - O Manifest)", "يَا فَتَّاحُ (Ya Fattah - O Opener)"],
       spiritualKey: lang === 'fr' ? "La clé est la constance (Istiqaamah) dans les premières étapes de l'effort spirituel."
                   : lang === 'ha' ? "Mabudin shi ne dorewa (Istiqaamah) a farkon matakan kokarin ruhaniya."
-                  : "The key is constancy (Istiqaamah) in the early stages of spiritual effort."
+                  : "The key is constancy (Istiqaamah) in the early stages of spiritual effort.",
+      wirdDetails: {
+        title: lang === 'fr' ? "Wird de l'Illumination Mentale (Ya Nûr)" : "Wird of Mental Illumination (Ya Nur)",
+        formula: "Yâ Nûru Yâ Mubînu Yâ Fattâh, Iftah lî abwâba rahmatika wa 'ilmika",
+        count: 489,
+        description: lang === 'fr' ? "Réciter au lever du soleil pour aiguiser l'intellect, chasser la confusion mentale et ouvrir les cœurs fermés." : "Recite at sunrise to sharpen intellect, clear mental confusion, and open closed hearts."
+      },
+      talsamDetails: {
+        formula: "ا ل ف - ٩ ١ ١ (Alif-L-F / 111)",
+        graphicSymbol: "║║║ 𐎃 ║║║ 𐎃 ║║║\n   ١    ١    ١   \n   ا    ل    ف   ",
+        spiritualUtility: lang === 'fr' ? "Clarté d'esprit, éveil de l'intuition céleste et déblocage des nœuds de la pensée" : "Clarity of mind, awakening of celestial intuition, and unlocking thought blocks",
+        description: lang === 'fr' ? "Ce talsam utilise la vibration linéaire de la lettre Alif, symbole de la rectitude et du premier canal de descente de la lumière créatrice sur Terre." : "This talisman utilizes the linear vibration of the letter Alif, symbol of rectitude and the first canal of descent for creative light on Earth."
+      }
     };
   } else if (hDay >= 7 && hDay <= 9) {
     return {
@@ -675,7 +711,7 @@ export const getLocalizedMoonDayMystery = (hDay: number, lang: 'fr' | 'en' | 'ha
       spiritualSecret: lang === 'fr' ? "Cette phase révèle le secret de la Voie du Milieu (As-Sirat al-Mustaqim). C'est le moment idéal pour surmonter les excès de l'ego et stabiliser son âme dans la paix et la justice universelle."
                      : lang === 'ha' ? "Wannan lokacin yana bayyana sirrin Hanya Madaidaciya (Siratal Mustaqim). Lokaci ne mai kyau don sarrafa son zuciya da tabbatar da zaman lafiya."
                      : "This phase reveals the secret of the Middle Way (As-Sirat al-Mustaqim). It is the perfect moment to overcome ego's excesses and stabilize the soul in peace and universal justice.",
-      astronomicalInfo: lang === 'fr' ? "La Lune a parcouru un quart de son orbite autour de la Terre. L'angle Terre-Lune-Soleil est de 90 degrés. La moitié droite du disque lunaire est illuminée par le soleil, visible l'après-midi et en première partie de nuit."
+      astronomicalInfo: lang === 'fr' ? "La Lune a parcouru un quarter de son orbite autour de la Terre. L'angle Terre-Lune-Soleil est de 90 degrés. La moitié droite du disque lunaire est illuminée par le soleil, visible l'après-midi et en première partie de nuit."
                       : lang === 'ha' ? "Wata ya cika kwata daya na zagayensa. Daidai kusurwar digiri 90. Rabinsa na dama ne ke da haske."
                       : "The Moon has covered a quarter of its orbit around Earth. The Earth-Moon-Sun angle is 90 degrees. The right half of the lunar disk is illuminated by the sun, visible in afternoon and early night.",
       recommendedAsma: lang === 'fr' ? ["يَا عَدْلُ (Ya 'Adl - Ô Juste Suprême)", "يَا قَوِيُّ (Ya Qawiyy - Ô Fort)", "يَا مُقْسِطُ (Ya Muqsit - Ô Équitable)"]
@@ -683,12 +719,24 @@ export const getLocalizedMoonDayMystery = (hDay: number, lang: 'fr' | 'en' | 'ha
                      : ["يَا عَدْلُ (Ya 'Adl - O Supreme Just)", "يَا قَوِيُّ (Ya Qawiyy - O Strong)", "يَا مُقْسِطُ (Ya Muqsit - O Equitable)"],
       spiritualKey: lang === 'fr' ? "La clé réside dans l'intégration harmonieuse des sciences extérieures et des vérités intérieures."
                   : lang === 'ha' ? "Mabudin yana cikin hada ilimin fili da na boye guri guda."
-                  : "The key lies in the harmonious integration of outer sciences and inner truths."
+                  : "The key lies in the harmonious integration of outer sciences and inner truths.",
+      wirdDetails: {
+        title: lang === 'fr' ? "Wird de la Force Spirituelle (Ya Qawîyy)" : "Wird of Spiritual Strength (Ya Qawiyy)",
+        formula: "Yâ Qawiyyu Yâ Matînu, Thabbit Qalbî 'alâ Dînik wa 'alâ Tâ'atik",
+        count: 117,
+        description: lang === 'fr' ? "Idéal à réciter au zénith (heure de midi) pour fortifier la foi, dompter la paresse spirituelle et surmonter l'anxiété." : "Ideal to recite at noon to strengthen faith, overcome spiritual laziness, and cure anxiety."
+      },
+      talsamDetails: {
+        formula: "ع د ل ق و ي (Adl-Qawiyy / 104-117)",
+        graphicSymbol: "┌─────────┐\n│ ⚖️  𐎄  ⚖️ │\n│ 𐎍  𐎓  𐎊 │\n│ ⚖️  𐎖  ⚖️ │\n└─────────┘",
+        spiritualUtility: lang === 'fr' ? "Bouclier de justice spirituelle, alignement vibratoire et stabilité face aux épreuves" : "Shield of spiritual justice, vibrational alignment, and stability during trials",
+        description: lang === 'fr' ? "Le sceau d'Équilibre (Al-Mizân) combine les lettres de la justice divine et de la force suprême pour protéger contre l'arbitraire et harmoniser l'aura." : "The Balance seal (Al-Mizan) combines letters of divine justice and supreme strength to protect against arbitrariness and harmonize the aura."
+      }
     };
   } else if (hDay >= 10 && hDay <= 12) {
     return {
       name: lang === 'fr' ? "Lune Gibbeuse Croissante (Al-Ahdab)" : lang === 'ha' ? "Wata Mai Karuwa (Al-Ahdab)" : "Waxing Gibbous (Al-Ahdab)",
-      arabicName: "الأحدب المتzaيد",
+      arabicName: "الأحدب المتزايد",
       manzil: "Al-Dabaran (الدَّبَرَان)",
       energy: lang === 'fr' ? "Expansion spirituelle intense et Réceptivité spirituelle accrue"
             : lang === 'ha' ? "Daukakar ruhaniya mai zurfi da bude zuciya don karbar haske"
@@ -711,7 +759,19 @@ export const getLocalizedMoonDayMystery = (hDay: number, lang: 'fr' | 'en' | 'ha
                      : ["يَا وَاسِعُ (Ya Wasi' - O All-Embracing)", "يَا لَطِيفُ (Ya Latif - O Infinitely Gentle)", "يَا جَمِيلُ (Ya Jamil - O Beautiful)"],
       spiritualKey: lang === 'fr' ? "La clé est l'aspiration ardente (Himmah) à l'union spirituelle sacrée."
                   : lang === 'ha' ? "Mabudin shi ne himma mai karfi (Himmah) don samun kusanci mai tsarki."
-                  : "The key is ardent aspiration (Himmah) for sacred spiritual union."
+                  : "The key is ardent aspiration (Himmah) for sacred spiritual union.",
+      wirdDetails: {
+        title: lang === 'fr' ? "Wird du Secret de la Douceur (Ya Latîf)" : "Wird of the Hidden Gentleness (Ya Latif)",
+        formula: "Yâ Wâsi'u Yâ Latîfu Yâ Jamîl, Alti'f bî fî qadâ'ika wa jammil ahwâlî",
+        count: 129,
+        description: lang === 'fr' ? "À réciter au coucher du soleil (Maghrib). Une fréquence extraordinaire pour attirer des miracles cachés, apaiser l'âme et dénouer l'impossible." : "Recite at sunset (Maghrib). An extraordinary frequency to attract hidden miracles, soothe the soul, and untie the impossible."
+      },
+      talsamDetails: {
+        formula: "ل ط ي ف (L-T-Y-F / 129)",
+        graphicSymbol: "┌──────────────────────┐\n│  ل (30)  │  ط (9)    │\n├──────────────────────┤\n│  ي (10)  │  ف (80)   │\n└──────────────────────┘",
+        spiritualUtility: lang === 'fr' ? "Ouverture des canaux d'abondance financière, soulagement des angoisses et harmonie" : "Opening financial abundance channels, relief of anxiety and harmony",
+        description: lang === 'fr' ? "Le sceau quadratique de Latif structure l'énergie des quatre éléments physiques pour la mettre au service de la paix intérieure et de la providence matérielle." : "The quadratic seal of Latif structures the energy of the four physical elements to serve inner peace and material providence."
+      }
     };
   } else if (hDay >= 13 && hDay <= 15) {
     return {
@@ -737,7 +797,19 @@ export const getLocalizedMoonDayMystery = (hDay: number, lang: 'fr' | 'en' | 'ha
       recommendedAsma: ["يَا اللَّهُ (Ya Allah)", "يَا قُدُّوسُ (Ya Quddus - Ô Infiniment Saint)", "يَا جَامِعُ (Ya Jami' - Ô Unificateur)"],
       spiritualKey: lang === 'fr' ? "La clé est la contemplation muette (Mushahadah) de la Splendeur divine."
                   : lang === 'ha' ? "Mabudin shi ne kiyaye shiru da bautar Ubangiji cikin natsuwa (Mushahadah)."
-                  : "The key is silent contemplation (Mushahadah) of Divine Splendor."
+                  : "The key is silent contemplation (Mushahadah) of Divine Splendor.",
+      wirdDetails: {
+        title: lang === 'fr' ? "Wird du Badr Suprême (Ya Allâh)" : "Wird of the Supreme Badr (Ya Allah)",
+        formula: "Yâ Allâhu Yâ Quddûsu Yâ Jâmi', Ijma' baynî wa bayna murâdî",
+        count: 1000,
+        description: lang === 'fr' ? "À réciter au milieu de la nuit sous l'éclat lunaire. Idéal pour la réalisation spirituelle, le dévoilement des secrets et la manifestation des souhaits." : "Recite in the middle of the night under the lunar brilliance. Ideal for spiritual realization, unveiling of secrets, and manifestation of desires."
+      },
+      talsamDetails: {
+        formula: "خ ا ت م ا ل ب د ر (Khatim Al-Badr / 166)",
+        graphicSymbol: "      ☆  هـ  ☆      \n  و   ┌─────┐   م   \n      │ 166 │      \n  د   └─────┘   ك   \n      ☆  ج  ☆      ",
+        spiritualUtility: lang === 'fr' ? "Magnétisme spirituel irrésistible, grand charisme, protection absolue et ouverture du Kashf" : "Irresistible spiritual magnetism, great charisma, absolute protection and opening of Kashf",
+        description: lang === 'fr' ? "Le Grand Sceau Cosmique du Badr Sacré combine la vibration de la pleine lumière lunaire et du pentagramme protecteur pour repousser les énergies négatives et éveiller le rayonnement spirituel." : "The Great Cosmic Seal of the Sacred Badr combines the vibration of full moonlight and the protective pentagram to repel negative energies and awaken spiritual radiance."
+      }
     };
   } else if (hDay >= 16 && hDay <= 18) {
     return {
@@ -748,7 +820,7 @@ export const getLocalizedMoonDayMystery = (hDay: number, lang: 'fr' | 'en' | 'ha
             : lang === 'ha' ? "Yada sirrika, raba hikima, da kyauta domin Allah"
             : "Transmission of secrets, shared wisdom, and generosity",
       mysticMeaning: lang === 'fr' ? "La lumière commence lentement son retour vers l'intérieur. Après avoir reçu l'illumination lors de la pleine lune, l'âme initiée redescend vers le monde terrestre pour transmettre cette sagesse acquise sous forme de compassion active."
-                   : lang === 'ha' ? "Haske yana fara komawa ciki a hankali. Bayan samun haske a lokacin cikakken wata, rai mai hankali yana komawa cikin mutane domin yada hikima ta hanyar tausayi da taimako."
+                   : lang === 'ha' ? "Haske yana fara komawa ciki a hankali. Bayan samun haske a lokatim cikakken wata, rai mai hankali yana komawa cikin mutane domin yada hikima ta hanyar tausayi da taimako."
                    : "Light slowly begins its return inward. After receiving illumination during the full moon, the initiated soul returns to the earthly world to transmit this acquired wisdom in the form of active compassion.",
       recommendedPractice: lang === 'fr' ? "Faire des dons secrets, aider les malades ou les affligés, et réciter l'invocation de la Bienveillance suprême. Partager des paroles spirituelles réconfortantes."
                          : lang === 'ha' ? "Yar da sadaka ta boye, taimaka wa marasa lafiya ko masu bukata, sannan ka raba kalmomi na kwantar da hankali."
@@ -765,7 +837,19 @@ export const getLocalizedMoonDayMystery = (hDay: number, lang: 'fr' | 'en' | 'ha
                      : ["يَا كَرِيمُ (Ya Karim - O Generous)", "يَا رَؤُوفُ (Ya Ra'uf - O Compassionate)", "يَا نَافِعُ (Ya Nafi' - O Bestower of Benefits)"],
       spiritualKey: lang === 'fr' ? "La clé réside dans le service désintéressé des créatures pour l'amour du Créateur."
                   : lang === 'ha' ? "Mabudin yana cikin yi wa bayi hidima domin son Ubangiji."
-                  : "The key lies in the selfless service of creatures for the love of the Creator."
+                  : "The key lies in the selfless service of creatures for the love of the Creator.",
+      wirdDetails: {
+        title: lang === 'fr' ? "Wird de l'Émanation Généreuse (Ya Karîm)" : "Wird of Generous Outpouring (Ya Karim)",
+        formula: "Yâ Karîmu Yâ Ra'ûfu Yâ Nâfi', Anfa'nî bi-nûrika wa-ftah lî abwâba jûdik",
+        count: 270,
+        description: lang === 'fr' ? "À réciter au lever du jour juste après la prière du Subh pour cultiver la baraka, ouvrir les voies de la subsistance bénie et rayonner de compassion." : "Recite at daybreak right after Subh prayer to cultivate baraka, open paths of blessed livelihood, and radiate compassion."
+      },
+      talsamDetails: {
+        formula: "ك ر ي م ن ا ف ع (Karim-Nafi' / 270-201)",
+        graphicSymbol: "┌──────────────────────┐\n│  ك (20)  │  ر (200)  │\n├──────────────────────┤\n│  ي (10)  │  م (40)   │\n└──────────────────────┘",
+        spiritualUtility: lang === 'fr' ? "Prospérité durable, baraka professionnelle et épanouissement des dons caritatifs" : "Sustainable prosperity, professional baraka, and flourishing charitable endeavors",
+        description: lang === 'fr' ? "Ce talsam unit les vibrations de la pure générosité divine et du don utile pour créer une résonance de bienveillance matérielle et protéger les acquis." : "This talisman unites vibrations of pure divine generosity and useful gifting to create material benevolence resonance and safeguard achievements."
+      }
     };
   } else if (hDay >= 19 && hDay <= 22) {
     return {
@@ -793,7 +877,19 @@ export const getLocalizedMoonDayMystery = (hDay: number, lang: 'fr' | 'en' | 'ha
                      : ["يَا حَفِيظُ (Ya Hafiz - O Preserver)", "يَا بَاطِنُ (Ya Batin - O Infinitely Hidden)", "يَا قَدِيرُ (Ya Qadir - O All-Powerful)"],
       spiritualKey: lang === 'fr' ? "La clé est le contentement de l'âme (Rida) dans la retraite spirituelle discrète."
                   : lang === 'ha' ? "Mabudin shi ne yarda da kaddara da natsuwa (Rida) a cikin kebewa."
-                  : "The key is soul contentment (Rida) in discrete spiritual retreat."
+                  : "The key is soul contentment (Rida) in discrete spiritual retreat.",
+      wirdDetails: {
+        title: lang === 'fr' ? "Wird du Bouclier des Secrets (Ya Hafîz)" : "Wird of the Shield of Secrets (Ya Hafiz)",
+        formula: "Yâ Hafîzu Yâ Bâtinu Yâ Qâdir, Ihfaz 'alayya dînî wa sirrî wa qalbi",
+        count: 998,
+        description: lang === 'fr' ? "À réciter à la tombée de la nuit pour ériger une barrière spirituelle infranchissable contre l'envie (Hasad), les influences négatives et renforcer le pouvoir intérieur." : "Recite at nightfall to establish an impassable spiritual barrier against envy (Hasad), negative influences, and reinforce inner power."
+      },
+      talsamDetails: {
+        formula: "ح ف ي ظ ب ا ط ن (Hafiz-Batin / 998-62)",
+        graphicSymbol: "┌──────────────┐\n│ 🛡️  𐎃  𐎏  𐎐  🛡️ │\n│ 🛡️  ٩  ٩  ٨  🛡️ │\n└──────────────┘",
+        spiritualUtility: lang === 'fr' ? "Protection absolue contre l'envie, préservation de l'état mystique et calme intérieur" : "Absolute protection against envy, preservation of mystical state and inner calm",
+        description: lang === 'fr' ? "Le Sceau de Dissimulation Protectrice entoure l'aura d'une fréquence de neutralité mystique, empêchant les énergies négatives d'avoir prise sur la conscience." : "The Protective Concealment Seal surrounds the aura with a frequency of mystical neutrality, preventing negative energies from taking hold of consciousness."
+      }
     };
   } else {
     return {
@@ -821,7 +917,19 @@ export const getLocalizedMoonDayMystery = (hDay: number, lang: 'fr' | 'en' | 'ha
                      : ["يَا غَفَّارُ (Ya Ghaffar - O Forgiver)", "يَا وَكِيلُ (Ya Wakil - O Supreme Trustee)", "يَا صَمَدُ (Ya Samad - O Eternal Source)"],
       spiritualKey: lang === 'fr' ? "La clé est l'effacement complet de l'ego pour laisser vivre la Présence spirituelle."
                   : lang === 'ha' ? "Mabudin shi ne kawar da son zuciya baki daya domin hasken Ubangiji ya rayu a ranka."
-                  : "The key is complete self-effacement to let the spiritual Presence live."
+                  : "The key is complete self-effacement to let the spiritual Presence live.",
+      wirdDetails: {
+        title: lang === 'fr' ? "Wird du Pardon et de l'Abandon (Ya Ghaffâr)" : "Wird of Forgiveness and Surrender (Ya Ghaffar)",
+        formula: "Yâ Ghaffâru Yâ Wakîlu Yâ Samad, Astaghfirullâha wa atûbu ilayh wa tawakaltu 'alâ-Llâh",
+        count: 100,
+        description: lang === 'fr' ? "À réciter au tiers de la nuit (Sahar) pour purifier entièrement le cœur, défaire les fardeaux karmiques de l'âme et s'abandonner au Tout-Puissant." : "Recite in the last third of the night (Sahar) to entirely purify the heart, dissolve karmic burdens of the soul, and surrender to the Almighty."
+      },
+      talsamDetails: {
+        formula: "غ ف ا ر ص م د (Ghaffar-Samad / 1281-134)",
+        graphicSymbol: "┌─────────────┐\n│  𐎅  𐎜  𐎖  𐎍  │\n│  𐎓  𐎏  𐎐  𐎜  │\n└─────────────┘",
+        spiritualUtility: lang === 'fr' ? "Annulation des blocages, apaisement de l'esprit et dissolution de l'ego négatif" : "Unblocking obstacles, calming the spirit, and dissolving the negative ego",
+        description: lang === 'fr' ? "Le Talsam de Dissolution sacrée aide à éliminer les attaches karmiques et les souffrances psychiques en alignant l'esprit sur le néant fertile indispensable à la renaissance." : "The Sacred Dissolution Talisman helps eliminate karmic ties and psychological suffering by aligning the mind with the fertile nothingness essential for rebirth."
+      }
     };
   }
 };

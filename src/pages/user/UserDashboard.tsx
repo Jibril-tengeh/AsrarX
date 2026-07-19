@@ -652,14 +652,14 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
           </Link>
         )}
 
-        <button
+        <Link
           id="tour-calendar-mystic"
-          onClick={() => setIsCalendarOpen(true)}
+          to="/explore/calendar"
           className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50 hover:bg-amber-100 dark:hover:bg-amber-900/50 h-[34px] w-[34px] sm:h-[42px] sm:w-[42px] flex items-center justify-center shadow-sm flex-shrink-0 transition-opacity duration-200 ${isSearchOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
           title="Calendrier Mystique"
         >
           <Calendar className="w-[15px] h-[15px] sm:w-[18px] sm:h-[18px]" />
-        </button>
+        </Link>
 
         <button
           id="tour-search"

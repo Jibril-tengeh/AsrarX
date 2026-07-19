@@ -618,9 +618,22 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
                     <Mail size={32} />
                   </div>
                   <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">{t('auth.verifyEmailTitle', 'Vérifiez votre email')}</h3>
-                  <p className="text-gray-600 dark:text-gray-400 mb-6 text-sm">
+                  <p className="text-gray-600 dark:text-gray-400 mb-4 text-sm">
                     {t('auth.verifyEmailDesc', 'Nous avons envoyé un lien de vérification à')} <span className="font-semibold">{email}</span>. {t('auth.verifyEmailAction', 'Veuillez cliquer sur ce lien pour activer votre compte.')}
                   </p>
+
+                  <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/30 rounded-xl flex items-start gap-2.5 text-left text-xs text-amber-800 dark:text-amber-300 shadow-sm animate-pulse">
+                    <AlertCircle size={16} className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
+                    <div>
+                      <p className="font-bold">
+                        {t('auth.spamWarningTitle', 'Vérifiez vos spams !')}
+                      </p>
+                      <p className="mt-1 leading-relaxed">
+                        {t('auth.spamWarningDesc', "Si l'email n'apparaît pas d'ici quelques minutes, pensez à bien vérifier votre dossier de courriers indésirables (SPAM) pour trouver le lien de vérification.")}
+                      </p>
+                    </div>
+                  </div>
+
                   <button
                     onClick={() => {
                       setVerificationSent(false);

@@ -532,6 +532,8 @@
     "verifyEmailTitle": "Verify your email",
     "verifyEmailDesc": "We have sent a verification link to",
     "verifyEmailAction": "Please click on this link to activate your account.",
+    "spamWarningTitle": "Check your Spam folder!",
+    "spamWarningDesc": "If the email does not appear within a few minutes, please make sure to check your SPAM or Junk folder to find the verification link.",
     "backToLogin": "Back to login",
     "email": "Email",
     "password": "Password",

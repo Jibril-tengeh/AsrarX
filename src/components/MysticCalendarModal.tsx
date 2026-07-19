@@ -16,12 +16,13 @@ import {
 } from '../utils/mysticCalendarData';
 
 interface MysticCalendarModalProps {
-  isOpen: boolean;
-  onClose: () => void;
+  isOpen?: boolean;
+  onClose?: () => void;
+  isPage?: boolean;
 }
 
 
-export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen, onClose }) => {
+export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen = false, onClose, isPage = false }) => {
   const { language, t } = useLanguage();
   const HIJRI_MONTHS = getLocalizedHijriMonths(language);
   
@@ -797,7 +798,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
     }
   }, [selectedHijriDay, hijriMonthIndex, hijriYear]);
 
-  if (!isOpen) return null;
+  if (!isOpen && !isPage) return null;
 
   const gregorianMonths = language === 'fr'
     ? ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"]
@@ -1076,27 +1077,47 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
   return (
     <AnimatePresence>
       <div 
-        ref={backdropRef} 
-        className="fixed inset-0 z-[120] overflow-hidden bg-black/70 backdrop-blur-md p-3 sm:p-4 flex justify-center items-center"
+        ref={isPage ? undefined : backdropRef} 
+        className={isPage 
+          ? "w-full max-w-4xl mx-auto px-4 py-6 sm:px-6 lg:px-8 safe-area-pt pb-24"
+          : "fixed inset-0 z-[120] overflow-hidden bg-black/70 backdrop-blur-md p-3 sm:p-4 flex justify-center items-center"
+        }
       >
         
         {/* Outer click protection */}
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={onClose}
-          className="fixed inset-0 cursor-default z-0"
-        />
+        {!isPage && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 cursor-default z-0"
+          />
+        )}
+
+        {/* Page Back Button (Only in Page Mode) */}
+        {isPage && (
+          <div className="mb-6 flex items-center justify-between w-full">
+            <button
+              onClick={() => window.history.back()}
+              className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors cursor-pointer font-bold"
+            >
+              <ChevronLeft size={16} />
+              {t('mysticCalendar.backBtn', "Retour à l'exploration")}
+            </button>
+          </div>
+        )}
 
         {/* Modal Outer Container */}
         <motion.div
-          ref={modalContentRef}
-          initial={{ scale: 0.95, opacity: 0, y: 15 }}
-          animate={{ scale: 1, opacity: 1, y: 0 }}
-          exit={{ scale: 0.95, opacity: 0, y: 15 }}
-          transition={{ type: "spring", stiffness: 300, damping: 26 }}
-          className={`relative border rounded-3xl p-4 sm:p-6 shadow-2xl max-w-xl w-full max-h-[90vh] sm:max-h-[85vh] overflow-y-auto overscroll-contain my-4 sm:my-8 z-10 flex flex-col transition-colors duration-300 scrollbar-thin scrollbar-track-transparent ${
+          ref={isPage ? undefined : modalContentRef}
+          initial={isPage ? false : { scale: 0.95, opacity: 0, y: 15 }}
+          animate={isPage ? false : { scale: 1, opacity: 1, y: 0 }}
+          exit={isPage ? false : { scale: 0.95, opacity: 0, y: 15 }}
+          transition={isPage ? undefined : { type: "spring", stiffness: 300, damping: 26 }}
+          className={`relative border rounded-3xl p-4 sm:p-6 shadow-2xl w-full z-10 flex flex-col transition-colors duration-300 ${
+            isPage ? "" : "max-w-xl max-h-[90vh] sm:max-h-[85vh] overflow-y-auto overscroll-contain my-4 sm:my-8 scrollbar-thin scrollbar-track-transparent"
+          } ${
             isReadingMode
               ? 'bg-[#0f0d0b] border-amber-950/40 text-amber-100/90 shadow-amber-950/20'
               : 'bg-white dark:bg-gray-900 border-gray-100 dark:border-gray-800'
@@ -1140,16 +1161,18 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                 {t('mysticCalendar.readingMode')}
               </button>
 
-              <button
-                onClick={onClose}
-                className={`p-1.5 rounded-full transition-colors cursor-pointer ${
-                  isReadingMode
-                    ? 'hover:bg-amber-950/40 text-amber-400/70 hover:text-amber-300'
-                    : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
-                }`}
-              >
-                <X size={18} />
-              </button>
+              {!isPage && onClose && (
+                <button
+                  onClick={onClose}
+                  className={`p-1.5 rounded-full transition-colors cursor-pointer ${
+                    isReadingMode
+                      ? 'hover:bg-amber-950/40 text-amber-400/70 hover:text-amber-300'
+                      : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'
+                  }`}
+                >
+                  <X size={18} />
+                </button>
+              )}
             </div>
           </div>
 
@@ -2753,6 +2776,79 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                           <strong>{t('mysticCalendar.soulKey')}</strong> {activeMoonMystery.spiritualKey}
                         </div>
                       </div>
+
+                      {activeMoonMystery.wirdDetails && (
+                        <div className="bg-gradient-to-br from-amber-500/10 to-purple-500/10 border border-amber-500/30 rounded-xl p-4 relative overflow-hidden shadow-lg col-span-1">
+                          <div className="absolute top-0 right-0 p-1 opacity-20">
+                            <Sparkles size={40} className="text-amber-400" />
+                          </div>
+                          
+                          <span className="text-[9px] font-bold uppercase tracking-wider text-amber-400 block mb-1 flex items-center gap-1">
+                            <Flame size={10} className="animate-pulse" /> 
+                            {language === 'fr' ? "WIRD & ZIKR DE LA PHASE" : language === 'ha' ? "WIRDI DA ZIKIRIN LOKACIN" : "WIRD & ZIKR OF THE PHASE"}
+                          </span>
+                          
+                          <h4 className="text-sm font-bold text-white mb-2">
+                            {activeMoonMystery.wirdDetails.title}
+                          </h4>
+                          
+                          <div className="bg-black/40 border border-amber-500/20 rounded-lg p-3 my-2 text-center relative">
+                            <p className="text-base font-serif font-bold text-amber-200 tracking-wide leading-relaxed">
+                              {activeMoonMystery.wirdDetails.formula}
+                            </p>
+                            <div className="absolute -bottom-2 right-4 bg-amber-500 text-black text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm">
+                              {activeMoonMystery.wirdDetails.count} x
+                            </div>
+                          </div>
+                          
+                          <p className="text-xs text-gray-300 leading-relaxed mt-2 italic">
+                            {activeMoonMystery.wirdDetails.description}
+                          </p>
+                        </div>
+                      )}
+
+                      {activeMoonMystery.talsamDetails && (
+                        <div className="bg-gradient-to-br from-purple-950/40 to-slate-900/60 border border-purple-500/30 rounded-xl p-4 relative overflow-hidden shadow-lg col-span-1">
+                          <div className="absolute top-0 right-0 p-1 opacity-10">
+                            <Compass size={40} className="text-purple-400" />
+                          </div>
+                          
+                          <span className="text-[9px] font-bold uppercase tracking-wider text-purple-400 block mb-1 flex items-center gap-1">
+                            <Zap size={10} />
+                            {language === 'fr' ? "SCEAU & TALSAM MYSTIQUE" : language === 'ha' ? "HARSHE DA SIRRIN TALSAM" : "SACRED SEAL & TALSAM"}
+                          </span>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center mt-2">
+                            <div className="md:col-span-5 flex justify-center">
+                              <pre className="bg-black/60 border border-purple-500/20 text-purple-300 text-[10px] p-2 rounded-lg font-mono leading-none tracking-tight text-center select-all shadow-inner whitespace-pre-wrap max-w-full">
+                                {activeMoonMystery.talsamDetails.graphicSymbol}
+                              </pre>
+                            </div>
+                            <div className="md:col-span-7 space-y-1.5">
+                              <div>
+                                <span className="text-[8px] uppercase tracking-wider text-gray-400 block">
+                                  {language === 'fr' ? "Formule talsamique" : language === 'ha' ? "Kalmar Talsam" : "Talismanic formula"}
+                                </span>
+                                <code className="text-xs font-serif font-bold text-purple-200">
+                                  {activeMoonMystery.talsamDetails.formula}
+                                </code>
+                              </div>
+                              <div>
+                                <span className="text-[8px] uppercase tracking-wider text-gray-400 block">
+                                  {language === 'fr' ? "Vertu Spirituelle" : language === 'ha' ? "Amfanin Ruhaniya" : "Spiritual Utility"}
+                                </span>
+                                <p className="text-xs text-emerald-300 font-semibold leading-snug">
+                                  {activeMoonMystery.talsamDetails.spiritualUtility}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <p className="text-[11px] text-gray-300 leading-relaxed mt-2.5 pt-2 border-t border-purple-500/10">
+                            {activeMoonMystery.talsamDetails.description}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
 

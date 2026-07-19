@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Moon, Sun, Languages, User, Users, Shield, LogOut, LogIn, Bell, BellOff, Store, ChevronDown, ChevronUp, Megaphone, X, ExternalLink, MessageCircle, Search } from 'lucide-react';
+import { Moon, Sun, Languages, User, Users, Shield, LogOut, LogIn, Bell, BellOff, Store, ChevronDown, ChevronUp, Megaphone, X, ExternalLink, MessageCircle, Search, Inbox, MessageSquare, Vote, Radio } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useFeatures } from '../contexts/FeatureContext';
@@ -33,9 +33,26 @@ export const Header: React.FC = () => {
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [showEnableNotifPopup, setShowEnableNotifPopup] = useState(false);
   const [notifsEnabled, setNotifsEnabled] = useState(false);
+  const [communityMenuOpen, setCommunityMenuOpen] = useState(false);
+  const [showLoginSuccessNotification, setShowLoginSuccessNotification] = useState(false);
+  const prevUserRef = useRef<any>(null);
   const initialLoadTime = useRef(Date.now());
+
+  useEffect(() => {
+    if (user && !prevUserRef.current) {
+      // Show notification on login / load
+      setShowLoginSuccessNotification(true);
+      const timer = setTimeout(() => {
+        setShowLoginSuccessNotification(false);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+    prevUserRef.current = user;
+  }, [user]);
   const langMenuRef = useRef<HTMLDivElement>(null);
   const notifMenuRef = useRef<HTMLDivElement>(null);
+  const communityMenuRef = useRef<HTMLDivElement>(null);
+  const communityMenuMobileRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
 
   useEffect(() => {
@@ -86,6 +103,12 @@ export const Header: React.FC = () => {
       }
       if (notifMenuRef.current && !notifMenuRef.current.contains(event.target as Node)) {
         setNotifMenuOpen(false);
+      }
+      if (communityMenuRef.current && !communityMenuRef.current.contains(event.target as Node)) {
+        setCommunityMenuOpen(false);
+      }
+      if (communityMenuMobileRef.current && !communityMenuMobileRef.current.contains(event.target as Node)) {
+        setCommunityMenuOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -191,7 +214,7 @@ export const Header: React.FC = () => {
           scrolled 
             ? 'py-3 bg-emerald-600 dark:bg-emerald-800 shadow-lg' 
             : 'py-4 bg-emerald-600 dark:bg-emerald-800'
-        } px-3 sm:px-6`}
+        } px-1.5 min-[375px]:px-3 sm:px-6`}
         onClick={handleSecretClick}
       >
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -199,19 +222,97 @@ export const Header: React.FC = () => {
             <AsrarLogo variant="horizontal" size="md" className="text-white hover:opacity-90 transition-opacity" hideSymbol={true} />
           </Link>
           
-          <div className="flex items-center space-x-1 sm:space-x-3">
+          <div className="flex items-center gap-0.5 min-[375px]:gap-1.5 sm:gap-3">
             
             {featureToggles['tool_community'] !== 'inactive' && (
-              <Link to="/community" id="tour-community">
-                <motion.div
+              <div className="relative hidden sm:block" ref={communityMenuRef} id="tour-community">
+                <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className="p-1.5 sm:p-2 rounded-full hover:bg-emerald-700 dark:hover:bg-emerald-900 text-white transition-colors hidden sm:flex"
+                  onClick={() => setCommunityMenuOpen(!communityMenuOpen)}
+                  className="p-1 min-[375px]:p-1.5 sm:p-2 rounded-full hover:bg-emerald-700 dark:hover:bg-emerald-900 text-white transition-colors flex cursor-pointer relative"
                   aria-label="Community"
                 >
                   <Users size={18} />
-                </motion.div>
-              </Link>
+                </motion.button>
+
+                <AnimatePresence>
+                  {communityMenuOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 15, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 15, scale: 0.95 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 mt-2.5 w-64 bg-white dark:bg-gray-800 border border-gray-150 dark:border-gray-700/85 rounded-3xl shadow-xl py-2 z-50 overflow-hidden"
+                    >
+                      <div className="px-3.5 py-2 border-b border-gray-50 dark:border-gray-700/50 flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                          {language === 'en' ? 'Community Menu' : language === 'ha' ? "Tsarin Al'umma" : 'Menu Communauté'}
+                        </span>
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                      </div>
+                      <div className="flex flex-col">
+                        <Link
+                          to="/community?view=messages"
+                          onClick={() => setCommunityMenuOpen(false)}
+                          className="flex items-center gap-3 px-3.5 py-2.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all border-b border-gray-50/50 dark:border-gray-700/30"
+                        >
+                          <MessageSquare size={15} className="text-emerald-500" />
+                          <span>{language === 'en' ? 'Discussions & Posts' : language === 'ha' ? 'Tattaunawa da Saƙonni' : 'Discussions & Messages'}</span>
+                        </Link>
+                        <Link
+                          to="/community?view=polls"
+                          onClick={() => setCommunityMenuOpen(false)}
+                          className="flex items-center gap-3 px-3.5 py-2.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all border-b border-gray-50/50 dark:border-gray-700/30"
+                        >
+                          <Vote size={15} className="text-emerald-500" />
+                          <span>{language === 'en' ? 'Community Polls' : language === 'ha' ? "Zaɓukan Al'umma" : "Sondages de l'Al'umma"}</span>
+                        </Link>
+                        <Link
+                          to="/community?view=dms"
+                          onClick={() => setCommunityMenuOpen(false)}
+                          className="flex items-center gap-3 px-3.5 py-2.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all border-b border-gray-50/50 dark:border-gray-700/30"
+                        >
+                          <Inbox size={15} className="text-emerald-500" />
+                          <span>{language === 'en' ? 'Private Messages' : language === 'ha' ? 'Saƙonnin Sirri' : 'Messages Privés'}</span>
+                        </Link>
+                        <Link
+                          to="/community?view=friends"
+                          onClick={() => setCommunityMenuOpen(false)}
+                          className="flex items-center gap-3 px-3.5 py-2.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all border-b border-gray-50/50 dark:border-gray-700/30"
+                        >
+                          <Users size={15} className="text-emerald-500" />
+                          <span>{language === 'en' ? 'Members & Friends' : language === 'ha' ? 'Mambobi da Abokai' : 'Membres & Amis'}</span>
+                        </Link>
+                        <Link
+                          to="/community?view=online"
+                          onClick={() => setCommunityMenuOpen(false)}
+                          className="flex items-center justify-between px-3.5 py-2.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all border-b border-gray-50/50 dark:border-gray-700/30"
+                        >
+                          <div className="flex items-center gap-3">
+                            <Radio size={15} className="text-emerald-500" />
+                            <span>{language === 'en' ? 'Online Users' : language === 'ha' ? 'Masu amfani a kan layi' : 'Utilisateurs en ligne'}</span>
+                          </div>
+                          <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                        </Link>
+
+                        {/* Spiritual Code Preview */}
+                        <div className="p-3 bg-emerald-500/5 dark:bg-emerald-500/10 rounded-2xl mx-2.5 mt-2 border border-emerald-500/10 flex flex-col gap-1.5">
+                          <div className="flex items-center justify-between text-[9px] text-emerald-600 dark:text-emerald-400 font-extrabold tracking-wider uppercase">
+                            <span>{language === 'en' ? 'Spiritual Code' : language === 'ha' ? 'Kodin Asrar' : 'Code Spirituel'}</span>
+                            <span className="animate-pulse">●</span>
+                          </div>
+                          <code className="text-[9px] font-mono text-gray-500 dark:text-gray-300 block bg-gray-50 dark:bg-gray-900 p-2 rounded-xl border border-gray-100 dark:border-gray-800 text-left leading-normal">
+                            <span className="text-purple-500 font-bold">const</span> zikr = <span className="text-emerald-500 font-bold">"Ya-Latif"</span>;<br />
+                            <span className="text-purple-500 font-bold">const</span> count = <span className="text-amber-500 font-semibold">129</span>;<br />
+                            <span className="text-blue-500 font-semibold">reciterZikr</span>(zikr, count);
+                          </code>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             )}
 
             {user && (
@@ -220,7 +321,7 @@ export const Header: React.FC = () => {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={handleOpenNotifs}
-                  className="relative p-1.5 sm:p-2 rounded-full hover:bg-emerald-700 dark:hover:bg-emerald-900 text-white transition-colors"
+                  className="relative p-1 min-[375px]:p-1.5 sm:p-2 rounded-full hover:bg-emerald-700 dark:hover:bg-emerald-900 text-white transition-colors"
                   aria-label="Notifications"
                 >
                   {notifsEnabled ? (
@@ -288,7 +389,7 @@ export const Header: React.FC = () => {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setLangMenuOpen(!langMenuOpen)}
-                className="flex items-center space-x-1 p-1.5 sm:p-2 rounded-full hover:bg-emerald-700 dark:hover:bg-emerald-900 text-white transition-colors"
+                className="flex items-center space-x-1 p-1 min-[375px]:p-1.5 sm:p-2 rounded-full hover:bg-emerald-700 dark:hover:bg-emerald-900 text-white transition-colors"
                 aria-label="Toggle language menu"
               >
                 <Languages size={18} />
@@ -332,7 +433,7 @@ export const Header: React.FC = () => {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={toggleTheme}
-              className="p-1.5 sm:p-2 rounded-full hover:bg-emerald-700 dark:hover:bg-emerald-900 text-white transition-colors"
+              className="p-1 min-[375px]:p-1.5 sm:p-2 rounded-full hover:bg-emerald-700 dark:hover:bg-emerald-900 text-white transition-colors"
               aria-label="Toggle dark mode"
             >
               {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
@@ -343,7 +444,7 @@ export const Header: React.FC = () => {
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={() => setSearchModalOpen(true)}
-              className="p-1.5 sm:p-2 rounded-full hover:bg-emerald-700 dark:hover:bg-emerald-900 text-white transition-colors"
+              className="p-1 min-[375px]:p-1.5 sm:p-2 rounded-full hover:bg-emerald-700 dark:hover:bg-emerald-900 text-white transition-colors"
               aria-label="Global Search"
             >
               <Search size={18} />
@@ -352,16 +453,94 @@ export const Header: React.FC = () => {
 
 
             {featureToggles['tool_community'] !== 'inactive' && (
-              <Link to="/community" className="sm:hidden">
-                <motion.div
+              <div className="relative sm:hidden" ref={communityMenuMobileRef}>
+                <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className="p-1.5 sm:p-2 rounded-full hover:bg-emerald-700 dark:hover:bg-emerald-900 text-white transition-colors"
+                  onClick={() => setCommunityMenuOpen(!communityMenuOpen)}
+                  className="p-1 min-[375px]:p-1.5 sm:p-2 rounded-full hover:bg-emerald-700 dark:hover:bg-emerald-900 text-white transition-colors flex cursor-pointer relative"
                   aria-label="Community"
                 >
                   <Users size={18} />
-                </motion.div>
-              </Link>
+                </motion.button>
+
+                <AnimatePresence>
+                  {communityMenuOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 15, scale: 0.95 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: 15, scale: 0.95 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 mt-2.5 w-64 bg-white dark:bg-gray-800 border border-gray-150 dark:border-gray-700/85 rounded-3xl shadow-xl py-2 z-50 overflow-hidden"
+                    >
+                      <div className="px-3.5 py-2 border-b border-gray-50 dark:border-gray-700/50 flex items-center justify-between">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                          {language === 'en' ? 'Community Menu' : language === 'ha' ? "Tsarin Al'umma" : 'Menu Communauté'}
+                        </span>
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                      </div>
+                      <div className="flex flex-col">
+                        <Link
+                          to="/community?view=messages"
+                          onClick={() => setCommunityMenuOpen(false)}
+                          className="flex items-center gap-3 px-3.5 py-2.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all border-b border-gray-50/50 dark:border-gray-700/30"
+                        >
+                          <MessageSquare size={15} className="text-emerald-500" />
+                          <span>{language === 'en' ? 'Discussions & Posts' : language === 'ha' ? 'Tattaunawa da Saƙonni' : 'Discussions & Messages'}</span>
+                        </Link>
+                        <Link
+                          to="/community?view=polls"
+                          onClick={() => setCommunityMenuOpen(false)}
+                          className="flex items-center gap-3 px-3.5 py-2.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all border-b border-gray-50/50 dark:border-gray-700/30"
+                        >
+                          <Vote size={15} className="text-emerald-500" />
+                          <span>{language === 'en' ? 'Community Polls' : language === 'ha' ? "Zaɓukan Al'umma" : "Sondages de l'Al'umma"}</span>
+                        </Link>
+                        <Link
+                          to="/community?view=dms"
+                          onClick={() => setCommunityMenuOpen(false)}
+                          className="flex items-center gap-3 px-3.5 py-2.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all border-b border-gray-50/50 dark:border-gray-700/30"
+                        >
+                          <Inbox size={15} className="text-emerald-500" />
+                          <span>{language === 'en' ? 'Private Messages' : language === 'ha' ? 'Saƙonnin Sirri' : 'Messages Privés'}</span>
+                        </Link>
+                        <Link
+                          to="/community?view=friends"
+                          onClick={() => setCommunityMenuOpen(false)}
+                          className="flex items-center gap-3 px-3.5 py-2.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all border-b border-gray-50/50 dark:border-gray-700/30"
+                        >
+                          <Users size={15} className="text-emerald-500" />
+                          <span>{language === 'en' ? 'Members & Friends' : language === 'ha' ? 'Mambobi da Abokai' : 'Membres & Amis'}</span>
+                        </Link>
+                        <Link
+                          to="/community?view=online"
+                          onClick={() => setCommunityMenuOpen(false)}
+                          className="flex items-center justify-between px-3.5 py-2.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all border-b border-gray-50/50 dark:border-gray-700/30"
+                        >
+                          <div className="flex items-center gap-3">
+                            <Radio size={15} className="text-emerald-500" />
+                            <span>{language === 'en' ? 'Online Users' : language === 'ha' ? 'Masu amfani a kan layi' : 'Utilisateurs en ligne'}</span>
+                          </div>
+                          <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                        </Link>
+
+                        {/* Spiritual Code Preview */}
+                        <div className="p-3 bg-emerald-500/5 dark:bg-emerald-500/10 rounded-2xl mx-2.5 mt-2 border border-emerald-500/10 flex flex-col gap-1.5">
+                          <div className="flex items-center justify-between text-[9px] text-emerald-600 dark:text-emerald-400 font-extrabold tracking-wider uppercase">
+                            <span>{language === 'en' ? 'Spiritual Code' : language === 'ha' ? 'Kodin Asrar' : 'Code Spirituel'}</span>
+                            <span className="animate-pulse">●</span>
+                          </div>
+                          <code className="text-[9px] font-mono text-gray-500 dark:text-gray-300 block bg-gray-50 dark:bg-gray-900 p-2 rounded-xl border border-gray-100 dark:border-gray-800 text-left leading-normal">
+                            <span className="text-purple-500 font-bold">const</span> zikr = <span className="text-emerald-500 font-bold">"Ya-Latif"</span>;<br />
+                            <span className="text-purple-500 font-bold">const</span> count = <span className="text-amber-500 font-semibold">129</span>;<br />
+                            <span className="text-blue-500 font-semibold">reciterZikr</span>(zikr, count);
+                          </code>
+                        </div>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
             )}
 
             {(user?.role === 'admin' || ['jibriltengeh4@gmail.com', 'sbireino@gmail.com', 'tenibawwal10@gmail.com', 'jibriltengeh57@gmail.com'].includes(user?.email?.toLowerCase() || '')) && (
@@ -369,7 +548,7 @@ export const Header: React.FC = () => {
                 <motion.div
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  className="p-1.5 sm:p-2 rounded-full hover:bg-emerald-700 dark:hover:bg-emerald-900 text-white transition-colors flex items-center justify-center"
+                  className="p-1 min-[375px]:p-1.5 sm:p-2 rounded-full hover:bg-emerald-700 dark:hover:bg-emerald-900 text-white transition-colors flex items-center justify-center"
                   aria-label="Admin Dashboard"
                 >
                   <Shield size={18} />
@@ -490,6 +669,29 @@ export const Header: React.FC = () => {
                 </button>
               </div>
             </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showLoginSuccessNotification && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.9 }}
+            className="fixed bottom-20 left-4 right-4 sm:left-auto sm:right-6 sm:w-80 z-[120]"
+          >
+            <div className="bg-emerald-600 dark:bg-emerald-700 text-white px-5 py-3.5 rounded-2xl shadow-xl border border-emerald-500/20 flex items-center gap-3">
+              <span className="text-lg">🎉</span>
+              <div className="text-left">
+                <p className="text-[10px] font-black uppercase tracking-wider text-emerald-100">
+                  {language === "en" ? "Connection Established" : language === "ha" ? "An haɗa lami lafiya" : "Connexion établie"}
+                </p>
+                <p className="text-xs font-bold text-white mt-0.5">
+                  {language === "en" ? `Welcome back, ${user?.displayName || "Member"}!` : language === "ha" ? `Barka da dawowa, ${user?.displayName || "Mamba"}!` : `Bon retour, ${user?.displayName || "Membre"} !`}
+                </p>
+              </div>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>

@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Activity, ArrowLeft, RefreshCw, Volume2, VolumeX, Settings, Target, Save, History as HistoryIcon, Plus, Trash2, Check, ChevronDown, ChevronRight, BarChart2 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Activity, ArrowLeft, RefreshCw, Volume2, VolumeX, Settings, Target, Save, History as HistoryIcon, Plus, Trash2, Check, ChevronDown, ChevronRight, BarChart2, Fingerprint, Users, Globe, MapPin, X } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
+import { db } from '../../../lib/firebase';
+import { collection, onSnapshot } from 'firebase/firestore';
 
 interface Zikr {
   id: string;
@@ -13,6 +15,42 @@ interface Zikr {
   category: string;
   isCustom?: boolean;
 }
+
+const localTranslations: Record<string, Record<string, string>> = {
+  fr: {
+    modalTitle: "Cercles de Zikr Collectifs",
+    modalSubtitle: "Participez en direct avec la communauté",
+    tooltipJoin: "Rejoindre un Cercle de Zikr Collectif",
+    noCircles: "Aucun cercle collectif actif actuellement.",
+    launchFromHalaqat: "Lancez un cercle depuis la section Halaqat !",
+    statusCompleted: "Complet",
+    statusInProgress: "En cours",
+    joinBtn: "Rejoindre",
+    allCircles: "Voir tous les cercles"
+  },
+  en: {
+    modalTitle: "Collective Zikr Circles",
+    modalSubtitle: "Participate live with the community",
+    tooltipJoin: "Join a Collective Zikr Circle",
+    noCircles: "No active collective circles at the moment.",
+    launchFromHalaqat: "Launch a circle from the Halaqat section!",
+    statusCompleted: "Completed",
+    statusInProgress: "In progress",
+    joinBtn: "Join",
+    allCircles: "See all circles"
+  },
+  ha: {
+    modalTitle: "Halaƙobin Zikiri na Al'umma",
+    modalSubtitle: "Halarci kai tsaye tare da al'umma",
+    tooltipJoin: "Shiga Tsarin Zikiri na Haɗin Gwiwa",
+    noCircles: "Babu wani tsarin zikiri mai aiki yanzu.",
+    launchFromHalaqat: "Ƙaddamar da da'ira daga sashin Halaqat!",
+    statusCompleted: "Kammalalle",
+    statusInProgress: "Ana nan kai",
+    joinBtn: "Shiga",
+    allCircles: "Duba dukkan tsaruka"
+  }
+};
 
 const DEFAULT_ZIKRS: Zikr[] = [
   { id: 'subhanallah', text: 'Subhanallah', arabic: 'سُبْحَانَ ٱللَّٰهِ', target: 33, category: 'Basiques' },
@@ -36,7 +74,10 @@ interface SessionHistory {
 }
 
 export const Tasbih: React.FC = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const lang = language === 'en' || language === 'ha' ? language : 'fr';
+  const tLocal = (key: string) => localTranslations[lang][key] || localTranslations['fr'][key] || key;
+  const navigate = useNavigate();
   const [customZikrs, setCustomZikrs] = useState<Zikr[]>([]);
   const [allZikrs, setAllZikrs] = useState<Zikr[]>(DEFAULT_ZIKRS);
   
@@ -52,6 +93,49 @@ export const Tasbih: React.FC = () => {
   const [totalLifetime, setTotalLifetime] = useState(0);
   const [dailyTotal, setDailyTotal] = useState(0);
   const [history, setHistory] = useState<SessionHistory[]>([]);
+
+  // Collective Zikr (Halaqat) integration
+  const [activeCircles, setActiveCircles] = useState<any[]>([]);
+  const [isCollectiveModalOpen, setIsCollectiveModalOpen] = useState(false);
+
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, 'halaqat'), (snapshot) => {
+      const list: any[] = [];
+      snapshot.forEach((doc) => {
+        list.push({ id: doc.id, ...doc.data() });
+      });
+      list.sort((a, b) => b.createdAt - a.createdAt);
+      setActiveCircles(list);
+    }, (error) => {
+      console.warn("Using offline fallback mock for collective circles in Tasbih:", error);
+      // Fallback
+      setActiveCircles([
+        {
+          id: 'mock_1',
+          title: language === 'en' ? 'Mawlid Salawat Unified Circle' : language === 'ha' ? 'Halaqar Salawat na Mawlidi' : 'Grand Cercle Salawat du Mawlid',
+          target: 100000,
+          count: 42150,
+          type: 'Salawat (Allāhumma ṣalli ʿalā Muḥammad)',
+          creatorName: 'Seydou Diop',
+          creatorCountry: 'Sénégal',
+          creatorCity: 'Dakar',
+          createdAt: Date.now() - 86400000
+        },
+        {
+          id: 'mock_2',
+          title: language === 'en' ? 'Istighfar Circle for Peace' : language === 'ha' ? 'Halaqar Istighfari Don Zaman Lafiya' : 'Cercle Istighfar de la Paix',
+          target: 70000,
+          count: 31200,
+          type: 'Istighfar (Astaghfirullāh al-ʿAẓīm)',
+          creatorName: 'Amina Al-Hassan',
+          creatorCountry: 'Nigeria',
+          creatorCity: 'Kano',
+          createdAt: Date.now() - 43200000
+        }
+      ]);
+    });
+    return () => unsubscribe();
+  }, [language]);
 
   // Custom Zikr Form
   const [newZikrName, setNewZikrName] = useState('');
@@ -284,6 +368,33 @@ export const Tasbih: React.FC = () => {
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
             <Activity className="text-emerald-500" />
             Tasbih
+            {activeCircles.length > 0 && (
+              <motion.button
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ 
+                  scale: [1, 1.08, 1],
+                  opacity: 1
+                }}
+                transition={{
+                  scale: {
+                    repeat: Infinity,
+                    duration: 2,
+                    ease: "easeInOut"
+                  },
+                  opacity: { duration: 0.3 }
+                }}
+                onClick={() => setIsCollectiveModalOpen(true)}
+                className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/10 dark:bg-emerald-500/20 hover:bg-emerald-500/20 border border-emerald-500/30 rounded-full cursor-pointer transition-colors shadow-sm ml-2 shrink-0"
+                title={tLocal('tooltipJoin')}
+              >
+                <div className="flex -space-x-1.5 items-center">
+                  <div className="w-2.5 h-2.5 rounded-full bg-red-500 border border-white dark:border-gray-900 shadow-sm" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-blue-500 border border-white dark:border-gray-900 shadow-sm" />
+                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 border border-white dark:border-gray-900 shadow-sm" />
+                </div>
+                <span className="text-[9px] font-black text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">Live</span>
+              </motion.button>
+            )}
           </h1>
         </div>
         <div className="flex bg-white dark:bg-gray-800 rounded-full shadow-sm border border-gray-200 dark:border-gray-700 p-1">
@@ -330,25 +441,19 @@ export const Tasbih: React.FC = () => {
           </button>
 
           {/* Progress Ring and Counter */}
-          <div className="relative w-64 h-64 sm:w-[320px] sm:h-[320px] flex items-center justify-center mb-12">
-            <svg className="absolute inset-0 w-full h-full -rotate-90 drop-shadow-md" viewBox="0 0 100 100">
+          <div className="relative w-64 h-64 sm:w-[320px] sm:h-[320px] flex items-center justify-center mb-8">
+            <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
               <circle 
                 cx="50" cy="50" r="46" 
-                className="stroke-white dark:stroke-gray-800" 
-                strokeWidth="6" 
-                fill="none" 
-              />
-              <circle 
-                cx="50" cy="50" r="46" 
-                className="stroke-gray-100 dark:stroke-gray-700" 
-                strokeWidth="2" 
+                className="stroke-gray-100 dark:stroke-gray-800" 
+                strokeWidth="4" 
                 fill="none" 
               />
               {target > 0 && (
                 <motion.circle 
                   cx="50" cy="50" r="46" 
-                  className="stroke-emerald-500 drop-shadow-[0_0_8px_rgba(16,185,129,0.3)]" 
-                  strokeWidth="6" 
+                  className="stroke-gray-200 dark:stroke-gray-700" 
+                  strokeWidth="4" 
                   strokeLinecap="round"
                   fill="none" 
                   strokeDasharray="289.02" // 2 * PI * 46
@@ -360,32 +465,43 @@ export const Tasbih: React.FC = () => {
               )}
             </svg>
 
-            <div className="flex flex-col items-center z-10">
-              <span className={`text-[80px] sm:text-[100px] font-bold tracking-tighter tabular-nums leading-none ${count >= target && target > 0 ? 'text-emerald-500 dark:text-emerald-400 drop-shadow-sm' : 'text-gray-900 dark:text-white'}`}>
+            {/* Content inside the circle - matching Image 1 */}
+            <div className="flex flex-col items-center justify-center z-10 text-center gap-2">
+              {/* Count Number */}
+              <span className="text-[72px] sm:text-[84px] font-bold tracking-tighter tabular-nums leading-none text-gray-900 dark:text-white">
                 {count}
               </span>
+              
+              {/* Target / Goal - Concentric Bullseye target icon + Target value */}
+              <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 font-medium">
+                <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <circle cx="12" cy="12" r="8" />
+                  <circle cx="12" cy="12" r="3.5" fill="currentColor" />
+                </svg>
+                <span className="text-lg sm:text-xl font-semibold">{target}</span>
+              </div>
+
+              {/* Red Reset Button - circular matching Image 1 */}
+              <button
+                onClick={handleReset}
+                className="mt-2 p-2.5 rounded-full bg-red-50 hover:bg-red-100 dark:bg-red-950/30 text-red-500 hover:text-red-600 dark:hover:text-red-400 flex items-center justify-center shadow-sm active:scale-90 transition-all cursor-pointer"
+                title="Reset"
+              >
+                <RefreshCw size={18} className="animate-hover" />
+              </button>
             </div>
           </div>
 
-          <div className="w-full max-w-[320px] grid grid-cols-4 gap-4 items-end">
-            <div className="flex justify-center flex-col items-center gap-2">
-              <button
-                onClick={handleReset}
-                className="w-14 h-14 rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-500 hover:text-red-500 hover:border-red-200 dark:hover:border-red-900/50 flex items-center justify-center shadow-sm active:scale-95 transition-all"
-              >
-                <RefreshCw size={22} />
-              </button>
-            </div>
-            
-            <div className="flex justify-center col-span-3 h-full">
-              <button
-                onClick={handleIncrement}
-                className="w-full h-[120px] rounded-[2rem] bg-gradient-to-b from-emerald-400 to-emerald-600 shadow-[0_10px_40px_-10px_rgba(16,185,129,0.7)] flex items-center justify-center text-white active:scale-95 active:translate-y-2 transition-all relative overflow-hidden group border-b-[6px] border-emerald-700 hover:brightness-110"
-              >
-                <div className="absolute inset-0 bg-white opacity-0 group-active:opacity-20 transition-opacity"></div>
-                <span className="text-2xl sm:text-3xl font-black tracking-[0.2em] uppercase relative z-10 drop-shadow-md">TAP</span>
-              </button>
-            </div>
+          {/* Large Tap Card matching Image 1 */}
+          <div className="w-full max-w-[320px] flex justify-center mb-4">
+            <button
+              onClick={handleIncrement}
+              className="w-full h-[180px] rounded-[2.5rem] bg-[#00c283] dark:bg-[#00b274] shadow-[0_15px_40px_-10px_rgba(0,194,131,0.4)] flex flex-col items-center justify-center gap-3 text-white active:scale-95 active:translate-y-1 transition-all relative overflow-hidden group hover:brightness-105"
+            >
+              <div className="absolute inset-0 bg-white opacity-0 group-active:opacity-10 transition-opacity"></div>
+              <Fingerprint size={64} className="text-white drop-shadow-sm" />
+              <span className="text-lg sm:text-xl font-bold tracking-[0.2em] uppercase relative z-10 drop-shadow-sm">TAP</span>
+            </button>
           </div>
 
           {/* Auto-increment Controls */}
@@ -640,6 +756,148 @@ export const Tasbih: React.FC = () => {
           </div>
         </motion.div>
       )}
+
+      {/* Collective Zikr Modal */}
+      <AnimatePresence>
+        {isCollectiveModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsCollectiveModalOpen(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+
+            {/* Modal Box */}
+            <motion.div
+              initial={{ opacity: 0, y: 100, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 100, scale: 0.95 }}
+              transition={{ type: "spring", damping: 25, stiffness: 350 }}
+              className="relative w-full max-w-lg bg-white dark:bg-gray-800 rounded-t-[2.5rem] sm:rounded-[2.5rem] shadow-2xl border border-gray-100 dark:border-gray-700/80 overflow-hidden max-h-[85vh] flex flex-col z-10"
+            >
+              {/* Top notch for mobile visual design */}
+              <div className="w-12 h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full mx-auto mt-4 mb-2 sm:hidden shrink-0" />
+
+              {/* Modal Header */}
+              <div className="p-6 sm:p-8 border-b border-gray-100 dark:border-gray-700/60 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="flex -space-x-1.5 items-center bg-emerald-500/10 p-2.5 rounded-2xl">
+                    <div className="w-3.5 h-3.5 rounded-full bg-red-500 border border-white dark:border-gray-800 shadow-sm" />
+                    <div className="w-3.5 h-3.5 rounded-full bg-blue-500 border border-white dark:border-gray-800 shadow-sm" />
+                    <div className="w-3.5 h-3.5 rounded-full bg-emerald-500 border border-white dark:border-gray-800 shadow-sm" />
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-xl text-gray-900 dark:text-white leading-tight">
+                      {tLocal('modalTitle')}
+                    </h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      {tLocal('modalSubtitle')}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsCollectiveModalOpen(false)}
+                  className="p-2.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 transition-colors cursor-pointer"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* List Container */}
+              <div className="p-6 sm:p-8 overflow-y-auto space-y-4 max-h-[50vh] scrollbar-thin">
+                {activeCircles.length === 0 ? (
+                  <div className="text-center py-10">
+                     <Users size={48} className="mx-auto text-gray-300 mb-3 animate-pulse" />
+                     <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">{tLocal('noCircles')}</p>
+                     <p className="text-xs text-gray-400 mt-1">{tLocal('launchFromHalaqat')}</p>
+                  </div>
+                ) : (
+                  activeCircles.map((circle) => {
+                    const circleProgress = Math.min((circle.count / circle.target) * 100, 100);
+                    return (
+                      <div
+                        key={circle.id}
+                        className="bg-gray-50/50 dark:bg-gray-900/40 rounded-3xl p-5 border border-gray-100/80 dark:border-gray-700/50 flex flex-col gap-4 hover:border-emerald-500/30 dark:hover:border-emerald-500/30 transition-all shadow-sm"
+                      >
+                        {/* Info Header */}
+                        <div>
+                          <div className="flex justify-between items-start gap-2 mb-1.5">
+                            <h4 className="font-extrabold text-gray-900 dark:text-white text-base leading-snug line-clamp-2">
+                              {circle.title}
+                            </h4>
+                            <span className="shrink-0 inline-flex items-center gap-1 text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400 px-2.5 py-1 rounded-full uppercase tracking-wider">
+                              {circleProgress >= 100 ? tLocal('statusCompleted') : tLocal('statusInProgress')}
+                            </span>
+                          </div>
+                          
+                          <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                            {circle.type}
+                          </p>
+                        </div>
+
+                        {/* Progress Bar */}
+                        <div className="space-y-1.5">
+                          <div className="flex justify-between items-center text-xs font-bold text-gray-500 dark:text-gray-400">
+                            <span>{circle.count.toLocaleString()} / {circle.target.toLocaleString()}</span>
+                            <span>{circleProgress.toFixed(0)}%</span>
+                          </div>
+                          <div className="h-2.5 bg-gray-200/60 dark:bg-gray-800 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                              style={{ width: `${circleProgress}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Card Footer: User & Button */}
+                        <div className="flex items-center justify-between gap-4 pt-1 border-t border-gray-100/50 dark:border-gray-700/20">
+                          {circle.creatorName && (
+                            <div className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+                              <MapPin size={12} className="text-gray-400" />
+                              <span className="font-bold">{circle.creatorName}</span>
+                              {(circle.creatorCity || circle.creatorCountry) && (
+                                <span className="opacity-75">
+                                  ({[circle.creatorCity, circle.creatorCountry].filter(Boolean).join(", ")})
+                                </span>
+                              )}
+                            </div>
+                          )}
+                          <button
+                            onClick={() => {
+                              setIsCollectiveModalOpen(false);
+                              navigate('/tools/halaqat', { state: { autoJoinId: circle.id } });
+                            }}
+                            className="ml-auto inline-flex items-center gap-1.5 px-4 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-extrabold text-xs rounded-2xl shadow-sm hover:shadow-emerald-500/20 transition-all cursor-pointer transform active:scale-95 shrink-0"
+                          >
+                            <Users size={14} />
+                            {tLocal('joinBtn')}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-6 bg-gray-50/50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-700/60 flex justify-center shrink-0">
+                <button
+                  onClick={() => {
+                    setIsCollectiveModalOpen(false);
+                    navigate('/tools/halaqat');
+                  }}
+                  className="px-6 py-3 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 rounded-2xl font-black text-xs uppercase tracking-wider shadow-sm transition-all hover:brightness-105 active:scale-95 cursor-pointer"
+                >
+                  {tLocal('allCircles')}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
     </div>
   );

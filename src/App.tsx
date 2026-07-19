@@ -339,6 +339,22 @@ export default function App() {
     localStorage.getItem('hasCompletedOnboarding') === 'true'
   );
 
+  const [showConnectedToast, setShowConnectedToast] = React.useState(false);
+  const [toastUserName, setToastUserName] = React.useState('');
+
+  React.useEffect(() => {
+    if (user && !sessionStorage.getItem('asrarhub_welcome_shown')) {
+      const name = user.name || user.email || (language === 'fr' ? 'Utilisateur' : language === 'ha' ? 'Mai amfani' : 'User');
+      setToastUserName(name);
+      setShowConnectedToast(true);
+      sessionStorage.setItem('asrarhub_welcome_shown', 'true');
+      const timer = setTimeout(() => {
+        setShowConnectedToast(false);
+      }, 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [user, language]);
+
   const isCompletedOnboarding = hasCompletedOnboarding || 
     sessionStorage.getItem('hasCompletedOnboarding') === 'true' || 
     !!(user && (user as any).hasCompletedOnboarding);
@@ -714,6 +730,26 @@ export default function App() {
                   ))}
                 </select>
               </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        {/* Connection success notification */}
+        <AnimatePresence>
+          {showConnectedToast && (
+            <motion.div
+              initial={{ opacity: 0, y: -50, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -20, scale: 0.9 }}
+              className="fixed top-24 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-full bg-emerald-500 text-white shadow-xl flex items-center gap-2.5 border border-emerald-400/20"
+            >
+              <div className="w-2 h-2 rounded-full bg-white animate-ping" />
+              <span className="text-xs sm:text-sm font-bold tracking-tight">
+                {language === 'fr' 
+                  ? `Utilisateur connecté avec succès : ${toastUserName} !` 
+                  : language === 'ha'
+                  ? `An haɗa mai amfani cikin nasara: ${toastUserName} !`
+                  : `User connected successfully: ${toastUserName}!`}
+              </span>
             </motion.div>
           )}
         </AnimatePresence>
