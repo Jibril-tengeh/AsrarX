@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth, handleFirestoreError, OperationType } from '../../contexts/AuthContext';
 import { useFeatures } from '../../contexts/FeatureContext';
 import { db } from '../../lib/firebase';
 import { collection, query, orderBy, onSnapshot, doc } from 'firebase/firestore';
@@ -25,6 +25,7 @@ import { getAsrarItems } from '../../data/store';
 import { AsrarItem, Category } from '../../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLocation, Link, useParams, useNavigate } from 'react-router-dom';
+import { tools } from '../../data/tools';
 
 import { getApiUrl } from '../../lib/api';
 
@@ -44,6 +45,15 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<Category | 'all' | 'favoris'>(initialFilter);
   const [layoutMode, setLayoutMode] = useState<LayoutMode>('grid2');
+  const [lastToolId, setLastToolId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("asrarhub_last_tool");
+    if (saved) {
+      setLastToolId(saved);
+    }
+  }, []);
+
   
   useEffect(() => {
     if (featureToggles?.articlesDisplayMode) {
@@ -463,6 +473,41 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
       console.error("Error pre-loading categories from cache", e);
     }
 
+    const defaultCats = [
+      {
+        id: 'wird',
+        name: 'Versets & Wirds',
+        name_en: 'Verses & Wirds',
+        name_ha: 'Wirdoshi & Ayoyi',
+        iconName: 'BookOpen',
+        subCategories: [
+          { id: 'wird-protection', name: 'Protection', name_en: 'Protection', name_ha: 'Kariya' },
+          { id: 'wird-guerison', name: 'Guérison', name_en: 'Healing', name_ha: 'Waraka' }
+        ]
+      },
+      {
+        id: 'secret',
+        name: "Secrets d'Asrar",
+        name_en: 'Secrets of Asrar',
+        name_ha: 'Asrarai',
+        iconName: 'Sparkles',
+        subCategories: [
+          { id: 'secret-richesse', name: 'Prospérité', name_en: 'Prosperity', name_ha: 'Arziki' },
+          { id: 'secret-amour', name: 'Affection', name_en: 'Affection', name_ha: 'Soyayya' }
+        ]
+      },
+      {
+        id: 'recette',
+        name: 'Recettes Spirituelles',
+        name_en: 'Spiritual Recipes',
+        name_ha: 'Hanyoyi',
+        iconName: 'Shield',
+        subCategories: [
+          { id: 'recette-sante', name: 'Santé', name_en: 'Health', name_ha: 'Lafiya' }
+        ]
+      }
+    ];
+
     const unsubscribe = onSnapshot(collection(db, 'categories'), (snapshot) => {
       if (!snapshot.empty) {
         const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -472,44 +517,13 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
           localStorage.setItem('asrarhub_cached_categories', JSON.stringify(list));
         } catch (e) {}
       } else {
-        const defaultCats = [
-          {
-            id: 'wird',
-            name: 'Versets & Wirds',
-            name_en: 'Verses & Wirds',
-            name_ha: 'Wirdoshi & Ayoyi',
-            iconName: 'BookOpen',
-            subCategories: [
-              { id: 'wird-protection', name: 'Protection', name_en: 'Protection', name_ha: 'Kariya' },
-              { id: 'wird-guerison', name: 'Guérison', name_en: 'Healing', name_ha: 'Waraka' }
-            ]
-          },
-          {
-            id: 'secret',
-            name: "Secrets d'Asrar",
-            name_en: 'Secrets of Asrar',
-            name_ha: 'Asrarai',
-            iconName: 'Sparkles',
-            subCategories: [
-              { id: 'secret-richesse', name: 'Prospérité', name_en: 'Prosperity', name_ha: 'Arziki' },
-              { id: 'secret-amour', name: 'Affection', name_en: 'Affection', name_ha: 'Soyayya' }
-            ]
-          },
-          {
-            id: 'recette',
-            name: 'Recettes Spirituelles',
-            name_en: 'Spiritual Recipes',
-            name_ha: 'Hanyoyi',
-            iconName: 'Shield',
-            subCategories: [
-              { id: 'recette-sante', name: 'Santé', name_en: 'Health', name_ha: 'Lafiya' }
-            ]
-          }
-        ];
         setCategories(defaultCats);
       }
     }, (error) => {
       console.error("Error fetching categories", error);
+      // Gracefully fall back to local default categories if permission is denied or offline
+      setCategories(defaultCats);
+      handleFirestoreError(error, OperationType.GET, 'categories');
     });
 
     return () => unsubscribe();
@@ -1008,6 +1022,41 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
       <div className="mb-4">
         <DailyGoalsTracker />
       </div>
+
+      {/* Last Consulted Tool Widget */}
+      {(() => {
+        const lastTool = lastToolId ? tools.find(t => t.id === lastToolId) : null;
+        if (!lastTool) return null;
+        return (
+          <div className="mb-4 bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div className="flex items-center gap-3">
+                <div className={`w-10 h-10 shrink-0 rounded-xl bg-gradient-to-br ${lastTool.color} text-white flex items-center justify-center shadow-sm`}>
+                  {React.createElement(lastTool.icon, { size: 20 })}
+                </div>
+                <div>
+                  <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 text-base">
+                    {language === 'fr' ? 'Dernier outil consulté' : language === 'ha' ? 'Kayan aiki na baya' : 'Last consulted tool'}
+                  </h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 font-medium">
+                    {t(`tools.${lastTool.id}.title`) !== `tools.${lastTool.id}.title`
+                      ? t(`tools.${lastTool.id}.title`)
+                      : lastTool.title}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => navigate(lastTool.path)}
+                className="w-full sm:w-auto px-4 py-2 bg-emerald-500 hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <span>{language === 'fr' ? 'Reprendre la pratique' : language === 'ha' ? 'Koma aiki' : 'Resume practice'}</span>
+                <ChevronDown size={14} className="-rotate-90" />
+              </button>
+            </div>
+          </div>
+        );
+      })()}
+
 
       {/* Reading History */}
       {readingHistory.length > 0 && (

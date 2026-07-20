@@ -578,6 +578,92 @@ ${JSON.stringify(textArray)}
     }
   });
 
+  // AI Community Spiritual Guide Chat endpoint
+  app.post("/api/community/ai-chat", async (req, res) => {
+    try {
+      const { message, history } = req.body;
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ error: "Gemini API key is not configured" });
+      }
+
+      const ai = new GoogleGenAI({
+        apiKey,
+        httpOptions: {
+          headers: {
+            'User-Agent': 'aistudio-build',
+          }
+        }
+      });
+
+      // Retrieve dynamic real recipes, secrets, and wirds to feed as context for recommending actual app contents
+      const availableItems: any[] = [];
+      try {
+        if (getApps().length) {
+          const db = getDb();
+          const articlesSnap = await db.collection("articles").limit(35).get();
+          articlesSnap.forEach((docSnap) => {
+            const data = docSnap.data();
+            availableItems.push({ id: docSnap.id, title: data.title || data.title_fr || data.title_en, type: "recette/article" });
+          });
+          const grandOathsSnap = await db.collection("grand_oaths").limit(35).get();
+          grandOathsSnap.forEach((docSnap) => {
+            const data = docSnap.data();
+            availableItems.push({ id: docSnap.id, title: data.title || data.title_fr || data.title_en || data.arabicTitle, type: "secret/wird/grand_serment" });
+          });
+          const lexiqueSnap = await db.collection("lexique_terms").limit(35).get();
+          lexiqueSnap.forEach((docSnap) => {
+            const data = docSnap.data();
+            availableItems.push({ id: docSnap.id, title: data.word || data.word_fr || data.word_en, definition: data.definition || data.definition_fr, type: "lexique/reve/definition" });
+          });
+        }
+      } catch (dbErr) {
+        console.warn("Could not query Firestore for AI context grounding:", dbErr);
+      }
+
+      const prompt = `
+Vous êtes "IA Asrar", le Guide Spirituel Virtuel officiel de l'application AsrarHub.
+Votre unique mission est d'aider les utilisateurs premium de la communauté d'AsrarHub à comprendre les secrets spirituels coraniques, les wirds de l'application, les secrets et recettes d'AsrarHub, la science des Noms d'Allah, et d'interpréter les rêves selon les saines traditions (comme celle d'Ibn Sirin).
+
+RÈGLES DE PERTINENCE ABSOLUES ET STRICTES :
+1. Vous devez UNIQUEMENT répondre aux questions portant sur :
+   - Les Noms d'Allah (Asma-ul-Husna), leurs bienfaits, significations et zikr associés.
+   - Les rêves et leur interprétation spirituelle (selon la noble tradition islamique comme celle d'Ibn Sirin).
+   - Les wirds, zikrs, prières sur le Prophète (Salat al-Fatih, Salat Nariya, etc.) et secrets spirituels coraniques/islamiques.
+   - Les recettes spirituelles et secrets de l'application AsrarHub.
+   - Les fonctionnalités de l'application AsrarHub elle-même (ex: "comment ajouter un wird ?", "la boussole de Qibla", "le chapelet électronique", "les forums", etc.).
+   
+2. REFUS DE TOUTES QUESTIONS INUTILES OU HORS-SUJET :
+   - Si un utilisateur pose une question qui n'est pas spirituelle ou pas liée à l'un de ces thèmes (ex: "comment coder en Python ?", "recette de gâteau au chocolat", "politique", "sport", "qui est Elon Musk", "aide-moi pour mes devoirs", "bavardages futiles"), vous devez POLIMENT MAIS FERMEMENT REFUSER de répondre.
+   - Réponse type en cas de refus : "Que la paix soit sur vous. En tant qu'assistant IA Asrar, ma mission est exclusivement dédiée aux mystères des Noms d'Allah, à l'interprétation des rêves, aux wirds, aux secrets spirituels coraniques et à l'application AsrarHub. Je ne peux malheureusement pas vous aider sur ce sujet profane ou hors-cadre. N'hésitez pas à me poser des questions sur les wirds, secrets coraniques, rêves, ou les Noms divins !"
+
+3. PROPOSITION DE CONTENU RÉEL PRÉSENT DANS L'APPLICATION :
+   - Si un utilisateur pose une question sur un wird, un secret, une recette spirituelle ou un concept, vous devez IMPÉRATIVEMENT lui proposer un ou plusieurs éléments réels de l'application si l'un d'eux correspond à sa recherche.
+   - Voici la liste en temps réel des éléments réellement configurés et disponibles dans notre base de données AsrarHub :
+${JSON.stringify(availableItems)}
+   - Citez précisément le titre exact de l'élément recommandé (par exemple "Da'wat al-Birhatiyya" ou "Ya Latif") pour que l'utilisateur puisse le rechercher et l'utiliser directement dans l'application AsrarHub.
+
+4. LANGUE ET TON :
+   - Répondez toujours de manière fluide, naturelle et éloquente dans la langue de l'utilisateur (Français, Anglais, ou Haoussa).
+   - Le ton doit être sage, extrêmement respectueux, humble, pieux, bienveillant et hautement spirituel.
+
+Détails de la conversation actuelle :
+- Message de l'utilisateur : "${message}"
+- Historique récent : ${JSON.stringify(history || [])}
+`;
+
+      const response = await generateWithRetry(ai, {
+        model: "gemini-3.5-flash",
+        contents: prompt,
+      });
+
+      res.json({ reply: response?.text || "Je n'ai pas pu générer de réponse spirituelle pour le moment." });
+    } catch (error: any) {
+      console.error("AI Community Chat error:", error);
+      res.status(500).json({ error: "Failed to communicate with spiritual assistant" });
+    }
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const { createServer: createViteServer } = await import("vite");

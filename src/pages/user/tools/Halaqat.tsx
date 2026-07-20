@@ -279,37 +279,13 @@ export const Halaqat = () => {
     }, (error) => {
       console.warn("Operating Virtual Halaqat offline / local fallback mode:", error);
       setIsOnline(false);
-      // Load local mock circles from storage or initial set
+      // Load local circles from storage or initial empty set
       const cached = localStorage.getItem('asrar_local_halaqat');
       if (cached) {
         setCircles(JSON.parse(cached));
       } else {
-        const initialMock: HalaqaCircle[] = [
-          {
-            id: 'mock_1',
-            title: lang === 'en' ? 'Mawlid Salawat Unified Circle' : lang === 'ha' ? 'Halaqar Salawat na Mawlidi' : 'Grand Cercle Salawat du Mawlid',
-            target: 100000,
-            count: 42150,
-            type: 'Salawat (Allāhumma ṣalli ʿalā Muḥammad)',
-            creatorName: 'Seydou Diop',
-            creatorCountry: 'Sénégal',
-            creatorCity: 'Dakar',
-            createdAt: Date.now() - 86400000
-          },
-          {
-            id: 'mock_2',
-            title: lang === 'en' ? 'Istighfar Circle for Peace' : lang === 'ha' ? 'Halaqar Istighfari Don Zaman Lafiya' : 'Cercle Istighfar de la Paix',
-            target: 70000,
-            count: 31200,
-            type: 'Istighfar (Astaghfirullāh al-ʿAẓīm)',
-            creatorName: 'Amina Al-Hassan',
-            creatorCountry: 'Nigeria',
-            creatorCity: 'Kano',
-            createdAt: Date.now() - 43200000
-          }
-        ];
-        setCircles(initialMock);
-        localStorage.setItem('asrar_local_halaqat', JSON.stringify(initialMock));
+        setCircles([]);
+        localStorage.setItem('asrar_local_halaqat', JSON.stringify([]));
       }
     });
 
@@ -333,11 +309,8 @@ export const Halaqat = () => {
         setParticipants(list);
       });
     } else {
-      // Simulate/Generate mock participants offline
+      // Offline mode: only show current user's contribution
       const mockParticipants: Participant[] = [
-        { id: 'p_1', fullName: 'Yusuf Demir', country: 'Turkey', city: 'Istanbul', count: 1840 },
-        { id: 'p_2', fullName: 'Fatima Al-Fihri', country: 'Morocco', city: 'Fez', count: 2150 },
-        { id: 'p_3', fullName: 'Amadou Diallo', country: 'Guinea', city: 'Conakry', count: 950 },
         { id: 'p_my', fullName: userProfile?.fullName || 'Vous (Salik)', country: userProfile?.country || 'Sénégal', city: userProfile?.city || 'Dakar', count: myContribution }
       ];
       setParticipants(mockParticipants);

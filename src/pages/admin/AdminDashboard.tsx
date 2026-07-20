@@ -254,6 +254,7 @@ export const AdminDashboard: React.FC = () => {
 
   // Community State
   const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>([]);
+  const [codeSharingEnabled, setCodeSharingEnabled] = useState(true);
 
   // Features State
   const [featureToggles, setFeatureToggles] = useState<any>({});
@@ -516,6 +517,12 @@ export const AdminDashboard: React.FC = () => {
       setStoreProducts(list);
     }, (error) => console.error("Admin Store Products error", error));
 
+    const unsubscribeCommunitySettings = onSnapshot(doc(db, "community_settings", "global"), (snap) => {
+      if (snap.exists()) {
+        setCodeSharingEnabled(snap.data().codeSharingEnabled !== false);
+      }
+    }, (error) => console.error("Admin Community Settings error", error));
+
     return () => {
       unsubscribeUsers();
       unsubscribeLexique();
@@ -530,6 +537,7 @@ export const AdminDashboard: React.FC = () => {
       unsubscribeGrandOaths();
       unsubscribePromoCodes();
       unsubscribeStoreProducts();
+      unsubscribeCommunitySettings();
     };
   }, []);
 
@@ -537,6 +545,18 @@ export const AdminDashboard: React.FC = () => {
     const newVal = !audioEnabled;
     setAudioEnabled(newVal);
     localStorage.setItem('admin_ruqyah_audio_enabled', String(newVal));
+  };
+
+  const handleToggleCodeSharing = async (enabled: boolean) => {
+    try {
+      await setDoc(doc(db, "community_settings", "global"), {
+        codeSharingEnabled: enabled
+      }, { merge: true });
+      showToast("Paramètre de partage de code mis à jour !");
+    } catch (err) {
+      console.error("Error setting code sharing settings:", err);
+      showToast("Erreur lors de la mise à jour.");
+    }
   };
 
   const handleAddPrompt = async () => {
@@ -2943,6 +2963,28 @@ export const AdminDashboard: React.FC = () => {
             <option value="premium">⭐ Premium (Membres uniquement)</option>
             <option value="maintenance">🛠️ En maintenance (Bloquée)</option>
             <option value="inactive">🔴 Inactive (Désactivée)</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Code Sharing Controls */}
+      <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 text-sm">
+            💻 Partage de Code dans la Communauté
+          </h4>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            Activer ou désactiver l'écriture et le partage de codes interactifs (HTML/JS/CSS) par les utilisateurs du forum.
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <select
+            value={codeSharingEnabled ? "enabled" : "disabled"}
+            onChange={(e) => handleToggleCodeSharing(e.target.value === "enabled")}
+            className="text-xs font-bold px-3 py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer text-gray-900 dark:text-white"
+          >
+            <option value="enabled">🟢 Activé (Écriture autorisée)</option>
+            <option value="disabled">🔴 Désactivé (Écriture bloquée)</option>
           </select>
         </div>
       </div>

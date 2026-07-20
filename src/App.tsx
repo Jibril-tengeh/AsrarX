@@ -207,6 +207,12 @@ const ProtectedToolsLayout: React.FC = () => {
   const location = useLocation();
   const [showAuthModal, setShowAuthModal] = React.useState(false);
 
+  React.useEffect(() => {
+    if (!user) {
+      setShowAuthModal(true);
+    }
+  }, [user]);
+
   if (!user) {
     return (
       <div className="max-w-md mx-auto p-6 sm:p-8 text-center flex flex-col items-center justify-center min-h-[70vh]">
@@ -242,20 +248,26 @@ const ProtectedToolsLayout: React.FC = () => {
   }
 
   const isSubTool = location.pathname.startsWith('/tools/') && location.pathname !== '/tools';
-  if (isSubTool) {
-    const pathParts = location.pathname.split('/');
-    const toolId = pathParts[pathParts.length - 1];
-    const status = featureToggles[`tool_${toolId}`] || "active";
-    const isMaintenance = status === "maintenance";
-    
-    const advancedToolIds = [
-      "personal-wird", "lunar-mansions", "spiritual-compatibility", "ilm-jafar",
-      "grand-oaths", "elemental", "geomancy", "letters", "rouhaniyya", "taksir",
-      "sirr", "zairja", "khatim", "talsam", "istikhara", "khouddam", "awfaq", "quranic-faal"
-    ];
-    const isAdvanced = advancedToolIds.includes(toolId);
-    const isBlocked = (user?.mysteryToolsDisabled && isAdvanced) || user?.blockedTools?.includes(toolId) || status === "disabled";
+  const pathParts = isSubTool ? location.pathname.split('/') : [];
+  const toolId = isSubTool ? pathParts[pathParts.length - 1] : "";
+  const status = isSubTool ? (featureToggles[`tool_${toolId}`] || "active") : "active";
+  const isMaintenance = isSubTool && status === "maintenance";
+  
+  const advancedToolIds = [
+    "personal-wird", "lunar-mansions", "spiritual-compatibility", "ilm-jafar",
+    "grand-oaths", "elemental", "geomancy", "letters", "rouhaniyya", "taksir",
+    "sirr", "zairja", "khatim", "talsam", "istikhara", "khouddam", "awfaq", "quranic-faal"
+  ];
+  const isAdvanced = isSubTool && advancedToolIds.includes(toolId);
+  const isBlocked = isSubTool && ((user?.mysteryToolsDisabled && isAdvanced) || user?.blockedTools?.includes(toolId) || status === "disabled");
 
+  React.useEffect(() => {
+    if (isSubTool && !isBlocked && !isMaintenance && toolId) {
+      localStorage.setItem('asrarhub_last_tool', toolId);
+    }
+  }, [location.pathname, isSubTool, isBlocked, isMaintenance, toolId]);
+
+  if (isSubTool) {
     if (isBlocked) {
       return (
         <div className="max-w-md mx-auto p-6 sm:p-8 text-center flex flex-col items-center justify-center min-h-[70vh]">
@@ -348,12 +360,17 @@ export default function App() {
       setToastUserName(name);
       setShowConnectedToast(true);
       sessionStorage.setItem('asrarhub_welcome_shown', 'true');
-      const timer = setTimeout(() => {
-        setShowConnectedToast(false);
-      }, 2000);
-      return () => clearTimeout(timer);
     }
   }, [user, language]);
+
+  React.useEffect(() => {
+    if (showConnectedToast) {
+      const timer = setTimeout(() => {
+        setShowConnectedToast(false);
+      }, 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [showConnectedToast]);
 
   const isCompletedOnboarding = hasCompletedOnboarding || 
     sessionStorage.getItem('hasCompletedOnboarding') === 'true' || 
@@ -640,12 +657,7 @@ export default function App() {
                 <Route path="/" element={<Navigate to="/user/dashboard" replace />} />
                 <Route path="/user/dashboard" element={<UserDashboard />} />
                 <Route path="/secret/:id" element={<SecretDetail />} />
-                <Route path="/explore" element={<ExploreDashboard />} />
                 <Route path="/explore/:categoryId" element={<UserDashboard />} />
-                <Route path="/store" element={<Store />} />
-                <Route path="/explore/quizz" element={<Quizz />} />
-                <Route path="/explore/lexique" element={<Lexique />} />
-                <Route path="/explore/calendar" element={<CalendarConverter />} />
                 <Route element={<ProtectedToolsLayout />}>
                   <Route path="/tools" element={<ToolsDashboard />} />
                   <Route path="/tools/abjad" element={<AbjadCalculator />} />
@@ -677,12 +689,19 @@ export default function App() {
                   <Route path="/tools/khouddam" element={<KhouddamExtractor />} />
                   <Route path="/tools/awfaq" element={<AwfaqAdvanced />} />
                   <Route path="/tools/quranic-faal" element={<QuranicFaal />} />
+                  
+                  {/* Additional Protected Routes */}
+                  <Route path="/explore" element={<ExploreDashboard />} />
+                  <Route path="/store" element={<Store />} />
+                  <Route path="/explore/quizz" element={<Quizz />} />
+                  <Route path="/explore/lexique" element={<Lexique />} />
+                  <Route path="/explore/calendar" element={<CalendarConverter />} />
+                  <Route path="/profile" element={<UserProfile />} />
+                  <Route path="/payment" element={<PaymentPage />} />
+                  <Route path="/journal" element={<Journal />} />
+                  <Route path="/saved" element={<UserDashboard initialFilter="favoris" />} />
+                  <Route path="/community" element={<Community />} />
                 </Route>
-                <Route path="/profile" element={<UserProfile />} />
-                <Route path="/payment" element={<PaymentPage />} />
-                <Route path="/journal" element={<Journal />} />
-                <Route path="/saved" element={<UserDashboard initialFilter="favoris" />} />
-                <Route path="/community" element={<Community />} />
                 <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/faq" element={<FaqPage />} />
                 <Route path="*" element={<Navigate to="/user/dashboard" replace />} />

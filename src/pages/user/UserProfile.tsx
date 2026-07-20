@@ -3,7 +3,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { User, Bell, Clock, Save, Shield, Moon, Sun, Smartphone, Laptop, Tablet, Globe, Trash2, Award, Medal, Star, Target, LogOut, Camera, Image as ImageIcon, RefreshCw, Sparkles, LogIn, ChevronDown, Plus, XCircle, CheckCircle, FileText, BookOpen, ScrollText, Heart, X, Share2, Wifi, Database, Activity, Terminal } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTheme } from '../../contexts/ThemeContext';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth, handleFirestoreError, OperationType } from '../../contexts/AuthContext';
 import { PremiumBadge } from '../../components/PremiumBadge';
 import { AuthModal } from '../../components/AuthModal';
 import { PremiumWrapper } from '../../components/PremiumWrapper';
@@ -224,6 +224,7 @@ export const UserProfile: React.FC = () => {
     }, (error) => {
       console.error("Error listening to sessions:", error);
       setLoadingSessions(false);
+      handleFirestoreError(error, OperationType.GET, `users/${user.uid}/sessions`);
     });
 
     return () => unsubscribe();

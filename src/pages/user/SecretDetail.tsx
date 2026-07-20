@@ -84,12 +84,36 @@ export const SecretDetail: React.FC = () => {
         str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
       const lockedKeywords = [
+        // French
         'secret', 'recette', 'pratique', 'methode', 'wird', 'zikr', 'dhikr', 
         'ingredient', 'etape', 'preparation', 'utilisation', 'application', 
-        'activation', 'rituel', 'formule', 'confection', 'recitation'
+        'activation', 'rituel', 'formule', 'confection', 'recitation',
+        // English
+        'recipe', 'practice', 'method', 'ingredient', 'step', 'use', 
+        'ritual', 'formula', 'making', 'procedure',
+        // Hausa
+        'sirri', 'hanya', 'yadda ake', 'wirdi', 'zikiri', 'sinadaran', 
+        'mataki', 'shirye-shirye', 'shiri', 'amfani', 'kunna', 'bayanai', 'rubutu'
       ];
 
-      const allowedKeywords = ['objectif', 'exemple', 'introduction', 'intro', 'definition'];
+      const allowedKeywords = [
+        // French
+        'objectif', 'exemple', 'introduction', 'intro', 'definition',
+        // English
+        'objective', 'example',
+        // Hausa
+        'manufa', 'manufar', 'manufofi', 'manufofin',
+        'burin', 'burins',
+        'nufi', 'nufin', 'abun nufi', 'abin nufi', 'abinda ake nufa', 'abin da ake nufa',
+        'niyya', 'niyyar', 'niyyoyin', 'niyyoyins',
+        'kudiri', 'kudurin',
+        'makasudi', 'makasudin', 'maqasudi', 'maqasudin',
+        'fa\'ida', 'fa\'idar', 'faida', 'faidar',
+        'misali', 'misalan', 'misali na', 'misalai',
+        'darasi', 'darasin', 'darasai',
+        'gabatarwa', 'gabatarwar', 'farko', 'farkon', 'bayanin farko', 'bayan fage',
+        'ma\'ana', 'ma\'anar', 'maana', 'maanar'
+      ];
 
       for (let i = 0; i < doc.body.childNodes.length; i++) {
         const node = doc.body.childNodes[i] as HTMLElement;
@@ -107,7 +131,12 @@ export const SecretDetail: React.FC = () => {
           } else if (hasStrong) {
             const strongEl = node.querySelector('strong') || node.querySelector('b');
             if (strongEl) {
-              headingText = normalize(strongEl.textContent || '');
+              const nodeText = (node.textContent || '').trim();
+              const strongText = (strongEl.textContent || '').trim();
+              // Only treat as a heading if the strong tag represents the whole paragraph text
+              if (nodeText === strongText && nodeText.length > 0) {
+                headingText = normalize(strongText);
+              }
             }
           }
           
@@ -115,7 +144,9 @@ export const SecretDetail: React.FC = () => {
             const hasLockedWord = lockedKeywords.some(kw => headingText.includes(kw));
             const hasAllowedWord = allowedKeywords.some(kw => headingText.includes(kw));
             
-            if (hasLockedWord || (!hasAllowedWord && headingText.length > 2)) {
+            // If the heading contains an allowed word (like "manufa" or "misali"), we do NOT stop, 
+            // even if it also contains a locked word (like "sirri" in "manufar sirrin").
+            if (!hasAllowedWord && (hasLockedWord || headingText.length > 2)) {
               shouldStop = true;
             }
           }
@@ -170,6 +201,12 @@ export const SecretDetail: React.FC = () => {
   });
   const [rating, setRating] = useState(0);
   const [showAuthModal, setShowAuthModal] = useState(false);
+
+  useEffect(() => {
+    if (!user && !authLoading) {
+      setShowAuthModal(true);
+    }
+  }, [user, authLoading]);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [speakingWordIndex, setSpeakingWordIndex] = useState<number | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -927,7 +964,7 @@ export const SecretDetail: React.FC = () => {
           </button>
         </div>
         
-        <AuthModal isOpen={showAuthModal || !user} onClose={() => setShowAuthModal(false)} />
+        <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
       </div>
     );
   }

@@ -102,32 +102,9 @@ export const DailyGoalsTracker: React.FC = () => {
       list.sort((a, b) => b.createdAt - a.createdAt);
       setActiveCircles(list);
     }, (error) => {
-      console.warn("Using offline fallback mock for collective circles in DailyGoalsTracker:", error);
-      // Fallback
-      setActiveCircles([
-        {
-          id: 'mock_1',
-          title: language === 'en' ? 'Mawlid Salawat Unified Circle' : language === 'ha' ? 'Halaqar Salawat na Mawlidi' : 'Grand Cercle Salawat du Mawlid',
-          target: 100000,
-          count: 42150,
-          type: 'Salawat (Allāhumma ṣalli ʿalā Muḥammad)',
-          creatorName: 'Seydou Diop',
-          creatorCountry: 'Sénégal',
-          creatorCity: 'Dakar',
-          createdAt: Date.now() - 86400000
-        },
-        {
-          id: 'mock_2',
-          title: language === 'en' ? 'Istighfar Circle for Peace' : language === 'ha' ? 'Halaqar Istighfari Don Zaman Lafiya' : 'Cercle Istighfar de la Paix',
-          target: 70000,
-          count: 31200,
-          type: 'Istighfar (Astaghfirullāh al-ʿAẓīm)',
-          creatorName: 'Amina Al-Hassan',
-          creatorCountry: 'Nigeria',
-          creatorCity: 'Kano',
-          createdAt: Date.now() - 43200000
-        }
-      ]);
+      console.warn("Using offline fallback for collective circles in DailyGoalsTracker:", error);
+      // Fallback: empty array when offline/error
+      setActiveCircles([]);
     });
     return () => unsubscribe();
   }, [language]);

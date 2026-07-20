@@ -21,30 +21,21 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      allow read: if request.auth != null;
       allow create: if request.auth != null && request.auth.uid == userId 
-                    && (
-                      isAdmin() || (
-                        (!('subscriptionTier' in request.resource.data) || request.resource.data.subscriptionTier == 'free' || request.resource.data.subscriptionTier == 'standard')
-                        && (!('role' in request.resource.data) || request.resource.data.role == 'user')
-                      )
-                    );
-      allow update: if request.auth != null && (
-        isAdmin() || (
-          request.auth.uid == userId 
-          && (!('subscriptionTier' in request.resource.data) || request.resource.data.subscriptionTier == ('subscriptionTier' in resource.data ? resource.data.subscriptionTier : 'free'))
-          && (!('role' in request.resource.data) || request.resource.data.role == ('role' in resource.data ? resource.data.role : 'user'))
-        )
-      );
+                    && (!('subscriptionTier' in request.resource.data) || request.resource.data.subscriptionTier == 'free' || request.resource.data.subscriptionTier == 'standard')
+                    && (!('role' in request.resource.data) || request.resource.data.role == 'user');
+      allow create: if request.auth != null && request.auth.uid == userId && isAdmin();
+      
+      allow update: if request.auth != null && request.auth.uid == userId 
+                    && (!('subscriptionTier' in request.resource.data) || request.resource.data.subscriptionTier == ('subscriptionTier' in resource.data ? resource.data.subscriptionTier : 'free'))
+                    && (!('role' in request.resource.data) || request.resource.data.role == ('role' in resource.data ? resource.data.role : 'user'));
+      allow update: if isAdmin();
       allow delete: if isAdmin();
-
-      match /sessions/{sessionId} {
-        allow read, write: if request.auth != null && (request.auth.uid == userId || isAdmin());
-      }
     }
 
     match /users/{userId}/sessions/{sessionId} {
-      allow read, write: if request.auth != null && (request.auth.uid == userId || isAdmin());
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
 
     match /dreams/{dreamId} {
@@ -73,7 +64,8 @@ service cloud.firestore {
     }
 
     match /manual_payments/{document} {
-      allow read: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow read: if isAdmin();
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
       allow update, delete: if isAdmin();
     }
@@ -96,7 +88,8 @@ service cloud.firestore {
     match /community_posts/{document=**} {
       allow read: if true;
       allow create: if request.auth != null;
-      allow update, delete: if request.auth != null && (request.auth.uid == resource.data.authorId || isAdmin());
+      allow update, delete: if request.auth != null && request.auth.uid == resource.data.authorId;
+      allow update, delete: if isAdmin();
     }
     
     match /notifications/{document=**} {
@@ -104,6 +97,11 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
     
+    match /community_settings/{document} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     match /settings/grand_oaths_setup {
       allow read, write: if request.auth != null;
     }
@@ -124,17 +122,13 @@ service cloud.firestore {
     }
     
     match /articles/{document=**} {
-      allow read: if !('isPremium' in resource.data) || resource.data.isPremium == false 
-                  || (request.auth != null && (
-                      isAdmin() ||
-                      (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
-                       ('subscriptionTier' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data && 
-                        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.subscriptionTier in ['premium', 'pro']))
-                  ));
+      allow read: if !('isPremium' in resource.data) || resource.data.isPremium == false;
+      allow read: if request.auth != null && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && ('subscriptionTier' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.subscriptionTier in ['premium', 'pro']);
+      allow read: if isAdmin();
       allow write: if isAdmin();
     }
 
-    match /categories/{catId} {
+    match /categories/{categoryId} {
       allow read: if true;
       allow write: if isAdmin();
     }
