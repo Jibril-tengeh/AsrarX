@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Activity, ArrowLeft, RefreshCw, Volume2, VolumeX, Settings, Target, Save, History as HistoryIcon, Plus, Trash2, Check, ChevronDown, ChevronRight, BarChart2, Fingerprint, Users, Globe, MapPin, X } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
@@ -78,12 +78,33 @@ export const Tasbih: React.FC = () => {
   const lang = language === 'en' || language === 'ha' ? language : 'fr';
   const tLocal = (key: string) => localTranslations[lang][key] || localTranslations['fr'][key] || key;
   const navigate = useNavigate();
+  const location = useLocation();
   const [customZikrs, setCustomZikrs] = useState<Zikr[]>([]);
   const [allZikrs, setAllZikrs] = useState<Zikr[]>(DEFAULT_ZIKRS);
   
   const [activeZikr, setActiveZikr] = useState<Zikr>(DEFAULT_ZIKRS[0]);
   const [count, setCount] = useState(0);
   const [target, setTarget] = useState(DEFAULT_ZIKRS[0].target);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const nameParam = params.get('name');
+    const arabicParam = params.get('arabic');
+    const targetParam = params.get('target');
+    if (nameParam) {
+      const targetVal = targetParam ? parseInt(targetParam, 10) : 100;
+      const loadedZikr: Zikr = {
+        id: `recommendation_${Date.now()}`,
+        text: nameParam,
+        arabic: arabicParam || undefined,
+        target: targetVal,
+        category: lang === 'fr' ? 'Recommandé' : lang === 'ha' ? 'Shawarta' : 'Recommended'
+      };
+      setActiveZikr(loadedZikr);
+      setTarget(targetVal);
+      setCount(0);
+    }
+  }, [location.search, lang]);
   
   const [soundEnabled, setSoundEnabled] = useState(false);
   const [vibrationEnabled, setVibrationEnabled] = useState(true);

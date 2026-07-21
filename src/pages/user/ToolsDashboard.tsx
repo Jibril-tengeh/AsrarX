@@ -36,6 +36,7 @@ import { useNavigate } from "react-router-dom";
 import { doc, onSnapshot } from "firebase/firestore";
 import { db, isAutoSaveEnabled } from "../../lib/firebase";
 import { tools } from "../../data/tools";
+import { CelestialRecommendations } from "../../components/CelestialRecommendations";
 
 
 import { BannerAd } from "../../components/BannerAd";
@@ -355,6 +356,10 @@ export const ToolsDashboard: React.FC = () => {
           </div>
         );
       })()}
+
+      <div className="mb-8">
+        <CelestialRecommendations />
+      </div>
 
 
       <AnimatePresence>

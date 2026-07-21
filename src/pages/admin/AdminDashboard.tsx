@@ -2023,7 +2023,7 @@ export const AdminDashboard: React.FC = () => {
     { id: 'faq', label: 'FAQ / Assistant', desc: 'Assistant IA spirituel' },
     { id: 'quizz', label: 'Quiz', desc: 'Test de connaissances' },
     { id: 'lexique', label: 'Lexique', desc: 'Lexique des termes' },
-    { id: 'calendar', label: 'Calendrier', desc: 'Calendrier Hégirien' },
+    { id: 'calendar', label: 'Calendrier Mystique (Hégirien)', desc: 'Contrôler l\'accès global : Actif, Premium, Maintenance, Inactif (Désactiver/Bloquer)' },
     { id: 'ruqyah', label: 'Module Ruqyah', desc: 'Accès aux versets de protection et guérison' },
     { id: 'abjad', label: 'Calculateur Abjad', desc: 'Outil de numérologie arabe' },
     { id: 'dreams', label: 'Journal des Rêves', desc: 'Fonctionnalité de suivi et interprétation' },
@@ -2117,6 +2117,7 @@ export const AdminDashboard: React.FC = () => {
                         <option value="premium">Premium</option>
                         <option value="maintenance">Maintenance</option>
                         <option value="inactive">Inactif</option>
+                        <option value="disabled">Désactivé (Bloqué)</option>
                       </select>
                     </div>
                   </div>

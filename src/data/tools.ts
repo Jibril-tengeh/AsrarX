@@ -319,4 +319,13 @@ export const tools: ToolItem[] = [
     path: "/tools/quranic-faal",
     level: "advanced",
   },
+  {
+    id: "ia-rapprochements",
+    title: "IA Rapprochements Ésotériques",
+    description: "Croisez vos rêves, le poids de votre nom, et le climat céleste actuel pour des zikrs personnalisés.",
+    icon: Sparkles,
+    color: "from-purple-600 via-indigo-600 to-pink-600",
+    path: "/tools/ia-rapprochements",
+    level: "advanced",
+  },
 ];

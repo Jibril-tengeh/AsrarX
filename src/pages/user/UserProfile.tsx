@@ -224,7 +224,6 @@ export const UserProfile: React.FC = () => {
     }, (error) => {
       console.error("Error listening to sessions:", error);
       setLoadingSessions(false);
-      handleFirestoreError(error, OperationType.GET, `users/${user.uid}/sessions`);
     });
 
     return () => unsubscribe();

@@ -343,6 +343,85 @@ Règles de comportement et formatage (TRÈS IMPORTANT) :
     }
   });
 
+  // AI-Powered Cross-Tool Spiritual Convergence & Rapprochements
+  app.post("/api/gemini/spiritual-rapprochements", async (req, res) => {
+    try {
+      const { userName, nameAbjad, dreamContent, currentPlanet, currentMansion } = req.body;
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ error: "Gemini API key is not configured" });
+      }
+
+      const ai = new GoogleGenAI({
+        apiKey,
+        httpOptions: {
+          headers: {
+            'User-Agent': 'aistudio-build',
+          }
+        }
+      });
+
+      const prompt = `
+Vous êtes l'Assistant Métaphysique Suprême d'AsrarHub, un maître spirituel spécialisé dans le croisement multidimensionnel ("Rapprochements Esotériques").
+Votre rôle est d'analyser les données convergentes d'un utilisateur pour lui révéler les secrets cachés reliant son identité, ses rêves et le climat céleste actuel.
+
+Voici les données d'entrée de l'utilisateur :
+- Nom de l'utilisateur : "${userName || "Inconnu"}"
+- Poids mystique (Abjad) de son nom : ${nameAbjad || "Non calculé"}
+- Rêve ou vision récent : "${dreamContent || "Aucun rêve saisi"}"
+- Planète dominante actuelle : "${currentPlanet || "Lune"}"
+- Demeure de la Lune (Mansion) actuelle : "${currentMansion || "Al-Sharatain"}"
+
+Tâche :
+Générez une synthèse ésotérique profonde, unifiée, réconfortante et extrêmement inspirante en français.
+Votre analyse doit lier le symbolisme du rêve au poids numérique (Abjad) de l'utilisateur et aux énergies planétaires et lunaires de l'instant présent.
+
+RÈGLES CRUCIALES DE TRADUCTION ET GÉNÉRATION (SANS TRANSLITTÉRATION) :
+1. PAS DE TRANSLITTÉRATION : Ne générez JAMAIS de translittération phonétique latine pour les invocations ou les mots arabes.
+2. ARABE ORIGINAL : Écrivez TOUJOURS les wirds, les versets et les noms d'Allah directement en alphabet arabe original.
+3. TRADUCTION DIRECTE : Fournissez une traduction claire, fluide et entièrement en Français juste en dessous de chaque texte arabe.
+
+Renvoyez STRICTEMENT un objet JSON valide contenant les champs suivants :
+1. "synthesis": Une synthèse d'analyse (3-4 paragraphes riches en français) reliant le rêve, le nom (son Abjad) et l'alignement céleste actuel. Expliquez comment la vibration de son nom résonne avec le rêve reçu sous cette influence astrale.
+2. "focusName": Un attribut d'énergie divine (un des Noms d'Allah) qui vibre le plus fort avec cette convergence, écrit en Arabe original suivi directement de sa traduction.
+3. "zikrRecommendation": Une recommandation de Wird/Zikr personnalisée pour l'utilisateur. Exemple : "Réciter Ya Latif (يَا لَطِيفُ) 129 fois après la prière d'Al-Asr."
+4. "targetCount": Le nombre exact de récitations recommandé (type nombre entier).
+5. "recommendedArabic": Le texte arabe du zikr à réciter (uniquement en alphabet arabe original).
+6. "recommendedNameOnly": Le nom en français/translittération du zikr pour le bouton (ex: "Ya Latif").
+7. "spiritualBenefit": Les bienfaits spirituels uniques de cette pratique synchronisée pour l'utilisateur en ce moment précis.
+
+Format de réponse attendu : Un objet JSON valide respectant cette structure exacte. Ne mettez aucun texte d'enrobage avant ou après le JSON.
+      `;
+
+      const response = await generateWithRetry(ai, {
+        model: "gemini-3.5-flash",
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: "OBJECT",
+            properties: {
+              synthesis: { type: "STRING" },
+              focusName: { type: "STRING" },
+              zikrRecommendation: { type: "STRING" },
+              targetCount: { type: "INTEGER" },
+              recommendedArabic: { type: "STRING" },
+              recommendedNameOnly: { type: "STRING" },
+              spiritualBenefit: { type: "STRING" }
+            },
+            required: ["synthesis", "focusName", "zikrRecommendation", "targetCount", "recommendedArabic", "recommendedNameOnly", "spiritualBenefit"]
+          }
+        }
+      });
+
+      const resultText = response?.text?.trim() || "{}";
+      res.json(JSON.parse(resultText));
+    } catch (error: any) {
+      console.error("Spiritual Rapprochements generation error:", error);
+      res.status(500).json({ error: "Failed to generate metaphysical rapprochment" });
+    }
+  });
+
   // AI Article Translation
   app.post("/api/translate-article", async (req, res) => {
     try {

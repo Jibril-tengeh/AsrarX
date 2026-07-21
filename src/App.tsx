@@ -53,6 +53,7 @@ const AdminDashboard = React.lazy(() => import('./pages/admin/AdminDashboard').t
 const Community = React.lazy(() => import('./pages/user/Community').then(m => ({ default: m.Community })));
 import { AudioPlayer } from './components/AudioPlayer';
 const DailyDhikrTracker = React.lazy(() => import('./pages/user/tools/DailyDhikrTracker').then(m => ({ default: m.DailyDhikrTracker })));
+const IaRapprochements = React.lazy(() => import('./pages/user/tools/IaRapprochements').then(m => ({ default: m.IaRapprochements })));
 
 import { Onboarding } from './pages/Onboarding';
 import { DailyRewardHandler } from './components/DailyRewardHandler';
@@ -213,6 +214,26 @@ const ProtectedToolsLayout: React.FC = () => {
     }
   }, [user]);
 
+  const isSubTool = location.pathname.startsWith('/tools/') && location.pathname !== '/tools';
+  const pathParts = isSubTool ? location.pathname.split('/') : [];
+  const toolId = isSubTool ? pathParts[pathParts.length - 1] : "";
+  const status = isSubTool ? (featureToggles[`tool_${toolId}`] || "active") : "active";
+  const isMaintenance = isSubTool && status === "maintenance";
+  
+  const advancedToolIds = [
+    "personal-wird", "lunar-mansions", "spiritual-compatibility", "ilm-jafar",
+    "grand-oaths", "elemental", "geomancy", "letters", "rouhaniyya", "taksir",
+    "sirr", "zairja", "khatim", "talsam", "istikhara", "khouddam", "awfaq", "quranic-faal"
+  ];
+  const isAdvanced = isSubTool && advancedToolIds.includes(toolId);
+  const isBlocked = isSubTool && ((user?.mysteryToolsDisabled && isAdvanced) || user?.blockedTools?.includes(toolId) || status === "disabled");
+
+  React.useEffect(() => {
+    if (user && isSubTool && !isBlocked && !isMaintenance && toolId) {
+      localStorage.setItem('asrarhub_last_tool', toolId);
+    }
+  }, [user, location.pathname, isSubTool, isBlocked, isMaintenance, toolId]);
+
   if (!user) {
     return (
       <div className="max-w-md mx-auto p-6 sm:p-8 text-center flex flex-col items-center justify-center min-h-[70vh]">
@@ -246,26 +267,6 @@ const ProtectedToolsLayout: React.FC = () => {
       </div>
     );
   }
-
-  const isSubTool = location.pathname.startsWith('/tools/') && location.pathname !== '/tools';
-  const pathParts = isSubTool ? location.pathname.split('/') : [];
-  const toolId = isSubTool ? pathParts[pathParts.length - 1] : "";
-  const status = isSubTool ? (featureToggles[`tool_${toolId}`] || "active") : "active";
-  const isMaintenance = isSubTool && status === "maintenance";
-  
-  const advancedToolIds = [
-    "personal-wird", "lunar-mansions", "spiritual-compatibility", "ilm-jafar",
-    "grand-oaths", "elemental", "geomancy", "letters", "rouhaniyya", "taksir",
-    "sirr", "zairja", "khatim", "talsam", "istikhara", "khouddam", "awfaq", "quranic-faal"
-  ];
-  const isAdvanced = isSubTool && advancedToolIds.includes(toolId);
-  const isBlocked = isSubTool && ((user?.mysteryToolsDisabled && isAdvanced) || user?.blockedTools?.includes(toolId) || status === "disabled");
-
-  React.useEffect(() => {
-    if (isSubTool && !isBlocked && !isMaintenance && toolId) {
-      localStorage.setItem('asrarhub_last_tool', toolId);
-    }
-  }, [location.pathname, isSubTool, isBlocked, isMaintenance, toolId]);
 
   if (isSubTool) {
     if (isBlocked) {
@@ -647,10 +648,10 @@ export default function App() {
             <AnimatePresence mode="wait">
               <motion.div
                 key={location.pathname}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.25, ease: 'easeOut' }}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -12 }}
+                transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
                 className="w-full max-w-full overflow-x-hidden flex flex-col flex-1"
               >
                 <Routes location={location}>
@@ -689,6 +690,7 @@ export default function App() {
                   <Route path="/tools/khouddam" element={<KhouddamExtractor />} />
                   <Route path="/tools/awfaq" element={<AwfaqAdvanced />} />
                   <Route path="/tools/quranic-faal" element={<QuranicFaal />} />
+                  <Route path="/tools/ia-rapprochements" element={<IaRapprochements />} />
                   
                   {/* Additional Protected Routes */}
                   <Route path="/explore" element={<ExploreDashboard />} />

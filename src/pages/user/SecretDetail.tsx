@@ -50,13 +50,23 @@ const AccordionSection: React.FC<{ title: string, htmlContent: string, readingMo
         }`}
       >
         <span className="text-lg">{title}</span>
-        <ChevronDown size={20} className={`transform transition-transform ${isOpen ? "rotate-180" : ""}`} />
+        <ChevronDown size={20} className={`transform transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`} />
       </button>
-      {isOpen && (
-        <div className={`p-4 sm:p-5 border-t ${readingMode ? "border-[#e8dcb5] dark:border-[#524830]/50 text-[#363028] dark:text-[#c4b79d]" : "border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300"}`} style={style}>
-          <div dangerouslySetInnerHTML={{ __html: htmlContent }} className="prose dark:prose-invert w-full max-w-full break-words overflow-hidden" style={style} />
-        </div>
-      )}
+      <AnimatePresence initial={false}>
+        {isOpen && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: "easeInOut" }}
+            className="overflow-hidden"
+          >
+            <div className={`p-4 sm:p-5 border-t ${readingMode ? "border-[#e8dcb5] dark:border-[#524830]/50 text-[#363028] dark:text-[#c4b79d]" : "border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300"}`} style={style}>
+              <div dangerouslySetInnerHTML={{ __html: htmlContent }} className="prose dark:prose-invert w-full max-w-full break-words overflow-hidden" style={style} />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

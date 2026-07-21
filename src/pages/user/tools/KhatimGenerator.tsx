@@ -1,11 +1,12 @@
 import React, { useState, useRef } from 'react';
-import { Star, ArrowLeft, RefreshCw, Calculator, Grid, Type, Download, Share2 } from 'lucide-react';
+import { Star, ArrowLeft, RefreshCw, Calculator, Grid, Type, Download, Share2, FileDown, Image, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { ToolInfoTooltip } from '../../../components/ToolInfoTooltip';
 import { motion, AnimatePresence } from 'motion/react';
 import { calculateAbjadValue } from '../../../utils/abjad';
-import { toCanvas } from 'html-to-image';
+import { toCanvas, toPng, toSvg } from 'html-to-image';
+import { jsPDF } from 'jspdf';
 
 export const KhatimGenerator: React.FC = () => {
   const { t } = useLanguage();
@@ -25,6 +26,91 @@ export const KhatimGenerator: React.FC = () => {
       link.download = `khatim-${gridSize}x${gridSize}.png`;
       link.href = url;
       link.click();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const downloadTransparentPNG = async () => {
+    if (!resultRef.current) return;
+    try {
+      const url = await toPng(resultRef.current, { 
+        backgroundColor: null,
+        style: {
+          background: 'transparent',
+          boxShadow: 'none',
+          border: 'none',
+        }
+      });
+      const link = document.createElement('a');
+      link.download = `khatim-${gridSize}x${gridSize}-transparent.png`;
+      link.href = url;
+      link.click();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const downloadSVG = async () => {
+    if (!resultRef.current) return;
+    try {
+      const url = await toSvg(resultRef.current, {
+        backgroundColor: null,
+        style: {
+          background: 'transparent',
+          boxShadow: 'none',
+          border: 'none',
+        }
+      });
+      const link = document.createElement('a');
+      link.download = `khatim-${gridSize}x${gridSize}.svg`;
+      link.href = url;
+      link.click();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const downloadPDF = async () => {
+    if (!resultRef.current) return;
+    try {
+      const canvas = await toCanvas(resultRef.current, { backgroundColor: '#18181b' });
+      const imgData = canvas.toDataURL('image/png');
+      
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+      
+      pdf.setFillColor(255, 255, 255);
+      pdf.rect(0, 0, 210, 297, 'F');
+      
+      pdf.setTextColor(17, 24, 39);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(22);
+      pdf.text("AsrarHub - Khatim Sacre", 105, 30, { align: 'center' });
+      
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`Khatim ${gridSize}x${gridSize} (Poids Mystique: ${calculatedTotal})`, 105, 42, { align: 'center' });
+      
+      const imgWidth = 120;
+      const imgHeight = 120;
+      const x = (210 - imgWidth) / 2;
+      const y = 60;
+      
+      pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
+      
+      pdf.setFontSize(10);
+      pdf.setTextColor(107, 114, 128);
+      pdf.text("Inscrivez ce Khatim sacre avec de l'encre de safran et de l'eau de rose", 105, 200, { align: 'center' });
+      pdf.text("lors de l'heure planetaire correspondante a votre intention.", 105, 206, { align: 'center' });
+      
+      pdf.setFontSize(8);
+      pdf.text("Genere via AsrarHub. Tous droits reserves.", 105, 280, { align: 'center' });
+      
+      pdf.save(`AsrarHub_Khatim_${gridSize}x${gridSize}_${calculatedTotal}.pdf`);
     } catch (e) {
       console.error(e);
     }
@@ -377,15 +463,56 @@ export const KhatimGenerator: React.FC = () => {
               </div>
             </div>
             
-            <div className="flex gap-4 mt-4">
-              <button onClick={downloadImage} className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-zinc-800 text-white hover:bg-zinc-700 font-semibold transition-colors shadow-lg cursor-pointer">
-                <Download size={20} />
-                {t('tools.khatim.download', 'Enregistrer')}
-              </button>
-              <button onClick={shareResult} className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-purple-600 text-white hover:bg-purple-500 font-semibold transition-colors shadow-lg cursor-pointer">
-                <Share2 size={20} />
-                {t('tools.khatim.share', 'Partager')}
-              </button>
+            <div className="mt-8 bg-zinc-900/50 backdrop-blur-sm p-6 rounded-3xl border border-zinc-800 w-full relative z-10">
+              <div className="flex items-center gap-2 mb-4">
+                <Sparkles size={16} className="text-purple-400" />
+                <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+                  Espace de Téléchargement & Exportation (Wafq)
+                </h3>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <button 
+                  onClick={downloadImage}
+                  className="p-3 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer text-center group border border-zinc-700/50"
+                >
+                  <Image size={18} className="text-zinc-400 group-hover:text-white transition-colors" />
+                  <span className="text-xs font-bold">PNG HD (Sombre)</span>
+                  <span className="text-[10px] text-zinc-400">Pour affichage écran</span>
+                </button>
+                <button 
+                  onClick={downloadTransparentPNG}
+                  className="p-3 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer text-center group border border-zinc-700/50"
+                >
+                  <Download size={18} className="text-emerald-400 group-hover:text-emerald-300 transition-colors" />
+                  <span className="text-xs font-bold">PNG Transparent</span>
+                  <span className="text-[10px] text-zinc-400">Pour travaux d'écriture</span>
+                </button>
+                <button 
+                  onClick={downloadSVG}
+                  className="p-3 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer text-center group border border-zinc-700/50"
+                >
+                  <FileDown size={18} className="text-blue-400 group-hover:text-blue-300 transition-colors" />
+                  <span className="text-xs font-bold">Vecteur SVG</span>
+                  <span className="text-[10px] text-zinc-400">Agrandissement infini</span>
+                </button>
+                <button 
+                  onClick={downloadPDF}
+                  className="p-3 bg-zinc-800 hover:bg-zinc-700 text-white rounded-xl flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer text-center group border border-zinc-700/50"
+                >
+                  <FileDown size={18} className="text-red-400 group-hover:text-red-300 transition-colors" />
+                  <span className="text-xs font-bold">PDF Imprimable</span>
+                  <span className="text-[10px] text-zinc-400">Prêt pour l'impression A4</span>
+                </button>
+              </div>
+              <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-zinc-800/80">
+                <button 
+                  onClick={shareResult}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-purple-600 text-white hover:bg-purple-500 text-xs font-bold transition-all shadow-md cursor-pointer ml-auto"
+                >
+                  <Share2 size={14} />
+                  <span>Partager le Khatim</span>
+                </button>
+              </div>
             </div>
           </motion.div>
         )}

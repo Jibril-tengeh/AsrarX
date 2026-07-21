@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, ChevronLeft, ChevronRight, Sparkles, BookOpen, Compass, Moon, Info, Eye, EyeOff, Calendar, Download, ChevronDown, Activity, Heart, Zap, Brain, Timer, Play, Pause, Flame, Check } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Sparkles, BookOpen, Compass, Moon, Info, Eye, EyeOff, Calendar, Download, ChevronDown, Activity, Heart, Zap, Brain, Timer, Play, Pause, Flame, Check, ShieldAlert, RefreshCw, Lock, Copy, ExternalLink } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useAuth } from '../contexts/AuthContext';
+import { useFeatures } from '../contexts/FeatureContext';
 import { CosmicEnergyAstrolabe } from './CosmicEnergyAstrolabe';
 import { calculateSolarTimes } from '../utils/solarCalculator';
 import {
@@ -24,6 +27,14 @@ interface MysticCalendarModalProps {
 
 export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen = false, onClose, isPage = false }) => {
   const { language, t } = useLanguage();
+  const { user } = useAuth();
+  const { featureToggles } = useFeatures();
+  const navigate = useNavigate();
+
+  const [isSealExpanded, setIsSealExpanded] = useState<boolean>(false);
+  const [copiedTalsam, setCopiedTalsam] = useState<boolean>(false);
+  const [copiedSeal, setCopiedSeal] = useState<boolean>(false);
+
   const HIJRI_MONTHS = getLocalizedHijriMonths(language);
   
   // Safe mathematical & astronomical conversion from Hijri to Gregorian
@@ -1051,6 +1062,100 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
 
   const activeMoonMystery = selectedMoonPhaseDay !== null ? getMoonDayMystery(selectedMoonPhaseDay) : null;
 
+  const calendarStatus = featureToggles?.tool_calendar || 'active'; // active, premium, maintenance, inactive, disabled
+  const isUserPremium = user?.subscriptionTier === 'premium' || user?.subscriptionTier === 'pro' || user?.role === 'admin';
+  const isCalendarBlocked = user?.blockedTools?.includes('calendar') || calendarStatus === 'inactive' || calendarStatus === 'disabled';
+  const isCalendarMaintenance = calendarStatus === 'maintenance';
+  const isCalendarPremiumLocked = calendarStatus === 'premium' && !isUserPremium;
+
+  const downloadSealAsImage = () => {
+    if (!activeMoonMystery?.talsamDetails) return;
+    const text = activeMoonMystery.talsamDetails.graphicSymbol;
+    
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    canvas.width = 600;
+    canvas.height = 600;
+    
+    const grad = ctx.createRadialGradient(300, 300, 50, 300, 300, 400);
+    grad.addColorStop(0, '#120b24');
+    grad.addColorStop(1, '#05030a');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 600, 600);
+    
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+    for (let i = 0; i < 60; i++) {
+      const x = Math.random() * 600;
+      const y = Math.random() * 600;
+      const r = Math.random() * 1.5;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    
+    ctx.strokeStyle = '#d97706';
+    ctx.lineWidth = 4;
+    ctx.strokeRect(20, 20, 560, 560);
+    
+    ctx.strokeStyle = 'rgba(168, 85, 247, 0.3)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(300, 300, 250, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.fillStyle = '#a78bfa';
+    ctx.font = 'bold 16px sans-serif';
+    ctx.textAlign = 'center';
+    const isFr = language === 'fr';
+    const isHa = language === 'ha';
+    ctx.fillText(isFr ? "SCEAU MYSTIQUE DE LA LUNE" : isHa ? "HATIMIN WATA NA SIRRI" : "MYSTICAL LUNAR SEAL", 300, 65);
+    
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'italic 12px sans-serif';
+    ctx.fillText(`"${activeMoonMystery.vibration}"`, 300, 90);
+    
+    ctx.fillStyle = '#c084fc';
+    ctx.font = 'bold 18px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    
+    const lines = text.split('\n');
+    const lineHeight = 28;
+    const startY = 300 - ((lines.length - 1) * lineHeight) / 2;
+    
+    lines.forEach((line, index) => {
+      ctx.fillText(line, 300, startY + index * lineHeight);
+    });
+
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.font = '10px sans-serif';
+    ctx.fillText("AsrarHub © Lunar Calendar System", 300, 545);
+    
+    const url = canvas.toDataURL('image/png');
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Sceau_Mystique_Jour_${selectedHijriDay}.png`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  const handleCopyTalsam = () => {
+    if (!activeMoonMystery?.talsamDetails) return;
+    navigator.clipboard.writeText(activeMoonMystery.talsamDetails.formula);
+    setCopiedTalsam(true);
+    setTimeout(() => setCopiedTalsam(false), 2000);
+  };
+
+  const handleCopySeal = () => {
+    if (!activeMoonMystery?.talsamDetails) return;
+    navigator.clipboard.writeText(activeMoonMystery.talsamDetails.graphicSymbol);
+    setCopiedSeal(true);
+    setTimeout(() => setCopiedSeal(false), 2000);
+  };
+
   const getGregorianRange = () => {
     const firstDay = getGregorianDateForHijri(hijriYear, hijriMonthIndex, 1);
     const lastDay = getGregorianDateForHijri(hijriYear, hijriMonthIndex, getDaysInHijriMonth(hijriYear, hijriMonthIndex));
@@ -1176,7 +1281,76 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
             </div>
           </div>
 
-          {/* Month Navigation & Display with complete Arabic with Vowels (Tashkeel) */}
+          {(isCalendarBlocked || isCalendarMaintenance || isCalendarPremiumLocked) ? (
+            <div className="flex flex-col items-center justify-center text-center p-6 sm:p-10 my-auto min-h-[40vh] space-y-6">
+              {isCalendarBlocked && (
+                <>
+                  <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center text-red-500 mb-2 border border-red-500/20 shadow-lg shadow-red-500/5 animate-pulse">
+                    <ShieldAlert size={36} />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                    {language === 'fr' ? 'Accès Bloqué' : language === 'ha' ? 'An Rufe Hanya' : 'Access Blocked'}
+                  </h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 max-w-sm leading-relaxed">
+                    {language === 'fr' 
+                      ? 'L\'accès au calendrier mystique a été temporairement restreint pour votre compte. Veuillez contacter l\'administrateur pour plus d\'informations.' 
+                      : language === 'ha'
+                      ? 'An rufe wannan sashe na kalanda ga asusunka. Tuntuɓi mai gudanarwa don ƙarin bayani.'
+                      : 'Access to the mystic calendar has been restricted for your account. Please contact the administrator for more information.'}
+                  </p>
+                </>
+              )}
+
+              {isCalendarMaintenance && (
+                <>
+                  <div className="w-16 h-16 bg-amber-500/10 rounded-full flex items-center justify-center text-amber-500 mb-2 border border-amber-500/20 shadow-lg shadow-amber-500/5 animate-pulse">
+                    <RefreshCw size={36} className="animate-spin" style={{ animationDuration: '6s' }} />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                    {language === 'fr' ? 'Calendrier en Maintenance' : language === 'ha' ? 'Rijistar a Gyara' : 'Calendar under Maintenance'}
+                  </h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 max-w-sm leading-relaxed">
+                    {language === 'fr' 
+                      ? 'Le calendrier mystique est temporairement en maintenance pour des ajustements astronomiques et techniques. Veuillez réessayer plus tard.' 
+                      : language === 'ha'
+                      ? 'Wannan tsarin kalanda yana fuskantar gyara na ɗan lokaci. Da fatan za a sake gwadawa daga baya.'
+                      : 'The mystic calendar is temporarily under maintenance for astronomical and technical adjustments. Please try again later.'}
+                  </p>
+                </>
+              )}
+
+              {isCalendarPremiumLocked && (
+                <>
+                  <div className="w-16 h-16 bg-violet-500/15 rounded-full flex items-center justify-center text-violet-400 mb-2 border border-violet-500/30 shadow-lg shadow-violet-500/10 relative">
+                    <Lock size={32} className="text-violet-400" />
+                    <Sparkles size={16} className="absolute -top-1 -right-1 text-amber-400 animate-pulse" />
+                  </div>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-1.5 justify-center">
+                    {language === 'fr' ? 'Calendrier Mystique Premium 🌟' : language === 'ha' ? 'Taswirar Premium 🌟' : 'Premium Mystic Calendar 🌟'}
+                  </h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 max-w-sm leading-relaxed">
+                    {language === 'fr' 
+                      ? 'Ce calendrier mystique et ses précieux secrets lunaires, astrologiques et théurgiques sont réservés aux membres Premium d\'AsrarHub. Débloquez-les dès maintenant !' 
+                      : language === 'ha'
+                      ? 'Wannan sashe na musamman na sirrin wata da taurari ne ga membobin Premium na AsrarHub.'
+                      : 'This mystic calendar and its valuable lunar, astrological, and theurgic secrets are reserved for Premium members of AsrarHub. Unlock them now!'}
+                  </p>
+                  <button
+                    onClick={() => {
+                      if (onClose) onClose();
+                      navigate('/payment');
+                    }}
+                    className="flex items-center justify-center gap-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white font-extrabold py-3 px-6 rounded-2xl shadow-lg hover:shadow-violet-500/10 transition-all active:scale-[0.98] cursor-pointer"
+                  >
+                    <Sparkles size={16} />
+                    <span>{language === 'fr' ? "Devenir Membre Premium" : language === 'ha' ? "Zama Memban Premium" : "Upgrade to Premium"}</span>
+                  </button>
+                </>
+              )}
+            </div>
+          ) : (
+            <>
+              {/* Month Navigation & Display with complete Arabic with Vowels (Tashkeel) */}
           <div className="flex items-center justify-between mb-4 bg-gray-50/70 dark:bg-gray-850/40 p-2.5 rounded-2xl border border-gray-100/50 dark:border-gray-800/40 shrink-0">
             <button
               onClick={handlePrevMonth}
@@ -2644,14 +2818,17 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.28, ease: "easeOut" }}
-                className="absolute inset-0 z-[130] bg-gray-950 text-white rounded-3xl p-5 sm:p-6 flex flex-col justify-between overflow-y-auto overscroll-contain"
+                className={isPage 
+                  ? "fixed inset-0 z-[10005] bg-gray-950 text-white p-5 pt-8 pb-10 sm:p-8 flex flex-col justify-between overflow-y-auto overscroll-contain w-full max-w-4xl mx-auto md:rounded-3xl md:my-8 md:h-[calc(100vh-4rem)] md:inset-auto md:left-1/2 md:-translate-x-1/2"
+                  : "absolute inset-0 z-[130] bg-gray-950 text-white rounded-3xl p-5 sm:p-6 flex flex-col justify-between overflow-y-auto overscroll-contain"
+                }
               >
                 {/* Mystic Starfield Design */}
                 <div className="absolute inset-0 opacity-15 pointer-events-none bg-[radial-gradient(#f59e0b_1.2px,transparent_1.2px)] [background-size:20px_20px]" />
                 <div className="absolute -top-10 -right-10 w-40 h-40 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
                 <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
 
-                <div className="relative z-10 flex flex-col h-full justify-between">
+                <div className="relative z-10 flex flex-col min-h-full justify-between">
                   <div>
                     {/* Header of overlay */}
                     <div className="flex justify-between items-center mb-3">
@@ -2819,19 +2996,53 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                           </span>
                           
                           <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center mt-2">
-                            <div className="md:col-span-5 flex justify-center">
-                              <pre className="bg-black/60 border border-purple-500/20 text-purple-300 text-[10px] p-2 rounded-lg font-mono leading-none tracking-tight text-center select-all shadow-inner whitespace-pre-wrap max-w-full">
-                                {activeMoonMystery.talsamDetails.graphicSymbol}
-                              </pre>
+                            <div className="md:col-span-5 flex flex-col items-center justify-center gap-1.5">
+                              <div 
+                                onClick={() => setIsSealExpanded(true)}
+                                className="group relative cursor-zoom-in bg-black/60 border border-purple-500/30 hover:border-purple-400/60 p-2.5 rounded-lg transition-all duration-300 shadow-inner hover:shadow-purple-500/5 select-none"
+                                title={language === 'fr' ? "Cliquez pour agrandir et télécharger le Sceau" : language === 'ha' ? "Danna don faɗaɗawa da saukar da Hatimi" : "Click to enlarge and download Seal"}
+                              >
+                                <pre className="text-purple-300 text-[10px] font-mono leading-none tracking-tight text-center whitespace-pre-wrap max-w-full">
+                                  {activeMoonMystery.talsamDetails.graphicSymbol}
+                                </pre>
+                                
+                                <div className="absolute inset-0 bg-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
+                                  <span className="bg-black/80 text-purple-300 text-[9px] font-extrabold px-1.5 py-0.5 rounded-md border border-purple-500/20 shadow-md flex items-center gap-1 uppercase tracking-wider">
+                                    <Sparkles size={8} className="animate-pulse" />
+                                    {language === 'fr' ? "Agrandir" : language === 'ha' ? "Buɗe" : "Enlarge"}
+                                  </span>
+                                </div>
+                              </div>
                             </div>
                             <div className="md:col-span-7 space-y-1.5">
                               <div>
-                                <span className="text-[8px] uppercase tracking-wider text-gray-400 block">
-                                  {language === 'fr' ? "Formule talsamique" : language === 'ha' ? "Kalmar Talsam" : "Talismanic formula"}
+                                <span className="text-[8px] uppercase tracking-wider text-gray-400 block flex items-center justify-between">
+                                  <span>
+                                    {language === 'fr' ? "Formule talsamique" : language === 'ha' ? "Kalmar Talsam" : "Talismanic formula"}
+                                  </span>
+                                  <button
+                                    onClick={handleCopyTalsam}
+                                    className="text-purple-400 hover:text-purple-300 text-[9px] font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                                    title={language === 'fr' ? "Copier la formule" : "Copy formula"}
+                                  >
+                                    {copiedTalsam ? (
+                                      <span className="text-emerald-400 flex items-center gap-0.5">
+                                        <Check size={10} />
+                                        {language === 'fr' ? "Copié !" : "Copied!"}
+                                      </span>
+                                    ) : (
+                                      <span className="flex items-center gap-0.5">
+                                        <Copy size={10} />
+                                        {language === 'fr' ? "Copier" : "Copy"}
+                                      </span>
+                                    )}
+                                  </button>
                                 </span>
-                                <code className="text-xs font-serif font-bold text-purple-200">
-                                  {activeMoonMystery.talsamDetails.formula}
-                                </code>
+                                <div className="bg-black/30 border border-purple-500/10 rounded-lg p-2 mt-0.5 flex items-center justify-between gap-2">
+                                  <code className="text-xs font-serif font-bold text-purple-200 select-all">
+                                    {activeMoonMystery.talsamDetails.formula}
+                                  </code>
+                                </div>
                               </div>
                               <div>
                                 <span className="text-[8px] uppercase tracking-wider text-gray-400 block">
@@ -2866,7 +3077,84 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
             )}
           </AnimatePresence>
 
+            </>
+          )}
+
         </motion.div>
+
+        {/* Lightbox for Seal Expansion */}
+        <AnimatePresence>
+          {isSealExpanded && activeMoonMystery?.talsamDetails && (
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[10050] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-4 sm:p-6"
+            >
+              {/* Background elements */}
+              <div className="absolute inset-0 bg-radial-gradient from-purple-950/20 via-black to-black opacity-60 pointer-events-none" />
+              
+              <div className="relative w-full max-w-lg bg-[#0a0712] border border-purple-500/30 rounded-3xl p-5 sm:p-8 flex flex-col items-center shadow-2xl shadow-purple-500/10 z-10">
+                {/* Close Button */}
+                <button
+                  onClick={() => setIsSealExpanded(false)}
+                  className="absolute top-4 right-4 p-2 bg-purple-950/40 text-purple-300 hover:text-white rounded-full border border-purple-500/20 hover:bg-purple-900/60 transition-colors cursor-pointer"
+                  title={language === 'fr' ? "Fermer" : "Close"}
+                >
+                  <X size={18} />
+                </button>
+
+                <div className="text-center mb-6">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-purple-400 block mb-1">
+                    {language === 'fr' ? "SCEAU SACRÉ DE LA PHASE" : language === 'ha' ? "HATIMIN LOKACIN NA SIRRI" : "SACRED LUNAR SEAL"}
+                  </span>
+                  <h3 className="text-lg font-serif font-bold text-white">
+                    {activeMoonMystery.wirdDetails?.title || `Jour ${selectedHijriDay}`}
+                  </h3>
+                  <p className="text-[11px] text-amber-300 font-extrabold italic mt-1">
+                    "{activeMoonMystery.vibration}"
+                  </p>
+                </div>
+
+                {/* Big Sceau view */}
+                <div className="w-full flex justify-center py-4 bg-black/80 border border-purple-500/20 rounded-2xl p-4 sm:p-6 shadow-inner relative overflow-hidden select-all mb-6">
+                  <pre className="text-purple-300 font-mono text-base sm:text-lg md:text-xl leading-none tracking-normal text-center whitespace-pre select-all">
+                    {activeMoonMystery.talsamDetails.graphicSymbol}
+                  </pre>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
+                  <button
+                    onClick={downloadSealAsImage}
+                    className="flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-extrabold py-3 px-5 rounded-2xl shadow-md hover:shadow-lg transition-all active:scale-[0.98] cursor-pointer"
+                  >
+                    <Download size={18} />
+                    <span>{language === 'fr' ? "Télécharger Sceau" : language === 'ha' ? "Sauke Hatimi" : "Download Seal"}</span>
+                  </button>
+
+                  <button
+                    onClick={handleCopySeal}
+                    className="flex items-center justify-center gap-2 bg-purple-950/50 hover:bg-purple-900/40 border border-purple-500/30 hover:border-purple-500/60 text-purple-200 font-bold py-3 px-5 rounded-2xl transition-all active:scale-[0.98] cursor-pointer"
+                  >
+                    {copiedSeal ? (
+                      <>
+                        <Check size={18} className="text-emerald-400" />
+                        <span className="text-emerald-400">{language === 'fr' ? "Sceau Copié !" : "Seal Copied!"}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy size={18} />
+                        <span>{language === 'fr' ? "Copier le Sceau" : "Copy Seal"}</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
       </div>
     </AnimatePresence>
   );
