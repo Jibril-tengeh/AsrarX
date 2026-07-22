@@ -32,7 +32,7 @@ jobs:
         java-version: '21'
 
     - name: Add Android Platform
-      run: npx cap add android || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..."
+      run: npx cap add android || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..."
 
     - name: Sync Capacitor
       run: npx cap sync android
