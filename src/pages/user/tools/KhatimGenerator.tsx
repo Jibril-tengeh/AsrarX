@@ -279,7 +279,7 @@ export const KhatimGenerator: React.FC = () => {
 
   const item = {
     hidden: { opacity: 0, scale: 0.5, y: 20 },
-    show: { opacity: 1, scale: 1, y: 0, transition: { type: "spring", bounce: 0.5 } }
+    show: { opacity: 1, scale: 1, y: 0, transition: { type: "spring" as const, bounce: 0.5 } }
   };
 
   const gridColsClassMap: Record<number, string> = {

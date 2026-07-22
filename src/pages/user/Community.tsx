@@ -292,7 +292,7 @@ export const Community: React.FC = () => {
   // Firestore & local states
   const [posts, setPosts] = useState<Post[]>([]);
   const [membersList, setMembersList] = useState<Member[]>([]);
-  const [activeSidebarTab, setActiveSidebarTab] = useState<"info" | "members" | "media">("info");
+  const [activeSidebarTab, setActiveSidebarTab] = useState<"info" | "members" | "media" | "ai">("info");
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   // Message Sending Inputs
@@ -1486,7 +1486,7 @@ export const Community: React.FC = () => {
                         {/* Code Compiler Block snippet */}
                         {post.codeSnippet && (() => {
                           const isHTML = post.codeSnippet.language === "html";
-                          const currentView = activeCodeViewMap[post.id] || (post.codeSnippet.showPreviewDirectly ? "preview" : "code");
+                          const currentView = activeCodeViewMap[post.id] || ((post.codeSnippet as any).showPreviewDirectly ? "preview" : "code");
                           
                           return (
                             <div className="bg-[#1e1e1e] rounded-2xl border border-gray-800/80 mt-3 overflow-hidden text-left shadow-lg w-full min-w-0">

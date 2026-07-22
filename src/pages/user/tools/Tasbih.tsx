@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Activity, ArrowLeft, RefreshCw, Volume2, VolumeX, Settings, Target, Save, History as HistoryIcon, Plus, Trash2, Check, ChevronDown, ChevronRight, BarChart2, Fingerprint, Users, Globe, MapPin, X } from 'lucide-react';
+import { Activity, ArrowLeft, RefreshCw, Volume2, VolumeX, Settings, Target, Save, History as HistoryIcon, Plus, Trash2, Check, ChevronDown, ChevronRight, BarChart2, Fingerprint, Users, Globe, MapPin, X, Play, Music } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { motion, AnimatePresence } from 'motion/react';
@@ -16,6 +16,315 @@ interface Zikr {
   isCustom?: boolean;
 }
 
+let globalAudioCtx: AudioContext | null = null;
+
+function getAudioContext(): AudioContext {
+  if (!globalAudioCtx || globalAudioCtx.state === 'closed') {
+    const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+    globalAudioCtx = new AudioContextClass();
+  }
+  if (globalAudioCtx.state === 'suspended') {
+    globalAudioCtx.resume();
+  }
+  return globalAudioCtx;
+}
+
+export interface SoundOption {
+  id: string;
+  name: Record<string, string>;
+  desc: Record<string, string>;
+  icon: string;
+  play: (ctx: AudioContext) => void;
+}
+
+export const TASBIH_SOUNDS: SoundOption[] = [
+  {
+    id: 'bead_wood',
+    name: { fr: 'Perle de Bois', en: 'Wooden Bead', ha: 'Itawa Kwalliya' },
+    desc: { fr: 'Choc naturel de grains de misbaha traditionnel', en: 'Natural traditional misbaha bead contact', ha: 'Ainihin taba duwatsun carbi' },
+    icon: '🪵',
+    play: (ctx) => {
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(280, now);
+      osc.frequency.exponentialRampToValueAtTime(80, now + 0.035);
+      gain.gain.setValueAtTime(0.3, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.035);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.04);
+    }
+  },
+  {
+    id: 'water_drop',
+    name: { fr: "Goutte d'Eau", en: 'Water Drop', ha: 'Datar Ruwa' },
+    desc: { fr: 'Goutte d\'eau limpide et apaisante', en: 'Limpid soothing water droplet', ha: 'Sautin ɗagon ruwa' },
+    icon: '💧',
+    play: (ctx) => {
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(450, now);
+      osc.frequency.exponentialRampToValueAtTime(980, now + 0.045);
+      gain.gain.setValueAtTime(0.25, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.055);
+    }
+  },
+  {
+    id: 'soft_bell',
+    name: { fr: 'Clochette Douce', en: 'Soft Bell', ha: 'Ƙararrawa Mai Dadi' },
+    desc: { fr: 'Carillon zen et harmonieux', en: 'Harmonious zen chime', ha: 'Ainihin sautin amsa' },
+    icon: '🔔',
+    play: (ctx) => {
+      const now = ctx.currentTime;
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc1.type = 'sine';
+      osc2.type = 'sine';
+      osc1.frequency.setValueAtTime(880, now);
+      osc2.frequency.setValueAtTime(1760, now);
+      gain.gain.setValueAtTime(0.18, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+      osc1.connect(gain);
+      osc2.connect(gain);
+      gain.connect(ctx.destination);
+      osc1.start(now);
+      osc2.start(now);
+      osc1.stop(now + 0.36);
+      osc2.stop(now + 0.36);
+    }
+  },
+  {
+    id: 'crystal_ping',
+    name: { fr: 'Ping de Cristal', en: 'Crystal Ping', ha: 'Sautin Lu\'u-lu\'u' },
+    desc: { fr: 'Résonance cristalline haute fréquence', en: 'High frequency crystal resonance', ha: 'Sautin mai kyau' },
+    icon: '💎',
+    play: (ctx) => {
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(1520, now);
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.26);
+    }
+  },
+  {
+    id: 'bamboo_block',
+    name: { fr: 'Bambou Mystique', en: 'Mystic Bamboo', ha: 'Sautin Ciyawar Katako' },
+    desc: { fr: 'Choc creux sur bois de bambou', en: 'Hollow strike on bamboo wood', ha: 'Sautin katako' },
+    icon: '🎍',
+    play: (ctx) => {
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(540, now);
+      osc.frequency.exponentialRampToValueAtTime(210, now + 0.03);
+      gain.gain.setValueAtTime(0.18, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.035);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.04);
+    }
+  },
+  {
+    id: 'classic_click',
+    name: { fr: 'Clic Classique', en: 'Classic Click', ha: 'Kanna na Kayan Aiki' },
+    desc: { fr: 'Bruitage discret de bouton tactile', en: 'Discreet tactile button click', ha: 'Sautin tabawam maɓalli' },
+    icon: '📻',
+    play: (ctx) => {
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(1200, now);
+      gain.gain.setValueAtTime(0.15, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.015);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.02);
+    }
+  },
+  {
+    id: 'subtle_beep',
+    name: { fr: 'Bip Doux', en: 'Soft Beep', ha: 'Sautin Bip' },
+    desc: { fr: 'Impulsion électronique apaisante', en: 'Soothing electronic pulse', ha: 'Bip mai taushi' },
+    icon: '⚡',
+    play: (ctx) => {
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(1050, now);
+      gain.gain.setValueAtTime(0.12, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.035);
+    }
+  },
+  {
+    id: 'sacred_stone',
+    name: { fr: 'Pierre de Galet', en: 'Sacred Stone', ha: 'Sautin Dutse' },
+    desc: { fr: 'Contact minéral lourd et ancré', en: 'Heavy grounded mineral contact', ha: 'Dutse mai nauyi' },
+    icon: '🪨',
+    play: (ctx) => {
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(160, now);
+      osc.frequency.exponentialRampToValueAtTime(50, now + 0.05);
+      gain.gain.setValueAtTime(0.35, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.055);
+    }
+  },
+  {
+    id: 'bubble_pop',
+    name: { fr: "Bulle d'Air", en: 'Bubble Pop', ha: 'Sautin Tamfatsa' },
+    desc: { fr: 'Claquement fluide de bulle', en: 'Fluid bubble popping sound', ha: 'Pawan tamfatsa' },
+    icon: '🫧',
+    play: (ctx) => {
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(750, now);
+      osc.frequency.exponentialRampToValueAtTime(180, now + 0.025);
+      gain.gain.setValueAtTime(0.22, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.035);
+    }
+  },
+  {
+    id: 'mechanical_key',
+    name: { fr: 'Touche Clavier', en: 'Mechanical Key', ha: 'Taba Maɓallin Na\'ura' },
+    desc: { fr: 'Pression mécanique nette et précise', en: 'Crisp mechanical switch press', ha: 'Kanna mai ƙarfi' },
+    icon: '⌨️',
+    play: (ctx) => {
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(2200, now);
+      osc.frequency.exponentialRampToValueAtTime(300, now + 0.015);
+      gain.gain.setValueAtTime(0.14, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.02);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.025);
+    }
+  },
+  {
+    id: 'celestial_harp',
+    name: { fr: 'Harpe Céleste', en: 'Celestial Harp', ha: 'Sautin Kayan Waƙa' },
+    desc: { fr: 'Pincement de corde vibrante poétique', en: 'Poetic vibrating string pluck', ha: 'Sautin igiya' },
+    icon: '🪕',
+    play: (ctx) => {
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(659.25, now);
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.3);
+    }
+  },
+  {
+    id: 'singing_bowl',
+    name: { fr: 'Bol Tibétain 432Hz', en: 'Singing Bowl 432Hz', ha: 'Kwanon Waƙa 432Hz' },
+    desc: { fr: 'Onde sacrée profonde et méditative', en: 'Deep meditative sacred wave', ha: 'Sautin zikiri mai zurfi' },
+    icon: '🥣',
+    play: (ctx) => {
+      const now = ctx.currentTime;
+      const osc1 = ctx.createOscillator();
+      const osc2 = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc1.type = 'sine';
+      osc2.type = 'sine';
+      osc1.frequency.setValueAtTime(432, now);
+      osc2.frequency.setValueAtTime(864, now);
+      gain.gain.setValueAtTime(0.16, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+      osc1.connect(gain);
+      osc2.connect(gain);
+      gain.connect(ctx.destination);
+      osc1.start(now);
+      osc2.start(now);
+      osc1.stop(now + 0.52);
+      osc2.stop(now + 0.52);
+    }
+  },
+  {
+    id: 'cosmic_pulse',
+    name: { fr: 'Impulsion Cosmique', en: 'Cosmic Pulse', ha: 'Impulsion Cosmique' },
+    desc: { fr: 'Sub-bass douce pour concentration', en: 'Soft sub-bass for deep focus', ha: 'Sautin zurfi don maida hankali' },
+    icon: '🌌',
+    play: (ctx) => {
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(180, now);
+      osc.frequency.exponentialRampToValueAtTime(60, now + 0.12);
+      gain.gain.setValueAtTime(0.28, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.16);
+    }
+  },
+  {
+    id: 'marimba_tap',
+    name: { fr: 'Marimba Chaud', en: 'Warm Marimba', ha: 'Marimba Mai Dadi' },
+    desc: { fr: 'Note en bois chaleureuse', en: 'Warm wooden note tone', ha: 'Sauti mai dadi na katako' },
+    icon: '🪵',
+    play: (ctx) => {
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(392, now);
+      gain.gain.setValueAtTime(0.22, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.16);
+    }
+  }
+];
+
 const localTranslations: Record<string, Record<string, string>> = {
   fr: {
     modalTitle: "Cercles de Zikr Collectifs",
@@ -26,7 +335,16 @@ const localTranslations: Record<string, Record<string, string>> = {
     statusCompleted: "Complet",
     statusInProgress: "En cours",
     joinBtn: "Rejoindre",
-    allCircles: "Voir tous les cercles"
+    allCircles: "Voir tous les cercles",
+    soundLibraryTitle: "Sons du Tasbih",
+    soundLibrarySubtitle: "Choisissez parmi 14 sonorités synthétisées de haute précision",
+    testSound: "Tester",
+    activeSound: "Sélectionné",
+    soundTriggerLabel: "Mode d'émission du son",
+    soundTriggerTarget: "À l'objectif fixé (ex: 100ème grain)",
+    soundTriggerTargetDesc: "Le son retentit uniquement lorsque l'objectif (ex: 33, 100) est atteint",
+    soundTriggerEvery: "À chaque grain (Clic continu)",
+    soundTriggerEveryDesc: "Un son retentit à chaque pression sur le bouton"
   },
   en: {
     modalTitle: "Collective Zikr Circles",
@@ -37,7 +355,16 @@ const localTranslations: Record<string, Record<string, string>> = {
     statusCompleted: "Completed",
     statusInProgress: "In progress",
     joinBtn: "Join",
-    allCircles: "See all circles"
+    allCircles: "See all circles",
+    soundLibraryTitle: "Tasbih Sounds",
+    soundLibrarySubtitle: "Choose from 14 high-precision synthesized sound styles",
+    testSound: "Test",
+    activeSound: "Selected",
+    soundTriggerLabel: "Sound Trigger Mode",
+    soundTriggerTarget: "At fixed target (e.g. 100th bead)",
+    soundTriggerTargetDesc: "Sound plays only when target goal (e.g. 33, 100) is reached",
+    soundTriggerEvery: "On every bead tap",
+    soundTriggerEveryDesc: "A sound plays with every tap press"
   },
   ha: {
     modalTitle: "Halaƙobin Zikiri na Al'umma",
@@ -48,7 +375,16 @@ const localTranslations: Record<string, Record<string, string>> = {
     statusCompleted: "Kammalalle",
     statusInProgress: "Ana nan kai",
     joinBtn: "Shiga",
-    allCircles: "Duba dukkan tsaruka"
+    allCircles: "Duba dukkan tsaruka",
+    soundLibraryTitle: "Saututtukan Tasbihi",
+    soundLibrarySubtitle: "Zaiɓi daga cikin saututtuka 14 na musamman don zaman ku",
+    testSound: "Gwada",
+    activeSound: "Zaɓaɓɓe",
+    soundTriggerLabel: "Lokacin Fitowar Sauti",
+    soundTriggerTarget: "A cika adadin (misali: cika 100)",
+    soundTriggerTargetDesc: "Sautin zai fito kawai idan an cika adadin da aka sa (33, 100)",
+    soundTriggerEvery: "A kowane taɓawa",
+    soundTriggerEveryDesc: "Sautin zai fito duk lokacin da aka danna"
   }
 };
 
@@ -107,6 +443,8 @@ export const Tasbih: React.FC = () => {
   }, [location.search, lang]);
   
   const [soundEnabled, setSoundEnabled] = useState(false);
+  const [soundStyle, setSoundStyle] = useState<string>('bead_wood');
+  const [soundTriggerMode, setSoundTriggerMode] = useState<'target' | 'every'>('target');
   const [vibrationEnabled, setVibrationEnabled] = useState(true);
   
   const [activeTab, setActiveTab] = useState<'main' | 'settings' | 'history' | 'stats'>('main');
@@ -195,9 +533,11 @@ export const Tasbih: React.FC = () => {
       if (savedSettings) {
         const parsedSettings = JSON.parse(savedSettings);
         if (parsedSettings && typeof parsedSettings === 'object') {
-          const { sound, vibe, lastActiveId } = parsedSettings;
+          const { sound, vibe, soundStyle: savedStyle, soundTriggerMode: savedTriggerMode, lastActiveId } = parsedSettings;
           setSoundEnabled(!!sound);
           setVibrationEnabled(vibe !== false);
+          if (savedStyle) setSoundStyle(savedStyle);
+          if (savedTriggerMode) setSoundTriggerMode(savedTriggerMode);
           if (lastActiveId) {
             let customArr = [];
             if (savedCustom) {
@@ -219,8 +559,16 @@ export const Tasbih: React.FC = () => {
     }
   }, []);
 
-  const saveSettings = (sound: boolean, vibe: boolean, activeId: string) => {
-    localStorage.setItem('tasbih_settings', JSON.stringify({ sound, vibe, lastActiveId: activeId }));
+  const saveSettings = (sound: boolean, vibe: boolean, activeId: string, style?: string, triggerMode?: 'target' | 'every') => {
+    const currentStyle = style || soundStyle;
+    const currentTriggerMode = triggerMode || soundTriggerMode;
+    localStorage.setItem('tasbih_settings', JSON.stringify({
+      sound,
+      vibe,
+      soundStyle: currentStyle,
+      soundTriggerMode: currentTriggerMode,
+      lastActiveId: activeId
+    }));
   };
 
   const triggerVibration = async (type: 'tap' | 'success' | 'hundred') => {
@@ -243,12 +591,35 @@ export const Tasbih: React.FC = () => {
     }
   };
 
-  const playClick = () => {
-    if (soundEnabled) {
-      const audio = new Audio('data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU');
-      audio.volume = 0.1;
-      audio.play().catch(() => {});
+  const playClick = (customStyle?: string, forcePlay?: boolean) => {
+    if (soundEnabled || forcePlay) {
+      try {
+        const ctx = getAudioContext();
+        const styleToPlay = customStyle || soundStyle;
+        const soundObj = TASBIH_SOUNDS.find(s => s.id === styleToPlay) || TASBIH_SOUNDS[0];
+        soundObj.play(ctx);
+      } catch (e) {
+        const audio = new Audio('data:audio/wav;base64,UklGRl9vT19XQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YU');
+        audio.volume = 0.1;
+        audio.play().catch(() => {});
+      }
     }
+  };
+
+  const handleTestSound = (e: React.MouseEvent, soundId: string) => {
+    e.stopPropagation();
+    playClick(soundId, true);
+  };
+
+  const handleSelectSoundStyle = (soundId: string) => {
+    setSoundStyle(soundId);
+    if (!soundEnabled) {
+      setSoundEnabled(true);
+      saveSettings(true, vibrationEnabled, activeZikr.id, soundId);
+    } else {
+      saveSettings(soundEnabled, vibrationEnabled, activeZikr.id, soundId);
+    }
+    playClick(soundId, true);
   };
 
   const saveHistorySession = () => {
@@ -287,7 +658,15 @@ export const Tasbih: React.FC = () => {
     } else {
       triggerVibration('tap');
     }
-    playClick();
+
+    if (soundTriggerMode === 'target') {
+      const isTargetReached = (target > 0 && newCount === target) || (target > 0 && newCount % target === 0) || (newCount > 0 && newCount % 100 === 0);
+      if (isTargetReached) {
+        playClick();
+      }
+    } else {
+      playClick();
+    }
   };
 
   const handleReset = () => {
@@ -424,19 +803,33 @@ export const Tasbih: React.FC = () => {
           className="flex-1 flex flex-col items-center justify-center relative pb-10"
         >
           {/* Active Zikr Info */}
-          <button 
-            onClick={() => setActiveTab('settings')}
-            className="mb-8 text-center group px-6 py-4 rounded-3xl bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 w-full max-w-[320px] transition-transform hover:scale-[1.02] active:scale-[0.98]"
-          >
-            {activeZikr.arabic && (
-              <h2 className="text-2xl sm:text-3xl font-arabic text-emerald-800 dark:text-emerald-400 mb-3" dir="rtl">{activeZikr.arabic}</h2>
+          <div className="flex flex-col items-center w-full max-w-[320px] mb-8">
+            {soundEnabled && (
+              <button
+                onClick={() => setActiveTab('settings')}
+                className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 rounded-full text-xs font-semibold hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors border border-emerald-200/60 dark:border-emerald-800/60 mb-2.5 shadow-2xs"
+              >
+                <span>{TASBIH_SOUNDS.find(s => s.id === soundStyle)?.icon || '🎵'}</span>
+                <span>{TASBIH_SOUNDS.find(s => s.id === soundStyle)?.name[lang] || TASBIH_SOUNDS.find(s => s.id === soundStyle)?.name['fr']}</span>
+                <span className="text-[10px] opacity-75 font-normal ml-0.5">
+                  ({soundTriggerMode === 'target' ? (lang === 'fr' ? 'À l\'objectif' : lang === 'ha' ? 'Adadi' : 'Target') : (lang === 'fr' ? 'Chaque grain' : lang === 'ha' ? 'Kowace' : 'Every')})
+                </span>
+              </button>
             )}
-            <div className="flex items-center justify-center gap-2">
-              <p className="text-gray-700 dark:text-gray-300 font-bold">{activeZikr.text}</p>
-              <ChevronDown size={16} className="text-gray-400 group-hover:text-emerald-500 transition-colors" />
-            </div>
-            {target > 0 && <p className="text-xs text-gray-500 mt-1 uppercase tracking-widest font-medium">Objectif: {target}</p>}
-          </button>
+            <button 
+              onClick={() => setActiveTab('settings')}
+              className="text-center group px-6 py-4 rounded-3xl bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 w-full transition-transform hover:scale-[1.02] active:scale-[0.98]"
+            >
+              {activeZikr.arabic && (
+                <h2 className="text-2xl sm:text-3xl font-arabic text-emerald-800 dark:text-emerald-400 mb-3" dir="rtl">{activeZikr.arabic}</h2>
+              )}
+              <div className="flex items-center justify-center gap-2">
+                <p className="text-gray-700 dark:text-gray-300 font-bold">{activeZikr.text}</p>
+                <ChevronDown size={16} className="text-gray-400 group-hover:text-emerald-500 transition-colors" />
+              </div>
+              {target > 0 && <p className="text-xs text-gray-500 mt-1 uppercase tracking-widest font-medium">Objectif: {target}</p>}
+            </button>
+          </div>
 
           {/* Progress Ring and Counter */}
           <div className="relative w-64 h-64 sm:w-[320px] sm:h-[320px] flex items-center justify-center mb-8">
@@ -571,6 +964,135 @@ export const Tasbih: React.FC = () => {
               <Activity size={24} />
               <span className="text-xs font-medium">Vibration</span>
             </button>
+          </div>
+
+          {/* Sound Trigger Mode Selector */}
+          <div className="bg-white dark:bg-gray-800 rounded-3xl p-5 border border-gray-100 dark:border-gray-700 shadow-sm space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="font-bold text-gray-900 dark:text-white text-sm sm:text-base">
+                {tLocal('soundTriggerLabel')}
+              </h3>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setSoundTriggerMode('target');
+                  saveSettings(soundEnabled, vibrationEnabled, activeZikr.id, soundStyle, 'target');
+                  playClick(soundStyle, true);
+                }}
+                className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
+                  soundTriggerMode === 'target'
+                    ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-500 shadow-xs'
+                    : 'bg-gray-50/60 dark:bg-gray-900/40 border-gray-200 dark:border-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className={`font-bold text-xs sm:text-sm ${soundTriggerMode === 'target' ? 'text-emerald-700 dark:text-emerald-400' : 'text-gray-900 dark:text-white'}`}>
+                    🎯 {tLocal('soundTriggerTarget')}
+                  </span>
+                  {soundTriggerMode === 'target' && <Check size={16} className="text-emerald-500 shrink-0" />}
+                </div>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-snug">
+                  {tLocal('soundTriggerTargetDesc')}
+                </p>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setSoundTriggerMode('every');
+                  saveSettings(soundEnabled, vibrationEnabled, activeZikr.id, soundStyle, 'every');
+                  playClick(soundStyle, true);
+                }}
+                className={`p-3.5 rounded-2xl border text-left transition-all cursor-pointer ${
+                  soundTriggerMode === 'every'
+                    ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-500 shadow-xs'
+                    : 'bg-gray-50/60 dark:bg-gray-900/40 border-gray-200 dark:border-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <span className={`font-bold text-xs sm:text-sm ${soundTriggerMode === 'every' ? 'text-emerald-700 dark:text-emerald-400' : 'text-gray-900 dark:text-white'}`}>
+                    🔊 {tLocal('soundTriggerEvery')}
+                  </span>
+                  {soundTriggerMode === 'every' && <Check size={16} className="text-emerald-500 shrink-0" />}
+                </div>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-snug">
+                  {tLocal('soundTriggerEveryDesc')}
+                </p>
+              </button>
+            </div>
+          </div>
+
+          {/* Sound Library Selector */}
+          <div className="bg-white dark:bg-gray-800 rounded-3xl p-5 border border-gray-100 dark:border-gray-700 shadow-sm space-y-4">
+            <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-700/80 pb-3">
+              <div className="flex items-center gap-2">
+                <Music className="text-emerald-500 shrink-0" size={20} />
+                <div>
+                  <h3 className="font-bold text-gray-900 dark:text-white text-base">
+                    {tLocal('soundLibraryTitle')}
+                  </h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {tLocal('soundLibrarySubtitle')}
+                  </p>
+                </div>
+              </div>
+              <span className="text-[10px] font-bold px-2.5 py-1 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-full shrink-0">
+                14 {lang === 'fr' ? 'sons' : lang === 'ha' ? 'sautuka' : 'sounds'}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-[360px] overflow-y-auto pr-1">
+              {TASBIH_SOUNDS.map((snd) => {
+                const isSelected = soundStyle === snd.id;
+                const soundName = snd.name[lang] || snd.name['fr'];
+                const soundDesc = snd.desc[lang] || snd.desc['fr'];
+
+                return (
+                  <div
+                    key={snd.id}
+                    onClick={() => handleSelectSoundStyle(snd.id)}
+                    className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                      isSelected
+                        ? 'bg-emerald-50/80 dark:bg-emerald-900/20 border-emerald-500 shadow-sm'
+                        : 'bg-gray-50/60 dark:bg-gray-900/40 border-gray-100 dark:border-gray-700/60 hover:bg-gray-100/80 dark:hover:bg-gray-700/50'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="text-2xl shrink-0 p-1 bg-white dark:bg-gray-800 rounded-xl shadow-2xs border border-gray-100 dark:border-gray-700">
+                        {snd.icon}
+                      </span>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <h4 className={`font-bold text-xs sm:text-sm truncate ${isSelected ? 'text-emerald-700 dark:text-emerald-400' : 'text-gray-900 dark:text-white'}`}>
+                            {soundName}
+                          </h4>
+                          {isSelected && (
+                            <span className="shrink-0 text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider bg-emerald-100 dark:bg-emerald-950 px-1.5 py-0.5 rounded-md">
+                              {tLocal('activeSound')}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate mt-0.5">
+                          {soundDesc}
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={(e) => handleTestSound(e, snd.id)}
+                      className="p-2 rounded-xl bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/40 border border-gray-200 dark:border-gray-700 shrink-0 active:scale-90 transition-all shadow-2xs cursor-pointer"
+                      title={tLocal('testSound')}
+                    >
+                      <Play size={14} className="fill-current" />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
           </div>
 
           <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden">

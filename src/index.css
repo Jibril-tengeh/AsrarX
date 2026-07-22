@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400;1,700&family=Cairo:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Amiri+Quran&family=Amiri:ital,wght@0,400;0,700;1,400;1,700&family=Cairo:wght@400;600;700&family=Scheherazade+New:wght@400;700&display=swap');
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 
@@ -16,10 +16,10 @@
 
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-arabic: "Amiri", "Cairo", "Uthmani", "Amiri Quran", "Traditional Arabic", serif;
+  --font-arabic: "Amiri Quran", "Amiri", "Cairo", "Uthmani", "Traditional Arabic", serif;
   --font-indopak: "Lateef", serif;
   --font-naskh: "Scheherazade New", serif;
-  --font-uthmani: "Uthmani", "Amiri Quran", serif;
+  --font-uthmani: "Amiri Quran", "Uthmani", serif;
   
   --text-xs: 0.55rem;
   --text-sm: 0.65rem;
@@ -169,11 +169,11 @@ pre, code, table, .overflow-x-auto-mobile {
   -webkit-overflow-scrolling: touch;
 }
 
-/* Force standard Arabic cursive ligatures to bind perfectly and prevent letter separation */
-.font-arabic {
-  font-family: "Amiri", "Cairo", "Uthmani", "Traditional Arabic", serif !important;
+/* Force standard Quranic Arabic cursive ligatures to bind perfectly and prevent letter separation */
+.font-arabic, .font-quran, .font-uthmani {
+  font-family: "Amiri Quran", "Uthmani", "Scheherazade New", "Amiri", "Traditional Arabic", serif !important;
   letter-spacing: 0px !important;
-  font-feature-settings: "rlig" on, "calt" on, "liga" on, "clig" on !important;
+  font-feature-settings: "rlig" on, "calt" on, "liga" on, "clig" on, "mkmk" on !important;
   font-variant-ligatures: common-ligatures !important;
   text-rendering: optimizeLegibility !important;
 }

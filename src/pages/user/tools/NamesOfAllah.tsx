@@ -771,9 +771,9 @@ export const NamesOfAllah: React.FC = () => {
         {viewState !== 'list' && activeName && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <motion.div 
-              initial={{ bgOpacity: 0 }} 
-              animate={{ bgOpacity: 1 }} 
-              exit={{ bgOpacity: 0 }} 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }} 
               className="absolute inset-0 bg-black/60 backdrop-blur-sm"
               onClick={closeModal}
             />

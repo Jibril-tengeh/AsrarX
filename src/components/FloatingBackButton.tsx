@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft } from 'lucide-react';
@@ -8,6 +8,7 @@ export const FloatingBackButton: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useLanguage();
+  const [hasActiveOverlay, setHasActiveOverlay] = useState(false);
 
   const isMainPage = location.pathname === '/' || 
                      location.pathname === '/user/dashboard' || 
@@ -17,9 +18,22 @@ export const FloatingBackButton: React.FC = () => {
                      location.pathname === '/saved' || 
                      location.pathname === '/profile';
 
+  useEffect(() => {
+    const checkOverlay = () => {
+      const activeOverlay = document.querySelector('[data-modal-overlay="true"]');
+      setHasActiveOverlay(!!activeOverlay);
+    };
+
+    checkOverlay();
+    const observer = new MutationObserver(checkOverlay);
+    observer.observe(document.body, { childList: true, subtree: true, attributes: true });
+
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <AnimatePresence>
-      {!isMainPage && (
+      {!isMainPage && !hasActiveOverlay && (
         <motion.button
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}

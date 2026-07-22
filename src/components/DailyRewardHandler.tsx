@@ -24,8 +24,8 @@ export const DailyRewardHandler: React.FC = () => {
         const lastReward = user.lastDailyRewardDate;
         let lastRewardTime = 0;
         if (lastReward) {
-          if (typeof lastReward.toDate === 'function') {
-            lastRewardTime = lastReward.toDate().getTime();
+          if (typeof (lastReward as any)?.toDate === 'function') {
+            lastRewardTime = (lastReward as any).toDate().getTime();
           } else if (typeof lastReward === 'number') {
             lastRewardTime = lastReward;
           } else {

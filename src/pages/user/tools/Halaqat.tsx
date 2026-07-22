@@ -507,7 +507,7 @@ export const Halaqat = () => {
     } else {
       const updated = circles.map(c => {
         if (c.id === circle.id) {
-          return { ...c, status: nextStatus };
+          return { ...c, status: nextStatus as "active" | "draft" };
         }
         return c;
       });

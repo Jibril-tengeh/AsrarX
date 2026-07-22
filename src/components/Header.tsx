@@ -688,7 +688,7 @@ export const Header: React.FC = () => {
                   {language === "en" ? "Connection Established" : language === "ha" ? "An haɗa lami lafiya" : "Connexion établie"}
                 </p>
                 <p className="text-xs font-bold text-white mt-0.5">
-                  {language === "en" ? `Welcome back, ${user?.displayName || "Member"}!` : language === "ha" ? `Barka da dawowa, ${user?.displayName || "Mamba"}!` : `Bon retour, ${user?.displayName || "Membre"} !`}
+                  {language === "en" ? `Welcome back, ${(user as any)?.displayName || user?.name || "Member"}!` : language === "ha" ? `Barka da dawowa, ${(user as any)?.displayName || user?.name || "Mamba"}!` : `Bon retour, ${(user as any)?.displayName || user?.name || "Membre"} !`}
                 </p>
               </div>
             </div>

@@ -17,6 +17,7 @@ import { Filesystem, Directory } from '@capacitor/filesystem';
 import { AuthModal } from '../../../components/AuthModal';
 import { getApiUrl } from '../../../lib/api';
 import { QURAN_RECITERS } from '../../../data/reciters';
+import { LunarDailyInspirationCard } from '../../../components/LunarDailyInspirationCard';
 
 const MUSHAF_OPTIONS = [
   { id: 'Amiri Quran', name: 'Uthmani (Amiri)', desc: 'Standard Uthmani script', preview: 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ\n\nأَرَءَيْتَ ٱلَّذِى يُكَذِّبُ بِٱلدِّينِ ﴿١﴾', style: {fontFamily: '"Amiri Quran", "Amiri", serif'} },
@@ -116,7 +117,8 @@ const QURAN_THEMES = [
   { id: 'Guidance', labelFr: 'Guidance', labelEn: 'Guidance', emoji: '🧭', color: 'from-emerald-500 to-teal-600' },
   { id: 'Patience', labelFr: 'Patience', labelEn: 'Patience', emoji: '⏳', color: 'from-amber-500 to-orange-600' },
   { id: 'Forgiveness', labelFr: 'Pardon', labelEn: 'Forgiveness', emoji: '🕊️', color: 'from-blue-500 to-indigo-600' },
-  { id: 'Gratitude', labelFr: 'Gratitude', labelEn: 'Gratitude', emoji: '🤲', color: 'from-purple-500 to-violet-600' }
+  { id: 'Gratitude', labelFr: 'Gratitude', labelEn: 'Gratitude', emoji: '🤲', color: 'from-purple-500 to-violet-600' },
+  { id: 'LunarPhases', labelFr: 'Phases Lunaires & Récitations Contemplatives', labelEn: 'Lunar Phases & Contemplative Recitations', emoji: '🌙', color: 'from-indigo-600 via-purple-600 to-amber-500' }
 ];
 
 const QURAN_THEME_METADATA = [
@@ -324,6 +326,134 @@ const QURAN_THEME_METADATA = [
       englishName: "Al-Baqarah",
       englishNameTranslation: "La Vache"
     }
+  },
+
+  // Phases Lunaires & Récitations Spirituelles Contemplatives
+  {
+    theme: "LunarPhases",
+    number: 4908,
+    numberInSurah: 7,
+    text: "وَالسَّمَاءَ رَفَعَهَا وَوَضَعَ الْمِيزَانَ ۝ أَلَّا تَطْغَوْا فِي الْمِيزَانِ ۝ وَأَقِيمُوا الْوَزْنَ بِالْقِسْطِ وَلَا تُخْسِرُوا الْمِيزَانَ",
+    frenchText: "RÉCITATION SPIRITUELLE CONTEMPLATIVE — Sourate Ar-Rahman (55:7-9) : Et quant au ciel, Il l'a élevé bien haut. Et Il a établi la balance, afin que vous ne transgressiez pas dans la pesée. Et établissez le poids avec équité et ne faussez pas la pesée.",
+    englishText: "CONTEMPLATIVE SPIRITUAL RECITATION — Surah Ar-Rahman (55:7-9): And the heaven He raised and imposed the balance, that you not transgress within the balance. And establish weight in justice and do not make deficient the balance.",
+    surah: {
+      number: 55,
+      name: "الرحمن",
+      englishName: "Ar-Rahman",
+      englishNameTranslation: "Le Tout Miséricordieux"
+    }
+  },
+  {
+    theme: "LunarPhases",
+    number: 4906,
+    numberInSurah: 5,
+    text: "الشَّمْسُ وَالْقَمَرُ بِحُسْبَانٍ",
+    frenchText: "Sourate Ar-Rahman (55:5) [Lune Gibbeuse Décroissante] : Le soleil et la lune évoluent selon un calcul minutieux.",
+    englishText: "Surah Ar-Rahman (55:5) [Waning Gibbous]: The sun and the moon move by precise calculation.",
+    surah: {
+      number: 55,
+      name: "الرحمن",
+      englishName: "Ar-Rahman",
+      englishNameTranslation: "Le Tout Miséricordieux"
+    }
+  },
+  {
+    theme: "LunarPhases",
+    number: 895,
+    numberInSurah: 96,
+    text: "فَالِقُ الْإِصْبَاحِ وَجَعَلَ اللَّيْلَ سَكَنًا وَالشَّمْسَ وَالْقَمَرَ حُسْبَانًا ۚ ذَٰلِكَ تَقْدِيرُ الْعَزِيزِ الْعَلِيمِ",
+    frenchText: "Sourate Al-An'am (6:96) [Nouvelle Lune - Al-Muhaq] : Il fend l'aube, fait de la nuit un repos, et du soleil et de la lune une mesure du temps. Tel est l'ordre établi par le Puissant, l'Omniscient.",
+    englishText: "Surah Al-An'am (6:96) [New Moon]: He causes the dawn to break and made the night for rest and the sun and moon for calculation. That is the determination of the Exalted in Might, the Knowing.",
+    surah: {
+      number: 6,
+      name: "الأنعام",
+      englishName: "Al-An'am",
+      englishNameTranslation: "Les Bestiaux"
+    }
+  },
+  {
+    theme: "LunarPhases",
+    number: 196,
+    numberInSurah: 189,
+    text: "يَسْأَلُونَكَ عَنِ الْأَهِلَّةِ ۖ قُلْ هِيَ مَوَاقِيتُ لِلنَّاسِ وَالْحَجِّ",
+    frenchText: "Sourate Al-Baqarah (2:189) [Premier Croissant - Al-Hilal] : Ils t'interrogent sur les nouvelles lunes. Dis : 'Elles servent aux hommes à mesurer le temps et pour le Pèlerinage.'",
+    englishText: "Surah Al-Baqarah (2:189) [Crescent Moon]: They ask you about the new moons. Say: 'They are measurements of time for the people and for Hajj.'",
+    surah: {
+      number: 2,
+      name: "البقرة",
+      englishName: "Al-Baqarah",
+      englishNameTranslation: "La Vache"
+    }
+  },
+  {
+    theme: "LunarPhases",
+    number: 3744,
+    numberInSurah: 39,
+    text: "وَالْقَمَرَ قَدَّرْنَاهُ مَنَازِلَ حَتَّىٰ عَادَ كَالْعُرْجُونِ الْقَدِيمِ",
+    frenchText: "Sourate Yasin (36:39) [Premier Quartier - Al-Tarbii' Al-Awwal] : Et la lune, Nous lui avons déterminé des phases jusqu'à ce qu'elle devienne comme la palme desséchée.",
+    englishText: "Surah Yasin (36:39) [First Quarter]: And the moon - We have determined for it phases, until it returns like the old date stalk.",
+    surah: {
+      number: 36,
+      name: "يس",
+      englishName: "Ya-Sin",
+      englishNameTranslation: "Ya-Sin"
+    }
+  },
+  {
+    theme: "LunarPhases",
+    number: 4851,
+    numberInSurah: 1,
+    text: "اقْتَرَبَتِ السَّاعَةُ وَانشَقَّ الْقَمَرُ",
+    frenchText: "Sourate Al-Qamar (54:1) [Lune Gibbeuse Croissante - Al-Ahdab] : L'Heure approche et la lune s'est fendue.",
+    englishText: "Surah Al-Qamar (54:1) [Waxing Gibbous]: The Hour has come near, and the moon has split.",
+    surah: {
+      number: 54,
+      name: "القمر",
+      englishName: "Al-Qamar",
+      englishNameTranslation: "La Lune"
+    }
+  },
+  {
+    theme: "LunarPhases",
+    number: 5909,
+    numberInSurah: 18,
+    text: "وَالْقَمَرِ إِذَا اتَّسَقَ ۝ لَتَرْكَبُنَّ طَبَقًا عَن طَبَقٍ",
+    frenchText: "Sourate Al-Inshiqaq (84:18-19) [Pleine Lune - Al-Badr] : Et par la lune quand elle devient pleine ! Vous passerez certes par des états successifs.",
+    englishText: "Surah Al-Inshiqaq (84:18-19) [Full Moon]: And by the moon when it becomes full, you will surely embark upon state after state.",
+    surah: {
+      number: 84,
+      name: "الانشقاق",
+      englishName: "Al-Inshiqaq",
+      englishNameTranslation: "La Déchirure"
+    }
+  },
+  {
+    theme: "LunarPhases",
+    number: 2950,
+    numberInSurah: 61,
+    text: "تَبَارَكَ الَّذِي جَعَلَ فِي السَّمَاءِ بُرُوجًا وَجَعَلَ فِيهَا سِرَاجًا وَقَمَرًا مُّنِيرًا",
+    frenchText: "Sourate Al-Furqan (25:61) [Dernier Quartier - Al-Tarbii' Al-Thani] : Béni soit Celui qui a placé dans le ciel des constellations et y a placé un flambeau et une lune éclairante !",
+    englishText: "Surah Al-Furqan (25:61) [Third Quarter]: Blessed is He who has placed in the sky constellations and placed therein a lamp and a luminous moon!",
+    surah: {
+      number: 25,
+      name: "الفرقان",
+      englishName: "Al-Furqan",
+      englishNameTranslation: "Le Discernement"
+    }
+  },
+  {
+    theme: "LunarPhases",
+    number: 5435,
+    numberInSurah: 16,
+    text: "وَجَعَلَ الْقَمَرَ فِيهِنَّ نُورًا وَجَعَلَ الشَّمْسَ سِرَاجًا",
+    frenchText: "Sourate Nuh (71:16) [Dernier Croissant - Al-Mahaq] : Et y a fait de la lune une lumière et du soleil une lampe.",
+    englishText: "Surah Nuh (71:16) [Waning Crescent]: And made the moon therein a light and made the sun a burning lamp.",
+    surah: {
+      number: 71,
+      name: "نوح",
+      englishName: "Nuh",
+      englishNameTranslation: "Noé"
+    }
   }
 ];
 
@@ -442,9 +572,20 @@ interface Ayah {
   page: number;
   ruku: number;
   hizbQuarter: number;
-  sajda: boolean | object;
+  sajda?: boolean | object;
   audio?: string;
   audioSecondary?: string[];
+  surah?: {
+    number: number;
+    name: string;
+    englishName: string;
+    englishNameTranslation?: string;
+    revelationType?: string;
+    numberOfAyahs?: number;
+  };
+  ar?: string;
+  frenchText?: string;
+  englishText?: string;
 }
 
 interface AyahBookmark {
@@ -613,6 +754,7 @@ export const QuranFull: React.FC = () => {
     userId: string;
     name: string;
     tracks: any[];
+    ayahs?: any[];
   }
 
   const [roqyaPlaylists, setRoqyaPlaylists] = useState<RuqyahPlaylist[]>(() => {
@@ -2564,6 +2706,8 @@ export const QuranFull: React.FC = () => {
               {Math.floor((readSurahs.length / 114) * 100)}% du Coran lu
             </p>
           </div>
+
+          <LunarDailyInspirationCard language={language} className="mb-6" />
 
           <div className="flex overflow-x-auto hide-scrollbar bg-gray-100 dark:bg-gray-800 rounded-xl p-1 mb-6">
             {(['surah', 'page', 'juz', 'hizb', 'rub'] as const).map(mode => (
@@ -4565,7 +4709,7 @@ export const QuranFull: React.FC = () => {
                                   </div>
                                 )}
                                 <span 
-                                  ref={(el) => ayahRefs.current[ayah.number] = el}
+                                  ref={(el) => { ayahRefs.current[ayah.number] = el as any; }}
                                   onClick={(e) => {
                                     if (selectionMode) {
                                       e.preventDefault();
@@ -4656,7 +4800,7 @@ export const QuranFull: React.FC = () => {
                             </div>
                           )}
                           <div 
-                            ref={(el) => ayahRefs.current[ayah.number] = el}
+                            ref={(el) => { ayahRefs.current[ayah.number] = el; }}
                             data-ayah-number={ayah.number}
                             className={`bg-white dark:bg-gray-800 border ${playingAyah === ayah.number ? 'border-emerald-500 dark:border-emerald-500 ring-2 ring-emerald-500/20 shadow-md' : 'border-gray-100 dark:border-gray-700'} rounded-2xl p-5 sm:p-8 shadow-sm flex flex-col space-y-6 transition-all duration-300`}
                           >

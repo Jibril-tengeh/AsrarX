@@ -17,8 +17,8 @@ export const AdminStoreManager = ({
   
   // Product Form State
   const [formData, setFormData] = useState({
-    name: { fr: '', en: '', ar: '' },
-    description: { fr: '', en: '', ar: '' },
+    name: { fr: '', en: '', ar: '', ha: '' },
+    description: { fr: '', en: '', ar: '', ha: '' },
     category: 'Livres',
     price: '',
     pointsCost: '',
@@ -85,8 +85,8 @@ export const AdminStoreManager = ({
   const resetForm = () => {
     setEditingId(null);
     setFormData({
-      name: { fr: '', en: '', ar: '' },
-      description: { fr: '', en: '', ar: '' },
+      name: { fr: '', en: '', ar: '', ha: '' },
+      description: { fr: '', en: '', ar: '', ha: '' },
       category: 'Livres',
       price: '',
       pointsCost: '',

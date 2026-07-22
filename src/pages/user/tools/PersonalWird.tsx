@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
-import { User, Shield, Key, Search, ArrowLeft, RefreshCw, Sparkles, BookOpen, Folder as FolderIcon, Trash2, Save } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { User, Shield, Key, Search, ArrowLeft, RefreshCw, Sparkles, BookOpen, Folder as FolderIcon, Trash2, Save, Heart, Clock, Sun, Moon, Calendar, CheckCircle2, Copy, Check, Eye, Compass, Plus, ShieldCheck } from 'lucide-react';
+import { db } from '../../../lib/firebase';
+import { doc, onSnapshot } from 'firebase/firestore';
 
 interface SavedWird {
   id: string;
@@ -14,6 +16,334 @@ interface Folder {
   id: string;
   name: string;
 }
+
+interface GhazaliWirdItem {
+  id: string;
+  dayFr: string;
+  dayEn: string;
+  dayHa: string;
+  titleFr: string;
+  titleEn: string;
+  titleHa: string;
+  arabic: string;
+  transliteration: string;
+  translationFr: string;
+  translationEn: string;
+  translationHa: string;
+  count: number;
+  virtueFr: string;
+  virtueEn: string;
+  virtueHa: string;
+}
+
+const GHAZALI_WEEKLY_WORDS: GhazaliWirdItem[] = [
+  {
+    id: 'ghazali_friday',
+    dayFr: 'Vendredi',
+    dayEn: 'Friday',
+    dayHa: 'Jumma\'a',
+    titleFr: 'Wird du Vendredi : Le Nom Majestueux',
+    titleEn: 'Friday Wird: The Supreme Name',
+    titleHa: 'Zikirin Jumma\'a: Sunan Girma',
+    arabic: 'يَا أَللَّهُ',
+    transliteration: 'Ya Allah',
+    translationFr: 'Ô Allah, le Nom Divin Suprême',
+    translationEn: 'O Allah, the Supreme Divine Name',
+    translationHa: 'Ya Allah, Sunan Allah Mafi Girma',
+    count: 1000,
+    virtueFr: 'Lumière de certitude, élévation de l\'âme et concrétisation de la foi.',
+    virtueEn: 'Light of certainty, elevation of the soul, and fulfillment of faith.',
+    virtueHa: 'Hasken tabbas, daukakar ruhi da cikar imani.'
+  },
+  {
+    id: 'ghazali_saturday',
+    dayFr: 'Samedi',
+    dayEn: 'Saturday',
+    dayHa: 'Asabar',
+    titleFr: 'Wird du Samedi : L\'Unicité Purificatrice',
+    titleEn: 'Saturday Wird: Purifying Tawhid',
+    titleHa: 'Zikirin Asabar: Kadaita Allah',
+    arabic: 'لاَ إِلَهَ إِلاَّ ٱللَّهُ',
+    transliteration: 'La ilaha illa Allah',
+    translationFr: 'Il n\'y a de divinité qu\'Allah',
+    translationEn: 'There is no god but Allah',
+    translationHa: 'Babu abun bautawa da gaskiya sai Allah',
+    count: 1000,
+    virtueFr: 'Effacement des doutes, illumination du cœur et bouclier contre l\'illusion.',
+    virtueEn: 'Removal of doubts, illumination of the heart, and shield against illusion.',
+    virtueHa: 'Yaye doubt, hasken zuciya da kariya daga rudu.'
+  },
+  {
+    id: 'ghazali_sunday',
+    dayFr: 'Dimanche',
+    dayEn: 'Sunday',
+    dayHa: 'Lahadi',
+    titleFr: 'Wird du Dimanche : La Vie & la Subsistance Divine',
+    titleEn: 'Sunday Wird: Divine Life & Sustenance',
+    titleHa: 'Zikirin Lahadi: Rayuwa da Arzikin Ubangiji',
+    arabic: 'يَا حَيُّ يَا قَيُّومُ',
+    transliteration: 'Ya Hayyu Ya Qayyumu',
+    translationFr: 'Ô Vivant, Ô Subsistant par Soi-même',
+    translationEn: 'O Ever-Living, O Self-Sustaining Sustainer',
+    translationHa: 'Ya Rayayye, Ya Mai Tsayawa da Kansa',
+    count: 1000,
+    virtueFr: 'Revitalisation du cœur mort, clarté d\'esprit et subsistance bénie.',
+    virtueEn: 'Revitalization of the dead heart, clarity of mind, and blessed sustenance.',
+    virtueHa: 'Rayar da zuciya matacciya, natsuwar hankali da arzuki mai albarka.'
+  },
+  {
+    id: 'ghazali_monday',
+    dayFr: 'Lundi',
+    dayEn: 'Monday',
+    dayHa: 'Litinin',
+    titleFr: 'Wird du Lundi : La Force Absolue',
+    titleEn: 'Monday Wird: Absolute Divine Power',
+    titleHa: 'Zikirin Litinin: Karfin Ubangiji',
+    arabic: 'لاَ حَوْلَ وَلاَ قُوَّۃَ إِلاَّ بِٱللَّهِ ٱلْعَلِيِّ ٱلْعَظِيمِ',
+    transliteration: 'La hawla wa la quwwata illa billahi al-\'Aliyyi al-\'Adheem',
+    translationFr: 'Il n\'y a de force ni de puissance qu\'en Allah, le Très-Haut, l\'Immense',
+    translationEn: 'There is no power nor strength except with Allah, the Most High, the Supreme',
+    translationHa: 'Babu dabara kuma babu karfi sai tare da Allah Mafi Daukaka Mafi Girma',
+    count: 1000,
+    virtueFr: 'Dénouement des situations impossibles, protection et levée des fardeaux.',
+    virtueEn: 'Unraveling impossible situations, protection, and lifting of heavy burdens.',
+    virtueHa: 'Bude abubuwa masu wuya, kariya da cire nauyi.'
+  },
+  {
+    id: 'ghazali_tuesday',
+    dayFr: 'Mardi',
+    dayEn: 'Tuesday',
+    dayHa: 'Talata',
+    titleFr: 'Wird du Mardi : Bénédiction sur le Prophète ﷺ',
+    titleEn: 'Tuesday Wird: Blessings upon the Prophet ﷺ',
+    titleHa: 'Zikirin Talata: Salatin Annabi ﷺ',
+    arabic: 'ٱللَّهُمَّ صَلِّ عَلَىٰ سَيِّدِنَا مُحَمَّدٍ وَعَلَىٰ آلِهِ وَصَحْبِهِ وَسَلِّمْ',
+    transliteration: 'Allahumma salli \'ala Sayyidina Muhammadin wa \'ala alihi wa sahbihi wa sallim',
+    translationFr: 'Ô Allah, répands Tes bénédictions et Ta paix sur notre Maître Muhammad, sa famille et ses compagnons',
+    translationEn: 'O Allah, send blessings and peace upon our Master Muhammad, his family and companions',
+    translationHa: 'Ya Allah, ka yi salati da taslima ga Shugabanmu Muhammadu da alalensa da sahabansa',
+    count: 1000,
+    virtueFr: 'Attraction de la miséricorde divine, apaisement de l\'âme et réponse aux invocations.',
+    virtueEn: 'Attraction of divine mercy, soothing of the soul, and answered prayers.',
+    virtueHa: 'Jan hankalin rahama, samun natsuwar ruhi da karɓar addu\'o\'i.'
+  },
+  {
+    id: 'ghazali_wednesday',
+    dayFr: 'Mercredi',
+    dayEn: 'Wednesday',
+    dayHa: 'Larabawa',
+    titleFr: 'Wird du Mercredi : L\'Istiġfār Purificateur',
+    titleEn: 'Wednesday Wird: Purifying Istighfar',
+    titleHa: 'Zikirin Laraba: Neman Gafara',
+    arabic: 'أَسْتَغْفِرُ ٱللَّهَ ٱلْعَظِيمَ ٱلَّذِي لاَ إِلَهَ إِلاَّ هُوَ ٱلْحَيُّ ٱلْقَيُّومُ وَأَتُوبُ إِلَيْهِ',
+    transliteration: 'Astaghfirullah al-\'Adheem alladhi la ilaha illa Huwal-Hayyul-Qayyumu wa atubu ilayh',
+    translationFr: 'Je demande pardon à Allah l\'Immense, en dehors de Qui il n\'y a point de divinité, le Vivant, le Subsistant, et je me repens à Lui',
+    translationEn: 'I seek forgiveness from Allah the Supreme, besides Whom there is no god, the Ever-Living, the Self-Sustaining, and I repent to Him',
+    translationHa: 'Ina neman gafarar Allah Mafi Girma, wanda babu abun bautawa da gaskiya sai Shi, Rayayye Mai Tsayawa, kuma ina tuba gare Shi',
+    count: 1000,
+    virtueFr: 'Lavage des erreurs, ouverture des vannes du pardon et purification spirituelle.',
+    virtueEn: 'Cleansing of shortcomings, opening the gates of forgiveness and spiritual purity.',
+    virtueHa: 'Wanke kuskure, bude kofofin gafara da tsarkakewar ruhi.'
+  },
+  {
+    id: 'ghazali_thursday',
+    dayFr: 'Jeudi',
+    dayEn: 'Thursday',
+    dayHa: 'Alhamis',
+    titleFr: 'Wird du Jeudi : La Glorification Angélique',
+    titleEn: 'Thursday Wird: Angelic Glorification',
+    titleHa: 'Zikirin Alhamis: Tasbihin Mala\'iku',
+    arabic: 'سُبْحَانَ ٱللَّهِ وَبِحَمْدِهِ سُبْحَانَ ٱللَّهِ ٱلْعَظِيمِ',
+    transliteration: 'Subhanallahi wa bi-hamdihi Subhanallahi al-\'Adheem',
+    translationFr: 'Gloire à Allah et louange à Lui, Gloire à Allah l\'Immense',
+    translationEn: 'Glory be to Allah and His praise, Glory be to Allah the Supreme',
+    translationHa: 'Tsarki ya tabbata ga Allah da yabo gare Shi, Tsarki ya tabbata ga Allah Mafi Girma',
+    count: 1000,
+    virtueFr: 'Lourdeur suprême sur la balance des actions, amour divin et sérénité.',
+    virtueEn: 'Supreme weight on the scale of deeds, divine love, and deep serenity.',
+    virtueHa: 'Nauyi a sikelin ayyuka, soyayyar Ubangiji da samun natsuwa.'
+  }
+];
+
+const GHAZALI_PURIFICATION_STEPS = [
+  {
+    step: "1",
+    nameFr: "Al-Musha'rata (L'Engagement Intérieur)",
+    nameEn: "Al-Musha'rata (Inner Commitment)",
+    nameHa: "Al-Musha'rata (Alkawarin Zuciya)",
+    descFr: "Chaque matin après le Fajr, posez des conditions strictes à votre âme : vous engager solennellement à préserver vos yeux, vos oreilles, votre langue et vos pensées de toute faute.",
+    descEn: "Every morning after Fajr, set strict conditions for your soul: solemnly vow to preserve your eyes, ears, tongue, and thoughts from any wrongdoing.",
+    descHa: "Kowace safiya bayan Asuba, gindaya sharuda masu tsauri ga ruhinka: daukar alkawari na kare idanu, kunnuwa, harshe da tunani daga sabo.",
+    icon: Shield
+  },
+  {
+    step: "2",
+    nameFr: "Al-Muraqaba (La Vigilance Continuelle)",
+    nameEn: "Al-Muraqaba (Continuous Vigilance)",
+    nameHa: "Al-Muraqaba (Lura da Ubangiji)",
+    descFr: "Maintenez la conscience vivante qu'Allah observe chaque battement de votre cœur. Avant chaque geste ou parole, demandez-vous : 'Est-ce pour Allah ou pour mon ego ?'",
+    descEn: "Maintain active awareness that Allah observes every heartbeat. Before any action or word, ask yourself: 'Is this for Allah or for my ego?'",
+    descHa: "Kasance da kyakkyawan tunani cewa Allah yana lura da kowace bugun zuciya. Kafin kowane motsi ko magana, tambayi kanka: 'Sodomin Allah ne ko sodomin buƙata ta?'",
+    icon: Eye
+  },
+  {
+    step: "3",
+    nameFr: "Al-Muhasaba (L'Examen de Conscience)",
+    nameEn: "Al-Muhasaba (Self-Accounting)",
+    nameHa: "Al-Muhasaba (Hisabin Kai)",
+    descFr: "Chaque soir avant de vous endormir, passez en revue votre journée comme un marchand fait son inventaire. Remerciez pour le bien accompli, et demandez pardon pour les faiblesses.",
+    descEn: "Every night before sleep, review your day as a merchant audits his inventory. Give thanks for good deeds, and seek forgiveness for shortcomings.",
+    descHa: "Kowace darare kafin barci, binciki ayyukanka na yau kamar yadda ɗan kasuwa ke hisabi. Yi godiya kan alheri, kuma nemi gafara kan kuskure.",
+    icon: BookOpen
+  },
+  {
+    step: "4",
+    nameFr: "Al-Mujahada (L'Autocorrection & la Lutte)",
+    nameEn: "Al-Mujahada (Self-Correction & Struggle)",
+    nameHa: "Al-Mujahada (Yaki da Soje)",
+    descFr: "Si votre âme a glissé vers la colère, l'orgueil ou la paresse, imposez-lui une discipline corrective immédiate : aumône discrète, jeûne surérogatoire ou récitation accrue de Zikr.",
+    descEn: "If your soul slipped into anger, pride, or laziness, impose immediate corrective discipline: quiet charity, voluntary fasting, or increased Dhikr.",
+    descHa: "Idan ruhinka ya karkata zuwa fushi, girman kai ko kasala, sanya masa horo nan take: sadaka ta sirri, azumi na son rai ko karara zikiri.",
+    icon: RefreshCw
+  }
+];
+
+const GHAZALI_HEART_DISEASES = [
+  {
+    diseaseFr: "Al-Kibr (L'Orgueil)",
+    diseaseEn: "Al-Kibr (Pride)",
+    diseaseHa: "Al-Kibr (Girman Kai)",
+    remedyFr: "S'asseoir à terre avec les humbles, effectuer des tâches ménagères et méditer sur la fragilité de la condition humaine.",
+    remedyEn: "Sit on the floor with the humble, perform household chores, and reflect on the fragility of human existence.",
+    remedyHa: "Zama a kasa tare da talakawa, yin ayyukan gida da tunanin raunin dan adam."
+  },
+  {
+    diseaseFr: "Ar-Riya' (L'Ostentation)",
+    diseaseEn: "Ar-Riya' (Showiness / Ostentation)",
+    diseaseHa: "Ar-Riya' (Nuna Aiki)",
+    remedyFr: "Pratiquer ses Wirds, ses prières surérogatoires et ses aumônes dans le secret le plus absolu sans en parler à personne.",
+    remedyEn: "Practice your Wirds, extra prayers, and charity in absolute secrecy without mentioning them to anyone.",
+    remedyHa: "Yin zikirori, nafilfili da sadaka a sirri na karshe ba tare da gayawa kowa ba."
+  },
+  {
+    diseaseFr: "Al-Hasad (L'Envie)",
+    diseaseEn: "Al-Hasad (Envy)",
+    diseaseHa: "Al-Hasad (Hassada)",
+    remedyFr: "Prier secrètement pour que la personne enviée reçoive encore plus de bienfaits, et lui offrir des cadeaux bienveillants.",
+    remedyEn: "Pray secretly for the envied person to receive even more blessings, and offer them thoughtful gifts.",
+    remedyHa: "Yin addu'a a sirri domin wanda ake hassada ya samu karin albarka, da basu kyaututtuka."
+  },
+  {
+    diseaseFr: "Hubb ad-Dunya (L'Attachement Terrestre)",
+    diseaseEn: "Hubb ad-Dunya (Love of the World)",
+    diseaseHa: "Hubb ad-Dunya (Son Duniya)",
+    remedyFr: "Méditer quotidiennement sur la mort (Dhikr al-Mawt) et se rappeler que tout bien matériel n'est qu'un prêt temporaire.",
+    remedyEn: "Daily reflection on death (Dhikr al-Mawt) and remembering that material goods are merely temporary loans.",
+    remedyHa: "Tunanin mutuwa kowace rana da tunawa cewa duk wani abun duniya aro ne kawai."
+  }
+];
+
+const GHAZALI_OPTIMAL_TIMES = [
+  {
+    periodFr: "1. De l'Aube (Fajr) au Lever du Soleil (Ishraq)",
+    periodEn: "1. From Dawn (Fajr) to Sunrise (Ishraq)",
+    periodHa: "1. Daga Asuba zuwa Fitowar Rana",
+    arabicTime: "وِردُ الصَّبَاحِ وَالإِشْرَاقِ",
+    activityFr: "Consacré exclusivement au Zikr concentré, aux invocations du matin, à l'Istiġfār et à la récitation du Coran. C'est l'heure de la distribution des subsistances spirituelles. Ne pas se rendormir.",
+    activityEn: "Dedicated exclusively to concentrated Dhikr, morning supplications, Istighfar, and Quran recitation. This is the hour of spiritual sustenance distribution. Avoid going back to sleep.",
+    activityHa: "Keɓaɓɓe domin zikiri, addu'o'in safe, neman gafara da karatun Alqur'ani. Lokacin rabon arzuki ne na ruhi. Kada a koma barci.",
+    icon: Sun,
+    badgeColor: "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800"
+  },
+  {
+    periodFr: "2. Du Lever du Soleil au Milieu de la Matinée (Duha)",
+    periodEn: "2. From Sunrise to Mid-Morning (Duha)",
+    periodHa: "2. Daga Fitowar Rana zuwa Hantsi",
+    arabicTime: "صَلاَةُ الضُّحَى وَالتَّفَكُّرُ",
+    activityFr: "Prière de Duha (2 à 8 rak'ats), étude des sciences utiles, méditation sur la création et accomplissement des devoirs professionnels avec intention sacrée.",
+    activityEn: "Duha prayer (2 to 8 units), study of beneficial knowledge, reflection on creation, and fulfilling professional duties with sacred intention.",
+    activityHa: "Sallar Hantsi (raka'a 2 zuwa 8), neman ilimi mai amfani, tunani kan halittar Allah da yin ayyukan yau da kullun da niyya mai kyau.",
+    icon: Sparkles,
+    badgeColor: "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800"
+  },
+  {
+    periodFr: "3. Du Milieu de Journée (Zawal/Dhuhr) au Milieu d'Après-Midi ('Asr)",
+    periodEn: "3. From Midday (Dhuhr) to Mid-Afternoon ('Asr)",
+    periodHa: "3. Daga Azahar zuwa La'asar",
+    arabicTime: "القَيْلُولَةُ وَوِرْدُ الظُّهْرِ",
+    activityFr: "Courte sieste régénératrice (Qaylula - 15-30 min) avant ou après Dhuhr avec l'intention de fortifier le corps pour le Tahajjud. Prière de Dhuhr et invocations associées.",
+    activityEn: "Short regenerative nap (Qaylula - 15-30 min) before or after Dhuhr to strengthen the body for night vigil. Dhuhr prayer and associated litanies.",
+    activityHa: "Barcin rana mai gajere (Qaylula) domin samun karfin yin tahajjud a daren. Sallar Azahar da addu'o'in da ke tattare da ita.",
+    icon: Compass,
+    badgeColor: "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800"
+  },
+  {
+    periodFr: "4. De la Prière d'Asr au Coucher du Soleil (Maghrib)",
+    periodEn: "4. From 'Asr Prayer to Sunset (Maghrib)",
+    periodHa: "4. Daga La'asar zuwa Magriba",
+    arabicTime: "وِردُ العَصْرِ وَالأَصِيلِ",
+    activityFr: "Période sacrée de l'Asil. Récitation intensive de Salawat et d'Istighfar. La toute dernière heure avant le Maghrib (l'heure dorée) est l'un des créneaux d'exaucement majeurs chez l'Imam Al-Ghazali.",
+    activityEn: "Sacred period of Asil. Intensive recitation of Salawat and Istighfar. The final hour before Maghrib (golden hour) is a prime time for granted prayers according to Imam Al-Ghazali.",
+    activityHa: "Lokaci mai albarka na Asil. Karanta salati da neman gafara sosai. Sa'a ta karshe kafin Magriba na daya daga cikin lokutan karɓar addu'a.",
+    icon: Sun,
+    badgeColor: "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-800"
+  },
+  {
+    periodFr: "5. Du Coucher du Soleil (Maghrib) à la Prière de la Nuit ('Isha)",
+    periodEn: "5. From Sunset (Maghrib) to Night Prayer ('Isha)",
+    periodHa: "5. Daga Magriba zuwa Isha'i",
+    arabicTime: "صَلاَةُ الأَوَّابِينَ وَإِحْيَاءُ المَغْرِبِ",
+    activityFr: "Prière des Awcabin (2 à 6 rak'ats entre Maghrib et 'Isha), lecture du Coran (Sourates Al-Waqi'a et Al-Mulk), et méditation sereine en famille ou dans la solitude.",
+    activityEn: "Awcabin prayer (2 to 6 units between Maghrib and 'Isha), Quran reading (Surahs Al-Waqi'a & Al-Mulk), and peaceful reflection with family or in solitude.",
+    activityHa: "Sallar Awcabin (raka'a 2 zuwa 6 tsakanin Magriba da Isha'i), karatun Suratul Waqi'a da Al-Mulk, da natsuwa a gida ko keɓewa.",
+    icon: Moon,
+    badgeColor: "bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800"
+  },
+  {
+    periodFr: "6. Le Dernier Tiers de la Nuit (Tahajjud & Sahar)",
+    periodEn: "6. The Last Third of the Night (Tahajjud & Sahar)",
+    periodHa: "6. Kashi na Karshe na Dare (Tahajjud)",
+    arabicTime: "سِرُّ السَّحَرِ وَالمُنَاجَاةُ",
+    activityFr: "L'apogée mystique chez Imam Al-Ghazali. Prière de Tahajjud, pleurs d'amour et de crainte, récitation du Wird secret et invocations d'intimité avec le Créateur (*Al-Munajat*).",
+    activityEn: "The mystical apex according to Imam Al-Ghazali. Tahajjud vigil, tears of divine love and awe, recitation of secret Wird, and intimate communion with the Creator (*Al-Munajat*).",
+    activityHa: "Toluwar lokaci ga Imam Al-Ghazali. Sallar Tahajjud, kuka saboda tsoro da soyayyar Allah, karanta wirdi na sirri da keɓewa da Ubangiji.",
+    icon: Sparkles,
+    badgeColor: "bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-800"
+  }
+];
+
+const GHAZALI_MAJOR_LITANIES = [
+  {
+    id: 'ghazali_muthallath_personal',
+    titleFr: 'Wird Al-Muthallath Al-Ghazali (Le Secret de la Grâce & du Dénouement)',
+    titleEn: 'Wird Al-Muthallath Al-Ghazali (Secret of Grace & Release)',
+    titleHa: 'Zikirin Al-Muthallath na Al-Ghazali (Sirrin Rahama da Warware Matsala)',
+    arabic: 'يَا لَطِيفًا لَمْ يَزَلْ أُلْطُفْ بِنَا فِيمَا نَزَلْ، إِنَّكَ لَطِيفٌ لَمْ تَزَلْ، أُلْطُفْ بِنَا وَالمُسْلِمِينَ، بِسِرِّ سِرِّ خَاتَمِ الغَزَالِيِّ وَالمِفْتَاحِ المُبَارَكِ.',
+    transliteration: 'Ya Latifan lam yazal ultuf bina fima nazal, innaka Latifun lam yazal, ultuf bina wal-Muslimin, bi-sirri sirri khatami al-Ghazali wal-miftahi al-mubarak.',
+    translationFr: 'Ô Subtil Qui ne cesse d\'être Doux, sois Doux envers nous dans les épreuves qui descendent. Tu es le Subtil Incomparable, étends Ta bienveillance sur nous par le mystère du Sceau de Ghazali.',
+    translationEn: 'O Ever-Gentle One Who never ceases to be Kind, be Gentle with us in all that descends. You are the Subtle Incomparable, extend Your benevolence upon us through the secret of Ghazali\'s Seal.',
+    translationHa: 'Ya Mai Sauki da Bayar da Rahama marar karewa, ka saukaka mana cikin abun da ya sauka. Kai Mai Tausayi ne, ka miƙa rahamarka gare mu.',
+    repetitionCount: 129,
+    benefitFr: 'Résolution miracle des difficultés inextricables, apaisement immédiat de l\'esprit et attraction de la douceur divine.',
+    benefitEn: 'Miraculous resolution of intricate difficulties, immediate peace of mind, and attraction of divine grace.',
+    benefitHa: 'Warware matsaloli cikin al\'ajabi, samun natsuwar zuciya da samun sauki daga Ubangiji.'
+  },
+  {
+    id: 'ghazali_munajat_personal',
+    titleFr: 'Wird Al-Munajat Al-Ghazaliyya (Prière d\'Intimité Spirituelle)',
+    titleEn: 'Wird Al-Munajat Al-Ghazaliyya (Prayer of Spiritual Intimacy)',
+    titleHa: 'Addu\'ar Kebewa ta Al-Ghazali (Munajat)',
+    arabic: 'إِلَهِي أَنْتَ مَقْصُودِي وَرِضَاكَ مَطْلُوبِي، هَبْ لِي قَلْبًا سَلِيمًا نَقِيًّامِنَ العُيُوبِ، وَافْتَحْ لِي أَبْوَابَ مَعْرِفَتِكَ يَا أَرْحَمَ الرَّاحِمِينَ.',
+    transliteration: 'Ilahi Anta maqsudi wa ridaka matlubi, hab li qalban saliman naqiyyan mina al-\'uyubi, wa-ftah li abwaba ma\'rifatika ya Arham ar-Rahimin.',
+    translationFr: 'Mon Dieu, Tu es mon But ultime et Ton agrément est ma quête ; accorde-moi un cœur sain et purifié de tout défaut, et ouvre-moi les portes de Ta Connaissance, Ô Plus Miséricordieux des miséricordieux.',
+    translationEn: 'My God, You are my ultimate Goal and Your pleasure is my pursuit; grant me a sound heart pure of defect, and open unto me the gates of Your knowledge, O Most Merciful of merciful ones.',
+    translationHa: 'Ya Ubangijina, Kai ne manufata kuma samun yardarka shine buƙatata; ka ba ni zuciya mai tsarki mara aibi, kuma ka bude min kofofin saninki.',
+    repetitionCount: 66,
+    benefitFr: 'Illumination de l\'âme, éradication des voiles intérieurs et proximité divine.',
+    benefitEn: 'Illumination of the soul, eradication of inner veils, and divine proximity.',
+    benefitHa: 'Haskaka ruhi, cire shamaki na ciki da samun kusanci ga Allah.'
+  }
+];
 
 const DEFAULT_FOLDERS: Folder[] = [
   { id: 'daily', name: 'Quotidien (Daily)' },
@@ -119,7 +449,23 @@ const wirdDict = {
     closingDesc: "Terminez en récitant à nouveau la Salawat 3 fois, puis faites vos douas (prières personnelles) en demandant à Allah de matérialiser les lumières et les bienfaits de ces nobles noms dans votre vie. Passez vos mains sur votre visage pour clore la séance.",
     optimalTimesTitle: "Moments Optimaux",
     optimalTimesDesc: "Après la prière de l'Aube (Fajr) pour l'énergie spirituelle de la journée, ou durant le dernier tiers de la nuit (Tahajjud) pour une intimité mystique maximale.",
-    meaningTitle: "Signification & Secrets Spirituels"
+    meaningTitle: "Signification & Secrets Spirituels",
+
+    // Ghazali Section
+    ghazaliTitle: "Sagesse & Wirds de l'Imam Al-Ghazali (حجة الإسلام)",
+    ghazaliSubtitle: "Inspiré d'Ihya 'Ulum al-Din & Bidayat al-Hidayah : Purification du Cœur (Tazkiyat al-Qalb), litanies quotidiennes et horaires de pratique optimaux.",
+    ghazaliTabWeekly: "Wirds Hebdomadaires",
+    ghazaliTabPurification: "Purification du Cœur",
+    ghazaliTabTimes: "Horaires Optimaux",
+    ghazaliTabLitanies: "Litanies Majeures",
+    ghazaliAddWird: "Ajouter à mes Wirds",
+    ghazaliCopied: "Copié !",
+    ghazaliStepsTitle: "Les 4 Étapes de la Discipline Intérieure (Ar-Riyāḍah)",
+    ghazaliRemediesTitle: "Remèdes des Maladies du Cœur (Amrāḍ al-Qalb)",
+    ghazaliWeeklyDesc: "L'Imam Al-Ghazali a consigné dans Bidayat al-Hidayah un Zikr spécifique de 1000 répétitions pour chaque jour de la semaine afin d'irradier le cœur de lumières célestes.",
+    ghazaliPurificationDesc: "Méthodologie alchimique de purification de l'âme (Tazkiya) développée par l'Imam Al-Ghazali pour extirper les défauts spirituels et faire briller le miroir du cœur.",
+    ghazaliTimesDesc: "L'organisation sacrée de la journée et de la nuit selon la tradition ghazalienne, divisée en 6 moments d'or pour maximiser la présence spirituelle.",
+    ghazaliLitaniesDesc: "Les invocations et Wirds sacrés attribués à Hujjat al-Islam Imam Al-Ghazali pour le dénouement des épreuves et l'intimité divine."
   },
   en: {
     back: "Back to dashboard",
@@ -176,7 +522,23 @@ const wirdDict = {
     closingDesc: "Finish by reciting Salawat 3 times, then make your duas (personal supplications) asking Allah to manifest the lights and blessings of these noble names in your life. Wipe your hands over your face to conclude the session.",
     optimalTimesTitle: "Optimal Times",
     optimalTimesDesc: "After Dawn prayer (Fajr) for the day's spiritual energy, or during the last third of the night (Tahajjud) for maximum mystical intimacy.",
-    meaningTitle: "Meaning & Spiritual Secrets"
+    meaningTitle: "Meaning & Spiritual Secrets",
+
+    // Ghazali Section
+    ghazaliTitle: "Wisdom & Wirds of Imam Al-Ghazali (حجة الإسلام)",
+    ghazaliSubtitle: "Inspired by Ihya 'Ulum al-Din & Bidayat al-Hidayah: Heart Purification (Tazkiyat al-Qalb), daily litanies, and optimal practice schedules.",
+    ghazaliTabWeekly: "Weekly Wirds",
+    ghazaliTabPurification: "Heart Purification",
+    ghazaliTabTimes: "Optimal Times",
+    ghazaliTabLitanies: "Major Litanies",
+    ghazaliAddWird: "Add to my Wirds",
+    ghazaliCopied: "Copied!",
+    ghazaliStepsTitle: "The 4 Steps of Inner Discipline (Ar-Riyādah)",
+    ghazaliRemediesTitle: "Remedies for Diseases of the Heart (Amrāḍ al-Qalb)",
+    ghazaliWeeklyDesc: "Imam Al-Ghazali prescribed in Bidayat al-Hidayah a specific Dhikr of 1000 repetitions for each day of the week to illuminate the heart with celestial light.",
+    ghazaliPurificationDesc: "Alchemical heart purification methodology (Tazkiya) developed by Imam Al-Ghazali to eradicate spiritual flaws and polish the mirror of the heart.",
+    ghazaliTimesDesc: "Sacred organization of the day and night according to Ghazalian tradition, divided into 6 golden periods for maximum spiritual presence.",
+    ghazaliLitaniesDesc: "Sacred supplications and Wirds attributed to Hujjat al-Islam Imam Al-Ghazali for resolving trials and attaining divine intimacy."
   },
   ha: {
     back: "Koma baya",
@@ -233,7 +595,23 @@ const wirdDict = {
     closingDesc: "Kammala da karanta Salatin Annabi sau 3, sannan ka yi addu'o'in kanka kana rokon Allah Ya sanya albarka da hasken wadannan sunaye a rayuwarka. Shafa fuskarka don kammalawa.",
     optimalTimesTitle: "Mafi kyawun Lokaci",
     optimalTimesDesc: "Bayan Sallar Asuba don samun hasken rana, ko kuma a kashi na uku na karshen dare (Tahajjud) don samun kusanci mafi girma ga Ubangiji.",
-    meaningTitle: "Ma'ana & Sirrin Ruhaniya"
+    meaningTitle: "Ma'ana & Sirrin Ruhaniya",
+
+    // Ghazali Section
+    ghazaliTitle: "Hikima da Zikirorin Imam Al-Ghazali (حجة الإسلام)",
+    ghazaliSubtitle: "An samo daga Ihya 'Ulum al-Din & Bidayat al-Hidayah: Tsarkake Zuciya (Tazkiyat al-Qalb), zikirorin kullum da mafi kyawun lokutan yi.",
+    ghazaliTabWeekly: "Zikirorin Mako",
+    ghazaliTabPurification: "Tsarkake Zuciya",
+    ghazaliTabTimes: "Lokuta na Musamman",
+    ghazaliTabLitanies: "Manyan Addu'o'i",
+    ghazaliAddWird: "Ajiye a Zikirorina",
+    ghazaliCopied: "An kwafa!",
+    ghazaliStepsTitle: "Matakai 4 na Horo na Ciki (Ar-Riyādah)",
+    ghazaliRemediesTitle: "Magungunan Cuta na Zuciya (Amrāḍ al-Qalb)",
+    ghazaliWeeklyDesc: "Imam Al-Ghazali ya rubuta a Bidayat al-Hidayah zikiri na musamman guda 1000 domin kowace rana a mako domin haskaka zuciya.",
+    ghazaliPurificationDesc: "Hanyar tsarkake zuciya (Tazkiya) da Imam Al-Ghazali ya samar domin cire cututtukan ruhi da gyara zuciya.",
+    ghazaliTimesDesc: "Tsara lokutan rana da dare bisa tsarin Al-Ghazali, kasu kashi 6 domin samun albarka da natsuwa.",
+    ghazaliLitaniesDesc: "Manyan addu'o'i da wirdodi na Hujjat al-Islam Imam Al-Ghazali domin warware matsaloli da samun kusanci ga Allah."
   }
 };
 
@@ -245,6 +623,20 @@ export const PersonalWird: React.FC = () => {
   const [result, setResult] = useState<MatchResult | null>(null);
   const [weight, setWeight] = useState<number | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
+
+  // Ghazali Section States
+  const [ghazaliActiveTab, setGhazaliActiveTab] = useState<'weekly' | 'purification' | 'times' | 'litanies'>('weekly');
+  const [copiedTextId, setCopiedTextId] = useState<string | null>(null);
+  const [disableDuaCopy, setDisableDuaCopy] = useState<boolean>(false);
+
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'settings', 'features'), (docSnap) => {
+      if (docSnap.exists()) {
+        setDisableDuaCopy(!!docSnap.data()?.disable_dua_copy);
+      }
+    }, () => {});
+    return () => unsub();
+  }, []);
 
   // Folder and Saved Wird states
   const [folders, setFolders] = useState<Folder[]>(() => {
@@ -269,6 +661,32 @@ export const PersonalWird: React.FC = () => {
 
   const [newFolderName, setNewFolderName] = useState('');
   const [isAddingFolder, setIsAddingFolder] = useState(false);
+
+  const handleCopyText = (text: string, id: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedTextId(id);
+    setTimeout(() => setCopiedTextId(null), 2000);
+  };
+
+  const saveGhazaliWirdToFolder = (arabic: string, name: string, weight: number) => {
+    const isAlreadySaved = savedWirds.some(w => w.arabic === arabic || w.name === name);
+    if (isAlreadySaved) {
+      alert(dict.alreadySaved);
+      return;
+    }
+    const newWird: SavedWird = {
+      id: `ghazali_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+      name,
+      arabic,
+      weight,
+      folderId: 'daily',
+      dateSaved: new Date().toISOString()
+    };
+    const updated = [...savedWirds, newWird];
+    setSavedWirds(updated);
+    localStorage.setItem('asrar_saved_wirds', JSON.stringify(updated));
+    alert(`${dict.saveSuccess} (${getFolderName('daily', 'Quotidien')})`);
+  };
 
   const saveWird = () => {
     if (!result || weight === null) return;
@@ -679,6 +1097,298 @@ export const PersonalWird: React.FC = () => {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Imam Al-Ghazali Dedicated Section */}
+      <div className="mt-12 bg-gradient-to-br from-amber-500/10 via-emerald-500/5 to-teal-500/10 dark:from-amber-950/20 dark:via-emerald-950/20 dark:to-teal-950/20 border border-amber-200/80 dark:border-amber-800/50 rounded-3xl p-6 sm:p-8 shadow-lg space-y-6">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-amber-200/60 dark:border-amber-800/40 pb-5">
+          <div>
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 rounded-full text-xs font-bold mb-2">
+              <Sparkles size={14} className="text-amber-600 dark:text-amber-400" />
+              Hujjat al-Islam (حجة الإسلام الإمام الغزالي)
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white flex items-center gap-3">
+              <BookOpen className="text-amber-600 dark:text-amber-400 shrink-0" size={28} />
+              {dict.ghazaliTitle}
+            </h2>
+            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mt-1 max-w-2xl leading-relaxed">
+              {dict.ghazaliSubtitle}
+            </p>
+          </div>
+        </div>
+
+        {/* Ghazali Section Navigation Tabs */}
+        <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-1 touch-pan-x">
+          {[
+            { id: 'weekly', label: dict.ghazaliTabWeekly, icon: Calendar },
+            { id: 'purification', label: dict.ghazaliTabPurification, icon: Heart },
+            { id: 'times', label: dict.ghazaliTabTimes, icon: Clock },
+            { id: 'litanies', label: dict.ghazaliTabLitanies, icon: Key },
+          ].map((tab) => {
+            const Icon = tab.icon;
+            const isActive = ghazaliActiveTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setGhazaliActiveTab(tab.id as any)}
+                className={`px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2 whitespace-nowrap transition-all cursor-pointer ${
+                  isActive
+                    ? 'bg-amber-600 text-white shadow-md ring-2 ring-amber-500/30'
+                    : 'bg-white/80 dark:bg-gray-800/80 text-gray-700 dark:text-gray-300 hover:bg-amber-100 dark:hover:bg-gray-700 border border-amber-200/50 dark:border-gray-700'
+                }`}
+              >
+                <Icon size={16} />
+                {tab.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* TAB 1: WEEKLY WORDS */}
+        {ghazaliActiveTab === 'weekly' && (
+          <div className="space-y-4">
+            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 italic bg-white/60 dark:bg-gray-800/60 p-4 rounded-2xl border border-amber-100 dark:border-amber-900/30">
+              💡 {dict.ghazaliWeeklyDesc}
+            </p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {GHAZALI_WEEKLY_WORDS.map((w) => {
+                const dayName = language === 'en' ? w.dayEn : language === 'ha' ? w.dayHa : w.dayFr;
+                const title = language === 'en' ? w.titleEn : language === 'ha' ? w.titleHa : w.titleFr;
+                const translation = language === 'en' ? w.translationEn : language === 'ha' ? w.translationHa : w.translationFr;
+                const virtue = language === 'en' ? w.virtueEn : language === 'ha' ? w.virtueHa : w.virtueFr;
+                const isCopied = copiedTextId === w.id;
+
+                return (
+                  <div key={w.id} className="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-amber-200/60 dark:border-gray-700 shadow-sm flex flex-col justify-between space-y-4 hover:border-amber-400 transition-all">
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="px-3 py-1 bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 text-xs font-bold rounded-full">
+                          {dayName} • {w.count}x
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={() => handleCopyText(w.arabic, w.id)}
+                            className="p-1.5 text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 rounded-lg hover:bg-amber-50 dark:hover:bg-gray-700 transition-colors"
+                            title="Copier le texte arabe"
+                          >
+                            {isCopied ? <Check size={16} className="text-emerald-500" /> : <Copy size={16} />}
+                          </button>
+                        </div>
+                      </div>
+
+                      <h3 className="font-bold text-gray-900 dark:text-white text-sm">{title}</h3>
+
+                      <div 
+                        className="text-2xl sm:text-3xl font-bold text-right text-emerald-700 dark:text-emerald-400 py-1"
+                        style={{ fontFamily: "'Amiri', 'Traditional Arabic', system-ui, sans-serif" }}
+                        dir="rtl"
+                      >
+                        {w.arabic}
+                      </div>
+
+                      <p className="text-xs text-gray-500 dark:text-gray-400 font-mono italic">
+                        "{w.transliteration}"
+                      </p>
+
+                      <p className="text-xs text-gray-700 dark:text-gray-300 font-medium">
+                        « {translation} »
+                      </p>
+
+                      <div className="text-[11px] text-amber-800 dark:text-amber-300 bg-amber-50/80 dark:bg-amber-950/30 p-2.5 rounded-xl border border-amber-100 dark:border-amber-900/30">
+                        <strong>Vertu :</strong> {virtue}
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={() => saveGhazaliWirdToFolder(w.arabic, `${dayName} (${w.transliteration})`, w.count)}
+                      className="w-full mt-2 py-2 px-3 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                    >
+                      <Plus size={14} />
+                      {dict.ghazaliAddWird}
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 2: HEART PURIFICATION */}
+        {ghazaliActiveTab === 'purification' && (
+          <div className="space-y-6">
+            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 italic bg-white/60 dark:bg-gray-800/60 p-4 rounded-2xl border border-amber-100 dark:border-amber-900/30">
+              ✨ {dict.ghazaliPurificationDesc}
+            </p>
+
+            {/* 4 Steps of Inner Discipline */}
+            <div className="space-y-3">
+              <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <ShieldCheck className="text-amber-600 dark:text-amber-400" size={20} />
+                {dict.ghazaliStepsTitle}
+              </h3>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {GHAZALI_PURIFICATION_STEPS.map((s) => {
+                  const Icon = s.icon;
+                  const name = language === 'en' ? s.nameEn : language === 'ha' ? s.nameHa : s.nameFr;
+                  const desc = language === 'en' ? s.descEn : language === 'ha' ? s.descHa : s.descFr;
+
+                  return (
+                    <div key={s.step} className="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-amber-200/60 dark:border-gray-700 shadow-sm space-y-2">
+                      <div className="flex items-center gap-2.5">
+                        <span className="w-7 h-7 rounded-full bg-amber-500 text-white font-bold text-xs flex items-center justify-center shrink-0">
+                          {s.step}
+                        </span>
+                        <h4 className="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-1.5">
+                          <Icon size={16} className="text-amber-600 dark:text-amber-400" />
+                          {name}
+                        </h4>
+                      </div>
+                      <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed pt-1">
+                        {desc}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Heart Diseases Remedies */}
+            <div className="space-y-3 pt-2">
+              <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <Heart className="text-rose-500" size={20} />
+                {dict.ghazaliRemediesTitle}
+              </h3>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {GHAZALI_HEART_DISEASES.map((d, i) => {
+                  const disease = language === 'en' ? d.diseaseEn : language === 'ha' ? d.diseaseHa : d.diseaseFr;
+                  const remedy = language === 'en' ? d.remedyEn : language === 'ha' ? d.remedyHa : d.remedyFr;
+
+                  return (
+                    <div key={i} className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-rose-100 dark:border-gray-700 shadow-sm space-y-2">
+                      <span className="text-xs font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider block">
+                        Maladie #0{i+1} : {disease}
+                      </span>
+                      <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed bg-rose-50/50 dark:bg-rose-950/20 p-3 rounded-xl border border-rose-100/60 dark:border-rose-900/30">
+                        <strong className="text-rose-800 dark:text-rose-300">Remède d'Al-Ghazali :</strong> {remedy}
+                      </p>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 3: OPTIMAL PRACTICE TIMES */}
+        {ghazaliActiveTab === 'times' && (
+          <div className="space-y-4">
+            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 italic bg-white/60 dark:bg-gray-800/60 p-4 rounded-2xl border border-amber-100 dark:border-amber-900/30">
+              🕒 {dict.ghazaliTimesDesc}
+            </p>
+
+            <div className="space-y-3">
+              {GHAZALI_OPTIMAL_TIMES.map((t, idx) => {
+                const Icon = t.icon;
+                const period = language === 'en' ? t.periodEn : language === 'ha' ? t.periodHa : t.periodFr;
+                const activity = language === 'en' ? t.activityEn : language === 'ha' ? t.activityHa : t.activityFr;
+
+                return (
+                  <div key={idx} className="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-amber-200/60 dark:border-gray-700 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="space-y-1.5 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className={`px-3 py-1 rounded-full text-xs font-bold border flex items-center gap-1.5 ${t.badgeColor}`}>
+                          <Icon size={14} />
+                          {period}
+                        </span>
+                        <span 
+                          className="text-sm font-bold text-gray-500 dark:text-gray-400 font-arabic ml-auto" 
+                          dir="rtl"
+                        >
+                          {t.arabicTime}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed pt-1">
+                        {activity}
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 4: MAJOR LITANIES */}
+        {ghazaliActiveTab === 'litanies' && (
+          <div className="space-y-4">
+            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 italic bg-white/60 dark:bg-gray-800/60 p-4 rounded-2xl border border-amber-100 dark:border-amber-900/30">
+              📿 {dict.ghazaliLitaniesDesc}
+            </p>
+
+            <div className="space-y-4">
+              {GHAZALI_MAJOR_LITANIES.map((lit) => {
+                const title = language === 'en' ? lit.titleEn : language === 'ha' ? lit.titleHa : lit.titleFr;
+                const translation = language === 'en' ? lit.translationEn : language === 'ha' ? lit.translationHa : lit.translationFr;
+                const benefit = language === 'en' ? lit.benefitEn : language === 'ha' ? lit.benefitHa : lit.benefitFr;
+                const isCopied = copiedTextId === lit.id;
+
+                return (
+                  <div key={lit.id} className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-amber-200/60 dark:border-gray-700 shadow-sm space-y-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 dark:border-gray-700 pb-3">
+                      <h3 className="font-bold text-gray-900 dark:text-white text-base flex items-center gap-2">
+                        <Sparkles className="text-amber-500" size={18} />
+                        {title}
+                      </h3>
+                      <span className="px-3 py-1 bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 text-xs font-bold rounded-full w-fit">
+                        Répétition : {lit.repetitionCount}x
+                      </span>
+                    </div>
+
+                    <div 
+                      className="text-2xl sm:text-3xl font-bold text-right text-emerald-800 dark:text-emerald-300 leading-relaxed"
+                      style={{ fontFamily: "'Amiri', 'Traditional Arabic', system-ui, sans-serif" }}
+                      dir="rtl"
+                    >
+                      {lit.arabic}
+                    </div>
+
+                    <p className="text-xs text-gray-600 dark:text-gray-400 font-mono italic">
+                      "{lit.transliteration}"
+                    </p>
+
+                    <p className="text-xs text-gray-700 dark:text-gray-300 font-medium">
+                      « {translation} »
+                    </p>
+
+                    <div className="text-xs text-amber-800 dark:text-amber-300 bg-amber-50/80 dark:bg-amber-950/30 p-3 rounded-xl border border-amber-100 dark:border-amber-900/30">
+                      <strong>Bienfaits :</strong> {benefit}
+                    </div>
+
+                    <div className="flex flex-col sm:flex-row gap-2 pt-2">
+                      <button
+                        onClick={() => handleCopyText(lit.arabic, lit.id)}
+                        className="flex-1 py-2.5 px-4 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                      >
+                        {isCopied ? <Check size={16} className="text-emerald-500" /> : <Copy size={16} />}
+                        {isCopied ? dict.ghazaliCopied : "Copier le texte arabe"}
+                      </button>
+                      <button
+                        onClick={() => saveGhazaliWirdToFolder(lit.arabic, lit.titleFr, lit.repetitionCount)}
+                        className="flex-1 py-2.5 px-4 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-sm"
+                      >
+                        <Plus size={16} />
+                        {dict.ghazaliAddWird}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Saved Wirds Section with Folders & Drag-and-Drop */}

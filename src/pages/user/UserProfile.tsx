@@ -67,7 +67,7 @@ const CollapsibleSection: React.FC<{
 
 const GamificationBadges = () => {
   const { t } = useLanguage();
-  const [stats, setStats] = useState({ journal_entries: 0 });
+  const [stats, setStats] = useState<{ journal_entries: number; tools_used?: number }>({ journal_entries: 0, tools_used: 0 });
 
   useEffect(() => {
     const savedStats = localStorage.getItem('asrar_stats');

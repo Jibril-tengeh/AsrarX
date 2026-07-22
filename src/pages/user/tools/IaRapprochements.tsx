@@ -206,7 +206,7 @@ export const IaRapprochements: React.FC = () => {
 
       {/* Tool Info Tooltip */}
       <div className="mb-8">
-        <ToolInfoTooltip toolId="ia-rapprochements" />
+        <ToolInfoTooltip toolId={"ia-rapprochements" as any} />
       </div>
 
       {/* Results Section */}

@@ -471,7 +471,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
         setCategories(JSON.parse(cached));
       }
     } catch (e) {
-      console.error("Error pre-loading categories from cache", e);
+      console.warn("Notice pre-loading categories from cache:", e);
     }
 
     const defaultCats = [
@@ -521,7 +521,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
         setCategories(defaultCats);
       }
     }, (error) => {
-      console.error("Error fetching categories, using fallback:", error);
+      console.warn("Categories fetch note (using local fallback):", error);
       // Gracefully fall back to local default categories if permission is denied or offline
       setCategories(defaultCats);
     });
