@@ -258,7 +258,7 @@ export const ToolsDashboard: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 safe-area-pt pb-24">
+    <div className="max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 safe-area-pt pb-24 w-full max-w-full overflow-x-hidden min-w-0">
       <BannerAd />
       <div className="mb-8">
         <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
@@ -486,15 +486,15 @@ export const ToolsDashboard: React.FC = () => {
 
               const content = (
                 <div
-                  className={`h-full rounded-2xl bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 p-4 transition-all duration-300 relative overflow-hidden group ${!tool.comingSoon && !isMaintenance && !isBlockedForUser ? "hover:shadow-md hover:-translate-y-1" : "opacity-75"}`}
+                  className={`h-full w-full max-w-full min-w-0 rounded-2xl bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 p-4 transition-all duration-300 relative overflow-hidden group ${!tool.comingSoon && !isMaintenance && !isBlockedForUser ? "hover:shadow-md hover:-translate-y-1" : "opacity-75"}`}
                 >
                   {/* Background Decoration */}
                   <div
                     className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${tool.color} rounded-bl-full opacity-10 transition-opacity ${!tool.comingSoon && !isMaintenance && !isBlockedForUser ? "group-hover:opacity-20" : ""}`}
                   ></div>
 
-                  <div className="relative z-10 flex flex-col h-full">
-                    <div className="flex items-center gap-3 mb-2">
+                  <div className="relative z-10 flex flex-col h-full min-w-0">
+                    <div className="flex items-center gap-3 mb-2 min-w-0">
                       <div
                         className={`w-10 h-10 shrink-0 rounded-xl bg-gradient-to-br ${tool.color} text-white flex items-center justify-center shadow-sm ${!tool.comingSoon && !isMaintenance && !isBlockedForUser ? "group-hover:scale-110 transition-transform relative" : "relative"}`}
                       >
@@ -505,7 +505,7 @@ export const ToolsDashboard: React.FC = () => {
                           </div>
                         )}
                       </div>
-                      <h3 className="text-[15px] sm:text-base font-bold text-gray-900 dark:text-white flex items-center gap-2 leading-tight">
+                      <h3 className="text-[15px] sm:text-base font-bold text-gray-900 dark:text-white flex items-center gap-2 leading-tight min-w-0 break-words flex-wrap">
                         {t(`tools.${tool.id}.title`) !== `tools.${tool.id}.title`
                           ? t(`tools.${tool.id}.title`)
                           : tool.title}

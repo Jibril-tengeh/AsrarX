@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Moon, ArrowLeft, Plus, Calendar, Save, Trash2, ChevronDown, CheckCircle2, RefreshCw, Cloud, Download } from 'lucide-react';
+import { Moon, ArrowLeft, Plus, Calendar, Save, Trash2, ChevronDown, CheckCircle2, RefreshCw, Cloud, Download, BookOpen, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import Markdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { useAuth } from '../../../contexts/AuthContext';
+import { triggerProtectionModal } from '../../../components/ContentProtectionManager';
 import { db } from '../../../lib/firebase';
 import { collection, query, where, onSnapshot, setDoc, deleteDoc, doc } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
@@ -20,8 +23,8 @@ interface DreamEntry {
 }
 
 export const DreamJournal: React.FC = () => {
-  const { t } = useLanguage();
-  const { user } = useAuth();
+  const { t, language } = useLanguage();
+  const { user, isPremium } = useAuth();
   const [dreams, setDreams] = useState<DreamEntry[]>([]);
   const [syncStatus, setSyncStatus] = useState<'synced' | 'syncing' | 'local'>('local');
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -36,6 +39,10 @@ export const DreamJournal: React.FC = () => {
 
   // PDF Export helper for single dream
   const exportSingleToPDF = (dream: DreamEntry) => {
+    if (!isPremium) {
+      triggerProtectionModal('download');
+      return;
+    }
     try {
       const doc = new jsPDF({
         orientation: 'portrait',
@@ -56,7 +63,10 @@ export const DreamJournal: React.FC = () => {
       doc.setTextColor(255, 255, 255);
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(20);
-      doc.text('Asrar - Journal des Reves', margin, 25);
+      doc.text('AsrarHub - Journal des Reves', margin, 25);
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.text('AsrarHub • Plateforme Spirituelle & Vision Oneirique', margin, 33);
 
       let y = 55;
 
@@ -158,7 +168,7 @@ export const DreamJournal: React.FC = () => {
         doc.setTextColor(156, 163, 175);
         doc.setFont('helvetica', 'italic');
         doc.setFontSize(8);
-        doc.text(`Genere par Asrar - Page ${i} sur ${totalPages}`, margin, pageHeight - 10);
+        doc.text(`AsrarHub • Plateforme Spirituelle AsrarHub - Page ${i} sur ${totalPages}`, margin, pageHeight - 10);
       }
 
       doc.save(`reve-${dream.id}.pdf`);
@@ -170,6 +180,10 @@ export const DreamJournal: React.FC = () => {
 
   // PDF Export helper for all dreams
   const exportAllToPDF = () => {
+    if (!isPremium) {
+      triggerProtectionModal('download');
+      return;
+    }
     if (dreams.length === 0) {
       alert("Aucun reve a exporter.");
       return;
@@ -307,10 +321,10 @@ export const DreamJournal: React.FC = () => {
         doc.setTextColor(156, 163, 175);
         doc.setFont('helvetica', 'italic');
         doc.setFontSize(8);
-        doc.text(`Genere par Asrar - Page ${i} sur ${totalPages}`, margin, pageHeight - 10);
+        doc.text(`AsrarHub • Recueil Officiel AsrarHub - Page ${i} sur ${totalPages}`, margin, pageHeight - 10);
       }
 
-      doc.save('journal-reves-complet.pdf');
+      doc.save('journal-reves-asrarhub.pdf');
     } catch (err) {
       console.error("PDF export error:", err);
       alert("Erreur lors de la generation du PDF");
@@ -383,7 +397,7 @@ export const DreamJournal: React.FC = () => {
       const res = await fetch(getApiUrl('/api/dreams/interpret'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, content, type, wirdDone })
+        body: JSON.stringify({ title, content, type, wirdDone, language })
       });
       const data = await res.json();
       if (data.interpretation) {
@@ -584,21 +598,30 @@ export const DreamJournal: React.FC = () => {
               </div>
 
               <div>
-                <div className="flex justify-between items-center mb-2">
-                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300">{t("common.interpretation")} (Optionnel)</label>
+                <div className="flex flex-wrap justify-between items-center mb-2 gap-2">
+                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300">
+                    {t("common.interpretation")} (Ta'bīr - Ibn Sīrīn & Savants)
+                  </label>
                   <button
                     onClick={handleInterpret}
                     disabled={isInterpreting || !title || !content}
-                    className="text-xs font-bold px-3 py-1 bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 rounded-lg hover:bg-purple-200 dark:hover:bg-purple-900/50 transition-colors disabled:opacity-50"
+                    className="text-xs font-bold px-3 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all disabled:opacity-50 flex items-center gap-1.5 shadow-sm"
                   >
-                    {isInterpreting ? "Analyse IA en cours..." : "Interpréter avec l'IA (Ibn Sirin)"}
+                    <Sparkles size={14} />
+                    {isInterpreting ? "Analyse Savants en cours..." : "Interpréter avec l'IA (Ibn Sirin & Savants)"}
                   </button>
+                </div>
+                <div className="flex flex-wrap gap-1.5 mb-2">
+                  <span className="text-[10px] font-medium bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 px-2 py-0.5 rounded-full border border-amber-200/50 dark:border-amber-800/50">Ibn Sīrīn (ابن سيرين)</span>
+                  <span className="text-[10px] font-medium bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-200/50 dark:border-emerald-800/50">Al-Nābulusī (النابلسي)</span>
+                  <span className="text-[10px] font-medium bg-blue-50 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300 px-2 py-0.5 rounded-full border border-blue-200/50 dark:border-blue-800/50">Ibn Shāhīn (ابن شاهين)</span>
+                  <span className="text-[10px] font-medium bg-purple-50 text-purple-800 dark:bg-purple-950/40 dark:text-purple-300 px-2 py-0.5 rounded-full border border-purple-200/50 dark:border-purple-800/50">Imam Ja'far Al-Ṣādiq (الإمام الصادق)</span>
                 </div>
                 <textarea
                   value={interpretation}
                   onChange={(e) => setInterpretation(e.target.value)}
-                  placeholder="Notes personnelles d'interprétation selon Ibn Sirin ou votre intuition..."
-                  className="w-full h-24 bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/50 rounded-xl p-3 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 resize-none"
+                  placeholder="L'interprétation générée apparaîtra ici avec l'analyse d'Ibn Sirin et des savants..."
+                  className="w-full h-32 bg-indigo-50/40 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/50 rounded-xl p-3 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 resize-none font-sans text-sm"
                 ></textarea>
               </div>
 
@@ -693,9 +716,23 @@ export const DreamJournal: React.FC = () => {
                         {dream.content}
                       </p>
                       {dream.interpretation && (
-                        <div className="bg-indigo-50 dark:bg-indigo-900/10 border-l-4 border-indigo-400 p-4 rounded-r-xl">
-                           <h4 className="text-xs uppercase tracking-widest font-bold text-indigo-500 mb-2">{t("common.interpretation")} (Ta'bir)</h4>
-                           <p className="text-sm text-indigo-900 dark:text-indigo-200">{dream.interpretation}</p>
+                        <div className="bg-gradient-to-br from-indigo-50/80 via-purple-50/50 to-amber-50/30 dark:from-indigo-950/20 dark:via-purple-950/20 dark:to-amber-950/10 border-l-4 border-indigo-500 p-5 rounded-r-2xl border border-indigo-100/50 dark:border-indigo-900/30 shadow-sm mt-4">
+                          <div className="flex flex-wrap items-center justify-between gap-2 mb-3 pb-2 border-b border-indigo-100 dark:border-indigo-900/40">
+                            <h4 className="text-xs uppercase tracking-widest font-bold text-indigo-700 dark:text-indigo-300 flex items-center gap-1.5">
+                              <BookOpen size={14} className="text-indigo-600 dark:text-indigo-400" />
+                              Interprétation Traditionnelle (Ta'bīr al-Ru'yā)
+                            </h4>
+                            <div className="flex flex-wrap gap-1">
+                              <span className="text-[10px] bg-indigo-100/80 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300 px-2 py-0.5 rounded-full font-semibold">Ibn Sīrīn</span>
+                              <span className="text-[10px] bg-purple-100/80 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300 px-2 py-0.5 rounded-full font-semibold">Al-Nābulusī</span>
+                              <span className="text-[10px] bg-amber-100/80 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 px-2 py-0.5 rounded-full font-semibold">Ibn Shāhīn</span>
+                              <span className="text-[10px] bg-emerald-100/80 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 px-2 py-0.5 rounded-full font-semibold">Imam Al-Ṣādiq</span>
+                            </div>
+                          </div>
+                          
+                          <div className="prose dark:prose-invert max-w-none text-sm text-gray-800 dark:text-gray-200 leading-relaxed font-sans space-y-2">
+                            <Markdown remarkPlugins={[remarkGfm]}>{dream.interpretation}</Markdown>
+                          </div>
                         </div>
                       )}
                     </div>

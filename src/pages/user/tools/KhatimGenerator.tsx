@@ -8,6 +8,8 @@ import { calculateAbjadValue } from '../../../utils/abjad';
 import { toCanvas, toPng, toSvg } from 'html-to-image';
 import { jsPDF } from 'jspdf';
 
+import { downloadCanvasImage } from '../../../utils/downloadHelper';
+
 export const KhatimGenerator: React.FC = () => {
   const { t } = useLanguage();
   const [inputText, setInputText] = useState('');
@@ -20,12 +22,8 @@ export const KhatimGenerator: React.FC = () => {
   const downloadImage = async () => {
     if (!resultRef.current) return;
     try {
-      const canvas = await toCanvas(resultRef.current, { backgroundColor: '#18181b' });
-      const url = canvas.toDataURL('image/png');
-      const link = document.createElement('a');
-      link.download = `khatim-${gridSize}x${gridSize}.png`;
-      link.href = url;
-      link.click();
+      const canvas = await toCanvas(resultRef.current, { backgroundColor: '#18181b', skipFonts: true });
+      await downloadCanvasImage(canvas, `khatim-${gridSize}x${gridSize}.png`);
     } catch (e) {
       console.error(e);
     }
@@ -36,6 +34,7 @@ export const KhatimGenerator: React.FC = () => {
     try {
       const url = await toPng(resultRef.current, { 
         backgroundColor: null,
+        skipFonts: true,
         style: {
           background: 'transparent',
           boxShadow: 'none',
@@ -56,6 +55,7 @@ export const KhatimGenerator: React.FC = () => {
     try {
       const url = await toSvg(resultRef.current, {
         backgroundColor: null,
+        skipFonts: true,
         style: {
           background: 'transparent',
           boxShadow: 'none',
@@ -74,7 +74,7 @@ export const KhatimGenerator: React.FC = () => {
   const downloadPDF = async () => {
     if (!resultRef.current) return;
     try {
-      const canvas = await toCanvas(resultRef.current, { backgroundColor: '#18181b' });
+      const canvas = await toCanvas(resultRef.current, { backgroundColor: '#18181b', skipFonts: true });
       const imgData = canvas.toDataURL('image/png');
       
       const pdf = new jsPDF({
@@ -119,7 +119,7 @@ export const KhatimGenerator: React.FC = () => {
   const shareResult = async () => {
     if (!resultRef.current) return;
     try {
-      const canvas = await toCanvas(resultRef.current, { backgroundColor: '#18181b' });
+      const canvas = await toCanvas(resultRef.current, { backgroundColor: '#18181b', skipFonts: true });
       canvas.toBlob(async (blob) => {
         if (!blob) return;
         const file = new File([blob], `khatim-${gridSize}x${gridSize}.png`, { type: 'image/png' });
@@ -415,7 +415,29 @@ export const KhatimGenerator: React.FC = () => {
             <div ref={resultRef} className="bg-zinc-900 rounded-3xl p-6 sm:p-8 shadow-2xl border-4 border-zinc-800 mx-auto max-w-md relative overflow-hidden w-full">
                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay"></div>
                
-               <div className="text-center mb-8 relative z-10">
+               {/* AsrarHub Watermarks in 4 corners */}
+               <div className="absolute top-2 left-3 text-[10px] font-bold tracking-widest text-purple-400/30 pointer-events-none select-none uppercase">
+                 AsrarHub
+               </div>
+               <div className="absolute top-2 right-3 text-[10px] font-bold tracking-widest text-purple-400/30 pointer-events-none select-none uppercase">
+                 AsrarHub
+               </div>
+               <div className="absolute bottom-2 left-3 text-[10px] font-bold tracking-widest text-purple-400/30 pointer-events-none select-none uppercase">
+                 AsrarHub
+               </div>
+               <div className="absolute bottom-2 right-3 text-[10px] font-bold tracking-widest text-purple-400/30 pointer-events-none select-none uppercase">
+                 AsrarHub
+               </div>
+
+               {/* AsrarHub Logo Header */}
+               <div className="flex justify-center mb-4 relative z-10">
+                 <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-950/60 border border-purple-500/30 text-purple-300 text-xs font-black tracking-widest uppercase shadow-sm">
+                   <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                   <span>AsrarHub</span>
+                 </div>
+               </div>
+
+               <div className="text-center mb-6 relative z-10">
                 <span className="inline-block border-2 border-purple-500/50 text-purple-400 px-6 py-2 rounded-full text-sm font-black tracking-[0.3em] bg-purple-500/10 shadow-[0_0_15px_rgba(168,85,247,0.2)]">
                   {t('tools.khatim.totalWeight', 'POIDS TOTAL')} : {calculatedTotal}
                 </span>
@@ -457,9 +479,10 @@ export const KhatimGenerator: React.FC = () => {
                 </div>
               </div>
 
-              <div className="text-center mt-8 relative z-10">
+              <div className="text-center mt-8 relative z-10 border-t border-zinc-800 pt-3">
                  <p className="text-xs text-zinc-500 font-bold tracking-widest uppercase mb-1">{t('tools.khatim.sacredHarmony', 'Harmonie Sacrée')}</p>
-                 <p className="text-xs text-zinc-400">{t('tools.khatim.rowsColsDesc', 'Lignes et colonnes')} = {calculatedTotal} {calculatedTotal % gridSize !== 0 && t('tools.khatim.diagonalsNote', "(Les diagonales peuvent légèrement varier s'il y a un reste)")}</p>
+                 <p className="text-xs text-zinc-400 mb-2">{t('tools.khatim.rowsColsDesc', 'Lignes et colonnes')} = {calculatedTotal} {calculatedTotal % gridSize !== 0 && t('tools.khatim.diagonalsNote', "(Les diagonales peuvent légèrement varier s'il y a un reste)")}</p>
+                 <p className="text-[10px] font-bold tracking-widest text-purple-400/60 uppercase">AsrarHub • Science des Lettres & Wafq</p>
               </div>
             </div>
             

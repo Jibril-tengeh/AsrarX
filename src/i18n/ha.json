@@ -303,6 +303,18 @@
       "title": "Mai Fitar da Rouhaniyya",
       "description": "Fitar da ruhohin sama ko ƙasa bisa Sunaye da Nauyi."
     },
+    "rouhaniyyaPage": {
+      "title": "Mai Fitar da Rouhaniyya",
+      "subtitle": "Fitar da rundunonin mala'iku da na duniya bisa la'akari da Sunaye da Hisabi.",
+      "infoNotice": "A cikin ilimin ruhaniya (Ilm al-Ruhaniyat), kowace lamba (daga Suna ko Ayah) tana da mai hidima na ruhaniya (Khadim). Ana fitar da sunansu ta hanyar maida lambar zuwa harafi ('Istintaq'), sannan a ƙara sassan Mala'iku (\"A'il\") da na Duniya (\"Tish\").",
+      "numericalValue": "Lamba ko Hisabi (Zimam)",
+      "placeholder": "Alh: 313",
+      "extractButton": "Fitar",
+      "angelicEntity": "Mala'ika na Sama (Malaikah)",
+      "angelicDesc": "Yana mulki ta hanyar ruhaniya. Ƙarshen \"A'il\" yana nufin \"Allah\".",
+      "terrestrialEntity": "Ruhani na Ƙasa (Ardi)",
+      "terrestrialDesc": "Yana mulki ta hanyar aiki na fili. Ƙarshen yana zama \"Tish\" ko \"Yush\"."
+    },
     "taksir": {
       "title": "Taksir (Rarrabawa)",
       "description": "Samar da siffofin Taksir da rarraba haruffa."
@@ -838,5 +850,59 @@
     "title": "Ana Gudanar da Gyara",
     "description": "Ana kan gyara AsrarHub a halin yanzu don inganta ƙwarewarku. Za mu dawo nan ba da jimawa ba. Mun gode da haƙurin ku.",
     "badge": "An dakatar da shiga na ɗan lokaci"
+  },
+  "toolTooltip": {
+    "clickToInterpret": "Datsa don ganin fassarar sakamako",
+    "howItWorks": "Yadda yake Aiki",
+    "interpretation": "Fassara",
+    "spiritualAdvice": "Shawara ta Ruhaniya"
+  },
+  "khouddamPage": {
+    "title": "Mai Gano Khouddam & Mala'iku",
+    "subtitle": "Fitar da Mala'ikan Sama da Ruhani na Ƙasa bisa tsarin Sirr (Suna + Uwa).",
+    "spiritualFiliation": "Bayanin Nasabar Ruhani (Hisab al-Um)",
+    "firstName": "Suna",
+    "lastName": "Sunan Uba",
+    "motherName": "Sunan Uwa",
+    "orDirectInput": "Ko Rubuta Lamba / Hisabi Kai Tsaye",
+    "extractBtn": "Fitar da Khadim & Mala'ikan Tsaro",
+    "celestialGuardian": "Mala'ikan Sama (Al-Malak Al-Ulwi)",
+    "earthlyServant": "Ruhani na Ƙasa (Al-Khadim Al-Ardi)",
+    "celestialAlignments": "Haɗin Taurari da Taurari",
+    "dominantElement": "Tushen Halitta",
+    "incenseToBurn": "Turaren Tsuguno (Bakhour)",
+    "dayAndRuler": "Rana & Tauraro Mai Mulki",
+    "personalInvocation": "Addu'ar Neman Agaji",
+    "copyInvocation": "Auna Addu'a"
+  },
+  "sciencePage": {
+    "title": "Ilimin Haruffa (Ilm al-Huruf)",
+    "rouhaniyyaExtractorTitle": "Fitar da Rouhaniyya & Haruffan Suna",
+    "rouhaniyyaExtractorDesc": "Rubuta suna ko kalma a harshen Larabci don fitar da tsarin haruffa, halitta mai rinjaya da addu'a.",
+    "extractRouhaniyya": "Fitar da Rouhaniyya",
+    "totalAbjadValue": "Cikakken Hisabi",
+    "dominantElement": "Tushen Halitta",
+    "recommendedRepetition": "Maimaitawa da Ake Sharanta",
+    "componentLetters": "Haruffan da Suka Hada",
+    "deducedInvocationFormula": "Lafazin Addu'a da Aka Ciro",
+    "secretVaultTitle": "Tarin Sirru na Malaman Kwarai",
+    "secretVaultDesc": "Wadannan zikirai da addu'o'i na asiri an samo su ne daga manyan malamai da malamai shehunnai.",
+    "filterByMaster": "Rarrabe ta Malam:",
+    "allMasters": "Dukkan Malami",
+    "phonetics": "Karatun Harshe:",
+    "translation": "Fassara:",
+    "executionRitual": "Yadda Ake Karantawa:"
+  },
+  "rouhaniyyaPage": {
+    "title": "Mai Fitar da Rouhaniyya",
+    "subtitle": "Fitar da rundunonin mala'iku da na duniya bisa la'akari da Sunaye da Hisabi.",
+    "infoNotice": "A cikin ilimin ruhaniya (Ilm al-Ruhaniyat), kowace lamba (daga Suna ko Ayah) tana da mai hidima na ruhaniya (Khadim). Ana fitar da sunansu ta hanyar maida lambar zuwa harafi ('Istintaq'), sannan a ƙara sassan Mala'iku (\"A'il\") da na Duniya (\"Tish\").",
+    "numericalValue": "Lamba ko Hisabi (Zimam)",
+    "placeholder": "Alh: 313",
+    "extractButton": "Fitar",
+    "angelicEntity": "Mala'ika na Sama (Malaikah)",
+    "angelicDesc": "Yana mulki ta hanyar ruhaniya. Ƙarshen \"A'il\" yana nufin \"Allah\".",
+    "terrestrialEntity": "Ruhani na Ƙasa (Ardi)",
+    "terrestrialDesc": "Yana mulki ta hanyar aiki na fili. Ƙarshen yana zama \"Tish\" ko \"Yush\"."
   }
 }

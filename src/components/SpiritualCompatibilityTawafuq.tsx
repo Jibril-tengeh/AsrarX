@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Heart, Sparkles, Flame, Droplets, Mountain, Wind, RefreshCw, ShieldAlert, CheckCircle, Copy, Check, Users } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { FULL_28_LETTERS_DATA, LetterInfo } from '../pages/user/tools/ScienceOfLetters';
+import { useFeatures } from '../contexts/FeatureContext';
 
 // Helper map for Latin to Arabic transliteration for names
 const LATIN_TO_ARABIC_MAP: { [key: string]: string } = {
@@ -69,6 +70,8 @@ const analyzeNameElements = (rawName: string): ElementalBreakdown => {
 };
 
 export const SpiritualCompatibilityTawafuq: React.FC = () => {
+  const { featureToggles } = useFeatures();
+  const disableDuaCopy = !!featureToggles?.disable_dua_copy;
   const [name1, setName1] = useState('');
   const [name2, setName2] = useState('');
   const [mother1, setMother1] = useState('');
@@ -178,6 +181,7 @@ export const SpiritualCompatibilityTawafuq: React.FC = () => {
   };
 
   const handleCopyWird = (text: string) => {
+    if (disableDuaCopy) return;
     navigator.clipboard.writeText(text);
     setCopiedText(true);
     setTimeout(() => setCopiedText(false), 2500);
@@ -339,7 +343,15 @@ export const SpiritualCompatibilityTawafuq: React.FC = () => {
               </span>
             </div>
 
-            <p dir="rtl" className="text-xl sm:text-3xl font-quran text-amber-100 text-center leading-relaxed sm:leading-[2.2] break-words px-2 w-full max-w-full" style={{ fontFamily: '"Amiri Quran", "Uthmani", "Scheherazade New", "Amiri", serif', direction: 'rtl' }}>
+            <p 
+              dir="rtl" 
+              className={`text-xl sm:text-3xl font-quran text-amber-100 text-center leading-relaxed sm:leading-[2.2] break-words px-2 w-full max-w-full ${
+                disableDuaCopy ? 'select-none' : ''
+              }`} 
+              style={{ fontFamily: '"Amiri Quran", "Uthmani", "Scheherazade New", "Amiri", serif', direction: 'rtl' }}
+              onCopy={(e) => { if (disableDuaCopy) e.preventDefault(); }}
+              onContextMenu={(e) => { if (disableDuaCopy) e.preventDefault(); }}
+            >
               {analysisResult.recommendedWird.arabic}
             </p>
 
@@ -351,15 +363,17 @@ export const SpiritualCompatibilityTawafuq: React.FC = () => {
               « {analysisResult.recommendedWird.translation} »
             </p>
 
-            <div className="pt-2 flex justify-end">
-              <button
-                onClick={() => handleCopyWird(analysisResult.recommendedWird.arabic)}
-                className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
-              >
-                {copiedText ? <Check size={14} className="text-amber-300" /> : <Copy size={14} />}
-                <span>{copiedText ? "Copié !" : "Copier la formule"}</span>
-              </button>
-            </div>
+            {!disableDuaCopy && (
+              <div className="pt-2 flex justify-end">
+                <button
+                  onClick={() => handleCopyWird(analysisResult.recommendedWird.arabic)}
+                  className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  {copiedText ? <Check size={14} className="text-amber-300" /> : <Copy size={14} />}
+                  <span>{copiedText ? "Copié !" : "Copier la formule"}</span>
+                </button>
+              </div>
+            )}
           </div>
         </motion.div>
       )}

@@ -71,7 +71,17 @@ interface UserData {
 interface AuthContextType {
   user: UserData | null;
   loading: boolean;
+  isPremium: boolean;
 }
+
+export const checkIsPremium = (user: UserData | null): boolean => {
+  if (!user) return false;
+  if (user.role === 'admin') return true;
+  if (user.subscriptionTier === 'premium' || user.subscriptionTier === 'pro') return true;
+  const adminEmails = ['jibriltengeh4@gmail.com', 'sbireino@gmail.com', 'tenibawwal10@gmail.com', 'jibriltengeh57@gmail.com'];
+  if (user.email && adminEmails.includes(user.email.toLowerCase())) return true;
+  return false;
+};
 
 export enum OperationType {
   CREATE = 'create',
@@ -120,7 +130,38 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   throw new Error(JSON.stringify(errInfo));
 }
 
-const AuthContext = createContext<AuthContextType>({ user: null, loading: true });
+export const setLocalUserSession = (email: string, name?: string, country?: string, phone?: string): UserData => {
+  const adminEmails = ['jibriltengeh4@gmail.com', 'sbireino@gmail.com', 'tenibawwal10@gmail.com', 'jibriltengeh57@gmail.com'];
+  const normalizedEmail = (email || 'user@asrarhub.com').trim().toLowerCase();
+  const isAdmin = adminEmails.includes(normalizedEmail);
+  const role = isAdmin ? 'admin' : 'user';
+  
+  const userData: UserData = {
+    uid: 'local_' + Math.random().toString(36).substring(2, 10),
+    email: normalizedEmail,
+    name: name || normalizedEmail.split('@')[0],
+    role: role,
+    isBanned: false,
+    mysteryToolsDisabled: false,
+    blockedTools: [],
+    isTrusted: true,
+    emailVerified: true,
+    spiritualPoints: 100,
+    subscriptionTier: isAdmin ? 'premium' : 'free',
+    hideAds: false,
+    streakDays: 1,
+    purchasedItems: [],
+    country: country || '',
+    phone: phone || '',
+    pushNotificationsEnabled: false
+  };
+  
+  localStorage.setItem('asrarhub_local_user', JSON.stringify(userData));
+  window.dispatchEvent(new Event('asrarhub_local_user_changed'));
+  return userData;
+};
+
+const AuthContext = createContext<AuthContextType>({ user: null, loading: true, isPremium: false });
 
 export const useAuth = () => useContext(AuthContext);
 
@@ -129,6 +170,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const getLocalUser = (): UserData | null => {
+      try {
+        const stored = localStorage.getItem('asrarhub_local_user');
+        if (stored) {
+          return JSON.parse(stored) as UserData;
+        }
+      } catch (e) {
+        console.warn("Failed to parse local user session", e);
+      }
+      return null;
+    };
+
     let unsubscribeDoc: (() => void) | null = null;
     let unsubscribeSession: (() => void) | null = null;
 
@@ -271,15 +324,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setLoading(false);
         }, (error) => {
           console.error("AuthContext userRef onSnapshot error:", error);
+          const local = getLocalUser();
+          if (local) setUser(local);
           setLoading(false);
         });
       } else {
-        setUser(null);
+        const local = getLocalUser();
+        setUser(local);
         setLoading(false);
       }
     });
 
+    const handleLocalUserChange = () => {
+      if (!auth.currentUser) {
+        const local = getLocalUser();
+        setUser(local);
+      }
+    };
+
+    window.addEventListener('storage', handleLocalUserChange);
+    window.addEventListener('asrarhub_local_user_changed', handleLocalUserChange);
+
     return () => {
+      window.removeEventListener('storage', handleLocalUserChange);
+      window.removeEventListener('asrarhub_local_user_changed', handleLocalUserChange);
       if (unsubscribeDoc) {
         unsubscribeDoc();
       }
@@ -290,8 +358,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, []);
 
+  const isPremium = checkIsPremium(user);
+
   return (
-    <AuthContext.Provider value={{ user, loading }}>
+    <AuthContext.Provider value={{ user, loading, isPremium }}>
       {loading ? <AsrarHubLoader size="fullscreen" /> : children}
     </AuthContext.Provider>
   );

@@ -1,6 +1,8 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { useLanguage } from "../../contexts/LanguageContext";
+import { useAuth } from "../../contexts/AuthContext";
+import { triggerProtectionModal } from "../../components/ContentProtectionManager";
 import { useFeatures } from "../../contexts/FeatureContext";
 import {
   ArrowLeft,
@@ -31,7 +33,6 @@ import { getAsrarItems } from "../../data/store";
 import { AsrarItem } from "../../types";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "../../lib/firebase";
-import { useAuth } from '../../contexts/AuthContext';
 import { AuthModal } from '../../components/AuthModal';
 import { InteractiveLexiconText } from "../../components/InteractiveLexiconText";
 import { PremiumWrapper } from "../../components/PremiumWrapper";
@@ -76,7 +77,7 @@ export const SecretDetail: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { t, language } = useLanguage();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, isPremium } = useAuth();
   const { featureToggles } = useFeatures();
   const [item, setItem] = useState<AsrarItem | null>(null);
   const [notFound, setNotFound] = useState(false);
@@ -923,6 +924,10 @@ export const SecretDetail: React.FC = () => {
       }
     } else {
       // Fallback: Copy to clipboard if Web Share API is not supported
+      if (!isPremium) {
+        triggerProtectionModal('copy');
+        return;
+      }
       navigator.clipboard.writeText(shareUrl);
       alert(t("linkCopied", "Lien copié dans le presse-papiers !"));
     }

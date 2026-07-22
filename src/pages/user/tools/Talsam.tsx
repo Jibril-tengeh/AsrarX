@@ -25,7 +25,10 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
+import { useAuth } from '../../../contexts/AuthContext';
+import { triggerProtectionModal } from '../../../components/ContentProtectionManager';
 import { ToolInfoTooltip } from '../../../components/ToolInfoTooltip';
+import { downloadCanvasImage } from '../../../utils/downloadHelper';
 import { motion, AnimatePresence } from 'motion/react';
 
 const talsamDict = {
@@ -67,6 +70,7 @@ interface DivineName {
 
 export const Talsam: React.FC = () => {
   const { t, language } = useLanguage();
+  const { isPremium } = useAuth();
   const dict = talsamDict[(language as 'fr' | 'en' | 'ha') || 'fr'] || talsamDict.fr;
   const [intention, setIntention] = useState('');
   const [talsam, setTalsam] = useState('');
@@ -446,13 +450,21 @@ export const Talsam: React.FC = () => {
 
   const copyFormulaToClipboard = () => {
     if (!talsam) return;
+    if (!isPremium) {
+      triggerProtectionModal('copy');
+      return;
+    }
     navigator.clipboard.writeText(talsam);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const downloadKhatimAsImage = () => {
+  const downloadKhatimAsImage = async () => {
     if (!khatimGrid) return;
+    if (!isPremium) {
+      triggerProtectionModal('download');
+      return;
+    }
     
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -498,7 +510,19 @@ export const Talsam: React.FC = () => {
     ctx.beginPath();
     ctx.arc(300, 300, 252, 0, Math.PI * 2);
     ctx.stroke();
-    
+
+    // Corner Watermarks "AsrarHub"
+    ctx.fillStyle = 'rgba(245, 158, 11, 0.35)';
+    ctx.font = 'bold 10px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText("ASRARHUB", 45, 52);
+    ctx.textAlign = 'right';
+    ctx.fillText("ASRARHUB", 555, 52);
+    ctx.textAlign = 'left';
+    ctx.fillText("ASRARHUB", 45, 558);
+    ctx.textAlign = 'right';
+    ctx.fillText("ASRARHUB", 555, 558);
+
     // Header text
     ctx.fillStyle = '#fef3c7';
     ctx.font = 'bold 18px sans-serif';
@@ -506,8 +530,8 @@ export const Talsam: React.FC = () => {
     ctx.fillText("SCEAU THÉURGIQUE DE GHAZALI", 300, 75);
     
     ctx.fillStyle = '#f59e0b';
-    ctx.font = 'normal 13px sans-serif';
-    ctx.fillText("ASRARHUB - TABLETTE SACRÉE DE TRANSMUTATION", 300, 100);
+    ctx.font = 'bold 13px sans-serif';
+    ctx.fillText("ASRARHUB • TABLETTE SACRÉE DE TRANSMUTATION", 300, 100);
 
     // Grid details
     const gridX = 150;
@@ -574,11 +598,8 @@ export const Talsam: React.FC = () => {
     ctx.font = '9px monospace';
     ctx.fillText(`Poids Abjad: ${abjad} | Résonance: ${repetitionCount} Répétitions`, 300, 550);
 
-    // Download flow
-    const link = document.createElement('a');
-    link.download = `Sceau_Khatim_Mystique_${abjad}.png`;
-    link.href = canvas.toDataURL('image/png');
-    link.click();
+    // Download flow with watermark & storage access
+    await downloadCanvasImage(canvas, `Sceau_Khatim_Mystique_${abjad}.png`);
   };
 
   return (

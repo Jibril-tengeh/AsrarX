@@ -2,6 +2,9 @@ import React, { useState, useRef } from 'react';
 import { X, Download, Sparkles, Image as ImageIcon, Check, Moon, Star, Share2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toCanvas } from 'html-to-image';
+import { downloadCanvasImage } from '../utils/downloadHelper';
+import { useAuth } from '../contexts/AuthContext';
+import { triggerProtectionModal } from './ContentProtectionManager';
 
 interface VerseVisualGeneratorModalProps {
   isOpen: boolean;
@@ -32,19 +35,22 @@ export const VerseVisualGeneratorModal: React.FC<VerseVisualGeneratorModalProps>
 
   const cardRef = useRef<HTMLDivElement | null>(null);
 
+  const { isPremium } = useAuth();
+
   if (!isOpen) return null;
 
   const handleDownloadImage = async () => {
     if (!cardRef.current) return;
+    if (!isPremium) {
+      triggerProtectionModal('download');
+      return;
+    }
     setIsExporting(true);
     try {
-      const canvas = await toCanvas(cardRef.current, { quality: 0.95, pixelRatio: 2 });
-      const dataUrl = canvas.toDataURL('image/png');
-      const link = document.createElement('a');
+      const canvas = await toCanvas(cardRef.current, { quality: 0.95, pixelRatio: 2, skipFonts: true });
       const cleanTitle = verseTitle.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
-      link.download = `verset_contemplatif_${cleanTitle}.png`;
-      link.href = dataUrl;
-      link.click();
+      const fileName = `verset_contemplatif_${cleanTitle}.png`;
+      await downloadCanvasImage(canvas, fileName);
       setDownloadSuccess(true);
       setTimeout(() => setDownloadSuccess(false), 3000);
     } catch (err) {
@@ -239,11 +245,19 @@ export const VerseVisualGeneratorModal: React.FC<VerseVisualGeneratorModalProps>
                 <div className={`absolute -top-12 -right-12 w-48 h-48 ${currentStyle.glow} rounded-full blur-3xl pointer-events-none`} />
                 <div className={`absolute -bottom-12 -left-12 w-48 h-48 ${currentStyle.glow} rounded-full blur-3xl pointer-events-none`} />
 
-                {/* Top Corner Ornaments */}
+                {/* AsrarHub Corner Watermarks */}
+                <div className="absolute top-2 left-3 text-[10px] font-black tracking-widest text-amber-400/30 pointer-events-none select-none uppercase">
+                  AsrarHub
+                </div>
+                <div className="absolute top-2 right-3 text-[10px] font-black tracking-widest text-amber-400/30 pointer-events-none select-none uppercase">
+                  AsrarHub
+                </div>
+
+                {/* Top Corner Ornaments & AsrarHub Badge */}
                 <div className="flex justify-between items-center text-xs text-amber-300/80 mb-4 font-mono">
-                  <span className="flex items-center gap-1 text-[11px]">
-                    <Moon size={12} className="text-amber-400" />
-                    {lunarPhaseName || (language === 'fr' ? "Récitation Contemplative" : "Contemplative Recitation")}
+                  <span className="flex items-center gap-1.5 text-[11px] font-bold text-amber-300">
+                    <Sparkles size={12} className="text-amber-400" />
+                    AsrarHub
                   </span>
                   <span className="font-bold tracking-wider text-amber-200 uppercase">
                     {verseTitle}
@@ -278,14 +292,12 @@ export const VerseVisualGeneratorModal: React.FC<VerseVisualGeneratorModalProps>
 
                 {/* Islamic Calligraphic Frame Bottom & Watermark */}
                 <div className="mt-4 pt-3 border-t border-white/10 flex justify-between items-center text-[10px] text-gray-400">
-                  <span className={currentStyle.titleColor}>
-                    {verseTitle}
+                  <span className={`${currentStyle.titleColor} font-bold`}>
+                    AsrarHub • {verseTitle}
                   </span>
-                  {showWatermark && (
-                    <span className="text-amber-300/70 font-semibold tracking-widest uppercase flex items-center gap-1">
-                      <Sparkles size={10} /> ASRAR • SAGESSE & CONTEMPLATION
-                    </span>
-                  )}
+                  <span className="text-amber-300/80 font-bold tracking-widest uppercase flex items-center gap-1">
+                    <Sparkles size={10} /> ASRARHUB • SAGESSE & CONTEMPLATION
+                  </span>
                 </div>
               </div>
             </div>

@@ -127,10 +127,10 @@ Format de réponse attendu : Un objet JSON valide respectant cette structure exa
     }
   });
 
-  // Dream Interpretation via Gemini
+  // Dream Interpretation via Gemini - Based on Classical Islamic Scholars (Ibn Sirin, Al-Nabulsi, Ibn Shahin, Imam Al-Sadiq)
   app.post("/api/dreams/interpret", async (req, res) => {
     try {
-      const { title, content, type, wirdDone } = req.body;
+      const { title, content, type, wirdDone, language } = req.body;
       const apiKey = process.env.GEMINI_API_KEY;
       if (!apiKey) {
         return res.status(500).json({ error: "Gemini API key is not configured" });
@@ -144,20 +144,48 @@ Format de réponse attendu : Un objet JSON valide respectant cette structure exa
           }
         }
       });
-      const prompt = `
-Vous êtes un expert en interprétation islamique des rêves, suivant la méthodologie d'Ibn Sirin et des savants spirituels.
-L'utilisateur partage le rêve suivant :
-Titre : ${title}
-Contenu du rêve : ${content}
-Type perçu : ${type}
-Wird/Zikr effectué avant de dormir : ${wirdDone || "Aucun"}
 
-Règles d'éthique spirituelle :
-- Ne jamais prédire l'avenir de façon absolue (seul Allah sait).
-- Toujours utiliser "Allahou A'lam" (Dieu sait mieux).
-- Si le rêve semble 'shaytani' (cauchemar), conseiller fermement de chercher refuge auprès d'Allah (A'oudhou billah) et de ne pas le raconter.
-- Fournir une interprétation concise, apaisante et ancrée dans le symbolisme classique islamique (Ibn Sirin).
-- Répondre en français avec douceur et sagesse spirituelle.
+      const langName = language === 'en' ? 'English' : language === 'ha' ? 'Hausa (with French for technical terms)' : 'French';
+
+      const prompt = `
+Vous êtes un maître érudit en herméneutique onirique islamique (Tafsīr al-Aḥlām / Ta'bīr al-Ru'yā), expert des sources et ouvrages classiques de référence :
+1. **L'Imam Muhammad Ibn Sīrīn** (تعبير الرؤيا / منتخب الكلام في تفسير الأحلام) - Fondateur de la science des symboles et analogies coraniques.
+2. **L'Imam 'Abdul-Ghanī Al-Nābulusī** (تعطير الأنام في تعبير المنام) - Expert des dictionnaire des symboles et nuances psychologico-spirituelles.
+3. **L'Imam Ibn Shāhīn Al-Ẓāhirī** (الإشارات في علم الإشارات) - Analyse selon le rang, l'état de pureté et la situation du rêveur.
+4. **L'Imam Ja'far Al-Ṣādiq** (décryptage par facettes et aspects multiples).
+
+Récit du rêve transmis par le croyant :
+- **Titre / Sujet principal** : ${title}
+- **Récit détaillé** : ${content}
+- **Nature supposée** : ${type || "Non défini"}
+- **Prélude spirituel / Zikr avant le sommeil** : ${wirdDone || "Aucun spécifié"}
+
+INSTRUCTIONS STRICTES DE RÉDACTION (Exprimez-vous en ${langName}) :
+
+Formatez votre interprétation de manière structurée et élégante en Markdown :
+
+### 1. 🌙 Classification & Nature Onirique (Sunnah)
+- Déterminez la nature du rêve : **Rū'yā Raḥmāniyya** (Vision véridique et divine), **Ḥulm Nafsānī** (Reflet des préoccupations intérieures), ou **Ḥulm Shayṭānī** (Cauchemar perturbateur).
+- Expliquez le rôle éventuel du Zikr ou de l'état spirituel avant le sommeil.
+
+### 2. 📜 Décryptage Symbolique selon Ibn Sirin (الإمام ابن سيرين)
+- Analysez les symboles majeurs (ex: eau, clés, ciel, vol, serpents, lumière, vêtements, fruits, personnes, lieux).
+- Citez les analogies coraniques et hadiths associées par Ibn Sirin.
+
+### 3. 🕊️ Éclairage d'Al-Nabulsi & Ibn Shahin (النابلسي وابن شاهين)
+- Apportez les nuances d'Al-Nabulsi (aspect matériel vs spirituel, réjouissance ou avertissement).
+- Intégrez la grille de lecture d'Ibn Shahin (différence selon que le rêveur est pieux, en épreuve, ou recherche une subsistance).
+
+### 4. 🌟 Facettes & Aspects selon l'Imam Ja'far Al-Sadiq (الإمام جعفر الصادق)
+- Décomposez les symboles fondamentaux en facettes explicites (ex: *"Les savants et l'Imam Ja'far al-Sadiq associent à ce symbole 4 facettes : 1. Élévation spirituelle, 2. Subsistance bénie, 3. Résolution d'un tracas, 4. Paix de l'âme"*).
+
+### 5. 🤲 Conseils Spirituels & Éthique du Rêveur (Ādāb al-Ru'yā)
+- Donnez les recommandations concrètes de la Sunnah selon la nature du rêve (remerciements, discrétion, aumône, ou demande de protection).
+- Proposez une courte invocation (Doua en arabe avec traduction) ou un Zikr apaisant adapté.
+
+**ÉTHIQUE ISLAMIQUE FONDAMENTALE** :
+- Ne prétendez jamais prédire l'avenir. L'Inconnaissable (Al-Ghayb) appartient à Allah Seul.
+- Concluez IMPÉRATIVEMENT par : **"Wa Allāhu A'lam" (والله أعلم - Et Allah sait mieux)**.
 `;
 
       const response = await generateWithRetry(ai, {
@@ -234,6 +262,70 @@ Ne mettez aucun texte d'enrobage avant ou après le JSON.
     } catch (error: any) {
       console.error("Asrar Conseil generation error:", error);
       res.status(500).json({ error: "Failed to generate AI counsel" });
+    }
+  });
+
+  // Za'irja AI Oracle & Prophetic Poetry
+  app.post("/api/zairja/oracle", async (req, res) => {
+    try {
+      const { question, abjadSum, language } = req.body;
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (!apiKey) {
+        return res.status(500).json({ error: "Gemini API key is not configured" });
+      }
+
+      const ai = new GoogleGenAI({
+        apiKey,
+        httpOptions: {
+          headers: {
+            'User-Agent': 'aistudio-build',
+          }
+        }
+      });
+
+      const prompt = `
+Vous êtes le maître gardien de la Za'irja (الزايرجة de Tlemsani & Ibn Khaldoun), la matrice ésotérique soufie d'Iqtiran et d'Abjad.
+L'utilisateur pose la question complexe suivante :
+"${question}"
+Valeur numérique Abjad Jummal calculée : ${abjadSum || 129}
+
+Tâche :
+Utilisez la poésie soufie prophétique et la sagesse des lettres (Ilm al-Huruf) pour composer un poème répondeur rythmé et rimé, sous la forme d'un verset/poème sacré (Bayt / Qasida) en arabe avec tashkeel complet, accompagné de sa traduction fluide et d'une exégèse spirituelle.
+
+RÈGLES STRICTES :
+1. "arabicVerse": Un poème ou verset rimé de 2 à 4 lignes en alphabet arabe original avec voyelles (tashkeel).
+2. "translation": La traduction française/anglaise poétique et élégante du poème.
+3. "interpretation": Une explication ésotérique spirituelle apaisante (Sharh) de 3 à 4 phrases pour guider le questionneur.
+4. "recommendedDhikr": Le Nom Divin ou verset recommandé avec le nombre de répétitions (ex: "Ya Latif (129 fois) - Pour dénouer l'épreuve").
+5. "numericString": Une suite de 5 à 7 nombres séparés par des tirets représentant la corde numérique de la Za'irja.
+
+Ne mettez aucun texte d'enrobage avant ou après le JSON.
+`;
+
+      const response = await generateWithRetry(ai, {
+        model: "gemini-3.5-flash",
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: "OBJECT",
+            properties: {
+              arabicVerse: { type: "STRING", description: "Rhyming Arabic poem with tashkeel" },
+              translation: { type: "STRING", description: "Translation of the poem" },
+              interpretation: { type: "STRING", description: "Spiritual commentary and advice" },
+              recommendedDhikr: { type: "STRING", description: "Associated Dhikr and count" },
+              numericString: { type: "STRING", description: "Crypted numeric string" }
+            },
+            required: ["arabicVerse", "translation", "interpretation", "recommendedDhikr", "numericString"]
+          }
+        }
+      });
+
+      const resultText = response?.text?.trim() || "{}";
+      res.json(JSON.parse(resultText));
+    } catch (error: any) {
+      console.error("Zairja Oracle generation error:", error);
+      res.status(500).json({ error: "Failed to generate Zairja Oracle" });
     }
   });
 

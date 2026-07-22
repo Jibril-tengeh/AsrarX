@@ -5,6 +5,8 @@ import {
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
+import { useAuth } from '../../../contexts/AuthContext';
+import { triggerProtectionModal } from '../../../components/ContentProtectionManager';
 import { motion, AnimatePresence } from 'motion/react';
 import { SpiritualCompatibilityTawafuq } from '../../../components/SpiritualCompatibilityTawafuq';
 import { KhatimWafqGenerator } from '../../../components/KhatimWafqGenerator';
@@ -597,6 +599,7 @@ export const FULL_28_LETTERS_DATA: LetterInfo[] = [
 
 export const ScienceOfLetters: React.FC = () => {
   const { t, language } = useLanguage();
+  const { isPremium } = useAuth();
   const [selectedLetter, setSelectedLetter] = useState<LetterInfo | null>(FULL_28_LETTERS_DATA[0]);
   const [activeTab, setActiveTab] = useState<'grid' | 'calculator' | 'tawafuq' | 'khatim' | 'clock' | 'vault'>('grid');
   const [filterElement, setFilterElement] = useState<string>('Tous');
@@ -632,6 +635,11 @@ export const ScienceOfLetters: React.FC = () => {
   };
 
   const handleCopy = (text: string, id: string) => {
+    if (disableDuaCopy) return;
+    if (!isPremium) {
+      triggerProtectionModal('copy');
+      return;
+    }
     navigator.clipboard.writeText(text);
     setCopiedText(id);
     setTimeout(() => setCopiedText(null), 2500);
@@ -997,7 +1005,6 @@ export const ScienceOfLetters: React.FC = () => {
                       }`}
                       onCopy={(e) => { if (disableDuaCopy) e.preventDefault(); }}
                       onContextMenu={(e) => { if (disableDuaCopy) e.preventDefault(); }}
-                      onSelectStart={(e) => { if (disableDuaCopy) e.preventDefault(); }}
                     >
                       <p className="text-xl sm:text-3xl font-quran leading-relaxed sm:leading-loose text-amber-100 break-words px-2" dir="rtl" style={{ direction: 'rtl' }}>
                         {selectedLetter.secretWird.arabicText}
@@ -1042,10 +1049,10 @@ export const ScienceOfLetters: React.FC = () => {
         <div className="bg-white dark:bg-gray-800 p-4 sm:p-8 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm space-y-6 w-full max-w-full overflow-hidden">
           <div className="border-b border-gray-100 dark:border-gray-700 pb-4">
             <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <Calculator className="text-emerald-500 shrink-0" size={20} /> Extracteur de Rouhaniyya & Lettres de Nom
+              <Calculator className="text-emerald-500 shrink-0" size={20} /> {t("sciencePage.rouhaniyyaExtractorTitle", "Extracteur de Rouhaniyya & Lettres de Nom")}
             </h2>
             <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
-              Saisissez un prénom ou un mot en arabe (ex: "محمد" ou "علي" ou votre prénom) pour extraire la composition des lettres, l'élément dominant et la formule de Wird personnalisée.
+              {t("sciencePage.rouhaniyyaExtractorDesc", "Saisissez un prénom ou un mot en arabe (ex: \"محمد\" ou \"علي\" ou votre prénom) pour extraire la composition des lettres, l'élément dominant et la formule de Wird personnalisée.")}
             </p>
           </div>
 
@@ -1054,7 +1061,7 @@ export const ScienceOfLetters: React.FC = () => {
               type="text"
               value={inputName}
               onChange={(e) => setInputName(e.target.value)}
-              placeholder="Ex: محمد ou علي..."
+              placeholder="Ex: محمد..."
               className="flex-1 w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl text-base sm:text-lg font-arabic text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
               dir="rtl"
             />
@@ -1062,7 +1069,7 @@ export const ScienceOfLetters: React.FC = () => {
               onClick={calculateNameRouhaniyya}
               className="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl shadow-lg transition-colors flex items-center justify-center gap-2 shrink-0 cursor-pointer"
             >
-              <Sparkles size={18} /> Extraire la Rouhaniyya
+              <Sparkles size={18} /> {t("sciencePage.extractRouhaniyya", "Extraire la Rouhaniyya")}
             </button>
           </div>
 
@@ -1074,26 +1081,26 @@ export const ScienceOfLetters: React.FC = () => {
             >
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 w-full max-w-full">
                 <div className="p-4 bg-emerald-50 dark:bg-emerald-950/30 rounded-2xl border border-emerald-200 dark:border-emerald-800/40 text-center">
-                  <span className="text-xs text-emerald-600 dark:text-emerald-400 font-bold uppercase">Total Valeur Abjad</span>
+                  <span className="text-xs text-emerald-600 dark:text-emerald-400 font-bold uppercase">{t("sciencePage.totalAbjadValue", "Total Valeur Abjad")}</span>
                   <p className="text-2xl sm:text-3xl font-black text-emerald-700 dark:text-emerald-300 mt-1">{extractedResult.totalAbjad}</p>
                 </div>
 
                 <div className="p-4 bg-blue-50 dark:bg-blue-950/30 rounded-2xl border border-blue-200 dark:border-blue-800/40 text-center">
-                  <span className="text-xs text-blue-600 dark:text-blue-400 font-bold uppercase">Élément Dominant</span>
+                  <span className="text-xs text-blue-600 dark:text-blue-400 font-bold uppercase">{t("sciencePage.dominantElement", "Élément Dominant")}</span>
                   <p className="text-xl sm:text-2xl font-bold text-blue-700 dark:text-blue-300 mt-1 flex items-center justify-center gap-1">
                     {getElementIcon(extractedResult.dominantElement)} {extractedResult.dominantElement}
                   </p>
                 </div>
 
                 <div className="p-4 bg-purple-50 dark:bg-purple-950/30 rounded-2xl border border-purple-200 dark:border-purple-800/40 text-center">
-                  <span className="text-xs text-purple-600 dark:text-purple-400 font-bold uppercase">Répétition Recommandée</span>
+                  <span className="text-xs text-purple-600 dark:text-purple-400 font-bold uppercase">{t("sciencePage.recommendedRepetition", "Répétition Recommandée")}</span>
                   <p className="text-2xl sm:text-3xl font-black text-purple-700 dark:text-purple-300 mt-1">{extractedResult.recommendedZikrCount}x</p>
                 </div>
               </div>
 
               {/* Individual Found Letters */}
               <div className="w-full max-w-full">
-                <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3">Lettres Composantes ({extractedResult.foundLetters.length})</h3>
+                <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3">{t("sciencePage.componentLetters", "Lettres Composantes")} ({extractedResult.foundLetters.length})</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 w-full max-w-full">
                   {extractedResult.foundLetters.map((l: LetterInfo, idx: number) => (
                     <div key={idx} className="p-3 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 flex items-center justify-between min-w-0">
@@ -1109,7 +1116,7 @@ export const ScienceOfLetters: React.FC = () => {
 
               {/* Custom Generated Wird */}
               <div className="p-4 sm:p-6 rounded-2xl bg-slate-900 text-white border border-emerald-500/30 space-y-3 w-full max-w-full overflow-hidden">
-                <h4 className="text-xs sm:text-sm font-bold text-amber-400 uppercase tracking-wider">Formule d'Invocation Déduite</h4>
+                <h4 className="text-xs sm:text-sm font-bold text-amber-400 uppercase tracking-wider">{t("sciencePage.deducedInvocationFormula", "Formule d'Invocation Déduite")}</h4>
                 <p className="text-base sm:text-lg font-arabic leading-relaxed text-amber-100 break-words" dir="rtl">
                   يَا {extractedResult.foundLetters[0]?.angelArabic || 'هَطْمَائِيلُ'} بِحَقِّ سِرِّ الحُرُوفِ ({extractedResult.foundLetters.map((l: LetterInfo) => l.char).join(' - ')}) اِجْعَلْ لِي مِنْ كُلِّ ضِيقٍ مَخْرَجًا
                 </p>
@@ -1140,17 +1147,17 @@ export const ScienceOfLetters: React.FC = () => {
         <div className="space-y-6 w-full max-w-full">
           <div className="bg-gradient-to-r from-amber-500/10 via-indigo-500/10 to-emerald-500/10 p-4 sm:p-6 rounded-3xl border border-amber-500/30 w-full max-w-full">
             <h2 className="text-lg sm:text-xl font-bold text-amber-800 dark:text-amber-300 flex items-center gap-2">
-              <Key className="text-amber-500 shrink-0" size={20} /> Le Caveau des Wirds Secrets des Grands Maîtres Initiés
+              <Key className="text-amber-500 shrink-0" size={20} /> {t("sciencePage.secretVaultTitle", "Le Caveau des Wirds Secrets des Grands Maîtres Initiés")}
             </h2>
             <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mt-1 leading-relaxed">
-              Ces invocations et wirds sacrés sont attribués aux plus grands imams et cheikhs (*Hujjat al-Islam Imam Al-Ghazali*, *Ibn 'Arabi*, *Cheikh 'Abdul Qadir al-Jilani*, *Imam Al-Nawawi*, *Imam Ash-Shadhili*, *Al-Buni*, *At-Tijani*, *Al-Busiri*, *Ar-Rifa'i*, *Ma al-'Aynayn*).
+              {t("sciencePage.secretVaultDesc", "Ces invocations et wirds sacrés sont attribués aux plus grands imams et cheikhs.")}
             </p>
 
             {/* Master Filter Buttons Bar */}
             <div className="mt-4 flex items-center gap-1.5 overflow-x-auto hide-scrollbar touch-pan-x pb-1 pt-1">
-              <span className="text-xs font-bold text-amber-700 dark:text-amber-400 shrink-0 mr-1">Filtrer par Maître :</span>
+              <span className="text-xs font-bold text-amber-700 dark:text-amber-400 shrink-0 mr-1">{t("sciencePage.filterByMaster", "Filtrer par Maître :")}</span>
               {[
-                { label: 'Tous les Maîtres', value: 'Tous' },
+                { label: t("sciencePage.allMasters", "Tous les Maîtres"), value: 'Tous' },
                 { label: 'Imam Al-Ghazali', value: 'Ghazali' },
                 { label: 'Ibn \'Arabi', value: 'Arabi' },
                 { label: 'Cheikh \'Abdul Qadir al-Jilani', value: 'Jilani' },
@@ -1207,7 +1214,6 @@ export const ScienceOfLetters: React.FC = () => {
                   }`}
                   onCopy={(e) => { if (disableDuaCopy) e.preventDefault(); }}
                   onContextMenu={(e) => { if (disableDuaCopy) e.preventDefault(); }}
-                  onSelectStart={(e) => { if (disableDuaCopy) e.preventDefault(); }}
                 >
                   <p className="text-lg sm:text-2xl font-arabic leading-relaxed sm:leading-loose break-words px-2" dir="rtl">{w.arabicText}</p>
                   {!disableDuaCopy && (

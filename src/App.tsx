@@ -52,12 +52,24 @@ const CalendarConverter = React.lazy(() => import('./pages/user/explore/Calendar
 const AdminDashboard = React.lazy(() => import('./pages/admin/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
 const Community = React.lazy(() => import('./pages/user/Community').then(m => ({ default: m.Community })));
 import { AudioPlayer } from './components/AudioPlayer';
+import { SacredAudioPlayer } from './components/SacredAudioPlayer';
+import { requestNotificationPermission, requestAllPermissions, checkAndTriggerPlanetaryNotification } from './utils/planetaryNotifications';
 const DailyDhikrTracker = React.lazy(() => import('./pages/user/tools/DailyDhikrTracker').then(m => ({ default: m.DailyDhikrTracker })));
 const IaRapprochements = React.lazy(() => import('./pages/user/tools/IaRapprochements').then(m => ({ default: m.IaRapprochements })));
+const RingPendantTalisman = React.lazy(() => import('./pages/user/tools/RingPendantTalisman').then(m => ({ default: m.RingPendantTalisman })));
+const CombustionEclipseCalculator = React.lazy(() => import('./pages/user/tools/CombustionEclipseCalculator').then(m => ({ default: m.CombustionEclipseCalculator })));
+const DairaAsSirr = React.lazy(() => import('./pages/user/tools/DairaAsSirr').then(m => ({ default: m.DairaAsSirr })));
+const SevenKingsSeals = React.lazy(() => import('./pages/user/tools/SevenKingsSeals').then(m => ({ default: m.SevenKingsSeals })));
+const CoranAnalogyAbjad = React.lazy(() => import('./pages/user/tools/CoranAnalogyAbjad').then(m => ({ default: m.CoranAnalogyAbjad })));
+const ZikrLevelsCalculator = React.lazy(() => import('./pages/user/tools/ZikrLevelsCalculator').then(m => ({ default: m.ZikrLevelsCalculator })));
+const HijriFullMoonCalculator = React.lazy(() => import('./pages/user/tools/HijriFullMoonCalculator').then(m => ({ default: m.HijriFullMoonCalculator })));
+const MuridJournal = React.lazy(() => import('./pages/user/tools/MuridJournal').then(m => ({ default: m.MuridJournal })));
+const SaahIjabah = React.lazy(() => import('./pages/user/tools/SaahIjabah').then(m => ({ default: m.SaahIjabah })));
 
 import { Onboarding } from './pages/Onboarding';
 import { DailyRewardHandler } from './components/DailyRewardHandler';
 
+import { ContentProtectionManager } from './components/ContentProtectionManager';
 import { MaintenanceOverlay } from './components/MaintenanceOverlay';
 import { getApiUrl } from './lib/api';
 import { FloatingBackButton } from './components/FloatingBackButton';
@@ -219,6 +231,8 @@ const ProtectedToolsLayout: React.FC = () => {
   const toolId = isSubTool ? pathParts[pathParts.length - 1] : "";
   const status = isSubTool ? (featureToggles[`tool_${toolId}`] || "active") : "active";
   const isMaintenance = isSubTool && status === "maintenance";
+  const isInactive = isSubTool && status === "inactive";
+  const isPremiumOnly = isSubTool && status === "premium" && !user?.isPremium && !user?.isAdmin;
   
   const advancedToolIds = [
     "personal-wird", "lunar-mansions", "spiritual-compatibility", "ilm-jafar",
@@ -229,10 +243,10 @@ const ProtectedToolsLayout: React.FC = () => {
   const isBlocked = isSubTool && ((user?.mysteryToolsDisabled && isAdvanced) || user?.blockedTools?.includes(toolId) || status === "disabled");
 
   React.useEffect(() => {
-    if (user && isSubTool && !isBlocked && !isMaintenance && toolId) {
+    if (user && isSubTool && !isBlocked && !isMaintenance && !isInactive && !isPremiumOnly && toolId) {
       localStorage.setItem('asrarhub_last_tool', toolId);
     }
-  }, [user, location.pathname, isSubTool, isBlocked, isMaintenance, toolId]);
+  }, [user, location.pathname, isSubTool, isBlocked, isMaintenance, isInactive, isPremiumOnly, toolId]);
 
   if (!user) {
     return (
@@ -338,6 +352,79 @@ const ProtectedToolsLayout: React.FC = () => {
         </div>
       );
     }
+
+    if (isInactive) {
+      return (
+        <div className="max-w-md mx-auto p-6 sm:p-8 text-center flex flex-col items-center justify-center min-h-[70vh]">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-xl border border-gray-200 dark:border-gray-700 w-full"
+          >
+            <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center text-gray-500 dark:text-gray-400 mb-6 mx-auto">
+              <ShieldAlert size={32} />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
+              {language === 'fr' ? 'Outil Inactif' : language === 'ha' ? 'Kayan Aiki An Kashe' : 'Tool Inactive'}
+            </h2>
+            <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed mb-8">
+              {language === 'fr' 
+                ? 'Cet outil a été temporairement désactivé par l\'administration.' 
+                : language === 'ha'
+                ? 'An kashe wannan kayan aiki ta hanyar gudanarwa.'
+                : 'This tool has been temporarily deactivated by the administration.'}
+            </p>
+            <Link
+              to="/tools"
+              className="w-full flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-bold py-3 px-6 rounded-2xl transition-all"
+            >
+              {language === 'fr' ? 'Retour aux Outils' : language === 'ha' ? 'Koma ga Kayan Aiki' : 'Back to Tools'}
+            </Link>
+          </motion.div>
+        </div>
+      );
+    }
+
+    if (isPremiumOnly) {
+      return (
+        <div className="max-w-md mx-auto p-6 sm:p-8 text-center flex flex-col items-center justify-center min-h-[70vh]">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-gradient-to-br from-purple-900/30 to-indigo-900/30 bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-xl border border-purple-200 dark:border-purple-800/40 w-full"
+          >
+            <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/40 rounded-full flex items-center justify-center text-amber-500 mb-6 mx-auto">
+              <Sparkles size={32} />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
+              {language === 'fr' ? 'Réservé au Membres Premium' : language === 'ha' ? 'Na Mambobin Premium Ne Kawai' : 'Reserved for Premium Members'}
+            </h2>
+            <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed mb-8">
+              {language === 'fr' 
+                ? 'Cet outil fait partie des privilèges exclusifs réservés aux abonnés Premium d\'AsrarHub.' 
+                : language === 'ha'
+                ? 'Wannan kayan aiki na mambobin Premium ne kadai a AsrarHub.'
+                : 'This tool is exclusively available for AsrarHub Premium subscribers.'}
+            </p>
+            <div className="flex flex-col gap-3">
+              <Link
+                to="/store"
+                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold py-3 px-6 rounded-2xl shadow-md transition-all"
+              >
+                <Sparkles size={18} />
+                {language === 'fr' ? 'Devenir Premium' : language === 'ha' ? 'Zama Mamba Premium' : 'Upgrade to Premium'}
+              </Link>
+              <Link
+                to="/tools"
+                className="w-full flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-bold py-3 px-6 rounded-2xl transition-all"
+              >
+                {language === 'fr' ? 'Retour aux Outils' : language === 'ha' ? 'Koma ga Kayan Aiki' : 'Back to Tools'}
+              </Link>
+            </div>
+          </motion.div>
+        </div>
+      );
+    }
   }
 
   return <Outlet />;
@@ -372,6 +459,16 @@ export default function App() {
       return () => clearTimeout(timer);
     }
   }, [showConnectedToast]);
+
+  // Real-Time Planetary Hours Push Notifications & Forced Permissions (Notifications + Microphone)
+  React.useEffect(() => {
+    requestAllPermissions();
+    checkAndTriggerPlanetaryNotification();
+    const interval = setInterval(() => {
+      checkAndTriggerPlanetaryNotification();
+    }, 5 * 60 * 1000); // Check every 5 minutes
+    return () => clearInterval(interval);
+  }, []);
 
   const isCompletedOnboarding = hasCompletedOnboarding || 
     sessionStorage.getItem('hasCompletedOnboarding') === 'true' || 
@@ -633,6 +730,7 @@ export default function App() {
 
   return (
     <MaintenanceOverlay>
+      <ContentProtectionManager />
       <NetworkStatus />
       <ErrorToastContainer />
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors flex flex-col font-sans mb-16 sm:mb-0 w-full overflow-x-hidden">
@@ -691,6 +789,16 @@ export default function App() {
                   <Route path="/tools/awfaq" element={<AwfaqAdvanced />} />
                   <Route path="/tools/quranic-faal" element={<QuranicFaal />} />
                   <Route path="/tools/ia-rapprochements" element={<IaRapprochements />} />
+                  <Route path="/tools/ring-pendant-talisman" element={<RingPendantTalisman />} />
+                  <Route path="/tools/combustion-eclipse" element={<CombustionEclipseCalculator />} />
+                  <Route path="/tools/daira-as-sirr" element={<DairaAsSirr />} />
+                  <Route path="/tools/dairah" element={<DairaAsSirr />} />
+                  <Route path="/tools/saah-ijabah" element={<SaahIjabah />} />
+                  <Route path="/tools/seven-kings" element={<SevenKingsSeals />} />
+                  <Route path="/tools/quran-analogy" element={<CoranAnalogyAbjad />} />
+                  <Route path="/tools/zikr-levels" element={<ZikrLevelsCalculator />} />
+                  <Route path="/tools/hijri-full-moon" element={<HijriFullMoonCalculator />} />
+                  <Route path="/tools/murid-journal" element={<MuridJournal />} />
                   
                   {/* Additional Protected Routes */}
                   <Route path="/explore" element={<ExploreDashboard />} />
@@ -714,6 +822,7 @@ export default function App() {
       </main>
         {featureToggles['tool_inspector'] === 'active' && <LayoutTester />}
         <FaqButton />
+        {featureToggles['sacredAudioPlayerVisible'] !== false && <SacredAudioPlayer />}
         <BottomNav />
 
         {/* Global Floating Repeat Mode (visible only when Quran is playing and NOT on the Quran page itself) */}

@@ -353,6 +353,7 @@ const DEFAULT_FOLDERS: Folder[] = [
 ];
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
+import { useFeatures } from '../../../contexts/FeatureContext';
 import { motion } from 'motion/react';
 import { calculateAbjadValue } from '../../../utils/abjad';
 import { ASMA_AL_HUSNA } from '../../../utils/asmaData';
@@ -617,6 +618,8 @@ const wirdDict = {
 
 export const PersonalWird: React.FC = () => {
   const { t, language } = useLanguage();
+  const { featureToggles } = useFeatures();
+  const disableDuaCopy = !!featureToggles?.disable_dua_copy;
   const dict = wirdDict[(language as 'fr' | 'en' | 'ha') || 'fr'] || wirdDict.fr;
   const [name, setName] = useState('');
   const [motherName, setMotherName] = useState('');
@@ -627,16 +630,6 @@ export const PersonalWird: React.FC = () => {
   // Ghazali Section States
   const [ghazaliActiveTab, setGhazaliActiveTab] = useState<'weekly' | 'purification' | 'times' | 'litanies'>('weekly');
   const [copiedTextId, setCopiedTextId] = useState<string | null>(null);
-  const [disableDuaCopy, setDisableDuaCopy] = useState<boolean>(false);
-
-  useEffect(() => {
-    const unsub = onSnapshot(doc(db, 'settings', 'features'), (docSnap) => {
-      if (docSnap.exists()) {
-        setDisableDuaCopy(!!docSnap.data()?.disable_dua_copy);
-      }
-    }, () => {});
-    return () => unsub();
-  }, []);
 
   // Folder and Saved Wird states
   const [folders, setFolders] = useState<Folder[]>(() => {
@@ -663,6 +656,7 @@ export const PersonalWird: React.FC = () => {
   const [isAddingFolder, setIsAddingFolder] = useState(false);
 
   const handleCopyText = (text: string, id: string) => {
+    if (disableDuaCopy) return;
     navigator.clipboard.writeText(text);
     setCopiedTextId(id);
     setTimeout(() => setCopiedTextId(null), 2000);
@@ -820,52 +814,52 @@ export const PersonalWird: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 safe-area-pt pb-24">
+    <div className="w-full max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 safe-area-pt pb-24 min-w-0 overflow-x-hidden">
       <div className="mb-8">
         <Link to="/tools" className="inline-flex items-center text-emerald-600 hover:text-emerald-700 mb-4 font-medium transition-colors">
           <ArrowLeft size={20} className="mr-2" />
           {dict.back}
         </Link>
-        <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-          <Sparkles className="text-emerald-500" size={32} />
+        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 dark:text-white flex items-center gap-3 break-words">
+          <Sparkles className="text-emerald-500 shrink-0" size={32} />
           {dict.title}
         </h1>
-        <p className="text-gray-500 dark:text-gray-400 mt-2">{t("tools.personal-wird.description")}</p>
+        <p className="text-gray-500 dark:text-gray-400 mt-2 text-sm sm:text-base">{t("tools.personal-wird.description")}</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="space-y-6">
-          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-              <User size={20} className="text-emerald-500" />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8 w-full min-w-0">
+        <div className="space-y-6 w-full min-w-0">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-4 sm:p-6 w-full min-w-0">
+            <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
+              <User size={20} className="text-emerald-500 shrink-0" />
               {dict.infoTitle}
             </h2>
 
-            <div className="space-y-4">
-              <div>
+            <div className="space-y-4 w-full min-w-0">
+              <div className="w-full min-w-0">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{dict.nameLabel}</label>
-                <div className="relative">
+                <div className="relative w-full">
                   <input
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Ex: محمد"
-                    className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-right text-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
+                    className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-right text-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all box-border min-w-0"
                     style={{ fontFamily: "'Amiri', 'Traditional Arabic', system-ui, sans-serif" }}
                     dir="rtl"
                   />
                 </div>
               </div>
               
-              <div>
+              <div className="w-full min-w-0">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">{dict.motherNameLabel}</label>
-                <div className="relative">
+                <div className="relative w-full">
                   <input
                     type="text"
                     value={motherName}
                     onChange={(e) => setMotherName(e.target.value)}
                     placeholder="Ex: فاطمة"
-                    className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-right text-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
+                    className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-3 text-right text-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all box-border min-w-0"
                     style={{ fontFamily: "'Amiri', 'Traditional Arabic', system-ui, sans-serif" }}
                     dir="rtl"
                   />
@@ -876,16 +870,16 @@ export const PersonalWird: React.FC = () => {
               <button
                 onClick={calculateWird}
                 disabled={!name || !motherName || isCalculating}
-                className="w-full mt-4 bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm cursor-pointer"
+                className="w-full mt-4 bg-emerald-600 hover:bg-emerald-700 text-white font-medium py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm cursor-pointer min-w-0"
               >
                 {isCalculating ? (
                   <>
-                    <RefreshCw className="animate-spin" size={20} />
+                    <RefreshCw className="animate-spin shrink-0" size={20} />
                     {dict.calculating}
                   </>
                 ) : (
                   <>
-                    <Key size={20} />
+                    <Key size={20} className="shrink-0" />
                     {dict.calculateBtn}
                   </>
                 )}
@@ -894,26 +888,26 @@ export const PersonalWird: React.FC = () => {
           </div>
         </div>
 
-        <div className="space-y-6">
+        <div className="space-y-6 w-full min-w-0">
           {result && weight !== null ? (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="space-y-6"
+              className="space-y-6 w-full min-w-0"
             >
               {/* Mystical Weight Card */}
-              <div className="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-3xl p-6 sm:p-8 shadow-md text-white text-center">
+              <div className="bg-gradient-to-br from-emerald-600 to-teal-700 rounded-3xl p-5 sm:p-8 shadow-md text-white text-center w-full min-w-0 break-words">
                 <p className="text-emerald-100 mb-1 font-medium text-sm sm:text-base">{dict.weightTitle}</p>
-                <div className="text-5xl sm:text-6xl font-bold font-serif mb-2 tracking-tight">{weight}</div>
+                <div className="text-4xl sm:text-6xl font-bold font-serif mb-2 tracking-tight">{weight}</div>
                 <p className="text-emerald-100 text-xs sm:text-sm">{dict.weightDesc}</p>
               </div>
 
               {/* Supreme Wird Card */}
-              <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 border border-emerald-100 dark:border-emerald-900/40 shadow-sm relative overflow-hidden">
+              <div className="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 border border-emerald-100 dark:border-emerald-900/40 shadow-sm relative overflow-hidden w-full min-w-0">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-full -mr-10 -mt-10 pointer-events-none"></div>
                 
                 <p className="text-emerald-600 dark:text-emerald-400 font-bold text-xs sm:text-sm uppercase tracking-wider mb-4 flex items-center justify-center gap-2">
-                  <Sparkles size={16} />
+                  <Sparkles size={16} className="shrink-0" />
                   {dict.supremeWird}
                 </p>
 
@@ -923,29 +917,29 @@ export const PersonalWird: React.FC = () => {
                   const translitVocativeStr = matchedDetailsList.map(d => getVocativeTransliteration(d.tr)).join(', ');
 
                   return (
-                    <div className="text-center">
+                    <div className="text-center w-full min-w-0">
                       {/* Arabic Zikr with Tashkeel and Amiri font */}
                       <div 
-                        className="text-4xl sm:text-5xl font-bold mb-4 leading-relaxed text-gray-900 dark:text-white"
+                        className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 leading-relaxed text-gray-900 dark:text-white break-words max-w-full overflow-hidden"
                         style={{ fontFamily: "'Amiri', 'Traditional Arabic', system-ui, sans-serif" }}
                         dir="rtl"
                       >
                         {arabicVocativeStr}
                       </div>
                       
-                      <p className="text-lg sm:text-xl font-bold text-emerald-700 dark:text-emerald-400 mb-4 font-sans">
+                      <p className="text-base sm:text-xl font-bold text-emerald-700 dark:text-emerald-400 mb-4 font-sans break-words">
                         {translitVocativeStr}
                       </p>
 
-                      <div className="inline-block px-4 py-1.5 bg-emerald-50 dark:bg-emerald-950/40 rounded-full text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-6">
+                      <div className="inline-block px-4 py-1.5 bg-emerald-50 dark:bg-emerald-950/40 rounded-full text-xs font-semibold text-emerald-700 dark:text-emerald-400 mb-6 max-w-full break-words">
                         {dict.valueZikr(result.totalAbjad)} • {result.diff === 0 ? dict.perfectMatch : `${dict.minorGap(result.diff)}`}
                       </div>
 
                       <button
                         onClick={saveWird}
-                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2 text-sm cursor-pointer shadow-sm active:scale-98"
+                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2 text-sm cursor-pointer shadow-sm active:scale-98 min-w-0"
                       >
-                        <Save size={18} />
+                        <Save size={18} className="shrink-0" />
                         {dict.saveSuccess} (Save)
                       </button>
                     </div>
@@ -1100,14 +1094,14 @@ export const PersonalWird: React.FC = () => {
       </div>
 
       {/* Imam Al-Ghazali Dedicated Section */}
-      <div className="mt-12 bg-gradient-to-br from-amber-500/10 via-emerald-500/5 to-teal-500/10 dark:from-amber-950/20 dark:via-emerald-950/20 dark:to-teal-950/20 border border-amber-200/80 dark:border-amber-800/50 rounded-3xl p-6 sm:p-8 shadow-lg space-y-6">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-amber-200/60 dark:border-amber-800/40 pb-5">
-          <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 rounded-full text-xs font-bold mb-2">
-              <Sparkles size={14} className="text-amber-600 dark:text-amber-400" />
-              Hujjat al-Islam (حجة الإسلام الإمام الغزالي)
+      <div className="mt-12 bg-gradient-to-br from-amber-500/10 via-emerald-500/5 to-teal-500/10 dark:from-amber-950/20 dark:via-emerald-950/20 dark:to-teal-950/20 border border-amber-200/80 dark:border-amber-800/50 rounded-3xl p-4 sm:p-6 md:p-8 shadow-lg space-y-6 w-full min-w-0 overflow-hidden">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-amber-200/60 dark:border-amber-800/40 pb-5 w-full min-w-0">
+          <div className="w-full min-w-0">
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 rounded-full text-xs font-bold mb-2 max-w-full">
+              <Sparkles size={14} className="text-amber-600 dark:text-amber-400 shrink-0" />
+              <span className="truncate">Hujjat al-Islam (حجة الإسلام الإمام الغزالي)</span>
             </div>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-white flex items-center gap-3">
+            <h2 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white flex items-center gap-3 break-words">
               <BookOpen className="text-amber-600 dark:text-amber-400 shrink-0" size={28} />
               {dict.ghazaliTitle}
             </h2>
@@ -1118,7 +1112,7 @@ export const PersonalWird: React.FC = () => {
         </div>
 
         {/* Ghazali Section Navigation Tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-1 touch-pan-x">
+        <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar pb-1 touch-pan-x w-full max-w-full">
           {[
             { id: 'weekly', label: dict.ghazaliTabWeekly, icon: Calendar },
             { id: 'purification', label: dict.ghazaliTabPurification, icon: Heart },
@@ -1131,13 +1125,13 @@ export const PersonalWird: React.FC = () => {
               <button
                 key={tab.id}
                 onClick={() => setGhazaliActiveTab(tab.id as any)}
-                className={`px-4 py-2.5 rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2 whitespace-nowrap transition-all cursor-pointer ${
+                className={`px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2 whitespace-nowrap transition-all cursor-pointer shrink-0 ${
                   isActive
                     ? 'bg-amber-600 text-white shadow-md ring-2 ring-amber-500/30'
                     : 'bg-white/80 dark:bg-gray-800/80 text-gray-700 dark:text-gray-300 hover:bg-amber-100 dark:hover:bg-gray-700 border border-amber-200/50 dark:border-gray-700'
                 }`}
               >
-                <Icon size={16} />
+                <Icon size={16} className="shrink-0" />
                 {tab.label}
               </button>
             );
@@ -1146,12 +1140,12 @@ export const PersonalWird: React.FC = () => {
 
         {/* TAB 1: WEEKLY WORDS */}
         {ghazaliActiveTab === 'weekly' && (
-          <div className="space-y-4">
-            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 italic bg-white/60 dark:bg-gray-800/60 p-4 rounded-2xl border border-amber-100 dark:border-amber-900/30">
+          <div className="space-y-4 w-full min-w-0">
+            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 italic bg-white/60 dark:bg-gray-800/60 p-3.5 sm:p-4 rounded-2xl border border-amber-100 dark:border-amber-900/30">
               💡 {dict.ghazaliWeeklyDesc}
             </p>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full min-w-0">
               {GHAZALI_WEEKLY_WORDS.map((w) => {
                 const dayName = language === 'en' ? w.dayEn : language === 'ha' ? w.dayHa : w.dayFr;
                 const title = language === 'en' ? w.titleEn : language === 'ha' ? w.titleHa : w.titleFr;
@@ -1160,51 +1154,53 @@ export const PersonalWird: React.FC = () => {
                 const isCopied = copiedTextId === w.id;
 
                 return (
-                  <div key={w.id} className="bg-white dark:bg-gray-800 rounded-2xl p-5 border border-amber-200/60 dark:border-gray-700 shadow-sm flex flex-col justify-between space-y-4 hover:border-amber-400 transition-all">
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="px-3 py-1 bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 text-xs font-bold rounded-full">
+                  <div key={w.id} className="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-5 border border-amber-200/60 dark:border-gray-700 shadow-sm flex flex-col justify-between space-y-4 hover:border-amber-400 transition-all min-w-0 w-full">
+                    <div className="space-y-2 min-w-0 w-full">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="px-3 py-1 bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 text-xs font-bold rounded-full truncate">
                           {dayName} • {w.count}x
                         </span>
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={() => handleCopyText(w.arabic, w.id)}
-                            className="p-1.5 text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 rounded-lg hover:bg-amber-50 dark:hover:bg-gray-700 transition-colors"
-                            title="Copier le texte arabe"
-                          >
-                            {isCopied ? <Check size={16} className="text-emerald-500" /> : <Copy size={16} />}
-                          </button>
-                        </div>
+                        {!disableDuaCopy && (
+                          <div className="flex items-center gap-1 shrink-0">
+                            <button
+                              onClick={() => handleCopyText(w.arabic, w.id)}
+                              className="p-1.5 text-gray-400 hover:text-amber-600 dark:hover:text-amber-400 rounded-lg hover:bg-amber-50 dark:hover:bg-gray-700 transition-colors cursor-pointer"
+                              title="Copier le texte arabe"
+                            >
+                              {isCopied ? <Check size={16} className="text-emerald-500" /> : <Copy size={16} />}
+                            </button>
+                          </div>
+                        )}
                       </div>
 
-                      <h3 className="font-bold text-gray-900 dark:text-white text-sm">{title}</h3>
+                      <h3 className="font-bold text-gray-900 dark:text-white text-sm break-words">{title}</h3>
 
                       <div 
-                        className="text-2xl sm:text-3xl font-bold text-right text-emerald-700 dark:text-emerald-400 py-1"
+                        className="text-2xl sm:text-3xl font-bold text-right text-emerald-700 dark:text-emerald-400 py-1 break-words max-w-full overflow-hidden"
                         style={{ fontFamily: "'Amiri', 'Traditional Arabic', system-ui, sans-serif" }}
                         dir="rtl"
                       >
                         {w.arabic}
                       </div>
 
-                      <p className="text-xs text-gray-500 dark:text-gray-400 font-mono italic">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 font-mono italic break-words">
                         "{w.transliteration}"
                       </p>
 
-                      <p className="text-xs text-gray-700 dark:text-gray-300 font-medium">
+                      <p className="text-xs text-gray-700 dark:text-gray-300 font-medium break-words">
                         « {translation} »
                       </p>
 
-                      <div className="text-[11px] text-amber-800 dark:text-amber-300 bg-amber-50/80 dark:bg-amber-950/30 p-2.5 rounded-xl border border-amber-100 dark:border-amber-900/30">
+                      <div className="text-[11px] text-amber-800 dark:text-amber-300 bg-amber-50/80 dark:bg-amber-950/30 p-2.5 rounded-xl border border-amber-100 dark:border-amber-900/30 break-words">
                         <strong>Vertu :</strong> {virtue}
                       </div>
                     </div>
 
                     <button
                       onClick={() => saveGhazaliWirdToFolder(w.arabic, `${dayName} (${w.transliteration})`, w.count)}
-                      className="w-full mt-2 py-2 px-3 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                      className="w-full mt-2 py-2 px-3 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-sm min-w-0"
                     >
-                      <Plus size={14} />
+                      <Plus size={14} className="shrink-0" />
                       {dict.ghazaliAddWird}
                     </button>
                   </div>
@@ -1216,36 +1212,36 @@ export const PersonalWird: React.FC = () => {
 
         {/* TAB 2: HEART PURIFICATION */}
         {ghazaliActiveTab === 'purification' && (
-          <div className="space-y-6">
+          <div className="space-y-6 w-full min-w-0">
             <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 italic bg-white/60 dark:bg-gray-800/60 p-4 rounded-2xl border border-amber-100 dark:border-amber-900/30">
               ✨ {dict.ghazaliPurificationDesc}
             </p>
 
             {/* 4 Steps of Inner Discipline */}
-            <div className="space-y-3">
+            <div className="space-y-3 w-full min-w-0">
               <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                <ShieldCheck className="text-amber-600 dark:text-amber-400" size={20} />
+                <ShieldCheck className="text-amber-600 dark:text-amber-400 shrink-0" size={20} />
                 {dict.ghazaliStepsTitle}
               </h3>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full min-w-0">
                 {GHAZALI_PURIFICATION_STEPS.map((s) => {
                   const Icon = s.icon;
                   const name = language === 'en' ? s.nameEn : language === 'ha' ? s.nameHa : s.nameFr;
                   const desc = language === 'en' ? s.descEn : language === 'ha' ? s.descHa : s.descFr;
 
                   return (
-                    <div key={s.step} className="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-amber-200/60 dark:border-gray-700 shadow-sm space-y-2">
+                    <div key={s.step} className="bg-white dark:bg-gray-800 p-4 sm:p-5 rounded-2xl border border-amber-200/60 dark:border-gray-700 shadow-sm space-y-2 w-full min-w-0">
                       <div className="flex items-center gap-2.5">
                         <span className="w-7 h-7 rounded-full bg-amber-500 text-white font-bold text-xs flex items-center justify-center shrink-0">
                           {s.step}
                         </span>
-                        <h4 className="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-1.5">
-                          <Icon size={16} className="text-amber-600 dark:text-amber-400" />
+                        <h4 className="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-1.5 break-words">
+                          <Icon size={16} className="text-amber-600 dark:text-amber-400 shrink-0" />
                           {name}
                         </h4>
                       </div>
-                      <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed pt-1">
+                      <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed pt-1 break-words">
                         {desc}
                       </p>
                     </div>
@@ -1255,23 +1251,23 @@ export const PersonalWird: React.FC = () => {
             </div>
 
             {/* Heart Diseases Remedies */}
-            <div className="space-y-3 pt-2">
+            <div className="space-y-3 pt-2 w-full min-w-0">
               <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                <Heart className="text-rose-500" size={20} />
+                <Heart className="text-rose-500 shrink-0" size={20} />
                 {dict.ghazaliRemediesTitle}
               </h3>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full min-w-0">
                 {GHAZALI_HEART_DISEASES.map((d, i) => {
                   const disease = language === 'en' ? d.diseaseEn : language === 'ha' ? d.diseaseHa : d.diseaseFr;
                   const remedy = language === 'en' ? d.remedyEn : language === 'ha' ? d.remedyHa : d.remedyFr;
 
                   return (
-                    <div key={i} className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-rose-100 dark:border-gray-700 shadow-sm space-y-2">
-                      <span className="text-xs font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider block">
+                    <div key={i} className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-rose-100 dark:border-gray-700 shadow-sm space-y-2 w-full min-w-0">
+                      <span className="text-xs font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider block break-words">
                         Maladie #0{i+1} : {disease}
                       </span>
-                      <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed bg-rose-50/50 dark:bg-rose-950/20 p-3 rounded-xl border border-rose-100/60 dark:border-rose-900/30">
+                      <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed bg-rose-50/50 dark:bg-rose-950/20 p-3 rounded-xl border border-rose-100/60 dark:border-rose-900/30 break-words">
                         <strong className="text-rose-800 dark:text-rose-300">Remède d'Al-Ghazali :</strong> {remedy}
                       </p>
                     </div>
@@ -1284,23 +1280,23 @@ export const PersonalWird: React.FC = () => {
 
         {/* TAB 3: OPTIMAL PRACTICE TIMES */}
         {ghazaliActiveTab === 'times' && (
-          <div className="space-y-4">
+          <div className="space-y-4 w-full min-w-0">
             <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 italic bg-white/60 dark:bg-gray-800/60 p-4 rounded-2xl border border-amber-100 dark:border-amber-900/30">
               🕒 {dict.ghazaliTimesDesc}
             </p>
 
-            <div className="space-y-3">
+            <div className="space-y-3 w-full min-w-0">
               {GHAZALI_OPTIMAL_TIMES.map((t, idx) => {
                 const Icon = t.icon;
                 const period = language === 'en' ? t.periodEn : language === 'ha' ? t.periodHa : t.periodFr;
                 const activity = language === 'en' ? t.activityEn : language === 'ha' ? t.activityHa : t.activityFr;
 
                 return (
-                  <div key={idx} className="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-amber-200/60 dark:border-gray-700 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="space-y-1.5 flex-1">
-                      <div className="flex items-center gap-2">
+                  <div key={idx} className="bg-white dark:bg-gray-800 p-4 sm:p-5 rounded-2xl border border-amber-200/60 dark:border-gray-700 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 w-full min-w-0">
+                    <div className="space-y-1.5 flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <span className={`px-3 py-1 rounded-full text-xs font-bold border flex items-center gap-1.5 ${t.badgeColor}`}>
-                          <Icon size={14} />
+                          <Icon size={14} className="shrink-0" />
                           {period}
                         </span>
                         <span 
@@ -1310,7 +1306,7 @@ export const PersonalWird: React.FC = () => {
                           {t.arabicTime}
                         </span>
                       </div>
-                      <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed pt-1">
+                      <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed pt-1 break-words">
                         {activity}
                       </p>
                     </div>
@@ -1323,12 +1319,12 @@ export const PersonalWird: React.FC = () => {
 
         {/* TAB 4: MAJOR LITANIES */}
         {ghazaliActiveTab === 'litanies' && (
-          <div className="space-y-4">
+          <div className="space-y-4 w-full min-w-0">
             <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 italic bg-white/60 dark:bg-gray-800/60 p-4 rounded-2xl border border-amber-100 dark:border-amber-900/30">
               📿 {dict.ghazaliLitaniesDesc}
             </p>
 
-            <div className="space-y-4">
+            <div className="space-y-4 w-full min-w-0">
               {GHAZALI_MAJOR_LITANIES.map((lit) => {
                 const title = language === 'en' ? lit.titleEn : language === 'ha' ? lit.titleHa : lit.titleFr;
                 const translation = language === 'en' ? lit.translationEn : language === 'ha' ? lit.translationHa : lit.translationFr;
@@ -1336,50 +1332,52 @@ export const PersonalWird: React.FC = () => {
                 const isCopied = copiedTextId === lit.id;
 
                 return (
-                  <div key={lit.id} className="bg-white dark:bg-gray-800 p-6 rounded-2xl border border-amber-200/60 dark:border-gray-700 shadow-sm space-y-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 dark:border-gray-700 pb-3">
-                      <h3 className="font-bold text-gray-900 dark:text-white text-base flex items-center gap-2">
-                        <Sparkles className="text-amber-500" size={18} />
+                  <div key={lit.id} className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-2xl border border-amber-200/60 dark:border-gray-700 shadow-sm space-y-4 w-full min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 dark:border-gray-700 pb-3 w-full min-w-0">
+                      <h3 className="font-bold text-gray-900 dark:text-white text-base flex items-center gap-2 break-words">
+                        <Sparkles className="text-amber-500 shrink-0" size={18} />
                         {title}
                       </h3>
-                      <span className="px-3 py-1 bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 text-xs font-bold rounded-full w-fit">
+                      <span className="px-3 py-1 bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-300 text-xs font-bold rounded-full w-fit shrink-0">
                         Répétition : {lit.repetitionCount}x
                       </span>
                     </div>
 
                     <div 
-                      className="text-2xl sm:text-3xl font-bold text-right text-emerald-800 dark:text-emerald-300 leading-relaxed"
+                      className="text-2xl sm:text-3xl font-bold text-right text-emerald-800 dark:text-emerald-300 leading-relaxed break-words max-w-full overflow-hidden"
                       style={{ fontFamily: "'Amiri', 'Traditional Arabic', system-ui, sans-serif" }}
                       dir="rtl"
                     >
                       {lit.arabic}
                     </div>
 
-                    <p className="text-xs text-gray-600 dark:text-gray-400 font-mono italic">
+                    <p className="text-xs text-gray-600 dark:text-gray-400 font-mono italic break-words">
                       "{lit.transliteration}"
                     </p>
 
-                    <p className="text-xs text-gray-700 dark:text-gray-300 font-medium">
+                    <p className="text-xs text-gray-700 dark:text-gray-300 font-medium break-words">
                       « {translation} »
                     </p>
 
-                    <div className="text-xs text-amber-800 dark:text-amber-300 bg-amber-50/80 dark:bg-amber-950/30 p-3 rounded-xl border border-amber-100 dark:border-amber-900/30">
+                    <div className="text-xs text-amber-800 dark:text-amber-300 bg-amber-50/80 dark:bg-amber-950/30 p-3 rounded-xl border border-amber-100 dark:border-amber-900/30 break-words">
                       <strong>Bienfaits :</strong> {benefit}
                     </div>
 
-                    <div className="flex flex-col sm:flex-row gap-2 pt-2">
-                      <button
-                        onClick={() => handleCopyText(lit.arabic, lit.id)}
-                        className="flex-1 py-2.5 px-4 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
-                      >
-                        {isCopied ? <Check size={16} className="text-emerald-500" /> : <Copy size={16} />}
-                        {isCopied ? dict.ghazaliCopied : "Copier le texte arabe"}
-                      </button>
+                    <div className="flex flex-col sm:flex-row gap-2 pt-2 w-full min-w-0">
+                      {!disableDuaCopy && (
+                        <button
+                          onClick={() => handleCopyText(lit.arabic, lit.id)}
+                          className="flex-1 py-2.5 px-4 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer min-w-0"
+                        >
+                          {isCopied ? <Check size={16} className="text-emerald-500 shrink-0" /> : <Copy size={16} className="shrink-0" />}
+                          {isCopied ? dict.ghazaliCopied : "Copier le texte arabe"}
+                        </button>
+                      )}
                       <button
                         onClick={() => saveGhazaliWirdToFolder(lit.arabic, lit.titleFr, lit.repetitionCount)}
-                        className="flex-1 py-2.5 px-4 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-sm"
+                        className="flex-1 py-2.5 px-4 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer shadow-sm min-w-0"
                       >
-                        <Plus size={16} />
+                        <Plus size={16} className="shrink-0" />
                         {dict.ghazaliAddWird}
                       </button>
                     </div>
@@ -1392,11 +1390,11 @@ export const PersonalWird: React.FC = () => {
       </div>
 
       {/* Saved Wirds Section with Folders & Drag-and-Drop */}
-      <div className="mt-12 border-t border-gray-100 dark:border-gray-800 pt-10">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+      <div className="mt-12 border-t border-gray-100 dark:border-gray-800 pt-10 w-full min-w-0">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 w-full min-w-0">
           <div>
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <FolderIcon className="text-emerald-500" size={24} />
+              <FolderIcon className="text-emerald-500 shrink-0" size={24} />
               {dict.savedTitle}
             </h2>
             <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -1418,13 +1416,13 @@ export const PersonalWird: React.FC = () => {
                 />
                 <button
                   onClick={addFolder}
-                  className="px-2.5 py-1 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700"
+                  className="px-2.5 py-1 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 cursor-pointer"
                 >
                   {dict.addBtn}
                 </button>
                 <button
                   onClick={() => setIsAddingFolder(false)}
-                  className="text-gray-400 text-xs hover:text-gray-600 px-1"
+                  className="text-gray-400 text-xs hover:text-gray-600 px-1 cursor-pointer"
                 >
                   {dict.cancelBtn}
                 </button>
@@ -1441,7 +1439,7 @@ export const PersonalWird: React.FC = () => {
         </div>
 
         {/* Board of Folders */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 w-full min-w-0">
           {folders.map(folder => {
             const folderWirds = savedWirds.filter(w => w.folderId === folder.id);
             return (
@@ -1452,7 +1450,7 @@ export const PersonalWird: React.FC = () => {
                   const itemId = e.dataTransfer.getData('text/plain');
                   if (itemId) moveWirdToFolder(itemId, folder.id);
                 }}
-                className="bg-white dark:bg-gray-800 border-2 border-dashed border-gray-200 dark:border-gray-700/60 rounded-2xl p-5 flex flex-col min-h-[220px] transition-all hover:border-emerald-400 dark:hover:border-emerald-500 hover:shadow-sm"
+                className="bg-white dark:bg-gray-800 border-2 border-dashed border-gray-200 dark:border-gray-700/60 rounded-2xl p-4 sm:p-5 flex flex-col min-h-[220px] transition-all hover:border-emerald-400 dark:hover:border-emerald-500 hover:shadow-sm w-full min-w-0"
               >
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">

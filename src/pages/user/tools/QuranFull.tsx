@@ -3,8 +3,10 @@ import { BookOpen, Shield, ArrowLeft, ArrowRight, Search, Play, Pause, ChevronDo
 import { Link, useLocation } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { useAuth } from '../../../contexts/AuthContext';
+import { triggerProtectionModal } from '../../../components/ContentProtectionManager';
 import { motion, AnimatePresence } from 'motion/react';
 import { toCanvas } from 'html-to-image';
+import { downloadCanvasImage } from '../../../utils/downloadHelper';
 import { useAudio, Track } from '../../../contexts/AudioContext';
 import { get, set } from 'idb-keyval';
 import { surahTranslations } from '../../../data/surahTranslations';
@@ -746,7 +748,7 @@ export const QuranFull: React.FC = () => {
     }
   });
 
-  const { user } = useAuth();
+  const { user, isPremium } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
   
   interface RuqyahPlaylist {
@@ -1321,14 +1323,14 @@ export const QuranFull: React.FC = () => {
         originalOpacity = arabicTextNode.style.opacity || '1';
         arabicTextNode.style.opacity = '0';
       }
-      const canvasBg = await toCanvas(node, { backgroundColor: document.documentElement.classList.contains('dark') && zoomedAyahBg === 0 ? '#111827' : undefined });
+      const canvasBg = await toCanvas(node, { backgroundColor: document.documentElement.classList.contains('dark') && zoomedAyahBg === 0 ? '#111827' : undefined, skipFonts: true });
       const dataUrlBg = canvasBg.toDataURL('image/png');
       
       // 2. Capture full image with text
       if (arabicTextNode) {
         arabicTextNode.style.opacity = originalOpacity;
       }
-      const canvasFull = await toCanvas(node, { backgroundColor: document.documentElement.classList.contains('dark') && zoomedAyahBg === 0 ? '#111827' : undefined });
+      const canvasFull = await toCanvas(node, { backgroundColor: document.documentElement.classList.contains('dark') && zoomedAyahBg === 0 ? '#111827' : undefined, skipFonts: true });
       const dataUrlFull = canvasFull.toDataURL('image/png');
       
       if (actionButtons) actionButtons.style.display = 'flex';
@@ -1904,6 +1906,10 @@ export const QuranFull: React.FC = () => {
   };
 
   const downloadForOffline = async (type: 'surah' | 'page' | 'hizbQuarter' | 'juz' | 'ruku', specificIds?: number[], resumeId?: string) => {
+    if (!isPremium) {
+      triggerProtectionModal('download');
+      return;
+    }
     setShowDownloadModal(false);
     setDownloadingOffline(true);
     setHideDownloadToast(false);
@@ -3822,13 +3828,14 @@ export const QuranFull: React.FC = () => {
                        </div>
                      )}
                      
-                                           <div id="image-footer" className="mt-8 pt-4 w-full flex justify-between items-center opacity-100 z-0 border-t-2 border-blue-500 text-blue-600 dark:text-blue-400">
-                        <div className="flex items-center gap-4">
-                          <span className="font-bold text-sm tracking-tight uppercase">AsrarHub</span>
+                                           <div id="image-footer" className="mt-8 pt-4 w-full flex justify-between items-center opacity-100 z-0 border-t-2 border-emerald-500 text-emerald-600 dark:text-emerald-400">
+                        <div className="flex items-center gap-2">
+                          <span className="font-black text-sm tracking-widest uppercase">AsrarHub</span>
+                          <span className="text-[10px] font-semibold opacity-70">• AsrarHub Sagesse Quranique</span>
                         </div>
                         <div className="flex flex-col items-end text-right">
                           <span className="font-bold text-base font-arabic leading-none">{zoomedAyah.surahName?.replace('سُورَةُ ', '') || ''}</span>
-                          <span className="text-[10px] font-semibold uppercase tracking-widest mt-1">Verset {zoomedAyah.numberInSurah}</span>
+                          <span className="text-[10px] font-semibold uppercase tracking-widest mt-1">Verset {zoomedAyah.numberInSurah} • AsrarHub</span>
                         </div>
                       </div>
                      </div>
@@ -3949,6 +3956,10 @@ export const QuranFull: React.FC = () => {
                        <button
                          onClick={(e) => {
                            e.stopPropagation();
+                           if (!isPremium) {
+                             triggerProtectionModal('copy');
+                             return;
+                           }
                            const textToCopy = `${zoomedAyah.text} ﴿${toArabicNumeral(zoomedAyah.numberInSurah)}﴾`;
                            navigator.clipboard.writeText(textToCopy);
                            alert('Verset copié dans le presse-papier !');
@@ -3989,7 +4000,7 @@ export const QuranFull: React.FC = () => {
                                originalConsoleError(...args);
                              };
                              
-                             toCanvas(node, { backgroundColor: document.documentElement.classList.contains('dark') && zoomedAyahBg === 0 ? '#111827' : undefined })
+                             toCanvas(node, { backgroundColor: document.documentElement.classList.contains('dark') && zoomedAyahBg === 0 ? '#111827' : undefined, skipFonts: true })
                                .then(async (canvas) => {
                                  const dataUrl = canvas.toDataURL('image/png');
                                  console.error = originalConsoleError;
@@ -4020,10 +4031,7 @@ export const QuranFull: React.FC = () => {
                                       }
                                     }
                                  } else {
-                                   const link = document.createElement('a');
-                                   link.download = fileName;
-                                   link.href = dataUrl;
-                                   link.click();
+                                                                       await downloadCanvasImage(canvas, fileName);
                                  }
                                })
                                .catch((err) => {

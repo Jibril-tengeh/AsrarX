@@ -14,10 +14,13 @@ import {
   Coins,
   Scale,
   Moon,
+  Circle,
   ListTodo,
   Layers,
   Shuffle,
   Target,
+  Feather,
+  Crown,
 } from "lucide-react";
 
 export interface ToolItem {
@@ -250,12 +253,32 @@ export const tools: ToolItem[] = [
   },
   {
     id: "zairja",
-    title: "Oracle Zairja",
+    title: "Miroir de la Za'irja & Oracle Spirituel",
     description:
-      "La machine ancestrale des soufis pour prédire et éclaircir les questions mystiques.",
+      "Oracle IA combiné aux algorithmes d'Abjad pour composer un poème répondeur prophétique et mystique.",
     icon: Hexagon,
     color: "from-zinc-700 to-black",
     path: "/tools/zairja",
+    level: "advanced",
+  },
+  {
+    id: "ring-pendant-talisman",
+    title: "Talisman de Bague & Pendentifs",
+    description:
+      "Outil pour graver virtuellement des versets ou talsams sous forme circulaire ou ovale pour artisan bijoutier.",
+    icon: Circle,
+    color: "from-amber-500 to-yellow-600",
+    path: "/tools/ring-pendant-talisman",
+    level: "advanced",
+  },
+  {
+    id: "combustion-eclipse",
+    title: "Calculateur d'Éclipse & Combustion (Iqtiran)",
+    description:
+      "Alerte céleste en temps réel lors des phases critiques et combustion planétaire pour vos rituels.",
+    icon: Moon,
+    color: "from-rose-600 to-purple-900",
+    path: "/tools/combustion-eclipse",
     level: "advanced",
   },
   {
@@ -291,9 +314,9 @@ export const tools: ToolItem[] = [
   },
   {
     id: "khouddam",
-    title: "Extracteur de Khouddam",
+    title: "Détecteur de Khouddam & Alignement",
     description:
-      "Calculez et invoquez les entités spirituelles angéliques et terrestres (A'il et Yush) liées à un nom.",
+      "Extraie le nom du Khadim et de l'Ange Gardien basé sur le Nom, Prénom et le Nom de la Mère.",
     icon: Sparkles,
     color: "from-amber-600 to-red-800",
     path: "/tools/khouddam",
@@ -301,9 +324,9 @@ export const tools: ToolItem[] = [
   },
   {
     id: "awfaq",
-    title: "Générateur de Awfaq",
+    title: "Awfaq Supérieurs (3x3 à 10x10)",
     description:
-      "Créez des carrés magiques complexes (Muthallath, Murabba) avec alignement planétaire et intentions.",
+      "Générateur de carrés magiques avec répartition du Kasr (fraction) et alignement des 4 éléments.",
     icon: Hexagon,
     color: "from-fuchsia-600 to-pink-800",
     path: "/tools/awfaq",
@@ -327,5 +350,69 @@ export const tools: ToolItem[] = [
     color: "from-purple-600 via-indigo-600 to-pink-600",
     path: "/tools/ia-rapprochements",
     level: "advanced",
+  },
+  // New Requested Tools & Journal
+  {
+    id: "daira-as-sirr",
+    title: "Dā'ira As-Sirr (Sceaux Radiaux Théurgiques)",
+    description: "Tracé automatique de diagrammes concentriques radiaux selon la tradition classique du Sheikh Ahmad Al-Buni.",
+    icon: Circle,
+    color: "from-amber-500 to-yellow-600",
+    path: "/tools/dairah",
+    level: "advanced",
+  },
+  {
+    id: "saah-ijabah",
+    title: "Sā'ah al-Ijābah (Horloge d'Exaucement Divin)",
+    description: "Calculateur en temps réel des fenêtres d'alignement céleste et des heures sacrées d'exaucement des invocations.",
+    icon: Clock,
+    color: "from-amber-600 via-yellow-500 to-orange-600",
+    path: "/tools/saah-ijabah",
+    level: "advanced",
+  },
+  {
+    id: "seven-kings",
+    title: "Sceaux des 7 Rois Célestes",
+    description: "Correspondances quotidiennes des 7 Anges, Rois Terrestres et Métaux sacrés.",
+    icon: Crown,
+    color: "from-amber-600 to-red-700",
+    path: "/tools/seven-kings",
+    level: "advanced",
+  },
+  {
+    id: "quran-analogy",
+    title: "Corresp'Ayāt par Abjad",
+    description: "Recherche d'analogie coranique et versets correspondants au poids mystique.",
+    icon: BookOpen,
+    color: "from-emerald-600 to-teal-800",
+    path: "/tools/quran-analogy",
+    level: "simple",
+  },
+  {
+    id: "zikr-levels",
+    title: "Calculateur 3 Niveaux de Zikr",
+    description: "Calcul des 3 régimes d'incantation : Al-Kabīr, Al-Wasaṭ et Al-Ṣaghīr.",
+    icon: Calculator,
+    color: "from-indigo-500 to-purple-600",
+    path: "/tools/zikr-levels",
+    level: "simple",
+  },
+  {
+    id: "hijri-full-moon",
+    title: "Calendrier Hijri & Pleine Lune",
+    description: "Calculateur des Nuits Blanches (Al-Ayyām Al-Bīḍ) et nuits bénies.",
+    icon: Moon,
+    color: "from-amber-500 to-orange-600",
+    path: "/tools/hijri-full-moon",
+    level: "simple",
+  },
+  {
+    id: "murid-journal",
+    title: "Carnet de Bord du Murīd",
+    description: "Journal spirituel personnel, suivi du Zikr et retraite des 40 jours (Arba'īn).",
+    icon: BookOpen,
+    color: "from-teal-600 to-emerald-800",
+    path: "/tools/murid-journal",
+    level: "simple",
   },
 ];

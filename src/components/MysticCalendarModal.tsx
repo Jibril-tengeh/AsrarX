@@ -4,6 +4,8 @@ import { X, ChevronLeft, ChevronRight, Sparkles, BookOpen, Compass, Moon, Info, 
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAuth } from '../contexts/AuthContext';
+import { triggerProtectionModal } from './ContentProtectionManager';
+import { downloadCanvasImage } from '../utils/downloadHelper';
 import { useFeatures } from '../contexts/FeatureContext';
 import { CosmicEnergyAstrolabe } from './CosmicEnergyAstrolabe';
 import { ContemplativeAudioPlayer } from './ContemplativeAudioPlayer';
@@ -760,6 +762,10 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
   // Dynamic .ics calendar file generator
   const downloadIcsFile = () => {
     if (!selectedHijriDay || !selectedEvent) return;
+    if (!isUserPremium) {
+      triggerProtectionModal('download');
+      return;
+    }
 
     const gDate = getGregorianDateForHijri(hijriYear, hijriMonthIndex, selectedHijriDay);
     const yyyy = gDate.getFullYear();
@@ -1073,10 +1079,14 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
   const isCalendarMaintenance = calendarStatus === 'maintenance';
   const isCalendarPremiumLocked = calendarStatus === 'premium' && !isUserPremium;
 
-  const downloadSealAsImage = () => {
+  const downloadSealAsImage = async () => {
     if (!activeMoonMystery?.talsamDetails) return;
+    if (!isUserPremium) {
+      triggerProtectionModal('download');
+      return;
+    }
     const text = activeMoonMystery.talsamDetails.graphicSymbol;
-    
+
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
@@ -1110,12 +1120,24 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
     ctx.arc(300, 300, 250, 0, Math.PI * 2);
     ctx.stroke();
 
+    // Corner Watermarks "AsrarHub"
+    ctx.fillStyle = 'rgba(168, 85, 247, 0.35)';
+    ctx.font = 'bold 10px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText("ASRARHUB", 35, 42);
+    ctx.textAlign = 'right';
+    ctx.fillText("ASRARHUB", 565, 42);
+    ctx.textAlign = 'left';
+    ctx.fillText("ASRARHUB", 35, 568);
+    ctx.textAlign = 'right';
+    ctx.fillText("ASRARHUB", 565, 568);
+
     ctx.fillStyle = '#a78bfa';
     ctx.font = 'bold 16px sans-serif';
     ctx.textAlign = 'center';
     const isFr = language === 'fr';
     const isHa = language === 'ha';
-    ctx.fillText(isFr ? "SCEAU MYSTIQUE DE LA LUNE" : isHa ? "HATIMIN WATA NA SIRRI" : "MYSTICAL LUNAR SEAL", 300, 65);
+    ctx.fillText(isFr ? "SCEAU MYSTIQUE ASRARHUB DE LA LUNE" : isHa ? "HATIMIN WATA NA SIRRI (ASRARHUB)" : "MYSTICAL ASRARHUB LUNAR SEAL", 300, 65);
     
     ctx.fillStyle = '#fbbf24';
     ctx.font = 'italic 12px sans-serif';
@@ -1138,17 +1160,15 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
     ctx.font = '10px sans-serif';
     ctx.fillText("AsrarHub © Lunar Calendar System", 300, 545);
     
-    const url = canvas.toDataURL('image/png');
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `Sceau_Mystique_Jour_${selectedHijriDay}.png`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    await downloadCanvasImage(canvas, `Sceau_Mystique_Jour_${selectedHijriDay}.png`);
   };
 
   const handleCopyTalsam = () => {
     if (!activeMoonMystery?.talsamDetails) return;
+    if (!isUserPremium) {
+      triggerProtectionModal('copy');
+      return;
+    }
     navigator.clipboard.writeText(activeMoonMystery.talsamDetails.formula);
     setCopiedTalsam(true);
     setTimeout(() => setCopiedTalsam(false), 2000);
@@ -1156,6 +1176,10 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
 
   const handleCopySeal = () => {
     if (!activeMoonMystery?.talsamDetails) return;
+    if (!isUserPremium) {
+      triggerProtectionModal('copy');
+      return;
+    }
     navigator.clipboard.writeText(activeMoonMystery.talsamDetails.graphicSymbol);
     setCopiedSeal(true);
     setTimeout(() => setCopiedSeal(false), 2000);

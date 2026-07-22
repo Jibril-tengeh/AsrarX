@@ -201,7 +201,9 @@ export const signOut = async () => {
     console.error("Error deleting session on signout", err);
   }
   localStorage.removeItem('asrarhub_session_id');
-  return firebaseSignOut(auth);
+  localStorage.removeItem('asrarhub_local_user');
+  window.dispatchEvent(new Event('asrarhub_local_user_changed'));
+  return firebaseSignOut(auth).catch(() => {});
 };
 
 export const isAutoSaveEnabled = () => {

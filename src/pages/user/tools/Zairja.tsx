@@ -1,56 +1,38 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Hexagon, ArrowLeft, Send, Download, Share2, HelpCircle, X } from 'lucide-react';
+import { Hexagon, ArrowLeft, Send, Download, Share2, HelpCircle, X, Sparkles, BookOpen, Check, Copy } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
+import { useAuth } from '../../../contexts/AuthContext';
+import { triggerProtectionModal } from '../../../components/ContentProtectionManager';
 import { ToolInfoTooltip } from '../../../components/ToolInfoTooltip';
 import { motion, AnimatePresence } from 'motion/react';
 import { toCanvas } from 'html-to-image';
+import { downloadCanvasImage } from '../../../utils/downloadHelper';
+import { calculateAbjadValue } from '../../../utils/abjad';
+import { useFeatures } from '../../../contexts/FeatureContext';
+
+interface ZairjaOracleResult {
+  arabicVerse: string;
+  translation: string;
+  interpretation: string;
+  recommendedDhikr: string;
+  numericString: string;
+}
 
 export const Zairja: React.FC = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const { isPremium } = useAuth();
+  const { featureToggles } = useFeatures();
+  const disableDuaCopy = !!featureToggles?.disable_dua_copy;
+
   const [question, setQuestion] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [answer, setAnswer] = useState<{ crypted: string; clear: string } | null>(null);
+  const [answer, setAnswer] = useState<ZairjaOracleResult | null>(null);
   const [showZairjaInfo, setShowZairjaInfo] = useState(false);
+  const [copied, setCopied] = useState(false);
   const resultRef = useRef<HTMLDivElement>(null);
 
-  const downloadImage = async () => {
-    if (!resultRef.current) return;
-    try {
-      const canvas = await toCanvas(resultRef.current, { backgroundColor: '#18181b' });
-      const url = canvas.toDataURL('image/png');
-      const link = document.createElement('a');
-      link.download = 'zairja-result.png';
-      link.href = url;
-      link.click();
-    } catch (e) {
-      console.error(e);
-    }
-  };
-
-  const shareResult = async () => {
-    if (!resultRef.current) return;
-    try {
-      const canvas = await toCanvas(resultRef.current, { backgroundColor: '#18181b' });
-      canvas.toBlob(async (blob) => {
-        if (!blob) return;
-        const file = new File([blob], 'zairja-result.png', { type: 'image/png' });
-        if (navigator.share && navigator.canShare({ files: [file] })) {
-          await navigator.share({
-            title: 'Zairja Oracle',
-            text: 'Voici la réponse de la Zairja de Tlemsani.',
-            files: [file]
-          });
-        } else {
-          alert('Le partage direct n\'est pas supporté sur ce navigateur.');
-        }
-      });
-    } catch (e) {
-      console.error(e);
-    }
-  };
-  
-  // Scramble state
+  // Scramble animation
   const [scrambleText, setScrambleText] = useState('');
 
   useEffect(() => {
@@ -59,7 +41,7 @@ export const Zairja: React.FC = () => {
       const chars = 'ابتثجحخدذرزسشصضطظعغفقكلمنهوي';
       interval = setInterval(() => {
         let fake = '';
-        for (let i = 0; i < 20; i++) fake += chars[Math.floor(Math.random() * chars.length)] + ' ';
+        for (let i = 0; i < 18; i++) fake += chars[Math.floor(Math.random() * chars.length)] + ' ';
         setScrambleText(fake);
       }, 50);
     } else {
@@ -68,42 +50,97 @@ export const Zairja: React.FC = () => {
     return () => clearInterval(interval);
   }, [isProcessing]);
 
-  const processZairja = () => {
+  const downloadImage = async () => {
+    if (!resultRef.current) return;
+    try {
+      const canvas = await toCanvas(resultRef.current, { backgroundColor: '#18181b', skipFonts: true });
+      await downloadCanvasImage(canvas, 'zairja-oracle-result.png');
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const processZairja = async () => {
     if (!question || question.length < 5) return;
-    
-    // Gamification
-    let stats; try { stats = JSON.parse(localStorage.getItem('asrar_stats') || '{}'); if (!stats || typeof stats !== 'object') stats = {}; } catch(e) { stats = {}; }
-    stats.tools_used = (stats.tools_used || 0) + 1;
-    localStorage.setItem('asrar_stats', JSON.stringify(stats));
+
+    // Gamification stats
+    try {
+      let stats = JSON.parse(localStorage.getItem('asrar_stats') || '{}');
+      if (!stats || typeof stats !== 'object') stats = {};
+      stats.tools_used = (stats.tools_used || 0) + 1;
+      localStorage.setItem('asrar_stats', JSON.stringify(stats));
+    } catch (e) {
+      console.error(e);
+    }
 
     setIsProcessing(true);
     setAnswer(null);
 
-    // Simulate the complex calculation time of a Zairja
-    setTimeout(() => {
-      // Very abstracted oracle logic:
-      const responses = [
-        "Le secret réside dans la patience, car le temps dévoilera l'obstacle de l'ennemi.",
-        "Une perte temporaire précède un grand triomphe, l'eau éteindra ce feu.",
-        "La question porte sur l'invisible, garde le silence et l'étoile te guidera.",
-        "Le mouvement est béni, le sédentaire perdra sa part.",
-        "Celui qui cherche est trop pressé, les lettres disent de repousser ce projet.",
-        "L'or cherché est caché sous tes pieds, regarde plus près de toi.",
-        "L'alliance sera favorable, mais une lettre D (Dal) ou M (Mim) s'y opposera."
-      ];
-      
-      const charSum = question.length + question.charCodeAt(0) + question.charCodeAt(question.length - 1);
-      const res = responses[charSum % responses.length];
+    const abjadSum = calculateAbjadValue(question);
 
-      // Cryptic representation (fake numeric zairja breakdown for UI)
-      const cryptedArray = Array.from({ length: 12 }, () => Math.floor(Math.random() * 90) + 10);
-      
-      setAnswer({
-        crypted: cryptedArray.join(' - '),
-        clear: res
+    try {
+      const response = await fetch('/api/zairja/oracle', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question, abjadSum, language })
       });
+
+      if (response.ok) {
+        const data = await response.json();
+        setAnswer(data);
+      } else {
+        throw new Error("Fallback to local Zairja engine");
+      }
+    } catch (error) {
+      console.warn('API error or unavailable, using offline Za\'irja algorithm:', error);
+      // High-quality offline fallback
+      setTimeout(() => {
+        const fallbackVerses = [
+          {
+            arabicVerse: "فَصْبِرْ صَبْرًا جَمِيلًا إِنَّ مَعَ الْعُسْرِ يُسْرًا\nوَإِنَّ نُورَ الْحَقِّ يُبْدِي مَا كَانَ سِرًّا",
+            translation: "Patientez d'une belle patience, car après la difficulté vient la facilité, et la lumière de la vérité dévoilera ce qui était un secret.",
+            interpretation: "L'oracle de la Za'irja indique que l'obstacle actuel est temporaire. La clé réside dans le calme et la constance, car les portes de la sérénité s'ouvriront au moment fixé.",
+            recommendedDhikr: "يا فتاح يا عليم (129 fois)",
+            numericString: `${abjadSum} - 129 - 786 - 998 - 316`
+          },
+          {
+            arabicVerse: "وَافْعَلُوا الْخَيْرَ لَعَلَّكُمْ تُفْلِحُونَ\nوَتَوَكَّلْ عَلَى الْحَيِّ الَّذِي لَا يَمُوتُ",
+            translation: "Poursuivez le bien pour que vous réussissiez, et placez votre confiance en le Vivant qui ne meurt jamais.",
+            interpretation: "L'énergie de votre question montre un besoin d'action juste et d'abandon confiant (Tawakkul). Ne doutez pas de la bénédiction attachée à vos efforts honnêtes.",
+            recommendedDhikr: "يا وكيل يا حفيظ (66 fois)",
+            numericString: `${abjadSum} - 66 - 111 - 456 - 888`
+          }
+        ];
+
+        const selected = fallbackVerses[abjadSum % fallbackVerses.length];
+        setAnswer(selected);
+      }, 2500);
+    } finally {
       setIsProcessing(false);
-    }, 4000); // give it more time for the awesome matrix effect
+    }
+  };
+
+  const copyResultText = () => {
+    if (disableDuaCopy || !answer) return;
+    if (!isPremium) {
+      triggerProtectionModal('copy');
+      return;
+    }
+    const text = `ORACLE DE LA ZA'IRJA
+Question : "${question}"
+Poème Arabe :
+${answer.arabicVerse}
+
+Traduction :
+« ${answer.translation} »
+
+Exégèse & Conseil Spirituel :
+${answer.interpretation}
+
+Dhikr Recommandé : ${answer.recommendedDhikr}`;
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -117,31 +154,34 @@ export const Zairja: React.FC = () => {
         </Link>
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <Hexagon className="text-zinc-600 dark:text-zinc-400" />
-            Oracle Zairja
+            <Hexagon className="text-purple-500" />
+            Miroir de la Za'irja & Oracle Spirituel
           </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t("tools.zairja.description")}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Matrice mystique combinant l'algorithme d'Abjad et la poésie prophétique.
+          </p>
         </div>
       </div>
 
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-zinc-900 rounded-3xl p-6 sm:p-8 shadow-2xl border border-zinc-800 relative overflow-hidden text-center mb-8">
-        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay"></div>
-        <div className="relative z-10">
-          <p className="text-zinc-400 text-sm leading-relaxed max-w-xl mx-auto">
-            La <strong>Zairja de Tlemsani</strong> est une matrice divinatoire ancestrale. Elle calcule la réponse exacte à une question en brisant mathématiquement les lettres de la question. Posez une question claire, précise, et fermée.
+        <div className="relative z-10 space-y-2">
+          <p className="text-zinc-300 text-sm leading-relaxed max-w-xl mx-auto">
+            La <strong>Za'irja (الزايرجة)</strong> est la célèbre machine divinatoire soufie d'Ibn Khaldoun. Posez votre question spirituelle ou personnelle : la matrice brisera sa valeur numérique d'Abjad pour composer un poème répondeur.
           </p>
         </div>
       </motion.div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-3xl p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700 relative z-20 transition-all focus-within:ring-2 focus-within:ring-zinc-500">
-        <div className="flex gap-4 items-end">
-          <div className="flex-1">
-            <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2 pl-2">Votre question secrète</label>
+      <div className="bg-white dark:bg-gray-800 rounded-3xl p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700 relative z-20">
+        <div className="flex flex-col sm:flex-row gap-4 items-end">
+          <div className="flex-1 w-full">
+            <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 pl-2">
+              Votre Question Secrète
+            </label>
             <input
               type="text"
               value={question}
               onChange={(e) => setQuestion(e.target.value)}
-              placeholder="Ex: Vais-je réussir ce grand projet cette année ?"
+              placeholder="Ex: Quel est le sens spirituel de mon épreuve actuelle ?"
               className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 text-gray-900 dark:text-white focus:outline-none font-medium transition-colors"
               disabled={isProcessing}
             />
@@ -149,14 +189,14 @@ export const Zairja: React.FC = () => {
           <button
             onClick={processZairja}
             disabled={isProcessing || question.length < 5}
-            className="w-14 h-14 shrink-0 rounded-2xl bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900 font-bold disabled:opacity-50 hover:scale-105 transition-all flex items-center justify-center gap-2 shadow-lg"
+            className="w-full sm:w-16 h-14 shrink-0 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-700 text-white font-bold disabled:opacity-50 hover:scale-[1.02] transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer"
           >
             {isProcessing ? (
               <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 3, ease: "linear" }}>
-                <Hexagon size={20} />
+                <Hexagon size={22} />
               </motion.div>
             ) : (
-              <Send size={20} />
+              <Send size={22} />
             )}
           </button>
         </div>
@@ -173,13 +213,12 @@ export const Zairja: React.FC = () => {
             initial={{ opacity: 0, height: 0 }} 
             animate={{ opacity: 1, height: 'auto' }} 
             exit={{ opacity: 0, height: 0 }}
-            className="mt-8 text-center bg-black rounded-3xl p-8 border border-zinc-800 shadow-[0_0_50px_rgba(0,0,0,0.5)] overflow-hidden relative"
+            className="mt-8 text-center bg-black rounded-3xl p-8 border border-zinc-800 shadow-2xl overflow-hidden relative"
           >
-            <div className="absolute inset-0 bg-gradient-to-b from-transparent via-zinc-900/50 to-transparent animate-pulse"></div>
-            <p className="text-xs uppercase tracking-[0.3em] font-bold text-zinc-500 mb-6">
-              Cassement des lettres en cours...
+            <p className="text-xs uppercase tracking-[0.3em] font-bold text-purple-400 mb-6">
+              Brisure Abjad & Composition du Poème...
             </p>
-            <div className="font-arabic text-3xl md:text-5xl text-emerald-500/80 tracking-widest break-all leading-relaxed blur-[1px] font-bold" dir="rtl" style={{ textShadow: '0 0 10px rgba(16,185,129,0.5)' }}>
+            <div className="font-arabic text-3xl md:text-5xl text-purple-400/80 tracking-widest break-all leading-relaxed font-bold" dir="rtl">
               {scrambleText}
             </div>
           </motion.div>
@@ -188,111 +227,94 @@ export const Zairja: React.FC = () => {
         {answer && !isProcessing && (
           <motion.div 
             key="answer"
-            initial={{ opacity: 0, scale: 0.9 }} 
+            initial={{ opacity: 0, scale: 0.95 }} 
             animate={{ opacity: 1, scale: 1 }}
             className="mt-8 relative flex flex-col items-center gap-6"
           >
-            <div ref={resultRef} className="bg-zinc-50 dark:bg-zinc-900/80 rounded-3xl p-6 sm:p-10 border-2 border-zinc-200 dark:border-zinc-700 text-center shadow-2xl backdrop-blur-sm w-full">
-              <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-                <h3 className="text-xs uppercase tracking-widest text-zinc-500 font-bold mb-4">Corde Numérique Extraite</h3>
-                <p className="font-mono text-lg sm:text-xl tracking-[0.4em] text-zinc-400 mb-8 blur-[2px] transition-all duration-500 hover:blur-none select-all relative group cursor-pointer">
-                  {answer.crypted}
-                  <span className="absolute -top-6 left-1/2 -translate-x-1/2 text-xs opacity-0 group-hover:opacity-100 transition-opacity bg-zinc-800 text-white px-2 py-1 rounded">Racine</span>
-                </p>
-              </motion.div>
+            <div ref={resultRef} className="bg-zinc-900 rounded-3xl p-6 sm:p-10 border-2 border-purple-900/60 text-center shadow-2xl w-full text-white space-y-6 relative overflow-hidden">
+              {/* AsrarHub Watermarks in 4 corners */}
+              <div className="absolute top-2 left-3 text-[10px] font-bold tracking-widest text-purple-400/30 pointer-events-none select-none uppercase">
+                AsrarHub
+              </div>
+              <div className="absolute top-2 right-3 text-[10px] font-bold tracking-widest text-purple-400/30 pointer-events-none select-none uppercase">
+                AsrarHub
+              </div>
+              <div className="absolute bottom-2 left-3 text-[10px] font-bold tracking-widest text-purple-400/30 pointer-events-none select-none uppercase">
+                AsrarHub
+              </div>
+              <div className="absolute bottom-2 right-3 text-[10px] font-bold tracking-widest text-purple-400/30 pointer-events-none select-none uppercase">
+                AsrarHub
+              </div>
 
-              <div className="h-px bg-zinc-200 dark:bg-zinc-800 w-1/3 mx-auto mb-8"></div>
-
-              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.6, type: "spring" }}>
-                <div className="flex justify-between items-center mb-6">
-                  <h3 className="text-xs uppercase tracking-widest text-zinc-900 dark:text-zinc-100 font-bold">L'Oracle a parlé</h3>
-                  <button 
-                    onClick={() => setShowZairjaInfo(true)}
-                    className="text-zinc-400 hover:text-emerald-500 dark:hover:text-emerald-400 p-1 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors flex items-center gap-1 cursor-pointer"
-                    title="Comment interpréter cette réponse ?"
-                  >
-                    <HelpCircle size={16} />
-                    <span className="text-[10px] font-bold uppercase tracking-wider">Interpréter</span>
-                  </button>
+              {/* AsrarHub Brand Header */}
+              <div className="flex justify-center mb-2 relative z-10">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-950/80 border border-purple-500/30 text-purple-300 text-xs font-black tracking-widest uppercase shadow-sm">
+                  <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                  <span>AsrarHub</span>
+                  <span className="text-[10px] text-purple-400 font-semibold">• Oracle & Za'irja</span>
                 </div>
-                <p className="text-2xl sm:text-4xl font-serif text-zinc-900 dark:text-white leading-relaxed italic border-l-4 border-zinc-300 dark:border-zinc-700 pl-6 text-left">
-                  « {answer.clear} »
+              </div>
+
+              <div>
+                <span className="text-[10px] uppercase tracking-widest text-purple-400 font-bold block mb-2">
+                  Corde Numérique Extraite
+                </span>
+                <p className="font-mono text-sm sm:text-base tracking-[0.3em] text-zinc-400">
+                  {answer.numericString}
                 </p>
-              </motion.div>
+              </div>
+
+              <div className="h-px bg-zinc-800 w-1/2 mx-auto"></div>
+
+              {/* Arabic Rhyming Poem */}
+              <div className="bg-purple-950/40 p-6 rounded-2xl border border-purple-800/40 space-y-3">
+                <span className="text-xs font-bold text-purple-300 uppercase tracking-widest block">
+                  Poème Répondeur de la Za'irja (Qasida)
+                </span>
+                <p className="text-2xl sm:text-4xl font-quran text-amber-200 leading-relaxed font-bold whitespace-pre-line" dir="rtl">
+                  {answer.arabicVerse}
+                </p>
+              </div>
+
+              {/* Translation */}
+              <p className="text-lg sm:text-xl font-serif text-zinc-200 italic leading-relaxed border-l-2 border-purple-500 pl-4 text-left">
+                « {answer.translation} »
+              </p>
+
+              {/* Interpretation */}
+              <div className="text-left bg-zinc-800/60 p-4 rounded-2xl text-xs sm:text-sm text-zinc-300 space-y-2">
+                <strong className="text-purple-300 flex items-center gap-1.5">
+                  <BookOpen size={16} /> Exégèse Spirituelle (Sharh) :
+                </strong>
+                <p className="leading-relaxed">{answer.interpretation}</p>
+                <div className="pt-2 border-t border-zinc-700/60 text-amber-300 font-bold">
+                  Dhikr Conseillé : {answer.recommendedDhikr}
+                </div>
+              </div>
+
+              {/* Footer watermark */}
+              <div className="pt-2 border-t border-zinc-800 text-center">
+                <p className="text-[10px] font-bold tracking-widest text-purple-400/60 uppercase">
+                  AsrarHub • Science des Lettres & Oracle Spirituel
+                </p>
+              </div>
             </div>
             
-            <div className="flex gap-4 mt-4">
-              <button onClick={downloadImage} className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-zinc-800 text-white hover:bg-zinc-700 font-semibold transition-colors shadow-lg">
-                <Download size={20} />
-                {t('zairja.download', 'Enregistrer')}
+            <div className="flex flex-wrap gap-3">
+              <button onClick={downloadImage} className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-zinc-800 text-white hover:bg-zinc-700 text-xs font-semibold transition-colors shadow-lg cursor-pointer">
+                <Download size={16} />
+                Enregistrer l'Image
               </button>
-              <button onClick={shareResult} className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-emerald-600 text-white hover:bg-emerald-500 font-semibold transition-colors shadow-lg">
-                <Share2 size={20} />
-                {t('zairja.share', 'Partager')}
-              </button>
+              {!disableDuaCopy && (
+                <button onClick={copyResultText} className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-purple-600 text-white hover:bg-purple-500 text-xs font-semibold transition-colors shadow-lg cursor-pointer">
+                  {copied ? <Check size={16} className="text-emerald-300" /> : <Copy size={16} />}
+                  {copied ? "Copié !" : "Copier le Poème & Conseil"}
+                </button>
+              )}
             </div>
           </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Zairja Info Modal */}
-      <AnimatePresence>
-        {showZairjaInfo && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.5 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowZairjaInfo(false)}
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            />
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white dark:bg-zinc-900 rounded-3xl p-6 shadow-2xl max-w-md w-full relative border border-zinc-100 dark:border-zinc-800 z-10"
-            >
-              <button
-                onClick={() => setShowZairjaInfo(false)}
-                className="absolute top-4 right-4 p-1.5 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 hover:text-zinc-600 transition-colors cursor-pointer"
-              >
-                <X size={20} />
-              </button>
-              
-              <div className="flex items-center gap-3 mb-4">
-                <div className="p-2.5 bg-emerald-500/10 text-emerald-500 rounded-xl">
-                  <Hexagon size={22} className="animate-spin-slow" />
-                </div>
-                <h3 className="text-lg font-bold text-zinc-900 dark:text-white">
-                  Comment interpréter la Zairja ?
-                </h3>
-              </div>
-              
-              <div className="space-y-4 text-sm text-zinc-600 dark:text-zinc-400">
-                <p>
-                  La <strong>Zairja</strong> (ou Za'irajah) est une ancienne méthode de divination cabalistique et astrologique islamique, utilisée notamment par Ibn Khaldoun pour obtenir des réponses poétiques et symboliques.
-                </p>
-                <p>
-                  <strong>Signification spirituelle :</strong>
-                  <br />
-                  La réponse de la Zairja ne doit pas être prise comme une prédiction scientifique ou magique, mais comme un <strong>miroir de réflexion spirituelle</strong> (Isharat) qui vous incite à approfondir votre propre discernement et votre intuition.
-                </p>
-                <p className="text-xs italic bg-zinc-50 dark:bg-zinc-950 p-3 rounded-2xl border border-zinc-100 dark:border-zinc-800 text-zinc-500">
-                  Note : Chaque consultation s'appuie sur la science des lettres (Ilm al-Huruf) pour extraire l'essence vibratoire cachée de votre question.
-                </p>
-              </div>
-              
-              <button
-                onClick={() => setShowZairjaInfo(false)}
-                className="mt-6 w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-sm font-semibold transition-colors shadow-sm cursor-pointer"
-              >
-                Fermer
-              </button>
-            </motion.div>
-          </div>
         )}
       </AnimatePresence>
     </div>
   );
 };
-

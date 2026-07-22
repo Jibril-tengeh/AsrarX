@@ -7,7 +7,7 @@ import {
   Book, BookOpen, ToggleLeft, Volume2, Save, Search, Plus, Trash2, Edit2, FileText,
   Eye, Image as ImageIcon, Crop as CropIcon, X, Upload, ShoppingBag, CreditCard,
   Clock, CheckCircle, XCircle, Globe, Grid, List, Mail, Phone, Lock, Bell, BellOff, Sparkles, Star, Share, ShieldAlert,
-  FolderOpen
+  FolderOpen, Copy, Radio
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 
@@ -2168,7 +2168,17 @@ export const AdminDashboard: React.FC = () => {
     { id: 'talsam', label: 'Talsam', desc: 'Générateur de talismans' },
     { id: 'tasbih', label: 'Tasbih', desc: 'Chapelet virtuel' },
     { id: 'zairja', label: 'Zairja', desc: 'Machine divinatoire' },
-    { id: 'halaqat', label: 'Halaqat', desc: 'Cercles d\'étude' }
+    { id: 'halaqat', label: 'Halaqat', desc: 'Cercles d\'étude' },
+    { id: 'daira-as-sirr', label: 'Dā\'ira As-Sirr', desc: 'Générateur de sceaux circulaires mystiques' },
+    { id: 'saah-ijabah', label: 'Sā\'ah Al-Ijābah', desc: 'Alignements célestes et heures d\'exaucement' },
+    { id: 'ia-rapprochements', label: 'IA Rapprochements', desc: 'Rapprochement intelligent des rêves, abjad et planètes' },
+    { id: 'combustion-eclipse', label: 'Combustion & Éclipses', desc: 'Analyse des combustions et éclipses planétaires' },
+    { id: 'ring-pendant-talisman', label: 'Bagues & Pendentifs', desc: 'Talismans physiques et gravures métalliques' },
+    { id: 'quran-analogy', label: 'Correspondances Coraniques', desc: 'Analogies spirituelles et correspondances coraniques' },
+    { id: 'seven-kings', label: 'Les 7 Rois Célestes', desc: 'Sceaux et rois célestes/terrestres de la semaine' },
+    { id: 'zikr-levels', label: 'Paliers Spirituels Zikr', desc: 'Paliers et niveaux d\'élévation du Zikr' },
+    { id: 'hijri-full-moon', label: 'Pleine Lune Hégirienne', desc: 'Suivi des nuits blanches et pleines lunes' },
+    { id: 'murid-journal', label: 'Journal du Murid', desc: 'Suivi de la voie et progression spirituelle' }
   ];
 
   const renderFeatures = () => {
@@ -3813,6 +3823,33 @@ export const AdminDashboard: React.FC = () => {
                 <div
                   className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${
                     featureToggles['assistantIconVisible'] !== false ? 'translate-x-6' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+
+          {/* Lecteur Flottant 432Hz Solfeggio / Fréquences Sacrées */}
+          <div className="flex flex-col p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <Radio size={18} className="text-amber-500" />
+                  Lecteur Flottant de Fréquences Sacrées (432Hz Solfeggio)
+                </h4>
+                <p className="text-sm text-gray-500 mt-1">
+                  Activer ou désactiver le bouton flottant "((o)) 432Hz Solfeggio" en bas de l'application.
+                </p>
+              </div>
+              <button
+                onClick={() => handleToggleFeature('sacredAudioPlayerVisible', featureToggles['sacredAudioPlayerVisible'] !== false)}
+                className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors ${
+                  featureToggles['sacredAudioPlayerVisible'] !== false ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
+                }`}
+              >
+                <div
+                  className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${
+                    featureToggles['sacredAudioPlayerVisible'] !== false ? 'translate-x-6' : 'translate-x-0'
                   }`}
                 />
               </button>

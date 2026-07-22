@@ -4,7 +4,7 @@ import { Info, ChevronDown, ChevronUp, BookOpen, Key, Sparkles } from 'lucide-re
 import { motion, AnimatePresence } from 'motion/react';
 
 interface ToolInfoTooltipProps {
-  toolId: 'zairja' | 'abjad' | 'taksir' | 'ilm_jafar' | 'elemental' | 'khouddam' | 'rouhaniyya' | 'khatim' | 'talsam';
+  toolId: string;
 }
 
 interface InterpretationGuide {
@@ -145,6 +145,42 @@ const guides: Record<string, Record<string, InterpretationGuide>> = {
       howItWorks: "Taksir hanya ce ta hada haruffa daki-daki har sai layin farko ya sake bayyana don rufe jadawalin.",
       interpretation: "Kowane layi yana wakiltar matakin sake fasalin muryar ruhi. Cikakken jadawalin yana zama kamar jagora mai karfi.",
       advice: "Yi amfani da Taksir wajen yin tunani mai zurfi. Karanta layukan daga sama zuwa kasa."
+    },
+    ilm_jafar: {
+      title: "Fassarar Ilimin Ja'far",
+      howItWorks: "Ilimin sirri na Ja'far yana binciken tushen haruffa, lambobi da taurari don bayyana asirin ruhi.",
+      interpretation: "Haruffa da lambobin da aka samu suna nuna kariya da sirrin da ke tattare da yanayin mutum.",
+      advice: "Ilimin Ja'far yana bukatar tsarkin zuciya da gaskiya. Yi amfani da sakamakon wajen addu'a."
+    },
+    elemental: {
+      title: "Fassarar Sassan Hudu (Anasir)",
+      howItWorks: "Wannan bangaren yana rarraba haruffan sunanka zuwa sassa hudu: Wuta (Nari), Iska (Hawai), Ruwa (Ma'i), da Kasa (Turabi).",
+      interpretation: "Rinjayen Wuta yana nuna karfi da kwarin gwiwa; Iska tana nuna tunani; Ruwa yana nuna hankali da ilimi; Kasa tana nuna tabbatuwa.",
+      advice: "Idan wani bangare ya yi karanci, cike shi da zikiri ko addu'o'in da suka dace."
+    },
+    khouddam: {
+      title: "Fassarar Masu Hidima (Khouddam)",
+      howItWorks: "Yana lissafa sunayen ruhohin sama (da ke karewa da \"A'il\") da na kasa (da ke karewa da \"Yush\") masu alaka da sunanka.",
+      interpretation: "Wadannan sunaye masu tsarki suna wakiltar hanyoyin kariya na Ubangiji da ke taimaka maka wajen addu'a.",
+      advice: "Koyaushe ka gode wa Allah kuma ka nemi kariya ta gaskiya daga gare Shi kawai."
+    },
+    rouhaniyya: {
+      title: "Fassarar Rouhaniyya",
+      howItWorks: "Yana fitar da karfin ruhi (Rouhaniyya) da ke aiki a cikin zikiri ko suna daga lambobi da haruffa.",
+      interpretation: "Karfin ruhaniya da aka lissafa yana nuna tasirin addu'o'inka. Cikakken Rouhaniyya yana nuna karfin amsa addu'a.",
+      advice: "Karanta zikirinka da cikakkiyar nutsuwa, biyayya da gaskiya don kunna karfin Rouhaniyya."
+    },
+    khatim: {
+      title: "Fassarar Hatimi / Khatim",
+      howItWorks: "Hatimi yana saka darajar lambarka a tsakiyar sahu 3x3 bisa tsari na musamman na lissafi.",
+      interpretation: "Sikofin yana daidaita karfin ruhi. Jimillar kowane layi tana zama daya, wanda ke nuna kadaitakar Ubangiji.",
+      advice: "Natsu wajen duba Hatimin yayin tunani don samun natsuwa da karfin addu'a."
+    },
+    talsam: {
+      title: "Fassarar Talsam",
+      howItWorks: "Talsam yana tattara haruffan addu'arka ko sunaye masu tsarki zuwa kalma guda mai karfin ruhi.",
+      interpretation: "Kalmar talsam da aka samu tana dunkule kudurinka na ruhi zuwa wata hanya ta musamman.",
+      advice: "Rike talsam din a matsayin madogara ta kyakkyawan zatonka ga Allah."
     }
   }
 };

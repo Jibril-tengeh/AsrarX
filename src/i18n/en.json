@@ -303,6 +303,18 @@
       "title": "Rouhaniyya Extractor",
       "description": "Extraction of celestial or terrestrial spirits based on Names and Weight."
     },
+    "rouhaniyyaPage": {
+      "title": "Rouhaniyya Extractor",
+      "subtitle": "Extraction of celestial and terrestrial entities based on Names and Abjad weight.",
+      "infoNotice": "In esoteric science (Ilm al-Ruhaniyat), every number (derived from a Name or Verse) possesses a spiritual servant (Khadim). Their name is extracted by converting the number into letters ('Istintaq'), followed by appending Angelic (\"A'il\") and Terrestrial (\"Tish\") suffixes.",
+      "numericalValue": "Numerical Value (Zimam)",
+      "placeholder": "Ex: 313",
+      "extractButton": "Extract",
+      "angelicEntity": "Angelic Entity (Malaikah)",
+      "angelicDesc": "Governs etherically. Ending in \"A'il\" meaning \"God\".",
+      "terrestrialEntity": "Terrestrial Entity (Ardi)",
+      "terrestrialDesc": "Governs physical/material action. Ending frequently in \"Tish\" or \"Yush\"."
+    },
     "taksir": {
       "title": "Taksir (Fracturing)",
       "description": "Generate Taksir matrices and letter breakages."
@@ -844,5 +856,59 @@
     "title": "Maintenance in Progress",
     "description": "AsrarHub is currently undergoing maintenance to improve your experience. We will be back very soon. Thank you for your patience.",
     "badge": "Access temporarily suspended"
+  },
+  "toolTooltip": {
+    "clickToInterpret": "Click to see how to interpret the results",
+    "howItWorks": "How it Works",
+    "interpretation": "Interpretation",
+    "spiritualAdvice": "Spiritual Advice"
+  },
+  "khouddamPage": {
+    "title": "Khouddam Detector & Angelic Alignment",
+    "subtitle": "Extraction of Celestial Guardian and Terrestrial Servant according to classical Sirr method (Name + Mother).",
+    "spiritualFiliation": "Spiritual Lineage Information (Hisab al-Um)",
+    "firstName": "First Name (User)",
+    "lastName": "Last Name",
+    "motherName": "Mother's First Name",
+    "orDirectInput": "Or Direct Input by Number / Abjad Value",
+    "extractBtn": "Extract Khadim & Guardian Angel",
+    "celestialGuardian": "Celestial Guardian (Al-Malak Al-Ulwi)",
+    "earthlyServant": "Earthly Servant (Al-Khadim Al-Ardi)",
+    "celestialAlignments": "Correspondences & Celestial Alignment",
+    "dominantElement": "Dominant Element",
+    "incenseToBurn": "Incense to Burn (Bakhour)",
+    "dayAndRuler": "Day & Planetary Ruler",
+    "personalInvocation": "Alignment Invocation Formula",
+    "copyInvocation": "Copy Invocation"
+  },
+  "sciencePage": {
+    "title": "Science of Letters (Ilm al-Huruf)",
+    "rouhaniyyaExtractorTitle": "Rouhaniyya & Name Letters Extractor",
+    "rouhaniyyaExtractorDesc": "Enter a first name or word in Arabic (e.g. \"محمد\" or \"علي\") to extract letter composition, dominant element, and custom Wird formula.",
+    "extractRouhaniyya": "Extract Rouhaniyya",
+    "totalAbjadValue": "Total Abjad Value",
+    "dominantElement": "Dominant Element",
+    "recommendedRepetition": "Recommended Repetition",
+    "componentLetters": "Component Letters",
+    "deducedInvocationFormula": "Deduced Invocation Formula",
+    "secretVaultTitle": "The Vault of Secret Wirds of the Grand Initiated Masters",
+    "secretVaultDesc": "These sacred invocations and wirds are attributed to the greatest imams and sheikhs (Hujjat al-Islam Imam Al-Ghazali, Ibn 'Arabi, Sheik 'Abdul Qadir al-Jilani, Imam Al-Nawawi, Imam Ash-Shadhili, Al-Buni, At-Tijani, Al-Busiri, Ar-Rifa'i, Ma al-'Aynayn).",
+    "filterByMaster": "Filter by Master:",
+    "allMasters": "All Masters",
+    "phonetics": "Phonetics:",
+    "translation": "Translation:",
+    "executionRitual": "Execution Ritual:"
+  },
+  "rouhaniyyaPage": {
+    "title": "Rouhaniyya Extractor",
+    "subtitle": "Extraction of celestial and terrestrial entities based on Names and Abjad weight.",
+    "infoNotice": "In esoteric science (Ilm al-Ruhaniyat), every number (derived from a Name or Verse) possesses a spiritual servant (Khadim). Their name is extracted by converting the number into letters ('Istintaq'), followed by appending Angelic (\"A'il\") and Terrestrial (\"Tish\") suffixes.",
+    "numericalValue": "Numerical Value (Zimam)",
+    "placeholder": "Ex: 313",
+    "extractButton": "Extract",
+    "angelicEntity": "Angelic Entity (Malaikah)",
+    "angelicDesc": "Governs etherically. Ending in \"A'il\" meaning \"God\".",
+    "terrestrialEntity": "Terrestrial Entity (Ardi)",
+    "terrestrialDesc": "Governs physical/material action. Ending frequently in \"Tish\" or \"Yush\"."
   }
 }
