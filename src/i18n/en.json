@@ -471,7 +471,14 @@
       "p3Title": "3. Incense Fumigation (Bakhour)",
       "p3DescDetail": "Burn a pinch of natural incense ({incense}) to raise the vibrational atmosphere of the space.",
       "p4Title": "4. Shield of Protection (Tahseen)",
-      "p4Desc": "Recite Ayatal-Kursi 7 times and Surahs Al-Falaq and An-Nas before meditation or tracing the seal."
+      "p4Desc": "Recite Ayatal-Kursi 7 times and Surahs Al-Falaq and An-Nas before meditation or tracing the seal.",
+      "parchmentSubtitle": "Regency of Angel {angel} ({angelAr}) & King {king}",
+      "planetLabel": "Planet:",
+      "metalLabel": "Metal:",
+      "incenseLabel": "Incense:",
+      "dimensionsLabel": "Wafq Dimensions:",
+      "arabicInvocationLabel": "Arabic Invocation:",
+      "authenticSeal": "AsrarHub — Authentic Theurgic Seal of {day}"
     },
     "protectionModal": {
       "premiumAccess": "Premium Access Only",
@@ -1049,5 +1056,15 @@
     "scienceText3": "Great scholars and mystics (such as Al-Farabi in Kitab al-Musiqa al-Kabir and the Ikhwan al-Safa) taught that the 7 musical notes correspond to the 7 classical planets and the 28 Lunar Mansions (Manazil al-Qamar). Reciting Divine Names in resonance with the day's planetary frequency harmonizes the mind with the cosmic symphony of the Supreme Creator.",
     "footerGenerator": "Acoustic Generator & Web Audio Synthesizer",
     "footerTitle": "AsrarHub Sacred Acoustics"
+  },
+  "parchmentModal": {
+    "headerTitle": "Ritual Scroll / Sacred Parchment",
+    "print": "Print",
+    "download": "Download Image",
+    "sacredTreatiseSubtitle": "AsrarHub Sacred Treatise & Ritual Sheet",
+    "name": "Name:",
+    "weight": "Weight (Zimām):",
+    "drawnBy": "Drawn by: AsrarHub Ruhaniyat",
+    "authenticSeal": "Authentic Seal — Sirr Al-Asrar"
   }
 }

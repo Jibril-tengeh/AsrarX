@@ -471,7 +471,14 @@
       "p3Title": "3. Encens de Fumigation (Bakhour)",
       "p3DescDetail": "Faites brûler une pincée d'encens naturel ({incense}) pour élever l'atmosphère vibratoire du lieu.",
       "p4Title": "4. Bouclier de Protection (Tahseen)",
-      "p4Desc": "Récitez 7 fois le Verset du Trône (Ayat Al-Kursi) et les Sourates Al-Falaq et An-Nas avant toute méditation ou tracé du sceau."
+      "p4Desc": "Récitez 7 fois le Verset du Trône (Ayat Al-Kursi) et les Sourates Al-Falaq et An-Nas avant toute méditation ou tracé du sceau.",
+      "parchmentSubtitle": "Régence de l'Ange {angel} ({angelAr}) & Roi {king}",
+      "planetLabel": "Planète :",
+      "metalLabel": "Métal :",
+      "incenseLabel": "Encens :",
+      "dimensionsLabel": "Dimensions Wafq :",
+      "arabicInvocationLabel": "Invocation Arabe :",
+      "authenticSeal": "AsrarHub — Sceau Théurgique Authentique du {day}"
     },
     "protectionModal": {
       "premiumAccess": "Accès Réservé Premium",
@@ -1049,5 +1056,15 @@
     "scienceText3": "Les grands savants et mystiques (tels qu'Al-Farabi dans Kitab al-Musiqa al-Kabir et les Ikhwan al-Safa) ont enseigné que les 7 notes de la gamme musicale correspondent aux 7 planètes classiques et aux 28 demeures de la Lune (Manazil al-Qamar). Réciter les Noms Divins en résonance avec la fréquence planétaire du jour permet d'harmoniser l'esprit avec la symphonie cosmique créée par le Créateur Suprême.",
     "footerGenerator": "Générateur Acoustique & Synthèse Audio Web API",
     "footerTitle": "AsrarHub Sacred Acoustics"
+  },
+  "parchmentModal": {
+    "headerTitle": "Fiche Rituelle / Parchemin Sacré",
+    "print": "Imprimer",
+    "download": "Télécharger Image",
+    "sacredTreatiseSubtitle": "AsrarHub Traité Sacré & Fiche Rituelle",
+    "name": "Nom :",
+    "weight": "Poids (Zimām) :",
+    "drawnBy": "Conscripteur : AsrarHub Ruhaniyat",
+    "authenticSeal": "Sceau Authentique — Sirr Al-Asrar"
   }
 }

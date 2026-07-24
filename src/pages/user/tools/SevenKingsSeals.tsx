@@ -43,7 +43,9 @@ interface SevenKingData {
   invocationHa: string;
   invocationAr: string;
   invocationPhonetic: string;
-  frequency: string;
+  frequencyFr: string;
+  frequencyEn: string;
+  frequencyHa: string;
 }
 
 const SEVEN_KINGS_DATA: SevenKingData[] = [
@@ -80,7 +82,9 @@ const SEVEN_KINGS_DATA: SevenKingData[] = [
     invocationHa: "Da sunan Allah Mai rahama Mai jin kai. Ka amsa, ya Rūqyā'īl, saboda hakkin Rana da Sarki Al-Mudhib, da kuma hakkin 'Ya Hayyu Ya Qayyūm'.",
     invocationAr: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ، أَجِبْ يَا رُوقَيَائِيلُ بِحَقِّ الشَّمْسِ وَالْمَلِكِ الْمُذْهِبِ، وَبِحَقِّ يَا حَيُّ يَا قَيُّومُ",
     invocationPhonetic: "Bismillāhi ar-Rahmāni ar-Rahīm, ajib yā Rūqyā'īl bi-haqqi ash-Shamsi wa al-Malik Al-Mudhib, wa bi-haqqi Yā Hayyu Yā Qayyūm.",
-    frequency: "528 Hz (Fréquence Solaire / Miracle)"
+    frequencyFr: "528 Hz (Fréquence Solaire / Miracle)",
+    frequencyEn: "528 Hz (Solar Frequency / Miracle)",
+    frequencyHa: "528 Hz (Mita na Rana / Al'ajabi)"
   },
   {
     dayId: "monday",
@@ -115,7 +119,9 @@ const SEVEN_KINGS_DATA: SevenKingData[] = [
     invocationHa: "Da sunan Allah Mai rahama. Ka amsa, ya Jibrā'īl, saboda hakkin Wata da Sarki Murrah, da kuma hakkin 'Ya Rahmān Ya Rahīm'.",
     invocationAr: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ، أَجِبْ يَا جَبْرَائِيلُ بِحَقِّ الْقَمَرِ وَالْمَلِكِ مُرَّةَ، وَبِحَقِّ يَا رَحْمَٰنُ يَا رَحِيمُ",
     invocationPhonetic: "Bismillāhi ar-Rahmāni ar-Rahīm, ajib yā Jibrā'īl bi-haqqi al-Qamari wa al-Malik Murrah, wa bi-haqqi Yā Rahmān Yā Rahīm.",
-    frequency: "432 Hz (Résonance Lunique / Intuition)"
+    frequencyFr: "432 Hz (Résonance Lunique / Intuition)",
+    frequencyEn: "432 Hz (Lunar Resonance / Intuition)",
+    frequencyHa: "432 Hz (Amsawar Wata / Hankali)"
   },
   {
     dayId: "tuesday",
@@ -150,7 +156,9 @@ const SEVEN_KINGS_DATA: SevenKingData[] = [
     invocationHa: "Da sunan Allah Mai rahama. Ka amsa, ya Samsamā'īl, saboda hakkin Tauraro Mars da Sarki Al-Ahmar, da kuma hakkin 'Ya Qawiyyu Ya Matīn'.",
     invocationAr: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ، أَجِبْ يَا سَمْسَمَائِيلُ بِحَقِّ الْمِرِّيخِ وَالْمَلِكِ الأَحْمَرِ، وَبِحَقِّ يَا قَوِيُّ يَا مَتِينُ",
     invocationPhonetic: "Bismillāhi ar-Rahmāni ar-Rahīm, ajib yā Samsamā'īl bi-haqqi al-Mirrīkh wa al-Malik Al-Ahmar, wa bi-haqqi Yā Qawiyyu Yā Matīn.",
-    frequency: "639 Hz (Force & Courage Martien)"
+    frequencyFr: "639 Hz (Force & Courage Martien)",
+    frequencyEn: "639 Hz (Martian Strength & Courage)",
+    frequencyHa: "639 Hz (Karfin Mars da Jarumta)"
   },
   {
     dayId: "wednesday",
@@ -185,7 +193,9 @@ const SEVEN_KINGS_DATA: SevenKingData[] = [
     invocationHa: "Da sunan Allah Mai rahama. Ka amsa, ya Mīkhā'īl, saboda hakkin Tauraro Utārid da Sarki Burqān, da kuma hakkin 'Ya 'Alīmu Ya Hakīm'.",
     invocationAr: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ، أَجِبْ يَا مِيكَائِيلُ بِحَقِّ عُطَارِدَ وَالْمَلِكِ بَرْقَانَ، وَبِحَقِّ يَا عَلِيمُ يَا حَكِيمُ",
     invocationPhonetic: "Bismillāhi ar-Rahmāni ar-Rahīm, ajib yā Mīkhā'īl bi-haqqi 'Utārid wa al-Malik Burqān, wa bi-haqqi Yā 'Alīmu Yā Hakīm.",
-    frequency: "741 Hz (Sagesse & Éloquence Mercurienne)"
+    frequencyFr: "741 Hz (Sagesse & Éloquence Mercurienne)",
+    frequencyEn: "741 Hz (Mercurian Wisdom & Eloquence)",
+    frequencyHa: "741 Hz (Hikimar Utarid da Jawabi)"
   },
   {
     dayId: "thursday",
@@ -220,7 +230,9 @@ const SEVEN_KINGS_DATA: SevenKingData[] = [
     invocationHa: "Da sunan Allah Mai rahama. Ka amsa, ya Sarfīyā'īl, saboda hakkin Tauraro Mushtari da Sarki Shamhurish, da kuma hakkin 'Ya Kabīru Ya Mut'āl'.",
     invocationAr: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ، أَجِبْ يَا صَرْفِيَائِيلُ بِحَقِّ الْمُشْتَرِي وَالْمَلِكِ شَمْهُورَشَ، وَبِحَقِّ يَا كَبِيرُ يَا مُتَعَالُ",
     invocationPhonetic: "Bismillāhi ar-Rahmāni ar-Rahīm, ajib yā Sarfīyā'īl bi-haqqi al-Mushtarī wa al-Malik Shamhurish, wa bi-haqqi Yā Kabīru Yā Mut'āl.",
-    frequency: "852 Hz (Expansion & Prospérité Jupitérienne)"
+    frequencyFr: "852 Hz (Expansion & Prospérité Jupitérienne)",
+    frequencyEn: "852 Hz (Juperiain Expansion & Prosperity)",
+    frequencyHa: "852 Hz (Fadaɗa da Arzikin Mushtari)"
   },
   {
     dayId: "friday",
@@ -255,7 +267,9 @@ const SEVEN_KINGS_DATA: SevenKingData[] = [
     invocationHa: "Da sunan Allah Mai rahama. Ka amsa, ya 'Anyā'īl, saboda hakkin Tauraro Zuhrah da Sarki Zawba'ah, da kuma hakkin 'Ya Wadūdu Ya Latīf'.",
     invocationAr: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ، أَجِبْ يَا عَنِيَائِيلُ بِحَقِّ الزُّهَرَةِ وَالْمَلِكِ زَوْبَعَةَ، وَبِحَقِّ يَا وَدُودُ يَا لَطِيفُ",
     invocationPhonetic: "Bismillāhi ar-Rahmāni ar-Rahīm, ajib yā 'Anyā'īl bi-haqqi az-Zuharah wa al-Malik Zawba'ah, wa bi-haqqi Yā Wadūdu Yā Latīf.",
-    frequency: "639 Hz (Harmonie & Amour Vénusien)"
+    frequencyFr: "639 Hz (Harmonie & Amour Vénusien)",
+    frequencyEn: "639 Hz (Venusian Harmony & Love)",
+    frequencyHa: "639 Hz (Daidaito da Soyayyar Zuhrah)"
   },
   {
     dayId: "saturday",
@@ -290,7 +304,9 @@ const SEVEN_KINGS_DATA: SevenKingData[] = [
     invocationHa: "Da sunan Allah Mai rahama. Ka amsa, ya Kasfīyā'īl, saboda hakkin Tauraro Zuhal da Sarki Maymūn, da kuma hakkin 'Ya Fattāhu Ya Razzāq'.",
     invocationAr: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ، أَجِبْ يَا كَسْفِيَائِيلُ بِحَقِّ زُحَلَ وَالْمَلِكِ مَيْمُونَ، وَبِحَقِّ يَا فَتَّاحُ يَا رَزَّاقُ",
     invocationPhonetic: "Bismillāhi ar-Rahmāni ar-Rahīm, ajib yā Kasfīyā'īl bi-haqqi Zuhal wa al-Malik Maymūn, wa bi-haqqi Yā Fattāhu Yā Razzāq.",
-    frequency: "396 Hz (Ancrage & Dénouement Saturnien)"
+    frequencyFr: "396 Hz (Ancrage & Dénouement Saturnien)",
+    frequencyEn: "396 Hz (Saturnian Grounding & Release)",
+    frequencyHa: "396 Hz (Tabbata da Maganin Zuhal)"
   }
 ];
 
@@ -450,6 +466,12 @@ export const SevenKingsSeals: React.FC = () => {
     return day.invocationFr;
   };
 
+  const getFrequencyName = (day: SevenKingData) => {
+    if ((language as string) === 'ha') return day.frequencyHa || day.frequencyFr;
+    if ((language as string) === 'en') return day.frequencyEn || day.frequencyFr;
+    return day.frequencyFr;
+  };
+
   const formatCellValue = (val: number): string => {
     if (displayMode === 'western') return String(val);
     if (displayMode === 'letters') return numberToAbjadLetter(val);
@@ -551,15 +573,15 @@ export const SevenKingsSeals: React.FC = () => {
 
     ctx.fillStyle = selectedDay.glowColor;
     ctx.font = 'italic 18px serif';
-    ctx.fillText(`"AsrarHub — Sceau Théurgique Authentique du ${getDayName(selectedDay)}"`, 500, 930);
+    ctx.fillText(`"${t('seven-kings.authenticSeal', 'AsrarHub — Sceau Théurgique Authentique du {day}').replace('{day}', getDayName(selectedDay))}"`, 500, 930);
 
     await downloadCanvasImage(canvas, `sceau_7_rois_${selectedDay.dayId}_${wafqSize}x${wafqSize}.png`);
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto p-3 sm:p-6 lg:p-8 safe-area-pt max-h-[85vh] overflow-hidden flex flex-col">
+    <div className="w-full max-w-7xl mx-auto p-3 sm:p-6 lg:p-8 safe-area-pt space-y-4">
       {/* Top Header Navigation */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-gray-800 p-4 sm:p-5 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm shrink-0 mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-gray-800 p-4 sm:p-5 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm shrink-0">
         <div className="flex items-center gap-3">
           <Link 
             to="/tools" 
@@ -580,7 +602,6 @@ export const SevenKingsSeals: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2">
-          <ToolInfoTooltip toolId="seven-kings" />
           <button
             onClick={() => setShowParchment(true)}
             className="px-4 py-2.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 rounded-2xl font-extrabold text-xs flex items-center gap-2 transition-all cursor-pointer shrink-0"
@@ -591,7 +612,9 @@ export const SevenKingsSeals: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pr-0.5">
+      <ToolInfoTooltip toolId="seven-kings" />
+
+      <div className="space-y-4">
 
       {/* Days Selector Tabs (Dimanche à Samedi) */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
@@ -636,7 +659,7 @@ export const SevenKingsSeals: React.FC = () => {
                 </div>
               </div>
               <span className="text-xs px-3 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 font-black border border-amber-500/20">
-                {selectedDay.frequency}
+                {getFrequencyName(selectedDay)}
               </span>
             </div>
 
@@ -1238,7 +1261,10 @@ export const SevenKingsSeals: React.FC = () => {
         isOpen={showParchment}
         onClose={() => setShowParchment(false)}
         title={`${t('seven-kings.sealHeader', 'Sceau Théurgique du {day}').replace('{day}', getDayName(selectedDay))} (${wafqSize}x${wafqSize})`}
-        subtitle={`Régence de l'Ange ${selectedDay.celestialAngel} (${selectedDay.celestialAngelAr}) & Roi ${selectedDay.terrestrialKing}`}
+        subtitle={t('seven-kings.parchmentSubtitle', "Régence de l'Ange {angel} ({angelAr}) & Roi {king}")
+          .replace('{angel}', selectedDay.celestialAngel)
+          .replace('{angelAr}', selectedDay.celestialAngelAr)
+          .replace('{king}', selectedDay.terrestrialKing)}
         content={
           <div className="space-y-4 text-center">
             <div className="p-4 bg-amber-100/60 rounded-2xl border border-amber-600/30">
@@ -1247,14 +1273,14 @@ export const SevenKingsSeals: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-2 gap-2 text-xs font-sans text-amber-950 text-left bg-amber-200/50 p-3.5 rounded-xl border border-amber-600/30">
-              <div>Planète : <strong>{getPlanetName(selectedDay)} ({selectedDay.planetSymbol})</strong></div>
-              <div>Métal : <strong>{getMetalName(selectedDay)}</strong></div>
-              <div>Encens : <strong>{getIncenseName(selectedDay)}</strong></div>
-              <div>Dimensions Wafq : <strong>{wafqSize}x{wafqSize}</strong></div>
+              <div>{t('seven-kings.planetLabel', 'Planète :')} <strong>{getPlanetName(selectedDay)} ({selectedDay.planetSymbol})</strong></div>
+              <div>{t('seven-kings.metalLabel', 'Métal :')} <strong>{getMetalName(selectedDay)}</strong></div>
+              <div>{t('seven-kings.incenseLabel', 'Encens :')} <strong>{getIncenseName(selectedDay)}</strong></div>
+              <div>{t('seven-kings.dimensionsLabel', 'Dimensions Wafq :')} <strong>{wafqSize}x{wafqSize}</strong></div>
             </div>
 
             <div className="p-3 bg-amber-50 rounded-xl border border-amber-300/60 text-right space-y-1">
-              <span className="text-[10px] text-amber-800 font-bold block text-left">Invocation Arabe :</span>
+              <span className="text-[10px] text-amber-800 font-bold block text-left">{t('seven-kings.arabicInvocationLabel', 'Invocation Arabe :')}</span>
               <p dir="rtl" className="text-base font-serif font-bold text-amber-950">
                 "{selectedDay.invocationAr}"
               </p>

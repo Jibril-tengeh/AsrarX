@@ -69,6 +69,18 @@ const guides: Record<string, Record<string, InterpretationGuide>> = {
       howItWorks: "Le Talsam fusionne et chiffre les lettres de votre invocation ou de vos noms sacrés pour créer un mot unique de haute densité vibratoire.",
       interpretation: "Le mot de pouvoir généré concentre toute l'essence de votre intention spirituelle sous une forme géométrique et phonétique sacrée non accessible à l'esprit rationnel.",
       advice: "Récitez le Talsam ou conservez-le en mémoire comme un ancrage de votre foi et de votre dévouement envers la Volonté divine souveraine."
+    },
+    "seven-kings": {
+      title: "Interprétation des Sceaux des 7 Rois Célestes",
+      howItWorks: "Chaque jour de la semaine est régi par un Ange Céleste (Mala'ik), un Roi Terrestre, un Nom Divin, une planète et un carré magique Wafq d'une dimension choisie (3x3 à 10x10).",
+      interpretation: "Le sceau combine le sceau solomonien, l'octagramme des 8 directions et le carré sacré pour concentrer les résonances théurgiques et équilibrer les énergies planétaires du jour.",
+      advice: "Effectuez votre méditation ou zikr le jour correspondant, à l'heure planétaire propice, en utilisant l'encens recommandé et en récitant le nom divin associé."
+    },
+    geomancy: {
+      title: "Interprétation de la Géomancie (Khatt ar-Raml)",
+      howItWorks: "Génère les 16 maisons géomantiques à partir des 4 Mères (soit par tirage de sable, saisie manuelle ou calcul Abjad). Les Filles, Nièces, Témoins, Juge et Suprême sont calculés par l'addition binaire sacrée.",
+      interpretation: "Le Juge (M15) donne la réponse directe à votre interrogation, tandis que le Suprême (M16) scelle l'issue ultime à long terme. L'analyse par domaine (M1 vs M-Cible) et la boussole spatiale révèlent les dynamiques d'action.",
+      advice: "Consultez le thème avec respect et sérénité. Effectuez l'aumône (Saraka) et les zikrs recommandés pour harmoniser les énergies élémentaires et débloquer les situations."
     }
   },
   en: {
@@ -125,6 +137,18 @@ const guides: Record<string, Record<string, InterpretationGuide>> = {
       howItWorks: "The Talsam merges and encrypts the letters of your invocation or sacred names to create a unique word of high vibrational density.",
       interpretation: "The generated word of power concentrates the entire essence of your spiritual intent in a geometric and phonetic sacred form not accessible to the rational mind.",
       advice: "Recite the Talsam or hold it in your memory as an anchor of your faith and devotion to the sovereign Divine Will."
+    },
+    "seven-kings": {
+      title: "Interpretation of the Seals of the 7 Celestial Kings",
+      howItWorks: "Each day of the week is governed by a Celestial Angel (Mala'ik), an Earthly King, a Divine Name, a planet, and a Wafq magic square of chosen dimensions (3x3 to 10x10).",
+      interpretation: "The seal combines the Solomonian seal, the 8-directional octagram, and the sacred square to focus theurgic resonances and balance the daily planetary energies.",
+      advice: "Perform your meditation or zikr on the corresponding day during the auspicious planetary hour, using the recommended incense and reciting the associated divine name."
+    },
+    geomancy: {
+      title: "Interpretation of Geomancy (Khatt ar-Raml)",
+      howItWorks: "Generates the 16 geomantic houses from 4 Mothers (via sand casting, manual input, or Abjad calculation). Daughters, Nieces, Witnesses, Judge, and Supreme are calculated through sacred binary addition.",
+      interpretation: "The Judge (H15) provides the direct answer to your question, while the Supreme (H16) seals the ultimate long-term outcome. Domain analysis (H1 vs Target-H) and spatial compass reveal action dynamics.",
+      advice: "Consult the chart with respect and peace. Perform the recommended charity (Saraka) and dhikrs to harmonize elemental energies and unblock situations."
     }
   },
   ha: {
@@ -181,6 +205,18 @@ const guides: Record<string, Record<string, InterpretationGuide>> = {
       howItWorks: "Talsam yana tattara haruffan addu'arka ko sunaye masu tsarki zuwa kalma guda mai karfin ruhi.",
       interpretation: "Kalmar talsam da aka samu tana dunkule kudurinka na ruhi zuwa wata hanya ta musamman.",
       advice: "Rike talsam din a matsayin madogara ta kyakkyawan zatonka ga Allah."
+    },
+    "seven-kings": {
+      title: "Fassarar Hatsiman Sarakunan Sama 7",
+      howItWorks: "Kowace rana ta mako tana karkashin mulkin Mala'ikan Sama, Sarkin Kasa, Sunan Allah, Tauraro, da Wafq mai lambobi (3x3 zuwa 10x10).",
+      interpretation: "Hatsimin yana haɗa hatimin Suleimanu, tauraro mai baki 8, da wafq domin tattara albarkar ruhananci da tauraro na ranar.",
+      advice: "Yi addu'arka ko zikirinka a ranar da ta dace, a sa'ar tauraron, tare da turaren wuta da aka gindaya da karanta sunan Allah."
+    },
+    geomancy: {
+      title: "Fassarar Duban Kasa (Khatt ar-Raml)",
+      howItWorks: "Yana samarda gidajen kasa 16 daga uwaye 4 (ta hanyar duba a yashi, shigarwa da hannu ko lissafin Abjad). Yammata, jikoki, shaidu, Alkali da Mafi Daukaka ana samun su ta hanyar lissafin lamba.",
+      interpretation: "Alkali (G15) yana ba da amsa kai tsaye ga tambayarka, yayin da Mafi Daukaka (G16) yake rufe karshen al'amari. Binciken bangare (G1 da Gidan Tambaya) da boussole suna nuna hanyar motsi.",
+      advice: "Duba kasa da girmamawa da nutsuwa. Yi sadaka da zikirin da aka shawarta domin daidaita karfin sassan hudu da bude hanya."
     }
   }
 };

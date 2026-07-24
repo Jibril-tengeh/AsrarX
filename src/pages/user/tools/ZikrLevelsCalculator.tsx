@@ -165,14 +165,32 @@ export const ZikrLevelsCalculator: React.FC = () => {
         className="w-full py-3 rounded-2xl bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold text-xs flex items-center justify-center gap-2 shadow-lg cursor-pointer transition-all"
       >
         <Feather className="w-4 h-4" />
-        <span>Exporter la Fiche de Zikr en Parchemin</span>
+        <span>
+          {language === 'fr'
+            ? 'Exporter la Fiche de Zikr en Parchemin'
+            : language === 'ha'
+            ? 'Fitar da Takardar Zikiri a Parchemin'
+            : 'Export Zikr Sheet to Parchment'}
+        </span>
       </button>
 
       <ParchmentExporterModal
         isOpen={showParchment}
         onClose={() => setShowParchment(false)}
-        title={`Régime de Zikr — ${inputText}`}
-        subtitle="Calcul des 3 Niveaux Théurgiques (Al-Kabīr, Al-Wasaṭ, Al-Ṣaghīr)"
+        title={
+          language === 'fr'
+            ? `Régime de Zikr — ${inputText}`
+            : language === 'ha'
+            ? `Tsarin Zikiri — ${inputText}`
+            : `Zikr Regime — ${inputText}`
+        }
+        subtitle={
+          language === 'fr'
+            ? 'Calcul des 3 Niveaux Théurgiques (Al-Kabīr, Al-Wasaṭ, Al-Ṣaghīr)'
+            : language === 'ha'
+            ? 'Lissafin Matakai 3 na Zikiri (Al-Kabīr, Al-Wasaṭ, Al-Ṣaghīr)'
+            : 'Calculation of 3 Theurgic Levels (Al-Kabīr, Al-Wasaṭ, Al-Ṣaghīr)'
+        }
         abjadWeight={wasatVal}
         content={
           <div className="space-y-4 text-center">

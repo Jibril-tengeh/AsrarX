@@ -342,3 +342,5 @@ export const GrandOaths: React.FC = () => {
     </div>
   );
 };
+
+export default GrandOaths;

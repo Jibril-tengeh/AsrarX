@@ -238,8 +238,20 @@ export const CoranAnalogyAbjad: React.FC = () => {
         <ParchmentExporterModal
           isOpen={!!selectedForParchment}
           onClose={() => setSelectedForParchment(null)}
-          title={`Verset Coranique Personnel — ${selectedForParchment.surah}`}
-          subtitle={`Résonance Abjad avec la valeur ${calculatedVal}`}
+          title={
+            language === 'fr'
+              ? `Verset Coranique Personnel — ${selectedForParchment.surah}`
+              : language === 'ha'
+              ? `Ayar Alkur'ani na Kanka — ${selectedForParchment.surah}`
+              : `Personal Quranic Verse — ${selectedForParchment.surah}`
+          }
+          subtitle={
+            language === 'fr'
+              ? `Résonance Abjad avec la valeur ${calculatedVal}`
+              : language === 'ha'
+              ? `Amon Abjad da daraja ${calculatedVal}`
+              : `Abjad resonance with value ${calculatedVal}`
+          }
           abjadWeight={selectedForParchment.abjadWeight}
           content={
             <div className="space-y-4 text-center">
@@ -247,10 +259,14 @@ export const CoranAnalogyAbjad: React.FC = () => {
                 {selectedForParchment.arabic}
               </p>
               <p className="text-xs italic text-amber-900">
-                "{selectedForParchment.translationFr}"
+                "{language === 'en' ? (selectedForParchment.translationEn || selectedForParchment.translationFr) : selectedForParchment.translationFr}"
               </p>
               <p className="text-xs font-mono text-amber-800 pt-2 border-t border-amber-600/30">
-                Sourate {selectedForParchment.surah}, Verset {selectedForParchment.ayahNo} (Poids: {selectedForParchment.abjadWeight})
+                {language === 'fr'
+                  ? `Sourate ${selectedForParchment.surah}, Verset ${selectedForParchment.ayahNo} (Poids : ${selectedForParchment.abjadWeight})`
+                  : language === 'ha'
+                  ? `Suratu ${selectedForParchment.surah}, Aya ${selectedForParchment.ayahNo} (Nauyi : ${selectedForParchment.abjadWeight})`
+                  : `Surah ${selectedForParchment.surah}, Verse ${selectedForParchment.ayahNo} (Weight: ${selectedForParchment.abjadWeight})`}
               </p>
             </div>
           }

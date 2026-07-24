@@ -24,7 +24,7 @@ export const ParchmentExporterModal: React.FC<ParchmentExporterModalProps> = ({
   recipientName,
   abjadWeight,
 }) => {
-  const { language } = useLanguage();
+  const { t } = useLanguage();
   const parchmentRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = React.useState(false);
 
@@ -67,11 +67,7 @@ export const ParchmentExporterModal: React.FC<ParchmentExporterModalProps> = ({
             <div className="flex items-center gap-2 text-amber-400 font-semibold text-sm">
               <Feather className="w-4 h-4 text-amber-500" />
               <span>
-                {language === 'fr'
-                  ? 'Fiche Rituelle / Parchemin Sacré'
-                  : language === 'ha'
-                  ? 'Takardar Rubutu da Khatimi'
-                  : 'Ritual Scroll / Sacred Parchment'}
+                {t('parchmentModal.headerTitle', 'Fiche Rituelle / Parchemin Sacré')}
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -80,7 +76,7 @@ export const ParchmentExporterModal: React.FC<ParchmentExporterModalProps> = ({
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-800 text-amber-200 hover:bg-zinc-700 text-xs font-medium transition-colors cursor-pointer"
               >
                 <Printer className="w-3.5 h-3.5" />
-                <span>{language === 'fr' ? 'Imprimer' : language === 'ha' ? 'Buga' : 'Print'}</span>
+                <span>{t('parchmentModal.print', 'Imprimer')}</span>
               </button>
               <button
                 onClick={handleDownload}
@@ -89,13 +85,7 @@ export const ParchmentExporterModal: React.FC<ParchmentExporterModalProps> = ({
               >
                 <Download className="w-3.5 h-3.5" />
                 <span>
-                  {isExporting
-                    ? '...'
-                    : language === 'fr'
-                    ? 'Télécharger Image'
-                    : language === 'ha'
-                    ? 'Saukar da Hoto'
-                    : 'Download Image'}
+                  {isExporting ? '...' : t('parchmentModal.download', 'Télécharger Image')}
                 </span>
               </button>
               <button
@@ -131,7 +121,7 @@ export const ParchmentExporterModal: React.FC<ParchmentExporterModalProps> = ({
                   بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ
                 </p>
                 <p className="text-xs text-amber-800/80 font-mono tracking-widest uppercase">
-                  AsrarHub Sacred Treatise & Ritual Sheet
+                  {t('parchmentModal.sacredTreatiseSubtitle', 'AsrarHub Traité Sacré & Fiche Rituelle')}
                 </p>
                 <div className="w-24 h-0.5 bg-gradient-to-r from-transparent via-amber-700 to-transparent mx-auto mt-2" />
               </div>
@@ -144,8 +134,8 @@ export const ParchmentExporterModal: React.FC<ParchmentExporterModalProps> = ({
                 {subtitle && <p className="text-xs italic text-amber-800 mt-1">{subtitle}</p>}
                 {(recipientName || abjadWeight) && (
                   <div className="flex justify-center items-center gap-4 mt-3 text-xs text-amber-900 bg-amber-200/50 py-1.5 px-4 rounded-full max-w-fit mx-auto border border-amber-400/40 font-sans font-medium">
-                    {recipientName && <span>Nom: <strong>{recipientName}</strong></span>}
-                    {abjadWeight && <span>Poids (Zimām): <strong>{abjadWeight}</strong></span>}
+                    {recipientName && <span>{t('parchmentModal.name', 'Nom :')} <strong>{recipientName}</strong></span>}
+                    {abjadWeight && <span>{t('parchmentModal.weight', 'Poids (Zimām) :')} <strong>{abjadWeight}</strong></span>}
                   </div>
                 )}
               </div>
@@ -159,9 +149,9 @@ export const ParchmentExporterModal: React.FC<ParchmentExporterModalProps> = ({
               <div className="pt-4 border-t border-amber-800/20 text-center flex items-center justify-between text-[11px] text-amber-800 font-sans">
                 <div className="flex items-center gap-1">
                   <Sparkles className="w-3 h-3 text-amber-600" />
-                  <span>Conscripteur: AsrarHub Ruhaniyat</span>
+                  <span>{t('parchmentModal.drawnBy', 'Conscripteur : AsrarHub Ruhaniyat')}</span>
                 </div>
-                <span>Sceau Authentique — Sirr Al-Asrar</span>
+                <span>{t('parchmentModal.authenticSeal', 'Sceau Authentique — Sirr Al-Asrar')}</span>
               </div>
             </div>
           </div>

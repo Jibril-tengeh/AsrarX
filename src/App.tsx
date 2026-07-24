@@ -30,7 +30,20 @@ function lazyWithRetry<T extends React.ComponentType<any> = React.ComponentType<
   return React.lazy(async () => {
     try {
       const module = await componentImport();
-      const component = module.default || module[Object.keys(module)[0]];
+      let component = module.default;
+      if (!component) {
+        const keys = Object.keys(module);
+        for (const key of keys) {
+          const val = module[key];
+          if (typeof val === 'function' || (typeof val === 'object' && val !== null && (val.$$typeof || val.render))) {
+            component = val;
+            break;
+          }
+        }
+        if (!component && keys.length > 0) {
+          component = module[keys[0]];
+        }
+      }
       return { default: component };
     } catch (error) {
       console.warn('Dynamic import chunk load error, retrying page reload...', error);

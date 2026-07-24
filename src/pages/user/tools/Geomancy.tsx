@@ -9,6 +9,7 @@ import { Link } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { downloadCanvasImage } from '../../../utils/downloadHelper';
+import { ToolInfoTooltip } from '../../../components/ToolInfoTooltip';
 
 // Abjad mapping for Name calculation mode
 const ABJAD_MAP: Record<string, number> = {
@@ -547,25 +548,34 @@ const GEOMANCY_I18N: Record<string, any> = {
     back: "Retour aux outils",
     title: "Géomancie Avancée & Multi-Traditions (Khatt ar-Raml)",
     desc: "Analyse géomantique holistique : Traditions Arabo-Maghrébine, Ouest-Africaine (Sikidy), Indienne (Ramal Shastra) & Latine.",
+    traditionsBadge: "Maghreb • Sikidy • Ramal • Europe",
+
+    // Tabs
     tabTheme: "📊 Thème des 16 Maisons",
+    tabDomain: "🎯 Analyse & Domaine",
     tabTraditions: "🌍 Traditions Comparées",
     tabElements: "⚖️ Éléments & Astrologie",
     tabSecret: "🔑 Voie du Secret & Remèdes",
     tabDictionary: "📖 Encyclopédie (16 Figures)",
-    
-    // Modes
-    modeAuto: "Tirage Automatique (Sable)",
-    modeManual: "Saisie Manuelle (Mères)",
-    modeAbjad: "Calcul Numérologique (Nom)",
+
+    // Modes & Generation
+    generationModeLabel: "Mode de Génération :",
+    modeAuto: "Tirage Sable",
+    modeManual: "Saisie Mères",
+    modeAbjad: "Abjad (Nom)",
     generating: "Consultation du sable en cours...",
     generate: "Générer le Thème",
     manualPrompt: "Sélectionnez les 4 Mères (M1, M2, M3, M4) :",
+    motherLabel: "Mère",
     namePrompt: "Nom du Consultant / Questionneur :",
     motherNamePrompt: "Nom de la Mère :",
+    namePlaceholder: "ex: Ibrahim / إبراهيم",
+    motherNamePlaceholder: "ex: Amina / أمينة",
     calculateAbjad: "Calculer & Générer les Mères",
 
-    // Labels
+    // Chart & Detail
     clickHouse: "Cliquez sur une maison pour explorer son analyse complète",
+    exportPNG: "Exporter Thème (PNG)",
     judge: "Le Juge (Maison 15)",
     supreme: "Le Suprême (Maison 16)",
     judgeDesc: "Le Verdict direct à votre question (M15).",
@@ -573,23 +583,93 @@ const GEOMANCY_I18N: Record<string, any> = {
     natureLabel: "Nature",
     meaningLabel: "Signification",
     houseLabel: "Maison",
+    generalInterpretation: "Interprétation Générale",
+    sikidyTitle: "Sikidy & Saraka (Recommandation Africaine)",
+    charityLabel: "💡 Aumône (Saraka) :",
+
+    // Domain Analysis Section
+    domainAnalysisTitle: "Analyse par Domaine de Question",
+    m1VsTarget: "Maison 1 vs Maison Cible",
+    domainCareer: "💼 Carrière & Pouvoir",
+    domainFinances: "💰 Finances & Fortune",
+    domainMarriage: "❤️ Mariage & Union",
+    domainTravel: "✈️ Voyage & Savoir",
+    domainHealth: "🛡️ Santé & Épreuves",
+    domainFriends: "👥 Amis & Projets",
+    domainHome: "🏠 Foyer & Patrimoine",
+    domainObstacles: "🔮 Obstacles & Secrets",
+
+    consultantLabel: "Consultant (M1)",
+    targetLabel: "Objet",
+    judgeLabel: "Juge (M15)",
+    supremeLabel: "Issue (M16)",
+    diagnosticTitle: "Diagnostic Thématique pour : Maison",
+    recommendationLabel: "✨ Recommandation :",
+
+    // Passations (Al-Intiqal)
+    passationsTitle: "Passations des Figures & Compagnonnage (Al-Intiqal)",
+    passationsSubtitle: "Répétition des figures dans les 16 Maisons (Circulation d'énergie)",
+    noPassations: "Aucune répétition directe détectée dans le thème. Chaque Maison accueille une figure unique (Thème très diversifié).",
+    housesBadge: "Maisons :",
+
+    // Compass & Directions (Al-Jiha)
+    compassTitle: "Boussole Géomantique & Orientation Spatiale (Al-Jiha)",
+    compassSubtitle: "Direction prédominante du thème pour la recherche ou les déplacements",
+    dominantDirLabel: "Direction Dominante :",
+    secondaryDirLabel: "Secteur Secondaire :",
+    dirEastName: "Est (Feu / Orient)",
+    dirEastDesc: "Secteur de l'action, des décisions rapides, de la vitalité et des initiatives.",
+    dirNorthName: "Nord (Air / Vent)",
+    dirNorthDesc: "Secteur de l'intelligence, des communications, du commerce et de la sagesse.",
+    dirWestName: "Ouest (Eau / Coucher)",
+    dirWestDesc: "Secteur des émotions, de la guérison, de l'intuition et des voyages maritimes.",
+    dirSouthName: "Sud (Terre / Sol)",
+    dirSouthDesc: "Secteur de l'ancrage, du patrimoine immobilier, de la stabilité et de la patience.",
+
+    // Traditions Comparées
+    multiTraditionTitle: "Analyse Multi-Traditions des Figures Clés",
+    tradAraboMaghrebi: "🌙 Arabo-Maghrébine",
+    tradAfrican: "🌍 Africaine (Sikidy)",
+    tradIndian: "🛕 Indienne (Ramal)",
+    tradEuropean: "🏛️ Latine / Européenne",
+    planetLabel: "Planète :",
+    zodiacLabel: "Zodiaque :",
+    elementLabel: "Élément :",
+
+    // Elements & Advice
     elementalBalance: "Bilan des Éléments du Thème",
     fireCount: "Feu (Nar / Action)",
     airCount: "Air (Hawa / Pensée)",
     waterCount: "Eau (Ma / Émotion)",
     earthCount: "Terre (Turab / Matière)",
     dominantElement: "Élément Dominant",
-    elementAdvice: "Conseil Élélementaire",
-    
+    elementAdvice: "Conseil Élémentaire",
+    fireDominanceText: "Dominance du Feu : Indique une énergie d'action zélée, de décision rapide, d'impulsion mais attention aux colères ou précipitations.",
+    airDominanceText: "Dominance de l'Air : Indique une prédominance des pensées, contrats, négociations, idées et communication sociale.",
+    waterDominanceText: "Dominance de l'Eau : Indique des voyages, de la sensibilité émotionnelle, de la spiritualité et du mouvement fluide.",
+    earthDominanceText: "Dominance de la Terre : Indique des considérations matérielles, financières, des possessions durables ou de la lenteur.",
+
+    // Secret Path
     secretPathTitle: "Tariq al-Nogta (La Voie du Secret)",
     secretPathDesc: "Retraçage de la lignée du point supérieur (Feu) du Juge jusqu'aux Mères pour révéler la cause cachée de la situation.",
+    headLineageLabel: "Lignée de la Tête du Juge (M15)",
+    secretMothersLabel: "Mères d'origine connectées au point du secret :",
+    noneDirectly: "Aucune directe",
     themeValidity: "Vérification du Mizan (Valide)",
     themeInvalidity: "Attention : Le Mizan est impair ! Thème asymétrique.",
     recommendedSaraka: "Aumône & Sacrifices Recommandés (Tradition Africaine / Sikidy)",
     recommendedDhikr: "Dhikr & Noms Divins Protecteurs",
+    dhikrAdvice: "À réciter matin ou soir pour débloquer les énergies bénéfiques du thème.",
 
+    // Encyclopedia
+    dictionaryTitle: "Dictionnaire des 16 Figures Géomantiques",
     searchPlaceholder: "Rechercher une figure (nom latin, arabe, africain...)",
-    
+
+    // Canvas Export
+    canvasTitle: "ASRARHUB — THÈME GÉOMANTIQUE COMPLET (KHATT AR-RAML)",
+    canvasSubtitle: "Calcul des 16 Maisons • Mizan, Passations & Remèdes Spirituels",
+    canvasFooter: "Prophétique & Géomancie Traditionnelle — AsrarHub Application",
+
     houseNames: [
       "M1 : La Vie & Le Consultant",
       "M2 : L'Argent & Finances",
@@ -613,25 +693,34 @@ const GEOMANCY_I18N: Record<string, any> = {
     back: "Back to tools",
     title: "Advanced Multi-Tradition Geomancy (Khatt ar-Raml)",
     desc: "Holistic Geomantic System: Arab-Maghrebi, West African (Sikidy), Indian (Ramal Shastra) & Latin Traditions.",
+    traditionsBadge: "Maghreb • Sikidy • Ramal • Europe",
+
+    // Tabs
     tabTheme: "📊 16 Houses Chart",
+    tabDomain: "🎯 Analysis & Domain",
     tabTraditions: "🌍 Compared Traditions",
     tabElements: "⚖️ Elements & Astrology",
     tabSecret: "🔑 Secret Path & Remedies",
     tabDictionary: "📖 Encyclopedia (16 Figures)",
-    
-    // Modes
-    modeAuto: "Auto Casting (Sand)",
-    modeManual: "Manual Entry (Mothers)",
-    modeAbjad: "Numerology Calculation (Name)",
+
+    // Modes & Generation
+    generationModeLabel: "Generation Mode:",
+    modeAuto: "Sand Casting",
+    modeManual: "Mothers Input",
+    modeAbjad: "Abjad (Name)",
     generating: "Consulting the sand...",
     generate: "Generate Chart",
     manualPrompt: "Select the 4 Mothers (M1, M2, M3, M4):",
+    motherLabel: "Mother",
     namePrompt: "Consultant / Questioner Name:",
     motherNamePrompt: "Mother's Name:",
+    namePlaceholder: "e.g.: Ibrahim / إبراهيم",
+    motherNamePlaceholder: "e.g.: Amina / أمينة",
     calculateAbjad: "Calculate & Generate Mothers",
 
-    // Labels
+    // Chart & Detail
     clickHouse: "Click on any house to inspect full tradition details",
+    exportPNG: "Export Chart (PNG)",
     judge: "The Judge (House 15)",
     supreme: "The Supreme (House 16)",
     judgeDesc: "Direct verdict to your question (H15).",
@@ -639,6 +728,60 @@ const GEOMANCY_I18N: Record<string, any> = {
     natureLabel: "Nature",
     meaningLabel: "Meaning",
     houseLabel: "House",
+    generalInterpretation: "General Interpretation",
+    sikidyTitle: "Sikidy & Saraka (African Recommendation)",
+    charityLabel: "💡 Charity (Saraka):",
+
+    // Domain Analysis Section
+    domainAnalysisTitle: "Question Domain Analysis",
+    m1VsTarget: "House 1 vs Target House",
+    domainCareer: "💼 Career & Power",
+    domainFinances: "💰 Finances & Fortune",
+    domainMarriage: "❤️ Marriage & Union",
+    domainTravel: "✈️ Travel & Knowledge",
+    domainHealth: "🛡️ Health & Trials",
+    domainFriends: "👥 Friends & Projects",
+    domainHome: "🏠 Home & Heritage",
+    domainObstacles: "🔮 Obstacles & Secrets",
+
+    consultantLabel: "Consultant (H1)",
+    targetLabel: "Target",
+    judgeLabel: "Judge (H15)",
+    supremeLabel: "Outcome (H16)",
+    diagnosticTitle: "Thematic Diagnosis for: House",
+    recommendationLabel: "✨ Recommendation:",
+
+    // Passations (Al-Intiqal)
+    passationsTitle: "Passations & Company of Figures (Al-Intiqal)",
+    passationsSubtitle: "Repetition of figures across the 16 Houses (Energy Circulation)",
+    noPassations: "No direct repetition detected in the chart. Each House hosts a unique figure (Highly diversified chart).",
+    housesBadge: "Houses:",
+
+    // Compass & Directions (Al-Jiha)
+    compassTitle: "Geomantic Compass & Spatial Orientation (Al-Jiha)",
+    compassSubtitle: "Predominant direction of the chart for searches or travel",
+    dominantDirLabel: "Dominant Direction:",
+    secondaryDirLabel: "Secondary Sector:",
+    dirEastName: "East (Fire / Orient)",
+    dirEastDesc: "Sector of action, swift decisions, vitality, and initiatives.",
+    dirNorthName: "North (Air / Wind)",
+    dirNorthDesc: "Sector of intelligence, communications, trade, and wisdom.",
+    dirWestName: "West (Water / Sunset)",
+    dirWestDesc: "Sector of emotions, healing, intuition, and sea travel.",
+    dirSouthName: "South (Earth / Ground)",
+    dirSouthDesc: "Sector of grounding, real estate heritage, stability, and patience.",
+
+    // Traditions Comparées
+    multiTraditionTitle: "Multi-Tradition Analysis of Key Figures",
+    tradAraboMaghrebi: "🌙 Arab-Maghrebi",
+    tradAfrican: "🌍 African (Sikidy)",
+    tradIndian: "🛕 Indian (Ramal)",
+    tradEuropean: "🏛️ Latin / European",
+    planetLabel: "Planet:",
+    zodiacLabel: "Zodiac:",
+    elementLabel: "Element:",
+
+    // Elements & Advice
     elementalBalance: "Chart Elemental Balance",
     fireCount: "Fire (Action / Energy)",
     airCount: "Air (Thought / Mind)",
@@ -646,15 +789,31 @@ const GEOMANCY_I18N: Record<string, any> = {
     earthCount: "Earth (Matter / Stability)",
     dominantElement: "Dominant Element",
     elementAdvice: "Elemental Advice",
+    fireDominanceText: "Fire Dominance: Indicates zeal, swift decisions, and impulse, but beware of anger or haste.",
+    airDominanceText: "Air Dominance: Indicates a prevalence of thoughts, contracts, negotiations, ideas, and social communication.",
+    waterDominanceText: "Water Dominance: Indicates travel, emotional sensitivity, spirituality, and fluid movement.",
+    earthDominanceText: "Earth Dominance: Indicates material considerations, financial matters, lasting possessions, or slowness.",
 
+    // Secret Path
     secretPathTitle: "Tariq al-Nogta (The Path of the Secret)",
     secretPathDesc: "Tracing the top line (Fire) of the Judge back to the Mother houses to reveal the hidden root cause.",
+    headLineageLabel: "Head Lineage of the Judge (H15)",
+    secretMothersLabel: "Original Mothers connected to secret point:",
+    noneDirectly: "None directly",
     themeValidity: "Mizan Balance Check (Valid)",
     themeInvalidity: "Warning: Mizan is odd! Asymmetrical chart.",
     recommendedSaraka: "Recommended Charity & Sacrifices (African Sikidy Tradition)",
     recommendedDhikr: "Protective Dhikr & Divine Names",
+    dhikrAdvice: "Recite morning or evening to unlock the beneficial energies of the chart.",
 
+    // Encyclopedia
+    dictionaryTitle: "Dictionary of the 16 Geomantic Figures",
     searchPlaceholder: "Search figure (Latin, Arabic, African name...)",
+
+    // Canvas Export
+    canvasTitle: "ASRARHUB — COMPLETE GEOMANTIC CHART (KHATT AR-RAML)",
+    canvasSubtitle: "16 Houses Calculation • Mizan, Passations & Spiritual Remedies",
+    canvasFooter: "Prophetic & Traditional Geomancy — AsrarHub Application",
 
     houseNames: [
       "H1: Life & The Consultant",
@@ -679,25 +838,34 @@ const GEOMANCY_I18N: Record<string, any> = {
     back: "Koma ga kayan aiki",
     title: "Kaddara ta Kasa ta Mabiya Daban-daban (Khatt ar-Raml)",
     desc: "Binciken Kasa mai Zurfi: Al'adun Larabawa, Afirka (Sikidy), Indiya (Ramal Shastra) da Turawa.",
+    traditionsBadge: "Arewacin Afirka • Sikidy • Ramal • Turai",
+
+    // Tabs
     tabTheme: "📊 Gidaje 16 na Kasa",
+    tabDomain: "🎯 Binciken Bangare",
     tabTraditions: "🌍 Kwatanta Al'adu",
     tabElements: "⚖️ Abubuwa & Taurari",
     tabSecret: "🔑 Hanyar Asiri & Magani",
     tabDictionary: "📖 Kamus na Alamomi 16",
-    
-    // Modes
-    modeAuto: "Duban Kasa ta Atomatik",
-    modeManual: "Shigar da Uwaye 4 da Kanka",
-    modeAbjad: "Lissafin Suna da Abjad",
+
+    // Modes & Generation
+    generationModeLabel: "Hanyar Samarda Kasa:",
+    modeAuto: "Duban Yashi",
+    modeManual: "Shigar da Uwaye",
+    modeAbjad: "Lissafin Abjad (Suna)",
     generating: "Ana duban kasa...",
-    generate: "Hada rabe-raben kasa",
+    generate: "Samarda Jadawali",
     manualPrompt: "Zabi uwayen kasa guda 4 (M1, M2, M3, M4):",
+    motherLabel: "Mahaifiya",
     namePrompt: "Sunan Mai Tambaya:",
     motherNamePrompt: "Sunan Mahaifiya:",
+    namePlaceholder: "misali: Ibrahim / إبراهيم",
+    motherNamePlaceholder: "misali: Amina / أمينة",
     calculateAbjad: "Lissafa & Samarda Uwaye",
 
-    // Labels
+    // Chart & Detail
     clickHouse: "Danna kan kowane gida don ganin bayanan al'ada gaba daya",
+    exportPNG: "Fitar da Jadawali (PNG)",
     judge: "Alkali (Gida na 15)",
     supreme: "Mafi Daukaka (Gida na 16)",
     judgeDesc: "Amsar karshe ga tambayarka (G15).",
@@ -705,6 +873,60 @@ const GEOMANCY_I18N: Record<string, any> = {
     natureLabel: "Dabi'a",
     meaningLabel: "Fassara",
     houseLabel: "Gida",
+    generalInterpretation: "Bayanin Gaba Daya",
+    sikidyTitle: "Sikidy da Sadaka (Bayanin Afirka)",
+    charityLabel: "💡 Sadaka:",
+
+    // Domain Analysis Section
+    domainAnalysisTitle: "Binciken Bangaren Tambaya",
+    m1VsTarget: "Gida 1 da Gidan Tambaya",
+    domainCareer: "💼 Aiki da Sarauta",
+    domainFinances: "💰 Kudi da Arziki",
+    domainMarriage: "❤️ Aure da Dangantaka",
+    domainTravel: "✈️ Tafiya da Ilimi",
+    domainHealth: "🛡️ Lafiya da Jarrabawa",
+    domainFriends: "👥 Abokai da Shirye-shirye",
+    domainHome: "🏠 Gida da Dukiya",
+    domainObstacles: "🔮 Matsaloli da Asirori",
+
+    consultantLabel: "Mai Tambaya (G1)",
+    targetLabel: "Abin Tambaya",
+    judgeLabel: "Alkali (G15)",
+    supremeLabel: "Karshe (G16)",
+    diagnosticTitle: "Binciken Bangare ga: Gida",
+    recommendationLabel: "✨ Shawara:",
+
+    // Passations (Al-Intiqal)
+    passationsTitle: "Motsin Alamomi da Haɗuwa (Al-Intiqal)",
+    passationsSubtitle: "Maimaituwar alamomi a gidaje 16 (Yaduwar Karfi)",
+    noPassations: "Babu maimaituwar alama kai tsaye. Kowane gida yana da alama ta musamman.",
+    housesBadge: "Gidaje:",
+
+    // Compass & Directions (Al-Jiha)
+    compassTitle: "Tausiyar Kasa da Bangaren Jagora (Al-Jiha)",
+    compassSubtitle: "Mafi rinjayen bangare don bincike ko tafiya",
+    dominantDirLabel: "Bangare Mafi Rinjiye:",
+    secondaryDirLabel: "Bangare na Biyu:",
+    dirEastName: "Gabas (Wuta / Orient)",
+    dirEastDesc: "Bangaren aiki, yanke shawara ta sauri, karfin jiki da kwarin gwiwa.",
+    dirNorthName: "Arewa (Iska / Vent)",
+    dirNorthDesc: "Bangaren ilimi, sadarwa, kasuwanci da hikima.",
+    dirWestName: "Yamma (Ruwa / Coucher)",
+    dirWestDesc: "Bangaren juyayi, waraka, tunani da tafiyar ruwa.",
+    dirSouthName: "Kudu (Kasa / Sol)",
+    dirSouthDesc: "Bangaren tabbatuwa, gida da dukiya, zaman lafiya da hakuri.",
+
+    // Traditions Comparées
+    multiTraditionTitle: "Kwatanta Al'adun Alamomi Masu Muhimmanci",
+    tradAraboMaghrebi: "🌙 Larabawa & Arewacin Afirka",
+    tradAfrican: "🌍 Afirka (Sikidy)",
+    tradIndian: "🛕 Indiya (Ramal)",
+    tradEuropean: "🏛️ Latin da Turai",
+    planetLabel: "Tauraro:",
+    zodiacLabel: "Burji:",
+    elementLabel: "Sinadari:",
+
+    // Elements & Advice
     elementalBalance: "Lissafin Abubuwan Hudu a Kasa",
     fireCount: "Wuta (Niyya da Karfi)",
     airCount: "Iska (Tunani da Magana)",
@@ -712,15 +934,31 @@ const GEOMANCY_I18N: Record<string, any> = {
     earthCount: "Kasa (Arziki da Dorewa)",
     dominantElement: "Abin da ya fi Yawa",
     elementAdvice: "Shawarar Abubuwan Kasa",
+    fireDominanceText: "Rinjayen Wuta: Yana nuna zafin nama, yanke shawara ta sauri da kwarin gwiwa, amma a kiyayi fushi ko gaggawa.",
+    airDominanceText: "Rinjayen Iska: Yana nuna mamayar tunani, yarjejeniya, kasuwanci, shawarwari da sadarwa.",
+    waterDominanceText: "Rinjayen Ruwa: Yana nuna tafiye-tafiye, tausayi, ruhananci da saukin al'amura.",
+    earthDominanceText: "Rinjayen Kasa: Yana nuna al'amuran dukiya, kudi, dawwamammun abubuwa ko jinkiri.",
 
+    // Secret Path
     secretPathTitle: "Tariq al-Nogta (Hanyar Boyayyen Asiri)",
     secretPathDesc: "Binciken samo asalin matsalar ta hanyar bin layin wuta na Alkali zuwa gidan Uwaye.",
+    headLineageLabel: "Nasabar Kan Alkali (G15)",
+    secretMothersLabel: "Uwaye da ke haɗe da ma'aunin asiri:",
+    noneDirectly: "Babu kai tsaye",
     themeValidity: "Tabbatar da Mizan (Yana da Kyau)",
     themeInvalidity: "An samu rashin daidaito a lissafin Mizan.",
     recommendedSaraka: "Sadakar da Aka Shawarta (Al'adar Afirka / Sikidy)",
     recommendedDhikr: "Zikiri da Sunaye Masu Albarka",
+    dhikrAdvice: "A karanta da safe ko maraice don bude albarkar jadawalin.",
 
+    // Encyclopedia
+    dictionaryTitle: "Kamus na Alamomi 16 na Kasa",
     searchPlaceholder: "Binciki alamar kasa (da Latin, Larabci ko Sunan Afirka)...",
+
+    // Canvas Export
+    canvasTitle: "ASRARHUB — JADAWALIN DUBAN KASA (KHATT AR-RAML)",
+    canvasSubtitle: "Lissafin Gidaje 16 • Mizan, Motsi da Maganin Ruhi",
+    canvasFooter: "Ilimin Kasa na Annabawa da Al'ada — AsrarHub Application",
 
     houseNames: [
       "G1: Rayuwa da Mai Duba",
@@ -1075,8 +1313,11 @@ export const Geomancy: React.FC = () => {
           </div>
           <div className="flex items-center gap-2 bg-amber-50 dark:bg-amber-950/40 p-2 rounded-xl border border-amber-200/50 text-xs font-semibold text-amber-800 dark:text-amber-300 shrink-0 self-start md:self-auto">
             <Globe size={16} className="text-amber-500 shrink-0" />
-            <span>Maghreb • Sikidy • Ramal • Europe</span>
+            <span>{i18n.traditionsBadge}</span>
           </div>
+        </div>
+        <div className="mt-2">
+          <ToolInfoTooltip toolId="geomancy" />
         </div>
       </div>
 
@@ -1088,13 +1329,13 @@ export const Geomancy: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 dark:border-gray-700/60 pb-3">
           <div className="flex items-center gap-2 text-xs sm:text-sm font-bold text-gray-900 dark:text-white">
             <Sliders size={16} className="text-amber-500" />
-            <span>Mode de Génération :</span>
+            <span>{i18n.generationModeLabel}</span>
           </div>
           <div className="grid grid-cols-3 gap-1.5 p-1 bg-gray-100 dark:bg-gray-700/50 rounded-xl w-full sm:w-auto">
             {[
-              { id: 'auto', label: 'Tirage Sable', icon: Sparkles },
-              { id: 'manual', label: 'Saisie Mères', icon: Layers },
-              { id: 'abjad', label: 'Abjad (Nom)', icon: Calculator }
+              { id: 'auto', label: i18n.modeAuto, icon: Sparkles },
+              { id: 'manual', label: i18n.modeManual, icon: Layers },
+              { id: 'abjad', label: i18n.modeAbjad, icon: Calculator }
             ].map(m => {
               const Icon = m.icon;
               return (
@@ -1123,7 +1364,7 @@ export const Geomancy: React.FC = () => {
               {[0, 1, 2, 3].map(idx => (
                 <div key={idx} className="flex flex-col gap-1">
                   <label className="text-[11px] font-semibold text-gray-600 dark:text-gray-300">
-                    Mère {idx + 1} (M{idx + 1})
+                    {i18n.motherLabel} {idx + 1} ({langKey === 'ha' ? 'G' : langKey === 'en' ? 'H' : 'M'}{idx + 1})
                   </label>
                   <select
                     value={manualMothers[idx]}
@@ -1159,7 +1400,7 @@ export const Geomancy: React.FC = () => {
                 </label>
                 <input
                   type="text"
-                  placeholder="ex: Ibrahim / إبراهيم"
+                  placeholder={i18n.namePlaceholder}
                   value={userName}
                   onChange={(e) => setUserName(e.target.value)}
                   className="w-full p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs text-gray-900 dark:text-white"
@@ -1172,7 +1413,7 @@ export const Geomancy: React.FC = () => {
                 </label>
                 <input
                   type="text"
-                  placeholder="ex: Amina / أمينة"
+                  placeholder={i18n.motherNamePlaceholder}
                   value={userMotherName}
                   onChange={(e) => setUserMotherName(e.target.value)}
                   className="w-full p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs text-gray-900 dark:text-white"
@@ -1200,7 +1441,7 @@ export const Geomancy: React.FC = () => {
         <div className="flex items-center justify-start gap-1.5 overflow-x-auto pb-2.5 mb-5 no-scrollbar border-b border-gray-200 dark:border-gray-700">
           {[
             { id: 'chart', label: i18n.tabTheme, icon: Layers },
-            { id: 'interpretation', label: 'Analyse & Domaine', icon: Target },
+            { id: 'interpretation', label: i18n.tabDomain, icon: Target },
             { id: 'traditions', label: i18n.tabTraditions, icon: Globe },
             { id: 'elements', label: i18n.tabElements, icon: Flame },
             { id: 'secret', label: i18n.tabSecret, icon: Key },
@@ -1255,7 +1496,7 @@ export const Geomancy: React.FC = () => {
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white shadow-xs transition-colors cursor-pointer"
               >
                 <Download size={13} />
-                <span>Exporter Thème (PNG)</span>
+                <span>{i18n.exportPNG}</span>
               </button>
             </div>
           </div>
@@ -1317,7 +1558,7 @@ export const Geomancy: React.FC = () => {
                 <div className="p-3 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-100 dark:border-gray-700/60 space-y-1">
                   <p className="font-bold text-gray-900 dark:text-white flex items-center gap-1.5 text-xs">
                     <BookOpen size={14} className="text-amber-500" />
-                    Interprétation Générale
+                    {i18n.generalInterpretation}
                   </p>
                   <p className="leading-relaxed">{getFigureDetail(figures[selectedHouse]).meaning[langKey]}</p>
                 </div>
@@ -1325,11 +1566,11 @@ export const Geomancy: React.FC = () => {
                 <div className="p-3 bg-amber-50/50 dark:bg-amber-950/20 rounded-xl border border-amber-200/50 space-y-1">
                   <p className="font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1.5 text-xs">
                     <ShieldCheck size={14} className="text-amber-500" />
-                    Sikidy & Saraka (Recommandation Africaine)
+                    {i18n.sikidyTitle}
                   </p>
                   <p className="leading-relaxed">{getFigureDetail(figures[selectedHouse]).africanMeaning[langKey]}</p>
                   <p className="font-semibold text-amber-800 dark:text-amber-300 mt-1 pt-1 border-t border-amber-200/40">
-                    💡 <strong>Aumône (Saraka) :</strong> {getFigureDetail(figures[selectedHouse]).africanSaraka[langKey]}
+                    {i18n.charityLabel} {getFigureDetail(figures[selectedHouse]).africanSaraka[langKey]}
                   </p>
                 </div>
               </div>
@@ -1397,24 +1638,24 @@ export const Geomancy: React.FC = () => {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 dark:border-gray-700 pb-3">
               <div className="flex items-center gap-2">
                 <Target className="text-amber-500" size={20} />
-                <h3 className="font-bold text-gray-900 dark:text-white text-base">Analyse par Domaine de Question</h3>
+                <h3 className="font-bold text-gray-900 dark:text-white text-base">{i18n.domainAnalysisTitle}</h3>
               </div>
               <span className="text-xs text-amber-600 dark:text-amber-400 font-semibold bg-amber-50 dark:bg-amber-950/40 px-2.5 py-1 rounded-lg">
-                Maison 1 vs Maison Cible
+                {i18n.m1VsTarget}
               </span>
             </div>
 
             {/* Domains Pills */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
               {[
-                { house: 10, label: '💼 Carrière & Pouvoir', houseName: 'M10' },
-                { house: 2, label: '💰 Finances & Fortune', houseName: 'M2' },
-                { house: 7, label: '❤️ Mariage & Union', houseName: 'M7' },
-                { house: 9, label: '✈️ Voyage & Savoir', houseName: 'M9' },
-                { house: 6, label: '🛡️ Santé & Épreuves', houseName: 'M6' },
-                { house: 11, label: '👥 Amis & Projets', houseName: 'M11' },
-                { house: 4, label: '🏠 Foyer & Patrimoine', houseName: 'M4' },
-                { house: 12, label: '🔮 Obstacles & Secrets', houseName: 'M12' },
+                { house: 10, label: i18n.domainCareer, houseName: langKey === 'ha' ? 'G10' : langKey === 'en' ? 'H10' : 'M10' },
+                { house: 2, label: i18n.domainFinances, houseName: langKey === 'ha' ? 'G2' : langKey === 'en' ? 'H2' : 'M2' },
+                { house: 7, label: i18n.domainMarriage, houseName: langKey === 'ha' ? 'G7' : langKey === 'en' ? 'H7' : 'M7' },
+                { house: 9, label: i18n.domainTravel, houseName: langKey === 'ha' ? 'G9' : langKey === 'en' ? 'H9' : 'M9' },
+                { house: 6, label: i18n.domainHealth, houseName: langKey === 'ha' ? 'G6' : langKey === 'en' ? 'H6' : 'M6' },
+                { house: 11, label: i18n.domainFriends, houseName: langKey === 'ha' ? 'G11' : langKey === 'en' ? 'H11' : 'M11' },
+                { house: 4, label: i18n.domainHome, houseName: langKey === 'ha' ? 'G4' : langKey === 'en' ? 'H4' : 'M4' },
+                { house: 12, label: i18n.domainObstacles, houseName: langKey === 'ha' ? 'G12' : langKey === 'en' ? 'H12' : 'M12' },
               ].map((d) => (
                 <button
                   key={d.house}
@@ -1436,45 +1677,61 @@ export const Geomancy: React.FC = () => {
               <div className="bg-amber-50/50 dark:bg-amber-950/20 p-4 rounded-xl border border-amber-200/50 space-y-3">
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center" dir="ltr">
                   <div className="p-2.5 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-                    <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase">Consultant (M1)</span>
+                    <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase">{i18n.consultantLabel}</span>
                     <div className="my-1 flex justify-center">{renderDots(figures[0], 'sm')}</div>
                     <p className="text-xs font-bold text-gray-900 dark:text-white truncate">{getFigureDetail(figures[0]).latin}</p>
-                    <p className="text-[10px] text-gray-500">{getFigureDetail(figures[0]).elementName.fr}</p>
+                    <p className="text-[10px] text-gray-500">{getFigureDetail(figures[0]).elementName[langKey]}</p>
                   </div>
 
                   <div className="p-2.5 bg-white dark:bg-gray-800 rounded-xl border border-amber-400/80 shadow-xs">
-                    <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase">Objet (M{selectedDomain})</span>
+                    <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase">{i18n.targetLabel} ({langKey === 'ha' ? 'G' : langKey === 'en' ? 'H' : 'M'}{selectedDomain})</span>
                     <div className="my-1 flex justify-center">{renderDots(figures[selectedDomain - 1], 'sm')}</div>
                     <p className="text-xs font-bold text-gray-900 dark:text-white truncate">{getFigureDetail(figures[selectedDomain - 1]).latin}</p>
-                    <p className="text-[10px] text-gray-500">{getFigureDetail(figures[selectedDomain - 1]).elementName.fr}</p>
+                    <p className="text-[10px] text-gray-500">{getFigureDetail(figures[selectedDomain - 1]).elementName[langKey]}</p>
                   </div>
 
                   <div className="p-2.5 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-                    <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase">Juge (M15)</span>
+                    <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase">{i18n.judgeLabel}</span>
                     <div className="my-1 flex justify-center">{renderDots(figures[14], 'sm')}</div>
                     <p className="text-xs font-bold text-gray-900 dark:text-white truncate">{getFigureDetail(figures[14]).latin}</p>
-                    <p className="text-[10px] text-gray-500">{getFigureDetail(figures[14]).elementName.fr}</p>
+                    <p className="text-[10px] text-gray-500">{getFigureDetail(figures[14]).elementName[langKey]}</p>
                   </div>
 
                   <div className="p-2.5 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-                    <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase">Issue (M16)</span>
+                    <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase">{i18n.supremeLabel}</span>
                     <div className="my-1 flex justify-center">{renderDots(figures[15], 'sm')}</div>
                     <p className="text-xs font-bold text-gray-900 dark:text-white truncate">{getFigureDetail(figures[15]).latin}</p>
-                    <p className="text-[10px] text-gray-500">{getFigureDetail(figures[15]).elementName.fr}</p>
+                    <p className="text-[10px] text-gray-500">{getFigureDetail(figures[15]).elementName[langKey]}</p>
                   </div>
                 </div>
 
                 <div className="p-3 bg-white dark:bg-gray-800 rounded-xl border border-amber-200/40 text-xs space-y-1.5 text-gray-800 dark:text-gray-200 leading-relaxed">
                   <p className="font-bold text-amber-900 dark:text-amber-300 flex items-center gap-1.5">
                     <Sparkles size={14} className="text-amber-500" />
-                    Diagnostic Thématique pour : Maison {selectedDomain} ({i18n.houseNames[selectedDomain - 1]})
+                    {i18n.diagnosticTitle} {selectedDomain} ({i18n.houseNames[selectedDomain - 1]})
                   </p>
                   <p>
-                    L'énergie du Demandeur (<strong>{getFigureDetail(figures[0]).latin}</strong>) rencontre l'énergie du Domaine visé (<strong>{getFigureDetail(figures[selectedDomain - 1]).latin}</strong>).
-                    L'interaction élémentaire <strong>{getFigureDetail(figures[0]).elementName.fr} &amp; {getFigureDetail(figures[selectedDomain - 1]).elementName.fr}</strong> indique une dynamique de progression sous le contrôle du Juge <strong>{getFigureDetail(figures[14]).latin}</strong>.
+                    {langKey === 'fr' && (
+                      <>
+                        L'énergie du Demandeur (<strong>{getFigureDetail(figures[0]).latin}</strong>) rencontre l'énergie du Domaine visé (<strong>{getFigureDetail(figures[selectedDomain - 1]).latin}</strong>).
+                        L'interaction élémentaire <strong>{getFigureDetail(figures[0]).elementName[langKey]} &amp; {getFigureDetail(figures[selectedDomain - 1]).elementName[langKey]}</strong> indique une dynamique de progression sous le contrôle du Juge <strong>{getFigureDetail(figures[14]).latin}</strong>.
+                      </>
+                    )}
+                    {langKey === 'en' && (
+                      <>
+                        The Applicant's energy (<strong>{getFigureDetail(figures[0]).latin}</strong>) meets the energy of the target Domain (<strong>{getFigureDetail(figures[selectedDomain - 1]).latin}</strong>).
+                        The elemental interaction <strong>{getFigureDetail(figures[0]).elementName[langKey]} &amp; {getFigureDetail(figures[selectedDomain - 1]).elementName[langKey]}</strong> indicates a dynamic progression under the control of the Judge <strong>{getFigureDetail(figures[14]).latin}</strong>.
+                      </>
+                    )}
+                    {langKey === 'ha' && (
+                      <>
+                        Karfin Mai Tambaya (<strong>{getFigureDetail(figures[0]).latin}</strong>) yana haɗuwa da karfin Bangaren da ake tambaya (<strong>{getFigureDetail(figures[selectedDomain - 1]).latin}</strong>).
+                        Hadin sinadaran <strong>{getFigureDetail(figures[0]).elementName[langKey]} &amp; {getFigureDetail(figures[selectedDomain - 1]).elementName[langKey]}</strong> yana nuna ci gaba karkashin ikonsa na Alkali <strong>{getFigureDetail(figures[14]).latin}</strong>.
+                      </>
+                    )}
                   </p>
                   <p className="text-amber-800 dark:text-amber-300 font-semibold pt-1 border-t border-gray-100 dark:border-gray-700">
-                    ✨ <strong>Recommandation :</strong> {getFigureDetail(figures[selectedDomain - 1]).meaning.fr}
+                    {i18n.recommendationLabel} {getFigureDetail(figures[selectedDomain - 1]).meaning[langKey]}
                   </p>
                 </div>
               </div>
@@ -1486,14 +1743,14 @@ export const Geomancy: React.FC = () => {
             <div className="flex items-center gap-2 border-b border-gray-100 dark:border-gray-700 pb-3">
               <GitMerge className="text-amber-500" size={20} />
               <div>
-                <h3 className="font-bold text-gray-900 dark:text-white text-base">Passations des Figures &amp; Companonnage (Al-Intiqal)</h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Répétition des figures dans les 16 Maisons (Circulation d'énergie)</p>
+                <h3 className="font-bold text-gray-900 dark:text-white text-base">{i18n.passationsTitle}</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{i18n.passationsSubtitle}</p>
               </div>
             </div>
 
             {getRepetitionsAndPassations().length === 0 ? (
               <div className="p-4 bg-gray-50 dark:bg-gray-900/40 rounded-xl text-xs text-gray-500 text-center">
-                Aucune répétition directe détectée dans le thème. Chaque Maison accueille une figure unique (Thème très diversifié).
+                {i18n.noPassations}
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1505,7 +1762,7 @@ export const Geomancy: React.FC = () => {
                         {p.detail.latin} ({p.detail.arabic})
                       </span>
                       <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/40 px-2 py-0.5 rounded-md">
-                        Maisons : {p.houses.map(h => `M${h}`).join(', ')}
+                        {i18n.housesBadge} {p.houses.map(h => `${langKey === 'ha' ? 'G' : langKey === 'en' ? 'H' : 'M'}${h}`).join(', ')}
                       </span>
                     </div>
                     <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">{p.interpretation}</p>
@@ -1520,8 +1777,8 @@ export const Geomancy: React.FC = () => {
             <div className="flex items-center gap-2 border-b border-gray-100 dark:border-gray-700 pb-3">
               <Compass className="text-amber-500" size={20} />
               <div>
-                <h3 className="font-bold text-gray-900 dark:text-white text-base">Boussole Géomantique &amp; Orientation Spatiale (Al-Jiha)</h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Direction prédominante du thème pour la recherche ou les déplacements</p>
+                <h3 className="font-bold text-gray-900 dark:text-white text-base">{i18n.compassTitle}</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">{i18n.compassSubtitle}</p>
               </div>
             </div>
 
@@ -1529,7 +1786,7 @@ export const Geomancy: React.FC = () => {
               <div className="p-3.5 bg-gradient-to-br from-amber-500/10 to-orange-500/10 rounded-xl border border-amber-500/20 space-y-2">
                 <div className="flex items-center gap-2 text-amber-900 dark:text-amber-200 font-bold text-sm">
                   <MapPin size={18} className="text-amber-500" />
-                  <span>Direction Dominante : {getSpatialDirection().primary}</span>
+                  <span>{i18n.dominantDirLabel} {getSpatialDirection().primary}</span>
                 </div>
                 <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
                   {getSpatialDirection().advice}
@@ -1539,7 +1796,7 @@ export const Geomancy: React.FC = () => {
               <div className="p-3.5 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-200 dark:border-gray-700 space-y-2">
                 <div className="flex items-center gap-2 text-gray-900 dark:text-white font-bold text-xs">
                   <TrendingUp size={16} className="text-emerald-500" />
-                  <span>Secteur Secondaire : {getSpatialDirection().secondary}</span>
+                  <span>{i18n.secondaryDirLabel} {getSpatialDirection().secondary}</span>
                 </div>
                 <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
                   {getSpatialDirection().primaryObj.desc}
@@ -1556,7 +1813,7 @@ export const Geomancy: React.FC = () => {
           <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-200/80 dark:border-gray-700">
             <h3 className="text-base font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
               <Globe className="text-amber-500" size={18} />
-              Analyse Multi-Traditions des Figures Clés
+              {i18n.multiTraditionTitle}
             </h3>
             <div className="space-y-3">
               {[0, 14, 15].map(houseIdx => {
@@ -1575,22 +1832,22 @@ export const Geomancy: React.FC = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 text-xs">
                       {/* Maghreb */}
                       <div className="p-2.5 bg-white dark:bg-gray-800 rounded-lg border border-amber-200/50 space-y-0.5">
-                        <span className="font-bold text-amber-700 dark:text-amber-300 block text-[11px]">🌙 Arabo-Maghrébine</span>
+                        <span className="font-bold text-amber-700 dark:text-amber-300 block text-[11px]">{i18n.tradAraboMaghrebi}</span>
                         <p className="font-bold text-gray-900 dark:text-white text-xs">{detail.arabic}</p>
-                        <p className="text-gray-500 text-[11px]">Planète : {detail.planet[langKey]}</p>
-                        <p className="text-gray-500 text-[11px]">Zodiaque : {detail.zodiac[langKey]}</p>
+                        <p className="text-gray-500 text-[11px]">{i18n.planetLabel} {detail.planet[langKey]}</p>
+                        <p className="text-gray-500 text-[11px]">{i18n.zodiacLabel} {detail.zodiac[langKey]}</p>
                       </div>
 
                       {/* West Africa */}
                       <div className="p-2.5 bg-white dark:bg-gray-800 rounded-lg border border-emerald-200/50 space-y-0.5">
-                        <span className="font-bold text-emerald-700 dark:text-emerald-300 block text-[11px]">🌍 Africaine (Sikidy)</span>
+                        <span className="font-bold text-emerald-700 dark:text-emerald-300 block text-[11px]">{i18n.tradAfrican}</span>
                         <p className="font-bold text-gray-900 dark:text-white text-xs">{detail.african}</p>
                         <p className="text-gray-600 dark:text-gray-300 text-[11px] leading-snug">{detail.africanMeaning[langKey]}</p>
                       </div>
 
                       {/* Indian Ramal */}
                       <div className="p-2.5 bg-white dark:bg-gray-800 rounded-lg border border-purple-200/50 space-y-0.5">
-                        <span className="font-bold text-purple-700 dark:text-purple-300 block text-[11px]">🛕 Indienne (Ramal)</span>
+                        <span className="font-bold text-purple-700 dark:text-purple-300 block text-[11px]">{i18n.tradIndian}</span>
                         <p className="font-bold text-gray-900 dark:text-white text-xs">{detail.indian}</p>
                         <p className="text-gray-500 text-[11px]">Graha : {detail.indianGraha}</p>
                         <p className="text-gray-500 text-[11px]">Dosha : {detail.indianDosha}</p>
@@ -1598,9 +1855,9 @@ export const Geomancy: React.FC = () => {
 
                       {/* European */}
                       <div className="p-2.5 bg-white dark:bg-gray-800 rounded-lg border border-blue-200/50 space-y-0.5">
-                        <span className="font-bold text-blue-700 dark:text-blue-300 block text-[11px]">🏛️ Latine / Européenne</span>
+                        <span className="font-bold text-blue-700 dark:text-blue-300 block text-[11px]">{i18n.tradEuropean}</span>
                         <p className="font-bold text-gray-900 dark:text-white text-xs">{detail.latin}</p>
-                        <p className="text-gray-500 text-[11px]">Élément : {detail.elementName[langKey]}</p>
+                        <p className="text-gray-500 text-[11px]">{i18n.elementLabel} {detail.elementName[langKey]}</p>
                         <p className="text-gray-500 text-[11px]">{detail.nature[langKey]}</p>
                       </div>
                     </div>
@@ -1655,16 +1912,32 @@ export const Geomancy: React.FC = () => {
                 {i18n.dominantElement} : <span className="uppercase font-extrabold text-amber-600">{elemStats.dominant}</span>
               </h4>
               {elemStats.dominant === 'fire' && (
-                <p>Dominance du Feu : Indique une énergie d'action zélée, de décision rapide, d'impulsion mais attention aux colères ou précipitations.</p>
+                <p>
+                  {langKey === 'fr' && "Dominance du Feu : Indique une énergie d'action zélée, de décision rapide, d'impulsion mais attention aux colères ou précipitations."}
+                  {langKey === 'en' && "Fire Dominance: Indicates zeal for action, quick decision-making, drive, but beware of anger or haste."}
+                  {langKey === 'ha' && "Mafi rinjayen Wuta: Yana nuna azama wajen aiki, yanke shawara cikin sauri, amma a kiyayi fushi ko hanzari marar amfani."}
+                </p>
               )}
               {elemStats.dominant === 'air' && (
-                <p>Dominance de l'Air : Indique une prédominance des pensées, contrats, négociations, idées et communication sociale.</p>
+                <p>
+                  {langKey === 'fr' && "Dominance de l'Air : Indique une prédominance des pensées, contrats, négociations, idées et communication sociale."}
+                  {langKey === 'en' && "Air Dominance: Indicates a prevalence of thoughts, contracts, negotiations, ideas, and social communication."}
+                  {langKey === 'ha' && "Mafi rinjayen Iska: Yana nuna rinjayen tunani, kwangiloli, tattaunawa, ra'ayoyi da tattaunawa tsakanin al'umma."}
+                </p>
               )}
               {elemStats.dominant === 'water' && (
-                <p>Dominance de l'Eau : Indique des voyages, de la sensibilité émotionnelle, de la spiritualité et du mouvement fluide.</p>
+                <p>
+                  {langKey === 'fr' && "Dominance de l'Eau : Indique des voyages, de la sensibilité émotionnelle, de la spiritualité et du mouvement fluide."}
+                  {langKey === 'en' && "Water Dominance: Indicates travel, emotional sensitivity, spirituality, and fluid movement."}
+                  {langKey === 'ha' && "Mafi rinjayen Ruwa: Yana nuna tafiye-tafiye, ji na zuciya, tsarkin ruhi da kuma tafiya cikin sauki."}
+                </p>
               )}
               {elemStats.dominant === 'earth' && (
-                <p>Dominance de la Terre : Indique des considérations matérielles, financières, des possessions durables ou de la lenteur.</p>
+                <p>
+                  {langKey === 'fr' && "Dominance de la Terre : Indique des considérations matérielles, financières, des possessions durables ou de la lenteur."}
+                  {langKey === 'en' && "Earth Dominance: Indicates material or financial considerations, durable possessions, or steady patience."}
+                  {langKey === 'ha' && "Mafi rinjayen Kasa: Yana nuna abubuwan duniya, kudi, dukiyar dindindin ko kuma jinkiri na hikima."}
+                </p>
               )}
             </div>
           </div>
@@ -1685,9 +1958,9 @@ export const Geomancy: React.FC = () => {
 
             <div className="p-3.5 bg-amber-50/60 dark:bg-amber-950/30 rounded-xl border border-amber-200/50 flex flex-col sm:flex-row items-center justify-between gap-3">
               <div>
-                <span className="text-xs font-bold text-amber-800 dark:text-amber-300 block">Lignée de la Tête du Juge (M15)</span>
+                <span className="text-xs font-bold text-amber-800 dark:text-amber-300 block">{i18n.headLineageLabel}</span>
                 <p className="text-xs text-gray-600 dark:text-gray-300 mt-0.5">
-                  Mères d'origine connectées au point du secret : <strong>{getSecretPathMothers().map(m => `Maison ${m}`).join(', ') || 'Aucune direct'}</strong>
+                  {i18n.secretMothersLabel} <strong>{getSecretPathMothers().map(m => `${langKey === 'ha' ? 'Gida' : langKey === 'en' ? 'House' : 'Maison'} ${m}`).join(', ') || i18n.noneDirectly}</strong>
                 </p>
               </div>
               <div className="p-2 bg-white dark:bg-gray-900 rounded-lg border border-amber-300 shrink-0" dir="ltr">
@@ -1716,7 +1989,7 @@ export const Geomancy: React.FC = () => {
                   {getFigureDetail(figures[14]).recommendedDhikr}
                 </p>
                 <p className="text-[11px] text-gray-600 dark:text-gray-400">
-                  À réciter matin ou soir pour débloquer les énergies bénéfiques du thème.
+                  {i18n.dhikrAdvice}
                 </p>
               </div>
             </div>
@@ -1731,7 +2004,7 @@ export const Geomancy: React.FC = () => {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <BookOpen className="text-amber-500" size={18} />
-                Dictionnaire des 16 Figures Géomantiques
+                {i18n.dictionaryTitle}
               </h3>
               <div className="relative w-full sm:w-64">
                 <Search className="absolute left-2.5 top-2.5 text-gray-400" size={14} />
@@ -1782,8 +2055,8 @@ export const Geomancy: React.FC = () => {
                       </p>
 
                       <div className="pt-1.5 border-t border-gray-200/50 dark:border-gray-700 text-[10px] text-gray-500 flex flex-wrap gap-x-3 gap-y-0.5">
-                        <span> Planète : {fig.planet[langKey]}</span>
-                        <span> Zodiaque : {fig.zodiac[langKey]}</span>
+                        <span> {i18n.planetLabel} {fig.planet[langKey]}</span>
+                        <span> {i18n.zodiacLabel} {fig.zodiac[langKey]}</span>
                         <span> Ramal : {fig.indian}</span>
                       </div>
                     </div>

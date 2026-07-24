@@ -291,15 +291,27 @@ export const DairaAsSirr: React.FC = () => {
         isOpen={showParchment}
         onClose={() => setShowParchment(false)}
         title="Dā'ira As-Sirr — Circular Seal"
-        subtitle={`Sceau de protection & couronne concentrique de ${inputName}`}
+        subtitle={
+          language === 'fr'
+            ? `Sceau de protection & couronne concentrique de ${inputName}`
+            : language === 'ha'
+            ? `Khatimin kariya da rawani na ${inputName}`
+            : `Protection seal & concentric crown of ${inputName}`
+        }
         recipientName={inputName}
         abjadWeight={abjadVal}
         content={
           <div className="space-y-4 text-center">
             <p className="text-2xl font-serif text-amber-900 font-bold">{inputName}</p>
-            <p className="text-sm font-mono text-amber-800">Poids Zimām: {abjadVal} | Khādim: {extractedAngel}</p>
+            <p className="text-sm font-mono text-amber-800">
+              {language === 'fr' ? 'Poids Zimām :' : language === 'ha' ? 'Nauyi Zimām :' : 'Weight Zimām:'} {abjadVal} | Khādim: {extractedAngel}
+            </p>
             <div className="p-4 bg-amber-200/40 rounded-2xl border border-amber-600/30 text-xs font-serif leading-relaxed text-amber-950">
-              "Ce sceau concentrique regroupe la couronne des 28 lettres et des 4 archanges célestes (Jibril, Mikail, Israfil, Azrail) scellant l'intention mystique."
+              {language === 'fr'
+                ? '"Ce sceau concentrique regroupe la couronne des 28 lettres et des 4 archanges célestes (Jibril, Mikail, Israfil, Azrail) scellant l\'intention mystique."'
+                : language === 'ha'
+                ? '"Wannan khatimi yana tattara haruffa 28 da manyan Mala\'iku 4 (Jibril, Mikail, Israfil, Azrail) don kulla muradin ruhi."'
+                : '"This concentric seal combines the crown of 28 letters and the 4 celestial archangels (Jibril, Mikail, Israfil, Azrail) sealing the mystical intention."'}
             </div>
           </div>
         }

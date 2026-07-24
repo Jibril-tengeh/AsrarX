@@ -1423,3 +1423,5 @@ export const Tasbih: React.FC = () => {
   );
 };
 
+export default Tasbih;
+

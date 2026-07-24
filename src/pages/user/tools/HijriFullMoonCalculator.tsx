@@ -150,7 +150,13 @@ export const HijriFullMoonCalculator: React.FC = () => {
       <ParchmentExporterModal
         isOpen={showParchment}
         onClose={() => setShowParchment(false)}
-        title="Calendrier Lunaire — Nuits Blanches"
+        title={
+          language === 'fr'
+            ? "Calendrier Lunaire — Nuits Blanches"
+            : language === 'ha'
+            ? "Rana da Wata — Ranakun Fararen Darare"
+            : "Lunar Calendar — White Nights"
+        }
         subtitle={`Date: ${dayHijriApprox} ${HIJRI_MONTHS_FR[monthHijriApprox - 1]} ${yearHijriApprox} AH`}
         content={
           <div className="space-y-4 text-center">
@@ -158,12 +164,24 @@ export const HijriFullMoonCalculator: React.FC = () => {
               {dayHijriApprox} {HIJRI_MONTHS_AR[monthHijriApprox - 1]} {yearHijriApprox}
             </p>
             <p className="text-xs font-sans text-amber-900">
-              Correspondance Grégorienne: {selectedGregorianDate}
+              {language === 'fr'
+                ? `Correspondance Grégorienne : ${selectedGregorianDate}`
+                : language === 'ha'
+                ? `Kwanan Wata na Turawa : ${selectedGregorianDate}`
+                : `Gregorian Date: ${selectedGregorianDate}`}
             </p>
             <p className="text-xs italic text-amber-900 bg-amber-200/50 p-3 rounded-xl border border-amber-600/30">
               {isWhiteDay
-                ? "Aujourd'hui est une Nuit Blanche (Al-Ayyām Al-Bīḍ) bénie !"
-                : "Les Nuits Blanches ont lieu les 13, 14 et 15 de chaque mois hégirien."}
+                ? (language === 'fr'
+                    ? "Aujourd'hui est une Nuit Blanche (Al-Ayyām Al-Bīḍ) bénie !"
+                    : language === 'ha'
+                    ? "Yau Rana ce ta Farar Darare (Al-Ayyām Al-Bīḍ) mai albarka!"
+                    : "Today is a blessed White Night (Al-Ayyām Al-Bīḍ)!")
+                : (language === 'fr'
+                    ? "Les Nuits Blanches ont lieu les 13, 14 et 15 de chaque mois hégirien."
+                    : language === 'ha'
+                    ? "Fararen Darare suna kasancewa a ranaku 13, 14 da 15 na kowane watan Musulunci."
+                    : "White Nights take place on the 13th, 14th, and 15th of each Hijri month.")}
             </p>
           </div>
         }

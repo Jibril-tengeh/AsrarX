@@ -471,7 +471,14 @@
       "p3Title": "3. Turaren Wuta (Bakhour)",
       "p3DescDetail": "Kona kadan daga turaren wuta na musamman ({incense}) don tsarkake muhalli.",
       "p4Title": "4. Kariyar Ruhani (Tahseen)",
-      "p4Desc": "Karanta Ayatal Kursiyyu sau 7 tare da Suratul Falaq da An-Nas kafin kowane aiki."
+      "p4Desc": "Karanta Ayatal Kursiyyu sau 7 tare da Suratul Falaq da An-Nas kafin kowane aiki.",
+      "parchmentSubtitle": "Mulkin Mala'ika {angel} ({angelAr}) da Sarki {king}",
+      "planetLabel": "Tauraro:",
+      "metalLabel": "Karfe:",
+      "incenseLabel": "Turaren Wuta:",
+      "dimensionsLabel": "Girman Wafq:",
+      "arabicInvocationLabel": "Kiranta ta Larabci:",
+      "authenticSeal": "AsrarHub — Hatsimi na Gaskiya na {day}"
     },
     "protectionModal": {
       "premiumAccess": "Kebantaccen Amfani na Premium",
@@ -1049,5 +1056,15 @@
     "scienceText3": "Manya-manyan malamai (kamar Al-Farabi a Kitab al-Musiqa al-Kabir da Ikhwan al-Safa) sun koyar da cewa sautuka 7 suna dace da taurari 7 da Manazil al-Qamar 28. Ambaton Sunayen Allah tare da sautin tauraron ranar yana daidaita zuciya da tsarin halittar Ubangiji.",
     "footerGenerator": "Injin Sauti da Web Audio Synthesizer",
     "footerTitle": "AsrarHub Sacred Acoustics"
+  },
+  "parchmentModal": {
+    "headerTitle": "Takardar Rubutu da Khatimi",
+    "print": "Buga",
+    "download": "Saukar da Hoto",
+    "sacredTreatiseSubtitle": "AsrarHub Takardar Rubutu da Khatimi",
+    "name": "Suna:",
+    "weight": "Nauyi (Zimām):",
+    "drawnBy": "Mawallafi: AsrarHub Ruhaniyat",
+    "authenticSeal": "Khatim Inyantacce — Sirr Al-Asrar"
   }
 }

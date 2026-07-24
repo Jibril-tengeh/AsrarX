@@ -1250,3 +1250,5 @@ export const ScienceOfLetters: React.FC = () => {
     </div>
   );
 };
+
+export default ScienceOfLetters;
