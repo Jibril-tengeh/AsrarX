@@ -603,9 +603,9 @@ export const Talsam: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 safe-area-pt pb-24 border-none">
+    <div className="w-full max-w-7xl mx-auto p-3 sm:p-6 lg:p-8 safe-area-pt max-h-[85vh] overflow-hidden flex flex-col">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
+      <div className="flex items-center gap-4 mb-4 shrink-0">
         <Link 
           to="/tools" 
           className="p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 transition-colors"
@@ -614,14 +614,16 @@ export const Talsam: React.FC = () => {
         </Link>
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <Key className="text-amber-500" />
-            {dict.title}
+            <Key className="text-amber-500 shrink-0" />
+            <span className="truncate">{dict.title}</span>
           </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5">
             Sondez la dimension abjadique de votre intention, extrayez son mot céleste secret de puissance et dressez son carré théurgique (Khatim).
           </p>
         </div>
       </div>
+
+      <div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pr-0.5">
 
       {/* Warnings & Spiritual Rules */}
       <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/50 rounded-2xl p-4 mb-8 flex items-start gap-3">
@@ -1149,6 +1151,7 @@ export const Talsam: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
+      </div>
     </div>
   );
 };

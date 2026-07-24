@@ -178,6 +178,35 @@ pre, code, table, .overflow-x-auto-mobile {
   text-rendering: optimizeLegibility !important;
 }
 
+/* Dynamic Typography & Layout Sizing controlled via Admin Panel */
+:root {
+  --app-body-font-size: initial;
+  --app-article-title-font-size: initial;
+  --app-tool-title-font-size: initial;
+  --app-card-title-font-size: initial;
+  --app-card-padding: initial;
+}
 
+body {
+  font-size: var(--app-body-font-size, 16px);
+}
 
+.custom-app-body, [data-custom-body] {
+  font-size: var(--app-body-font-size, inherit);
+}
 
+.article-title-custom, [data-article-title], h1.article-title, h2.article-title {
+  font-size: var(--app-article-title-font-size, inherit) !important;
+}
+
+.tool-title-custom, [data-tool-title], h1.tool-title, h2.tool-title {
+  font-size: var(--app-tool-title-font-size, inherit) !important;
+}
+
+.card-title-custom, [data-card-title], h3.card-title, .tool-card-title {
+  font-size: var(--app-card-title-font-size, inherit) !important;
+}
+
+.custom-card-container, [data-card-container], .tool-card-padding {
+  padding: var(--app-card-padding, inherit) !important;
+}

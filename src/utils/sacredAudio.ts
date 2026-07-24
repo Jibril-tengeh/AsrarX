@@ -11,6 +11,9 @@ class SacredAudioEngine {
   private isPlaying: boolean = false;
   private currentFreq: number = 432;
 
+  private volume: number = 0.15;
+  private timerId: any = null;
+
   private initCtx() {
     if (!this.ctx) {
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
@@ -21,12 +24,28 @@ class SacredAudioEngine {
     }
   }
 
-  public startFrequency(freq: number = 432, binauralBeat: number = 4, volume: number = 0.15) {
+  public setVolume(vol: number) {
+    this.volume = Math.max(0, Math.min(1, vol));
+    if (this.gainNode && this.ctx) {
+      try {
+        this.gainNode.gain.setValueAtTime(Math.max(0.001, this.volume), this.ctx.currentTime);
+      } catch (e) {
+        // Ignore gain set error if node is closing
+      }
+    }
+  }
+
+  public getVolume() {
+    return this.volume;
+  }
+
+  public startFrequency(freq: number = 432, binauralBeat: number = 4, volume: number = 0.15, timerMinutes: number = 0) {
     this.stop();
     this.initCtx();
     if (!this.ctx) return;
 
     this.currentFreq = freq;
+    this.volume = volume;
 
     // Create main oscillator (left ear frequency)
     this.osc1 = this.ctx.createOscillator();
@@ -51,9 +70,19 @@ class SacredAudioEngine {
     this.osc1.start();
     this.osc2.start();
     this.isPlaying = true;
+
+    if (timerMinutes > 0) {
+      this.timerId = setTimeout(() => {
+        this.stop();
+      }, timerMinutes * 60 * 1000);
+    }
   }
 
   public stop() {
+    if (this.timerId) {
+      clearTimeout(this.timerId);
+      this.timerId = null;
+    }
     if (this.gainNode && this.ctx) {
       try {
         this.gainNode.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + 0.5);

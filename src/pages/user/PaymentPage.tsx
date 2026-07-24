@@ -40,7 +40,7 @@ export const PaymentPage: React.FC = () => {
 
     const wasDiscounted = price < originalPrice;
     const displayStr = wasDiscounted 
-      ? `${price} ${premiumCurrency} (au lieu de ${originalPrice} ${premiumCurrency})` 
+      ? `${price} ${premiumCurrency} (${t('payment.insteadOf', 'au lieu de')} ${originalPrice} ${premiumCurrency})` 
       : `${price} ${premiumCurrency}`;
 
     return { 
@@ -196,9 +196,33 @@ export const PaymentPage: React.FC = () => {
     const cleanInput = promoCodeInput.trim();
     const upperCode = cleanInput.toUpperCase();
     const lowerCode = cleanInput.toLowerCase();
+    const noSpaceUpper = cleanInput.replace(/\s+/g, '').toUpperCase();
 
     // Comprehensive offline/fallback dictionary for common codes
     const FALLBACK_PROMO_CODES: Record<string, any> = {
+      'ASRA200': {
+        code: 'ASRA200',
+        type: 'unlock_subscription',
+        subscriptionMonths: 3,
+        isActive: true,
+        discountType: 'percent',
+        discountValue: 100
+      },
+      'ASRAR200': {
+        code: 'ASRAR200',
+        type: 'unlock_subscription',
+        subscriptionMonths: 3,
+        isActive: true,
+        discountType: 'percent',
+        discountValue: 100
+      },
+      'ASRA100': {
+        code: 'ASRA100',
+        type: 'discount',
+        discountType: 'percent',
+        discountValue: 100,
+        isActive: true
+      },
       'SBI1234': {
         code: 'SBI1234',
         type: 'unlock_subscription',
@@ -260,6 +284,10 @@ export const PaymentPage: React.FC = () => {
       // Try uppercase doc ID
       let docSnap = await getDoc(doc(db, 'promo_codes', upperCode)).catch(() => null);
 
+      if ((!docSnap || !docSnap.exists()) && noSpaceUpper !== upperCode) {
+        docSnap = await getDoc(doc(db, 'promo_codes', noSpaceUpper)).catch(() => null);
+      }
+
       // Try original case doc ID if different
       if ((!docSnap || !docSnap.exists()) && cleanInput !== upperCode) {
         docSnap = await getDoc(doc(db, 'promo_codes', cleanInput)).catch(() => null);
@@ -270,8 +298,11 @@ export const PaymentPage: React.FC = () => {
         docSnap = await getDoc(doc(db, 'promo_codes', lowerCode)).catch(() => null);
       }
 
-      // If direct doc lookup didn't match, try query search
-      if (!docSnap || !docSnap.exists()) {
+      if (docSnap && docSnap.exists()) {
+        promo = docSnap.data();
+        promoId = docSnap.id;
+      } else {
+        // Query search by field 'code'
         const qUpper = query(collection(db, 'promo_codes'), where('code', '==', upperCode));
         const snapUpper = await getDocs(qUpper).catch(() => null);
         
@@ -280,26 +311,48 @@ export const PaymentPage: React.FC = () => {
           promo = matchDoc.data();
           promoId = matchDoc.id;
         } else {
-          const qClean = query(collection(db, 'promo_codes'), where('code', '==', cleanInput));
-          const snapClean = await getDocs(qClean).catch(() => null);
-          if (snapClean && !snapClean.empty) {
-            const matchDoc = snapClean.docs[0];
-            promo = matchDoc.data();
-            promoId = matchDoc.id;
+          // Scan all promo_codes in collection in case of casing / space mismatches
+          const allDocsSnap = await getDocs(collection(db, 'promo_codes')).catch(() => null);
+          if (allDocsSnap && !allDocsSnap.empty) {
+            const foundDoc = allDocsSnap.docs.find(d => {
+              const data = d.data();
+              const dId = d.id.toUpperCase().replace(/\s+/g, '');
+              const dCode = (data.code || '').toUpperCase().replace(/\s+/g, '');
+              return dId === noSpaceUpper || dCode === noSpaceUpper || dId === upperCode || dCode === upperCode;
+            });
+            if (foundDoc) {
+              promo = foundDoc.data();
+              promoId = foundDoc.id;
+            }
           }
         }
-      } else {
-        promo = docSnap.data();
-        promoId = docSnap.id;
       }
     } catch (err) {
-      console.warn("Firestore promo lookup failed (will check local fallback):", err);
+      console.warn("Firestore promo lookup failed (will check local cache / fallback):", err);
     }
 
-    // 2. If no Firestore match or error, check fallback dictionary
-    if (!promo && FALLBACK_PROMO_CODES[upperCode]) {
-      promo = FALLBACK_PROMO_CODES[upperCode];
-      promoId = upperCode;
+    // 2. Check local storage cache array (asrarhub_local_promo_codes)
+    if (!promo) {
+      try {
+        const localList = JSON.parse(localStorage.getItem('asrarhub_local_promo_codes') || '[]');
+        const match = localList.find((p: any) => {
+          const pCode = (p.code || p.id || '').toUpperCase().replace(/\s+/g, '');
+          return pCode === noSpaceUpper || pCode === upperCode;
+        });
+        if (match) {
+          promo = match;
+          promoId = match.code || match.id || upperCode;
+        }
+      } catch (e) {}
+    }
+
+    // 3. Check fallback dictionary
+    if (!promo) {
+      const matchKey = Object.keys(FALLBACK_PROMO_CODES).find(k => k.replace(/\s+/g, '').toUpperCase() === noSpaceUpper);
+      if (matchKey) {
+        promo = FALLBACK_PROMO_CODES[matchKey];
+        promoId = matchKey;
+      }
     }
 
     if (!promo) {
@@ -316,14 +369,25 @@ export const PaymentPage: React.FC = () => {
       return;
     }
 
-    if (promo.expiryDate && Date.now() > promo.expiryDate) {
-      setPromoError(t('payment.promoExpired', "Ce code promo a expiré."));
-      setAppliedPromo(null);
-      setApplyingPromo(false);
-      return;
+    if (promo.expiryDate) {
+      let expTime = typeof promo.expiryDate === 'number' ? promo.expiryDate : new Date(promo.expiryDate).getTime();
+      if (!isNaN(expTime)) {
+        const expDate = new Date(expTime);
+        // If hours/minutes are zero (date picker timestamp), expand to end of day 23:59:59.999
+        if (expDate.getHours() === 0 && expDate.getMinutes() === 0 && expDate.getSeconds() === 0) {
+          expDate.setHours(23, 59, 59, 999);
+          expTime = expDate.getTime();
+        }
+        if (Date.now() > expTime) {
+          setPromoError(t('payment.promoExpired', "Ce code promo a expiré."));
+          setAppliedPromo(null);
+          setApplyingPromo(false);
+          return;
+        }
+      }
     }
 
-    if (promo.maxUses && (promo.uses || 0) >= promo.maxUses) {
+    if (promo.maxUses && Number(promo.maxUses) > 0 && (promo.uses || 0) >= Number(promo.maxUses)) {
       setPromoError(t('payment.promoLimit', "Ce code promo a atteint sa limite d'utilisations."));
       setAppliedPromo(null);
       setApplyingPromo(false);
@@ -336,14 +400,14 @@ export const PaymentPage: React.FC = () => {
     let successMsg = "";
     if (promo.type === 'discount') {
       successMsg = promo.discountType === 'percent' 
-        ? `Code promo appliqué ! Vous bénéficiez de -${promo.discountValue}% sur tous les abonnements.`
-        : `Code promo appliqué ! Vous bénéficiez d'une réduction de -${promo.discountValue} ${premiumCurrency}.`;
+        ? t('payment.promoPercentSuccess', 'Code promo appliqué ! Vous bénéficiez de -{val}% sur tous les abonnements.').replace('{val}', String(promo.discountValue))
+        : t('payment.promoValueSuccess', "Code promo appliqué ! Vous bénéficiez d'une réduction de -{val} {curr}.").replace('{val}', String(promo.discountValue)).replace('{curr}', premiumCurrency);
     } else if (promo.type === 'unlock_subscription') {
-      successMsg = `Code promo valide ! Vous pouvez débloquer directement un abonnement Premium de ${promo.subscriptionMonths || 3} mois gratuitement.`;
+      successMsg = t('payment.promoSubUnlockSuccess', 'Code promo valide ! Vous pouvez débloquer directement un abonnement Premium de {months} mois gratuitement.').replace('{months}', String(promo.subscriptionMonths || 3));
     } else if (promo.type === 'unlock_product') {
-      successMsg = `Code promo valide ! Vous pouvez débloquer gratuitement l'article correspondant de la boutique.`;
+      successMsg = t('payment.promoProductUnlockSuccess', "Code promo valide ! Vous pouvez débloquer gratuitement l'article correspondant de la boutique.");
     } else {
-      successMsg = `Code promo ${promoId} appliqué avec succès !`;
+      successMsg = t('payment.promoAppliedSuccess', 'Code promo {code} appliqué avec succès !').replace('{code}', promoId);
     }
 
     setPromoSuccess(successMsg);
@@ -389,14 +453,14 @@ export const PaymentPage: React.FC = () => {
         }
 
         await incrementPromoUses(appliedPromo.code);
-        alert(`Félicitations! Votre abonnement Premium de ${months} mois a été activé gratuitement.`);
+        alert(t('payment.alertSubUnlocked', 'Félicitations! Votre abonnement Premium de {months} mois a été activé gratuitement.').replace('{months}', String(months)));
         setAppliedPromo(null);
         setPromoCodeInput('');
         navigate('/user/dashboard');
       } else if (appliedPromo.type === 'unlock_product') {
         const prodId = appliedPromo.productId;
         if (!prodId) {
-          alert("ID de l'article manquant dans la configuration du code promo.");
+          alert(t('payment.alertMissingProdId', "ID de l'article manquant dans la configuration du code promo."));
           setLoading(false);
           return;
         }
@@ -421,14 +485,14 @@ export const PaymentPage: React.FC = () => {
         }
 
         await incrementPromoUses(appliedPromo.code);
-        alert(`Félicitations! L'article "${prodName}" a été débloqué et ajouté à votre compte gratuitement.`);
+        alert(t('payment.alertProdUnlocked', 'Félicitations! L\'article "{name}" a été débloqué et ajouté à votre compte gratuitement.').replace('{name}', prodName));
         setAppliedPromo(null);
         setPromoCodeInput('');
         navigate('/user/store');
       }
     } catch (err) {
       console.error(err);
-      alert("Une erreur est survenue lors de l'activation du code promo.");
+      alert(t('payment.alertPromoActivationError', "Une erreur est survenue lors de l'activation du code promo."));
     } finally {
       setLoading(false);
     }
@@ -461,7 +525,7 @@ export const PaymentPage: React.FC = () => {
       navigate('/user/dashboard');
     } catch (dbErr) {
       console.error("Failed to update premium status in DB:", dbErr);
-      alert("Erreur lors de l'activation.");
+      alert(t('payment.errorActivation', "Erreur lors de l'activation."));
     } finally {
       setLoading(false);
     }
@@ -614,9 +678,9 @@ export const PaymentPage: React.FC = () => {
         </p>
         
         <div className="mt-6 flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 items-center justify-center sm:justify-start text-xs sm:text-sm font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 p-3 sm:p-4 rounded-xl border border-emerald-100 dark:border-emerald-800/50 w-full overflow-hidden">
-          <span className="flex items-center gap-2 text-center sm:text-left"><CreditCard size={16} className="shrink-0" /><span className="leading-tight">Paystack (Automatique : Cartes & Mobile Money)</span></span>
+          <span className="flex items-center gap-2 text-center sm:text-left"><CreditCard size={16} className="shrink-0" /><span className="leading-tight">{t('payment.methodPaystack', 'Paystack (Automatique : Cartes & Mobile Money)')}</span></span>
           <span className="text-emerald-300 hidden sm:inline">•</span>
-          <span className="flex items-center gap-2 text-center sm:text-left"><Landmark size={16} className="shrink-0" /><span className="leading-tight">Transfert Bancaire Direct (GCB Bank PLC)</span></span>
+          <span className="flex items-center gap-2 text-center sm:text-left"><Landmark size={16} className="shrink-0" /><span className="leading-tight">{t('payment.methodBank', 'Transfert Bancaire Direct (GCB Bank PLC)')}</span></span>
         </div>
       </div>
 
@@ -627,13 +691,13 @@ export const PaymentPage: React.FC = () => {
           {t('payment.promoCodeHeader', "Avez-vous un Code Promo ?")}
         </h3>
         <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
-          Saisissez votre code promotionnel pour bénéficier de réductions immédiates sur nos abonnements, débloquer directement un abonnement ou débloquer gratuitement un article spécifique de la boutique.
+          {t('payment.promoDesc', "Saisissez votre code promotionnel pour bénéficier de réductions immédiates sur nos abonnements, débloquer directement un abonnement ou débloquer gratuitement un article spécifique de la boutique.")}
         </p>
 
         <div className="flex flex-col sm:flex-row gap-3 max-w-xl">
           <input
             type="text"
-            placeholder="Saisir le code (ex: ASRAR50)"
+            placeholder={t('payment.promoPlaceholder', "Saisir le code (ex: ASRAR50)")}
             value={promoCodeInput}
             onChange={(e) => setPromoCodeInput(e.target.value)}
             disabled={applyingPromo}
@@ -665,7 +729,7 @@ export const PaymentPage: React.FC = () => {
                 disabled={loading}
                 className="py-2 px-4 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow transition-all flex items-center gap-1.5"
               >
-                {loading ? "Activation..." : "Débloquer et Activer maintenant"}
+                {loading ? t('payment.modalSubmitting', "Activation...") : t('payment.unlockAndActivateNow', "Débloquer et Activer maintenant")}
               </button>
             )}
           </div>
@@ -800,14 +864,14 @@ export const PaymentPage: React.FC = () => {
                   {detectUserCurrencyAndPrice(selectedPlan.priceNumber).price === 0 ? (
                     <div className="text-center py-6 space-y-4 bg-emerald-50 dark:bg-emerald-950/20 rounded-2xl p-4 border border-emerald-100 dark:border-emerald-900/50">
                       <Sparkles className="mx-auto text-emerald-500 animate-bounce" size={48} />
-                      <h4 className="font-bold text-lg text-gray-900 dark:text-white">Abonnement gratuit avec code promo !</h4>
-                      <p className="text-sm text-gray-500 dark:text-gray-400 max-w-sm mx-auto">Votre code promo réduit le coût de cet abonnement à 0. Vous pouvez l'activer instantanément sans frais.</p>
+                      <h4 className="font-bold text-lg text-gray-900 dark:text-white">{t('payment.freeWithPromoTitle', "Abonnement gratuit avec code promo !")}</h4>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 max-w-sm mx-auto">{t('payment.freeWithPromoDesc', "Votre code promo réduit le coût de cet abonnement à 0. Vous pouvez l'activer instantanément sans frais.")}</p>
                       <button
                         onClick={handleFreeActivation}
                         disabled={loading}
                         className="py-3 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-md transition-all"
                       >
-                        {loading ? "Activation..." : "Activer mon abonnement gratuitement"}
+                        {loading ? t('payment.modalSubmitting', "Activation...") : t('payment.activateFreeSub', "Activer mon abonnement gratuitement")}
                       </button>
                     </div>
                   ) : (
@@ -816,7 +880,7 @@ export const PaymentPage: React.FC = () => {
                       
                       {featureToggles?.paystack_enabled === false && featureToggles?.bank_transfer_enabled === false ? (
                         <div className="text-center py-8 text-gray-500 border border-dashed rounded-2xl p-4">
-                          ⚠️ Les méthodes de paiement en ligne sont temporairement désactivées par l'administrateur. Veuillez réessayer plus tard.
+                          ⚠️ {t('payment.methodsDisabled', "Les méthodes de paiement en ligne sont temporairement désactivées par l'administrateur. Veuillez réessayer plus tard.")}
                         </div>
                       ) : (
                         <>

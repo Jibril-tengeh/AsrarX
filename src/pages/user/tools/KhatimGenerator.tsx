@@ -316,9 +316,9 @@ export const KhatimGenerator: React.FC = () => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto p-4 sm:p-6 lg:p-8 safe-area-pt pb-24 border-none min-h-screen">
+    <div className="w-full max-w-7xl mx-auto p-3 sm:p-6 lg:p-8 safe-area-pt max-h-[85vh] overflow-hidden flex flex-col">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
+      <div className="flex items-center gap-4 mb-4 shrink-0">
         <Link 
           to="/tools" 
           className="p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 transition-colors"
@@ -327,12 +327,14 @@ export const KhatimGenerator: React.FC = () => {
         </Link>
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <Star className="text-purple-500" />
-            {t('tools.khatim.dynamicTitle', 'Générateur de Khatim Dynamique')}
+            <Star className="text-purple-500 shrink-0" />
+            <span className="truncate">{t('tools.khatim.dynamicTitle', 'Générateur de Khatim Dynamique')}</span>
           </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t("tools.khatim.description")}</p>
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5">{t("tools.khatim.description")}</p>
         </div>
       </div>
+
+      <div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pr-0.5">
 
       <div className="bg-purple-900/10 border border-purple-800/30 rounded-3xl p-6 mb-8 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/20 rounded-full blur-3xl"></div>
@@ -540,6 +542,7 @@ export const KhatimGenerator: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
+      </div>
     </div>
   );
 };

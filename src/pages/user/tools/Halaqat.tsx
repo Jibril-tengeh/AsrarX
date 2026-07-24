@@ -616,11 +616,24 @@ export const Halaqat = () => {
                   }
                 </p>
                 <button
-                  onClick={() => setShowCreateModal(true)}
+                  onClick={() => {
+                    if (user?.subscriptionTier !== 'premium' && user?.subscriptionTier !== 'pro' && user?.role !== 'admin') {
+                      const msg = lang === 'en'
+                        ? "👑 Premium Feature: Creating virtual zikr circles (Halaqat) is reserved for AsrarHub Premium members. Upgrade to Premium to create your own circles."
+                        : lang === 'ha'
+                        ? "👑 Siffar Premium: Qirqirar halaqobin zikiri na gizo wani dama ne na mambobin Premium a AsrarHub. Haɓaka zuwa Premium domin ƙirƙirar halaqobinku."
+                        : "👑 Option Premium : La création de cercles de zikr virtuels (Halaqat) est une fonctionnalité réservée aux membres Premium d'AsrarHub. Passez au compte Premium pour créer vos propres cercles.";
+                      alert(msg);
+                      navigate('/user/profile');
+                      return;
+                    }
+                    setShowCreateModal(true);
+                  }}
                   className="bg-white text-emerald-800 hover:bg-emerald-50 font-black text-sm px-6 py-3.5 rounded-2xl shadow-md transition-all flex items-center gap-2 cursor-pointer active:scale-95"
                 >
+                  <Sparkles size={18} className="text-amber-500" />
                   <Plus size={18} />
-                  <span>{tLocal('createCircle')}</span>
+                  <span>{tLocal('createCircle')} (Premium 👑)</span>
                 </button>
               </div>
             </div>

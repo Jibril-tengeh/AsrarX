@@ -11,6 +11,7 @@ import {
 } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { useAuth } from "../../contexts/AuthContext";
+import { useLanguage } from "../../contexts/LanguageContext";
 import { Send, X, ArrowLeft } from "lucide-react";
 
 interface Message {
@@ -28,12 +29,46 @@ interface DirectMessagesProps {
   initialRecipientName?: string;
 }
 
+const localTranslations: Record<string, Record<string, string>> = {
+  fr: {
+    messagesTitle: "Messages Privés",
+    noConversations: "Aucune conversation",
+    selectConversation: "Sélectionnez une conversation",
+    yourMessagesHere: "Vos messages apparaîtront ici",
+    sendToStart: "Envoyez un message pour commencer",
+    typeMessage: "Écrivez votre message...",
+    userPlaceholder: "Utilisateur"
+  },
+  en: {
+    messagesTitle: "Private Messages",
+    noConversations: "No conversations",
+    selectConversation: "Select a conversation",
+    yourMessagesHere: "Your messages will appear here",
+    sendToStart: "Send a message to start",
+    typeMessage: "Write your message...",
+    userPlaceholder: "User"
+  },
+  ha: {
+    messagesTitle: "Sakonnin Sirri",
+    noConversations: "Babu tattaunawa",
+    selectConversation: "Zaɓi tattaunawa",
+    yourMessagesHere: "Saƙonninku za su bayyana a nan",
+    sendToStart: "Aika sako don farawa",
+    typeMessage: "Rubuta sakonku...",
+    userPlaceholder: "Mamba"
+  }
+};
+
 export const DirectMessages: React.FC<DirectMessagesProps> = ({
   onClose,
   initialRecipientId,
   initialRecipientName,
 }) => {
   const { user } = useAuth();
+  const { language } = useLanguage();
+  const lang = language === "en" || language === "ha" ? language : "fr";
+  const tLocal = (key: string) => localTranslations[lang][key] || localTranslations["fr"][key] || key;
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [activeChat, setActiveChat] = useState<{
@@ -41,7 +76,7 @@ export const DirectMessages: React.FC<DirectMessagesProps> = ({
     name: string;
   } | null>(
     initialRecipientId
-      ? { id: initialRecipientId, name: initialRecipientName || "Utilisateur" }
+      ? { id: initialRecipientId, name: initialRecipientName || tLocal("userPlaceholder") }
       : null,
   );
   const [conversations, setConversations] = useState<
@@ -66,7 +101,7 @@ export const DirectMessages: React.FC<DirectMessagesProps> = ({
       const convosMap = new Map<string, string>();
       msgs.forEach((m) => {
         if (m.senderId === user.uid) {
-          convosMap.set(m.receiverId, m.receiverId); // Don't have receiver name easily, but can use senderName if they replied
+          convosMap.set(m.receiverId, m.receiverId);
         } else {
           convosMap.set(m.senderId, m.senderName);
         }
@@ -74,7 +109,7 @@ export const DirectMessages: React.FC<DirectMessagesProps> = ({
       if (initialRecipientId && !convosMap.has(initialRecipientId)) {
         convosMap.set(
           initialRecipientId,
-          initialRecipientName || "Utilisateur",
+          initialRecipientName || tLocal("userPlaceholder"),
         );
       }
 
@@ -86,7 +121,7 @@ export const DirectMessages: React.FC<DirectMessagesProps> = ({
       console.warn("DirectMessages onSnapshot error (operating offline):", error);
     });
     return () => unsubscribe();
-  }, [user, initialRecipientId, initialRecipientName]);
+  }, [user, initialRecipientId, initialRecipientName, lang]);
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,7 +131,7 @@ export const DirectMessages: React.FC<DirectMessagesProps> = ({
       await addDoc(collection(db, "direct_messages"), {
         senderId: user.uid,
         receiverId: activeChat.id,
-        senderName: user.name || "Utilisateur",
+        senderName: user.name || tLocal("userPlaceholder"),
         content: newMessage.trim(),
         createdAt: serverTimestamp(),
       });
@@ -121,7 +156,7 @@ export const DirectMessages: React.FC<DirectMessagesProps> = ({
         <div className={`w-full md:w-1/3 border-r border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900 flex flex-col ${activeChat ? "hidden md:flex" : "flex"}`}>
           <div className="p-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
             <h3 className="font-bold text-gray-900 dark:text-white">
-              Messages
+              {tLocal("messagesTitle")}
             </h3>
             <button
               onClick={onClose}
@@ -133,7 +168,7 @@ export const DirectMessages: React.FC<DirectMessagesProps> = ({
           <div className="overflow-y-auto flex-1">
             {conversations.length === 0 ? (
               <p className="text-sm text-gray-500 p-4 text-center">
-                Aucune conversation
+                {tLocal("noConversations")}
               </p>
             ) : (
               conversations.map((c) => (
@@ -164,7 +199,7 @@ export const DirectMessages: React.FC<DirectMessagesProps> = ({
                 </button>
               )}
               <h3 className="font-bold text-gray-900 dark:text-white truncate max-w-[200px] sm:max-w-xs">
-                {activeChat ? activeChat.name : "Sélectionnez une conversation"}
+                {activeChat ? activeChat.name : tLocal("selectConversation")}
               </h3>
             </div>
             <button
@@ -178,11 +213,11 @@ export const DirectMessages: React.FC<DirectMessagesProps> = ({
           <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50 dark:bg-gray-900/50">
             {!activeChat ? (
               <div className="h-full flex items-center justify-center text-gray-500">
-                Vos messages apparaîtront ici
+                {tLocal("yourMessagesHere")}
               </div>
             ) : activeMessages.length === 0 ? (
               <div className="h-full flex items-center justify-center text-gray-500">
-                Envoyez un message pour commencer
+                {tLocal("sendToStart")}
               </div>
             ) : (
               activeMessages.map((msg) => (
@@ -209,7 +244,7 @@ export const DirectMessages: React.FC<DirectMessagesProps> = ({
                 type="text"
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
-                placeholder="Écrivez votre message..."
+                placeholder={tLocal("typeMessage")}
                 className="flex-1 bg-gray-100 dark:bg-gray-900 border-0 rounded-xl px-4 py-2 focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-white"
               />
               <button

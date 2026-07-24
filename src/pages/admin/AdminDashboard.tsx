@@ -7,7 +7,7 @@ import {
   Book, BookOpen, ToggleLeft, Volume2, Save, Search, Plus, Trash2, Edit2, FileText,
   Eye, Image as ImageIcon, Crop as CropIcon, X, Upload, ShoppingBag, CreditCard,
   Clock, CheckCircle, XCircle, Globe, Grid, List, Mail, Phone, Lock, Bell, BellOff, Sparkles, Star, Share, ShieldAlert,
-  FolderOpen, Copy, Radio
+  FolderOpen, Copy, Radio, Type, Sliders, Maximize2, Activity, Terminal, RefreshCw
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 
@@ -31,6 +31,7 @@ import { TipTapEditor } from '../../components/TipTapEditor';
 import ReactCrop, { type Crop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { getApiUrl } from '../../lib/api';
+import { pingFirestore, getNetworkLogs, clearNetworkLogs, addNetworkLog, triggerBackgroundReconnect, NetworkLog, PingResult } from '../../utils/networkLogger';
 import { 
   ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, CartesianGrid 
 } from 'recharts';
@@ -238,6 +239,21 @@ export const AdminDashboard: React.FC = () => {
 
   // Feature Search
   const [featureSearch, setFeatureSearch] = useState('');
+
+  // --- Network Diagnostics State ---
+  const [diagnosticLogs, setDiagnosticLogs] = useState<NetworkLog[]>(getNetworkLogs());
+  const [pingResult, setPingResult] = useState<PingResult | null>(null);
+  const [isPinging, setIsPinging] = useState(false);
+
+  useEffect(() => {
+    const handleLogsUpdate = () => {
+      setDiagnosticLogs(getNetworkLogs());
+    };
+    window.addEventListener('asrarhub_network_logs_updated', handleLogsUpdate);
+    return () => {
+      window.removeEventListener('asrarhub_network_logs_updated', handleLogsUpdate);
+    };
+  }, []);
 
   // Manual Payments state
   const [manualPayments, setManualPayments] = useState<any[]>([]);
@@ -524,6 +540,9 @@ export const AdminDashboard: React.FC = () => {
     const unsubscribePromoCodes = onSnapshot(collection(db, 'promo_codes'), (snapshot) => {
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setPromoCodes(list);
+      try {
+        localStorage.setItem('asrarhub_local_promo_codes', JSON.stringify(list));
+      } catch (e) {}
     }, (error) => console.warn("Admin Promo Codes listener note:", error));
 
     const unsubscribeStoreProducts = onSnapshot(collection(db, 'store_products'), (snapshot) => {
@@ -2067,7 +2086,11 @@ export const AdminDashboard: React.FC = () => {
     const codeUpper = newPromo.code.trim().toUpperCase();
 
     try {
-      const expiryTimestamp = newPromo.expiryDate ? new Date(newPromo.expiryDate).getTime() : null;
+      let expiryTimestamp = null;
+      if (newPromo.expiryDate) {
+        const d = new Date(newPromo.expiryDate + 'T23:59:59.999');
+        expiryTimestamp = isNaN(d.getTime()) ? new Date(newPromo.expiryDate).getTime() : d.getTime();
+      }
       
       const promoData = {
         code: codeUpper,
@@ -2084,6 +2107,15 @@ export const AdminDashboard: React.FC = () => {
       };
 
       await setDoc(doc(db, 'promo_codes', codeUpper), promoData);
+
+      // Save locally as immediate cache
+      try {
+        const existing = JSON.parse(localStorage.getItem('asrarhub_local_promo_codes') || '[]');
+        const filtered = existing.filter((p: any) => (p.code || p.id || '').toUpperCase() !== codeUpper);
+        filtered.push({ id: codeUpper, ...promoData });
+        localStorage.setItem('asrarhub_local_promo_codes', JSON.stringify(filtered));
+      } catch (e) {}
+
       showToast(`Code promo ${codeUpper} créé avec succès !`);
       
       // Reset form
@@ -3830,22 +3862,34 @@ export const AdminDashboard: React.FC = () => {
           </div>
 
           {/* Lecteur Flottant 432Hz Solfeggio / Fréquences Sacrées */}
-          <div className="flex flex-col p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex flex-col p-5 bg-gray-50 dark:bg-gray-750 border border-amber-200/50 dark:border-amber-900/30 rounded-2xl gap-5 shadow-sm">
+            {/* Header + Toggle */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-gray-200 dark:border-gray-700">
               <div>
-                <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                  <Radio size={18} className="text-amber-500" />
-                  Lecteur Flottant de Fréquences Sacrées (432Hz Solfeggio)
-                </h4>
-                <p className="text-sm text-gray-500 mt-1">
-                  Activer ou désactiver le bouton flottant "((o)) 432Hz Solfeggio" en bas de l'application.
+                <div className="flex items-center gap-2">
+                  <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 text-base">
+                    <Radio size={20} className="text-amber-500 animate-pulse" />
+                    Widget Notification Flottant (432Hz & Celestial)
+                  </h4>
+                  <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${
+                    featureToggles['sacredAudioPlayerVisible'] !== false 
+                      ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300' 
+                      : 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300'
+                  }`}>
+                    {featureToggles['sacredAudioPlayerVisible'] !== false ? 'Actif' : 'Désactivé'}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                  Affiche ou masque le bouton flottant "432Hz & Ciel" en bas à droite de l'application, et permet de régler sa taille (scale).
                 </p>
               </div>
+
               <button
                 onClick={() => handleToggleFeature('sacredAudioPlayerVisible', featureToggles['sacredAudioPlayerVisible'] !== false)}
-                className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors ${
+                className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors cursor-pointer shrink-0 ${
                   featureToggles['sacredAudioPlayerVisible'] !== false ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
                 }`}
+                title={featureToggles['sacredAudioPlayerVisible'] !== false ? "Cliquer pour désactiver" : "Cliquer pour activer"}
               >
                 <div
                   className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${
@@ -3854,6 +3898,82 @@ export const AdminDashboard: React.FC = () => {
                 />
               </button>
             </div>
+
+            {/* Scale / Size Settings */}
+            {featureToggles['sacredAudioPlayerVisible'] !== false && (
+              <div className="space-y-4 pt-1">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <label className="text-sm font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-2">
+                    <Sparkles size={16} className="text-amber-500" />
+                    Taille / Dimension du Bouton Flottant :
+                  </label>
+                  <span className="text-xs font-mono font-bold px-3 py-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 rounded-lg">
+                    {Number(featureToggles['sacredAudioPlayerScale'] ?? 100)}% (Scale {(Number(featureToggles['sacredAudioPlayerScale'] ?? 100) / 100).toFixed(2)}x)
+                  </span>
+                </div>
+
+                {/* Range Slider */}
+                <div className="flex items-center gap-4">
+                  <span className="text-xs font-semibold text-gray-500">Réduire (60%)</span>
+                  <input
+                    type="range"
+                    min="60"
+                    max="180"
+                    step="5"
+                    value={Number(featureToggles['sacredAudioPlayerScale'] ?? 100)}
+                    onChange={(e) => handleToggleFeature('sacredAudioPlayerScale', Number(e.target.value))}
+                    className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-amber-500"
+                  />
+                  <span className="text-xs font-semibold text-gray-500">Augmenter (180%)</span>
+                </div>
+
+                {/* Quick Presets */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                  {[
+                    { label: 'Petit (75%)', val: 75, icon: '🔹' },
+                    { label: 'Normal (100%)', val: 100, icon: '🔸' },
+                    { label: 'Grand (125%)', val: 125, icon: '🔷' },
+                    { label: 'Très Grand (150%)', val: 150, icon: '👑' },
+                  ].map((preset) => {
+                    const currentVal = Number(featureToggles['sacredAudioPlayerScale'] ?? 100);
+                    const isSelected = currentVal === preset.val;
+                    return (
+                      <button
+                        key={preset.val}
+                        type="button"
+                        onClick={() => handleToggleFeature('sacredAudioPlayerScale', preset.val)}
+                        className={`px-3 py-2 text-xs font-medium rounded-xl border transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
+                          isSelected
+                            ? 'bg-amber-500 text-white border-amber-600 shadow-md font-bold'
+                            : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-amber-400'
+                        }`}
+                      >
+                        <span>{preset.icon}</span>
+                        <span>{preset.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Visual Live Preview Box */}
+                <div className="mt-2 p-4 bg-zinc-950 rounded-2xl border border-amber-500/30 text-amber-300 flex flex-col items-center justify-center min-h-[110px] overflow-hidden relative">
+                  <span className="text-[10px] uppercase font-mono tracking-wider text-zinc-400 mb-2">Aperçu en direct (Taille réelle)</span>
+                  <div 
+                    className="transition-transform duration-200"
+                    style={{ transform: `scale(${Math.max(0.6, Math.min(1.8, Number(featureToggles['sacredAudioPlayerScale'] ?? 100) / 100))})` }}
+                  >
+                    <div className="flex items-center gap-2.5 px-4 py-3 rounded-full bg-zinc-900 border border-amber-500/40 text-amber-300 shadow-xl">
+                      <Radio className="w-4 h-4 text-amber-400 animate-pulse" />
+                      <div className="flex flex-col text-left">
+                        <span className="text-[11px] font-bold font-mono leading-none">432Hz & Ciel</span>
+                        <span className="text-[9px] opacity-80 font-serif">Aperçu • ♃ Jupiter</span>
+                      </div>
+                      <Sparkles className="w-3.5 h-3.5 text-amber-200" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Protection & Désactivation de Copie des Douas / Wirds */}
@@ -3972,6 +4092,440 @@ export const AdminDashboard: React.FC = () => {
                 }`}
               />
             </button>
+          </div>
+
+          {/* Diagnostic & Connexion Firestore (Réservé à l'Admin Panel) */}
+          <div className="flex flex-col p-5 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4 mt-2">
+            <div>
+              <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 text-base">
+                <Activity size={20} className="text-emerald-500" />
+                Diagnostic & Connexion Firestore
+              </h4>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
+                Analysez l'état de la connexion en temps réel avec les serveurs de base de données Firestore. Ce panneau permet d'identifier les blocages réseau, SSL, CORS ou d'autres anomalies dans les environnements mobiles et de type Capacitor.
+              </p>
+            </div>
+
+            {/* Diagnostic Action Controls */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <button
+                onClick={async () => {
+                  setIsPinging(true);
+                  const res = await pingFirestore();
+                  setPingResult(res);
+                  setIsPinging(false);
+                }}
+                disabled={isPinging}
+                className="flex items-center justify-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 dark:bg-emerald-900/20 dark:hover:bg-emerald-900/40 dark:text-emerald-400 rounded-xl px-4 py-3 font-bold text-xs transition-colors cursor-pointer"
+              >
+                <Activity size={16} className={isPinging ? "animate-spin" : ""} />
+                {isPinging ? "Vérification en cours..." : "Tester la latence (Ping)"}
+              </button>
+
+              <button
+                onClick={async () => {
+                  addNetworkLog('info', 'firestore', 'Reconnexion manuelle initiée par l\'administrateur.');
+                  await triggerBackgroundReconnect();
+                }}
+                className="flex items-center justify-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 dark:text-blue-400 rounded-xl px-4 py-3 font-bold text-xs transition-colors cursor-pointer"
+              >
+                <RefreshCw size={16} />
+                Forcer la reconnexion
+              </button>
+            </div>
+
+            {/* Ping / Latency Result Display */}
+            {pingResult && (
+              <div className={`p-4 rounded-2xl border text-sm flex flex-col gap-2 ${
+                pingResult.reachable 
+                  ? 'border-emerald-200 bg-emerald-50/20 dark:border-emerald-800/30 dark:bg-emerald-950/10 text-emerald-800 dark:text-emerald-300'
+                  : 'border-red-200 bg-red-50/20 dark:border-red-900/30 dark:bg-red-950/10 text-red-800 dark:text-red-300'
+              }`}>
+                <div className="flex items-center justify-between font-bold text-xs uppercase tracking-wider">
+                  <span>Résultat du Diagnostic :</span>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] ${
+                    pingResult.reachable 
+                      ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400' 
+                      : 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400'
+                  }`}>
+                    {pingResult.reachable ? 'Connecté / Réseau Ok' : 'Erreur Connexion'}
+                  </span>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4 mt-1 text-xs text-gray-600 dark:text-gray-300">
+                  <div>
+                    <span className="opacity-70">Latence du serveur :</span>{' '}
+                    <strong className={pingResult.reachable ? 'text-emerald-600 dark:text-emerald-400 font-mono text-sm' : 'font-mono'}>
+                      {pingResult.reachable ? `${pingResult.latencyMs} ms` : 'Indisponible'}
+                    </strong>
+                  </div>
+                  <div>
+                    <span className="opacity-70">Statut réseau local :</span>{' '}
+                    <strong className={navigator.onLine ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}>
+                      {navigator.onLine ? 'En ligne' : 'Hors ligne'}
+                    </strong>
+                  </div>
+                </div>
+
+                {pingResult.errorMessage && (
+                  <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-800 text-xs">
+                    <span className="font-bold">Message :</span> {pingResult.errorMessage}
+                  </div>
+                )}
+                
+                {pingResult.errorType === 'ssl_cors' && (
+                  <div className="mt-1 text-[11px] bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 p-2.5 rounded-xl">
+                    ⚠️ <strong>Anomalie SSL ou CORS détectée :</strong> Si vous utilisez une application mobile (Capacitor), assurez-vous que l'heure de votre appareil est parfaitement synchrone et que vous n'êtes pas connecté via un proxy / VPN filtrant.
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Real-time Connection State Summary card */}
+            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4">
+              <h4 className="font-bold text-gray-900 dark:text-white text-xs mb-3 uppercase tracking-wider flex items-center gap-1.5">
+                <Database size={14} /> Paramètres Réseau Actuels
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4 text-xs">
+                <div className="flex justify-between py-1 border-b border-gray-100 dark:border-gray-800">
+                  <span className="text-gray-500">IndexedDB Persistance :</span>
+                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">Actif (Optimisé mobile)</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-gray-100 dark:border-gray-800">
+                  <span className="text-gray-500">Long Polling (Capacitor) :</span>
+                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">Forcé (experimentalForceLongPolling)</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-gray-100 dark:border-gray-800">
+                  <span className="text-gray-500">Protocole de la page :</span>
+                  <span className="font-mono">{window.location.protocol}</span>
+                </div>
+                <div className="flex justify-between py-1 border-b border-gray-100 dark:border-gray-800">
+                  <span className="text-gray-500">Origine :</span>
+                  <span className="font-mono truncate max-w-[150px]" title={window.location.origin}>{window.location.origin}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Live Diagnostics Console Log Display */}
+            <div className="border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden bg-gray-950">
+              <div className="bg-gray-900 px-4 py-3 flex items-center justify-between border-b border-gray-800">
+                <span className="text-xs font-mono font-bold text-gray-300 flex items-center gap-1.5">
+                  <Terminal size={14} className="text-emerald-500" /> Console de Diagnostics Réseau ({diagnosticLogs.length})
+                </span>
+                {diagnosticLogs.length > 0 && (
+                  <button
+                    onClick={() => clearNetworkLogs()}
+                    className="text-[10px] text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 transition-colors px-2.5 py-1 rounded-lg font-mono font-bold cursor-pointer"
+                  >
+                    Vider
+                  </button>
+                )}
+              </div>
+
+              <div className="p-3 font-mono text-[10px] leading-relaxed max-h-56 overflow-y-auto flex flex-col gap-2">
+                {diagnosticLogs.length === 0 ? (
+                  <div className="text-center text-gray-500 py-4 italic">
+                    Aucun log réseau enregistré pour le moment.
+                  </div>
+                ) : (
+                  diagnosticLogs.map((log) => {
+                    let badgeColor = 'bg-blue-950/40 text-blue-400 border border-blue-500/20';
+                    if (log.type === 'error') badgeColor = 'bg-red-950/40 text-red-400 border border-red-500/20';
+                    if (log.type === 'success') badgeColor = 'bg-emerald-950/40 text-emerald-400 border border-emerald-500/20';
+                    if (log.type === 'retry') badgeColor = 'bg-amber-950/40 text-amber-400 border border-amber-500/20';
+
+                    return (
+                      <div key={log.id} className="border-b border-gray-900/50 pb-2 last:border-0 last:pb-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-gray-500 font-light">[{new Date(log.timestamp).toLocaleTimeString()}]</span>
+                          <span className={`text-[8px] font-bold uppercase px-1 rounded ${badgeColor}`}>
+                            {log.type}
+                          </span>
+                          <span className="text-gray-400 font-bold">[{log.category}]</span>
+                          <span className="text-gray-200">{log.message}</span>
+                        </div>
+                        {log.details && (
+                          <div className="mt-1 pl-4 text-gray-500 break-all select-all">
+                            ↳ {log.details}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Personnalisation des Tailles de Polices et Cartes (10px à 50px) */}
+          <div className="flex flex-col p-5 bg-gradient-to-br from-emerald-50/60 via-gray-50 to-teal-50/40 dark:from-emerald-950/20 dark:via-gray-800 dark:to-teal-950/20 border border-emerald-200/60 dark:border-emerald-800/40 rounded-3xl gap-6 shadow-sm mt-6">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-emerald-100 dark:border-emerald-900/50">
+              <div>
+                <h4 className="font-extrabold text-gray-900 dark:text-white flex items-center gap-2 text-base sm:text-lg">
+                  <Type size={20} className="text-emerald-600 dark:text-emerald-400" />
+                  Réglage des Tailles de Polices et Cartes (10px - 50px)
+                </h4>
+                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  Ajustez la taille des textes, des titres d'articles, des titres d'outils et le rembourrage des cartes pour toute l'application.
+                </p>
+              </div>
+
+              {/* Presets Quick Action Buttons */}
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleToggleFeature('textSizeBody', 12);
+                    handleToggleFeature('textSizeArticleTitle', 20);
+                    handleToggleFeature('textSizeToolTitle', 18);
+                    handleToggleFeature('textSizeCardTitle', 15);
+                    handleToggleFeature('cardPadding', 12);
+                    showToast("Preset Compact appliqué !");
+                  }}
+                  className="px-2.5 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-emerald-50 text-xs font-bold text-gray-700 dark:text-gray-200 rounded-xl transition-all cursor-pointer shadow-xs"
+                >
+                  🔍 Compact
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleToggleFeature('textSizeBody', 15);
+                    handleToggleFeature('textSizeArticleTitle', 24);
+                    handleToggleFeature('textSizeToolTitle', 22);
+                    handleToggleFeature('textSizeCardTitle', 18);
+                    handleToggleFeature('cardPadding', 16);
+                    showToast("Preset Standard appliqué !");
+                  }}
+                  className="px-2.5 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-emerald-50 text-xs font-bold text-gray-700 dark:text-gray-200 rounded-xl transition-all cursor-pointer shadow-xs"
+                >
+                  📱 Standard
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleToggleFeature('textSizeBody', 18);
+                    handleToggleFeature('textSizeArticleTitle', 28);
+                    handleToggleFeature('textSizeToolTitle', 26);
+                    handleToggleFeature('textSizeCardTitle', 22);
+                    handleToggleFeature('cardPadding', 20);
+                    showToast("Preset Grand appliqué !");
+                  }}
+                  className="px-2.5 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-emerald-50 text-xs font-bold text-gray-700 dark:text-gray-200 rounded-xl transition-all cursor-pointer shadow-xs"
+                >
+                  🖥️ Grand
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleToggleFeature('textSizeBody', 22);
+                    handleToggleFeature('textSizeArticleTitle', 36);
+                    handleToggleFeature('textSizeToolTitle', 32);
+                    handleToggleFeature('textSizeCardTitle', 26);
+                    handleToggleFeature('cardPadding', 24);
+                    showToast("Preset XL Accessibilité appliqué !");
+                  }}
+                  className="px-2.5 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-emerald-50 text-xs font-bold text-gray-700 dark:text-gray-200 rounded-xl transition-all cursor-pointer shadow-xs"
+                >
+                  🚀 XL
+                </button>
+              </div>
+            </div>
+
+            {/* Sliders Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* 1. Body Text Size */}
+              <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-black uppercase text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                    <Type size={14} className="text-emerald-500" />
+                    Taille du texte / corps
+                  </label>
+                  <span className="px-2.5 py-0.5 bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300 font-extrabold text-xs rounded-lg">
+                    {featureToggles['textSizeBody'] ?? 15} px
+                  </span>
+                </div>
+                <p className="text-[11px] text-gray-500">Paragraphes et textes généraux dans l'ensemble de l'application.</p>
+                <input
+                  type="range"
+                  min={10}
+                  max={50}
+                  step={1}
+                  value={featureToggles['textSizeBody'] ?? 15}
+                  onChange={(e) => handleToggleFeature('textSizeBody', Number(e.target.value))}
+                  className="w-full accent-emerald-600 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg"
+                />
+                <div className="flex justify-between text-[10px] text-gray-400 font-bold">
+                  <span>10px</span>
+                  <span>25px</span>
+                  <span>50px</span>
+                </div>
+              </div>
+
+              {/* 2. Article Titles Size */}
+              <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-black uppercase text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                    <BookOpen size={14} className="text-blue-500" />
+                    Taille des titres d'articles
+                  </label>
+                  <span className="px-2.5 py-0.5 bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300 font-extrabold text-xs rounded-lg">
+                    {featureToggles['textSizeArticleTitle'] ?? 24} px
+                  </span>
+                </div>
+                <p className="text-[11px] text-gray-500">Titres principaux dans les articles, bibliothèque et sagesses.</p>
+                <input
+                  type="range"
+                  min={10}
+                  max={50}
+                  step={1}
+                  value={featureToggles['textSizeArticleTitle'] ?? 24}
+                  onChange={(e) => handleToggleFeature('textSizeArticleTitle', Number(e.target.value))}
+                  className="w-full accent-blue-600 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg"
+                />
+                <div className="flex justify-between text-[10px] text-gray-400 font-bold">
+                  <span>10px</span>
+                  <span>25px</span>
+                  <span>50px</span>
+                </div>
+              </div>
+
+              {/* 3. Tool Titles Size */}
+              <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-black uppercase text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                    <Grid size={14} className="text-amber-500" />
+                    Taille des titres d'outils
+                  </label>
+                  <span className="px-2.5 py-0.5 bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300 font-extrabold text-xs rounded-lg">
+                    {featureToggles['textSizeToolTitle'] ?? 22} px
+                  </span>
+                </div>
+                <p className="text-[11px] text-gray-500">Titre d'en-tête de chaque outil spirituel (Abjad, Khatim, Zikr, etc.).</p>
+                <input
+                  type="range"
+                  min={10}
+                  max={50}
+                  step={1}
+                  value={featureToggles['textSizeToolTitle'] ?? 22}
+                  onChange={(e) => handleToggleFeature('textSizeToolTitle', Number(e.target.value))}
+                  className="w-full accent-amber-500 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg"
+                />
+                <div className="flex justify-between text-[10px] text-gray-400 font-bold">
+                  <span>10px</span>
+                  <span>25px</span>
+                  <span>50px</span>
+                </div>
+              </div>
+
+              {/* 4. Card Titles Size */}
+              <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-black uppercase text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                    <Sliders size={14} className="text-purple-500" />
+                    Taille des titres de cartes
+                  </label>
+                  <span className="px-2.5 py-0.5 bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-300 font-extrabold text-xs rounded-lg">
+                    {featureToggles['textSizeCardTitle'] ?? 18} px
+                  </span>
+                </div>
+                <p className="text-[11px] text-gray-500">Titres figurant sur les cartes d'outils et blocs de contenu.</p>
+                <input
+                  type="range"
+                  min={10}
+                  max={50}
+                  step={1}
+                  value={featureToggles['textSizeCardTitle'] ?? 18}
+                  onChange={(e) => handleToggleFeature('textSizeCardTitle', Number(e.target.value))}
+                  className="w-full accent-purple-600 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg"
+                />
+                <div className="flex justify-between text-[10px] text-gray-400 font-bold">
+                  <span>10px</span>
+                  <span>25px</span>
+                  <span>50px</span>
+                </div>
+              </div>
+
+              {/* 5. Card Padding Size */}
+              <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 space-y-2 md:col-span-2">
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-black uppercase text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                    <Maximize2 size={14} className="text-teal-500" />
+                    Rembourrage / Taille des cartes (Card Padding)
+                  </label>
+                  <span className="px-2.5 py-0.5 bg-teal-100 dark:bg-teal-900/50 text-teal-800 dark:text-teal-300 font-extrabold text-xs rounded-lg">
+                    {featureToggles['cardPadding'] ?? 16} px
+                  </span>
+                </div>
+                <p className="text-[11px] text-gray-500">Marge intérieure (padding) appliquée aux cartes d'outils, d'articles et de communauté.</p>
+                <input
+                  type="range"
+                  min={10}
+                  max={50}
+                  step={1}
+                  value={featureToggles['cardPadding'] ?? 16}
+                  onChange={(e) => handleToggleFeature('cardPadding', Number(e.target.value))}
+                  className="w-full accent-teal-600 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg"
+                />
+                <div className="flex justify-between text-[10px] text-gray-400 font-bold">
+                  <span>10px</span>
+                  <span>25px</span>
+                  <span>50px</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Interactive Live Preview Box */}
+            <div className="mt-2 p-4 bg-white dark:bg-gray-900 border border-emerald-200 dark:border-emerald-800/60 rounded-2xl space-y-3">
+              <span className="text-[11px] font-black uppercase text-emerald-600 dark:text-emerald-400 tracking-wider">
+                👁️ Aperçu en direct de vos réglages :
+              </span>
+
+              <div className="space-y-3">
+                {/* Article Title Preview */}
+                <div>
+                  <span className="text-[10px] text-gray-400 block mb-0.5">Titre d'Article ({featureToggles['textSizeArticleTitle'] ?? 24}px) :</span>
+                  <h2 
+                    style={{ fontSize: `${featureToggles['textSizeArticleTitle'] ?? 24}px` }} 
+                    className="font-extrabold text-gray-900 dark:text-white transition-all leading-tight"
+                  >
+                    📖 Les Secrets Spirituels du Zikr & de la Sagesse
+                  </h2>
+                </div>
+
+                {/* Tool Title Preview */}
+                <div>
+                  <span className="text-[10px] text-gray-400 block mb-0.5">Titre d'Outil ({featureToggles['textSizeToolTitle'] ?? 22}px) :</span>
+                  <h1 
+                    style={{ fontSize: `${featureToggles['textSizeToolTitle'] ?? 22}px` }} 
+                    className="font-black text-emerald-700 dark:text-emerald-400 transition-all leading-tight"
+                  >
+                    📿 Calculateur Abjad & Générateur de Khatim
+                  </h1>
+                </div>
+
+                {/* Card Container Preview */}
+                <div 
+                  style={{ padding: `${featureToggles['cardPadding'] ?? 16}px` }}
+                  className="bg-emerald-50/50 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60 rounded-xl transition-all"
+                >
+                  <span className="text-[10px] text-gray-400 block mb-1">
+                    Carte d'Outil (Padding: {featureToggles['cardPadding'] ?? 16}px) :
+                  </span>
+                  <h3 
+                    style={{ fontSize: `${featureToggles['textSizeCardTitle'] ?? 18}px` }}
+                    className="font-extrabold text-gray-900 dark:text-white mb-1 transition-all"
+                  >
+                    ⚡ Formule Sacrée #108
+                  </h3>
+                  <p 
+                    style={{ fontSize: `${featureToggles['textSizeBody'] ?? 15}px` }}
+                    className="text-gray-600 dark:text-gray-300 transition-all"
+                  >
+                    Ceci est une illustration de la taille du texte du corps ({featureToggles['textSizeBody'] ?? 15}px) à l'intérieur de la carte.
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -4968,3 +5522,5 @@ export const AdminDashboard: React.FC = () => {
     </div>
   );
 };
+
+export default AdminDashboard;

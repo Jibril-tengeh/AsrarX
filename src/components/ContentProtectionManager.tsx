@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useLanguage } from '../contexts/LanguageContext';
 import { Lock, Sparkles, ShieldAlert, X, Copy, Download, MousePointer } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
@@ -10,6 +11,7 @@ export const triggerProtectionModal = (action: 'download' | 'copy' | 'select' | 
 
 export const ContentProtectionManager: React.FC = () => {
   const { isPremium } = useAuth();
+  const { t } = useLanguage();
   const [modalState, setModalState] = useState<{ open: boolean; action: string }>({
     open: false,
     action: 'general',
@@ -169,7 +171,7 @@ export const ContentProtectionManager: React.FC = () => {
               <button
                 onClick={() => setModalState({ open: false, action: 'general' })}
                 className="absolute top-4 right-4 text-gray-400 hover:text-white p-2 rounded-full hover:bg-white/10 transition-colors"
-                aria-label="Fermer"
+                aria-label={t('protectionModal.close', 'Fermer')}
               >
                 <X size={20} />
               </button>
@@ -186,35 +188,35 @@ export const ContentProtectionManager: React.FC = () => {
                 </div>
 
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-400 text-xs font-bold uppercase tracking-wider mb-2">
-                  <Sparkles size={12} /> Accès Réservé Premium
+                  <Sparkles size={12} /> {t('protectionModal.premiumAccess', 'Accès Réservé Premium')}
                 </div>
 
                 <h3 className="text-xl font-black tracking-tight text-white mb-2">
                   {modalState.action === 'download'
-                    ? 'Téléchargement Réservé'
+                    ? t('protectionModal.downloadTitle', 'Téléchargement Réservé')
                     : modalState.action === 'copy'
-                    ? 'Copie & Sélection Protégées'
-                    : 'Contenu Protégé AsrarHub'}
+                    ? t('protectionModal.copyTitle', 'Copie & Sélection Protégées')
+                    : t('protectionModal.generalTitle', 'Contenu Protégé AsrarHub')}
                 </h3>
 
                 <p className="text-sm text-gray-300 leading-relaxed mb-6">
                   {modalState.action === 'download'
-                    ? 'Le téléchargement des sceaux, khatims, images et documents PDF est réservé aux membres Premium d’AsrarHub.'
-                    : 'La sélection de texte, le copier-coller et les captures de contenus sont réservés aux membres Premium d’AsrarHub.'}
+                    ? t('protectionModal.downloadDesc', 'Le téléchargement des sceaux, khatims, images et documents PDF est réservé aux membres Premium d’AsrarHub.')
+                    : t('protectionModal.copyDesc', 'La sélection de texte, le copier-coller et les captures de contenus sont réservés aux membres Premium d’AsrarHub.')}
                 </p>
 
                 <div className="w-full bg-slate-800/80 rounded-2xl p-4 border border-white/5 text-left mb-6 space-y-2.5 text-xs text-gray-300">
                   <div className="flex items-center gap-2 text-amber-300 font-semibold">
                     <Sparkles size={14} className="shrink-0 text-amber-400" />
-                    Téléchargements haute résolution des Khatims & Sceaux
+                    {t('protectionModal.featureHighResDownloads', 'Téléchargements haute résolution des Khatims & Sceaux')}
                   </div>
                   <div className="flex items-center gap-2">
                     <Copy size={14} className="shrink-0 text-amber-400" />
-                    Copie libre des formules & invocations mystiques
+                    {t('protectionModal.featureFreeCopy', 'Copie libre des formules & invocations mystiques')}
                   </div>
                   <div className="flex items-center gap-2">
                     <Lock size={14} className="shrink-0 text-amber-400" />
-                    Accès sans restriction aux secrets spirituels
+                    {t('protectionModal.featureUnrestrictedAccess', 'Accès sans restriction aux secrets spirituels')}
                   </div>
                 </div>
 
@@ -223,14 +225,14 @@ export const ContentProtectionManager: React.FC = () => {
                     onClick={() => setModalState({ open: false, action: 'general' })}
                     className="w-full sm:w-1/2 py-3 rounded-xl border border-gray-700 text-gray-300 font-bold hover:bg-white/5 transition-colors text-sm"
                   >
-                    Fermer
+                    {t('protectionModal.close', 'Fermer')}
                   </button>
                   <Link
                     to="/payment"
                     onClick={() => setModalState({ open: false, action: 'general' })}
                     className="w-full sm:w-1/2 py-3 rounded-xl bg-gradient-to-r from-amber-400 to-amber-600 text-slate-950 font-black shadow-lg shadow-amber-500/20 hover:scale-[1.02] active:scale-[0.98] transition-all flex items-center justify-center gap-1.5 text-sm"
                   >
-                    <Sparkles size={16} /> Devenir Premium
+                    <Sparkles size={16} /> {t('protectionModal.becomePremium', 'Devenir Premium')}
                   </Link>
                 </div>
               </div>

@@ -14,6 +14,55 @@ export const useFeatures = () => useContext(FeatureContext);
 export const FeatureProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [featureToggles, setFeatureToggles] = useState<any>({});
 
+  // Apply typography and sizing variables to documentElement dynamically
+  const applyTypographyAndSizing = (data: any) => {
+    if (!data) return;
+    const root = document.documentElement;
+
+    if (data.textSizeBody && Number(data.textSizeBody) >= 10 && Number(data.textSizeBody) <= 50) {
+      root.style.setProperty('--app-body-font-size', `${data.textSizeBody}px`);
+    } else {
+      root.style.removeProperty('--app-body-font-size');
+    }
+
+    if (data.textSizeArticleTitle && Number(data.textSizeArticleTitle) >= 10 && Number(data.textSizeArticleTitle) <= 50) {
+      root.style.setProperty('--app-article-title-font-size', `${data.textSizeArticleTitle}px`);
+    } else {
+      root.style.removeProperty('--app-article-title-font-size');
+    }
+
+    if (data.textSizeToolTitle && Number(data.textSizeToolTitle) >= 10 && Number(data.textSizeToolTitle) <= 50) {
+      root.style.setProperty('--app-tool-title-font-size', `${data.textSizeToolTitle}px`);
+    } else {
+      root.style.removeProperty('--app-tool-title-font-size');
+    }
+
+    if (data.textSizeCardTitle && Number(data.textSizeCardTitle) >= 10 && Number(data.textSizeCardTitle) <= 50) {
+      root.style.setProperty('--app-card-title-font-size', `${data.textSizeCardTitle}px`);
+    } else {
+      root.style.removeProperty('--app-card-title-font-size');
+    }
+
+    if (data.cardPadding && Number(data.cardPadding) >= 10 && Number(data.cardPadding) <= 50) {
+      root.style.setProperty('--app-card-padding', `${data.cardPadding}px`);
+    } else {
+      root.style.removeProperty('--app-card-padding');
+    }
+  };
+
+  // Synchronous immediate initialization from localStorage to prevent flash
+  useEffect(() => {
+    try {
+      const localFontSaved = localStorage.getItem('asrar_font_toggles');
+      if (localFontSaved) {
+        const parsed = JSON.parse(localFontSaved);
+        applyTypographyAndSizing(parsed);
+      }
+    } catch (e) {
+      console.warn("Failed reading local font settings:", e);
+    }
+  }, []);
+
   // 1. Initialise state from IndexedDB Cache for instant load (offline-first)
   useEffect(() => {
     const initCachedFeatures = async () => {
@@ -22,6 +71,10 @@ export const FeatureProvider: React.FC<{ children: React.ReactNode }> = ({ child
         if (cached) {
           console.log("[FeatureContext] Loaded feature toggles from IndexedDB Cache:", cached);
           setFeatureToggles(cached);
+          applyTypographyAndSizing(cached);
+          try {
+            localStorage.setItem('asrar_font_toggles', JSON.stringify(cached));
+          } catch (_) {}
           if (cached.backend_url) {
             localStorage.setItem('asrarhub_backend_url', cached.backend_url);
           }
@@ -41,6 +94,10 @@ export const FeatureProvider: React.FC<{ children: React.ReactNode }> = ({ child
         if (docSnap.exists()) {
           const data = docSnap.data();
           setFeatureToggles(data);
+          applyTypographyAndSizing(data);
+          try {
+            localStorage.setItem('asrar_font_toggles', JSON.stringify(data));
+          } catch (_) {}
           
           // Save back to both localStorage and IndexedDB
           if (data && data.backend_url) {
@@ -51,6 +108,7 @@ export const FeatureProvider: React.FC<{ children: React.ReactNode }> = ({ child
           });
         } else {
           setFeatureToggles({});
+          applyTypographyAndSizing({});
           set('asrar_feature_toggles', {}).catch(() => {});
         }
       },

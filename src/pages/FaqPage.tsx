@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { collection, query, where, getDocs, doc, setDoc, deleteDoc, writeBatch } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { db, auth } from '../lib/firebase';
 import { useAuth } from '../contexts/AuthContext';
 import { getApiUrl } from '../lib/api';
 
@@ -90,7 +90,7 @@ export const FaqPage: React.FC = () => {
   useEffect(() => {
     const loadSessions = async () => {
       setIsSyncing(true);
-      if (user) {
+      if (user && !user.uid.startsWith('local_') && auth.currentUser) {
         try {
           const q = query(collection(db, 'chat_sessions'), where('userId', '==', user.uid));
           const querySnapshot = await getDocs(q);
@@ -128,7 +128,7 @@ export const FaqPage: React.FC = () => {
             });
           }
         } catch (e) {
-          console.error("Error reading Firestore chat sessions, using fallback:", e);
+          console.warn("Error reading Firestore chat sessions, using fallback:", e);
           const fallbackSession: ChatSession = {
             id: 'sess_' + Date.now(),
             title: language === 'en' ? 'New Conversation' : language === 'ha' ? 'Sabuwar Tattaunawa' : 'Nouvelle conversation',

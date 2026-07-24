@@ -1766,3 +1766,5 @@ export const SecretDetail: React.FC = () => {
     </PremiumWrapper>
   );
 };
+
+export default SecretDetail;

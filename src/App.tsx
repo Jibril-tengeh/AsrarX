@@ -1,85 +1,104 @@
 import React from 'react';
-import { Routes, Route, Navigate, useLocation, useNavigate, Outlet } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation, useNavigate, Outlet, Link } from 'react-router-dom';
 import { Header } from './components/Header';
 import { LayoutTester } from './components/LayoutTester';
 import { useAuth } from './contexts/AuthContext';
 import { useLanguage } from './contexts/LanguageContext';
 import { AuthModal } from './components/AuthModal';
-import { ShieldAlert, LogIn, RefreshCw } from 'lucide-react';
+import { ShieldAlert, LogIn, RefreshCw, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { db, isAutoSaveEnabled } from './lib/firebase';
 import { BottomNav } from './components/BottomNav';
 import { AsrarHubLoader } from './components/AsrarHubLoader';
 import { useAudio } from './contexts/AudioContext';
-const UserDashboard = React.lazy(() => import('./pages/user/UserDashboard').then(m => ({ default: m.UserDashboard })));
-const SecretDetail = React.lazy(() => import('./pages/user/SecretDetail').then(m => ({ default: m.SecretDetail })));
-const ToolsDashboard = React.lazy(() => import('./pages/user/ToolsDashboard').then(m => ({ default: m.ToolsDashboard })));
-const AbjadCalculator = React.lazy(() => import('./pages/user/tools/AbjadCalculator').then(m => ({ default: m.AbjadCalculator })));
-const PlanetaryHours = React.lazy(() => import('./pages/user/tools/PlanetaryHours').then(m => ({ default: m.PlanetaryHours })));
-const Tasbih = React.lazy(() => import('./pages/user/tools/Tasbih').then(m => ({ default: m.Tasbih })));
-const KhatimGenerator = React.lazy(() => import('./pages/user/tools/KhatimGenerator').then(m => ({ default: m.KhatimGenerator })));
-const Asma = React.lazy(() => import('./pages/user/tools/Asma').then(m => ({ default: m.Asma })));
-const Talsam = React.lazy(() => import('./pages/user/tools/Talsam').then(m => ({ default: m.Talsam })));
-const Istikhara = React.lazy(() => import('./pages/user/tools/Istikhara').then(m => ({ default: m.Istikhara })));
-const SirrAlAsrar = React.lazy(() => import('./pages/user/tools/SirrAlAsrar').then(m => ({ default: m.SirrAlAsrar })));
-const Zairja = React.lazy(() => import('./pages/user/tools/Zairja').then(m => ({ default: m.Zairja })));
-const ZakatCalculator = React.lazy(() => import('./pages/user/tools/ZakatCalculator').then(m => ({ default: m.ZakatCalculator })));
-const FaraidCalculator = React.lazy(() => import('./pages/user/tools/FaraidCalculator').then(m => ({ default: m.FaraidCalculator })));
-const DreamJournal = React.lazy(() => import('./pages/user/tools/DreamJournal').then(m => ({ default: m.DreamJournal })));
-const Halaqat = React.lazy(() => import('./pages/user/tools/Halaqat').then(m => ({ default: m.Halaqat })));
-const NamesOfAllah = React.lazy(() => import('./pages/user/tools/NamesOfAllah').then(m => ({ default: m.NamesOfAllah })));
-const RouhaniyyaExtractor = React.lazy(() => import('./pages/user/tools/RouhaniyyaExtractor').then(m => ({ default: m.RouhaniyyaExtractor })));
-const Taksir = React.lazy(() => import('./pages/user/tools/Taksir').then(m => ({ default: m.Taksir })));
-const QuranFull = React.lazy(() => import('./pages/user/tools/QuranFull').then(m => ({ default: m.QuranFull })));
-const ElementalAnalyzer = React.lazy(() => import('./pages/user/tools/ElementalAnalyzer').then(m => ({ default: m.ElementalAnalyzer })));
-const Geomancy = React.lazy(() => import('./pages/user/tools/Geomancy').then(m => ({ default: m.Geomancy })));
-const ScienceOfLetters = React.lazy(() => import('./pages/user/tools/ScienceOfLetters').then(m => ({ default: m.ScienceOfLetters })));
-const PersonalWird = React.lazy(() => import('./pages/user/tools/PersonalWird').then(m => ({ default: m.PersonalWird })));
-const LunarMansions = React.lazy(() => import('./pages/user/tools/LunarMansions').then(m => ({ default: m.LunarMansions })));
-const SpiritualCompatibility = React.lazy(() => import('./pages/user/tools/SpiritualCompatibility').then(m => ({ default: m.SpiritualCompatibility })));
-const IlmJafar = React.lazy(() => import('./pages/user/tools/IlmJafar').then(m => ({ default: m.IlmJafar })));
-const GrandOaths = React.lazy(() => import('./pages/user/tools/GrandOaths').then(m => ({ default: m.GrandOaths })));
-const KhouddamExtractor = React.lazy(() => import('./pages/user/tools/KhouddamExtractor').then(m => ({ default: m.KhouddamExtractor })));
-const AwfaqAdvanced = React.lazy(() => import('./pages/user/tools/AwfaqAdvanced').then(m => ({ default: m.AwfaqAdvanced })));
-const QuranicFaal = React.lazy(() => import('./pages/user/tools/QuranicFaal').then(m => ({ default: m.QuranicFaal })));
-const UserProfile = React.lazy(() => import('./pages/user/UserProfile').then(m => ({ default: m.UserProfile })));
-const PaymentPage = React.lazy(() => import('./pages/user/PaymentPage').then(m => ({ default: m.PaymentPage })));
-const Journal = React.lazy(() => import('./pages/user/Journal').then(m => ({ default: m.Journal })));
-const ExploreDashboard = React.lazy(() => import('./pages/user/ExploreDashboard').then(m => ({ default: m.ExploreDashboard })));
-const Quizz = React.lazy(() => import('./pages/user/explore/Quizz').then(m => ({ default: m.Quizz })));
-const Lexique = React.lazy(() => import('./pages/user/explore/Lexique').then(m => ({ default: m.Lexique })));
-const CalendarConverter = React.lazy(() => import('./pages/user/explore/CalendarConverter').then(m => ({ default: m.CalendarConverter })));
-const AdminDashboard = React.lazy(() => import('./pages/admin/AdminDashboard').then(m => ({ default: m.AdminDashboard })));
-const Community = React.lazy(() => import('./pages/user/Community').then(m => ({ default: m.Community })));
 import { AudioPlayer } from './components/AudioPlayer';
 import { SacredAudioPlayer } from './components/SacredAudioPlayer';
 import { requestNotificationPermission, requestAllPermissions, checkAndTriggerPlanetaryNotification } from './utils/planetaryNotifications';
-const DailyDhikrTracker = React.lazy(() => import('./pages/user/tools/DailyDhikrTracker').then(m => ({ default: m.DailyDhikrTracker })));
-const IaRapprochements = React.lazy(() => import('./pages/user/tools/IaRapprochements').then(m => ({ default: m.IaRapprochements })));
-const RingPendantTalisman = React.lazy(() => import('./pages/user/tools/RingPendantTalisman').then(m => ({ default: m.RingPendantTalisman })));
-const CombustionEclipseCalculator = React.lazy(() => import('./pages/user/tools/CombustionEclipseCalculator').then(m => ({ default: m.CombustionEclipseCalculator })));
-const DairaAsSirr = React.lazy(() => import('./pages/user/tools/DairaAsSirr').then(m => ({ default: m.DairaAsSirr })));
-const SevenKingsSeals = React.lazy(() => import('./pages/user/tools/SevenKingsSeals').then(m => ({ default: m.SevenKingsSeals })));
-const CoranAnalogyAbjad = React.lazy(() => import('./pages/user/tools/CoranAnalogyAbjad').then(m => ({ default: m.CoranAnalogyAbjad })));
-const ZikrLevelsCalculator = React.lazy(() => import('./pages/user/tools/ZikrLevelsCalculator').then(m => ({ default: m.ZikrLevelsCalculator })));
-const HijriFullMoonCalculator = React.lazy(() => import('./pages/user/tools/HijriFullMoonCalculator').then(m => ({ default: m.HijriFullMoonCalculator })));
-const MuridJournal = React.lazy(() => import('./pages/user/tools/MuridJournal').then(m => ({ default: m.MuridJournal })));
-const SaahIjabah = React.lazy(() => import('./pages/user/tools/SaahIjabah').then(m => ({ default: m.SaahIjabah })));
-
 import { Onboarding } from './pages/Onboarding';
 import { DailyRewardHandler } from './components/DailyRewardHandler';
-
 import { ContentProtectionManager } from './components/ContentProtectionManager';
 import { MaintenanceOverlay } from './components/MaintenanceOverlay';
 import { getApiUrl } from './lib/api';
 import { FloatingBackButton } from './components/FloatingBackButton';
-import { Link } from 'react-router-dom';
 import { ErrorToastContainer } from './components/ErrorToastContainer';
-
-const Store = React.lazy(() => import('./pages/user/Store').then(m => ({ default: m.Store })));
-const FaqPage = React.lazy(() => import('./pages/FaqPage').then(m => ({ default: m.FaqPage })));
-
 import { FeatureProvider, useFeatures } from './contexts/FeatureContext';
+import UserDashboard from './pages/user/UserDashboard';
+
+function lazyWithRetry<T extends React.ComponentType<any> = React.ComponentType<any>>(
+  componentImport: () => Promise<any>
+) {
+  return React.lazy(async () => {
+    try {
+      const module = await componentImport();
+      const component = module.default || module[Object.keys(module)[0]];
+      return { default: component };
+    } catch (error) {
+      console.warn('Dynamic import chunk load error, retrying page reload...', error);
+      const storageKey = 'lazy_retry_' + window.location.pathname;
+      const hasRetried = sessionStorage.getItem(storageKey);
+      if (!hasRetried) {
+        sessionStorage.setItem(storageKey, 'true');
+        window.location.reload();
+        return new Promise(() => {});
+      }
+      sessionStorage.removeItem(storageKey);
+      throw error;
+    }
+  });
+}
+
+const SecretDetail = lazyWithRetry(() => import('./pages/user/SecretDetail'));
+const ToolsDashboard = lazyWithRetry(() => import('./pages/user/ToolsDashboard'));
+const AbjadCalculator = lazyWithRetry(() => import('./pages/user/tools/AbjadCalculator'));
+const PlanetaryHours = lazyWithRetry(() => import('./pages/user/tools/PlanetaryHours'));
+const Tasbih = lazyWithRetry(() => import('./pages/user/tools/Tasbih'));
+const KhatimGenerator = lazyWithRetry(() => import('./pages/user/tools/KhatimGenerator'));
+const Asma = lazyWithRetry(() => import('./pages/user/tools/Asma'));
+const Talsam = lazyWithRetry(() => import('./pages/user/tools/Talsam'));
+const Istikhara = lazyWithRetry(() => import('./pages/user/tools/Istikhara'));
+const SirrAlAsrar = lazyWithRetry(() => import('./pages/user/tools/SirrAlAsrar'));
+const Zairja = lazyWithRetry(() => import('./pages/user/tools/Zairja'));
+const ZakatCalculator = lazyWithRetry(() => import('./pages/user/tools/ZakatCalculator'));
+const FaraidCalculator = lazyWithRetry(() => import('./pages/user/tools/FaraidCalculator'));
+const DreamJournal = lazyWithRetry(() => import('./pages/user/tools/DreamJournal'));
+const Halaqat = lazyWithRetry(() => import('./pages/user/tools/Halaqat'));
+const NamesOfAllah = lazyWithRetry(() => import('./pages/user/tools/NamesOfAllah'));
+const RouhaniyyaExtractor = lazyWithRetry(() => import('./pages/user/tools/RouhaniyyaExtractor'));
+const Taksir = lazyWithRetry(() => import('./pages/user/tools/Taksir'));
+const QuranFull = lazyWithRetry(() => import('./pages/user/tools/QuranFull'));
+const ElementalAnalyzer = lazyWithRetry(() => import('./pages/user/tools/ElementalAnalyzer'));
+const Geomancy = lazyWithRetry(() => import('./pages/user/tools/Geomancy'));
+const ScienceOfLetters = lazyWithRetry(() => import('./pages/user/tools/ScienceOfLetters'));
+const PersonalWird = lazyWithRetry(() => import('./pages/user/tools/PersonalWird'));
+const LunarMansions = lazyWithRetry(() => import('./pages/user/tools/LunarMansions'));
+const SpiritualCompatibility = lazyWithRetry(() => import('./pages/user/tools/SpiritualCompatibility'));
+const IlmJafar = lazyWithRetry(() => import('./pages/user/tools/IlmJafar'));
+const GrandOaths = lazyWithRetry(() => import('./pages/user/tools/GrandOaths'));
+const KhouddamExtractor = lazyWithRetry(() => import('./pages/user/tools/KhouddamExtractor'));
+const AwfaqAdvanced = lazyWithRetry(() => import('./pages/user/tools/AwfaqAdvanced'));
+const QuranicFaal = lazyWithRetry(() => import('./pages/user/tools/QuranicFaal'));
+const UserProfile = lazyWithRetry(() => import('./pages/user/UserProfile'));
+const PaymentPage = lazyWithRetry(() => import('./pages/user/PaymentPage'));
+const Journal = lazyWithRetry(() => import('./pages/user/Journal'));
+const ExploreDashboard = lazyWithRetry(() => import('./pages/user/ExploreDashboard'));
+const Quizz = lazyWithRetry(() => import('./pages/user/explore/Quizz'));
+const Lexique = lazyWithRetry(() => import('./pages/user/explore/Lexique'));
+const CalendarConverter = lazyWithRetry(() => import('./pages/user/explore/CalendarConverter'));
+const AdminDashboard = lazyWithRetry(() => import('./pages/admin/AdminDashboard'));
+const Community = lazyWithRetry(() => import('./pages/user/Community'));
+const DailyDhikrTracker = lazyWithRetry(() => import('./pages/user/tools/DailyDhikrTracker'));
+const IaRapprochements = lazyWithRetry(() => import('./pages/user/tools/IaRapprochements'));
+const RingPendantTalisman = lazyWithRetry(() => import('./pages/user/tools/RingPendantTalisman'));
+const CombustionEclipseCalculator = lazyWithRetry(() => import('./pages/user/tools/CombustionEclipseCalculator'));
+const DairaAsSirr = lazyWithRetry(() => import('./pages/user/tools/DairaAsSirr'));
+const SevenKingsSeals = lazyWithRetry(() => import('./pages/user/tools/SevenKingsSeals'));
+const CoranAnalogyAbjad = lazyWithRetry(() => import('./pages/user/tools/CoranAnalogyAbjad'));
+const ZikrLevelsCalculator = lazyWithRetry(() => import('./pages/user/tools/ZikrLevelsCalculator'));
+const HijriFullMoonCalculator = lazyWithRetry(() => import('./pages/user/tools/HijriFullMoonCalculator'));
+const MuridJournal = lazyWithRetry(() => import('./pages/user/tools/MuridJournal'));
+const SaahIjabah = lazyWithRetry(() => import('./pages/user/tools/SaahIjabah'));
+const Store = lazyWithRetry(() => import('./pages/user/Store'));
+const FaqPage = lazyWithRetry(() => import('./pages/FaqPage'));
 
 const PlaceholderPage = ({ title }: { title: string }) => (
   <div className="flex items-center justify-center h-full min-h-[50vh]">
@@ -214,7 +233,7 @@ const NetworkStatus = () => {
 };
 
 const ProtectedToolsLayout: React.FC = () => {
-  const { user } = useAuth();
+  const { user, isPremium } = useAuth();
   const { t, language } = useLanguage();
   const { featureToggles } = useFeatures();
   const location = useLocation();
@@ -232,7 +251,7 @@ const ProtectedToolsLayout: React.FC = () => {
   const status = isSubTool ? (featureToggles[`tool_${toolId}`] || "active") : "active";
   const isMaintenance = isSubTool && status === "maintenance";
   const isInactive = isSubTool && status === "inactive";
-  const isPremiumOnly = isSubTool && status === "premium" && !user?.isPremium && !user?.isAdmin;
+  const isPremiumOnly = isSubTool && status === "premium" && !isPremium && user?.role !== 'admin';
   
   const advancedToolIds = [
     "personal-wird", "lunar-mansions", "spiritual-compatibility", "ilm-jafar",

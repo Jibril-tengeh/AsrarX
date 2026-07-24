@@ -1,5 +1,5 @@
-import React, { useState, useRef } from 'react';
-import { ArrowLeft, Hexagon, Info, Flame, Wind, Droplets, Mountain, Compass, Sparkles, Check, Copy, Download } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { ArrowLeft, Hexagon, Info, Flame, Wind, Droplets, Mountain, Compass, Sparkles, Check, Copy, Download, Play, Pause, SkipForward, SkipBack, RotateCcw, FileCode, Printer } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -174,13 +174,89 @@ export const AwfaqAdvanced: React.FC = () => {
 
   const [targetValue, setTargetValue] = useState<string>('129');
   const [gridSize, setGridSize] = useState<number>(3); // 3x3 to 10x10
-  const [viewMode, setViewMode] = useState<'values' | 'houses'>('values');
+  const [viewMode, setViewMode] = useState<'values' | 'houses' | 'animation'>('values');
   const [grid, setGrid] = useState<number[][]>([]);
   const [baseHousesGrid, setBaseHousesGrid] = useState<number[][]>([]);
   const [kasrInfo, setKasrInfo] = useState<{ base: number; rem: number; kasrCellIndex: number; minRequired: number } | null>(null);
   const [copiedGrid, setCopiedGrid] = useState(false);
   const [error, setError] = useState<string>('');
   const wafqRef = useRef<HTMLDivElement>(null);
+
+  // Animation Ghazali State
+  const [animStep, setAnimStep] = useState<number>(1);
+  const [isAnimPlaying, setIsAnimPlaying] = useState<boolean>(false);
+  const [animSpeed, setAnimSpeed] = useState<number>(800);
+
+  const maxSteps = gridSize * gridSize;
+
+  // Auto-play timer for Ghazali order filling animation
+  useEffect(() => {
+    let timer: NodeJS.Timeout | null = null;
+    if (isAnimPlaying) {
+      timer = setInterval(() => {
+        setAnimStep((prev) => {
+          if (prev >= maxSteps) {
+            setIsAnimPlaying(false);
+            return maxSteps;
+          }
+          return prev + 1;
+        });
+      }, animSpeed);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [isAnimPlaying, animSpeed, maxSteps]);
+
+  const downloadSVG = () => {
+    if (!grid.length) return;
+    const size = gridSize;
+    const cellSize = 70;
+    const padding = 80;
+    const width = size * cellSize + padding * 2;
+    const height = size * cellSize + padding * 2 + 70;
+
+    let svgContent = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">
+  <rect width="100%" height="100%" fill="#090d16" />
+  <!-- Outer Ornate Border -->
+  <rect x="15" y="15" width="${width - 30}" height="${height - 30}" fill="none" stroke="#d97706" stroke-width="2.5" rx="16" />
+  <rect x="22" y="22" width="${width - 44}" height="${height - 44}" fill="none" stroke="#d97706" stroke-width="1" stroke-dasharray="6,4" rx="12" />
+  <!-- Bismillah Header -->
+  <text x="${width / 2}" y="52" font-family="'Amiri', 'Traditional Arabic', serif" font-size="22" fill="#f59e0b" text-anchor="middle" font-weight="bold">بسم الله الرحمن الرحيم</text>
+  <text x="${width / 2}" y="74" font-family="sans-serif" font-size="12" fill="#9ca3af" text-anchor="middle">Khatim Wafq Ghazali (${size}x${size}) - Adad Jummal: ${targetValue}</text>
+  <!-- Grid Matrix -->
+  <g transform="translate(${padding}, ${padding + 25})">
+`;
+
+    grid.forEach((row, r) => {
+      row.forEach((val, c) => {
+        const x = c * cellSize;
+        const y = r * cellSize;
+        const houseNum = baseHousesGrid[r][c] + 1;
+        const isKasr = kasrInfo && houseNum === kasrInfo.kasrCellIndex && kasrInfo.rem > 0;
+
+        svgContent += `
+    <rect x="${x}" y="${y}" width="${cellSize}" height="${cellSize}" fill="${isKasr ? '#1e1b10' : '#111827'}" stroke="#d97706" stroke-width="1.5" />
+    <text x="${x + cellSize / 2}" y="${y + cellSize / 2 + 7}" font-family="sans-serif" font-size="20" font-weight="bold" fill="#ffffff" text-anchor="middle">${val}</text>
+    <text x="${x + cellSize - 6}" y="${y + cellSize - 6}" font-family="sans-serif" font-size="9" fill="#d97706" text-anchor="end">#${houseNum}</text>
+`;
+      });
+    });
+
+    svgContent += `  </g>
+  <!-- Footer -->
+  <text x="${width / 2}" y="${height - 22}" font-family="sans-serif" font-size="10" fill="#6b7280" text-anchor="middle">Sceau Théurgique - Asrar al-Hikmah</text>
+</svg>`;
+
+    const blob = new Blob([svgContent], { type: 'image/svg+xml;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `khatim-wafq-${size}x${size}-${targetValue}.svg`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const handleDownloadWafqImage = async () => {
     if (!wafqRef.current) return;
@@ -308,19 +384,21 @@ export const AwfaqAdvanced: React.FC = () => {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 safe-area-pt pb-24">
-      <div className="flex items-center gap-4 mb-8">
+    <div className="w-full max-w-7xl mx-auto p-3 sm:p-6 lg:p-8 safe-area-pt max-h-[85vh] overflow-hidden flex flex-col">
+      <div className="flex items-center gap-4 mb-4 shrink-0">
         <Link to="/tools" className="p-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
           <ArrowLeft className="text-gray-600 dark:text-gray-300" size={20} />
         </Link>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <Hexagon className="text-fuchsia-500" />
-            {dict.title}
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+            <Hexagon className="text-fuchsia-500 shrink-0" />
+            <span className="truncate">{dict.title}</span>
           </h1>
-          <p className="text-gray-500 dark:text-gray-400">{dict.desc}</p>
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">{dict.desc}</p>
         </div>
       </div>
+
+      <div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pr-0.5">
 
       <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 sm:p-8 border border-gray-100 dark:border-gray-700 shadow-sm mb-8">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -390,10 +468,10 @@ export const AwfaqAdvanced: React.FC = () => {
                 {dict.yourWafq(gridSize)}
               </h3>
 
-              <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-900 p-1.5 rounded-2xl">
+              <div className="flex items-center gap-1.5 bg-gray-100 dark:bg-gray-900 p-1.5 rounded-2xl overflow-x-auto no-scrollbar">
                 <button
                   onClick={() => setViewMode('values')}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
                     viewMode === 'values' ? 'bg-white dark:bg-gray-800 text-fuchsia-600 dark:text-fuchsia-400 shadow-sm' : 'text-gray-500 dark:text-gray-400'
                   }`}
                 >
@@ -401,14 +479,96 @@ export const AwfaqAdvanced: React.FC = () => {
                 </button>
                 <button
                   onClick={() => setViewMode('houses')}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
                     viewMode === 'houses' ? 'bg-white dark:bg-gray-800 text-fuchsia-600 dark:text-fuchsia-400 shadow-sm' : 'text-gray-500 dark:text-gray-400'
                   }`}
                 >
                   Ordre Sayr (Gidaje)
                 </button>
+                <button
+                  onClick={() => {
+                    setViewMode('animation');
+                    setAnimStep(1);
+                    setIsAnimPlaying(false);
+                  }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
+                    viewMode === 'animation' ? 'bg-gradient-to-r from-fuchsia-600 to-pink-600 text-white shadow-sm' : 'text-fuchsia-600 dark:text-fuchsia-400 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-950/30'
+                  }`}
+                >
+                  <Play size={12} />
+                  <span>Animation du Tracé</span>
+                </button>
               </div>
             </div>
+
+            {/* Animation Player Control Bar */}
+            {viewMode === 'animation' && (
+              <div className="w-full bg-fuchsia-50 dark:bg-fuchsia-950/40 border border-fuchsia-200 dark:border-fuchsia-900/50 rounded-2xl p-4 mb-6 space-y-3">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        setAnimStep(1);
+                        setIsAnimPlaying(false);
+                      }}
+                      className="p-2 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-50 transition-colors cursor-pointer"
+                      title="Réinitialiser le tracé"
+                    >
+                      <RotateCcw size={16} />
+                    </button>
+                    <button
+                      onClick={() => setAnimStep((prev) => Math.max(1, prev - 1))}
+                      disabled={animStep <= 1}
+                      className="p-2 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 disabled:opacity-40 transition-colors cursor-pointer"
+                      title="Étape précédente"
+                    >
+                      <SkipBack size={16} />
+                    </button>
+                    <button
+                      onClick={() => setIsAnimPlaying(!isAnimPlaying)}
+                      className="px-4 py-2 rounded-xl bg-fuchsia-600 hover:bg-fuchsia-700 text-white font-bold text-xs flex items-center gap-2 transition-transform active:scale-95 shadow-md cursor-pointer"
+                    >
+                      {isAnimPlaying ? <Pause size={16} /> : <Play size={16} />}
+                      <span>{isAnimPlaying ? "Pause" : animStep >= maxSteps ? "Rejouer" : "Lecture Tracé"}</span>
+                    </button>
+                    <button
+                      onClick={() => setAnimStep((prev) => Math.min(maxSteps, prev + 1))}
+                      disabled={animStep >= maxSteps}
+                      className="p-2 rounded-xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 disabled:opacity-40 transition-colors cursor-pointer"
+                      title="Étape suivante"
+                    >
+                      <SkipForward size={16} />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-4 text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="text-gray-600 dark:text-gray-400 font-semibold">Vitesse:</span>
+                      <select
+                        value={animSpeed}
+                        onChange={(e) => setAnimSpeed(Number(e.target.value))}
+                        className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2 py-1 font-bold text-gray-800 dark:text-gray-200"
+                      >
+                        <option value={1500}>Lente (1.5s)</option>
+                        <option value={800}>Normale (0.8s)</option>
+                        <option value={400}>Rapide (0.4s)</option>
+                      </select>
+                    </div>
+
+                    <span className="font-extrabold text-fuchsia-700 dark:text-fuchsia-300 bg-white dark:bg-gray-800 px-3 py-1 rounded-xl border border-fuchsia-200 dark:border-fuchsia-800">
+                      Étape {animStep} / {maxSteps}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="w-full h-1.5 bg-fuchsia-200 dark:bg-fuchsia-900/60 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-fuchsia-500 to-pink-500 transition-all duration-300"
+                    style={{ width: `${(animStep / maxSteps) * 100}%` }}
+                  />
+                </div>
+              </div>
+            )}
 
             <div ref={wafqRef} className="w-full overflow-x-auto pb-4 scrollbar-thin flex justify-start sm:justify-center p-2 bg-slate-900/10 dark:bg-slate-950/40 rounded-3xl">
               <div className="p-3 bg-gray-100 dark:bg-gray-900/80 rounded-3xl border border-gray-200 dark:border-gray-700/60 shadow-inner">
@@ -417,23 +577,46 @@ export const AwfaqAdvanced: React.FC = () => {
                     row.map((cell, j) => {
                       const houseNum = baseHousesGrid[i][j] + 1;
                       const isKasrCell = kasrInfo && houseNum === kasrInfo.kasrCellIndex;
-                      const displayVal = viewMode === 'values' ? cell : `M.${houseNum}`;
+                      
+                      let displayVal = viewMode === 'values' ? cell : `M.${houseNum}`;
+                      let isVisibleInAnim = true;
+                      let isCurrentAnimHighlight = false;
+
+                      if (viewMode === 'animation') {
+                        isVisibleInAnim = houseNum <= animStep;
+                        isCurrentAnimHighlight = houseNum === animStep;
+                        displayVal = isVisibleInAnim ? cell : `(${houseNum})`;
+                      }
 
                       return (
                         <div 
                           key={`${i}-${j}`}
-                          className={`${cellSizeClass} relative bg-white dark:bg-gray-800 border ${
-                            isKasrCell && kasrInfo && kasrInfo.rem > 0
+                          className={`${cellSizeClass} relative ${
+                            isCurrentAnimHighlight
+                              ? 'bg-fuchsia-600 text-white border-fuchsia-400 ring-4 ring-fuchsia-400/60 scale-105 z-10 shadow-lg'
+                              : isKasrCell && kasrInfo && kasrInfo.rem > 0
                               ? 'border-amber-500 ring-2 ring-amber-400/50 bg-amber-50/50 dark:bg-amber-950/30' 
-                              : 'border-gray-200 dark:border-gray-700'
-                          } flex flex-col items-center justify-center font-bold text-gray-900 dark:text-white hover:bg-fuchsia-50 dark:hover:bg-fuchsia-950/30 transition-all shadow-sm group`}
+                              : isVisibleInAnim || viewMode !== 'animation'
+                              ? 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
+                              : 'bg-gray-100 dark:bg-gray-900/40 border-gray-200/50 dark:border-gray-800 text-gray-400 dark:text-gray-600 opacity-60'
+                          } border flex flex-col items-center justify-center font-bold text-gray-900 dark:text-white transition-all shadow-sm group`}
                         >
-                          <span>{displayVal}</span>
+                          <span className={isCurrentAnimHighlight ? 'text-white text-xl sm:text-2xl font-extrabold animate-pulse' : ''}>
+                            {displayVal}
+                          </span>
+
                           {viewMode === 'values' && (
                             <span className="text-[9px] text-gray-400 dark:text-gray-500 absolute bottom-1 right-1 font-mono">
                               #{houseNum}
                             </span>
                           )}
+
+                          {viewMode === 'animation' && (
+                            <span className={`text-[9px] absolute bottom-1 right-1 font-mono ${isCurrentAnimHighlight ? 'text-fuchsia-100' : 'text-gray-400'}`}>
+                              #{houseNum}
+                            </span>
+                          )}
+
                           {isKasrCell && kasrInfo && kasrInfo.rem > 0 && (
                             <span className="absolute top-1 left-1 bg-amber-500 text-white text-[8px] font-bold px-1 rounded-full">
                               +Kasr ({kasrInfo.rem})
@@ -447,7 +630,7 @@ export const AwfaqAdvanced: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-3 mt-4">
+            <div className="flex flex-wrap items-center justify-center gap-3 mt-4">
               {!disableDuaCopy && (
                 <button
                   onClick={handleCopyGridText}
@@ -459,10 +642,17 @@ export const AwfaqAdvanced: React.FC = () => {
               )}
               <button
                 onClick={handleDownloadWafqImage}
-                className="px-4 py-2 bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-700 hover:to-purple-700 text-white text-xs font-bold rounded-xl flex items-center gap-2 transition-all shadow-md hover:shadow-lg cursor-pointer"
+                className="px-4 py-2 bg-gray-800 hover:bg-gray-900 text-white text-xs font-bold rounded-xl flex items-center gap-2 transition-all shadow-md cursor-pointer"
               >
                 <Download size={14} />
-                <span>Télécharger l'Image Sacrée (Watermarquée)</span>
+                <span>Image PNG</span>
+              </button>
+              <button
+                onClick={downloadSVG}
+                className="px-4 py-2 bg-gradient-to-r from-amber-600 to-fuchsia-600 hover:from-amber-700 hover:to-fuchsia-700 text-white text-xs font-bold rounded-xl flex items-center gap-2 transition-all shadow-md hover:shadow-lg cursor-pointer"
+              >
+                <FileCode size={14} />
+                <span>Export Vectoriel SVG (Khatim Imprimable)</span>
               </button>
             </div>
           </div>
@@ -546,6 +736,7 @@ export const AwfaqAdvanced: React.FC = () => {
           )}
         </motion.div>
       )}
+      </div>
     </div>
   );
 };

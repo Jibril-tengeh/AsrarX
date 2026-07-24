@@ -335,15 +335,19 @@ export const DailyDhikrTracker: React.FC = () => {
   };
 
   return (
-    <div className="max-w-3xl mx-auto p-4 sm:p-6 lg:p-8 safe-area-pt pb-24">
-      <div className="flex items-center gap-3 mb-8">
-        <div className="p-3 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 rounded-xl">
+    <div className="w-full max-w-4xl mx-auto p-3 sm:p-6 lg:p-8 safe-area-pt max-h-[85vh] overflow-hidden flex flex-col">
+      <div className="flex items-center gap-3 mb-4 shrink-0">
+        <div className="p-3 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 rounded-xl shrink-0">
           <Target size={24} />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Daily Dhikr Tracker</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+            {t('tools.dailyDhikr.title', 'Suivi de Dhikr Quotidien')}
+          </h1>
           <div className="flex flex-wrap items-center gap-2 mt-1">
-            <p className="text-gray-500 dark:text-gray-400 text-sm">Définissez et suivez vos objectifs quotidiens de Dhikr</p>
+            <p className="text-gray-500 dark:text-gray-400 text-xs sm:text-sm">
+              {t('tools.dailyDhikr.subtitle', 'Définissez et suivez vos objectifs quotidiens de Dhikr')}
+            </p>
             
             {/* Sync Status Badge */}
             {syncStatus === 'synced' && (
@@ -361,12 +365,14 @@ export const DailyDhikrTracker: React.FC = () => {
             {syncStatus === 'local' && (
               <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 px-2 py-0.5 rounded-full border border-gray-200 dark:border-gray-700">
                 <Cloud size={12} className="text-gray-400" />
-                {user ? t('sync.cached', 'Cache local') : t('sync.localOnly', 'Cache local uniquement (Connexion requise)')}
+                {user ? t('sync.cached', 'Cache local') : t('sync.localOnly', 'Cache local uniquement')}
               </span>
             )}
           </div>
         </div>
       </div>
+
+      <div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pr-0.5">
 
       <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 mb-8">
         <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Ajouter un objectif</h2>
@@ -756,6 +762,7 @@ export const DailyDhikrTracker: React.FC = () => {
             );
           })
         )}
+      </div>
       </div>
     </div>
   );

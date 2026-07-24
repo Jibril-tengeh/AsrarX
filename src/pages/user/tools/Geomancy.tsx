@@ -1,476 +1,1801 @@
 import React, { useState } from 'react';
-import { Compass, ArrowLeft, RefreshCw, Layers, Sparkles, BookOpen, Info, HelpCircle } from 'lucide-react';
+import { 
+  Compass, ArrowLeft, RefreshCw, Layers, Sparkles, BookOpen, Info, 
+  Globe, ShieldCheck, HeartHandshake, Flame, Wind, Droplets, Mountain, 
+  Key, Sliders, User, Calculator, CheckCircle, AlertTriangle, Search, Eye,
+  Download, GitMerge, MapPin, TrendingUp, Target
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { motion, AnimatePresence } from 'motion/react';
+import { downloadCanvasImage } from '../../../utils/downloadHelper';
 
-// Geomantic Figures data with translations
-const FIGURES_DATA: Record<string, Record<string, { name: string; latin: string; nature: string; meaning: string; arabic: string }>> = {
+// Abjad mapping for Name calculation mode
+const ABJAD_MAP: Record<string, number> = {
+  'ا': 1, 'أ': 1, 'إ': 1, 'آ': 1, 'ء': 1, 'ب': 2, 'ج': 3, 'د': 4, 'ه': 5, 'ـه': 5,
+  'و': 6, 'ز': 7, 'ح': 8, 'ط': 9, 'ي': 10, 'ى': 10, 'ك': 20, 'ل': 30, 'م': 40,
+  'ن': 50, 'س': 60, 'ع': 70, 'ف': 80, 'ص': 90, 'ق': 100, 'ر': 200, 'ش': 300,
+  'ت': 400, 'ث': 500, 'خ': 600, 'ذ': 700, 'ض': 800, 'ظ': 900, 'غ': 1000,
+  'a': 1, 'b': 2, 'c': 3, 'd': 4, 'e': 5, 'f': 80, 'g': 3, 'h': 8, 'i': 10,
+  'j': 3, 'k': 20, 'l': 30, 'm': 40, 'n': 50, 'o': 6, 'p': 2, 'q': 100, 'r': 200,
+  's': 60, 't': 400, 'u': 6, 'v': 6, 'w': 6, 'x': 60, 'y': 10, 'z': 7
+};
+
+export interface GeomancyFigureDetail {
+  code: string;
+  latin: string;
+  arabic: string;
+  african: string; // West African / Sikidy name
+  indian: string;  // Ramal Shastra name
+  element: 'fire' | 'air' | 'water' | 'earth';
+  elementName: { fr: string; en: string; ha: string };
+  planet: { fr: string; en: string; ha: string };
+  zodiac: { fr: string; en: string; ha: string };
+  nature: { fr: string; en: string; ha: string };
+  meaning: { fr: string; en: string; ha: string };
+  africanMeaning: { fr: string; en: string; ha: string };
+  africanSaraka: { fr: string; en: string; ha: string }; // Recommended Sacrifice / Sadaqah
+  indianGraha: string;
+  indianDosha: string;
+  recommendedDhikr: string;
+  bodyPart: { fr: string; en: string; ha: string };
+}
+
+// Complete 16 Geomantic Figures Data with 4 Traditions (Maghrebi, West African, Indian, European/Latin)
+export const FIGURES_DATABASE: Record<string, GeomancyFigureDetail> = {
   "1-1-1-1": {
-    fr: { name: "La Voie", latin: "Via", nature: "Neutre", meaning: "Indique le changement, le mouvement, le voyage et les transitions. Force neutre dépendant du contexte.", arabic: "الطريق" },
-    en: { name: "The Way", latin: "Via", nature: "Neutral", meaning: "Indicates change, movement, travel, and transitions. A neutral force depending on the context.", arabic: "الطريق" },
-    ha: { name: "Hanya", latin: "Via", nature: "Tsaka-tsaki", meaning: "Yana nuna canji, tafiya, da sauye-sauye. Karfi ne na tsaka-tsaki dangane da yanayi.", arabic: "الطريق" }
+    code: "1-1-1-1",
+    latin: "Via",
+    arabic: "الطريق (At-Tariq)",
+    african: "Yissourou / Alhassane",
+    indian: "Marga (मार्ग)",
+    element: "water",
+    elementName: { fr: "Eau", en: "Water", ha: "Ruwa" },
+    planet: { fr: "Lune (Régente)", en: "Moon (Ruler)", ha: "Wata" },
+    zodiac: { fr: "Cancer", en: "Cancer", ha: "Kansa" },
+    nature: { fr: "Neutre / Mobile", en: "Neutral / Mobile", ha: "Tsaka-tsaki / Mai motsi" },
+    meaning: { 
+      fr: "Changement, voyage, mouvement, fluidité et cheminement. Indique des transitions rapides et la nécessité d'un guide.", 
+      en: "Change, travel, movement, fluidity, and pathway. Indicates rapid transitions and the need for guidance.", 
+      ha: "Canji, tafiya, motsi, da bude hanya. Yana nuna sauye-sauye da bukatar jaoranci." 
+    },
+    africanMeaning: {
+      fr: "Symbole du grand voyageur et du chercheur. Présage de déblocage de route et de voyage imminent.",
+      en: "Symbol of the great traveler and seeker. Portends unblocking of paths and imminent journey.",
+      ha: "Alamar mai tafiya nesa da mai neman shawara. Yana nuna bude hanyar da aka kulle."
+    },
+    africanSaraka: {
+      fr: "Aumône de lait frais, kolas blanches ou eau pure aux voyageurs.",
+      en: "Charity of fresh milk, white kola nuts, or pure water to travelers.",
+      ha: "Sadakar madara mai sanyi, goro fari, ko ruwa mai tsarki ga masafira."
+    },
+    indianGraha: "Chandra (Moon)",
+    indianDosha: "Kapha",
+    recommendedDhikr: "Ya Hadi (يا هادي) - 100x",
+    bodyPart: { fr: "Estomac et fluides corporéaux", en: "Stomach and bodily fluids", ha: "Ciki da ruwan jiki" }
   },
   "2-2-2-2": {
-    fr: { name: "Le Peuple", latin: "Populus", nature: "Neutre", meaning: "Représente les foules, l'opinion publique et la stabilité passive. Multiplie l'influence des autres.", arabic: "الجماعة" },
-    en: { name: "The People", latin: "Populus", nature: "Neutral", meaning: "Represents crowds, public opinion, and passive stability. Multiplies the influence of others.", arabic: "الجماعة" },
-    ha: { name: "Jama'a", latin: "Populus", nature: "Tsaka-tsaki", meaning: "Yana wakiltar taron mutane, ra'ayin jama'a da dorewa. Yana ninka tasirin sauran rabe-rabe.", arabic: "الجماعة" }
+    code: "2-2-2-2",
+    latin: "Populus",
+    arabic: "الجماعة (Al-Jama'a)",
+    african: "Jama'a / Sori",
+    indian: "Samuha (समूह)",
+    element: "water",
+    elementName: { fr: "Eau", en: "Water", ha: "Ruwa" },
+    planet: { fr: "Lune (Fixe)", en: "Moon (Fixed)", ha: "Wata" },
+    zodiac: { fr: "Capricorne", en: "Capricorn", ha: "Kaprikon" },
+    nature: { fr: "Neutre / Passif", en: "Neutral / Passive", ha: "Tsaka-tsaki / Mara motsi" },
+    meaning: { 
+      fr: "Foules, assemblée, opinion publique et passivité. Multiplie la force des figures environnantes.", 
+      en: "Crowds, assembly, public opinion, and passivity. Multiplies the force of surrounding figures.", 
+      ha: "Taron mutane, ra'ayin jama'a da shuru. Yana ninka karfin sauran rabe-rabe." 
+    },
+    africanMeaning: {
+      fr: "Rassemblement familial ou communautaire. Force du nombre et consensus du village.",
+      en: "Family or community gathering. Strength in numbers and village consensus.",
+      ha: "Taron dangi ko na gari. Karfin taron mutane da hadin kai."
+    },
+    africanSaraka: {
+      fr: "Partage de plat collectif (riz ou couscous) aux enfants de la communauté.",
+      en: "Sharing a collective meal (rice or couscous) with village children.",
+      ha: "Sadakar abinci mai yawa (shinkafa ko tuwo) ga yaran al'umma."
+    },
+    indianGraha: "Ketu / Chandra",
+    indianDosha: "Kapha / Vata",
+    recommendedDhikr: "Ya Jami' (يا جامع) - 114x",
+    bodyPart: { fr: "Système lymphatique et yeux", en: "Lymphatic system and eyes", ha: "Hanyoyin jini da idanu" }
   },
   "1-2-1-2": {
-    fr: { name: "La Conjonction", latin: "Conjunctio", nature: "Bénéfique", meaning: "Symbole d'union, de contrats, de mariage et d'accords. Très faste pour les partenariats.", arabic: "الاجتماع" },
-    en: { name: "Conjunction", latin: "Conjunctio", nature: "Beneficent", meaning: "Symbol of union, contracts, marriage, and agreements. Highly auspicious for partnerships.", arabic: "الاجتماع" },
-    ha: { name: "Hadaka", latin: "Conjunctio", nature: "Mai albarka", meaning: "Alamar hadaka, yarjejeniya, aure, da daidaito. Yana da kyau sosai ga abokan tarayya.", arabic: "الاجتماع" }
+    code: "1-2-1-2",
+    latin: "Conjunctio",
+    arabic: "الاجتماع (Al-Ijtima')",
+    african: "Adama / Coumba",
+    indian: "Milana (मिलन)",
+    element: "air",
+    elementName: { fr: "Air", en: "Air", ha: "Iska" },
+    planet: { fr: "Mercure", en: "Mercury", ha: "Utarid" },
+    zodiac: { fr: "Vierge", en: "Virgo", ha: "Virgo" },
+    nature: { fr: "Bénéfique / Harmonieux", en: "Beneficent / Harmonious", ha: "Mai albarka / Daidaito" },
+    meaning: { 
+      fr: "Union, contrat, mariage, association et alliance heureuse. Excellente augure pour la négociation.", 
+      en: "Union, contract, marriage, partnership, and happy alliance. Great omen for negotiation.", 
+      ha: "Aure, yarjejeniya, hadaka, da abota mai kyau. Alama ce mai kyau ga kasuwanci." 
+    },
+    africanMeaning: {
+      fr: "Alliance ancestrale réconciliée, mariage béni et entente parfaite entre deux familles.",
+      en: "Reconciled ancestral alliance, blessed marriage, and perfect agreement between families.",
+      ha: "Daidaiton dangi, auren albarka, da kyakkyawar alaka tsakanin gidaje."
+    },
+    africanSaraka: {
+      fr: "Offrande de 2 noix de kola attachées ensemble ou friandises à un couple.",
+      en: "Offering of 2 kola nuts tied together or sweets to a married couple.",
+      ha: "Sadakar goro guda biyu a haɗe ko zakin alawa ga ma'aurata."
+    },
+    indianGraha: "Budha (Mercury)",
+    indianDosha: "Vata",
+    recommendedDhikr: "Ya Wadud (يا ودود) - 200x",
+    bodyPart: { fr: "Mains, bras et système nerveux", en: "Hands, arms, and nervous system", ha: "Hannaye, hannu da jijiyoyi" }
   },
   "2-1-2-1": {
-    fr: { name: "La Prison", latin: "Carcer", nature: "Maléfique", meaning: "Représente l'isolement, les retards, les restrictions et les secrets. Bon pour préserver.", arabic: "القبض الداخل" },
-    en: { name: "The Prison", latin: "Carcer", nature: "Malefic", meaning: "Represents isolation, delays, restrictions, and secrets. Good for preserving or keeping.", arabic: "القبض الداخل" },
-    ha: { name: "Gidan Yari", latin: "Carcer", nature: "Mara kyau", meaning: "Yana nuna kadaita, jinkiri, hani da asiri. Yana da kyau kawai don kiyayewa ko boyewa.", arabic: "القبض الداخل" }
+    code: "2-1-2-1",
+    latin: "Carcer",
+    arabic: "القبض الداخل (Al-Qabd ad-Dakhil)",
+    african: "Bandiou / Kounta",
+    indian: "Bandhana (बंधन)",
+    element: "earth",
+    elementName: { fr: "Terre", en: "Earth", ha: "Kasa" },
+    planet: { fr: "Saturne", en: "Saturn", ha: "Zuhal" },
+    zodiac: { fr: "Poissons", en: "Pisces", ha: "Kifi" },
+    nature: { fr: "Maléfique / Restreint", en: "Malefic / Restrictive", ha: "Mara kyau / Kullewa" },
+    meaning: { 
+      fr: "Isolement, prison, blocage, secret gardé, fermeture et retards. Utile uniquement pour la conservation.", 
+      en: "Isolation, prison, blockage, kept secret, closure, and delays. Useful only for preservation.", 
+      ha: "Kullewa, gidan yari, jinkiri, asirin da aka boye da tsarewa. Yana da amfani kawai don adana abu." 
+    },
+    africanMeaning: {
+      fr: "Attachement occulte, secret de famille enfermé ou blocage temporaire nécessitant libération.",
+      en: "Occult tie, locked family secret, or temporary blockage requiring spiritual release.",
+      ha: "Kullewa ta asiri, boyayyen sirri na gida ko jinkiri da ke bukatar addu'a."
+    },
+    africanSaraka: {
+      fr: "Don de cadenas ouvert, pain complet ou clé inutilisée à un indigent.",
+      en: "Donation of an open padlock, whole wheat bread, or unused key to a poor person.",
+      ha: "Sadakar kwadodo a bude, buredi ko mabuɗi ga matsi."
+    },
+    indianGraha: "Shani (Saturn)",
+    indianDosha: "Vata / Kapha",
+    recommendedDhikr: "Ya Fattah (يا فتاح) - 489x",
+    bodyPart: { fr: "Squelette, genoux et articulations", en: "Skeleton, knees, and joints", ha: "Kashi, gwiwoyi da gaba" }
   },
   "1-1-2-2": {
-    fr: { name: "La Grande Fortune", latin: "Fortuna Major", nature: "Très Bénéfique", meaning: "Succès éclatant, protection divine puissante, victoire stable et durable.", arabic: "النصرة الخارجة" },
-    en: { name: "Major Fortune", latin: "Fortuna Major", nature: "Highly Beneficent", meaning: "Brilliant success, powerful divine protection, stable and lasting victory.", arabic: "النصرة الخارجة" },
-    ha: { name: "Babban Arziki", latin: "Fortuna Major", nature: "Mai yawan gaske", meaning: "Babban nasara, kariya ta Allah mai karfi, nasara mai dorewa.", arabic: "النصرة الخارجة" }
+    code: "1-1-2-2",
+    latin: "Fortuna Major",
+    arabic: "النصرة الخارجة (An-Nusra al-Kharija)",
+    african: "Souleymane / N'Soloman",
+    indian: "Maha Labha (महा लाभ)",
+    element: "fire",
+    elementName: { fr: "Feu", en: "Fire", ha: "Wuta" },
+    planet: { fr: "Soleil", en: "Sun", ha: "Rana" },
+    zodiac: { fr: "Lion", en: "Leo", ha: "Zaki" },
+    nature: { fr: "Très Bénéfique", en: "Highly Beneficent", ha: "Mai albarka sosai" },
+    meaning: { 
+      fr: "Victoire majeure, succès éclatant, haute protection divine et réussite durable.", 
+      en: "Major victory, brilliant success, high divine protection, and lasting achievement.", 
+      ha: "Babban nasara, daukaka, kariya ta Ubangiji da wadata mai dorewa." 
+    },
+    africanMeaning: {
+      fr: "Le Sceptre du Roi (Soliman). Couronnement, noblesse, charisme invincible et triomphe.",
+      en: "The King's Scepter (Solomon). Coronation, nobility, invincible charisma, and triumph.",
+      ha: "Sanda ta Sarki (Annabi Sulaiman). Sarauta, daukaka, karfin magana da nasara."
+    },
+    africanSaraka: {
+      fr: "Aumône d'un vêtement blanc noble ou festin offert aux sages de la mosquée.",
+      en: "Charity of noble white clothing or feast offered to mosque elders.",
+      ha: "Sadakar riga fara mai kyau ko ciyar da malamai da dattawa."
+    },
+    indianGraha: "Surya (Sun)",
+    indianDosha: "Pitta",
+    recommendedDhikr: "Ya Malik (يا ملك) - 90x",
+    bodyPart: { fr: "Cœur, colonne vertébrale et vitalité", en: "Heart, spine, and vitality", ha: "Zuciya, bayan jiki da karfi" }
   },
   "2-2-1-1": {
-    fr: { name: "La Petite Fortune", latin: "Fortuna Minor", nature: "Bénéfique", meaning: "Succès rapide mais temporaire ou superficiel. Chance immédiate à saisir.", arabic: "النصرة الداخلة" },
-    en: { name: "Minor Fortune", latin: "Fortuna Minor", nature: "Beneficent", meaning: "Quick but temporary or superficial success. Immediate chance to be seized.", arabic: "النصرة الداخلة" },
-    ha: { name: "Kankanin Arziki", latin: "Fortuna Minor", nature: "Mai albarka", meaning: "Nasara mai sauri amma ta dan lokaci. Sa'a ce ta gaggawa da ya kamata a yi amfani da ita.", arabic: "النصرة الداخلة" }
+    code: "2-2-1-1",
+    latin: "Fortuna Minor",
+    arabic: "النصرة الداخلة (An-Nusra ad-Dakhila)",
+    african: "Alou / Aliou",
+    indian: "Alpa Labha (अल्प लाभ)",
+    element: "fire",
+    elementName: { fr: "Feu", en: "Fire", ha: "Wuta" },
+    planet: { fr: "Soleil", en: "Sun", ha: "Rana" },
+    zodiac: { fr: "Bélier", en: "Aries", ha: "Rago" },
+    nature: { fr: "Bénéfique Rapidement", en: "Quickly Beneficent", ha: "Mai albarka ta sauri" },
+    meaning: { 
+      fr: "Petit succès immédiat, secours rapide, chance soudaine mais parfois volatile.", 
+      en: "Immediate small success, rapid relief, sudden luck but sometimes volatile.", 
+      ha: "Kankanin nasara na gaggawa, taimako mai sauri, sa'a ta dan lokaci." 
+    },
+    africanMeaning: {
+      fr: "L'Épée du Guerrier (Ali). Courage impétueux, victoire rapide sur les obstacles immédiats.",
+      en: "The Warrior's Sword (Ali). Impetuous courage, swift victory over immediate obstacles.",
+      ha: "Takobi ta gwanin fada (Sayyidina Ali). Jajircewa da kakkabe matsaloli nan take."
+    },
+    africanSaraka: {
+      fr: "Don de viande rouge grillée ou d'ustensiles métalliques.",
+      en: "Donation of grilled red meat or metallic tools.",
+      ha: "Sadakar nama soyayye ko kayan karfe."
+    },
+    indianGraha: "Surya / Mangala",
+    indianDosha: "Pitta",
+    recommendedDhikr: "Ya Qawiyyu (يا قوي) - 116x",
+    bodyPart: { fr: "Tête, visage et yeux", en: "Head, face, and eyes", ha: "Kai, fuska da idanu" }
   },
   "1-2-2-1": {
-    fr: { name: "Le Gain", latin: "Acquisitio", nature: "Bénéfique", meaning: "Gain financier, prospérité, absorption positive, expansion et réussite matérielle.", arabic: "القبض الخارج" },
-    en: { name: "Gain", latin: "Acquisitio", nature: "Beneficent", meaning: "Financial gain, prosperity, positive absorption, expansion, and material success.", arabic: "القبض الخارج" },
-    ha: { name: "Samun Kudi", latin: "Acquisitio", nature: "Mai albarka", meaning: "Samun kudi, ci gaba, fadada arziki da nasarar abun duniya.", arabic: "القبض الخارج" }
+    code: "1-2-2-1",
+    latin: "Acquisitio",
+    arabic: "القبض الخارج (Al-Qabd al-Kharij)",
+    african: "Mangoussi / Moriba",
+    indian: "Labha (लाभ)",
+    element: "air",
+    elementName: { fr: "Air", en: "Air", ha: "Iska" },
+    planet: { fr: "Jupiter", en: "Jupiter", ha: "Mushtari" },
+    zodiac: { fr: "Sagittaire", en: "Sagittarius", ha: "Uqub" },
+    nature: { fr: "Très Bénéfique", en: "Highly Beneficent", ha: "Mai albarka sosai" },
+    meaning: { 
+      fr: "Abondance, prospérité matérielle, rentrée d'argent, profit et expansion réussie.", 
+      en: "Abundance, material prosperity, influx of money, profit, and successful expansion.", 
+      ha: "Arziki, karuwar kudi, ribar kasuwanci, fadada kasuwanci da samun bukata." 
+    },
+    africanMeaning: {
+      fr: "Le Grenier Rempli. Prospérité des récoltes, bénédiction financière et richesse matérielle.",
+      en: "The Filled Granary. Harvest prosperity, financial blessing, and material wealth.",
+      ha: "Rumbun abinci mai cika. Samun amfanin gona, albarkar kudi da dukiya."
+    },
+    africanSaraka: {
+      fr: "Don de céréales (millet, maïs, riz) ou sucreries en quantité généreuse.",
+      en: "Donation of grains (millet, corn, rice) or generous sweets.",
+      ha: "Sadakar hatsi (dawa, masara, shinkafa) ko zakin abinci mai yawa."
+    },
+    indianGraha: "Guru (Jupiter)",
+    indianDosha: "Kapha",
+    recommendedDhikr: "Ya Razzaq (يا رزاق) - 308x",
+    bodyPart: { fr: "Hanches, cuisses et foie", en: "Hips, thighs, and liver", ha: "Kwankwaso, cinyoyi da hanta" }
   },
   "2-1-1-2": {
-    fr: { name: "La Perte", latin: "Amissio", nature: "Maléfique", meaning: "Perte financière, désengagement, fuite d'énergie ou abandon. Utile pour bannir.", arabic: "القبض الداخل" },
-    en: { name: "Loss", latin: "Amissio", nature: "Malefic", meaning: "Financial loss, disengagement, energy leak, or surrender. Useful for banishing.", arabic: "القبض الداخل" },
-    ha: { name: "Rashi", latin: "Amissio", nature: "Mara kyau", meaning: "Asarar kudi, guduwar karfi, ko saduda. Yana da amfani kawai don korar abubuwan da ba a so.", arabic: "القبض الداخل" }
+    code: "2-1-1-2",
+    latin: "Amissio",
+    arabic: "الشكلة / العقلة (Ash-Shakl / Al-Uqla)",
+    african: "Raki / Lansana",
+    indian: "Hani (हानि)",
+    element: "earth",
+    elementName: { fr: "Terre", en: "Earth", ha: "Kasa" },
+    planet: { fr: "Vénus", en: "Venus", ha: "Zuhra" },
+    zodiac: { fr: "Taureau", en: "Taurus", ha: "Sa'a" },
+    nature: { fr: "Maléfique / Dépense", en: "Malefic / Loss", ha: "Mara kyau / Asara" },
+    meaning: { 
+      fr: "Perte financière, fuite de ressources, détachement ou abandon. Favorable pour éliminer les maux.", 
+      en: "Financial loss, leak of resources, detachment, or surrender. Favorable for purging harm.", 
+      ha: "Asarar kudi, fita kudi, barin abu. Yana da kyau kawai don rabuwa da matsala." 
+    },
+    africanMeaning: {
+      fr: "Poche percée. Dépenses imprévues ou abandon nécessaire pour éviter pire malédiction.",
+      en: "Pierced pocket. Unforeseen expenses or necessary surrender to avoid worse curse.",
+      ha: "Aljihu mai huda. Fitar kudi ba zato ba tsammani ko rabuwa da abu don samun lafiya."
+    },
+    africanSaraka: {
+      fr: "Jeter des pièces de monnaie anciennes dans l'eau courante ou donner de vieux vêtements.",
+      en: "Tossing old coins in running water or giving away old clothes.",
+      ha: "Jefa kudi a cikin kogi ko sadakar tsoffin tufafi."
+    },
+    indianGraha: "Shukra (Venus)",
+    indianDosha: "Kapha / Pitta",
+    recommendedDhikr: "Ya Hafiz (يا حفيظ) - 998x",
+    bodyPart: { fr: "Gorge, cou et reins", en: "Throat, neck, and kidneys", ha: "Makogwaro, wuya da koda" }
   },
   "1-1-1-2": {
-    fr: { name: "Le Blanc", latin: "Albus", nature: "Bénéfique", meaning: "Sagesse, pureté, paix, clarté d'esprit et honnêteté. Favorable au dialogue.", arabic: "البياض" },
-    en: { name: "The White", latin: "Albus", nature: "Beneficent", meaning: "Wisdom, purity, peace, clarity of mind, and honesty. Favorable for dialogue.", arabic: "البياض" },
-    ha: { name: "Fari", latin: "Albus", nature: "Mai albarka", meaning: "Hikima, tsarki, zaman lafiya, tsarkin zuciya da gaskiya. Yana da kyau ga tattaunawa.", arabic: "البياض" }
+    code: "1-1-1-2",
+    latin: "Albus",
+    arabic: "البياض (Al-Bayad)",
+    african: "Safi / Ibrahim",
+    indian: "Shweta (श्वेत)",
+    element: "water",
+    elementName: { fr: "Eau", en: "Water", ha: "Ruwa" },
+    planet: { fr: "Mercure", en: "Mercury", ha: "Utarid" },
+    zodiac: { fr: "Gémeaux", en: "Gemini", ha: "Jauza" },
+    nature: { fr: "Très Bénéfique", en: "Highly Beneficent", ha: "Mai albarka sosai" },
+    meaning: { 
+      fr: "Pureté, sagesse, paix, sérénité, vérité, sincérité et clarté d'esprit.", 
+      en: "Purity, wisdom, peace, serenity, truth, sincerity, and mental clarity.", 
+      ha: "Tsarki, hikima, zaman lafiya, gaskiya da tsarkin zuciya." 
+    },
+    africanMeaning: {
+      fr: "Le Pagne Blanc du Sage (Abraham). Bénédiction spirituelle, paix du cœur et sagesse suprême.",
+      en: "The Sage's White Garment (Abraham). Spiritual blessing, peace of heart, and supreme wisdom.",
+      ha: "Farar riga ta Annabi Ibrahim. Albarkar ruhaniya, zaman lafiya da gaskiya."
+    },
+    africanSaraka: {
+      fr: "Aumône de lait, farine blanche, sucre ou bougies blanches.",
+      en: "Charity of milk, white flour, sugar, or white candles.",
+      ha: "Sadakar madara, fula, sukari ko fitilar kyandir fari."
+    },
+    indianGraha: "Budha / Shukra",
+    indianDosha: "Vata / Kapha",
+    recommendedDhikr: "Ya Salam (يا سلام) - 131x",
+    bodyPart: { fr: "Poumons, épaules et esprit", en: "Lungs, shoulders, and mind", ha: "Huhu, kafadu da kwakwalwa" }
   },
   "2-1-1-1": {
-    fr: { name: "Le Rouge", latin: "Rubeus", nature: "Maléfique", meaning: "Colère, passion destructrice, violence, impulsion incontrôlée. Danger et hostilité.", arabic: "الحمرة" },
-    en: { name: "The Red", latin: "Rubeus", nature: "Malefic", meaning: "Anger, destructive passion, violence, uncontrolled impulse. Danger and hostility.", arabic: "الحمرة" },
-    ha: { name: "Ja", latin: "Rubeus", nature: "Mara kyau", meaning: "Fushi, hauka, tashin hankali, da saurin fushi. Akwai hadari da gaba.", arabic: "الحمرة" }
+    code: "2-1-1-1",
+    latin: "Rubeus",
+    arabic: "الحمرة (Al-Humra)",
+    african: "Tontagui / Oumar",
+    indian: "Rakta (रक्त)",
+    element: "fire",
+    elementName: { fr: "Feu", en: "Fire", ha: "Wuta" },
+    planet: { fr: "Mars", en: "Mars", ha: "Mirrikh" },
+    zodiac: { fr: "Scorpion", en: "Scorpio", ha: "Aqrab" },
+    nature: { fr: "Maléfique / Inflammable", en: "Malefic / Inflammable", ha: "Mara kyau / Fushi" },
+    meaning: { 
+      fr: "Colère, passion destructrice, conflit, sang versé, impulsion et danger immédiat.", 
+      en: "Anger, destructive passion, conflict, bloodshed, impulse, and immediate danger.", 
+      ha: "Fushi, hauka, tashin hankali, jini, da hadari na gaggawa." 
+    },
+    africanMeaning: {
+      fr: "Le Feu du Guerrier (Omar). Tempête, dispute violente, sang et passion aveugle.",
+      en: "The Warrior's Fire (Omar). Storm, violent dispute, blood, and blind passion.",
+      ha: "Wutar fada (Sayyidina Umar). Tashin hankali, fushi da hadarin jini."
+    },
+    africanSaraka: {
+      fr: "Immolation d'un coq rouge ou aumône de piment rouge et viande aux nécessiteux.",
+      en: "Sacrifice of a red rooster or charity of red pepper and meat to the needy.",
+      ha: "Sadakar zakara ja ko barkono ja da nama ga mabukata."
+    },
+    indianGraha: "Mangala (Mars)",
+    indianDosha: "Pitta",
+    recommendedDhikr: "Ya Jabbar (يا جبار) - 206x",
+    bodyPart: { fr: "Sang, tête et organes génitaux", en: "Blood, head, and reproductive organs", ha: "Jini, kai da al'aura" }
   },
   "1-2-1-1": {
-    fr: { name: "La Jeune Fille", latin: "Puella", nature: "Bénéfique", meaning: "Harmonie, plaisir, amitié, esthétique et douceur. Influence féminine agréable.", arabic: "العتبة الخارجة" },
-    en: { name: "The Girl", latin: "Puella", nature: "Beneficent", meaning: "Harmony, pleasure, friendship, aesthetics, and sweetness. Pleasant feminine influence.", arabic: "العتبة الخارجة" },
-    ha: { name: "Yarinya", latin: "Puella", nature: "Mai albarka", meaning: "Daidaito, nishadi, abota, kyau da sanyi. Tasiri ne mai dadi na mata.", arabic: "العتبة الخارجة" }
+    code: "1-2-1-1",
+    latin: "Puella",
+    arabic: "العتبة الخارجة (Al-Ataba al-Kharija)",
+    african: "Lassina / Younous",
+    indian: "Kanya (कन्या)",
+    element: "air",
+    elementName: { fr: "Air", en: "Air", ha: "Iska" },
+    planet: { fr: "Vénus", en: "Venus", ha: "Zuhra" },
+    zodiac: { fr: "Balance", en: "Libra", ha: "Mizan" },
+    nature: { fr: "Bénéfique / Doux", en: "Beneficent / Sweet", ha: "Mai albarka / Sanyi" },
+    meaning: { 
+      fr: "Douceur, beauté, plaisir, art, esthétique, séduction et harmonie féminine.", 
+      en: "Sweetness, beauty, pleasure, art, aesthetics, seduction, and feminine harmony.", 
+      ha: "Sanyi, kyau, nishadi, fasaha, da kawance mai kyau." 
+    },
+    africanMeaning: {
+      fr: "La Belle Jeune Fille. Séduction, élégance, musique et agréables nouvelles amoureuses.",
+      en: "The Beautiful Maiden. Seduction, elegance, music, and pleasant love news.",
+      ha: "Kyakkyawar budurwa. Soyayya, ado, nishadi da labari mai dadi."
+    },
+    africanSaraka: {
+      fr: "Don de parfums doux, miroirs, tissus colorés ou friandises aux jeunes femmes.",
+      en: "Gift of sweet perfumes, mirrors, colorful fabrics, or sweets to young women.",
+      ha: "Sadakar tirare mai kamshi, madubi, kyallen kaya ko alawa ga mata."
+    },
+    indianGraha: "Shukra (Venus)",
+    indianDosha: "Kapha",
+    recommendedDhikr: "Ya Jamil (يا جميل) - 166x",
+    bodyPart: { fr: "Peau, reins et système endocrinien", en: "Skin, kidneys, and endocrine system", ha: "Fatar jiki, koda da halitta" }
   },
   "1-1-2-1": {
-    fr: { name: "Le Garçon", latin: "Puer", nature: "Mixte", meaning: "Énergie active, combativité, rivalité, audace. Idéal pour la lutte, non pour la paix.", arabic: "العتبة الداخلة" },
-    en: { name: "The Boy", latin: "Puer", nature: "Mixed", meaning: "Active energy, combativeness, rivalry, boldness. Ideal for struggle, not for peace.", arabic: "العتبة الداخلة" },
-    ha: { name: "Yaro", latin: "Puer", nature: "Gami", meaning: "Karfi mai sauri, yaki, gaba, da jajircewa. Ya dace don fada, ba zaman lafiya ba.", arabic: "العتبة الداخلة" }
+    code: "1-1-2-1",
+    latin: "Puer",
+    arabic: "العتبة الداخلة (Al-Ataba ad-Dakhila)",
+    african: "Badra / Issa",
+    indian: "Putra (पुत्र)",
+    element: "fire",
+    elementName: { fr: "Feu", en: "Fire", ha: "Wuta" },
+    planet: { fr: "Mars", en: "Mars", ha: "Mirrikh" },
+    zodiac: { fr: "Bélier", en: "Aries", ha: "Rago" },
+    nature: { fr: "Mixte / Combatif", en: "Mixed / Combative", ha: "Gami / Mai yaki" },
+    meaning: { 
+      fr: "Énergie combative, impétuosité, audace, rivalité et virilité. Excellent pour la lutte.", 
+      en: "Combative energy, impetuosity, boldness, rivalry, and virility. Excellent for fighting.", 
+      ha: "Karfin yaki, jajircewa, gaba da fada. Yana da kyau don neman haqqi." 
+    },
+    africanMeaning: {
+      fr: "Le Jeune Guerrier Ardent (Jésus/Issa). Ardeur, impétuosité et audace d'action.",
+      en: "The Ardent Young Warrior (Jesus/Issa). Ardor, impetuosity, and boldness of action.",
+      ha: "Saurayi mai zafin nama (Annabi Isa). Karfin gwiwa da zafin nama."
+    },
+    africanSaraka: {
+      fr: "Aumône d'œufs crus, couteau ou outils de travail à un jeune travailleur.",
+      en: "Charity of raw eggs, knife, or work tools to a young worker.",
+      ha: "Sadakar qwai danye, wuka ko kayan aiki ga saurayi mai kwazo."
+    },
+    indianGraha: "Mangala (Mars)",
+    indianDosha: "Pitta",
+    recommendedDhikr: "Ya Aziz (يا عزيز) - 94x",
+    bodyPart: { fr: "Muscles, tête et énergie physique", en: "Muscles, head, and physical energy", ha: "Tsoka, kai da karfin jiki" }
   },
   "1-2-2-2": {
-    fr: { name: "La Tête du Dragon", latin: "Caput Draconis", nature: "Bénéfique", meaning: "Nouveau départ, entrée de chance, opportunité d'élévation spirituelle ou matérielle.", arabic: "النقي الخد" },
-    en: { name: "The Dragon's Head", latin: "Caput Draconis", nature: "Beneficent", meaning: "New start, entry of luck, opportunity for spiritual or material elevation.", arabic: "النقي الخد" },
-    ha: { name: "Kan Maciji", latin: "Caput Draconis", nature: "Mai albarka", meaning: "Sabon farawa, shigar sa'a, damar daukaka ta ruhaniya ko ta duniya.", arabic: "النqui الخد" }
+    code: "1-2-2-2",
+    latin: "Caput Draconis",
+    arabic: "النقي الخد (An-Naqi al-Khadd)",
+    african: "N'Garlan / Idris",
+    indian: "Rahu Mukha (राहु मुख)",
+    element: "earth",
+    elementName: { fr: "Terre", en: "Earth", ha: "Kasa" },
+    planet: { fr: "Tête du Dragon (Rahu)", en: "Dragon's Head (Rahu)", ha: "Kan Maciji" },
+    zodiac: { fr: "Taureau", en: "Taurus", ha: "Sa'a" },
+    nature: { fr: "Très Bénéfique / Élévation", en: "Highly Beneficent / Elevation", ha: "Mai albarka / Daukaka" },
+    meaning: { 
+      fr: "Porte d'entrée favorable, nouveau départ, élévation spirituelle et matérielle.", 
+      en: "Favorable entry threshold, new beginning, spiritual and material elevation.", 
+      ha: "Kofar shiga mai albarka, sabon farawa, daukaka ta ruhaniya da abun duniya." 
+    },
+    africanMeaning: {
+      fr: "Le Seuil du Prophète Idriss. Élévation intellectuelle, secrets de la terre et sagesse.",
+      en: "The Threshold of Prophet Enoch/Idris. Intellectual elevation, earth secrets, and wisdom.",
+      ha: "Kofar Annabi Idriss. Ilimi mai zurfi, asirin kasa da daukaka."
+    },
+    africanSaraka: {
+      fr: "Offrande de dattes fraîches, miel pur ou encens précieux.",
+      en: "Offering of fresh dates, pure honey, or precious incense.",
+      ha: "Sadakar dabino danye, zuma mai tsarki ko turaren wuta mai tsada."
+    },
+    indianGraha: "Rahu",
+    indianDosha: "Vata",
+    recommendedDhikr: "Ya Ali (يا علي) - 110x",
+    bodyPart: { fr: "Tête, cerveau et intuition", en: "Head, brain, and intuition", ha: "Kai, kwakwalwa da ganin asiri" }
   },
   "2-2-2-1": {
-    fr: { name: "La Queue du Dragon", latin: "Cauda Draconis", nature: "Maléfique", meaning: "Sortie difficile, fin de cycle douloureuse, illusions ou trahison. À abandonner.", arabic: "الانكيس" },
-    en: { name: "The Dragon's Tail", latin: "Cauda Draconis", nature: "Malefic", meaning: "Difficult exit, painful end of cycle, illusions, or betrayal. Time to let go.", arabic: "الانكيس" },
-    ha: { name: "Wutsiyar Maciji", latin: "Cauda Draconis", nature: "Mara kyau", meaning: "Fita mai wuya, karshen lamari mai zafi, yaudara ko cin amana. Lokaci ne na bari.", arabic: "الانكيس" }
+    code: "2-2-2-1",
+    latin: "Cauda Draconis",
+    arabic: "الانكيس (Al-Inkis)",
+    african: "Garlan / N'Garlan Inverse",
+    indian: "Ketu Puchha (केतु पुच्छ)",
+    element: "fire",
+    elementName: { fr: "Feu", en: "Fire", ha: "Wuta" },
+    planet: { fr: "Queue du Dragon (Ketu)", en: "Dragon's Tail (Ketu)", ha: "Wutsiyar Maciji" },
+    zodiac: { fr: "Scorpion", en: "Scorpio", ha: "Aqrab" },
+    nature: { fr: "Maléfique / Sortie", en: "Malefic / Exit", ha: "Mara kyau / Fita" },
+    meaning: { 
+      fr: "Sortie difficile, fin de cycle douloureuse, illusions, déception et trahison.", 
+      en: "Difficult exit, painful end of cycle, illusions, disappointment, and betrayal.", 
+      ha: "Fita mai wuya, karshen lamari mai zafi, yaudara, bacin rai da cin amana." 
+    },
+    africanMeaning: {
+      fr: "La Queue du Maciji. Trahison sournoise, illusion magique ou fin inévitable d'un bail.",
+      en: "The Serpent's Tail. Devious betrayal, magical illusion, or inevitable end of a deal.",
+      ha: "Wutsiyar Maciji. Cin amana ta boye, yaudarar asiri ko karshen alaka."
+    },
+    africanSaraka: {
+      fr: "Don de vieux Balai, cendres chaudes ou sel gros grain hors de la maison.",
+      en: "Donation of an old broom, warm ashes, or coarse salt outside the house.",
+      ha: "Sadakar tsohon tsani, toka ko gishiri mai tsatsa a wajen gida."
+    },
+    indianGraha: "Ketu",
+    indianDosha: "Pitta / Vata",
+    recommendedDhikr: "Ya Mani' (يا مانع) - 161x",
+    bodyPart: { fr: "Pieds, gros orteil et élimination", en: "Feet, big toe, and elimination system", ha: "Kafafu, yatsun kafa da najasa" }
   },
   "2-1-2-2": {
-    fr: { name: "La Joie", latin: "Laetitia", nature: "Très Bénéfique", meaning: "Grande joie, bonheur, bonne santé, célébration et élévation spirituelle.", arabic: "الاحيان" },
-    en: { name: "Joy", latin: "Laetitia", nature: "Highly Beneficent", meaning: "Great joy, happiness, good health, celebration, and spiritual elevation.", arabic: "الاحيان" },
-    ha: { name: "Farinciki", latin: "Laetitia", nature: "Mai yawan gaske", meaning: "Babban farinciki, jin dadi, lafiyar jiki, biki da daukaka ta ruhaniya.", arabic: "الاحيان" }
+    code: "2-1-2-2",
+    latin: "Laetitia",
+    arabic: "الأحيان (Al-Ahyan)",
+    african: "Mahdiou / Adam",
+    indian: "Ananda (आनंद)",
+    element: "air",
+    elementName: { fr: "Air", en: "Air", ha: "Iska" },
+    planet: { fr: "Jupiter", en: "Jupiter", ha: "Mushtari" },
+    zodiac: { fr: "Poissons", en: "Pisces", ha: "Kifi" },
+    nature: { fr: "Très Bénéfique", en: "Highly Beneficent", ha: "Mai albarka sosai" },
+    meaning: { 
+      fr: "Immense joie, félicité, santé parfaite, célébration, bonne nouvelle et élévation.", 
+      en: "Immense joy, bliss, perfect health, celebration, good news, and elevation.", 
+      ha: "Babban farinciki, jin dadi, lafiya mai kyau, biki da kyakkyawaccen labari." 
+    },
+    africanMeaning: {
+      fr: "La Joie d'Adam au Paradis. Délivrance de toute peine, fête au village et naissance bénie.",
+      en: "The Joy of Adam in Paradise. Deliverance from all grief, village feast, and blessed birth.",
+      ha: "Farincikin Annabi Adam a Aljanna. Samun mafita daga damuwa da bikin gari."
+    },
+    africanSaraka: {
+      fr: "Aumône de jus sucré, miel, kolas roses ou dons aux orphelins.",
+      en: "Charity of sweet juice, honey, pink kola nuts, or gifts to orphans.",
+      ha: "Sadakar abin sha mai zaki, zuma, goro mai ruwan hoda ko taimakon marayu."
+    },
+    indianGraha: "Guru (Jupiter)",
+    indianDosha: "Kapha",
+    recommendedDhikr: "Ya Basit (يا باسط) - 72x",
+    bodyPart: { fr: "Visage, sourire et cœur", en: "Face, smile, and heart", ha: "Fuska, murmushi da zuciya" }
   },
   "2-2-1-2": {
-    fr: { name: "La Tristesse", latin: "Tristitia", nature: "Maléfique", meaning: "Tristesse, chagrin, fardeau matériel, solitude. Lié aux choses souterraines.", arabic: "الفيض الخارج" },
-    en: { name: "Sorrow", latin: "Tristitia", nature: "Malefic", meaning: "Sorrow, grief, material burden, solitude. Linked to heavy or underground matters.", arabic: "الفيض الخارج" },
-    ha: { name: "Bakinciki", latin: "Tristitia", nature: "Mara kyau", meaning: "Bakinciki, bacin rai, nauyi na duniya, da kadaita. Yana da alaka da abubuwa masu nauyi.", arabic: "الفيض الخارج" }
+    code: "2-2-1-2",
+    latin: "Tristitia",
+    arabic: "النصرة / الفيض الخارج (Al-Fayd al-Kharij)",
+    african: "Lomara / Ayyoub",
+    indian: "Dukkha (दुःख)",
+    element: "earth",
+    elementName: { fr: "Terre", en: "Earth", ha: "Kasa" },
+    planet: { fr: "Saturne", en: "Saturn", ha: "Zuhal" },
+    zodiac: { fr: "Scorpion", en: "Scorpio", ha: "Aqrab" },
+    nature: { fr: "Maléfique / Lourd", en: "Malefic / Heavy", ha: "Mara kyau / Nauyi" },
+    meaning: { 
+      fr: "Chagrin, tristesse profonde, fardeau matériel, solitude et obstacles souterrains.", 
+      en: "Sorrow, deep grief, material burden, solitude, and underground obstacles.", 
+      ha: "Bakinciki, bacin rai, nauyin al'amuran duniya, kadaita da cikas." 
+    },
+    africanMeaning: {
+      fr: "L'Épreuve de Job (Ayyoub). Patience dans la douleur, lourd fardeau et mélancolie.",
+      en: "The Trial of Job (Ayyoub). Patience through pain, heavy burden, and melancholy.",
+      ha: "Jarrabawar Annabi Ayuba. Hakuri a lokacin tsanani da nauyin zuciya."
+    },
+    africanSaraka: {
+      fr: "Aumône de terre cuite, charbon froid, haricots noirs ou graines d'en haut.",
+      en: "Charity of baked clay, cold charcoal, black beans, or subterranean seeds.",
+      ha: "Sadakar tukunya ta kasa, dokar gawayi, ko wake baki ga matsuwa."
+    },
+    indianGraha: "Shani (Saturn)",
+    indianDosha: "Vata",
+    recommendedDhikr: "Ya Sabur (يا صبور) - 298x",
+    bodyPart: { fr: "Dos, lombaires et os", en: "Back, spine, and bones", ha: "Baya, kugu da kashi" }
   }
 };
 
-// UI Translations
-const GEOMANCY_TRANSLATIONS: Record<string, any> = {
+// UI Translations for French, English, Hausa
+const GEOMANCY_I18N: Record<string, any> = {
   fr: {
     back: "Retour aux outils",
-    title: "Géomancie (Khatt ar-Raml)",
-    desc: "Générez et interprétez les figures géomantiques pour consulter le destin.",
-    generating: "Consultation du sable...",
-    generate: "Générer le thème",
-    synthesis: "🔮 Synthèse de la Consultation",
+    title: "Géomancie Avancée & Multi-Traditions (Khatt ar-Raml)",
+    desc: "Analyse géomantique holistique : Traditions Arabo-Maghrébine, Ouest-Africaine (Sikidy), Indienne (Ramal Shastra) & Latine.",
+    tabTheme: "📊 Thème des 16 Maisons",
+    tabTraditions: "🌍 Traditions Comparées",
+    tabElements: "⚖️ Éléments & Astrologie",
+    tabSecret: "🔑 Voie du Secret & Remèdes",
+    tabDictionary: "📖 Encyclopédie (16 Figures)",
+    
+    // Modes
+    modeAuto: "Tirage Automatique (Sable)",
+    modeManual: "Saisie Manuelle (Mères)",
+    modeAbjad: "Calcul Numérologique (Nom)",
+    generating: "Consultation du sable en cours...",
+    generate: "Générer le Thème",
+    manualPrompt: "Sélectionnez les 4 Mères (M1, M2, M3, M4) :",
+    namePrompt: "Nom du Consultant / Questionneur :",
+    motherNamePrompt: "Nom de la Mère :",
+    calculateAbjad: "Calculer & Générer les Mères",
+
+    // Labels
+    clickHouse: "Cliquez sur une maison pour explorer son analyse complète",
     judge: "Le Juge (Maison 15)",
     supreme: "Le Suprême (Maison 16)",
-    judgeDesc: "Le Juge représente la réponse finale à votre question.",
-    supremeDesc: "Le Suprême montre l'issue à long terme de cette situation.",
-    details: "Analyse Détaillée des 16 Maisons",
-    clickHouse: "Cliquez sur une maison pour voir son interprétation",
+    judgeDesc: "Le Verdict direct à votre question (M15).",
+    supremeDesc: "L'Avenir ultime à long terme (M16).",
     natureLabel: "Nature",
     meaningLabel: "Signification",
-    symbolLabel: "Aperçu de la Figure",
     houseLabel: "Maison",
+    elementalBalance: "Bilan des Éléments du Thème",
+    fireCount: "Feu (Nar / Action)",
+    airCount: "Air (Hawa / Pensée)",
+    waterCount: "Eau (Ma / Émotion)",
+    earthCount: "Terre (Turab / Matière)",
+    dominantElement: "Élément Dominant",
+    elementAdvice: "Conseil Élélementaire",
+    
+    secretPathTitle: "Tariq al-Nogta (La Voie du Secret)",
+    secretPathDesc: "Retraçage de la lignée du point supérieur (Feu) du Juge jusqu'aux Mères pour révéler la cause cachée de la situation.",
+    themeValidity: "Vérification du Mizan (Valide)",
+    themeInvalidity: "Attention : Le Mizan est impair ! Thème asymétrique.",
+    recommendedSaraka: "Aumône & Sacrifices Recommandés (Tradition Africaine / Sikidy)",
+    recommendedDhikr: "Dhikr & Noms Divins Protecteurs",
+
+    searchPlaceholder: "Rechercher une figure (nom latin, arabe, africain...)",
+    
     houseNames: [
-      "La Vie (Maison 1 : Le Consultant, vitalité)",
-      "L'Argent (Maison 2 : Finances, acquisitions)",
-      "Les Frères (Maison 3 : Entourage proche, communication)",
-      "Le Foyer (Maison 4 : Patrimoine, foyer, fin)",
-      "Les Enfants (Maison 5 : Amours, plaisirs, création)",
-      "La Maladie (Maison 6 : Santé, travail, servitudes)",
-      "Le Mariage (Maison 7 : Unions, contrats, conjoints)",
-      "La Mort (Maison 8 : Crises, transformations, héritages)",
-      "Les Voyages (Maison 9 : Spiritualité, philosophie, lointain)",
-      "Le Pouvoir (Maison 10 : Réussite, carrière, honneur)",
-      "L'Espoir (Maison 11 : Amis, projets, soutiens)",
-      "Les Épreuves (Maison 12 : Obstacles secrets, solitude)",
-      "Témoin Droit (Maison 13 : Le Passé, la situation actuelle)",
-      "Témoin Gauche (Maison 14 : Le Futur proche, opportunités)",
-      "Le Juge (Maison 15 : Le Verdict de la question)",
-      "Le Suprême (Maison 16 : L'Issue finale à long terme)"
+      "M1 : La Vie & Le Consultant",
+      "M2 : L'Argent & Finances",
+      "M3 : Les Frères & Proches",
+      "M4 : Le Foyer & Patrimoine",
+      "M5 : Les Enfants & Amours",
+      "M6 : La Maladie & Servitudes",
+      "M7 : Le Mariage & Contrats",
+      "M8 : La Mort & Crises",
+      "M9 : Les Voyages & Spiritualité",
+      "M10 : Le Pouvoir & Réussite",
+      "M11 : L'Espoir & Amis",
+      "M12 : Les Épreuves & Obstacles",
+      "M13 : Témoin Droit (Le Passé)",
+      "M14 : Témoin Gauche (Le Futur)",
+      "M15 : Le Juge (Le Verdict)",
+      "M16 : Le Suprême (L'Issue Finale)"
     ]
   },
   en: {
     back: "Back to tools",
-    title: "Geomancy (Khatt ar-Raml)",
-    desc: "Generate and interpret geomantic figures to consult destiny.",
+    title: "Advanced Multi-Tradition Geomancy (Khatt ar-Raml)",
+    desc: "Holistic Geomantic System: Arab-Maghrebi, West African (Sikidy), Indian (Ramal Shastra) & Latin Traditions.",
+    tabTheme: "📊 16 Houses Chart",
+    tabTraditions: "🌍 Compared Traditions",
+    tabElements: "⚖️ Elements & Astrology",
+    tabSecret: "🔑 Secret Path & Remedies",
+    tabDictionary: "📖 Encyclopedia (16 Figures)",
+    
+    // Modes
+    modeAuto: "Auto Casting (Sand)",
+    modeManual: "Manual Entry (Mothers)",
+    modeAbjad: "Numerology Calculation (Name)",
     generating: "Consulting the sand...",
-    generate: "Generate theme",
-    synthesis: "🔮 Consultation Synthesis",
+    generate: "Generate Chart",
+    manualPrompt: "Select the 4 Mothers (M1, M2, M3, M4):",
+    namePrompt: "Consultant / Questioner Name:",
+    motherNamePrompt: "Mother's Name:",
+    calculateAbjad: "Calculate & Generate Mothers",
+
+    // Labels
+    clickHouse: "Click on any house to inspect full tradition details",
     judge: "The Judge (House 15)",
     supreme: "The Supreme (House 16)",
-    judgeDesc: "The Judge represents the final answer to your question.",
-    supremeDesc: "The Supreme shows the long-term outcome of this situation.",
-    details: "Detailed Analysis of the 16 Houses",
-    clickHouse: "Click on a house to see its interpretation",
+    judgeDesc: "Direct verdict to your question (H15).",
+    supremeDesc: "Ultimate long-term outcome (H16).",
     natureLabel: "Nature",
     meaningLabel: "Meaning",
-    symbolLabel: "Figure Details",
     houseLabel: "House",
+    elementalBalance: "Chart Elemental Balance",
+    fireCount: "Fire (Action / Energy)",
+    airCount: "Air (Thought / Mind)",
+    waterCount: "Water (Emotion / Travel)",
+    earthCount: "Earth (Matter / Stability)",
+    dominantElement: "Dominant Element",
+    elementAdvice: "Elemental Advice",
+
+    secretPathTitle: "Tariq al-Nogta (The Path of the Secret)",
+    secretPathDesc: "Tracing the top line (Fire) of the Judge back to the Mother houses to reveal the hidden root cause.",
+    themeValidity: "Mizan Balance Check (Valid)",
+    themeInvalidity: "Warning: Mizan is odd! Asymmetrical chart.",
+    recommendedSaraka: "Recommended Charity & Sacrifices (African Sikidy Tradition)",
+    recommendedDhikr: "Protective Dhikr & Divine Names",
+
+    searchPlaceholder: "Search figure (Latin, Arabic, African name...)",
+
     houseNames: [
-      "Life (House 1: The Consultant, vitality)",
-      "Money (House 2: Finances, acquisitions)",
-      "Siblings (House 3: Close entourage, short trips)",
-      "Home (House 4: Heritage, household, end of things)",
-      "Children (House 5: Love, pleasures, creation)",
-      "Sickness (House 6: Health, work, daily life)",
-      "Marriage (House 7: Unions, contracts, partners)",
-      "Death (House 8: Crises, transformations, heritage)",
-      "Journeys (House 9: Spirituality, higher study, distance)",
-      "Power (House 10: Success, career, honor)",
-      "Hope (House 11: Friends, projects, support)",
-      "Trials (House 12: Secret obstacles, solitude)",
-      "Right Witness (House 13: The Past, current situation)",
-      "Left Witness (House 14: Near Future, opportunities)",
-      "The Judge (House 15: The Verdict of the question)",
-      "The Supreme (House 16: The Long-term final outcome)"
+      "H1: Life & The Consultant",
+      "H2: Money & Wealth",
+      "H3: Siblings & Relatives",
+      "H4: Home & Ancestry",
+      "H5: Children & Love",
+      "H6: Sickness & Work",
+      "H7: Marriage & Contracts",
+      "H8: Death & Crises",
+      "H9: Journeys & Faith",
+      "H10: Power & Success",
+      "H11: Hope & Friends",
+      "H12: Trials & Secrets",
+      "H13: Right Witness (Past)",
+      "H14: Left Witness (Future)",
+      "H15: The Judge (Verdict)",
+      "H16: The Supreme (Final Outcome)"
     ]
   },
   ha: {
     back: "Koma ga kayan aiki",
-    title: "Kaddara ta Kasa (Khatt ar-Raml)",
-    desc: "Samar da kuma fassara alamomin kasa don duba kaddara.",
-    generating: "Duban kasa ana nan ana yi...",
+    title: "Kaddara ta Kasa ta Mabiya Daban-daban (Khatt ar-Raml)",
+    desc: "Binciken Kasa mai Zurfi: Al'adun Larabawa, Afirka (Sikidy), Indiya (Ramal Shastra) da Turawa.",
+    tabTheme: "📊 Gidaje 16 na Kasa",
+    tabTraditions: "🌍 Kwatanta Al'adu",
+    tabElements: "⚖️ Abubuwa & Taurari",
+    tabSecret: "🔑 Hanyar Asiri & Magani",
+    tabDictionary: "📖 Kamus na Alamomi 16",
+    
+    // Modes
+    modeAuto: "Duban Kasa ta Atomatik",
+    modeManual: "Shigar da Uwaye 4 da Kanka",
+    modeAbjad: "Lissafin Suna da Abjad",
+    generating: "Ana duban kasa...",
     generate: "Hada rabe-raben kasa",
-    synthesis: "🔮 Hadakar Duban Kasa",
+    manualPrompt: "Zabi uwayen kasa guda 4 (M1, M2, M3, M4):",
+    namePrompt: "Sunan Mai Tambaya:",
+    motherNamePrompt: "Sunan Mahaifiya:",
+    calculateAbjad: "Lissafa & Samarda Uwaye",
+
+    // Labels
+    clickHouse: "Danna kan kowane gida don ganin bayanan al'ada gaba daya",
     judge: "Alkali (Gida na 15)",
-    supreme: "Mafi daukaka (Gida na 16)",
-    judgeDesc: "Alkali yana nuna amsar karshe ga tambayarka.",
-    supremeDesc: "Mafi daukaka yana nuna yadda karshen lamarin zai kasance a nan gaba.",
-    details: "Fassarar Gidaje 16 Daki-daki",
-    clickHouse: "Danna kan gida don ganin fassararsa",
+    supreme: "Mafi Daukaka (Gida na 16)",
+    judgeDesc: "Amsar karshe ga tambayarka (G15).",
+    supremeDesc: "Karshen lamari na dogon lokaci (G16).",
     natureLabel: "Dabi'a",
     meaningLabel: "Fassara",
-    symbolLabel: "Bayanan Alama",
     houseLabel: "Gida",
+    elementalBalance: "Lissafin Abubuwan Hudu a Kasa",
+    fireCount: "Wuta (Niyya da Karfi)",
+    airCount: "Iska (Tunani da Magana)",
+    waterCount: "Ruwa (Juyayi da Tafiya)",
+    earthCount: "Kasa (Arziki da Dorewa)",
+    dominantElement: "Abin da ya fi Yawa",
+    elementAdvice: "Shawarar Abubuwan Kasa",
+
+    secretPathTitle: "Tariq al-Nogta (Hanyar Boyayyen Asiri)",
+    secretPathDesc: "Binciken samo asalin matsalar ta hanyar bin layin wuta na Alkali zuwa gidan Uwaye.",
+    themeValidity: "Tabbatar da Mizan (Yana da Kyau)",
+    themeInvalidity: "An samu rashin daidaito a lissafin Mizan.",
+    recommendedSaraka: "Sadakar da Aka Shawarta (Al'adar Afirka / Sikidy)",
+    recommendedDhikr: "Zikiri da Sunaye Masu Albarka",
+
+    searchPlaceholder: "Binciki alamar kasa (da Latin, Larabci ko Sunan Afirka)...",
+
     houseNames: [
-      "Rayuwa (Gida na 1: Mai duba, jiki da lafiya)",
-      "Kudi (Gida na 2: Arziki, kudi da sayayya)",
-      "Yan uwa (Gida na 3: Yan uwa na kusa, tafiya)",
-      "Gida (Gida na 4: Dukiya, gida da karshen lamari)",
-      "Yara (Gida na 5: Soyayya, nishadi da haihuwa)",
-      "Rashin lafiya (Gida na 6: Lafiya da aiki)",
-      "Aure (Gida na 7: Aure, yarjejeniya da abokan tarayya)",
-      "Mutuwa (Gida na 8: Wahala, sauye-sauye, gado)",
-      "Tafiya (Gida na 9: Ibada, ilimi, tafiya mai nisa)",
-      "Mulki (Gida na 10: Nasara, aiki, daukaka)",
-      "Fata (Gida na 11: Abokan arziki, tsare-tsare)",
-      "Jarrabawa (Gida na 12: Abokan gaba na boye, kadaita)",
-      "Shaidar Dama (Gida na 13: Abubuwan da suka gabata)",
-      "Shaidar Hagu (Gida na 14: Abubuwan ke tafe nan kusa)",
-      "Alkali (Gida na 15: Hukuncin karshe)",
-      "Mafi daukaka (Gida na 16: Karshen lamari na dogon lokaci)"
+      "G1: Rayuwa da Mai Duba",
+      "G2: Kudi da Dukiya",
+      "G3: Yan Uwa na Kusa",
+      "G4: Gida da Karshen Lamari",
+      "G5: Yara da Soyayya",
+      "G6: Rashin Lafiya da Aiki",
+      "G7: Aure da Yarjejeniya",
+      "G8: Mutuwa da Wahala",
+      "G9: Tafiya da Ibada",
+      "G10: Mulki da Daukaka",
+      "G11: Fata da Abokan Arziki",
+      "G12: Jarrabawa da Abokan Gaba",
+      "G13: Shaidar Dama (Tarihi)",
+      "G14: Shaidar Hagu (Nan Gaba)",
+      "G15: Alkali (Hukunci)",
+      "G16: Mafi Daukaka (Karshe)"
     ]
   }
 };
 
 export const Geomancy: React.FC = () => {
   const { language } = useLanguage();
-  const currentLang = (language === 'ha' || language === 'en' || language === 'fr') ? language : 'fr';
-  const localT = GEOMANCY_TRANSLATIONS[currentLang] || GEOMANCY_TRANSLATIONS['fr'];
+  const langKey = (language === 'ha' || language === 'en' || language === 'fr') ? language : 'fr';
+  const i18n = GEOMANCY_I18N[langKey] || GEOMANCY_I18N['fr'];
+
+  const [activeTab, setActiveTab] = useState<'chart' | 'interpretation' | 'traditions' | 'elements' | 'secret' | 'dictionary'>('chart');
+  const [inputMode, setInputMode] = useState<'auto' | 'manual' | 'abjad'>('auto');
+  const [selectedDomain, setSelectedDomain] = useState<number>(10); // Default to House 10 (Career/Power)
+  
+  // Custom manual inputs
+  const [manualMothers, setManualMothers] = useState<string[]>(["1-1-1-1", "2-2-2-2", "1-2-1-2", "2-1-2-1"]);
+  const [userName, setUserName] = useState('');
+  const [userMotherName, setUserMotherName] = useState('');
 
   const [figures, setFigures] = useState<number[][]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedHouse, setSelectedHouse] = useState<number | null>(null);
+  const [dictionarySearch, setDictionarySearch] = useState('');
+
+  // Calculate 16 figures from 4 mothers
+  const computeFullChartFromMothers = (m1: number[], m2: number[], m3: number[], m4: number[]) => {
+    // Daughters
+    const d1 = [m1[0], m2[0], m3[0], m4[0]];
+    const d2 = [m1[1], m2[1], m3[1], m4[1]];
+    const d3 = [m1[2], m2[2], m3[2], m4[2]];
+    const d4 = [m1[3], m2[3], m3[3], m4[3]];
+
+    // Addition modulo 2 (even = 2, odd = 1)
+    const combine = (a: number[], b: number[]) => a.map((val, i) => (val + b[i]) % 2 === 0 ? 2 : 1);
+
+    // Nieces
+    const n1 = combine(m1, m2);
+    const n2 = combine(m3, m4);
+    const n3 = combine(d1, d2);
+    const n4 = combine(d3, d4);
+
+    // Witnesses
+    const w1 = combine(n1, n2);
+    const w2 = combine(n3, n4);
+
+    // Judge
+    const j = combine(w1, w2);
+
+    // Reconciler / Supreme
+    const r = combine(j, m1);
+
+    return [m1, m2, m3, m4, d1, d2, d3, d4, n1, n2, n3, n4, w1, w2, j, r];
+  };
 
   const generateFigures = () => {
     setIsGenerating(true);
     setSelectedHouse(null);
+
     setTimeout(() => {
-      // Generate 4 random mothers (4 arrays of 4 bits)
-      const m1 = Array(4).fill(0).map(() => Math.random() > 0.5 ? 1 : 2);
-      const m2 = Array(4).fill(0).map(() => Math.random() > 0.5 ? 1 : 2);
-      const m3 = Array(4).fill(0).map(() => Math.random() > 0.5 ? 1 : 2);
-      const m4 = Array(4).fill(0).map(() => Math.random() > 0.5 ? 1 : 2);
+      let m1: number[], m2: number[], m3: number[], m4: number[];
 
-      // Daughters
-      const d1 = [m1[0], m2[0], m3[0], m4[0]];
-      const d2 = [m1[1], m2[1], m3[1], m4[1]];
-      const d3 = [m1[2], m2[2], m3[2], m4[2]];
-      const d4 = [m1[3], m2[3], m3[3], m4[3]];
+      if (inputMode === 'auto') {
+        m1 = Array(4).fill(0).map(() => Math.random() > 0.5 ? 1 : 2);
+        m2 = Array(4).fill(0).map(() => Math.random() > 0.5 ? 1 : 2);
+        m3 = Array(4).fill(0).map(() => Math.random() > 0.5 ? 1 : 2);
+        m4 = Array(4).fill(0).map(() => Math.random() > 0.5 ? 1 : 2);
+      } else if (inputMode === 'manual') {
+        m1 = manualMothers[0].split('-').map(Number);
+        m2 = manualMothers[1].split('-').map(Number);
+        m3 = manualMothers[2].split('-').map(Number);
+        m4 = manualMothers[3].split('-').map(Number);
+      } else {
+        // Abjad Calculation
+        const combinedStr = (userName + userMotherName).toLowerCase();
+        let abjadSum = 0;
+        for (let char of combinedStr) {
+          if (ABJAD_MAP[char]) {
+            abjadSum += ABJAD_MAP[char];
+          } else {
+            abjadSum += (char.charCodeAt(0) % 9) + 1;
+          }
+        }
+        if (abjadSum === 0) abjadSum = 123; // fallback
 
-      // Nieces
-      const combine = (a: number[], b: number[]) => a.map((val, i) => (val + b[i]) % 2 === 0 ? 2 : 1);
-      const n1 = combine(m1, m2);
-      const n2 = combine(m3, m4);
-      const n3 = combine(d1, d2);
-      const n4 = combine(d3, d4);
+        m1 = [(abjadSum % 2) + 1, ((abjadSum + 1) % 2) + 1, ((abjadSum + 2) % 2) + 1, ((abjadSum + 3) % 2) + 1];
+        m2 = [((abjadSum * 2) % 2) + 1, (((abjadSum * 2) + 1) % 2) + 1, (((abjadSum * 2) + 2) % 2) + 1, (((abjadSum * 2) + 3) % 2) + 1];
+        m3 = [((abjadSum * 3) % 2) + 1, (((abjadSum * 3) + 1) % 2) + 1, (((abjadSum * 3) + 2) % 2) + 1, (((abjadSum * 3) + 3) % 2) + 1];
+        m4 = [((abjadSum * 4) % 2) + 1, (((abjadSum * 4) + 1) % 2) + 1, (((abjadSum * 4) + 2) % 2) + 1, (((abjadSum * 4) + 3) % 2) + 1];
+      }
 
-      // Witnesses
-      const w1 = combine(n1, n2);
-      const w2 = combine(n3, n4);
-
-      // Judge
-      const j = combine(w1, w2);
-
-      // Reconciler / Supreme
-      const r = combine(j, m1);
-
-      setFigures([m1, m2, m3, m4, d1, d2, d3, d4, n1, n2, n3, n4, w1, w2, j, r]);
+      const fullChart = computeFullChartFromMothers(m1, m2, m3, m4);
+      setFigures(fullChart);
       setIsGenerating(false);
-    }, 1200);
+    }, 800);
   };
 
-  const getFigureInfo = (fig: number[]) => {
-    const key = fig.join('-');
-    return FIGURES_DATA[key]?.[currentLang] || FIGURES_DATA[key]?.['fr'] || { name: 'Unknown', latin: '', nature: '', meaning: '', arabic: '' };
+  // Helper to look up figure details
+  const getFigureDetail = (figArr: number[]): GeomancyFigureDetail => {
+    const key = figArr.join('-');
+    return FIGURES_DATABASE[key] || FIGURES_DATABASE["1-1-1-1"];
   };
 
-  const renderDots = (arr: number[]) => (
-    <div className="flex flex-col gap-1 items-center justify-center">
-      {arr.map((val, i) => (
-        <div key={i} className="flex gap-1.5">
-          {val === 2 ? (
-            <>
-              <div className="w-2.5 h-2.5 rounded-full bg-amber-900 dark:bg-amber-100 shadow-sm"></div>
-              <div className="w-2.5 h-2.5 rounded-full bg-amber-900 dark:bg-amber-100 shadow-sm"></div>
-            </>
-          ) : (
-            <div className="w-2.5 h-2.5 rounded-full bg-amber-900 dark:bg-amber-100 shadow-sm"></div>
-          )}
-        </div>
-      ))}
-    </div>
-  );
+  // Render 4 lines of dots
+  const renderDots = (arr: number[], size: 'sm' | 'md' | 'lg' = 'md') => {
+    const dotSizes = {
+      sm: 'w-2 h-2',
+      md: 'w-2.5 h-2.5',
+      lg: 'w-3.5 h-3.5'
+    };
+    return (
+      <div className="flex flex-col gap-1 items-center justify-center">
+        {arr.map((val, i) => (
+          <div key={i} className="flex gap-1.5">
+            {val === 2 ? (
+              <>
+                <div className={`${dotSizes[size]} rounded-full bg-amber-900 dark:bg-amber-100 shadow-sm`}></div>
+                <div className={`${dotSizes[size]} rounded-full bg-amber-900 dark:bg-amber-100 shadow-sm`}></div>
+              </>
+            ) : (
+              <div className={`${dotSizes[size]} rounded-full bg-amber-900 dark:bg-amber-100 shadow-sm`}></div>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  // Calculate Elemental distribution across the 16 houses
+  const getElementalStats = () => {
+    if (figures.length === 0) return { fire: 0, air: 0, water: 0, earth: 0, dominant: 'fire' };
+    let counts = { fire: 0, air: 0, water: 0, earth: 0 };
+    figures.forEach(fig => {
+      const detail = getFigureDetail(fig);
+      counts[detail.element]++;
+    });
+    
+    let maxCount = -1;
+    let dominant = 'fire';
+    (Object.keys(counts) as Array<keyof typeof counts>).forEach(el => {
+      if (counts[el] > maxCount) {
+        maxCount = counts[el];
+        dominant = el;
+      }
+    });
+
+    return { ...counts, dominant };
+  };
+
+  // Check Mizan validity (Sum of dots in Judge House 15 must be even)
+  const isMizanValid = () => {
+    if (figures.length < 15) return true;
+    const judgeDots = figures[14].reduce((a, b) => a + b, 0);
+    return judgeDots % 2 === 0;
+  };
+
+  // Tariq al-Nogta (Path of the Secret): Trace Judge's line 1 (Fire line) back to Mothers
+  const getSecretPathMothers = () => {
+    if (figures.length < 15) return [];
+    const judgeTopLine = figures[14][0]; // 1 or 2
+    const matchingMothers: number[] = [];
+    [0, 1, 2, 3].forEach(idx => {
+      if (figures[idx][0] === judgeTopLine) {
+        matchingMothers.push(idx + 1);
+      }
+    });
+    return matchingMothers;
+  };
+
+  // Analyze Repetitions & House Passations (Intiqal & Sohba)
+  const getRepetitionsAndPassations = () => {
+    if (figures.length < 16) return [];
+    const map: Record<string, number[]> = {};
+    figures.slice(0, 16).forEach((fig, idx) => {
+      const code = fig.join('-');
+      if (!map[code]) map[code] = [];
+      map[code].push(idx + 1); // 1-indexed House numbers
+    });
+
+    const results: { code: string; detail: GeomancyFigureDetail; houses: number[]; interpretation: string }[] = [];
+    Object.entries(map).forEach(([code, houses]) => {
+      if (houses.length >= 2) {
+        const detail = FIGURES_DATABASE[code] || FIGURES_DATABASE["1-1-1-1"];
+        let interp = "";
+        if (houses.includes(1) && houses.includes(10)) {
+          interp = "Passation remarquable entre le Demandeur (M1) et le Pouvoir (M10) : L'intention du consultant se concrétise directement dans la sphère d'autorité, garantissant succès et promotion.";
+        } else if (houses.includes(1) && houses.includes(7)) {
+          interp = "Passation entre le Demandeur (M1) et l'Adversaire/Partenaire (M7) : Lien direct ou effet miroir avec l'autre partie. Négociation, association ou rencontre décisive.";
+        } else if (houses.includes(1) && houses.includes(2)) {
+          interp = "Passation vers les Biens (M2) : Les démarches personnelles du consultant agissent immédiatement sur ses finances et bénéfices matériels.";
+        } else if (houses.includes(1) && houses.includes(8)) {
+          interp = "Présence simultanée en M1 et M8 (Crainte/Transformation) : Avertissement sur une entrave temporaire ou une inquiétude à apaiser par le Dhikr.";
+        } else if (houses.includes(15) || houses.includes(16)) {
+          interp = `Répétition dans la Maison du Juge/Suprême (M15/M16) : La force de la figure ${detail.latin} (${detail.arabic}) scelle le dénouement de la consultation.`;
+        } else {
+          interp = `Répétition de la figure ${detail.latin} dans les Maisons ${houses.join(', ')} : Amplification de la vibration élémentaire ${detail.elementName.fr} dans ces secteurs de vie.`;
+        }
+        results.push({ code, detail, houses, interpretation: interp });
+      }
+    });
+    return results;
+  };
+
+  // Spatial Direction / Compass calculation
+  const getSpatialDirection = () => {
+    if (figures.length < 16) return { primary: 'Nord', secondary: 'Est', advice: '' };
+    const stats = getElementalStats();
+    // Fire = Est, Air = Nord, Water = Ouest, Earth = Sud
+    const dirScores = [
+      { name: 'Est (Feu / Orient)', count: stats.fire, element: 'fire', desc: 'Secteur de l\'action, des décisions rapides, de la vitalité et des initiatives.' },
+      { name: 'Nord (Air / Vent)', count: stats.air, element: 'air', desc: 'Secteur de l\'intelligence, des communications, du commerce et de la sagesse.' },
+      { name: 'Ouest (Eau / Coucher)', count: stats.water, element: 'water', desc: 'Secteur des émotions, de la guérison, de l\'intuition et des voyages maritimes.' },
+      { name: 'Sud (Terre / Sol)', count: stats.earth, element: 'earth', desc: 'Secteur de l\'ancrage, du patrimoine immobilier, de la stabilité et de la patience.' }
+    ].sort((a, b) => b.count - a.count);
+
+    return {
+      primary: dirScores[0].name,
+      secondary: dirScores[1].name,
+      primaryObj: dirScores[0],
+      secondaryObj: dirScores[1],
+      advice: `L'énergie spatiale dominante du thème pointe vers la direction ${dirScores[0].name}. Pour vos démarches physiques, la recherche d'un objet égaré ou l'orientation d'un lieu d'action, privilégiez ce quadrant.`
+    };
+  };
+
+  // Export 16 Houses Chart as PNG Image
+  const exportChartAsImage = async () => {
+    if (figures.length < 16) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = 1200;
+    canvas.height = 1000;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Background fill
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Header banner
+    ctx.fillStyle = '#d97706';
+    ctx.fillRect(0, 0, canvas.width, 90);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 28px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('ASRARHUB — THÈME GÉOMANTIQUE COMPLET (KHATT AR-RAML)', canvas.width / 2, 45);
+
+    ctx.font = '16px sans-serif';
+    ctx.fillText('Calcul des 16 Maisons • Mizan, Passations & Remèdes Spirituels', canvas.width / 2, 72);
+
+    // Grid of 16 houses
+    const cols = 4;
+    const padding = 25;
+    const startY = 120;
+    const cellWidth = (canvas.width - padding * (cols + 1)) / cols;
+    const cellHeight = 180;
+
+    figures.slice(0, 16).forEach((fig, idx) => {
+      const col = idx % cols;
+      const row = Math.floor(idx / cols);
+      const x = padding + col * (cellWidth + padding);
+      const y = startY + row * (cellHeight + 15);
+
+      ctx.fillStyle = '#1e293b';
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.roundRect(x, y, cellWidth, cellHeight, 12);
+      ctx.fill();
+      ctx.stroke();
+
+      // House Title
+      ctx.fillStyle = '#f59e0b';
+      ctx.font = 'bold 14px sans-serif';
+      ctx.textAlign = 'center';
+      const houseLabel = i18n.houseNames[idx] ? i18n.houseNames[idx].split(' : ')[0] : `Maison ${idx + 1}`;
+      ctx.fillText(`M${idx + 1}: ${houseLabel}`, x + cellWidth / 2, y + 26);
+
+      // Dots
+      const detail = getFigureDetail(fig);
+      const dotYStart = y + 50;
+      fig.forEach((val, lIdx) => {
+        const ly = dotYStart + lIdx * 18;
+        ctx.fillStyle = '#f59e0b';
+        if (val === 2) {
+          ctx.beginPath();
+          ctx.arc(x + cellWidth / 2 - 10, ly, 5, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.arc(x + cellWidth / 2 + 10, ly, 5, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.beginPath();
+          ctx.arc(x + cellWidth / 2, ly, 5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+
+      // Figure Names
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 13px sans-serif';
+      ctx.fillText(`${detail.latin} — ${detail.arabic.split(' ')[0]}`, x + cellWidth / 2, y + 140);
+
+      ctx.fillStyle = '#10b981';
+      ctx.font = '11px sans-serif';
+      ctx.fillText(`Sikidy: ${detail.african.split(' / ')[0]}`, x + cellWidth / 2, y + 160);
+    });
+
+    // Footer
+    ctx.fillStyle = '#f59e0b';
+    ctx.font = 'bold 14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('Prophétique & Géomancie Traditionnelle — AsrarHub Application', canvas.width / 2, canvas.height - 25);
+
+    await downloadCanvasImage(canvas, `Geomancie_Theme_${Date.now()}.png`);
+  };
+
+  const elemStats = getElementalStats();
 
   return (
-    <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8 safe-area-pt pb-24">
-      <div className="mb-8">
-        <Link to="/tools" className="inline-flex items-center text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 font-medium mb-4 transition-colors">
-          <ArrowLeft className="mr-2" size={20} />
-          {localT.back}
+    <div className="w-full max-w-7xl mx-auto p-3 sm:p-6 lg:p-8 safe-area-pt max-h-[85vh] overflow-hidden flex flex-col">
+      {/* Top Banner */}
+      <div className="mb-4 shrink-0">
+        <Link to="/tools" className="inline-flex items-center text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 font-medium mb-2 transition-colors">
+          <ArrowLeft className="mr-2" size={18} />
+          {i18n.back}
         </Link>
-        <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-          <Layers className="text-amber-500" size={32} />
-          {localT.title}
-        </h1>
-        <p className="text-gray-500 dark:text-gray-400 mt-2 text-sm sm:text-base break-words">{localT.desc}</p>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-amber-200/60 dark:border-amber-900/40 pb-3">
+          <div>
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-950 dark:text-white flex items-center gap-2">
+              <Compass className="text-amber-500 animate-spin-slow shrink-0" size={28} />
+              <span className="truncate">{i18n.title}</span>
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1 text-xs sm:text-sm leading-relaxed">
+              {i18n.desc}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 bg-amber-50 dark:bg-amber-950/40 p-2 rounded-xl border border-amber-200/50 text-xs font-semibold text-amber-800 dark:text-amber-300 shrink-0 self-start md:self-auto">
+            <Globe size={16} className="text-amber-500 shrink-0" />
+            <span>Maghreb • Sikidy • Ramal • Europe</span>
+          </div>
+        </div>
       </div>
 
-      <div className="flex justify-center mb-8 sm:mb-12">
-        <button 
-          onClick={generateFigures}
-          disabled={isGenerating}
-          className="bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white font-bold py-3.5 px-8 rounded-2xl shadow-sm flex items-center gap-2.5 transition-all"
-        >
-          <RefreshCw size={20} className={isGenerating ? "animate-spin" : ""} />
-          {isGenerating ? localT.generating : localT.generate}
-        </button>
-      </div>
+      {/* Internal Scrollable Workspace */}
+      <div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pr-0.5">
 
-      <AnimatePresence>
-        {figures.length > 0 && (
-          <motion.div 
-            initial={{ opacity: 0, y: 15 }} 
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-8"
+      {/* Mode Selector & Generator controls */}
+      <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-200/80 dark:border-gray-700 mb-6 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 dark:border-gray-700/60 pb-3">
+          <div className="flex items-center gap-2 text-xs sm:text-sm font-bold text-gray-900 dark:text-white">
+            <Sliders size={16} className="text-amber-500" />
+            <span>Mode de Génération :</span>
+          </div>
+          <div className="grid grid-cols-3 gap-1.5 p-1 bg-gray-100 dark:bg-gray-700/50 rounded-xl w-full sm:w-auto">
+            {[
+              { id: 'auto', label: 'Tirage Sable', icon: Sparkles },
+              { id: 'manual', label: 'Saisie Mères', icon: Layers },
+              { id: 'abjad', label: 'Abjad (Nom)', icon: Calculator }
+            ].map(m => {
+              const Icon = m.icon;
+              return (
+                <button
+                  key={m.id}
+                  onClick={() => setInputMode(m.id as any)}
+                  className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap ${
+                    inputMode === m.id
+                      ? 'bg-amber-500 text-white shadow-sm'
+                      : 'text-gray-600 dark:text-gray-300 hover:text-amber-600 dark:hover:text-amber-400'
+                  }`}
+                >
+                  <Icon size={13} className="shrink-0" />
+                  <span className="truncate">{m.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Dynamic Inputs depending on mode */}
+        {inputMode === 'manual' && (
+          <div className="p-3.5 bg-amber-50/50 dark:bg-amber-950/20 rounded-xl border border-amber-200/50 space-y-2.5">
+            <p className="text-xs font-bold text-amber-900 dark:text-amber-300">{i18n.manualPrompt}</p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5">
+              {[0, 1, 2, 3].map(idx => (
+                <div key={idx} className="flex flex-col gap-1">
+                  <label className="text-[11px] font-semibold text-gray-600 dark:text-gray-300">
+                    Mère {idx + 1} (M{idx + 1})
+                  </label>
+                  <select
+                    value={manualMothers[idx]}
+                    onChange={(e) => {
+                      const updated = [...manualMothers];
+                      updated[idx] = e.target.value;
+                      setManualMothers(updated);
+                    }}
+                    className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs text-gray-900 dark:text-white font-medium focus:ring-2 focus:ring-amber-500"
+                  >
+                    {Object.keys(FIGURES_DATABASE).map(code => {
+                      const fig = FIGURES_DATABASE[code];
+                      return (
+                        <option key={code} value={code}>
+                          {fig.latin} ({fig.arabic.split(' ')[0]} - {fig.african.split(' / ')[0]})
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {inputMode === 'abjad' && (
+          <div className="p-3.5 bg-amber-50/50 dark:bg-amber-950/20 rounded-xl border border-amber-200/50 space-y-2.5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-1.5">
+                  <User size={13} className="text-amber-500" />
+                  {i18n.namePrompt}
+                </label>
+                <input
+                  type="text"
+                  placeholder="ex: Ibrahim / إبراهيم"
+                  value={userName}
+                  onChange={(e) => setUserName(e.target.value)}
+                  className="w-full p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs text-gray-900 dark:text-white"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-1.5">
+                  <HeartHandshake size={13} className="text-amber-500" />
+                  {i18n.motherNamePrompt}
+                </label>
+                <input
+                  type="text"
+                  placeholder="ex: Amina / أمينة"
+                  value={userMotherName}
+                  onChange={(e) => setUserMotherName(e.target.value)}
+                  className="w-full p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs text-gray-900 dark:text-white"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Generate Button */}
+        <div className="flex justify-center pt-1">
+          <button
+            onClick={generateFigures}
+            disabled={isGenerating}
+            className="bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 disabled:opacity-50 text-white font-bold py-2.5 px-6 rounded-xl shadow-md flex items-center gap-2 transition-all cursor-pointer transform hover:scale-[1.01] text-xs sm:text-sm"
           >
-            {/* Grid of Houses */}
-            <div>
-              <p className="text-xs text-amber-600 dark:text-amber-400 font-semibold mb-3 text-center flex items-center justify-center gap-1.5">
-                <Info size={14} />
-                {localT.clickHouse}
-              </p>
-              <div 
-                className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-3 sm:gap-4" 
-                dir="rtl"
+            <RefreshCw size={16} className={isGenerating ? "animate-spin" : ""} />
+            <span>{isGenerating ? i18n.generating : i18n.generate}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Tabs Header */}
+      {figures.length > 0 && (
+        <div className="flex items-center justify-start gap-1.5 overflow-x-auto pb-2.5 mb-5 no-scrollbar border-b border-gray-200 dark:border-gray-700">
+          {[
+            { id: 'chart', label: i18n.tabTheme, icon: Layers },
+            { id: 'interpretation', label: 'Analyse & Domaine', icon: Target },
+            { id: 'traditions', label: i18n.tabTraditions, icon: Globe },
+            { id: 'elements', label: i18n.tabElements, icon: Flame },
+            { id: 'secret', label: i18n.tabSecret, icon: Key },
+            { id: 'dictionary', label: i18n.tabDictionary, icon: BookOpen }
+          ].map(tab => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id as any)}
+                className={`px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
+                  isActive
+                    ? 'bg-amber-600 text-white shadow-sm'
+                    : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200/80 dark:border-gray-700 hover:border-amber-400'
+                }`}
               >
-                {figures.slice(0, 16).map((fig, i) => {
-                  const figInfo = getFigureInfo(fig);
-                  const isSelected = selectedHouse === i;
-                  return (
-                    <button 
-                      key={i} 
-                      onClick={() => {
-                        setSelectedHouse(i);
-                        const element = document.getElementById(`house-details-${i}`);
-                        if (element) {
-                          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        }
-                      }}
-                      className={`flex flex-col items-center p-3.5 bg-amber-50/50 dark:bg-amber-950/10 hover:bg-amber-100/50 dark:hover:bg-amber-900/20 border transition-all rounded-xl text-right cursor-pointer ${
-                        isSelected 
-                          ? 'ring-2 ring-amber-500 border-amber-400 bg-amber-100/70 dark:bg-amber-900/30' 
-                          : 'border-amber-200/60 dark:border-amber-800/20'
-                      }`}
-                    >
-                      <span className="text-[10px] sm:text-[11px] text-amber-600 dark:text-amber-400 font-bold mb-2 h-7 overflow-hidden text-center leading-tight flex items-center justify-center">
-                        {localT.houseNames[i].split(' (')[0]}
+                <Icon size={14} />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Tab 1: 16 Houses Chart & Interactive Grid */}
+      {figures.length > 0 && activeTab === 'chart' && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+          {/* Validity Badge & PNG Export */}
+          <div className="flex flex-wrap items-center justify-between gap-2.5 p-3 sm:p-3.5 bg-amber-50/70 dark:bg-amber-950/30 rounded-xl border border-amber-200/60 dark:border-amber-800/30">
+            <div className="flex items-center gap-2 text-xs font-bold text-amber-900 dark:text-amber-200">
+              {isMizanValid() ? (
+                <>
+                  <CheckCircle size={16} className="text-emerald-500 shrink-0" />
+                  <span>{i18n.themeValidity}</span>
+                </>
+              ) : (
+                <>
+                  <AlertTriangle size={16} className="text-amber-500 shrink-0" />
+                  <span>{i18n.themeInvalidity}</span>
+                </>
+              )}
+            </div>
+
+            <div className="flex items-center gap-3">
+              <p className="text-xs text-amber-700/80 dark:text-amber-400/80 hidden sm:flex items-center gap-1">
+                <Info size={13} />
+                {i18n.clickHouse}
+              </p>
+              <button
+                onClick={exportChartAsImage}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white shadow-xs transition-colors cursor-pointer"
+              >
+                <Download size={13} />
+                <span>Exporter Thème (PNG)</span>
+              </button>
+            </div>
+          </div>
+
+          {/* 16 Houses Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-2 sm:gap-2.5" dir="rtl">
+            {figures.slice(0, 16).map((fig, i) => {
+              const detail = getFigureDetail(fig);
+              const isSelected = selectedHouse === i;
+              return (
+                <button
+                  key={i}
+                  onClick={() => setSelectedHouse(i)}
+                  className={`flex flex-col items-center p-2 bg-white dark:bg-gray-800 hover:bg-amber-50 dark:hover:bg-amber-900/20 border transition-all rounded-xl text-right cursor-pointer shadow-xs relative overflow-hidden ${
+                    isSelected
+                      ? 'ring-2 ring-amber-500 border-amber-500 bg-amber-50/90 dark:bg-amber-950/40'
+                      : 'border-gray-200/80 dark:border-gray-700'
+                  }`}
+                >
+                  <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 mb-0.5 h-4 text-center leading-tight flex items-center justify-center truncate w-full">
+                    {i18n.houseNames[i].split(' : ')[0]}
+                  </span>
+                  <div className="my-1 h-11 flex items-center justify-center" dir="ltr">
+                    {renderDots(fig, 'sm')}
+                  </div>
+                  <span className="text-[10px] font-bold text-gray-900 dark:text-white mt-0.5 truncate w-full text-center">{detail.latin}</span>
+                  <span className="text-[9px] font-arabic text-amber-600 dark:text-amber-400 truncate w-full text-center" dir="rtl">{detail.arabic.split(' ')[0]}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Selected House Deep Analysis Card */}
+          {selectedHouse !== null && (
+            <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-5 shadow-sm border border-amber-500/40 space-y-3.5">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-gray-100 dark:border-gray-700 pb-3">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-amber-50 dark:bg-gray-900 rounded-xl border border-amber-200 dark:border-gray-700 shrink-0" dir="ltr">
+                    {renderDots(figures[selectedHouse], 'md')}
+                  </div>
+                  <div>
+                    <span className="text-[11px] font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">
+                      {i18n.houseNames[selectedHouse]}
+                    </span>
+                    <h3 className="text-lg font-bold text-gray-950 dark:text-white mt-0.5">
+                      {getFigureDetail(figures[selectedHouse]).latin} — {getFigureDetail(figures[selectedHouse]).arabic}
+                    </h3>
+                    <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 mt-0.5">
+                      Sikidy : {getFigureDetail(figures[selectedHouse]).african} • Ramal : {getFigureDetail(figures[selectedHouse]).indian}
+                    </p>
+                  </div>
+                </div>
+                <span className="px-2.5 py-1 bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-bold text-xs rounded-lg shrink-0">
+                  {getFigureDetail(figures[selectedHouse]).nature[langKey]}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-gray-700 dark:text-gray-300">
+                <div className="p-3 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-100 dark:border-gray-700/60 space-y-1">
+                  <p className="font-bold text-gray-900 dark:text-white flex items-center gap-1.5 text-xs">
+                    <BookOpen size={14} className="text-amber-500" />
+                    Interprétation Générale
+                  </p>
+                  <p className="leading-relaxed">{getFigureDetail(figures[selectedHouse]).meaning[langKey]}</p>
+                </div>
+
+                <div className="p-3 bg-amber-50/50 dark:bg-amber-950/20 rounded-xl border border-amber-200/50 space-y-1">
+                  <p className="font-bold text-amber-900 dark:text-amber-200 flex items-center gap-1.5 text-xs">
+                    <ShieldCheck size={14} className="text-amber-500" />
+                    Sikidy & Saraka (Recommandation Africaine)
+                  </p>
+                  <p className="leading-relaxed">{getFigureDetail(figures[selectedHouse]).africanMeaning[langKey]}</p>
+                  <p className="font-semibold text-amber-800 dark:text-amber-300 mt-1 pt-1 border-t border-amber-200/40">
+                    💡 <strong>Aumône (Saraka) :</strong> {getFigureDetail(figures[selectedHouse]).africanSaraka[langKey]}
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Judge (M15) & Supreme (M16) Highlight Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 bg-gradient-to-br from-amber-50 via-orange-50 to-amber-100/50 dark:from-amber-950/30 dark:via-gray-900 dark:to-orange-950/20 p-4 rounded-2xl border border-amber-200/80 dark:border-amber-800/30">
+            {/* Judge */}
+            <div className="bg-white dark:bg-gray-800 p-3.5 rounded-xl shadow-xs border border-amber-200 dark:border-gray-700 space-y-2">
+              <div className="flex justify-between items-start gap-2">
+                <div>
+                  <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/40 px-2 py-0.5 rounded-md uppercase">
+                    {i18n.judge}
+                  </span>
+                  <h4 className="text-base font-bold text-gray-900 dark:text-white mt-1">
+                    {getFigureDetail(figures[14]).latin} ({getFigureDetail(figures[14]).arabic})
+                  </h4>
+                  <p className="text-[11px] text-amber-700 dark:text-amber-300 font-semibold mt-0.5">
+                    {getFigureDetail(figures[14]).african}
+                  </p>
+                </div>
+                <div className="p-2 bg-amber-50 dark:bg-gray-900 rounded-lg shrink-0" dir="ltr">
+                  {renderDots(figures[14], 'sm')}
+                </div>
+              </div>
+              <p className="text-[11px] text-gray-500 italic">{i18n.judgeDesc}</p>
+              <div className="text-xs text-gray-700 dark:text-gray-300 border-t border-gray-100 dark:border-gray-700 pt-2 leading-relaxed">
+                {getFigureDetail(figures[14]).meaning[langKey]}
+              </div>
+            </div>
+
+            {/* Supreme */}
+            <div className="bg-white dark:bg-gray-800 p-3.5 rounded-xl shadow-xs border border-orange-200 dark:border-gray-700 space-y-2">
+              <div className="flex justify-between items-start gap-2">
+                <div>
+                  <span className="text-[10px] font-bold text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/40 px-2 py-0.5 rounded-md uppercase">
+                    {i18n.supreme}
+                  </span>
+                  <h4 className="text-base font-bold text-gray-900 dark:text-white mt-1">
+                    {getFigureDetail(figures[15]).latin} ({getFigureDetail(figures[15]).arabic})
+                  </h4>
+                  <p className="text-[11px] text-orange-700 dark:text-orange-300 font-semibold mt-0.5">
+                    {getFigureDetail(figures[15]).african}
+                  </p>
+                </div>
+                <div className="p-2 bg-orange-50 dark:bg-gray-900 rounded-lg shrink-0" dir="ltr">
+                  {renderDots(figures[15], 'sm')}
+                </div>
+              </div>
+              <p className="text-[11px] text-gray-500 italic">{i18n.supremeDesc}</p>
+              <div className="text-xs text-gray-700 dark:text-gray-300 border-t border-gray-100 dark:border-gray-700 pt-2 leading-relaxed">
+                {getFigureDetail(figures[15]).meaning[langKey]}
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Tab 2: Domaine, Passations & Directions Spatiales */}
+      {figures.length > 0 && activeTab === 'interpretation' && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+          {/* 1. Domain Selector & Synthesis Card */}
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-200/80 dark:border-gray-700 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 dark:border-gray-700 pb-3">
+              <div className="flex items-center gap-2">
+                <Target className="text-amber-500" size={20} />
+                <h3 className="font-bold text-gray-900 dark:text-white text-base">Analyse par Domaine de Question</h3>
+              </div>
+              <span className="text-xs text-amber-600 dark:text-amber-400 font-semibold bg-amber-50 dark:bg-amber-950/40 px-2.5 py-1 rounded-lg">
+                Maison 1 vs Maison Cible
+              </span>
+            </div>
+
+            {/* Domains Pills */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              {[
+                { house: 10, label: '💼 Carrière & Pouvoir', houseName: 'M10' },
+                { house: 2, label: '💰 Finances & Fortune', houseName: 'M2' },
+                { house: 7, label: '❤️ Mariage & Union', houseName: 'M7' },
+                { house: 9, label: '✈️ Voyage & Savoir', houseName: 'M9' },
+                { house: 6, label: '🛡️ Santé & Épreuves', houseName: 'M6' },
+                { house: 11, label: '👥 Amis & Projets', houseName: 'M11' },
+                { house: 4, label: '🏠 Foyer & Patrimoine', houseName: 'M4' },
+                { house: 12, label: '🔮 Obstacles & Secrets', houseName: 'M12' },
+              ].map((d) => (
+                <button
+                  key={d.house}
+                  onClick={() => setSelectedDomain(d.house)}
+                  className={`p-2.5 rounded-xl text-xs font-bold transition-all text-left flex items-center justify-between cursor-pointer border ${
+                    selectedDomain === d.house
+                      ? 'bg-amber-500 text-white border-amber-500 shadow-sm'
+                      : 'bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-amber-400'
+                  }`}
+                >
+                  <span className="truncate">{d.label}</span>
+                  <span className="text-[10px] opacity-80 shrink-0 ml-1">({d.houseName})</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Synthesis Cards */}
+            {figures.length >= 16 && (
+              <div className="bg-amber-50/50 dark:bg-amber-950/20 p-4 rounded-xl border border-amber-200/50 space-y-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center" dir="ltr">
+                  <div className="p-2.5 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+                    <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase">Consultant (M1)</span>
+                    <div className="my-1 flex justify-center">{renderDots(figures[0], 'sm')}</div>
+                    <p className="text-xs font-bold text-gray-900 dark:text-white truncate">{getFigureDetail(figures[0]).latin}</p>
+                    <p className="text-[10px] text-gray-500">{getFigureDetail(figures[0]).elementName.fr}</p>
+                  </div>
+
+                  <div className="p-2.5 bg-white dark:bg-gray-800 rounded-xl border border-amber-400/80 shadow-xs">
+                    <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase">Objet (M{selectedDomain})</span>
+                    <div className="my-1 flex justify-center">{renderDots(figures[selectedDomain - 1], 'sm')}</div>
+                    <p className="text-xs font-bold text-gray-900 dark:text-white truncate">{getFigureDetail(figures[selectedDomain - 1]).latin}</p>
+                    <p className="text-[10px] text-gray-500">{getFigureDetail(figures[selectedDomain - 1]).elementName.fr}</p>
+                  </div>
+
+                  <div className="p-2.5 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+                    <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase">Juge (M15)</span>
+                    <div className="my-1 flex justify-center">{renderDots(figures[14], 'sm')}</div>
+                    <p className="text-xs font-bold text-gray-900 dark:text-white truncate">{getFigureDetail(figures[14]).latin}</p>
+                    <p className="text-[10px] text-gray-500">{getFigureDetail(figures[14]).elementName.fr}</p>
+                  </div>
+
+                  <div className="p-2.5 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+                    <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 uppercase">Issue (M16)</span>
+                    <div className="my-1 flex justify-center">{renderDots(figures[15], 'sm')}</div>
+                    <p className="text-xs font-bold text-gray-900 dark:text-white truncate">{getFigureDetail(figures[15]).latin}</p>
+                    <p className="text-[10px] text-gray-500">{getFigureDetail(figures[15]).elementName.fr}</p>
+                  </div>
+                </div>
+
+                <div className="p-3 bg-white dark:bg-gray-800 rounded-xl border border-amber-200/40 text-xs space-y-1.5 text-gray-800 dark:text-gray-200 leading-relaxed">
+                  <p className="font-bold text-amber-900 dark:text-amber-300 flex items-center gap-1.5">
+                    <Sparkles size={14} className="text-amber-500" />
+                    Diagnostic Thématique pour : Maison {selectedDomain} ({i18n.houseNames[selectedDomain - 1]})
+                  </p>
+                  <p>
+                    L'énergie du Demandeur (<strong>{getFigureDetail(figures[0]).latin}</strong>) rencontre l'énergie du Domaine visé (<strong>{getFigureDetail(figures[selectedDomain - 1]).latin}</strong>).
+                    L'interaction élémentaire <strong>{getFigureDetail(figures[0]).elementName.fr} &amp; {getFigureDetail(figures[selectedDomain - 1]).elementName.fr}</strong> indique une dynamique de progression sous le contrôle du Juge <strong>{getFigureDetail(figures[14]).latin}</strong>.
+                  </p>
+                  <p className="text-amber-800 dark:text-amber-300 font-semibold pt-1 border-t border-gray-100 dark:border-gray-700">
+                    ✨ <strong>Recommandation :</strong> {getFigureDetail(figures[selectedDomain - 1]).meaning.fr}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 2. Passations & Repetitions (Intiqal) */}
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-200/80 dark:border-gray-700 space-y-4">
+            <div className="flex items-center gap-2 border-b border-gray-100 dark:border-gray-700 pb-3">
+              <GitMerge className="text-amber-500" size={20} />
+              <div>
+                <h3 className="font-bold text-gray-900 dark:text-white text-base">Passations des Figures &amp; Companonnage (Al-Intiqal)</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Répétition des figures dans les 16 Maisons (Circulation d'énergie)</p>
+              </div>
+            </div>
+
+            {getRepetitionsAndPassations().length === 0 ? (
+              <div className="p-4 bg-gray-50 dark:bg-gray-900/40 rounded-xl text-xs text-gray-500 text-center">
+                Aucune répétition directe détectée dans le thème. Chaque Maison accueille une figure unique (Thème très diversifié).
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {getRepetitionsAndPassations().map((p, idx) => (
+                  <div key={idx} className="p-3 bg-amber-50/50 dark:bg-amber-950/20 rounded-xl border border-amber-200/50 space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-xs text-gray-900 dark:text-white flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                        {p.detail.latin} ({p.detail.arabic})
                       </span>
-                      <div className="my-2 h-16 flex items-center justify-center" dir="ltr">
-                        {renderDots(fig)}
+                      <span className="text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/40 px-2 py-0.5 rounded-md">
+                        Maisons : {p.houses.map(h => `M${h}`).join(', ')}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">{p.interpretation}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* 3. Spatial Orientation & Lost Object Finder */}
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-200/80 dark:border-gray-700 space-y-4">
+            <div className="flex items-center gap-2 border-b border-gray-100 dark:border-gray-700 pb-3">
+              <Compass className="text-amber-500" size={20} />
+              <div>
+                <h3 className="font-bold text-gray-900 dark:text-white text-base">Boussole Géomantique &amp; Orientation Spatiale (Al-Jiha)</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Direction prédominante du thème pour la recherche ou les déplacements</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-3.5 bg-gradient-to-br from-amber-500/10 to-orange-500/10 rounded-xl border border-amber-500/20 space-y-2">
+                <div className="flex items-center gap-2 text-amber-900 dark:text-amber-200 font-bold text-sm">
+                  <MapPin size={18} className="text-amber-500" />
+                  <span>Direction Dominante : {getSpatialDirection().primary}</span>
+                </div>
+                <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
+                  {getSpatialDirection().advice}
+                </p>
+              </div>
+
+              <div className="p-3.5 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-200 dark:border-gray-700 space-y-2">
+                <div className="flex items-center gap-2 text-gray-900 dark:text-white font-bold text-xs">
+                  <TrendingUp size={16} className="text-emerald-500" />
+                  <span>Secteur Secondaire : {getSpatialDirection().secondary}</span>
+                </div>
+                <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+                  {getSpatialDirection().primaryObj.desc}
+                </p>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Tab 2: Traditions Comparées */}
+      {figures.length > 0 && activeTab === 'traditions' && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-200/80 dark:border-gray-700">
+            <h3 className="text-base font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
+              <Globe className="text-amber-500" size={18} />
+              Analyse Multi-Traditions des Figures Clés
+            </h3>
+            <div className="space-y-3">
+              {[0, 14, 15].map(houseIdx => {
+                const detail = getFigureDetail(figures[houseIdx]);
+                return (
+                  <div key={houseIdx} className="p-3.5 rounded-xl bg-gray-50 dark:bg-gray-900/50 border border-gray-200/60 dark:border-gray-700 space-y-2.5">
+                    <div className="flex items-center justify-between border-b border-gray-200/60 dark:border-gray-700 pb-2">
+                      <span className="text-xs font-bold text-amber-600 dark:text-amber-400">
+                        {i18n.houseNames[houseIdx]}
+                      </span>
+                      <div className="flex items-center gap-2" dir="ltr">
+                        {renderDots(figures[houseIdx], 'sm')}
                       </div>
-                      <span className="text-[10px] text-amber-700/60 dark:text-amber-400/50 font-arabic mt-1 font-medium">{figInfo.name}</span>
-                      <span className="text-[9px] text-gray-400 mt-1">H{i+1}</span>
-                    </button>
-                  );
-                })}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 text-xs">
+                      {/* Maghreb */}
+                      <div className="p-2.5 bg-white dark:bg-gray-800 rounded-lg border border-amber-200/50 space-y-0.5">
+                        <span className="font-bold text-amber-700 dark:text-amber-300 block text-[11px]">🌙 Arabo-Maghrébine</span>
+                        <p className="font-bold text-gray-900 dark:text-white text-xs">{detail.arabic}</p>
+                        <p className="text-gray-500 text-[11px]">Planète : {detail.planet[langKey]}</p>
+                        <p className="text-gray-500 text-[11px]">Zodiaque : {detail.zodiac[langKey]}</p>
+                      </div>
+
+                      {/* West Africa */}
+                      <div className="p-2.5 bg-white dark:bg-gray-800 rounded-lg border border-emerald-200/50 space-y-0.5">
+                        <span className="font-bold text-emerald-700 dark:text-emerald-300 block text-[11px]">🌍 Africaine (Sikidy)</span>
+                        <p className="font-bold text-gray-900 dark:text-white text-xs">{detail.african}</p>
+                        <p className="text-gray-600 dark:text-gray-300 text-[11px] leading-snug">{detail.africanMeaning[langKey]}</p>
+                      </div>
+
+                      {/* Indian Ramal */}
+                      <div className="p-2.5 bg-white dark:bg-gray-800 rounded-lg border border-purple-200/50 space-y-0.5">
+                        <span className="font-bold text-purple-700 dark:text-purple-300 block text-[11px]">🛕 Indienne (Ramal)</span>
+                        <p className="font-bold text-gray-900 dark:text-white text-xs">{detail.indian}</p>
+                        <p className="text-gray-500 text-[11px]">Graha : {detail.indianGraha}</p>
+                        <p className="text-gray-500 text-[11px]">Dosha : {detail.indianDosha}</p>
+                      </div>
+
+                      {/* European */}
+                      <div className="p-2.5 bg-white dark:bg-gray-800 rounded-lg border border-blue-200/50 space-y-0.5">
+                        <span className="font-bold text-blue-700 dark:text-blue-300 block text-[11px]">🏛️ Latine / Européenne</span>
+                        <p className="font-bold text-gray-900 dark:text-white text-xs">{detail.latin}</p>
+                        <p className="text-gray-500 text-[11px]">Élément : {detail.elementName[langKey]}</p>
+                        <p className="text-gray-500 text-[11px]">{detail.nature[langKey]}</p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Tab 3: Éléments & Astrologie */}
+      {figures.length > 0 && activeTab === 'elements' && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-200/80 dark:border-gray-700 space-y-4">
+            <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <Flame className="text-amber-500" size={18} />
+              {i18n.elementalBalance}
+            </h3>
+
+            {/* Meters */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              <div className="p-3 rounded-xl bg-red-50 dark:bg-red-950/20 border border-red-200/50 text-center space-y-0.5">
+                <Flame className="mx-auto text-red-500" size={20} />
+                <span className="text-[11px] font-bold text-red-700 dark:text-red-300 block">{i18n.fireCount}</span>
+                <span className="text-xl font-black text-red-900 dark:text-red-200">{elemStats.fire} / 16</span>
+              </div>
+
+              <div className="p-3 rounded-xl bg-sky-50 dark:bg-sky-950/20 border border-sky-200/50 text-center space-y-0.5">
+                <Wind className="mx-auto text-sky-500" size={20} />
+                <span className="text-[11px] font-bold text-sky-700 dark:text-sky-300 block">{i18n.airCount}</span>
+                <span className="text-xl font-black text-sky-900 dark:text-sky-200">{elemStats.air} / 16</span>
+              </div>
+
+              <div className="p-3 rounded-xl bg-blue-50 dark:bg-blue-950/20 border border-blue-200/50 text-center space-y-0.5">
+                <Droplets className="mx-auto text-blue-500" size={20} />
+                <span className="text-[11px] font-bold text-blue-700 dark:text-blue-300 block">{i18n.waterCount}</span>
+                <span className="text-xl font-black text-blue-900 dark:text-blue-200">{elemStats.water} / 16</span>
+              </div>
+
+              <div className="p-3 rounded-xl bg-amber-50 dark:bg-amber-950/20 border border-amber-200/50 text-center space-y-0.5">
+                <Mountain className="mx-auto text-amber-600" size={20} />
+                <span className="text-[11px] font-bold text-amber-800 dark:text-amber-300 block">{i18n.earthCount}</span>
+                <span className="text-xl font-black text-amber-950 dark:text-amber-200">{elemStats.earth} / 16</span>
               </div>
             </div>
 
-            {/* Synthesis Cards for Judge and Supreme */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/10 p-5 sm:p-7 rounded-2xl border border-amber-200/50 dark:border-amber-800/10">
-              <div className="col-span-1 md:col-span-2 mb-2">
-                <h3 className="text-lg font-bold text-amber-900 dark:text-amber-100 flex items-center gap-2">
-                  <Sparkles className="text-amber-500" size={20} />
-                  {localT.synthesis}
-                </h3>
-              </div>
-
-              {/* Judge card */}
-              <div className="bg-white dark:bg-gray-800/60 p-5 rounded-xl shadow-sm border border-amber-200/30 dark:border-amber-800/20 relative overflow-hidden">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <span className="text-xs font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-2.5 py-1 rounded-full uppercase">
-                      {localT.judge}
-                    </span>
-                    <h4 className="text-xl font-bold text-gray-900 dark:text-white mt-2">
-                      {getFigureInfo(figures[14]).name} ({getFigureInfo(figures[14]).latin})
-                    </h4>
-                    <p className="text-xl font-arabic text-amber-600 mt-1" dir="rtl">{getFigureInfo(figures[14]).arabic}</p>
-                  </div>
-                  <div className="p-3 bg-amber-50 dark:bg-gray-900/50 rounded-lg" dir="ltr">
-                    {renderDots(figures[14])}
-                  </div>
-                </div>
-                <p className="text-xs text-gray-400 dark:text-gray-500 mb-3 italic">{localT.judgeDesc}</p>
-                <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300 border-t border-gray-100 dark:border-gray-700/50 pt-3">
-                  <p><strong>{localT.natureLabel}:</strong> <span className="font-semibold text-amber-700 dark:text-amber-300">{getFigureInfo(figures[14]).nature}</span></p>
-                  <p><strong>{localT.meaningLabel}:</strong> {getFigureInfo(figures[14]).meaning}</p>
-                </div>
-              </div>
-
-              {/* Supreme card */}
-              <div className="bg-white dark:bg-gray-800/60 p-5 rounded-xl shadow-sm border border-amber-200/30 dark:border-amber-800/20 relative overflow-hidden">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <span className="text-xs font-bold text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-900/30 px-2.5 py-1 rounded-full uppercase">
-                      {localT.supreme}
-                    </span>
-                    <h4 className="text-xl font-bold text-gray-900 dark:text-white mt-2">
-                      {getFigureInfo(figures[15]).name} ({getFigureInfo(figures[15]).latin})
-                    </h4>
-                    <p className="text-xl font-arabic text-orange-600 mt-1" dir="rtl">{getFigureInfo(figures[15]).arabic}</p>
-                  </div>
-                  <div className="p-3 bg-amber-50 dark:bg-gray-900/50 rounded-lg" dir="ltr">
-                    {renderDots(figures[15])}
-                  </div>
-                </div>
-                <p className="text-xs text-gray-400 dark:text-gray-500 mb-3 italic">{localT.supremeDesc}</p>
-                <div className="space-y-2 text-sm text-gray-600 dark:text-gray-300 border-t border-gray-100 dark:border-gray-700/50 pt-3">
-                  <p><strong>{localT.natureLabel}:</strong> <span className="font-semibold text-orange-700 dark:text-orange-300">{getFigureInfo(figures[15]).nature}</span></p>
-                  <p><strong>{localT.meaningLabel}:</strong> {getFigureInfo(figures[15]).meaning}</p>
-                </div>
-              </div>
+            {/* Dominant Element Analysis */}
+            <div className="p-3.5 rounded-xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/60 text-xs text-gray-800 dark:text-gray-200 leading-relaxed space-y-1.5">
+              <h4 className="font-bold text-xs text-amber-900 dark:text-amber-200 flex items-center gap-1.5">
+                <Sparkles size={14} className="text-amber-500" />
+                {i18n.dominantElement} : <span className="uppercase font-extrabold text-amber-600">{elemStats.dominant}</span>
+              </h4>
+              {elemStats.dominant === 'fire' && (
+                <p>Dominance du Feu : Indique une énergie d'action zélée, de décision rapide, d'impulsion mais attention aux colères ou précipitations.</p>
+              )}
+              {elemStats.dominant === 'air' && (
+                <p>Dominance de l'Air : Indique une prédominance des pensées, contrats, négociations, idées et communication sociale.</p>
+              )}
+              {elemStats.dominant === 'water' && (
+                <p>Dominance de l'Eau : Indique des voyages, de la sensibilité émotionnelle, de la spiritualité et du mouvement fluide.</p>
+              )}
+              {elemStats.dominant === 'earth' && (
+                <p>Dominance de la Terre : Indique des considérations matérielles, financières, des possessions durables ou de la lenteur.</p>
+              )}
             </div>
+          </div>
+        </motion.div>
+      )}
 
-            {/* Detailed Analysis of all 16 Houses */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-5 sm:p-6">
-              <h3 className="text-lg font-bold text-gray-950 dark:text-white mb-6 flex items-center gap-2">
-                <BookOpen className="text-amber-500" size={20} />
-                {localT.details}
+      {/* Tab 4: Voie du Secret (Tariq al-Nogta) & Remèdes */}
+      {figures.length > 0 && activeTab === 'secret' && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-200/80 dark:border-gray-700 space-y-4">
+            <div>
+              <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <Key className="text-amber-500" size={18} />
+                {i18n.secretPathTitle}
               </h3>
-              
-              <div className="space-y-4">
-                {figures.map((fig, idx) => {
-                  const figInfo = getFigureInfo(fig);
-                  const isHighlighted = selectedHouse === idx;
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{i18n.secretPathDesc}</p>
+            </div>
+
+            <div className="p-3.5 bg-amber-50/60 dark:bg-amber-950/30 rounded-xl border border-amber-200/50 flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div>
+                <span className="text-xs font-bold text-amber-800 dark:text-amber-300 block">Lignée de la Tête du Juge (M15)</span>
+                <p className="text-xs text-gray-600 dark:text-gray-300 mt-0.5">
+                  Mères d'origine connectées au point du secret : <strong>{getSecretPathMothers().map(m => `Maison ${m}`).join(', ') || 'Aucune direct'}</strong>
+                </p>
+              </div>
+              <div className="p-2 bg-white dark:bg-gray-900 rounded-lg border border-amber-300 shrink-0" dir="ltr">
+                {renderDots(figures[14], 'sm')}
+              </div>
+            </div>
+
+            {/* Recommended Saraka & Dhikr for Judge */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+              <div className="p-3.5 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200/50 space-y-1.5">
+                <h4 className="font-bold text-xs text-emerald-900 dark:text-emerald-200 flex items-center gap-1.5">
+                  <ShieldCheck size={16} className="text-emerald-500" />
+                  {i18n.recommendedSaraka}
+                </h4>
+                <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
+                  {getFigureDetail(figures[14]).africanSaraka[langKey]}
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-purple-50/60 dark:bg-purple-950/20 border border-purple-200/50 space-y-1.5">
+                <h4 className="font-bold text-xs text-purple-900 dark:text-purple-200 flex items-center gap-1.5">
+                  <Sparkles size={16} className="text-purple-500" />
+                  {i18n.recommendedDhikr}
+                </h4>
+                <p className="text-xs font-extrabold text-purple-800 dark:text-purple-300">
+                  {getFigureDetail(figures[14]).recommendedDhikr}
+                </p>
+                <p className="text-[11px] text-gray-600 dark:text-gray-400">
+                  À réciter matin ou soir pour débloquer les énergies bénéfiques du thème.
+                </p>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Tab 5: Dictionary / Encyclopedia */}
+      {activeTab === 'dictionary' && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-200/80 dark:border-gray-700 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <BookOpen className="text-amber-500" size={18} />
+                Dictionnaire des 16 Figures Géomantiques
+              </h3>
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-2.5 top-2.5 text-gray-400" size={14} />
+                <input
+                  type="text"
+                  placeholder={i18n.searchPlaceholder}
+                  value={dictionarySearch}
+                  onChange={(e) => setDictionarySearch(e.target.value)}
+                  className="w-full pl-8 pr-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs text-gray-900 dark:text-white"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {Object.keys(FIGURES_DATABASE)
+                .filter(code => {
+                  const fig = FIGURES_DATABASE[code];
+                  const query = dictionarySearch.toLowerCase();
                   return (
-                    <div 
-                      key={idx}
-                      id={`house-details-${idx}`}
-                      className={`p-4 rounded-xl border transition-all ${
-                        isHighlighted 
-                          ? 'bg-amber-50/70 dark:bg-amber-950/20 border-amber-400/80 ring-1 ring-amber-400' 
-                          : 'bg-gray-50/50 dark:bg-gray-900/40 border-gray-100 dark:border-gray-800'
-                      }`}
-                    >
-                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                        <div className="flex items-start gap-3">
-                          <div className="p-2.5 bg-white dark:bg-gray-800 rounded-lg border border-gray-200/50 dark:border-gray-700/50 shrink-0 shadow-sm" dir="ltr">
-                            {renderDots(fig)}
+                    fig.latin.toLowerCase().includes(query) ||
+                    fig.arabic.toLowerCase().includes(query) ||
+                    fig.african.toLowerCase().includes(query) ||
+                    fig.indian.toLowerCase().includes(query)
+                  );
+                })
+                .map(code => {
+                  const fig = FIGURES_DATABASE[code];
+                  const figArr = code.split('-').map(Number);
+                  return (
+                    <div key={code} className="p-3.5 rounded-xl bg-gray-50 dark:bg-gray-900/40 border border-gray-200/60 dark:border-gray-700/60 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2.5">
+                          <div className="p-1.5 bg-white dark:bg-gray-800 rounded-lg border border-amber-200 shrink-0" dir="ltr">
+                            {renderDots(figArr, 'sm')}
                           </div>
                           <div>
-                            <span className="text-[10px] uppercase tracking-wider font-bold text-amber-600 dark:text-amber-400">
-                              {localT.houseLabel} {idx + 1}
-                            </span>
-                            <h4 className="text-base font-bold text-gray-950 dark:text-white mt-0.5">
-                              {localT.houseNames[idx]}
-                            </h4>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                                {figInfo.name} ({figInfo.latin})
-                              </span>
-                              <span className="text-xs text-gray-400 dark:text-gray-500">•</span>
-                              <span className="text-xs font-arabic text-gray-500 dark:text-gray-400" dir="rtl">
-                                {figInfo.arabic}
-                              </span>
-                            </div>
+                            <h4 className="font-bold text-xs text-gray-900 dark:text-white">{fig.latin} — {fig.arabic}</h4>
+                            <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">{fig.african}</p>
                           </div>
                         </div>
-
-                        <div className="flex items-center gap-3 sm:self-center">
-                          <span className={`px-2.5 py-1 rounded-full text-xs font-bold whitespace-nowrap ${
-                            figInfo.nature.includes('Bénéfique') || figInfo.nature.includes('Beneficent') || figInfo.nature.includes('albarka') || figInfo.nature.includes('gaske')
-                              ? 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30'
-                              : figInfo.nature.includes('Maléfique') || figInfo.nature.includes('Malefic') || figInfo.nature.includes('muni') || figInfo.nature.includes('kyau')
-                              ? 'bg-red-50 dark:bg-red-950/30 text-red-700 dark:text-red-400 border border-red-100 dark:border-red-900/30'
-                              : 'bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400 border border-amber-100 dark:border-amber-900/30'
-                          }`}>
-                            {figInfo.nature}
-                          </span>
-                        </div>
+                        <span className="text-[9px] font-bold px-2 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 rounded-md">
+                          {fig.elementName[langKey]}
+                        </span>
                       </div>
 
-                      <div className="mt-4 border-t border-gray-200/50 dark:border-gray-700/50 pt-3">
-                        <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
-                          {figInfo.meaning}
-                        </p>
+                      <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+                        {fig.meaning[langKey]}
+                      </p>
+
+                      <div className="pt-1.5 border-t border-gray-200/50 dark:border-gray-700 text-[10px] text-gray-500 flex flex-wrap gap-x-3 gap-y-0.5">
+                        <span> Planète : {fig.planet[langKey]}</span>
+                        <span> Zodiaque : {fig.zodiac[langKey]}</span>
+                        <span> Ramal : {fig.indian}</span>
                       </div>
                     </div>
                   );
                 })}
-              </div>
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </div>
+        </motion.div>
+      )}
+      </div>
     </div>
   );
 };
+
+export default Geomancy;

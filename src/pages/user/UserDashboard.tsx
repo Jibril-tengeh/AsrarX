@@ -1432,3 +1432,5 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
     </div>
   );
 };
+
+export default UserDashboard;

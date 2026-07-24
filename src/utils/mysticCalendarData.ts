@@ -646,9 +646,9 @@ export const getLocalizedMysticEvent = (
 
 // 3. Localized Moon Phase Mysteries
 export const getLocalizedMoonDayMystery = (hDay: number, lang: 'fr' | 'en' | 'ha'): MoonPhaseMystery => {
-  // Localized structures for each phase range
-  if (hDay === 1 || hDay === 30 || hDay === 29) {
-    return {
+  const baseObj: MoonPhaseMystery = (() => {
+    if (hDay === 1 || hDay === 30 || hDay === 29) {
+      return {
       name: lang === 'fr' ? "Nouvelle Lune (Al-Hilal Al-Khafi / Al-Muhag)" : lang === 'ha' ? "Sabuwar Wata (Al-Hilal Al-Khafi)" : "New Moon (Al-Hilal Al-Khafi)",
       arabicName: "الهلال الخفي - المحاق",
       manzil: lang === 'fr' ? "Al-Sharatan & Al-Butayn (الشَّرَطَان - Demeure des Signes Célestes)" : lang === 'ha' ? "Al-Sharatan da Al-Butayn (الشَّرَطَان)" : "Al-Sharatan & Al-Butayn (الشَّرَطَان)",
@@ -1176,6 +1176,455 @@ export const getLocalizedMoonDayMystery = (hDay: number, lang: 'fr' | 'en' | 'ha
       }
     };
   }
+  })();
+
+  // Inject unique day-by-day Talsam Details for EVERY DAY (1 to 30)
+  baseObj.talsamDetails = getUniqueDayTalsamDetails(hDay, lang);
+  return baseObj;
+};
+
+export const getUniqueDayTalsamDetails = (hDay: number, lang: 'fr' | 'en' | 'ha') => {
+  const d = Math.max(1, Math.min(30, Math.floor(hDay)));
+
+  const generateGraphicSymbol = (dayNum: number): string => {
+    const seals: Record<number, string> = {
+      1: `    ★   ب   ★\nد ┌───────────┐ ح\n│  2   9   4  │\n│  7   5   3  │\n│  6   1   8  │\nو └───────────┘ ب\n    ★   د   ★\n  ✦ WAFQ BUDUH 15 ✦`,
+      2: `  ۞  أَ لِـفٌ  ۞\n║║║  𐎃  ١١١  𐎃  ║║║\n┌───────────────┐\n│  ا   ل   ف    │\n│  ١   ١   ١    │\n│  73   30   1  │\n└───────────────┘\n ✦ SEAL OF ALIF 111 ✦`,
+      3: `   ⚖️   جَـامِـعٌ   ⚖️\n┌─────────────────┐\n│ 𐎄  3   1   40  │\n│ 270 ───★─── 114 │\n│ 𐎓  ج   ا   م   │\n└─────────────────┘\n ✦ KHATIM AL-JAM' ✦`,
+      4: `   🛡️   دَائِـمٌ   🛡️\n┌─────────────────┐\n│ 𐎏   د   ا   ئ   │\n│ 54  ── 18 ── 54 │\n│ 𐎐   م   حي  ق  │\n└─────────────────┘\n ✦ CITADEL OF DAL ✦`,
+      5: `   ☆   هَادٍ وَهَّابٌ   ☆\n┌─────────────────┐\n│  هـ │  15  │  ا │\n├─────────────────┤\n│  14 │  و   │ 73 │\n└─────────────────┘\n  ✦ GATE OF GIFTS ✦`,
+      6: `   💖   وَ دُ و دٌ   💖\n┌─────────────────┐\n│  و (6) │  د (4) │\n├─────────────────┤\n│ 20     │ 256    │\n└─────────────────┘\n ✦ KHATIM AL-WADUD ✦`,
+      7: `   ⚡   زَكِـيٌّ قَوِيٌّ   ⚡\n┌─────────────────┐\n│  ز  │  37  │  ق │\n│ 117 ── ⚡ ── 37 │\n│  ي  │ 117  │  ك │\n└─────────────────┘\n✦ SEAL OF ZAY & POWER ✦`,
+      8: `   🛡️   حَكِيمٌ حَفِيظٌ   🛡️\n┌──────────────────┐\n│ 🛡️  ح  ٩٩٨  🛡️  │\n│ 78  ── 𐎃 ── 998 │\n│ 🛡️  ظ  ٧٨   🛡️  │\n└──────────────────┘\n✦ IMPERVIOUS HAH SHIELD ✦`,
+      9: `   👁️   طَاهِرٌ بَاطِنٌ   👁️\n┌──────────────────┐\n│ 𐎅   ط   215  𐎜 │\n│ 62  ── 👁️ ── 62 │\n│ 𐎖   ر   215  𐎍 │\n└──────────────────┘\n✦ SEAL OF TAH & VISION ✦`,
+      10: `   🗝️   يَسِيرٌ مُبِينٌ   🗝️\n┌──────────────────┐\n│  ي (10) │ 214   │\n├──────────────────┤\n│ 102     │ س (60)│\n└──────────────────┘\n  ✦ KEY OF YA & EASE ✦`,
+      11: `   👑   كٰفِي كَرِيمٌ   👑\n┌──────────────────┐\n│  ك (20) │  ف (80)│\n├──────────────────┤\n│  ي (10) │ 111    │\n└──────────────────┘\n   ✦ CROWN OF KAF ✦`,
+      12: `   🕊️   لَطِيفٌ جَمِيلٌ   🕊️\n┌──────────────────┐\n│  ل (30) │  ط (9) │\n├──────────────────┤\n│  ي (10) │  ف (80)│\n└──────────────────┘\n  ✦ WAFQ LATIF 129 ✦`,
+      13: `   🌕   مَجِيدٌ مُتَعَالٍ   🌕\n┌──────────────────┐\n│ 57  │  م (40) │ 541│\n│ ─── │ 🌕 FULL │ ───│
+│ 𐎓  │  ج (3)  │ 𐎏 │\n└──────────────────┘\n  ✦ MATRIX OF MAJID ✦`,
+      14: `       ☆   هـ   ☆       \n   و  ┌───────────┐  م  \n  ────│  166 BDR  │──── \n   د  └───────────┘  ك  \n       ☆   ج   ☆       \n  ✦ GRAND SEAL OF BADR ✦`,
+      15: `   🕊️   قُدُّوسٌ سَلَامٌ   🕊️\n┌──────────────────┐\n│  ق (100)│ 170    │\n├──────────────────┤\n│ 131     │ س (60) │\n└──────────────────┘\n  ✦ SEAL OF QUDDUS ✦`,
+      16: `   💡   نُورٌ نَافِعٌ   💡\n┌──────────────────┐\n│  ن (50) │ 256    │\n├──────────────────┤\n│ 201     │ و (6)  │\n└──────────────────┘\n  ✦ MATRIX OF NUN ✦`,
+      17: `   👂   سَمِيعٌ بَصِيرٌ   👁️\n┌──────────────────┐\n│  س (60) │ 420    │\n├──────────────────┤\n│ 302     │ ع (70) │\n└──────────────────┘\n✦ SEAL OF SIN & HEARING ✦`,
+      18: `   📖   عَلِيمٌ عَظِيمٌ   📖\n┌──────────────────┐\n│  ع (70) │ 150    │\n├──────────────────┤\n│ 1020    │ ل (30) │\n└──────────────────┘\n  ✦ AYN WISDOM VAULT ✦`,
+      19: `   🔓   فَتَّاحُ فَرْدٌ   🔓\n┌──────────────────┐\n│  ف (80) │ 489    │\n├──────────────────┤\n│ 284     │ ت (400)│\n└──────────────────┘\n  ✦ UNLOCKER OF FA ✦`,
+      20: `   🏛️   صَمَدٌ صَادِقٌ   🏛️\n┌──────────────────┐\n│  ص (90) │ 134    │\n├──────────────────┤\n│ 161     │ م (40) │\n└──────────────────┘\n  ✦ FORTRESS OF SAD ✦`,
+      21: `   ⚡   قُدُّوسٌ قَادِرٌ   ⚡\n┌──────────────────┐\n│  ق (100)│ 305    │\n├──────────────────┤\n│ 170     │ د (4)  │\n└──────────────────┘\n   ✦ TOWER OF QAF ✦`,
+      22: `   🌧️   رَحْمٰنٌ رَحِيمٌ   🌧️\n┌──────────────────┐\n│  ر (200)│ 298    │\n├──────────────────┤\n│ 258     │ ح (8)  │\n└──────────────────┘\n  ✦ RA MERCY FLOOD ✦`,
+      23: `   🌾   شَكُورٌ شَهِيدٌ   🌾\n┌──────────────────┐\n│  ش (300)│ 526    │\n├──────────────────┤\n│ 319     │ ك (20) │\n└──────────────────┘\n  ✦ HARVEST OF SHIN ✦`,
+      24: `   🌊   تَوَّابٌ ثَابِتٌ   🌊\n┌──────────────────┐\n│  ت (400)│ 409    │\n├──────────────────┤\n│ 503     │ و (6)  │\n└──────────────────┘\n  ✦ FOUNTAIN OF TAW ✦`,
+      25: `   ⚓   ثَابِتٌ ثِقَةٌ   ⚓\n┌──────────────────┐\n│  ث (500)│ 503    │\n├──────────────────┤\n│ 905     │ ا (1)  │\n└──────────────────┘\n  ✦ ANCHOR OF THA ✦`,
+      26: `   ⚛️   خَالِقُ خَبِيرٌ   ⚛️\n┌──────────────────┐\n│  خ (600)│ 731    │\n├──────────────────┤\n│ 812     │ ل (30) │\n└──────────────────┘\n  ✦ MATRIX OF KHA ✦`,
+      27: `    👑  ذُو الْجَلَالِ  👑\n┌──────────────────┐\n│  ذ (700)│ 1100   │\n├──────────────────┤\n│  786    │ ﷽     │\n└──────────────────┘\n ✦ SEAL OF MAJESTY 786 ✦`,
+      28: `   🛡️   ضَامِنٌ ظَاهِرٌ   🛡️\n┌──────────────────┐\n│  ض (800)│ 1005   │\n├──────────────────┤\n│ 1106    │ م (40) │\n└──────────────────┘\n  ✦ GUARDIAN OF DDAD ✦`,
+      29: `   🪞   ظَاهِرٌ زَكِيٌّ   🪞\n┌──────────────────┐\n│  ظ (900)│ 1106   │\n├──────────────────┤\n│  37     │ هـ (5) │\n└──────────────────┘\n  ✦ MIRROR OF ZZA ✦`,
+      30: `    ۞  غَنِيٌّ غَفُورٌ  ۞\n┌──────────────────┐\n│  غ (1000)│ 1060  │\n├──────────────────┤\n│  1286    │ 1000  │\n└──────────────────┘\n✦ CROWN OF GHAYN 1000 ✦`
+    };
+
+    return seals[dayNum] || seals[1];
+  };
+
+  const dayRecords: Record<number, { formula: string; spiritualUtility: { fr: string; en: string; ha: string }; description: { fr: string; en: string; ha: string } }> = {
+    1: {
+      formula: "بَدُوحُ (بَ-دُ-و-حُ / B-D-W-H) - ٨ ٦ ٤ ٢",
+      spiritualUtility: {
+        fr: "Attraction des influences bénéfiques, harmonisation de l'aura et consécration sacrée des intentions de vie",
+        en: "Attraction of beneficial influences, aura harmonization, and sacred consecration of intentions",
+        ha: "Jawo albarka, daidaita hasken jiki (aura) da sabunta kyakkyawar niyya da yardar Ubangiji"
+      },
+      description: {
+        fr: "Le talsam de Buduh repose sur un carré magique parfait (Wafq 3x3) dont la somme théurgique constante est de 15 sur chaque axe. Il canalise la vibration de la création primordiale du 1er jour.",
+        en: "The Buduh talisman rests upon a 3x3 magic square with a magic sum of 15 across all axes, channeling primordial creation energy for day 1.",
+        ha: "Hatimin Buduh yana amfani da lissafin Wafq 3x3 na farkon wata (Sabuwar Wata) domin kariya da bude kofofin nasara."
+      }
+    },
+    2: {
+      formula: "أَلِفٌ جَلِيلٌ (أَ-لِ-فُ / A-L-F) - ١١١ / ٧٣",
+      spiritualUtility: {
+        fr: "Clarté d'esprit, éveil de la perception extrasensorielle et déblocage des nœuds mentaux",
+        en: "Mental clarity, spiritual perception awakening, and removal of mental blockages",
+        ha: "Hasken tunani, buɗe hikima da cire duhun zuciya a ranar 2 ga wata"
+      },
+      description: {
+        fr: "Ce talsam du 2e jour s'appuie sur le secret numérique du Alif (111) et sa rectitude. Il aligne le canal médullaire et élève la fréquence vibratoire.",
+        en: "This day 2 talisman leverages the numerical secret of Alif (111) and its vertical posture, raising spiritual frequency.",
+        ha: "Hatimi na ranar 2 yana amfani da sirrin harafin Alif (111) domin tabbatar da haske da natsuwa."
+      }
+    },
+    3: {
+      formula: "جَامِعٌ كَرِيمٌ (جَ-ا-مِ-عٌ / J-A-M-I') - ١١٤ / ٢٧٠",
+      spiritualUtility: {
+        fr: "Rassemblement des cœurs, harmonie relationnelle, concorde et attraction d'affinités spirituelles",
+        en: "Gathering of hearts, relational harmony, and attraction of spiritual affinities",
+        ha: "Haɗa kan mutane, samar da zaman lafiya da jawo masoya na gaskiya"
+      },
+      description: {
+        fr: "Sceau du 3e jour unifiant la lettre Jim (valeur 3) et la force d'attraction sacrée pour sceller l'entente et dissoudre les querelles.",
+        en: "Day 3 seal unifying the letter Jim (value 3) and sacred attraction forces to consolidate harmony and resolve disputes.",
+        ha: "Hatimin ranar 3 mai amfani da harafin Jim (3) domin haɗa kan al'umma da kawo albarka."
+      }
+    },
+    4: {
+      formula: "دَائِمٌ حَيٌّ (دَ-ا-ئِ-مٌ / D-A-I-M) - ٥٤ / ١٨",
+      spiritualUtility: {
+        fr: "Stabilité inébranlable, vitalité physique, ancrage et protection de la santé",
+        en: "Unshakeable stability, physical vitality, grounding, and health protection",
+        ha: "Dorewar nasara, lafiyar jiki, natsuwa da kariyar Ubangiji"
+      },
+      description: {
+        fr: "Talsam du 4e jour utilisant la puissance géométrique du Dal (4) pour former une citadelle de pérennité autour des projets et de la santé.",
+        en: "Day 4 talisman harnessing the geometric strength of Dal (4) to establish a fortress of stability around projects and health.",
+        ha: "Hatimin ranar 4 yana gina katangar karfe na kariya ga lafiya da sana'o'i."
+      }
+    },
+    5: {
+      formula: "هَادٍ وَهَّابٌ (هَ-ا-دٍ / H-A-D-I) - ١٥ / ١٤",
+      spiritualUtility: {
+        fr: "Illumination de la guidance intérieure, dons spirituels spontanés et ouverture des portes du succès",
+        en: "Illumination of inner guidance, spontaneous spiritual gifts, and doors of success opening",
+        ha: "Shiriya ta ubangiji, samun wahayi mai kyau da buɗe hanyoyin arziki"
+      },
+      description: {
+        fr: "Sceau du 5e jour canalisant la vibration du Ha (5) et du Nom Ya Wahhab pour diffuser une cascade de faveurs et d'inspiration divine.",
+        en: "Day 5 seal channeling Ha (5) vibration and Ya Wahhab to release a cascade of divine favors and inspiration.",
+        ha: "Hatimin ranar 5 yana kawo buɗe kofofin arziki da karuwar ilimi ta hanyar sirrin harafin Ha (5)."
+      }
+    },
+    6: {
+      formula: "وَدُودٌ نُورٌ (وَ-دُ-و-دٌ / W-A-D-U-D) - ٢٠ / ٢٥٦",
+      spiritualUtility: {
+        fr: "Magnétisme d'amour pur, apaisement des tensions familiales et rayonnement personnel",
+        en: "Pure love magnetism, family tension soothing, and personal radiance",
+        ha: "So da kauna tsakanin iyali, kwantar da hankali da kwarjini mai kyau"
+      },
+      description: {
+        fr: "Talsam du 6e jour articulé autour du Waw (6) et de la miséricorde universelle, dissolvant l'animosité et attirant la bienveillance.",
+        en: "Day 6 talisman structured around Waw (6) and divine affection, dissolving animosity and drawing benevolence.",
+        ha: "Hatimin ranar 6 na sirrin harafin Waw (6) yana goge kiyayya da shuka so da tausayi."
+      }
+    },
+    7: {
+      formula: "زَكِيٌّ قَوِيٌّ (زَ-كِ-يٌّ / Z-A-K-I) - ٣٧ / ١١٧",
+      spiritualUtility: {
+        fr: "Purification de l'âme, renforcement de la volonté et victoire contre les inclinations négatives",
+        en: "Soul purification, willpower reinforcement, and victory over negative urges",
+        ha: "Tsarkake zuciya, karfafa gwiwa da cin nasara a kan son zuciya"
+      },
+      description: {
+        fr: "Sceau du 7e jour basé sur la lettre Zay (7) et la rectitude du Premier Quartier, fortifiant le cœur et purifiant les mémoires subtiles.",
+        en: "Day 7 seal leveraging Zay (7) and First Quarter rectitude to fortify the heart and cleanse subtle memories.",
+        ha: "Hatimin ranar 7 mai amfani da harafin Zay (7) domin karfafa zuciya da tsarkake rai."
+      }
+    },
+    8: {
+      formula: "حَكِيمٌ حَفِيظٌ (حَ-كِ-ي-مٌ / H-A-K-I-M) - ٧٨ / ٩٩٨",
+      spiritualUtility: {
+        fr: "Bouclier de protection intégrale, sagesse décisionnelle et clarté du jugement",
+        en: "Integral protection shield, decision wisdom, and judgmental clarity",
+        ha: "Kariyar Ubangiji daga dukan maita, hikima wajen yanke shawara da hasken hankali"
+      },
+      description: {
+        fr: "Formule du 8e jour du Hah (8) érigeant une muraille impénétrable contre les énergies toxiques et les perturbations psychiques.",
+        en: "Day 8 formula of Hah (8) raising an impenetrable wall against toxic psychic influences and disturbances.",
+        ha: "Hatimin ranar 8 mai gina kariyar sirri daga makiya da tsare mutum cikin aminci."
+      }
+    },
+    9: {
+      formula: "طَاهِرٌ بَاطِنٌ (طَ-ا-هِ-رٌ / T-A-H-I-R) - ٢١٥ / ٦٢",
+      spiritualUtility: {
+        fr: "Dévoilement des vérités cachées, intuition aiguisée et sanctification de l'esprit",
+        en: "Unveiling of hidden truths, sharpened intuition, and spiritual sanctification",
+        ha: "Fahimtar asirin gaibu, kaifin basira da samun tsarki na gaske"
+      },
+      description: {
+        fr: "Talsam du 9e jour reposant sur le Tah (9), symbole du sommet de la première dizaine, ouvrant la perception aux réalités spirituelles.",
+        en: "Day 9 talisman relying on Tah (9), opening perception to higher spiritual realities.",
+        ha: "Hatimin ranar 9 na harafin Tah (9) yana buɗe idon basira don gane gaskiya."
+      }
+    },
+    10: {
+      formula: "يَسِيرٌ مُبِينٌ (يَ-سِ-ي-رٌ / Y-A-S-I-R) - ٢١٤ / ١٠٢",
+      spiritualUtility: {
+        fr: "Facilitation des épreuves complexes, déblocage des affaires financières et manifestation rapide",
+        en: "Facilitation of complex trials, financial endeavors unblocking, and swift manifestation",
+        ha: "Saukaka al'amuran da suka tsananta, buɗe hanyoyin sana'a da samun nasara da wuri"
+      },
+      description: {
+        fr: "Sceau du 10e jour du Ya (10), point culminant de la décade initiale, ouvrant les voies fermées et apportant une aisance bénie.",
+        en: "Day 10 seal of Ya (10), culminating the first decade to unlock closed pathways and grant blessed ease.",
+        ha: "Hatimin ranar 10 na harafin Ya (10) yana warware dukkan kulle da saukaka wahalhalu."
+      }
+    },
+    11: {
+      formula: "كٰفِي كَرِيمٌ (كٰ-فِ-ي / K-A-F-I) - ١١١ / ٢٧٠",
+      spiritualUtility: {
+        fr: "Suffisance divine, protection contre le manque matériel et générosité céleste",
+        en: "Divine sufficiency, protection against material lack, and celestial generosity",
+        ha: "Bunkasa arziki, samun wadatar zuciya da karewa daga talauci"
+      },
+      description: {
+        fr: "Talsam du 11e jour fondé sur la lettre Kaf (20) et le Nom Ya Kafi, scellant la promesse de suffisance matérielle et spirituelle.",
+        en: "Day 11 talisman built upon Kaf (20) and Ya Kafi, sealing the promise of spiritual and material sufficiency.",
+        ha: "Hatimin ranar 11 na harafin Kaf (20) yana tabbatar da wadatar abinci da tufafi cikin albarka."
+      }
+    },
+    12: {
+      formula: "لَطِيفٌ جَمِيلٌ (لَ-طِ-ي-فٌ / L-A-T-I-F) - ١٢٩ / ٧٣",
+      spiritualUtility: {
+        fr: "Douceur subtile, résolution pacifique des conflits et attraction d'opportunités providentielles",
+        en: "Subtle grace, peaceful conflict resolution, and attraction of providential opportunities",
+        ha: "Sauki da tausayi, warware sabani cikin aminci da samun arzikin ba tsammani"
+      },
+      description: {
+        fr: "Sceau du 12e jour exploitant le carré du Lam (30) et la fréquence de Ya Latif (129) pour émettre une vibration d'apaisement.",
+        en: "Day 12 seal exploiting Lam (30) and Ya Latif (129) frequency to radiate soothing divine grace.",
+        ha: "Hatimin ranar 12 na harafin Lam (30) yana amfani da Ism Ya Latif (129) don kawo sassauci."
+      }
+    },
+    13: {
+      formula: "مَجِيدٌ مُتَعَالٍ (مَ-جِ-ي-دٌ / M-A-J-I-D) - ٥٧ / ٥٤١",
+      spiritualUtility: {
+        fr: "Élévation du statut spirituel, charisme et protection au seuil des Jours Blancs",
+        en: "Spiritual status elevation, charisma, and protection at the threshold of the White Days",
+        ha: "Daukakar matayi, kwarjini a idon mutane da kariya a lokacin Fararen Ranakun Wata"
+      },
+      description: {
+        fr: "Talsam du 13e jour inaugurant la première nuit de la Pleine Lune avec la lettre Mim (40), purifiant l'aura.",
+        en: "Day 13 talisman marking the first White Night with Mim (40), elevating spiritual aura.",
+        ha: "Hatimin ranar 13 na harafin Mim (40) yana daukaka daraja da fito da hasken zuciya."
+      }
+    },
+    14: {
+      formula: "خَاتَمُ الْبَدْرِ الشَّرِيفِ (K-H-A-T-A-M B-A-D-R) - ١٦٦ / ٦٦",
+      spiritualUtility: {
+        fr: "Illumination absolue, sommet du magnétisme spirituel et exaucement direct des vœux",
+        en: "Absolute illumination, spiritual magnetism peak, and direct prayer granting",
+        ha: "Cikakken haske na Badr, karshen kwarjini da amsa addu'a nan take"
+      },
+      description: {
+        fr: "Le Grand Sceau du Badr au sommet de la Pleine Lune (Jour 14), canalisant la plénitude de la lumière divine.",
+        en: "The Great Badr Seal at Full Moon peak (Day 14), channeling full divine illumination.",
+        ha: "Babban Hatimin Badr na ranar 14 (Cikakken Wata) wanda ke yaye dukkan labule na gaibu."
+      }
+    },
+    15: {
+      formula: "قُدُّوسٌ سَلَامٌ (قُ-دُّ-و-سٌ / Q-U-D-D-U-S) - ١٧٠ / ١٣١",
+      spiritualUtility: {
+        fr: "Sainte paix, purification des corps subtils et protection angélique environnante",
+        en: "Holy peace, subtle body purification, and surrounding angelic protection",
+        ha: "Cikakken zaman lafiya, tsarkake jiki da kariya daga mala'ikun kariya"
+      },
+      description: {
+        fr: "Sceau du 15e jour clôturant la Pleine Lune avec la résonance sacrée de Ya Quddus, scellant l'harmonie.",
+        en: "Day 15 seal concluding the Full Moon phase with Ya Quddus, sealing inner balance.",
+        ha: "Hatimin ranar 15 mai rufe lokacin Badr da amsa zikiri ta Ism Ya Quddus."
+      }
+    },
+    16: {
+      formula: "نُورٌ نَافِعٌ (نُ-و-رٌ / N-U-R) - ٢٥٦ / ٢٠١",
+      spiritualUtility: {
+        fr: "Diffusion du savoir utile, clarté d'enseignement et rayonnement bienveillant envers autrui",
+        en: "Useful knowledge dissemination, teaching clarity, and benevolent radiance",
+        ha: "Yada ilimi mai amfani, bayani daki-daki da haskaka zukatan mutane"
+      },
+      description: {
+        fr: "Talsam du 16e jour du Nun (50), marquant le début de la phase descendante pour partager la sagesse acquise.",
+        en: "Day 16 talisman of Nun (50), initiating the sharing of accumulated spiritual wisdom.",
+        ha: "Hatimin ranar 16 na harafin Nun (50) don amfanar al'umma da ilimi mai amfani."
+      }
+    },
+    17: {
+      formula: "سَمِيعٌ بَصِيرٌ (سَ-مِ-ي-عٌ / S-A-M-I') - ٤٢٠ / ٣٠٢",
+      spiritualUtility: {
+        fr: "Écoute spirituelle, clairvoyance et sensibilité accrue aux signes providentiels",
+        en: "Spiritual hearing, clairvoyance, and heightened sensitivity to divine signs",
+        ha: "Jiu ta ruhaniya, kaifin gani da fahimtar alamomin Ubangiji"
+      },
+      description: {
+        fr: "Sceau du 17e jour du Sin (60) amplifiant l'écoute subtile et la perception des vérités intérieures.",
+        en: "Day 17 seal of Sin (60) heightening subtle listening and inner truth perception.",
+        ha: "Hatimin ranar 17 na harafin Sin (60) yana bude kunnen basira da tsinkaye."
+      }
+    },
+    18: {
+      formula: "عَلِيمٌ عَظِيمٌ (عَ-لِ-ي-مٌ / 'A-L-I-M) - ١٥٠ / ١٠٢٠",
+      spiritualUtility: {
+        fr: "Connaissance profonde, grandeur d'âme et protection contre l'ignorance et la tromperie",
+        en: "Deep knowledge, soul greatness, and protection against ignorance and deception",
+        ha: "Bada zurfin ilimi, girman zuciya da kariyar Ubangiji daga yaudara"
+      },
+      description: {
+        fr: "Talsam du 18e jour du Ayn (70), source d'inspiration intellectuelle et de discernement métaphysique.",
+        en: "Day 18 talisman of Ayn (70), source of intellectual inspiration and metaphysical discernment.",
+        ha: "Hatimin ranar 18 na harafin Ayn (70) yana bude kofofin fahimta mai zurfi."
+      }
+    },
+    19: {
+      formula: "فَتَّاحُ فَرْدٌ (فَ-تَّ-ا-حُ / F-A-T-T-A-H) - ٤٨٩ / ٢٨٤",
+      spiritualUtility: {
+        fr: "Ouverture des portes closes, autonomie spirituelle et victoire définitive sur les blocages",
+        en: "Opening of closed doors, spiritual autonomy, and victory over stagnation",
+        ha: "Buɗe dukkan kofofi da aka rufe, 'yancin zuciya da samun nasara mai dorewa"
+      },
+      description: {
+        fr: "Sceau du 19e jour du Fa (80) et de Ya Fattah, dissolvant les verrous invisibles.",
+        en: "Day 19 seal of Fa (80) and Ya Fattah, dissolving invisible locks and clearing the way.",
+        ha: "Hatimin ranar 19 na harafin Fa (80) yana karya dukkan makullai na makiya."
+      }
+    },
+    20: {
+      formula: "صَمَدٌ صَادِقٌ (صَ-مَ-دٌ / S-A-M-A-D) - ١٣٤ / ١٦١",
+      spiritualUtility: {
+        fr: "Sincérité inébranlable, refuge auprès de l'Absolu et protection contre le mensonge",
+        en: "Unshakeable sincerity, refuge in the Absolute, and protection against falsehood",
+        ha: "Gaskiya ta dindindin, fake wa Ubangiji da kariya daga maƙaryata"
+      },
+      description: {
+        fr: "Talsam du 20e jour du Sad (90) fortifiant la véracité du cœur.",
+        en: "Day 20 talisman of Sad (90) fortifying heart veracity and sincerity.",
+        ha: "Hatimin ranar 20 na harafin Sad (90) yana tabbatar da gaskiya da cire shakku."
+      }
+    },
+    21: {
+      formula: "قُدُّوسٌ قَادِرٌ (قُ-دُّ-و-سٌ / Q-A-D-I-R) - ١٧٠ / ٣٠٥",
+      spiritualUtility: {
+        fr: "Toute-puissance sacrée, souveraineté spirituelle et défense absolue contre les attaques",
+        en: "Sacred omnipotence, spiritual sovereignty, and defense against attacks",
+        ha: "Iko na Ubangiji, 'yanci na ruhaniya da garkuwa daga dukkan hari"
+      },
+      description: {
+        fr: "Sceau du 21e jour du Qaf (100) ancrant une invulnérabilité céleste.",
+        en: "Day 21 seal of Qaf (100) anchoring celestial invulnerability.",
+        ha: "Hatimin ranar 21 na harafin Qaf (100) yana gina kariyar karfe a jikin dan adam."
+      }
+    },
+    22: {
+      formula: "رَحْمٰنٌ رَحِيمٌ (رَ-حْ-مٰ-نٌ / R-A-H-M-A-N) - ٢٩٨ / ٢٥٨",
+      spiritualUtility: {
+        fr: "Mise en œuvre de la miséricorde universelle, guérison des blessures intérieures et paix",
+        en: "Universal mercy manifestation, inner healing, and spiritual peace",
+        ha: "Saukaka tausayin Ubangiji, warkar da miki na zuciya da samun salama"
+      },
+      description: {
+        fr: "Talsam du 22e jour (Dernier Quartier) de la lettre Ra (200), apportant réconfort et guérison.",
+        en: "Day 22 (Last Quarter) talisman of Ra (200), bestowing divine comfort and healing.",
+        ha: "Hatimin ranar 22 na harafin Ra (200) wanda ke saukar da rahma da warkarwa."
+      }
+    },
+    23: {
+      formula: "شَكُورٌ شَهِيدٌ (شَ-كُ-و-رٌ / S-H-A-K-U-R) - ٥٢٦ / ٣١٩",
+      spiritualUtility: {
+        fr: "Gratitude multipliée, présence attentive et multiplication des bénédictions reçues",
+        en: "Multiplied gratitude, mindful presence, and multiplication of blessings",
+        ha: "Ninkakar godiya ga Ubangiji, natsuwa da rubanya albarkatun rayuwa"
+      },
+      description: {
+        fr: "Sceau du 23e jour du Shin (300) activant le pouvoir de la gratitude pour attirer l'abondance.",
+        en: "Day 23 seal of Shin (300) activating gratitude power to magnify abundance.",
+        ha: "Hatimin ranar 23 na harafin Shin (300) yana yawaita godiya da albarka."
+      }
+    },
+    24: {
+      formula: "تَوَّابٌ ثَابِتٌ (تَ-وَّ-ا-بٌ / T-A-W-W-A-B) - ٤٠٩ / ٥٠٣",
+      spiritualUtility: {
+        fr: "Acceptation du repentir, effacement des fautes et fermeté retrouvée",
+        en: "Repentance acceptance, fault erasing, and restored spiritual firmness",
+        ha: "Karbar tuba, goge zunubai da komawa zuwa tafarki madaidaici"
+      },
+      description: {
+        fr: "Talsam du 24e jour du Taw (400), dissolvant les blocages karmiques et renouvelant la pureté.",
+        en: "Day 24 talisman of Taw (400), dissolving spiritual knots and renewing purity.",
+        ha: "Hatimin ranar 24 na harafin Taw (400) na goge zunubai da sabunta addu'a."
+      }
+    },
+    25: {
+      formula: "ثَابِتٌ ثِقَةٌ (ثَ-ا-بِ-تٌ / T-H-A-B-I-T) - ٥٠٣ / ٩٠٥",
+      spiritualUtility: {
+        fr: "Confiance absolue en la Providence divine, sérénité face à l'inconnu et stabilité",
+        en: "Absolute trust in Divine Providence, serenity before uncertainty, and stability",
+        ha: "Rike amana ta gaske ga Ubangiji, cire tsoron gobe da natsuwar rai"
+      },
+      description: {
+        fr: "Sceau du 25e jour du Tha (500) ancrant une certitude inébranlable.",
+        en: "Day 25 seal of Tha (500) grounding unshakeable faith in Divine Decree.",
+        ha: "Hatimin ranar 25 na harafin Tha (500) yana kawo kwanciyar hankali."
+      }
+    },
+    26: {
+      formula: "خَالِقُ خَبِيرٌ (خَ-ا-لِ-قُ / K-H-A-L-I-Q) - ٧٣١ / ٨١٢",
+      spiritualUtility: {
+        fr: "Inspiration créatrice, compréhension des mécanismes secrets et sagesse",
+        en: "Creative inspiration, understanding of secret mechanisms, and wisdom",
+        ha: "Fahimtar tsarin halitta, fasaha wajen aiki da ilimin gaibu"
+      },
+      description: {
+        fr: "Talsam du 26e jour du Kha (600), dévoilant les lois cachées de la création.",
+        en: "Day 26 talisman of Kha (600), uncovering hidden creation laws and wisdom.",
+        ha: "Hatimin ranar 26 na harafin Kha (600) yana fito da sirrin halittar Ubangiji."
+      }
+    },
+    27: {
+      formula: "ذُو الْجَلَالِ وَالْإِكْرَامِ (D-H-U A-L-J-A-L-A-L) - ١١٠٠ / ٧٨٦",
+      spiritualUtility: {
+        fr: "Majesté, honneur spirituel, secours divin et déblocage des causes majeures",
+        en: "Majesty, spiritual honor, divine help, and major endeavors unblocking",
+        ha: "Girmah da daukaka, taimakon Ubangiji cikin gaggawa da buɗe babbar harkar rayuwa"
+      },
+      description: {
+        fr: "Sceau du 27e jour (Dhal 700), nuit de bénédiction et de dévoilement céleste suprême.",
+        en: "Day 27 seal (Dhal 700), night of blessing and supreme celestial unveiling.",
+        ha: "Hatimin ranar 27 na harafin Dhal (700) na dare mai albarka da amsa roko."
+      }
+    },
+    28: {
+      formula: "ضَامِنٌ ظَاهِرٌ (D-D-A-M-I-N) - ١٠٠٥ / ١١٠٦",
+      spiritualUtility: {
+        fr: "Garantie divine de protection des biens et de l'âme au terme du cycle",
+        en: "Divine guarantee of protection for possessions and soul at cycle end",
+        ha: "Garon Ubangiji na tsare dukiyoyi da rayuwa a karshen watan"
+      },
+      description: {
+        fr: "Talsam du 28e jour du Ddad (800), sécurisant les acquis spirituels et matériels.",
+        en: "Day 28 talisman of Ddad (800), safeguarding spiritual and material gains.",
+        ha: "Hatimin ranar 28 na harafin Ddad (800) yana kiyaye albarkar da aka samu."
+      }
+    },
+    29: {
+      formula: "ظَاهِرٌ زَكِيٌّ (Z-Z-A-H-I-R) - ١١٠٦ / ٣٧",
+      spiritualUtility: {
+        fr: "Purification finale avant le renouveau, effacement des reliquats d'impuretés",
+        en: "Final purification before cycle renewal, erasing residual impurities",
+        ha: "Tsarkakewa na karshe kafin shiga sabon wata, goge dukkan duhu"
+      },
+      description: {
+        fr: "Sceau du 29e jour du Zza (900), nettoyant le miroir du cœur pour le nouveau mois.",
+        en: "Day 29 seal of Zza (900), polishing the heart's mirror for the new cycle.",
+        ha: "Hatimin ranar 29 na harafin Zza (900) wanda ke tsarkake zuciya."
+      }
+    },
+    30: {
+      formula: "غَنِيٌّ غَفُورٌ (G-H-A-N-I-Y) - ١٠٦٠ / ١٢٨٦",
+      spiritualUtility: {
+        fr: "Richesse spirituelle intégrale, pardon complet (Maghfirah) et accomplissement du cycle",
+        en: "Complete spiritual richness, full forgiveness (Maghfirah), and cycle completion",
+        ha: "Wadata ta gaske na zuciya, gafara ta dindindin da cikar zagayowar wata"
+      },
+      description: {
+        fr: "Talsam du 30e jour du Ghayn (1000), scellant le mois dans l'abondance et la paix.",
+        en: "Day 30 talisman of Ghayn (1000), sealing the lunar month in abundance and peace.",
+        ha: "Hatimin ranar 30 na harafin Ghayn (1000) wanda ke rufe wata da cikakkiyar albarka."
+      }
+    }
+  };
+
+  const rec = dayRecords[d] || dayRecords[1];
+
+  return {
+    formula: rec.formula,
+    graphicSymbol: generateGraphicSymbol(d),
+    spiritualUtility: rec.spiritualUtility[lang] || rec.spiritualUtility.fr,
+    description: rec.description[lang] || rec.description.fr
+  };
 };
 
 export interface TalsamUsageProtocol {

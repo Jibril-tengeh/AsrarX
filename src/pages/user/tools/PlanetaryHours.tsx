@@ -5,13 +5,90 @@ import { useLanguage } from '../../../contexts/LanguageContext';
 import { motion, AnimatePresence } from 'motion/react';
 
 const planets = [
-  { name: 'Soleil', arabic: 'الشمس', color: 'text-amber-500', bg: 'bg-amber-100 dark:bg-amber-900/30', border: 'border-amber-200 dark:border-amber-800', desc: 'Succès, pouvoir, guérison, illumination' },
-  { name: 'Vénus', arabic: 'الزهرة', color: 'text-emerald-500', bg: 'bg-emerald-100 dark:bg-emerald-900/30', border: 'border-emerald-200 dark:border-emerald-800', desc: 'Amour, beauté, attraction, harmonie' },
-  { name: 'Mercure', arabic: 'عطارد', color: 'text-blue-400', bg: 'bg-blue-100 dark:bg-blue-900/30', border: 'border-blue-200 dark:border-blue-800', desc: 'Communication, intelligence, commerce, rapidité' },
-  { name: 'Lune', arabic: 'القمر', color: 'text-slate-400', bg: 'bg-slate-100 dark:bg-slate-800', border: 'border-slate-200 dark:border-slate-700', desc: 'Rêves, intuition, émotions, magie d\'eau' },
-  { name: 'Saturne', arabic: 'زحل', color: 'text-zinc-600 dark:text-zinc-400', bg: 'bg-zinc-100 dark:bg-zinc-800', border: 'border-zinc-200 dark:border-zinc-700', desc: 'Discipline, karma, séparation, protection, bannissement' },
-  { name: 'Jupiter', arabic: 'المشتري', color: 'text-orange-500', bg: 'bg-orange-100 dark:bg-orange-900/30', border: 'border-orange-200 dark:border-orange-800', desc: 'Chance, richesse, expansion, justice' },
-  { name: 'Mars', arabic: 'المريخ', color: 'text-red-500', bg: 'bg-red-100 dark:bg-red-900/30', border: 'border-red-200 dark:border-red-800', desc: 'Courage, force, conflit, victoire' }
+  { 
+    name: 'Soleil', 
+    arabic: 'الشمس', 
+    color: 'text-amber-500', 
+    bg: 'bg-amber-100 dark:bg-amber-900/30', 
+    border: 'border-amber-200 dark:border-amber-800', 
+    desc: 'Succès, pouvoir, guérison, illumination',
+    angel: 'Ruqiyail (روفيائيل)',
+    jinnKing: 'Al-Mudhib (المذهب / Roi du Dimanche)',
+    incense: 'Luban Mâle, Oud & Safran',
+    auspicity: { status: 'neutral', label: 'Favorable / Neutre (Noblesse)', color: 'bg-amber-500 text-white' }
+  },
+  { 
+    name: 'Vénus', 
+    arabic: 'الزهرة', 
+    color: 'text-emerald-500', 
+    bg: 'bg-emerald-100 dark:bg-emerald-900/30', 
+    border: 'border-emerald-200 dark:border-emerald-800', 
+    desc: 'Amour, beauté, attraction, harmonie',
+    angel: 'Aniyail (عنيائيل)',
+    jinnKing: 'Zouba\'ah (زوبعة / Roi du Vendredi)',
+    incense: 'Mastic, Oud Blanc & Eau de Rose',
+    auspicity: { status: 'favorable', label: 'Très Favorable (Grâce & Amour)', color: 'bg-emerald-500 text-white' }
+  },
+  { 
+    name: 'Mercure', 
+    arabic: 'عطارد', 
+    color: 'text-blue-400', 
+    bg: 'bg-blue-100 dark:bg-blue-900/30', 
+    border: 'border-blue-200 dark:border-blue-800', 
+    desc: 'Communication, intelligence, commerce, rapidité',
+    angel: 'Mikail (ميكائيل)',
+    jinnKing: 'Barqan (برقان / Roi du Mercredi)',
+    incense: 'Sandaraque, Mastic & Musc',
+    auspicity: { status: 'neutral', label: 'Favorable / Neutre (Commerce)', color: 'bg-blue-500 text-white' }
+  },
+  { 
+    name: 'Lune', 
+    arabic: 'القمر', 
+    color: 'text-slate-400', 
+    bg: 'bg-slate-100 dark:bg-slate-800', 
+    border: 'border-slate-200 dark:border-slate-700', 
+    desc: 'Rêves, intuition, émotions, magie d\'eau',
+    angel: 'Jibril / Gabriel (جبرائيل)',
+    jinnKing: 'Al-Abyad (الأبيض / Roi du Lundi)',
+    incense: 'Musc Blanc & Encens de Cambodge',
+    auspicity: { status: 'neutral', label: 'Favorable / Neutre (Intuition)', color: 'bg-slate-500 text-white' }
+  },
+  { 
+    name: 'Saturne', 
+    arabic: 'زحل', 
+    color: 'text-zinc-600 dark:text-zinc-400', 
+    bg: 'bg-zinc-100 dark:bg-zinc-800', 
+    border: 'border-zinc-200 dark:border-zinc-700', 
+    desc: 'Discipline, karma, séparation, protection, bannissement',
+    angel: 'Kasfiyail (كسفيائيل)',
+    jinnKing: 'Maymun (ميمون / Roi du Samedi)',
+    incense: 'Myrrhe, Santal Noir & Soufre',
+    auspicity: { status: 'unfavorable', label: 'Prudence / Défavorable (Rigoureux)', color: 'bg-zinc-700 text-white' }
+  },
+  { 
+    name: 'Jupiter', 
+    arabic: 'المشتري', 
+    color: 'text-orange-500', 
+    bg: 'bg-orange-100 dark:bg-orange-900/30', 
+    border: 'border-orange-200 dark:border-orange-800', 
+    desc: 'Chance, richesse, expansion, justice',
+    angel: 'Sarfiyail (صرفيائيل)',
+    jinnKing: 'Shamhurish (شمهورش / Roi du Jeudi)',
+    incense: 'Ambre Gris, Oud & Santal',
+    auspicity: { status: 'favorable', label: 'Très Favorable (Prospérité)', color: 'bg-emerald-500 text-white' }
+  },
+  { 
+    name: 'Mars', 
+    arabic: 'المريخ', 
+    color: 'text-red-500', 
+    bg: 'bg-red-100 dark:bg-red-900/30', 
+    border: 'border-red-200 dark:border-red-800', 
+    desc: 'Courage, force, conflit, victoire',
+    angel: 'Samsamail (سمسائيل)',
+    jinnKing: 'Al-Ahmar (الأحمر / Roi du Mardi)',
+    incense: 'Santal Rouge, Poivre & Casserole',
+    auspicity: { status: 'unfavorable', label: 'Prudence / Défavorable (Combat)', color: 'bg-red-600 text-white' }
+  }
 ];
 
 // Chaldean sequence: Saturn -> Jupiter -> Mars -> Sun -> Venus -> Mercury -> Moon -> repeat
@@ -28,6 +105,15 @@ export const PlanetaryHours: React.FC = () => {
   const [sunset, setSunset] = useState('18:00');
   const [selectedDay, setSelectedDay] = useState(new Date().getDay()); // 0-6
   const [isUsingCache, setIsUsingCache] = useState(true);
+  const [nowTime, setNowTime] = useState<Date>(new Date());
+
+  // Live timer tick
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNowTime(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Load saved state on mount
   useEffect(() => {
@@ -135,6 +221,47 @@ export const PlanetaryHours: React.FC = () => {
 
   const allHours = calculateHours();
   const currentViewHours = allHours.filter(h => h.isDay === isDay);
+
+  const getLiveActiveHour = () => {
+    const nowMinutes = nowTime.getHours() * 60 + nowTime.getMinutes();
+    const nowSeconds = nowTime.getSeconds();
+
+    let found = allHours.find(h => {
+      const s = parseTime(h.timeStart);
+      let e = parseTime(h.timeEnd);
+      if (e <= s) e += 24 * 60;
+      let adjustedNow = nowMinutes;
+      if (nowMinutes < s && s > 18 * 60) adjustedNow += 24 * 60;
+      return adjustedNow >= s && adjustedNow < e;
+    });
+
+    if (!found) found = allHours[0];
+
+    const sMins = parseTime(found.timeStart);
+    let eMins = parseTime(found.timeEnd);
+    if (eMins <= sMins) eMins += 24 * 60;
+
+    let adjustedNowMins = nowMinutes;
+    if (nowMinutes < sMins && sMins > 18 * 60) adjustedNowMins += 24 * 60;
+
+    const totalHourSecs = (eMins - sMins) * 60;
+    const elapsedSecs = (adjustedNowMins - sMins) * 60 + nowSeconds;
+    const remainingSecs = Math.max(0, totalHourSecs - elapsedSecs);
+
+    const remH = Math.floor(remainingSecs / 3600);
+    const remM = Math.floor((remainingSecs % 3600) / 60);
+    const remS = Math.floor(remainingSecs % 60);
+
+    const progress = Math.min(100, Math.max(0, (elapsedSecs / totalHourSecs) * 100));
+
+    return {
+      activeHour: found,
+      remainingStr: `${remH > 0 ? `${remH}h ` : ''}${String(remM).padStart(2, '0')}m ${String(remS).padStart(2, '0')}s`,
+      progress
+    };
+  };
+
+  const liveInfo = getLiveActiveHour();
 
   const enableNotifications = async () => {
     if (!("Notification" in window)) {
@@ -265,6 +392,79 @@ export const PlanetaryHours: React.FC = () => {
         )}
       </AnimatePresence>
 
+      {/* Real-time Planetary Hour Card */}
+      {liveInfo && (
+        <div className="bg-gradient-to-br from-slate-900 to-indigo-950 text-white rounded-3xl p-5 sm:p-6 shadow-xl border border-indigo-800/40 mb-6 space-y-4 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+              </span>
+              <span className="text-xs uppercase font-extrabold tracking-widest text-amber-300">
+                Heure Planétaire en Cours (Temps Réel)
+              </span>
+            </div>
+
+            <div className="bg-white/10 px-3 py-1.5 rounded-full backdrop-blur-md border border-white/10 text-right">
+              <span className="text-[10px] uppercase tracking-wider text-slate-300 block">Temps Restant</span>
+              <strong className="text-base font-mono font-bold text-emerald-400">{liveInfo.remainingStr}</strong>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <div className="flex items-center gap-3">
+                <span className={`text-3xl font-extrabold ${liveInfo.activeHour.planet.color}`}>
+                  {liveInfo.activeHour.planet.name}
+                </span>
+                <span className="text-2xl font-bold font-arabic text-amber-200" dir="rtl">
+                  {liveInfo.activeHour.planet.arabic}
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 mt-1">{liveInfo.activeHour.planet.desc}</p>
+              <div className="mt-2 inline-block">
+                <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${liveInfo.activeHour.planet.auspicity.color}`}>
+                  {liveInfo.activeHour.planet.auspicity.label}
+                </span>
+              </div>
+            </div>
+
+            <div className="bg-white/5 p-3 rounded-2xl border border-white/10 space-y-1.5 text-xs">
+              <div>
+                <span className="text-slate-400 block text-[10px]">Ange Régent du Ciel:</span>
+                <strong className="text-amber-300">{liveInfo.activeHour.planet.angel}</strong>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[10px]">Roi Jinn de la Terre:</span>
+                <strong className="text-emerald-300">{liveInfo.activeHour.planet.jinnKing}</strong>
+              </div>
+              <div>
+                <span className="text-slate-400 block text-[10px]">Encens à Brûler:</span>
+                <span className="text-slate-200">{liveInfo.activeHour.planet.incense}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Hour completion progress bar */}
+          <div className="space-y-1">
+            <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-amber-400 to-emerald-400 transition-all duration-1000"
+                style={{ width: `${liveInfo.progress}%` }}
+              />
+            </div>
+            <div className="flex justify-between text-[10px] text-slate-400 font-mono">
+              <span>{liveInfo.activeHour.timeStart}</span>
+              <span>{liveInfo.activeHour.timeEnd}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Info banner */}
       <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800/50 rounded-2xl p-4 mb-6 flex gap-3">
         <Info className="text-amber-500 shrink-0 mt-0.5" size={20} />
         <p className="text-sm text-amber-800 dark:text-amber-200">
@@ -304,24 +504,38 @@ export const PlanetaryHours: React.FC = () => {
             key={`${isDay ? 'd' : 'n'}-${i}`}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.05 }}
-            className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-5 rounded-2xl border ${h.planet.bg} ${h.planet.border} gap-4`}
+            transition={{ delay: i * 0.03 }}
+            className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-5 rounded-2xl border ${h.planet.bg} ${h.planet.border} gap-4 relative overflow-hidden`}
           >
-            <div className="flex items-center gap-4 flex-1">
-              <div className={`w-10 h-10 rounded-full bg-white dark:bg-gray-800 flex items-center justify-center font-bold shadow-sm ${h.planet.color} shrink-0`}>
+            <div className="flex items-start sm:items-center gap-4 flex-1">
+              <div className={`w-10 h-10 rounded-full bg-white dark:bg-gray-800 flex items-center justify-center font-bold shadow-sm ${h.planet.color} shrink-0 mt-1 sm:mt-0`}>
                 {h.hourIndex}
               </div>
-              <div className="flex-1 min-w-0">
-                <span className="block text-sm text-gray-500 dark:text-gray-400 font-medium font-mono mb-0.5">
-                  {h.timeStart} - {h.timeEnd}
-                </span>
-                <span className={`font-bold text-lg ${h.planet.color}`}>{h.planet.name}</span>
-                <p className="text-xs text-gray-600 dark:text-gray-300 mt-1 line-clamp-2">{h.planet.desc}</p>
+              <div className="flex-1 min-w-0 space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs text-gray-500 dark:text-gray-400 font-bold font-mono">
+                    {h.timeStart} - {h.timeEnd}
+                  </span>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${h.planet.auspicity.color}`}>
+                    {h.planet.auspicity.label}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className={`font-extrabold text-lg ${h.planet.color}`}>{h.planet.name}</span>
+                  <span className="text-xs text-gray-500 font-medium">({h.planet.desc})</span>
+                </div>
+
+                <div className="text-[11px] text-gray-600 dark:text-gray-300 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-0.5 pt-1">
+                  <span><strong>Ange:</strong> {h.planet.angel}</span>
+                  <span><strong>Roi Jinn:</strong> {h.planet.jinnKing}</span>
+                  <span className="col-span-1 sm:col-span-2 text-gray-500"><strong>Encens:</strong> {h.planet.incense}</span>
+                </div>
               </div>
             </div>
             
             <div className="text-right shrink-0">
-              <span className={`text-xl sm:text-2xl font-bold font-arabic ${h.planet.color}`} dir="rtl">
+              <span className={`text-2xl font-bold font-arabic ${h.planet.color}`} dir="rtl">
                 {h.planet.arabic}
               </span>
             </div>

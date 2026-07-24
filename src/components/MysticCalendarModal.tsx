@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, ChevronLeft, ChevronRight, Sparkles, BookOpen, Compass, Moon, Info, Eye, EyeOff, Calendar, Download, ChevronDown, Activity, Heart, Zap, Brain, Timer, Play, Pause, Flame, Check, ShieldAlert, RefreshCw, Lock, Copy, ExternalLink, Leaf } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -1071,7 +1072,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
   const selectedHijriDetails = HIJRI_MONTHS[hijriMonthIndex];
   const asrarOfTheDay = inspirativeQuotes[selectedHijriDay % inspirativeQuotes.length];
 
-  const activeMoonMystery = selectedMoonPhaseDay !== null ? getMoonDayMystery(selectedMoonPhaseDay) : null;
+  const activeMoonMystery = getMoonDayMystery(selectedMoonPhaseDay !== null ? selectedMoonPhaseDay : selectedHijriDay);
 
   const calendarStatus = featureToggles?.tool_calendar || 'active'; // active, premium, maintenance, inactive, disabled
   const isUserPremium = user?.subscriptionTier === 'premium' || user?.subscriptionTier === 'pro' || user?.role === 'admin';
@@ -3047,22 +3048,54 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                           </span>
                           
                           <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center mt-2">
-                            <div className="md:col-span-5 flex flex-col items-center justify-center gap-1.5">
+                            <div className="md:col-span-5 flex flex-col items-center justify-center gap-2">
                               <div 
-                                onClick={() => setIsSealExpanded(true)}
-                                className="group relative cursor-zoom-in bg-black/60 border border-purple-500/30 hover:border-purple-400/60 p-2.5 rounded-lg transition-all duration-300 shadow-inner hover:shadow-purple-500/5 select-none"
-                                title={language === 'fr' ? "Cliquez pour agrandir et télécharger le Sceau" : language === 'ha' ? "Danna don faɗaɗawa da saukar da Hatimi" : "Click to enlarge and download Seal"}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setIsSealExpanded(true);
+                                }}
+                                className="group relative cursor-pointer w-full flex flex-col items-center justify-center bg-black/80 border border-purple-500/40 hover:border-amber-400/60 p-3 rounded-xl transition-all duration-300 shadow-inner hover:shadow-purple-500/20 select-none"
+                                title={language === 'fr' ? "Cliquez pour agrandir en plein écran et télécharger le Sceau" : language === 'ha' ? "Danna don faɗaɗawa da saukar da Hatimi" : "Click to enlarge in full screen and download Seal"}
                               >
-                                <pre className="text-purple-300 text-[10px] font-mono leading-none tracking-tight text-center whitespace-pre-wrap max-w-full">
+                                <pre className="text-purple-300 text-[10px] sm:text-[11px] font-mono leading-none tracking-tight text-center whitespace-pre max-w-full overflow-x-auto">
                                   {activeMoonMystery.talsamDetails.graphicSymbol}
                                 </pre>
                                 
-                                <div className="absolute inset-0 bg-purple-500/5 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg flex items-center justify-center">
-                                  <span className="bg-black/80 text-purple-300 text-[9px] font-extrabold px-1.5 py-0.5 rounded-md border border-purple-500/20 shadow-md flex items-center gap-1 uppercase tracking-wider">
-                                    <Sparkles size={8} className="animate-pulse" />
-                                    {language === 'fr' ? "Agrandir" : language === 'ha' ? "Buɗe" : "Enlarge"}
+                                <div className="absolute inset-0 bg-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center backdrop-blur-[2px]">
+                                  <span className="bg-purple-950/90 text-amber-300 text-[10px] font-extrabold px-2 py-1 rounded-lg border border-amber-500/40 shadow-xl flex items-center gap-1.5 uppercase tracking-wider">
+                                    <Eye size={12} className="animate-pulse" />
+                                    {language === 'fr' ? "Voir en Plein Écran" : language === 'ha' ? "Buɗe Bayana" : "Full Screen"}
                                   </span>
                                 </div>
+                              </div>
+
+                              {/* Direct Seal Control Buttons */}
+                              <div className="flex items-center gap-1.5 w-full">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setIsSealExpanded(true);
+                                  }}
+                                  className="flex-1 flex items-center justify-center gap-1 bg-purple-950/60 hover:bg-purple-900/80 border border-purple-500/30 text-purple-200 text-[10px] font-bold py-1.5 px-2 rounded-lg transition-colors cursor-pointer"
+                                  title={language === 'fr' ? "Afficher le sceau en grand" : "View seal full screen"}
+                                >
+                                  <Eye size={12} className="text-purple-300" />
+                                  <span>{language === 'fr' ? "Plein Écran" : language === 'ha' ? "Buɗe" : "Full Screen"}</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    downloadSealAsImage();
+                                  }}
+                                  className="flex-1 flex items-center justify-center gap-1 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-[10px] font-bold py-1.5 px-2 rounded-lg transition-colors cursor-pointer"
+                                  title={language === 'fr' ? "Télécharger le Sceau sous forme d'image PNG" : "Download Seal as PNG image"}
+                                >
+                                  <Download size={12} className="text-amber-400" />
+                                  <span>{language === 'fr' ? "Télécharger" : language === 'ha' ? "Sauke" : "Download"}</span>
+                                </button>
                               </div>
                             </div>
                             <div className="md:col-span-7 space-y-1.5">
@@ -3242,160 +3275,164 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
 
         {/* Lightbox for Seal Expansion */}
         <AnimatePresence>
-          {isSealExpanded && activeMoonMystery?.talsamDetails && (() => {
-            const proto = getTalsamAdvancedProtocol(selectedHijriDay, language);
-            return (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 z-[10050] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-3 sm:p-6"
-              >
-                {/* Background elements */}
-                <div className="absolute inset-0 bg-radial-gradient from-purple-950/20 via-black to-black opacity-60 pointer-events-none" />
-                
-                <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto custom-scrollbar bg-[#0a0712] border border-purple-500/30 rounded-3xl p-5 sm:p-8 flex flex-col items-center shadow-2xl shadow-purple-500/10 z-10">
-                  {/* Close Button */}
-                  <button
-                    onClick={() => setIsSealExpanded(false)}
-                    className="absolute top-4 right-4 p-2 bg-purple-950/60 text-purple-300 hover:text-white rounded-full border border-purple-500/30 hover:bg-purple-900/80 transition-colors cursor-pointer z-20"
-                    title={language === 'fr' ? "Fermer" : "Close"}
-                  >
-                    <X size={18} />
-                  </button>
+          {isSealExpanded && activeMoonMystery?.talsamDetails && createPortal(
+            (() => {
+              const currentDayForSeal = selectedMoonPhaseDay || selectedHijriDay;
+              const proto = getTalsamAdvancedProtocol(currentDayForSeal, language);
+              return (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 z-[100000] bg-black/95 backdrop-blur-2xl flex flex-col items-center justify-center p-3 sm:p-6 overflow-y-auto"
+                >
+                  {/* Background elements */}
+                  <div className="absolute inset-0 bg-radial-gradient from-purple-950/40 via-black to-black opacity-80 pointer-events-none" />
+                  
+                  <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto custom-scrollbar bg-[#0a0712] border border-purple-500/40 rounded-3xl p-5 sm:p-8 flex flex-col items-center shadow-2xl shadow-purple-500/20 z-10 my-auto">
+                    {/* Close Button */}
+                    <button
+                      onClick={() => setIsSealExpanded(false)}
+                      className="absolute top-4 right-4 p-2.5 bg-purple-950/80 text-purple-300 hover:text-white rounded-full border border-purple-500/40 hover:bg-purple-900 transition-colors cursor-pointer z-20 shadow-lg"
+                      title={language === 'fr' ? "Fermer" : "Close"}
+                    >
+                      <X size={20} />
+                    </button>
 
-                  <div className="text-center mb-6 pr-6">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-purple-400 block mb-1">
-                      {language === 'fr' ? "SCEAU SACRÉ & PROTOCOLE D'UTILISATION" : language === 'ha' ? "HATIMIN SIRRI DA MAGANA" : "SACRED LUNAR SEAL & RITUAL PROTOCOL"}
-                    </span>
-                    <h3 className="text-xl sm:text-2xl font-serif font-bold text-white">
-                      {activeMoonMystery.wirdDetails?.title || `Jour ${selectedHijriDay}`}
-                    </h3>
-                    <p className="text-xs text-amber-300 font-extrabold italic mt-1">
-                      "{activeMoonMystery.vibration}"
-                    </p>
-                  </div>
-
-                  {/* Big Sceau view */}
-                  <div className="w-full flex flex-col items-center justify-center gap-4 py-5 bg-black/90 border border-purple-500/30 rounded-2xl p-4 sm:p-6 shadow-2xl relative overflow-hidden select-all mb-6">
-                    <pre className="text-purple-300 font-mono text-lg sm:text-xl md:text-2xl leading-none tracking-normal text-center whitespace-pre select-all">
-                      {activeMoonMystery.talsamDetails.graphicSymbol}
-                    </pre>
-                    
-                    {activeMoonMystery.talsamDetails.formula && (
-                      <div className="w-full pt-4 border-t border-purple-500/30 text-center">
-                        <span className="text-[10px] uppercase tracking-widest text-amber-400/90 block mb-1.5 font-bold">
-                          {language === 'fr' ? "Formule Talsamique Vocalisée (Tashkeel)" : language === 'ha' ? "Formular Talsam (Tashkeel)" : "Talismanic Formula (Tashkeel)"}
-                        </span>
-                        <code className="text-2xl sm:text-3xl md:text-4xl font-serif font-bold text-amber-300 select-all tracking-wide leading-relaxed block my-1" dir="rtl">
-                          {activeMoonMystery.talsamDetails.formula}
-                        </code>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Mode d'Emploi Rituel Section */}
-                  <div className="w-full bg-purple-950/20 border border-purple-500/20 rounded-2xl p-4 sm:p-5 mb-6 text-left">
-                    <div className="flex items-center gap-2 mb-3 pb-2 border-b border-purple-500/20">
-                      <Sparkles size={16} className="text-amber-400" />
-                      <h4 className="text-sm font-bold text-purple-200 uppercase tracking-wider">
-                        {language === 'fr' ? "Comment Utiliser le Sceau & Talsam (Protocole Rituel)" : language === 'ha' ? "Yadda ake amfani da Hatimi (Tsarin Aiki)" : "How to Use the Seal & Talisman (Ritual Protocol)"}
-                      </h4>
+                    <div className="text-center mb-6 pr-6">
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-purple-400 block mb-1">
+                        {language === 'fr' ? `SCEAU SACRÉ & PROTOCOLE (JOUR ${currentDayForSeal})` : language === 'ha' ? `HATIMIN SIRRI DA MAGANA (RANA ${currentDayForSeal})` : `SACRED LUNAR SEAL & PROTOCOL (DAY ${currentDayForSeal})`}
+                      </span>
+                      <h3 className="text-xl sm:text-2xl font-serif font-bold text-white">
+                        {activeMoonMystery.wirdDetails?.title || `Jour ${currentDayForSeal}`}
+                      </h3>
+                      <p className="text-xs text-amber-300 font-extrabold italic mt-1">
+                        "{activeMoonMystery.vibration}"
+                      </p>
                     </div>
 
-                    <div className="space-y-3">
-                      {proto.usageSteps.map((s) => (
-                        <div key={s.step} className="flex gap-3 items-start bg-black/40 border border-purple-500/10 rounded-xl p-3">
-                          <span className="flex-shrink-0 w-6 h-6 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-bold flex items-center justify-center">
-                            {s.step}
+                    {/* Big Sceau view */}
+                    <div className="w-full flex flex-col items-center justify-center gap-4 py-6 bg-black/95 border border-purple-500/40 rounded-2xl p-4 sm:p-8 shadow-2xl relative overflow-hidden select-all mb-6">
+                      <pre className="text-purple-300 font-mono text-xl sm:text-2xl md:text-3xl leading-none tracking-normal text-center whitespace-pre select-all">
+                        {activeMoonMystery.talsamDetails.graphicSymbol}
+                      </pre>
+                      
+                      {activeMoonMystery.talsamDetails.formula && (
+                        <div className="w-full pt-4 border-t border-purple-500/30 text-center">
+                          <span className="text-[10px] uppercase tracking-widest text-amber-400/90 block mb-1.5 font-bold">
+                            {language === 'fr' ? "Formule Talsamique Vocalisée (Tashkeel)" : language === 'ha' ? "Formular Talsam (Tashkeel)" : "Talismanic Formula (Tashkeel)"}
                           </span>
-                          <div>
-                            <h5 className="text-xs font-bold text-amber-200">{s.title}</h5>
-                            <p className="text-[11px] text-gray-300 leading-relaxed mt-0.5">{s.description}</p>
-                          </div>
+                          <code className="text-2xl sm:text-3xl md:text-4xl font-serif font-bold text-amber-300 select-all tracking-wide leading-relaxed block my-1" dir="rtl">
+                            {activeMoonMystery.talsamDetails.formula}
+                          </code>
                         </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Advanced Esoteric Details */}
-                  <div className="w-full bg-black/60 border border-amber-500/20 rounded-2xl p-4 sm:p-5 mb-6 text-left">
-                    <div className="flex items-center gap-2 mb-3 pb-2 border-b border-amber-500/20">
-                      <Compass size={16} className="text-amber-400" />
-                      <h4 className="text-sm font-bold text-amber-200 uppercase tracking-wider">
-                        {language === 'fr' ? "Détails & Spécifications Ésotériques Avancées" : language === 'ha' ? "Sirri da Bayani na Gaba" : "Advanced Esoteric Specifications"}
-                      </h4>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                      <div className="bg-purple-950/30 border border-purple-500/20 rounded-xl p-3">
-                        <span className="text-[10px] text-purple-300 uppercase font-bold block mb-1">
-                          {language === 'fr' ? "Base Abjadique & Fréquence" : "Abjad & Numerical Base"}
-                        </span>
-                        <p className="text-gray-200 font-medium">{proto.advancedDetails.abjadBasis}</p>
-                      </div>
-
-                      <div className="bg-purple-950/30 border border-purple-500/20 rounded-xl p-3">
-                        <span className="text-[10px] text-purple-300 uppercase font-bold block mb-1">
-                          {language === 'fr' ? "Nature Élémentaire" : "Elemental Temperament"}
-                        </span>
-                        <p className="text-gray-200 font-medium">{proto.advancedDetails.elementalNature}</p>
-                      </div>
-
-                      <div className="bg-purple-950/30 border border-purple-500/20 rounded-xl p-3">
-                        <span className="text-[10px] text-purple-300 uppercase font-bold block mb-1">
-                          {language === 'fr' ? "Alignement des Khuddam & Anges" : "Angelic & Khuddam Alignment"}
-                        </span>
-                        <p className="text-gray-200 font-medium">{proto.advancedDetails.khuddamInfo}</p>
-                      </div>
-
-                      <div className="bg-purple-950/30 border border-purple-500/20 rounded-xl p-3">
-                        <span className="text-[10px] text-purple-300 uppercase font-bold block mb-1">
-                          {language === 'fr' ? "Encens Recommandé (Bukhoor)" : "Recommended Incense"}
-                        </span>
-                        <p className="text-emerald-300 font-semibold">{proto.advancedDetails.recommendedIncense}</p>
-                      </div>
-
-                      <div className="sm:col-span-2 bg-amber-950/20 border border-amber-500/30 rounded-xl p-3">
-                        <span className="text-[10px] text-amber-400 uppercase font-bold block mb-1">
-                          {language === 'fr' ? "Règle Temporelle & Direction Céleste" : "Timing & Qiblah Rule"}
-                        </span>
-                        <p className="text-amber-200 font-medium">{proto.advancedDetails.timingRule}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
-                    <button
-                      onClick={downloadSealAsImage}
-                      className="flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-extrabold py-3 px-5 rounded-2xl shadow-md hover:shadow-lg transition-all active:scale-[0.98] cursor-pointer"
-                    >
-                      <Download size={18} />
-                      <span>{language === 'fr' ? "Télécharger Sceau" : language === 'ha' ? "Sauke Hatimi" : "Download Seal"}</span>
-                    </button>
-
-                    <button
-                      onClick={handleCopySeal}
-                      className="flex items-center justify-center gap-2 bg-purple-950/50 hover:bg-purple-900/40 border border-purple-500/30 hover:border-purple-500/60 text-purple-200 font-bold py-3 px-5 rounded-2xl transition-all active:scale-[0.98] cursor-pointer"
-                    >
-                      {copiedSeal ? (
-                        <>
-                          <Check size={18} className="text-emerald-400" />
-                          <span className="text-emerald-400">{language === 'fr' ? "Sceau Copié !" : "Seal Copied!"}</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy size={18} />
-                          <span>{language === 'fr' ? "Copier le Sceau" : "Copy Seal"}</span>
-                        </>
                       )}
-                    </button>
+                    </div>
+
+                    {/* Mode d'Emploi Rituel Section */}
+                    <div className="w-full bg-purple-950/20 border border-purple-500/20 rounded-2xl p-4 sm:p-5 mb-6 text-left">
+                      <div className="flex items-center gap-2 mb-3 pb-2 border-b border-purple-500/20">
+                        <Sparkles size={16} className="text-amber-400" />
+                        <h4 className="text-sm font-bold text-purple-200 uppercase tracking-wider">
+                          {language === 'fr' ? "Comment Utiliser le Sceau & Talsam (Protocole Rituel)" : language === 'ha' ? "Yadda ake amfani da Hatimi (Tsarin Aiki)" : "How to Use the Seal & Talisman (Ritual Protocol)"}
+                        </h4>
+                      </div>
+
+                      <div className="space-y-3">
+                        {proto.usageSteps.map((s) => (
+                          <div key={s.step} className="flex gap-3 items-start bg-black/40 border border-purple-500/10 rounded-xl p-3">
+                            <span className="flex-shrink-0 w-6 h-6 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-bold flex items-center justify-center">
+                              {s.step}
+                            </span>
+                            <div>
+                              <h5 className="text-xs font-bold text-amber-200">{s.title}</h5>
+                              <p className="text-[11px] text-gray-300 leading-relaxed mt-0.5">{s.description}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Advanced Esoteric Details */}
+                    <div className="w-full bg-black/60 border border-amber-500/20 rounded-2xl p-4 sm:p-5 mb-6 text-left">
+                      <div className="flex items-center gap-2 mb-3 pb-2 border-b border-amber-500/20">
+                        <Compass size={16} className="text-amber-400" />
+                        <h4 className="text-sm font-bold text-amber-200 uppercase tracking-wider">
+                          {language === 'fr' ? "Détails & Spécifications Ésotériques Avancées" : language === 'ha' ? "Sirri da Bayani na Gaba" : "Advanced Esoteric Specifications"}
+                        </h4>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                        <div className="bg-purple-950/30 border border-purple-500/20 rounded-xl p-3">
+                          <span className="text-[10px] text-purple-300 uppercase font-bold block mb-1">
+                            {language === 'fr' ? "Base Abjadique & Fréquence" : "Abjad & Numerical Base"}
+                          </span>
+                          <p className="text-gray-200 font-medium">{proto.advancedDetails.abjadBasis}</p>
+                        </div>
+
+                        <div className="bg-purple-950/30 border border-purple-500/20 rounded-xl p-3">
+                          <span className="text-[10px] text-purple-300 uppercase font-bold block mb-1">
+                            {language === 'fr' ? "Nature Élémentaire" : "Elemental Temperament"}
+                          </span>
+                          <p className="text-gray-200 font-medium">{proto.advancedDetails.elementalNature}</p>
+                        </div>
+
+                        <div className="bg-purple-950/30 border border-purple-500/20 rounded-xl p-3">
+                          <span className="text-[10px] text-purple-300 uppercase font-bold block mb-1">
+                            {language === 'fr' ? "Alignement des Khuddam & Anges" : "Angelic & Khuddam Alignment"}
+                          </span>
+                          <p className="text-gray-200 font-medium">{proto.advancedDetails.khuddamInfo}</p>
+                        </div>
+
+                        <div className="bg-purple-950/30 border border-purple-500/20 rounded-xl p-3">
+                          <span className="text-[10px] text-purple-300 uppercase font-bold block mb-1">
+                            {language === 'fr' ? "Encens Recommandé (Bukhoor)" : "Recommended Incense"}
+                          </span>
+                          <p className="text-emerald-300 font-semibold">{proto.advancedDetails.recommendedIncense}</p>
+                        </div>
+
+                        <div className="sm:col-span-2 bg-amber-950/20 border border-amber-500/30 rounded-xl p-3">
+                          <span className="text-[10px] text-amber-400 uppercase font-bold block mb-1">
+                            {language === 'fr' ? "Règle Temporelle & Direction Céleste" : "Timing & Qiblah Rule"}
+                          </span>
+                          <p className="text-amber-200 font-medium">{proto.advancedDetails.timingRule}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
+                      <button
+                        onClick={downloadSealAsImage}
+                        className="flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-extrabold py-3 px-5 rounded-2xl shadow-md hover:shadow-lg transition-all active:scale-[0.98] cursor-pointer"
+                      >
+                        <Download size={18} />
+                        <span>{language === 'fr' ? "Télécharger Sceau" : language === 'ha' ? "Sauke Hatimi" : "Download Seal"}</span>
+                      </button>
+
+                      <button
+                        onClick={handleCopySeal}
+                        className="flex items-center justify-center gap-2 bg-purple-950/50 hover:bg-purple-900/40 border border-purple-500/30 hover:border-purple-500/60 text-purple-200 font-bold py-3 px-5 rounded-2xl transition-all active:scale-[0.98] cursor-pointer"
+                      >
+                        {copiedSeal ? (
+                          <>
+                            <Check size={18} className="text-emerald-400" />
+                            <span className="text-emerald-400">{language === 'fr' ? "Sceau Copié !" : "Seal Copied!"}</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy size={18} />
+                            <span>{language === 'fr' ? "Copier le Sceau" : "Copy Seal"}</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
                   </div>
-                </div>
-              </motion.div>
-            );
-          })()}
+                </motion.div>
+              );
+            })(),
+            document.body
+          )}
         </AnimatePresence>
 
         {/* Muraqabah Lunar Retreat Log Generator Modal */}

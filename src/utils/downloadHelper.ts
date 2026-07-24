@@ -19,17 +19,45 @@ export async function downloadCanvasImage(
     if (Capacitor.isNativePlatform()) {
       // Native storage execution (Android / iOS via Capacitor)
       const base64Data = dataUrl.replace(/^data:image\/png;base64,/, '');
-      const path = `AsrarHub/${fileName.endsWith('.png') ? fileName : fileName + '.png'}`;
+      const cleanFileName = fileName.endsWith('.png') ? fileName : `${fileName}.png`;
+      const path = `AsrarHub/${cleanFileName}`;
 
-      // Write file to device Documents directory
-      await Filesystem.writeFile({
-        path,
-        data: base64Data,
-        directory: Directory.Documents,
-        recursive: true
-      });
+      try {
+        await Filesystem.requestPermissions();
+      } catch (pErr) {
+        console.warn('Filesystem requestPermissions warning:', pErr);
+      }
 
-      return true;
+      // Try Documents directory first, then Cache directory as fallback
+      try {
+        await Filesystem.writeFile({
+          path,
+          data: base64Data,
+          directory: Directory.Documents,
+          recursive: true
+        });
+        return true;
+      } catch (docErr) {
+        console.warn('Documents write failed, retrying in Cache directory:', docErr);
+        try {
+          await Filesystem.writeFile({
+            path: cleanFileName,
+            data: base64Data,
+            directory: Directory.Cache,
+            recursive: true
+          });
+          return true;
+        } catch (cacheErr) {
+          console.warn('Cache write failed, retrying in Data directory:', cacheErr);
+          await Filesystem.writeFile({
+            path: cleanFileName,
+            data: base64Data,
+            directory: Directory.Data,
+            recursive: true
+          });
+          return true;
+        }
+      }
     } else {
       // Browser standard fallback
       const link = document.createElement('a');
@@ -68,6 +96,14 @@ export function useStorageAccess() {
   const isNative = Capacitor.isNativePlatform();
 
   const requestStoragePermissions = async () => {
+    if (typeof navigator !== 'undefined' && navigator.storage && navigator.storage.persist) {
+      try {
+        await navigator.storage.persist();
+      } catch (e) {
+        console.warn('Persistent storage authorization notice:', e);
+      }
+    }
+
     if (!isNative) return true;
     try {
       const status = await Filesystem.requestPermissions();

@@ -99,6 +99,18 @@ export async function requestMicrophonePermission(): Promise<boolean> {
  * Request Storage Permission (For offline cache, file exports, parchment downloads)
  */
 export async function requestStoragePermission(): Promise<boolean> {
+  let webPersisted = false;
+  
+  // Web Persistent Storage API request
+  if (typeof navigator !== 'undefined' && navigator.storage && navigator.storage.persist) {
+    try {
+      webPersisted = await navigator.storage.persist();
+      console.log('[AsrarHub] Persistent storage authorization:', webPersisted);
+    } catch (e) {
+      console.warn('Storage persistence request notice:', e);
+    }
+  }
+
   const cap = (window as any).Capacitor;
   if (cap?.Plugins?.Filesystem) {
     try {
@@ -108,7 +120,8 @@ export async function requestStoragePermission(): Promise<boolean> {
       console.warn('Capacitor Filesystem permission error:', e);
     }
   }
-  return true; // Web storage is enabled by default
+  
+  return true; // Web storage authorized
 }
 
 /**

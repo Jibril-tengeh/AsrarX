@@ -49,7 +49,8 @@ import {
   Paperclip,
   Search,
   Info,
-  Gift
+  Gift,
+  MessageCircle
 } from "lucide-react";
 import { db } from "../../lib/firebase";
 import {
@@ -165,7 +166,10 @@ const localTranslations: Record<string, Record<string, string>> = {
     copied: "Copié !",
     deleteSuccess: "Message supprimé avec succès.",
     giftSuccess: "Cadeau envoyé ! +50 points spirituels.",
-    mustBeLoggedIn: "Veuillez vous connecter pour participer."
+    mustBeLoggedIn: "Veuillez vous connecter pour participer.",
+    commentsAndReplies: "Commentaires & Réponses",
+    hideComments: "Masquer les commentaires",
+    privateMessageDirect: "Message Privé"
   },
   en: {
     communityTitle: "Asrar Al'umma Group 📿",
@@ -201,7 +205,10 @@ const localTranslations: Record<string, Record<string, string>> = {
     copied: "Copied!",
     deleteSuccess: "Message deleted successfully.",
     giftSuccess: "Gift sent! +50 spiritual points.",
-    mustBeLoggedIn: "Please log in to participate."
+    mustBeLoggedIn: "Please log in to participate.",
+    commentsAndReplies: "Comments & Replies",
+    hideComments: "Hide comments",
+    privateMessageDirect: "Private Message"
   },
   ha: {
     communityTitle: "Asrar Al'umma Group 📿",
@@ -237,7 +244,10 @@ const localTranslations: Record<string, Record<string, string>> = {
     copied: "An kofa !",
     deleteSuccess: "An goge sakon cikin nasara.",
     giftSuccess: "An tura kyauta! +50 maki na ruhaniya.",
-    mustBeLoggedIn: "Da fatan za a shiga don shiga tattaunawa."
+    mustBeLoggedIn: "Da fatan za a shiga don shiga tattaunawa.",
+    commentsAndReplies: "Sharhi da Martani",
+    hideComments: "Boye sharhi",
+    privateMessageDirect: "Sakon Sirri (DM)"
   }
 };
 
@@ -1701,6 +1711,41 @@ export const Community: React.FC = () => {
                           <span className="font-mono text-gray-500 font-extrabold">{currentReactionCount}</span>
                         </div>
                       )}
+
+                      {/* Direct Comments & DM Action Buttons */}
+                      <div className="flex items-center gap-2 mt-1 ml-1 select-none">
+                        <button
+                          onClick={() => setActiveCommentPostId((prev) => (prev === post.id ? null : post.id))}
+                          className={`flex items-center gap-1.5 text-[11px] font-bold transition-colors py-0.5 px-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/60 cursor-pointer ${
+                            activeCommentPostId === post.id
+                              ? "text-emerald-600 dark:text-emerald-400 font-black bg-emerald-50 dark:bg-emerald-950/40"
+                              : "text-gray-500 hover:text-emerald-600 dark:hover:text-emerald-400"
+                          }`}
+                        >
+                          <MessageSquare size={12} className={activeCommentPostId === post.id ? "fill-emerald-500/20" : ""} />
+                          <span>{activeCommentPostId === post.id ? tLocal("hideComments") : tLocal("commentsAndReplies")}</span>
+                        </button>
+
+                        {user?.uid !== post.authorId && (
+                          <button
+                            onClick={() => {
+                              setDmRecipient({ id: post.authorId, name: post.authorName });
+                              setIsDMOpen(true);
+                            }}
+                            className="flex items-center gap-1.5 text-[11px] font-bold text-gray-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors py-0.5 px-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/60 cursor-pointer"
+                          >
+                            <Send size={11} />
+                            <span>{tLocal("privateMessageDirect")}</span>
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Inline Post Comments Thread */}
+                      {activeCommentPostId === post.id && (
+                        <div className="mt-2 w-full max-w-xl animate-fadeIn">
+                          <PostComments postId={post.id} />
+                        </div>
+                      )}
                     </div>
                   </div>
                 );
@@ -2303,6 +2348,32 @@ export const Community: React.FC = () => {
 
               {/* Action operations lists */}
               <div className="space-y-1">
+                <button
+                  onClick={() => {
+                    if (activeContextMenuPostId) {
+                      setActiveCommentPostId((prev) => (prev === activeContextMenuPostId ? null : activeContextMenuPostId));
+                    }
+                    setActiveContextMenuPostId(null);
+                  }}
+                  className="w-full text-left px-2.5 py-1.5 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-lg text-[11px] sm:text-xs font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-2 cursor-pointer"
+                >
+                  <MessageSquare size={13} /> {tLocal("commentsAndReplies")}
+                </button>
+
+                <button
+                  onClick={() => {
+                    const post = posts.find((p) => p.id === activeContextMenuPostId);
+                    if (post && post.authorId !== user?.uid) {
+                      setDmRecipient({ id: post.authorId, name: post.authorName });
+                      setIsDMOpen(true);
+                    }
+                    setActiveContextMenuPostId(null);
+                  }}
+                  className="w-full text-left px-2.5 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg text-[11px] sm:text-xs font-bold text-gray-700 dark:text-gray-200 flex items-center gap-2 cursor-pointer"
+                >
+                  <MessageCircle size={13} /> {tLocal("privateMessageDirect")} (DM)
+                </button>
+
                 <button
                   onClick={() => {
                     const post = posts.find((p) => p.id === activeContextMenuPostId);
