@@ -4,10 +4,10 @@ import { useNavigate } from 'react-router-dom';
 import { AuthModal } from '../../components/AuthModal';
 import { 
   Settings, Users, BarChart3, Database, Shield, LayoutDashboard, 
-  Book, BookOpen, ToggleLeft, Volume2, Save, Search, Plus, Trash2, Edit2, FileText,
+  Book, BookOpen, ToggleLeft, Volume2, Headphones, Save, Search, Plus, Trash2, Edit2, FileText,
   Eye, Image as ImageIcon, Crop as CropIcon, X, Upload, ShoppingBag, CreditCard,
   Clock, CheckCircle, XCircle, Globe, Grid, List, Mail, Phone, Lock, Bell, BellOff, Sparkles, Star, Share, ShieldAlert,
-  FolderOpen, Copy, Radio, Type, Sliders, Maximize2, Activity, Terminal, RefreshCw
+  FolderOpen, Copy, Radio, Type, Sliders, Maximize2, Activity, Terminal, RefreshCw, Moon
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 
@@ -38,6 +38,8 @@ import {
 
 import { AdminStoreManager } from '../../components/AdminStoreManager';
 import { DEFAULT_OATHS } from '../user/tools/GrandOaths';
+import { QURAN_RECITERS } from '../../data/reciters';
+import { calculateHijriDate } from '../../utils/hijriDate';
 
 const LayoutSelector = ({ value, onChange, activeColor = 'emerald' }: { value: string, onChange: (val: string) => void, activeColor?: string }) => {
   const isEmerald = activeColor.includes('emerald');
@@ -317,7 +319,7 @@ export const AdminDashboard: React.FC = () => {
   const [articles, setArticles] = useState<Article[]>([]);
   const [editingArticle, setEditingArticle] = useState<Article | null>(null);
   const [newArticle, setNewArticle] = useState<Partial<Article>>({
-    title: '', hook: '', thumbnail: '', content: '', type: 'richtext', category: '', subCategory: ''
+    title: '', hook: '', thumbnail: '', content: '', type: 'richtext', status: 'Published', category: '', subCategory: ''
   });
   const [showPreview, setShowPreview] = useState(false);
   const [draftSavedMessage, setDraftSavedMessage] = useState('');
@@ -974,7 +976,7 @@ export const AdminDashboard: React.FC = () => {
           content_ha: (newArticle as any).content_ha || '',
           benefits: (newArticle as any).benefits || [],
           type: newArticle.type || 'richtext',
-          status: newArticle.status || 'Draft',
+          status: newArticle.status || 'Published',
           publishDate: newArticle.publishDate || '',
           isPremium: newArticle.isPremium || false,
           category: newArticle.category || 'wird',
@@ -996,7 +998,7 @@ export const AdminDashboard: React.FC = () => {
           content_ha: (newArticle as any).content_ha || '',
           benefits: (newArticle as any).benefits || [],
           type: newArticle.type || 'richtext',
-          status: newArticle.status || 'Draft',
+          status: newArticle.status || 'Published',
           publishDate: newArticle.publishDate || '',
           isPremium: newArticle.isPremium || false,
           category: newArticle.category || 'wird',
@@ -1005,7 +1007,7 @@ export const AdminDashboard: React.FC = () => {
         });
         showToast("Article publié avec succès !");
       }
-      setNewArticle({ title: '', hook: '', thumbnail: '', content: '', type: 'richtext', status: 'Draft', publishDate: '', benefits: [], category: '', subCategory: '' } as any);
+      setNewArticle({ title: '', hook: '', thumbnail: '', content: '', type: 'richtext', status: 'Published', publishDate: '', benefits: [], category: '', subCategory: '' } as any);
       localStorage.removeItem('asrarhub_article_draft');
     } catch (error: any) {
       console.error("Error saving article:", error);
@@ -3710,6 +3712,97 @@ export const AdminDashboard: React.FC = () => {
         <h3 className="font-bold text-gray-900 dark:text-white mb-6">Paramètres Globaux</h3>
         
         <div className="space-y-4 mb-8">
+          {/* Hijri Calendar Date Adjustment */}
+          <div className="flex flex-col p-4 bg-amber-500/5 border border-amber-500/20 dark:bg-amber-950/20 dark:border-amber-700/30 rounded-2xl gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <Moon size={18} className="text-amber-500 shrink-0" />
+                  Ajustement du Calendrier Hijri (Décalage Lunaire)
+                </h4>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                  Corrigez le décalage lunaire (-10 à +10 jours) pour aligner les outils (Hijri, Nuits Blanches) sur l'observation de la lune.
+                </p>
+              </div>
+              <div className="text-left sm:text-right shrink-0 bg-amber-500/10 border border-amber-500/20 px-3.5 py-2 rounded-xl">
+                <span className="text-[11px] text-amber-700 dark:text-amber-400 font-bold block">Hijri Aujourd'hui :</span>
+                <span className="text-sm font-extrabold text-amber-900 dark:text-amber-200">
+                  {(() => {
+                    const todayRes = calculateHijriDate(new Date(), Number(featureToggles['hijriOffset'] || 0));
+                    return `${todayRes.day} ${todayRes.monthNameFr} ${todayRes.year} AH`;
+                  })()}
+                </span>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-3 mt-1 pt-2 border-t border-amber-500/15">
+              <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 shrink-0">
+                Décalage en jours :
+              </label>
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const curr = Number(featureToggles['hijriOffset'] || 0);
+                    handleToggleFeature('hijriOffset', curr - 1);
+                  }}
+                  className="px-3 py-1.5 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                >
+                  -1 Jour
+                </button>
+                <input
+                  type="number"
+                  min="-10"
+                  max="10"
+                  value={featureToggles['hijriOffset'] !== undefined ? featureToggles['hijriOffset'] : 0}
+                  onChange={(e) => handleToggleFeature('hijriOffset', parseInt(e.target.value, 10) || 0)}
+                  className="w-16 px-2.5 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl text-xs font-bold text-center text-gray-900 dark:text-white"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const curr = Number(featureToggles['hijriOffset'] || 0);
+                    handleToggleFeature('hijriOffset', curr + 1);
+                  }}
+                  className="px-3 py-1.5 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                >
+                  +1 Jour
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleToggleFeature('hijriOffset', 0)}
+                  className="px-3 py-1.5 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20 rounded-lg text-xs font-bold transition-colors cursor-pointer"
+                >
+                  Réinitialiser (0)
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Default Quran Reciter Setting */}
+          <div className="flex flex-col p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <Headphones size={18} className="text-emerald-500" />
+                  Récitateur du Coran par Défaut (Système)
+                </h4>
+                <p className="text-sm text-gray-500 mt-0.5">Définissez le récitateur principal du Saint Coran par défaut pour l'ensemble des utilisateurs.</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 mt-1">
+              <select
+                value={featureToggles['default_reciter_id'] || QURAN_RECITERS[0].id}
+                onChange={(e) => handleToggleFeature('default_reciter_id', e.target.value)}
+                className="w-full px-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl text-sm font-medium text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-emerald-500"
+              >
+                {QURAN_RECITERS.map(r => (
+                  <option key={r.id} value={r.id}>
+                    {r.name} {r.nameAr ? `(${r.nameAr})` : ''} — {r.country}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
           <div className="flex flex-col p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>

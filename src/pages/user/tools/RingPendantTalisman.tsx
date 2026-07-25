@@ -45,14 +45,128 @@ const GEMSTONES: GemOption[] = [
   { id: 'none', nameFr: 'Aucune Pierre (Plaque Métal Purgée)', colorHex: 'transparent', innerGlow: 'transparent' },
 ];
 
+const talismanDict = {
+  fr: {
+    back: "Retour aux outils",
+    title: "Générateur de Talismans de Bague & Pendentifs",
+    desc: "Concevez et gravez virtuellement des bijoux théurgiques sacrés prêts pour artisan bijoutier ou méditation.",
+    step1: "1. Type de Bijou Sacré",
+    ring: "Bague Théurgique (Khatim)",
+    pendant: "Pendentif / Médaillon",
+    step2: "2. Alliage Métallique",
+    step3: "3. Pierre Précieuse / Sertissage (Aqeeq)",
+    step4: "4. Inscriptions & Gravures Théurgiques",
+    outerTextLabel: "Gravure Extérieure (Cercle Biseau)",
+    centerTextLabel: "Gravure Centrale (Sceau / Nom)",
+    innerNumLabel: "Sceau Numérique Secret (Adad / Wafq)",
+    downloadBtn: "Télécharger l'Image (PNG HD)",
+    copyBtn: "Copier la Fiche Technique Bijoutier",
+    copied: "Copié !",
+    metals: {
+      silver: "Argent Pur (Fidda)",
+      gold: "Or Sacré (Dhahab)",
+      copper: "Cuivre Rouge (Nahas)",
+      bronze: "Bronze Antique",
+      iron: "Fer de Protection (Hadid)"
+    },
+    gems: {
+      aqeeq_red: "Agate Yemenite Rouge (Aqeeq)",
+      aqeeq_yellow: "Agate Jaune (Sharaf al-Shams)",
+      emerald: "Émeraude Spirituelle (Zumurrud)",
+      ruby: "Rubis Royal (Yaqut)",
+      turquoise: "Turquoise Bénie (Firouz)",
+      lapis: "Lapis-Lazuli Bleu Nuit (Lajward)",
+      amethyst: "Améthyste Violette",
+      none: "Aucune Pierre (Plaque Métal Purgée)"
+    }
+  },
+  en: {
+    back: "Back to tools",
+    title: "Ring & Pendant Talisman Generator",
+    desc: "Design and virtually engrave sacred request jewellery ready for a master jeweler or meditation.",
+    step1: "1. Type of Sacred Jewel",
+    ring: "Theurgic Ring (Khatim)",
+    pendant: "Pendant / Medallion",
+    step2: "2. Metallic Alloy",
+    step3: "3. Gemstone / Setting (Aqeeq)",
+    step4: "4. Inscriptions & Theurgic Engravings",
+    outerTextLabel: "Outer Engraving (Bevel Circle)",
+    centerTextLabel: "Central Engraving (Seal / Name)",
+    innerNumLabel: "Secret Numerical Seal (Adad / Wafq)",
+    downloadBtn: "Download Image (HD PNG)",
+    copyBtn: "Copy Jeweler Technical Sheet",
+    copied: "Copied!",
+    metals: {
+      silver: "Pure Silver (Fidda)",
+      gold: "Sacred Gold (Dhahab)",
+      copper: "Red Copper (Nahas)",
+      bronze: "Antique Bronze",
+      iron: "Protective Iron (Hadid)"
+    },
+    gems: {
+      aqeeq_red: "Red Yemenite Agate (Aqeeq)",
+      aqeeq_yellow: "Yellow Agate (Sharaf al-Shams)",
+      emerald: "Spiritual Emerald (Zumurrud)",
+      ruby: "Royal Ruby (Yaqut)",
+      turquoise: "Blessed Turquoise (Firouz)",
+      lapis: "Night Blue Lapis-Lazuli (Lajward)",
+      amethyst: "Purple Amethyst",
+      none: "No Stone (Purified Metal Plate)"
+    }
+  },
+  ha: {
+    back: "Koma zuwa kayan aiki",
+    title: "Mai Hada Hatimin Zobe da Lakani",
+    desc: "Zane da yi wa kayan ado na kariya rubutun alfarma a shirye don maƙera ko tunani.",
+    step1: "1. Nau'in Kayan Ado",
+    ring: "Zoben Hatimi (Khatim)",
+    pendant: "Lakanin Wuya / Kwando",
+    step2: "2. Sinar Karfe",
+    step3: "3. Dutsen Alfarma (Aqeeq)",
+    step4: "4. Rubutun Filaye da Sakonni",
+    outerTextLabel: "Rubutun Waje na Da'ira",
+    centerTextLabel: "Rubutun Tsakiya (Hatimi / Sunan Allah)",
+    innerNumLabel: "Hatim / Lambar Asiri",
+    downloadBtn: "Sauke Hoto (PNG HD)",
+    copyBtn: "Kwashe Bayanan Maƙeri",
+    copied: "An kwashe!",
+    metals: {
+      silver: "Azurfa Tsohuwa (Fidda)",
+      gold: "Zinariya ta Alfarma (Dhahab)",
+      copper: "Jan Karfe (Nahas)",
+      bronze: "Tagulla",
+      iron: "Karfen Kariya (Hadid)"
+    },
+    gems: {
+      aqeeq_red: "Ja Agate ta Yemen (Aqeeq)",
+      aqeeq_yellow: "Rallau Agate (Sharaf al-Shams)",
+      emerald: "Korayen Zumurrud",
+      ruby: "Jajjayen Yaqut",
+      turquoise: "Shu'uda Turquoise (Firouz)",
+      lapis: "Lapis-Lazuli Shuɗin Dare",
+      amethyst: "Amethyst Violet",
+      none: "Babu Dutse (Karfe Kawai)"
+    }
+  }
+};
+
 export const RingPendantTalisman: React.FC = () => {
   const { language } = useLanguage();
+  const dict = talismanDict[(language as 'fr' | 'en' | 'ha') || 'fr'] || talismanDict.fr;
   const { featureToggles } = useFeatures();
   const disableDuaCopy = !!featureToggles?.disable_dua_copy;
 
   const [talismanType, setTalismanType] = useState<'ring' | 'pendant'>('ring');
   const [metal, setMetal] = useState<MetalOption>(METALS[0]);
   const [gemstone, setGemstone] = useState<GemOption>(GEMSTONES[0]);
+
+  const getMetalName = (m: MetalOption) => {
+    return dict.metals[m.id as keyof typeof dict.metals] || m.nameFr;
+  };
+
+  const getGemName = (g: GemOption) => {
+    return dict.gems[g.id as keyof typeof dict.gems] || g.nameFr;
+  };
 
   // Engraving text
   const [outerText, setOuterText] = useState<string>('فَاللَّهُ خَيْرٌ حَافِظًا وَهُوَ أَرْحَمُ الرَّاحِمِينَ');
@@ -87,13 +201,13 @@ export const RingPendantTalisman: React.FC = () => {
       triggerProtectionModal('copy');
       return;
     }
-    const details = `TALISMAN DE ${talismanType === 'ring' ? 'BAGUE' : 'PENDENTIF'} THÉURGIQUE
-Métal : ${metal.nameFr}
-Pierre : ${gemstone.nameFr}
-Gravure Extérieure : ${outerText} (Adad: ${totalAbjadOuter})
-Gravure Centrale : ${centerText} (Adad: ${totalAbjadCenter})
-Sceau Numérique : ${innerNumber}
-Poids Mystique Total (Adad Jummal) : ${grandTotal}`;
+    const details = `TALISMAN (${talismanType === 'ring' ? dict.ring : dict.pendant})
+${dict.step2} : ${getMetalName(metal)}
+${dict.step3} : ${getGemName(gemstone)}
+${dict.outerTextLabel} : ${outerText} (Adad: ${totalAbjadOuter})
+${dict.centerTextLabel} : ${centerText} (Adad: ${totalAbjadCenter})
+${dict.innerNumLabel} : ${innerNumber}
+Adad Total : ${grandTotal}`;
     navigator.clipboard.writeText(details);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -109,10 +223,10 @@ Poids Mystique Total (Adad Jummal) : ${grandTotal}`;
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
             <Sparkles className="text-amber-500" />
-            Générateur de Talismans de Bague & Pendentifs
+            {dict.title}
           </h1>
           <p className="text-gray-500 dark:text-gray-400">
-            Concevez et gravez virtuellement des bijoux théurgiques sacrés prêts pour artisan bijoutier ou méditation.
+            {dict.desc}
           </p>
         </div>
       </div>
@@ -123,7 +237,7 @@ Poids Mystique Total (Adad Jummal) : ${grandTotal}`;
           {/* Type Selection */}
           <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm">
             <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">
-              1. Type de Bijou Sacré
+              {dict.step1}
             </label>
             <div className="grid grid-cols-2 gap-3">
               <button
@@ -135,7 +249,7 @@ Poids Mystique Total (Adad Jummal) : ${grandTotal}`;
                 }`}
               >
                 <Circle size={20} className="text-amber-500" />
-                <span>Bague Théurgique (Khatim)</span>
+                <span>{dict.ring}</span>
               </button>
               <button
                 onClick={() => setTalismanType('pendant')}
@@ -146,7 +260,7 @@ Poids Mystique Total (Adad Jummal) : ${grandTotal}`;
                 }`}
               >
                 <Disc size={20} className="text-amber-500" />
-                <span>Pendentif / Medaillon</span>
+                <span>{dict.pendant}</span>
               </button>
             </div>
           </div>
@@ -155,7 +269,7 @@ Poids Mystique Total (Adad Jummal) : ${grandTotal}`;
           <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm space-y-4">
             <div>
               <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
-                2. Alliage Métallique
+                {dict.step2}
               </label>
               <select
                 value={metal.id}
@@ -166,14 +280,14 @@ Poids Mystique Total (Adad Jummal) : ${grandTotal}`;
                 className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl p-3 font-bold text-sm text-gray-900 dark:text-white focus:outline-none"
               >
                 {METALS.map(m => (
-                  <option key={m.id} value={m.id}>{m.nameFr}</option>
+                  <option key={m.id} value={m.id}>{getMetalName(m)}</option>
                 ))}
               </select>
             </div>
 
             <div>
               <label className="block text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2">
-                3. Pierre Précieuse / Sertissage (Aqeeq)
+                {dict.step3}
               </label>
               <select
                 value={gemstone.id}
@@ -184,7 +298,7 @@ Poids Mystique Total (Adad Jummal) : ${grandTotal}`;
                 className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl p-3 font-bold text-sm text-gray-900 dark:text-white focus:outline-none"
               >
                 {GEMSTONES.map(g => (
-                  <option key={g.id} value={g.id}>{g.nameFr}</option>
+                  <option key={g.id} value={g.id}>{getGemName(g)}</option>
                 ))}
               </select>
             </div>
@@ -193,12 +307,12 @@ Poids Mystique Total (Adad Jummal) : ${grandTotal}`;
           {/* Texts Input */}
           <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 border border-gray-100 dark:border-gray-700 shadow-sm space-y-4">
             <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-              4. Inscriptions & Gravures Théurgiques
+              {dict.step4}
             </h3>
 
             <div>
               <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                Gravure Extérieure (Cercle Biseau)
+                {dict.outerTextLabel}
               </label>
               <input
                 type="text"
@@ -213,7 +327,7 @@ Poids Mystique Total (Adad Jummal) : ${grandTotal}`;
 
             <div>
               <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                Gravure Centrale (Sceau / Nom)
+                {dict.centerTextLabel}
               </label>
               <input
                 type="text"
@@ -228,7 +342,7 @@ Poids Mystique Total (Adad Jummal) : ${grandTotal}`;
 
             <div>
               <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">
-                Sceau Numérique Secret (Adad / Wafq)
+                {dict.innerNumLabel}
               </label>
               <input
                 type="text"
@@ -366,11 +480,11 @@ Poids Mystique Total (Adad Jummal) : ${grandTotal}`;
             {/* Summary Metadata Card */}
             <div className="w-full bg-slate-800/80 rounded-2xl p-4 border border-slate-700/60 text-xs text-slate-300 space-y-1.5 mt-2">
               <div className="flex justify-between font-bold text-slate-100">
-                <span>Alliage : {metal.nameFr}</span>
-                <span>Poids Total : {grandTotal}</span>
+                <span>Metal : {getMetalName(metal)}</span>
+                <span>Total : {grandTotal}</span>
               </div>
-              <div>Pierre : <strong className="text-amber-400">{gemstone.nameFr}</strong></div>
-              <div className="truncate">Cercle : <span className="font-arabic">{outerText}</span></div>
+              <div>Gem : <strong className="text-amber-400">{getGemName(gemstone)}</strong></div>
+              <div className="truncate">Circle : <span className="font-arabic">{outerText}</span></div>
             </div>
           </div>
 
@@ -381,7 +495,7 @@ Poids Mystique Total (Adad Jummal) : ${grandTotal}`;
               className="px-6 py-3 rounded-2xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs flex items-center gap-2 transition-all shadow-md cursor-pointer"
             >
               <Download size={16} />
-              Télécharger l'Image (PNG HD)
+              {dict.downloadBtn}
             </button>
             {!disableDuaCopy && (
               <button
@@ -389,7 +503,7 @@ Poids Mystique Total (Adad Jummal) : ${grandTotal}`;
                 className="px-6 py-3 rounded-2xl bg-slate-800 dark:bg-gray-700 hover:bg-slate-700 text-white font-bold text-xs flex items-center gap-2 transition-all shadow-md cursor-pointer"
               >
                 {copied ? <Check size={16} className="text-emerald-400" /> : <Copy size={16} />}
-                {copied ? "Copié !" : "Copier la Fiche Technique Bijoutier"}
+                {copied ? dict.copied : dict.copyBtn}
               </button>
             )}
           </div>

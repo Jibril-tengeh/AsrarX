@@ -110,7 +110,7 @@ export const ExploreDashboard: React.FC = () => {
         };
       });
       // Support filtering by Published
-      const publishedArticles = allArticles.filter((art: any) => art.status === 'Published');
+      const publishedArticles = allArticles.filter((art: any) => !art.status || art.status === 'Published' || art.status === 'published' || (art.status !== 'Draft' && art.status !== 'Archived'));
       if (publishedArticles.length > 0) {
         setArticles(publishedArticles);
         try {

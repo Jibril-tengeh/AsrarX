@@ -29,7 +29,7 @@ async function startServer() {
   }
 
   const getDb = () => {
-    if (!getApps().length) throw new Error("Firebase Admin not initialized");
+    if (!getApps().length) return null;
     return getFirestore();
   };
 
@@ -698,6 +698,9 @@ ${JSON.stringify(textArray)}
 
       if (data.status && data.data.status === 'success') {
         const db = getDb();
+        if (!db) {
+          return res.status(500).json({ error: "Firebase Admin is not initialized on server." });
+        }
         // Update user to premium
         await db.collection("users").doc(userId).update({
           subscriptionTier: "premium",
@@ -857,13 +860,15 @@ Détails de la conversation actuelle :
     // Dynamically store the backend URL to Firestore settings/features
     try {
       const appUrl = process.env.APP_URL;
-      if (appUrl) {
-        const adminDb = getDb();
+      const adminDb = getDb();
+      if (appUrl && adminDb) {
         const settingsRef = adminDb.collection("settings").doc("features");
         await settingsRef.set({
           backend_url: appUrl
         }, { merge: true });
         console.log(`Saved dynamic backend_url to Firestore settings/features: ${appUrl}`);
+      } else if (appUrl) {
+        console.log("APP_URL present, but Firebase Admin not initialized (FIREBASE_SERVICE_ACCOUNT unset). Skipping backend_url save.");
       }
     } catch (e) {
       console.error("Failed to store backend_url on startup:", e);

@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Clock, Sun, Moon, Sparkles, Compass, Flame, Droplets, Mountain, Wind, CheckCircle2, ChevronRight, RefreshCw, Volume2 } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useLanguage } from '../contexts/LanguageContext';
 import { FULL_28_LETTERS_DATA, LetterInfo } from '../pages/user/tools/ScienceOfLetters';
 
 interface PlanetInfo {
   id: string;
   nameFr: string;
   nameEn: string;
+  nameHa: string;
   symbol: string;
   letters: string[];
   element: 'Feu' | 'Terre' | 'Air' | 'Eau';
@@ -16,13 +18,16 @@ interface PlanetInfo {
   wirdAr: string;
   wirdCount: number;
   bestFor: string;
+  bestForEn?: string;
+  bestForHa?: string;
 }
 
 const PLANETS_DATA: { [key: string]: PlanetInfo } = {
   Soleil: {
     id: 'Soleil',
     nameFr: 'Soleil (Al-Shams)',
-    nameEn: 'Sun',
+    nameEn: 'Sun (Al-Shams)',
+    nameHa: 'Rana (Al-Shams)',
     symbol: '☉',
     letters: ['ا', 'ح', 'ت'],
     element: 'Feu',
@@ -31,12 +36,15 @@ const PLANETS_DATA: { [key: string]: PlanetInfo } = {
     wird: "Ya Allahu ya Hayyu ya Qayyumu",
     wirdAr: "يَا أَللَّهُ يَا حَيُّ يَا قَيُّومُ",
     wirdCount: 111,
-    bestFor: "Autorité, prestige auprès des rois/décideurs, clarté mentale, santé et illumination spirituelle."
+    bestFor: "Autorité, prestige auprès des rois/décideurs, clarté mentale, santé et illumination spirituelle.",
+    bestForEn: "Authority, prestige with leaders, mental clarity, health, and spiritual illumination.",
+    bestForHa: "Mummuna mulki, kwarjini ga sarakuna, Hasken hankali, lafiya da hasken ruhani."
   },
   Lune: {
     id: 'Lune',
     nameFr: 'Lune (Al-Qamar)',
-    nameEn: 'Moon',
+    nameEn: 'Moon (Al-Qamar)',
+    nameHa: 'Wata (Al-Qamar)',
     symbol: '☽',
     letters: ['ب', 'ط', 'ث'],
     element: 'Eau',
@@ -45,12 +53,15 @@ const PLANETS_DATA: { [key: string]: PlanetInfo } = {
     wird: "Ya Bari'u ya Basitu ya Mubin",
     wirdAr: "يَا بَارِئُ يَا بَاسِطُ يَا مُبِينُ",
     wirdCount: 128,
-    bestFor: "Guérison des cœurs, rêves prémonitoires, fertilité, réconciliation et voyage serein."
+    bestFor: "Guérison des cœurs, rêves prémonitoires, fertilité, réconciliation et voyage serein.",
+    bestForEn: "Healing of hearts, prophetic dreams, fertility, reconciliation, and peaceful travel.",
+    bestForHa: "Maganin zuciya, mafarki mai kyau, samun haihuwa, sulhu da tafiya ta lafiya."
   },
   Mars: {
     id: 'Mars',
     nameFr: 'Mars (Al-Mirrikh)',
-    nameEn: 'Mars',
+    nameEn: 'Mars (Al-Mirrikh)',
+    nameHa: 'Mirrikh (Al-Mirrikh)',
     symbol: '♂',
     letters: ['ج', 'ي', 'ف', 'خ'],
     element: 'Feu',
@@ -59,12 +70,15 @@ const PLANETS_DATA: { [key: string]: PlanetInfo } = {
     wird: "Ya Qahharu ya Jabbaru ya Qawiyyu",
     wirdAr: "يَا قَهَّارُ يَا جَبَّارُ يَا قَوِيُّ",
     wirdCount: 306,
-    bestFor: "Victoire contre les tyrans, destruction de la magie noire, courage et invulnérabilité."
+    bestFor: "Victoire contre les tyrans, destruction de la magie noire, courage et invulnérabilité.",
+    bestForEn: "Victory over tyrants, destruction of black magic, courage, and invulnerability.",
+    bestForHa: "Nasara a kan azalumai, lalata sihir, jarumtaka da kariya daga makiya."
   },
   Mercure: {
     id: 'Mercure',
     nameFr: 'Mercure (Al-Utarid)',
-    nameEn: 'Mercury',
+    nameEn: 'Mercury (Al-Utarid)',
+    nameHa: 'Utarid (Al-Utarid)',
     symbol: '☿',
     letters: ['د', 'ك', 'ص', 'ذ'],
     element: 'Air',
@@ -73,12 +87,15 @@ const PLANETS_DATA: { [key: string]: PlanetInfo } = {
     wird: "Ya 'Alimu ya Kafi ya Sadiqu",
     wirdAr: "يَا عَلِيمُ يَا كَافِي يَا صَادِقُ",
     wirdCount: 150,
-    bestFor: "Intelligence supérieure, commerce, rédaction des talismans, apprentissage rapide et écriture."
+    bestFor: "Intelligence supérieure, commerce, rédaction des talismans, apprentissage rapide et écriture.",
+    bestForEn: "Superior intelligence, trade, talisman writing, rapid learning, and calligraphy.",
+    bestForHa: "Fahimta mai zurfi, kasuwanci, rubutun khatimi, koyo da sauri."
   },
   Jupiter: {
     id: 'Jupiter',
     nameFr: 'Jupiter (Al-Mushtari)',
-    nameEn: 'Jupiter',
+    nameEn: 'Jupiter (Al-Mushtari)',
+    nameHa: 'Mushtari (Al-Mushtari)',
     symbol: '♃',
     letters: ['ه', 'ل', 'ق', 'ض'],
     element: 'Air',
@@ -87,12 +104,15 @@ const PLANETS_DATA: { [key: string]: PlanetInfo } = {
     wird: "Ya Latifu ya Razzaqu ya Ghaniyu",
     wirdAr: "يَا لَطِيفُ يَا رَزَّاقُ يَا غَنِيُّ",
     wirdCount: 129,
-    bestFor: "Prospérité financière majeure, bénédiction des affaires, justice favorable et paix profonde."
+    bestFor: "Prospérité financière majeure, bénédiction des affaires, justice favorable et paix profonde.",
+    bestForEn: "Major financial prosperity, business blessings, favorable justice, and deep peace.",
+    bestForHa: "Babban arzuki na kudi, albarka a sana'a, samun adalci da zaman lafiya."
   },
   Venus: {
     id: 'Venus',
     nameFr: 'Vénus (Al-Zuhara)',
-    nameEn: 'Venus',
+    nameEn: 'Venus (Al-Zuhara)',
+    nameHa: 'Zuhara (Al-Zuhara)',
     symbol: '♀',
     letters: ['و', 'م', 'ر', 'ظ'],
     element: 'Terre',
@@ -101,12 +121,15 @@ const PLANETS_DATA: { [key: string]: PlanetInfo } = {
     wird: "Ya Wadudu ya Jami'u ya Rahmanu",
     wirdAr: "يَا وَدُودُ يَا جَامِعُ يَا رَحْمَنُ",
     wirdCount: 114,
-    bestFor: "Harmonie conjugale, amour réciproque, beauté du visage, charisme et sympathie de la foule."
+    bestFor: "Harmonie conjugale, amour réciproque, beauté du visage, charisme et sympathie de la foule.",
+    bestForEn: "Marital harmony, mutual love, facial beauty, charisma, and public affection.",
+    bestForHa: "Zaman lafiyar aure, soyayya ta tsakani, kyawun fuska, kwarjini da masoya."
   },
   Saturne: {
     id: 'Saturne',
     nameFr: 'Saturne (Al-Zuhal)',
-    nameEn: 'Saturn',
+    nameEn: 'Saturn (Al-Zuhal)',
+    nameHa: 'Zuhal (Al-Zuhal)',
     symbol: '♄',
     letters: ['ز', 'ن', 'ش', 'غ'],
     element: 'Terre',
@@ -115,7 +138,9 @@ const PLANETS_DATA: { [key: string]: PlanetInfo } = {
     wird: "Ya Qaddusu ya Saburu ya Ghaniyu",
     wirdAr: "يَا قُدُّوسُ يَا صَبُورُ يَا غَنِيُّ",
     wirdCount: 300,
-    bestFor: "Inamovibilité, protection du patrimoine immobilier, solitude contemplative et rupture des sortilèges."
+    bestFor: "Inamovibilité, protection du patrimoine immobilier, solitude contemplative et rupture des sortilèges.",
+    bestForEn: "Stability, real estate protection, contemplative solitude, and breaking of spells.",
+    bestForHa: "Tsayawa tsam, tsaron dukiya da gidaje, bimbini da karya maita/sihiri."
   }
 };
 
@@ -126,6 +151,7 @@ const CHALDEAN_SEQUENCE = ['Saturne', 'Jupiter', 'Mars', 'Soleil', 'Venus', 'Mer
 const DAY_RULERS = ['Soleil', 'Lune', 'Mars', 'Mercure', 'Jupiter', 'Venus', 'Saturne'];
 
 export const PlanetaryLetterClock: React.FC = () => {
+  const { t, language } = useLanguage();
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
   const [selectedHourIndex, setSelectedHourIndex] = useState<number>(-1);
 
@@ -150,6 +176,18 @@ export const PlanetaryLetterClock: React.FC = () => {
     ? getPlanetaryRulerForHour(selectedHourIndex)
     : getPlanetaryRulerForHour(currentHour);
 
+  const getPlanetName = (planet: PlanetInfo) => {
+    if (language === 'en') return planet.nameEn;
+    if (language === 'ha') return planet.nameHa;
+    return planet.nameFr;
+  };
+
+  const getPlanetBestFor = (planet: PlanetInfo) => {
+    if (language === 'en') return planet.bestForEn || planet.bestFor;
+    if (language === 'ha') return planet.bestForHa || planet.bestFor;
+    return planet.bestFor;
+  };
+
   // Get matching letter objects
   const activeLetterObjects = activeRuler.letters.map(char => 
     FULL_28_LETTERS_DATA.find(l => l.char === char)
@@ -161,10 +199,10 @@ export const PlanetaryLetterClock: React.FC = () => {
       <div className="border-b border-gray-100 dark:border-gray-700 pb-4 flex flex-col sm:flex-row justify-between sm:items-center gap-3">
         <div>
           <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <Clock className="text-indigo-500" /> Horloge Astronomique & Planétaire des Lettres
+            <Clock className="text-indigo-500" /> {t('planetary-clock.title', 'Horloge Astronomique & Planétaire des Lettres')}
           </h2>
           <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Découvrez en temps réel quelle planète et quelles lettres régissent l'heure courante pour optimiser l'efficacité spirituelle de vos invocations (Wirds & Zikr).
+            {t('planetary-clock.subtitle', "Découvrez en temps réel quelle planète et quelles lettres régissent l'heure courante pour optimiser l'efficacité spirituelle de vos invocations (Wirds & Zikr).")}
           </p>
         </div>
 
@@ -181,24 +219,24 @@ export const PlanetaryLetterClock: React.FC = () => {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-indigo-500/20 pb-4">
           <div>
             <span className="text-[10px] font-bold uppercase tracking-widest text-amber-400 flex items-center gap-1">
-              <Sparkles size={12} /> {selectedHourIndex >= 0 ? `Heure Sélectionnée : ${selectedHourIndex}:00` : "Heure Planétaire Active (Instant Présent)"}
+              <Sparkles size={12} /> {selectedHourIndex >= 0 ? t('planetary-clock.selectedHour', 'Heure Sélectionnée : {hour}:00').replace('{hour}', String(selectedHourIndex)) : t('planetary-clock.activeHour', "Heure Planétaire Active (Instant Présent)")}
             </span>
             <h3 className="text-2xl font-black text-white mt-1 flex items-center gap-2">
               <span className="text-amber-300 text-3xl">{activeRuler.symbol}</span>
-              <span>{activeRuler.nameFr}</span>
+              <span>{getPlanetName(activeRuler)}</span>
             </h3>
           </div>
 
           <div className="flex items-center gap-2">
             <span className="px-3 py-1 bg-indigo-900/80 border border-indigo-500/40 text-amber-300 rounded-full font-mono text-xs font-bold">
-              Ange : {activeRuler.angel} ({activeRuler.angelAr})
+              {t('planetary-clock.angel', 'Ange')} : {activeRuler.angel} ({activeRuler.angelAr})
             </span>
             {selectedHourIndex >= 0 && (
               <button
                 onClick={() => setSelectedHourIndex(-1)}
                 className="px-2.5 py-1 bg-amber-500 hover:bg-amber-400 text-black text-xs font-bold rounded-full transition-colors cursor-pointer"
               >
-                Revenir à maintenant
+                {t('planetary-clock.returnToNow', 'Revenir à maintenant')}
               </button>
             )}
           </div>
@@ -207,7 +245,7 @@ export const PlanetaryLetterClock: React.FC = () => {
         {/* Active Ruling Letters Grid */}
         <div>
           <h4 className="text-xs font-bold text-indigo-300 uppercase tracking-wider mb-3">
-            Lettres Régisseuses de cette Heure ({activeLetterObjects.length})
+            {t('planetary-clock.rulingLetters', 'Lettres Régisseuses de cette Heure ({count})').replace('{count}', String(activeLetterObjects.length))}
           </h4>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -227,10 +265,10 @@ export const PlanetaryLetterClock: React.FC = () => {
         <div className="p-4 bg-slate-900/90 rounded-2xl border border-indigo-500/30 space-y-2">
           <div className="flex justify-between items-center">
             <span className="text-xs font-bold text-amber-400 uppercase tracking-wider">
-              Invocation (Wird) Recommandée
+              {t('planetary-clock.recommendedWird', 'Invocation (Wird) Recommandée')}
             </span>
             <span className="text-[10px] bg-amber-500/20 text-amber-300 px-2.5 py-0.5 rounded-full font-mono font-bold">
-              Répétition : {activeRuler.wirdCount}x
+              {t('planetary-clock.repetition', 'Répétition : {count}x').replace('{count}', String(activeRuler.wirdCount))}
             </span>
           </div>
 
@@ -242,7 +280,7 @@ export const PlanetaryLetterClock: React.FC = () => {
           </p>
 
           <p className="text-xs text-gray-300 pt-1 border-t border-indigo-900/50">
-            <strong>Vertus de cette heure :</strong> {activeRuler.bestFor}
+            <strong>{t('planetary-clock.virtues', 'Vertus de cette heure :')}</strong> {getPlanetBestFor(activeRuler)}
           </p>
         </div>
       </div>
@@ -250,7 +288,7 @@ export const PlanetaryLetterClock: React.FC = () => {
       {/* 24-Hour Planetary Day Timeline */}
       <div>
         <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-          <Compass size={16} className="text-indigo-500" /> Programme Planétaire des 24 Heures de la Journée
+          <Compass size={16} className="text-indigo-500" /> {t('planetary-clock.timelineTitle', 'Programme Planétaire des 24 Heures de la Journée')}
         </h3>
 
         <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-12 gap-1.5">
@@ -282,3 +320,4 @@ export const PlanetaryLetterClock: React.FC = () => {
     </div>
   );
 };
+

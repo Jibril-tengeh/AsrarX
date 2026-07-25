@@ -187,7 +187,7 @@ export const ContemplativeAudioPlayer: React.FC<ContemplativeAudioPlayerProps> =
     }
   };
 
-  const playVerseAudioIndex = (index: number) => {
+  const playVerseAudioIndex = async (index: number) => {
     const urls = verseUrlsRef.current;
     if (index >= urls.length) {
       handleVersePlaybackFinished();
@@ -212,7 +212,28 @@ export const ContemplativeAudioPlayer: React.FC<ContemplativeAudioPlayerProps> =
       ? `${reciterName} • Aya ${index + 1}/${urls.length}${currentLoopText}`
       : `${reciterName} • Verse ${index + 1}/${urls.length}${currentLoopText}`);
 
-    const audio = new Audio(urls[index]);
+    const rawUrl = urls[index];
+    let playSrc = rawUrl;
+    let isCachedBlob = false;
+
+    try {
+      const cache = await caches.open('quran-audio-cache');
+      const matched = await cache.match(rawUrl);
+      if (matched) {
+        const blob = await matched.blob();
+        playSrc = URL.createObjectURL(blob);
+        isCachedBlob = true;
+      }
+    } catch (_) {}
+
+    if (!navigator.onLine && !isCachedBlob) {
+      if ('speechSynthesis' in window && arabicText) {
+        speakArabicSpeechSynthesis(arabicText);
+        return;
+      }
+    }
+
+    const audio = new Audio(playSrc);
     htmlAudioRef.current = audio;
     audio.muted = isMuted;
 
@@ -241,6 +262,9 @@ export const ContemplativeAudioPlayer: React.FC<ContemplativeAudioPlayerProps> =
     };
 
     audio.onended = () => {
+      if (isCachedBlob) {
+        URL.revokeObjectURL(playSrc);
+      }
       currentVerseIndexRef.current = index + 1;
       if (index + 1 < urls.length) {
         playVerseAudioIndex(index + 1);
@@ -250,6 +274,9 @@ export const ContemplativeAudioPlayer: React.FC<ContemplativeAudioPlayerProps> =
     };
 
     audio.onerror = () => {
+      if (isCachedBlob) {
+        URL.revokeObjectURL(playSrc);
+      }
       console.warn("Quran audio MP3 failed to load, falling back to vocal synthesis");
       speakArabicSpeechSynthesis(arabicText);
     };

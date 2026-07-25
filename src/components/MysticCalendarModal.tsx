@@ -39,6 +39,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
   const navigate = useNavigate();
 
   const [isSealExpanded, setIsSealExpanded] = useState<boolean>(false);
+  const [selectedSealVersion, setSelectedSealVersion] = useState<1 | 2>(1);
   const [copiedTalsam, setCopiedTalsam] = useState<boolean>(false);
   const [copiedSeal, setCopiedSeal] = useState<boolean>(false);
 
@@ -365,7 +366,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
         title = language === 'fr' ? "Zénith Solaire ☀️" : language === 'ha' ? "Tsakiyar Rana ☀️" : "Solar Zenith ☀️";
         message = language === 'fr' ? "Le Soleil atteint son zénith. Heure sacrée pour la méditation et l'alignement." : language === 'ha' ? "Rana ta kai kololuwarta. Lokaci ne na albarka don yin zikiri da samun natsuwa." : "The Sun has reached its zenith. Sacred hour for meditation and alignment.";
       } else if (currentHM === solarTimes.goldenHour) {
-        title = language === 'fr' ? "Heure Dorée 🌟" : language === 'ha' ? "Lokacin Zinariya 🌟" : "Golden Hour 🌟";
+        title = language === 'fr' ? "Heure Dorée 🌟" : language === 'ha' ? "Lokacin Zinariya ������" : "Golden Hour 🌟";
         message = language === 'fr' ? "L'Heure Dorée commence. Les ondes spirituelles sont idéales pour le Tasbih et le calme." : language === 'ha' ? "Lokacin Zinariya ya fara. Lokaci ne mai kyau don Tasbahi da natsuwa." : "The Golden Hour begins. Spiritual waves are perfect for Tasbih and serenity.";
       } else if (currentHM === solarTimes.sunset) {
         title = language === 'fr' ? "Coucher du Soleil 🌇" : language === 'ha' ? "Faɗuwar Rana 🌇" : "Sunset 🌇";
@@ -1086,7 +1087,9 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
       triggerProtectionModal('download');
       return;
     }
-    const text = activeMoonMystery.talsamDetails.graphicSymbol;
+    const text = selectedSealVersion === 2 && activeMoonMystery.talsamDetails.graphicSymbolV2
+      ? activeMoonMystery.talsamDetails.graphicSymbolV2
+      : activeMoonMystery.talsamDetails.graphicSymbol;
 
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -1181,7 +1184,10 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
       triggerProtectionModal('copy');
       return;
     }
-    navigator.clipboard.writeText(activeMoonMystery.talsamDetails.graphicSymbol);
+    const text = selectedSealVersion === 2 && activeMoonMystery.talsamDetails.graphicSymbolV2
+      ? activeMoonMystery.talsamDetails.graphicSymbolV2
+      : activeMoonMystery.talsamDetails.graphicSymbol;
+    navigator.clipboard.writeText(text);
     setCopiedSeal(true);
     setTimeout(() => setCopiedSeal(false), 2000);
   };
@@ -3049,16 +3055,50 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                           
                           <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center mt-2">
                             <div className="md:col-span-5 flex flex-col items-center justify-center gap-2">
+                              {/* Version Switcher Tabs */}
+                              <div className="flex items-center justify-between gap-1 w-full bg-black/70 p-1 rounded-xl border border-purple-500/30">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedSealVersion(1);
+                                  }}
+                                  className={`flex-1 py-1 px-1.5 text-[9px] font-extrabold rounded-lg transition-all cursor-pointer ${
+                                    selectedSealVersion === 1 
+                                      ? "bg-amber-500 text-black shadow-md" 
+                                      : "text-purple-300 hover:text-white hover:bg-purple-900/40"
+                                  }`}
+                                >
+                                  {activeMoonMystery.talsamDetails.version1Title || (language === 'fr' ? "V1 : Wafq Abjad" : "V1: Wafq Seal")}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedSealVersion(2);
+                                  }}
+                                  className={`flex-1 py-1 px-1.5 text-[9px] font-extrabold rounded-lg transition-all cursor-pointer ${
+                                    selectedSealVersion === 2 
+                                      ? "bg-amber-500 text-black shadow-md" 
+                                      : "text-purple-300 hover:text-white hover:bg-purple-900/40"
+                                  }`}
+                                >
+                                  {activeMoonMystery.talsamDetails.version2Title || (language === 'fr' ? "V2 : Khatim An-Nur" : "V2: Khatim Seal")}
+                                </button>
+                              </div>
+
                               <div 
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   setIsSealExpanded(true);
                                 }}
-                                className="group relative cursor-pointer w-full flex flex-col items-center justify-center bg-black/80 border border-purple-500/40 hover:border-amber-400/60 p-3 rounded-xl transition-all duration-300 shadow-inner hover:shadow-purple-500/20 select-none"
+                                className="group relative cursor-pointer w-full flex flex-col items-center justify-center bg-black/80 border border-purple-500/40 hover:border-amber-400/60 p-3 rounded-xl transition-all duration-300 shadow-inner hover:shadow-purple-500/20 select-none min-h-[140px]"
                                 title={language === 'fr' ? "Cliquez pour agrandir en plein écran et télécharger le Sceau" : language === 'ha' ? "Danna don faɗaɗawa da saukar da Hatimi" : "Click to enlarge in full screen and download Seal"}
                               >
                                 <pre className="text-purple-300 text-[10px] sm:text-[11px] font-mono leading-none tracking-tight text-center whitespace-pre max-w-full overflow-x-auto">
-                                  {activeMoonMystery.talsamDetails.graphicSymbol}
+                                  {selectedSealVersion === 2 && activeMoonMystery.talsamDetails.graphicSymbolV2
+                                    ? activeMoonMystery.talsamDetails.graphicSymbolV2
+                                    : activeMoonMystery.talsamDetails.graphicSymbol}
                                 </pre>
                                 
                                 <div className="absolute inset-0 bg-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center backdrop-blur-[2px]">
@@ -3284,12 +3324,16 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
-                  className="fixed inset-0 z-[100000] bg-black/95 backdrop-blur-2xl flex flex-col items-center justify-center p-3 sm:p-6 overflow-y-auto"
+                  onClick={() => setIsSealExpanded(false)}
+                  className="fixed inset-0 z-[100000] bg-black/95 backdrop-blur-2xl flex flex-col items-center justify-center p-3 sm:p-6 overflow-y-auto cursor-pointer"
                 >
                   {/* Background elements */}
                   <div className="absolute inset-0 bg-radial-gradient from-purple-950/40 via-black to-black opacity-80 pointer-events-none" />
                   
-                  <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto custom-scrollbar bg-[#0a0712] border border-purple-500/40 rounded-3xl p-5 sm:p-8 flex flex-col items-center shadow-2xl shadow-purple-500/20 z-10 my-auto">
+                  <div 
+                    onClick={(e) => e.stopPropagation()}
+                    className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto custom-scrollbar bg-[#0a0712] border border-purple-500/40 rounded-3xl p-5 sm:p-8 flex flex-col items-center shadow-2xl shadow-purple-500/20 z-10 my-auto cursor-default"
+                  >
                     {/* Close Button */}
                     <button
                       onClick={() => setIsSealExpanded(false)}
@@ -3311,10 +3355,38 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                       </p>
                     </div>
 
+                    {/* Version Switcher Bar in Lightbox */}
+                    <div className="flex items-center justify-center gap-2 w-full max-w-md bg-black/80 p-1.5 rounded-2xl border border-purple-500/30 mb-6 shadow-inner">
+                      <button
+                        type="button"
+                        onClick={() => setSelectedSealVersion(1)}
+                        className={`flex-1 py-2 px-3 text-xs font-extrabold rounded-xl transition-all cursor-pointer ${
+                          selectedSealVersion === 1 
+                            ? "bg-amber-500 text-black shadow-lg scale-[1.02]" 
+                            : "text-purple-300 hover:text-white hover:bg-purple-900/40"
+                        }`}
+                      >
+                        {activeMoonMystery.talsamDetails.version1Title || (language === 'fr' ? "Version 1 : Wafq Abjad" : "Version 1: Wafq Seal")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedSealVersion(2)}
+                        className={`flex-1 py-2 px-3 text-xs font-extrabold rounded-xl transition-all cursor-pointer ${
+                          selectedSealVersion === 2 
+                            ? "bg-amber-500 text-black shadow-lg scale-[1.02]" 
+                            : "text-purple-300 hover:text-white hover:bg-purple-900/40"
+                        }`}
+                      >
+                        {activeMoonMystery.talsamDetails.version2Title || (language === 'fr' ? "Version 2 : Khatim An-Nur" : "Version 2: Khatim Seal")}
+                      </button>
+                    </div>
+
                     {/* Big Sceau view */}
                     <div className="w-full flex flex-col items-center justify-center gap-4 py-6 bg-black/95 border border-purple-500/40 rounded-2xl p-4 sm:p-8 shadow-2xl relative overflow-hidden select-all mb-6">
-                      <pre className="text-purple-300 font-mono text-xl sm:text-2xl md:text-3xl leading-none tracking-normal text-center whitespace-pre select-all">
-                        {activeMoonMystery.talsamDetails.graphicSymbol}
+                      <pre className="text-purple-300 font-mono text-xl sm:text-2xl md:text-3xl leading-none tracking-normal text-center whitespace-pre select-all overflow-x-auto max-w-full">
+                        {selectedSealVersion === 2 && activeMoonMystery.talsamDetails.graphicSymbolV2
+                          ? activeMoonMystery.talsamDetails.graphicSymbolV2
+                          : activeMoonMystery.talsamDetails.graphicSymbol}
                       </pre>
                       
                       {activeMoonMystery.talsamDetails.formula && (

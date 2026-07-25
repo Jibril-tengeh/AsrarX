@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Moon, Sparkles, Image as ImageIcon, Calendar, Radio } from 'lucide-react';
-import { motion } from 'motion/react';
+import { Moon, Sparkles, Image as ImageIcon, Calendar, Radio, ChevronDown, ChevronUp } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { ContemplativeAudioPlayer } from './ContemplativeAudioPlayer';
 import { VerseVisualGeneratorModal } from './VerseVisualGeneratorModal';
 
@@ -121,6 +121,7 @@ export const LunarDailyInspirationCard: React.FC<LunarDailyInspirationCardProps>
   className = ''
 }) => {
   const [showGeneratorModal, setShowGeneratorModal] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   // Calculate day of lunar cycle (1 to 29.53) based on current date
   const getTodayLunarIndex = (): number => {
@@ -150,71 +151,105 @@ export const LunarDailyInspirationCard: React.FC<LunarDailyInspirationCardProps>
     : verseData.translationEn;
 
   return (
-    <div className={`bg-gradient-to-br from-slate-950 via-indigo-950/80 to-slate-900 border border-emerald-500/30 rounded-2xl p-4 sm:p-6 text-white shadow-xl relative overflow-hidden backdrop-blur-sm ${className}`}>
+    <div className={`bg-gradient-to-br from-slate-950 via-indigo-950/80 to-slate-900 border border-emerald-500/30 rounded-2xl p-4 text-white shadow-xl relative overflow-hidden backdrop-blur-sm transition-all ${className}`}>
       {/* Background glowing particles */}
       <div className="absolute top-0 right-0 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-0 left-0 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
-      {/* Header Badge */}
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
-        <div className="flex items-center gap-2">
-          <span className="text-xl">{verseData.emoji}</span>
+      {/* Interactive Header Bar */}
+      <div className="flex items-center justify-between gap-3 cursor-pointer select-none" onClick={() => setIsExpanded(!isExpanded)}>
+        <div className="flex items-center gap-3">
+          <span className="text-2xl p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 shrink-0">{verseData.emoji}</span>
           <div>
             <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 block">
-              {language === 'fr' ? "CARTE D'INSPIRATION DU JOUR • PHASE LUNAIRE COURANTE" : "DAILY LUNAR INSPIRATION CARD"}
+              {language === 'fr' ? "CARTE D'INSPIRATION DU JOUR • PHASE LUNAIRE" : "DAILY LUNAR INSPIRATION CARD"}
             </span>
-            <h4 className="text-xs sm:text-sm font-bold text-amber-200">
-              {phaseName}
-            </h4>
+            <div className="flex flex-wrap items-center gap-2">
+              <h4 className="text-xs sm:text-sm font-bold text-amber-200">
+                {phaseName}
+              </h4>
+              <span className="text-[11px] font-mono text-emerald-300/90 bg-emerald-950/60 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+                {verseData.verseTitle}
+              </span>
+            </div>
           </div>
         </div>
 
-        <button
-          onClick={() => setShowGeneratorModal(true)}
-          className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500/20 to-emerald-500/20 hover:from-amber-500/30 hover:to-emerald-500/30 border border-amber-400/30 text-amber-200 text-xs font-bold flex items-center gap-1.5 transition-all shadow-md cursor-pointer"
-        >
-          <ImageIcon size={14} className="text-amber-400" />
-          <span>{language === 'fr' ? "Générer Visuel" : "Generate Visual"}</span>
-        </button>
+        <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
+          <button
+            onClick={() => setShowGeneratorModal(true)}
+            className="hidden sm:flex px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500/20 to-emerald-500/20 hover:from-amber-500/30 hover:to-emerald-500/30 border border-amber-400/30 text-amber-200 text-xs font-bold items-center gap-1.5 transition-all shadow-md cursor-pointer"
+          >
+            <ImageIcon size={14} className="text-amber-400" />
+            <span>{language === 'fr' ? "Visuel" : "Visual"}</span>
+          </button>
+
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="p-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-xs font-bold flex items-center gap-1.5 border border-amber-500/30 transition-all cursor-pointer"
+            aria-label={isExpanded ? "Fermer la carte" : "Ouvrir la carte"}
+          >
+            <span className="hidden sm:inline text-xs">
+              {isExpanded 
+                ? (language === 'fr' ? 'Fermer' : 'Close') 
+                : (language === 'fr' ? 'Ouvrir' : 'Expand')}
+            </span>
+            {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+          </button>
+        </div>
       </div>
 
-      {/* Main Content */}
-      <div className="bg-black/40 border border-emerald-500/20 rounded-xl p-4 text-center my-3 relative">
-        <span className="text-xs text-amber-400 font-mono font-bold block mb-2">
-          ﴿ {verseData.verseTitle} ﴾
-        </span>
+      {/* Expandable Body Content */}
+      <AnimatePresence>
+        {isExpanded && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3 }}
+            className="overflow-hidden pt-4"
+          >
+            {/* Main Content */}
+            <div className="bg-black/40 border border-emerald-500/20 rounded-xl p-4 text-center my-2 relative">
+              <span className="text-xs text-amber-400 font-mono font-bold inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 mb-3">
+                <Sparkles size={12} className="text-amber-400" />
+                <span>{verseData.verseTitle}</span>
+              </span>
 
-        <p dir="rtl" className="font-quran text-2xl sm:text-3xl font-bold text-amber-100 leading-[2.2] text-center my-3" style={{ fontFamily: '"Amiri Quran", "Uthmani", "Scheherazade New", "Amiri", serif', direction: 'rtl' }}>
-          {verseData.arabicText}
-        </p>
+              <p dir="rtl" className="font-quran text-2xl sm:text-3xl font-bold text-amber-100 leading-[2.2] text-center my-3" style={{ fontFamily: '"Amiri Quran", "Uthmani", "Scheherazade New", "Amiri", serif', direction: 'rtl' }}>
+                {verseData.arabicText}
+              </p>
 
-        <p className="text-xs text-emerald-300/90 italic font-serif mb-2">
-          "{verseData.phoneticText}"
-        </p>
+              <p className="text-xs text-emerald-300/90 italic font-serif mb-2">
+                "{verseData.phoneticText}"
+              </p>
 
-        <p className="text-xs sm:text-sm text-gray-200 leading-relaxed font-sans">
-          « {translation} »
-        </p>
+              <p className="text-xs sm:text-sm text-gray-200 leading-relaxed font-sans">
+                « {translation} »
+              </p>
 
-        {verseData.benefitFr && (
-          <p className="text-[11px] text-amber-300/80 font-medium mt-3 pt-2 border-t border-emerald-500/10 flex items-center justify-center gap-1">
-            <Sparkles size={12} className="text-amber-400" />
-            {verseData.benefitFr}
-          </p>
+              {verseData.benefitFr && (
+                <p className="text-[11px] text-amber-300/80 font-medium mt-3 pt-2 border-t border-emerald-500/10 flex items-center justify-center gap-1">
+                  <Sparkles size={12} className="text-amber-400" />
+                  {verseData.benefitFr}
+                </p>
+              )}
+            </div>
+
+            {/* Embedded Contemplative Audio Player */}
+            <div className="mt-4">
+              <ContemplativeAudioPlayer
+                verseTitle={`${verseData.verseTitle} - ${phaseName}`}
+                arabicText={verseData.arabicText}
+                phoneticText={verseData.phoneticText}
+                translationText={translation}
+                language={language}
+                onOpenVisualGenerator={() => setShowGeneratorModal(true)}
+              />
+            </div>
+          </motion.div>
         )}
-      </div>
-
-      {/* Embedded Contemplative Audio Player */}
-      <div className="mt-4">
-        <ContemplativeAudioPlayer
-          verseTitle={`${verseData.verseTitle} - ${phaseName}`}
-          arabicText={verseData.arabicText}
-          phoneticText={verseData.phoneticText}
-          translationText={translation}
-          language={language}
-          onOpenVisualGenerator={() => setShowGeneratorModal(true)}
-        />
-      </div>
+      </AnimatePresence>
 
       {/* Visual Generator Modal */}
       <VerseVisualGeneratorModal

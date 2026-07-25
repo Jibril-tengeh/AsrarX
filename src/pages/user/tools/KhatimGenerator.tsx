@@ -9,6 +9,7 @@ import { toCanvas, toPng, toSvg } from 'html-to-image';
 import { jsPDF } from 'jspdf';
 
 import { downloadCanvasImage } from '../../../utils/downloadHelper';
+import { notifyDownloadStart, notifyDownloadSuccess, notifyDownloadError } from '../../../utils/downloadNotification';
 
 export const KhatimGenerator: React.FC = () => {
   const { t } = useLanguage();
@@ -31,6 +32,8 @@ export const KhatimGenerator: React.FC = () => {
 
   const downloadTransparentPNG = async () => {
     if (!resultRef.current) return;
+    const fname = `khatim-${gridSize}x${gridSize}-transparent.png`;
+    notifyDownloadStart(fname);
     try {
       const url = await toPng(resultRef.current, { 
         backgroundColor: null,
@@ -42,16 +45,20 @@ export const KhatimGenerator: React.FC = () => {
         }
       });
       const link = document.createElement('a');
-      link.download = `khatim-${gridSize}x${gridSize}-transparent.png`;
+      link.download = fname;
       link.href = url;
       link.click();
+      notifyDownloadSuccess(fname);
     } catch (e) {
       console.error(e);
+      notifyDownloadError(fname);
     }
   };
 
   const downloadSVG = async () => {
     if (!resultRef.current) return;
+    const fname = `khatim-${gridSize}x${gridSize}.svg`;
+    notifyDownloadStart(fname);
     try {
       const url = await toSvg(resultRef.current, {
         backgroundColor: null,
@@ -63,16 +70,20 @@ export const KhatimGenerator: React.FC = () => {
         }
       });
       const link = document.createElement('a');
-      link.download = `khatim-${gridSize}x${gridSize}.svg`;
+      link.download = fname;
       link.href = url;
       link.click();
+      notifyDownloadSuccess(fname);
     } catch (e) {
       console.error(e);
+      notifyDownloadError(fname);
     }
   };
 
   const downloadPDF = async () => {
     if (!resultRef.current) return;
+    const fname = `AsrarHub_Khatim_${gridSize}x${gridSize}_${calculatedTotal}.pdf`;
+    notifyDownloadStart(fname);
     try {
       const canvas = await toCanvas(resultRef.current, { backgroundColor: '#18181b', skipFonts: true });
       const imgData = canvas.toDataURL('image/png');
@@ -110,9 +121,11 @@ export const KhatimGenerator: React.FC = () => {
       pdf.setFontSize(8);
       pdf.text("Genere via AsrarHub. Tous droits reserves.", 105, 280, { align: 'center' });
       
-      pdf.save(`AsrarHub_Khatim_${gridSize}x${gridSize}_${calculatedTotal}.pdf`);
+      pdf.save(fname);
+      notifyDownloadSuccess(fname);
     } catch (e) {
       console.error(e);
+      notifyDownloadError(fname);
     }
   };
 

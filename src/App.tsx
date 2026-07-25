@@ -21,6 +21,7 @@ import { MaintenanceOverlay } from './components/MaintenanceOverlay';
 import { getApiUrl } from './lib/api';
 import { FloatingBackButton } from './components/FloatingBackButton';
 import { ErrorToastContainer } from './components/ErrorToastContainer';
+import { DownloadNotificationPopup } from './components/DownloadNotificationPopup';
 import { FeatureProvider, useFeatures } from './contexts/FeatureContext';
 import UserDashboard from './pages/user/UserDashboard';
 
@@ -895,6 +896,9 @@ export default function App() {
             </motion.div>
           )}
         </AnimatePresence>
+        {/* Download pop-up notification */}
+        <DownloadNotificationPopup />
+
         {/* Connection success notification */}
         <AnimatePresence>
           {showConnectedToast && (

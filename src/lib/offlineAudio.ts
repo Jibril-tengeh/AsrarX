@@ -1,7 +1,10 @@
+import { notifyDownloadStart, notifyDownloadSuccess, notifyDownloadError } from '../utils/downloadNotification';
+
 export const downloadAudioForOffline = async (
   urls: string[], 
   onProgress?: (progress: number, total: number) => void
 ) => {
+  notifyDownloadStart(`Audios (${urls.length})`);
   try {
     const cache = await caches.open('quran-audio-cache');
     let completed = 0;
@@ -28,9 +31,11 @@ export const downloadAudioForOffline = async (
       );
     }
     
+    notifyDownloadSuccess(`Audios (${urls.length})`);
     return true;
   } catch (error) {
     console.error('Error downloading for offline:', error);
+    notifyDownloadError(`Audios (${urls.length})`);
     return false;
   }
 };

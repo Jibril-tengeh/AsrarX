@@ -1,6 +1,7 @@
 import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { applyAsrarHubWatermark } from './watermark';
+import { notifyDownloadStart, notifyDownloadSuccess, notifyDownloadError } from './downloadNotification';
 
 /**
  * Downloads or saves a canvas image safely on both Web and Native (Android/iOS via Capacitor).
@@ -11,6 +12,9 @@ export async function downloadCanvasImage(
   fileName: string = 'asrarhub-export.png',
   skipWatermark: boolean = false
 ): Promise<boolean> {
+  const cleanFileName = fileName.endsWith('.png') ? fileName : `${fileName}.png`;
+  notifyDownloadStart(cleanFileName);
+
   try {
     // Apply AsrarHub Watermark systematically
     const finalCanvas = skipWatermark ? sourceCanvas : applyAsrarHubWatermark(sourceCanvas);
@@ -19,7 +23,6 @@ export async function downloadCanvasImage(
     if (Capacitor.isNativePlatform()) {
       // Native storage execution (Android / iOS via Capacitor)
       const base64Data = dataUrl.replace(/^data:image\/png;base64,/, '');
-      const cleanFileName = fileName.endsWith('.png') ? fileName : `${fileName}.png`;
       const path = `AsrarHub/${cleanFileName}`;
 
       try {
@@ -36,6 +39,7 @@ export async function downloadCanvasImage(
           directory: Directory.Documents,
           recursive: true
         });
+        notifyDownloadSuccess(cleanFileName);
         return true;
       } catch (docErr) {
         console.warn('Documents write failed, retrying in Cache directory:', docErr);
@@ -46,6 +50,7 @@ export async function downloadCanvasImage(
             directory: Directory.Cache,
             recursive: true
           });
+          notifyDownloadSuccess(cleanFileName);
           return true;
         } catch (cacheErr) {
           console.warn('Cache write failed, retrying in Data directory:', cacheErr);
@@ -55,17 +60,19 @@ export async function downloadCanvasImage(
             directory: Directory.Data,
             recursive: true
           });
+          notifyDownloadSuccess(cleanFileName);
           return true;
         }
       }
     } else {
       // Browser standard fallback
       const link = document.createElement('a');
-      link.download = fileName.endsWith('.png') ? fileName : `${fileName}.png`;
+      link.download = cleanFileName;
       link.href = dataUrl;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      notifyDownloadSuccess(cleanFileName);
       return true;
     }
   } catch (err) {
@@ -76,14 +83,16 @@ export async function downloadCanvasImage(
       const finalCanvas = skipWatermark ? sourceCanvas : applyAsrarHubWatermark(sourceCanvas);
       const dataUrl = finalCanvas.toDataURL('image/png');
       const link = document.createElement('a');
-      link.download = fileName.endsWith('.png') ? fileName : `${fileName}.png`;
+      link.download = cleanFileName;
       link.href = dataUrl;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      notifyDownloadSuccess(cleanFileName);
       return true;
     } catch (e) {
       console.error('Fallback browser download also failed:', e);
+      notifyDownloadError(cleanFileName);
       return false;
     }
   }

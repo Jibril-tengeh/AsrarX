@@ -253,20 +253,25 @@ export const VerseVisualGeneratorModal: React.FC<VerseVisualGeneratorModalProps>
                   AsrarHub
                 </div>
 
-                {/* Top Corner Ornaments & AsrarHub Badge */}
-                <div className="flex justify-between items-center text-xs text-amber-300/80 mb-4 font-mono">
+                {/* Top Header & Verse Reference Divider */}
+                <div className="flex justify-between items-center text-xs text-amber-300/80 mb-2 font-mono">
                   <span className="flex items-center gap-1.5 text-[11px] font-bold text-amber-300">
                     <Sparkles size={12} className="text-amber-400" />
                     AsrarHub
                   </span>
-                  <span className="font-bold tracking-wider text-amber-200 uppercase">
-                    {verseTitle}
+                  <span className="text-[10px] uppercase font-bold tracking-widest text-amber-400/80">
+                    {lunarPhaseName || "Verse Card"}
                   </span>
                 </div>
 
-                {/* Islamic Calligraphic Frame Top */}
-                <div className={`text-center my-2 ${currentStyle.ornamentColor}`}>
-                  <span className="text-lg">﴿ ۞ ﴾</span>
+                {/* Islamic Calligraphic Verse Title Divider */}
+                <div className="flex items-center justify-center gap-2 my-2">
+                  <div className={`h-[1px] w-10 sm:w-16 ${currentStyle.border} opacity-40`} />
+                  <span className={`text-xs font-mono font-bold px-3 py-1 rounded-full bg-black/40 border ${currentStyle.border} ${currentStyle.titleColor} flex items-center gap-1.5`}>
+                    <Sparkles size={10} className="text-amber-400" />
+                    <span>{verseTitle}</span>
+                  </span>
+                  <div className={`h-[1px] w-10 sm:w-16 ${currentStyle.border} opacity-40`} />
                 </div>
 
                 {/* Main Arabic Verse */}

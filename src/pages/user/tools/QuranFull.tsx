@@ -8,10 +8,11 @@ import { motion, AnimatePresence } from 'motion/react';
 import { toCanvas } from 'html-to-image';
 import { downloadCanvasImage } from '../../../utils/downloadHelper';
 import { useAudio, Track } from '../../../contexts/AudioContext';
+import { useFeatures } from '../../../contexts/FeatureContext';
 import { get, set } from 'idb-keyval';
 import { surahTranslations } from '../../../data/surahTranslations';
 import { db } from '../../../lib/firebase';
-import { collection, query, where, onSnapshot, addDoc, updateDoc, doc, serverTimestamp, getDocs } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, addDoc, updateDoc, setDoc, doc, serverTimestamp, getDocs } from 'firebase/firestore';
 import { Share } from '@capacitor/share';
 import { downloadAudioForOffline } from '../../../lib/offlineAudio';
 import { DownloadCloud, CheckSquare, Sparkles } from 'lucide-react';
@@ -749,6 +750,9 @@ export const QuranFull: React.FC = () => {
   });
 
   const { user, isPremium } = useAuth();
+  const { featureToggles } = useFeatures();
+  const defaultReciterFromConfig = featureToggles?.default_reciter_id || featureToggles?.default_quran_reciter;
+  const isAdmin = user?.role === 'admin' || (user?.email && ['jibriltengeh4@gmail.com', 'sbireino@gmail.com', 'tenibawwal10@gmail.com', 'jibriltengeh57@gmail.com'].includes(user.email.toLowerCase()));
   const [showAuthModal, setShowAuthModal] = useState(false);
   
   interface RuqyahPlaylist {
@@ -1585,7 +1589,46 @@ export const QuranFull: React.FC = () => {
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
 
-  const [selectedReciterId, setSelectedReciterId] = useState(QURAN_RECITERS[0].id);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  const [selectedReciterId, setSelectedReciterId] = useState(() => {
+    try {
+      const saved = localStorage.getItem('quran_user_selected_reciter');
+      if (saved && QURAN_RECITERS.some(r => r.id === saved)) {
+        return saved;
+      }
+    } catch (_) {}
+    return defaultReciterFromConfig || QURAN_RECITERS[0].id;
+  });
+
+  useEffect(() => {
+    if (defaultReciterFromConfig) {
+      try {
+        const saved = localStorage.getItem('quran_user_selected_reciter');
+        if (!saved) {
+          setSelectedReciterId(defaultReciterFromConfig);
+        }
+      } catch (_) {}
+    }
+  }, [defaultReciterFromConfig]);
+
+  const handleSelectReciter = (newId: string) => {
+    setSelectedReciterId(newId);
+    try {
+      localStorage.setItem('quran_user_selected_reciter', newId);
+    } catch (_) {}
+  };
   const { 
     playTrack, 
     playPlaylist, 
@@ -1631,6 +1674,15 @@ export const QuranFull: React.FC = () => {
       return () => clearTimeout(timer);
     }
   }, [toastMessage]);
+
+  useEffect(() => {
+    const handleOfflineMissing = (e: any) => {
+      const title = e.detail?.title || 'cet audio';
+      showToast(`Mode Hors Ligne : ${title} n'a pas encore été téléchargé.`);
+    };
+    window.addEventListener('asrarhub_offline_audio_missing', handleOfflineMissing);
+    return () => window.removeEventListener('asrarhub_offline_audio_missing', handleOfflineMissing);
+  }, []);
 
   // Hifz (Memorization) State
   const [hifzMode, setHifzMode] = useState<boolean>(false);
@@ -2656,6 +2708,18 @@ export const QuranFull: React.FC = () => {
       onTouchMove={onTouchMoveEvent}
       onTouchEnd={onTouchEndEvent}
     >
+      {/* Offline Mode Banner */}
+      {isOffline && (
+        <div className="mb-4 p-3 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-200 text-xs flex items-center justify-between gap-2 shadow-sm">
+          <span className="flex items-center gap-2 font-medium">
+            <CloudOff size={16} className="text-amber-500 shrink-0" />
+            Mode Hors Ligne — Les récitateurs et lectures téléchargés restent totalement accessibles.
+          </span>
+          <span className="shrink-0 text-[10px] bg-amber-500/20 px-2 py-0.5 rounded-full font-bold text-amber-700 dark:text-amber-300">
+            Hors Ligne
+          </span>
+        </div>
+      )}
       {/* Floating Exit/Back Arrow (Middle Left) */}
       {activeSurah && fullScreenMode && (
         <motion.button
@@ -3301,7 +3365,7 @@ export const QuranFull: React.FC = () => {
                        </label>
                        <select
                          value={selectedReciterId}
-                         onChange={(e) => setSelectedReciterId(e.target.value)}
+                         onChange={(e) => handleSelectReciter(e.target.value)}
                           className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-4 py-2.5 text-[13.5px] text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium"
                           style={{ fontSize: '13.5px' }}
                         >
@@ -3315,12 +3379,46 @@ export const QuranFull: React.FC = () => {
                            <optgroup key={country} label={country} className="font-bold text-gray-950 dark:text-gray-100 bg-white dark:bg-gray-900 text-[12.5px]" style={{ fontSize: "12.5px" }}>
                              {reciters.map(r => (
                                <option key={r.id} value={r.id} className="font-normal text-gray-700 dark:text-gray-300 text-[13.5px]" style={{ fontSize: "13.5px" }}>
-                                 {r.name} {r.nameAr ? `(${r.nameAr})` : ''}
+                                 {r.name} {r.nameAr ? `(${r.nameAr})` : ''} {defaultReciterFromConfig === r.id ? '★ [Défaut Système]' : ''}
                                </option>
                              ))}
                            </optgroup>
                          ))}
                        </select>
+
+                        {/* Admin Default Reciter Setter */}
+                        {isAdmin && (
+                          <div className="mt-2.5 p-3 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/40 flex items-center justify-between gap-3">
+                            <div className="text-xs text-amber-900 dark:text-amber-200 font-medium">
+                              {selectedReciterId === defaultReciterFromConfig ? (
+                                <span className="flex items-center gap-1.5 font-semibold text-emerald-600 dark:text-emerald-400">
+                                  <Check size={14} /> Récitateur actuellement défini comme défaut système
+                                </span>
+                              ) : (
+                                <span>Définir ce récitateur comme le choix par défaut pour tous les utilisateurs.</span>
+                              )}
+                            </div>
+                            {selectedReciterId !== defaultReciterFromConfig && (
+                              <button
+                                onClick={async () => {
+                                  try {
+                                    await setDoc(doc(db, 'settings', 'features'), {
+                                      default_reciter_id: selectedReciterId
+                                    }, { merge: true });
+                                    const reciterName = QURAN_RECITERS.find(r => r.id === selectedReciterId)?.name || selectedReciterId;
+                                    showToast(`Récitateur "${reciterName}" défini comme défaut système !`);
+                                  } catch (err) {
+                                    console.error("Failed setting default reciter:", err);
+                                    showToast("Erreur lors de la sauvegarde du récitateur par défaut");
+                                  }
+                                }}
+                                className="shrink-0 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-semibold text-xs transition-colors shadow-sm cursor-pointer"
+                              >
+                                Définir par défaut (Admin)
+                              </button>
+                            )}
+                          </div>
+                        )}
                      </div>
 
                      <div>

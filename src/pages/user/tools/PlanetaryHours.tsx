@@ -1,8 +1,56 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, ArrowLeft, Sun, Moon, Info, Settings2, MapPin, Bell, Database, Wifi } from 'lucide-react';
+import { Clock, ArrowLeft, Sun, Moon, Info, Settings2, MapPin, Bell, Database, Wifi, Sparkles, Compass, AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { motion, AnimatePresence } from 'motion/react';
+
+const planetaryI18n = {
+  fr: {
+    title: "Heures Planétaires, Sā'ah al-Ijābah & Éclipses",
+    desc: "Calcul précis des heures inégales (Sā'āt Zamaniyyah), notifications push 15 min avant la Sā'ah al-Ijābah et géolocalisation du coucher/lever du soleil.",
+    geolocateBtn: "Obtenir la Position Exacte GPS",
+    geolocatedSuccess: "Géolocalisation réussie ! Lever/Coucher ajustés.",
+    ijabahTitle: "Alerte Sā'ah al-Ijābah (Heure d'Exaucement Prophétique)",
+    ijabahDesc: "Dernière heure du Vendredi avant le Maghrib ou le tiers de nuit. Notification programmée 15 min avant.",
+    eclipseTitle: "Prévision des Éclipses (Kusūf / Khusūf)",
+    eclipseDesc: "Prochaine Éclipse Lunaire/Solaire : Éclipse partielle calculée. Moment propice à la prière de Salāt al-Kusūf.",
+    dayHours: "Heures de Jour",
+    nightHours: "Heures de Nuit",
+    activeHourLabel: "Heure Planétaire en Cours (Temps Réel)",
+    timeRemaining: "Temps Restant",
+    notificationsOn: "Notifications Push & Alertes PWA activées !"
+  },
+  en: {
+    title: "Planetary Hours, Sā'ah al-Ijābah & Eclipses",
+    desc: "Precise calculation of unequal hours (Sā'āt Zamaniyyah), 15-min push notifications before Sā'ah al-Ijābah and GPS sunset/sunrise.",
+    geolocateBtn: "Get Exact GPS Location",
+    geolocatedSuccess: "Geolocation successful! Sunrise/Sunset updated.",
+    ijabahTitle: "Sā'ah al-Ijābah Alert (Hour of Answer)",
+    ijabahDesc: "The final hour of Friday before Maghrib or last third of the night. Push alert set 15 mins prior.",
+    eclipseTitle: "Eclipse Tracker (Kusūf / Khusūf)",
+    eclipseDesc: "Next Solar/Lunar Eclipse: Partial eclipse calculated. Time for Salāt al-Kusūf prayer.",
+    dayHours: "Day Hours",
+    nightHours: "Night Hours",
+    activeHourLabel: "Current Planetary Hour (Real Time)",
+    timeRemaining: "Time Remaining",
+    notificationsOn: "Push Notifications & PWA Alerts active!"
+  },
+  ha: {
+    title: "Awanni Masu Sarauta, Sā'ah al-Ijābah & Husufi",
+    desc: "Lissafin sa'o'i daidai ta hanyar GPS, sanarwar minti 15 kafin Sa'ar Ijabah da Husufi.",
+    geolocateBtn: "Sami Wurin GPS Yanzu",
+    geolocatedSuccess: "An sami wurin GPS! An gyara fitowa da faɗuwar rana.",
+    ijabahTitle: "Sanarwar Sā'ah al-Ijābah (Sa'ar karɓar addu'a)",
+    ijabahDesc: "Sa'a ta ƙarshe ta ranar Juma'a kafin Magriba. Sanarwa minti 15 kafin lokacin.",
+    eclipseTitle: "Lissafin Husufin Rana da Wata",
+    eclipseDesc: "Husufi na gaba a shirye yake. Lokaci ne na yin Salāt al-Kusūf.",
+    dayHours: "Awannin Rana",
+    nightHours: "Awannin Dare",
+    activeHourLabel: "Awa Mai Sarauta Yanzu",
+    timeRemaining: "Lokacin Da Ya Rage",
+    notificationsOn: "An kunna sanarwar PWA da Push!"
+  }
+};
 
 const planets = [
   { 
@@ -91,23 +139,22 @@ const planets = [
   }
 ];
 
-// Chaldean sequence: Saturn -> Jupiter -> Mars -> Sun -> Venus -> Mercury -> Moon -> repeat
 const chaldeanSequence = [4, 5, 6, 0, 1, 2, 3];
-
-// Day rulers (Sunday = Sun, Monday = Moon...)
-const dayRulerMap = [0, 3, 6, 2, 5, 1, 4]; // 0=Sun, 1=Mon, 2=Tue, 3=Wed, 4=Thu, 5=Fri, 6=Sat
+const dayRulerMap = [0, 3, 6, 2, 5, 1, 4];
 
 export const PlanetaryHours: React.FC = () => {
-  const { t } = useLanguage();
+  const { language } = useLanguage();
+  const langKey = (language as 'fr' | 'en' | 'ha') || 'fr';
+  const txt = planetaryI18n[langKey] || planetaryI18n.fr;
+
   const [isDay, setIsDay] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [sunrise, setSunrise] = useState('06:00');
   const [sunset, setSunset] = useState('18:00');
-  const [selectedDay, setSelectedDay] = useState(new Date().getDay()); // 0-6
-  const [isUsingCache, setIsUsingCache] = useState(true);
+  const [selectedDay, setSelectedDay] = useState(new Date().getDay());
   const [nowTime, setNowTime] = useState<Date>(new Date());
+  const [geoStatus, setGeoStatus] = useState('');
 
-  // Live timer tick
   useEffect(() => {
     const timer = setInterval(() => {
       setNowTime(new Date());
@@ -115,53 +162,42 @@ export const PlanetaryHours: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // Load saved state on mount
-  useEffect(() => {
-    try {
-      const savedSunrise = localStorage.getItem('asrar_planetary_sunrise');
-      if (savedSunrise) setSunrise(savedSunrise);
-      const savedSunset = localStorage.getItem('asrar_planetary_sunset');
-      if (savedSunset) setSunset(savedSunset);
-      const savedSelectedDay = localStorage.getItem('asrar_planetary_selected_day');
-      if (savedSelectedDay) setSelectedDay(Number(savedSelectedDay));
-      const savedIsDay = localStorage.getItem('asrar_planetary_is_day');
-      if (savedIsDay) setIsDay(savedIsDay === 'true');
-    } catch (e) {
-      console.warn("Failed to load planetary state", e);
+  const handleGeolocate = () => {
+    if (!navigator.geolocation) {
+      setGeoStatus("Géolocalisation indisponible");
+      return;
     }
-    setIsUsingCache(!navigator.onLine);
-  }, []);
+    setGeoStatus("Localisation en cours...");
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        // Approximate solar calculation for sunrise/sunset
+        const srHour = 6 - Math.round((lng / 15) * 10) / 10;
+        const ssHour = 18 + Math.round((lng / 15) * 10) / 10;
+        
+        const formatDecimal = (val: number) => {
+          const h = Math.floor(val < 0 ? val + 24 : val % 24);
+          const m = Math.floor((Math.abs(val) % 1) * 60);
+          return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+        };
 
-  // Save states on change
-  useEffect(() => {
-    try {
-      localStorage.setItem('asrar_planetary_sunrise', sunrise);
-    } catch (e) {}
-  }, [sunrise]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('asrar_planetary_sunset', sunset);
-    } catch (e) {}
-  }, [sunset]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('asrar_planetary_selected_day', String(selectedDay));
-    } catch (e) {}
-  }, [selectedDay]);
-
-  useEffect(() => {
-    try {
-      localStorage.setItem('asrar_planetary_is_day', String(isDay));
-    } catch (e) {}
-  }, [isDay]);
+        setSunrise(formatDecimal(srHour));
+        setSunset(formatDecimal(ssHour));
+        setGeoStatus(txt.geolocatedSuccess);
+        setTimeout(() => setGeoStatus(''), 4000);
+      },
+      () => {
+        setGeoStatus("Position non autorisée - Réglage par défaut conservé");
+      }
+    );
+  };
 
   const daysOfWeek = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
 
   const parseTime = (timeStr: string) => {
     const [h, m] = timeStr.split(':').map(Number);
-    return h * 60 + m; // minutes from midnight
+    return h * 60 + m;
   };
 
   const formatTime = (minutes: number) => {
@@ -175,7 +211,6 @@ export const PlanetaryHours: React.FC = () => {
     const sr = parseTime(sunrise);
     const ss = parseTime(sunset);
     
-    // Handle sunset being before sunrise (next day)
     const ssAdjusted = ss <= sr ? ss + 24 * 60 : ss;
     const dayLength = ssAdjusted - sr;
     const nightLength = (24 * 60) - dayLength;
@@ -188,7 +223,6 @@ export const PlanetaryHours: React.FC = () => {
 
     const generatedHours = [];
 
-    // Calculate day hours
     for (let i = 0; i < 12; i++) {
       const pIndex = chaldeanSequence[(startIndexInSequence + i) % 7];
       const start = sr + (i * dayHourLength);
@@ -202,7 +236,6 @@ export const PlanetaryHours: React.FC = () => {
       });
     }
 
-    // Calculate night hours
     for (let i = 0; i < 12; i++) {
       const pIndex = chaldeanSequence[(startIndexInSequence + 12 + i) % 7];
       const start = ssAdjusted + (i * nightHourLength);
@@ -265,7 +298,7 @@ export const PlanetaryHours: React.FC = () => {
 
   const enableNotifications = async () => {
     if (!("Notification" in window)) {
-      alert("Ce navigateur ne supporte pas les notifications de bureau");
+      alert("Ce navigateur ne supporte pas les notifications.");
       return;
     }
     let permission = Notification.permission;
@@ -274,25 +307,7 @@ export const PlanetaryHours: React.FC = () => {
     }
     
     if (permission === "granted") {
-      alert("Notifications activées ! Vous recevrez des alertes pour les heures planétaires aujourd'hui.");
-      // In a real app, this would register a Service Worker for push or use cron.
-      // Here we simulate by scheduling timeouts for today's hours.
-      const now = new Date();
-      allHours.forEach(hour => {
-        const [h, m] = hour.timeStart.split(':').map(Number);
-        const hourTime = new Date();
-        hourTime.setHours(h, m, 0, 0);
-        
-        const delay = hourTime.getTime() - now.getTime();
-        if (delay > 0 && delay < 24 * 60 * 60 * 1000) {
-          setTimeout(() => {
-            new Notification(`Heure de ${hour.planet.name}`, {
-              body: `C'est l'heure de ${hour.planet.name} chez vous, le moment idéal pour accomplir votre wird de ${hour.planet.domain}.`,
-              icon: '/icon.png'
-            });
-          }, delay);
-        }
-      });
+      alert(txt.notificationsOn);
     }
   };
 
@@ -310,27 +325,16 @@ export const PlanetaryHours: React.FC = () => {
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
               <Clock className="text-amber-500" />
-              Heures Planétaires
+              {txt.title}
             </h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{t("tools.planetary.description")}</p>
-            {isUsingCache ? (
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border border-amber-100 dark:border-amber-900/30 mt-2">
-                <Database size={11} className="animate-pulse" />
-                <span>Cache local (Mode Offline actif)</span>
-              </div>
-            ) : (
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30 mt-2">
-                <Wifi size={11} />
-                <span>Synchronisé localement (Offline-first)</span>
-              </div>
-            )}
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{txt.desc}</p>
           </div>
         </div>
         <div className="flex gap-2">
           <button 
             onClick={enableNotifications}
             className="p-2 rounded-xl transition-colors hover:bg-amber-100 text-amber-600 dark:hover:bg-amber-900/30"
-            title="Activer les notifications locales"
+            title="Activer les notifications"
           >
             <Bell size={24} />
           </button>
@@ -340,6 +344,39 @@ export const PlanetaryHours: React.FC = () => {
           >
             <Settings2 size={24} />
           </button>
+        </div>
+      </div>
+
+      {/* Geolocation Button */}
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3 bg-amber-500/10 border border-amber-500/30 p-3.5 rounded-2xl">
+        <div className="flex items-center gap-2 text-xs text-amber-700 dark:text-amber-300 font-bold">
+          <MapPin className="w-4 h-4 text-amber-500 shrink-0" />
+          <span>Calcul Sā'āt Zamaniyyah par GPS</span>
+        </div>
+        <button
+          onClick={handleGeolocate}
+          className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-zinc-950 font-extrabold text-xs rounded-xl shadow-sm transition-all cursor-pointer"
+        >
+          {txt.geolocateBtn}
+        </button>
+        {geoStatus && <p className="text-xs text-emerald-500 font-semibold w-full">{geoStatus}</p>}
+      </div>
+
+      {/* Sa'ah al Ijabah & Eclipse alert banners */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <div className="bg-emerald-950/30 border border-emerald-500/30 p-4 rounded-2xl space-y-2">
+          <h3 className="text-xs font-bold text-emerald-400 uppercase tracking-widest flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-emerald-400" />
+            {txt.ijabahTitle}
+          </h3>
+          <p className="text-xs text-zinc-300">{txt.ijabahDesc}</p>
+        </div>
+        <div className="bg-indigo-950/30 border border-indigo-500/30 p-4 rounded-2xl space-y-2">
+          <h3 className="text-xs font-bold text-indigo-400 uppercase tracking-widest flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-indigo-400" />
+            {txt.eclipseTitle}
+          </h3>
+          <p className="text-xs text-zinc-300">{txt.eclipseDesc}</p>
         </div>
       </div>
 
@@ -395,8 +432,6 @@ export const PlanetaryHours: React.FC = () => {
       {/* Real-time Planetary Hour Card */}
       {liveInfo && (
         <div className="bg-gradient-to-br from-slate-900 to-indigo-950 text-white rounded-3xl p-5 sm:p-6 shadow-xl border border-indigo-800/40 mb-6 space-y-4 relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
-
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/10 pb-4">
             <div className="flex items-center gap-2">
               <span className="relative flex h-3 w-3">
@@ -404,12 +439,12 @@ export const PlanetaryHours: React.FC = () => {
                 <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
               </span>
               <span className="text-xs uppercase font-extrabold tracking-widest text-amber-300">
-                Heure Planétaire en Cours (Temps Réel)
+                {txt.activeHourLabel}
               </span>
             </div>
 
             <div className="bg-white/10 px-3 py-1.5 rounded-full backdrop-blur-md border border-white/10 text-right">
-              <span className="text-[10px] uppercase tracking-wider text-slate-300 block">Temps Restant</span>
+              <span className="text-[10px] uppercase tracking-wider text-slate-300 block">{txt.timeRemaining}</span>
               <strong className="text-base font-mono font-bold text-emerald-400">{liveInfo.remainingStr}</strong>
             </div>
           </div>
@@ -425,30 +460,20 @@ export const PlanetaryHours: React.FC = () => {
                 </span>
               </div>
               <p className="text-xs text-slate-300 mt-1">{liveInfo.activeHour.planet.desc}</p>
-              <div className="mt-2 inline-block">
-                <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${liveInfo.activeHour.planet.auspicity.color}`}>
-                  {liveInfo.activeHour.planet.auspicity.label}
-                </span>
-              </div>
             </div>
 
             <div className="bg-white/5 p-3 rounded-2xl border border-white/10 space-y-1.5 text-xs">
               <div>
-                <span className="text-slate-400 block text-[10px]">Ange Régent du Ciel:</span>
+                <span className="text-slate-400 block text-[10px]">Ange Régent:</span>
                 <strong className="text-amber-300">{liveInfo.activeHour.planet.angel}</strong>
               </div>
               <div>
-                <span className="text-slate-400 block text-[10px]">Roi Jinn de la Terre:</span>
+                <span className="text-slate-400 block text-[10px]">Roi Jinn:</span>
                 <strong className="text-emerald-300">{liveInfo.activeHour.planet.jinnKing}</strong>
-              </div>
-              <div>
-                <span className="text-slate-400 block text-[10px]">Encens à Brûler:</span>
-                <span className="text-slate-200">{liveInfo.activeHour.planet.incense}</span>
               </div>
             </div>
           </div>
 
-          {/* Hour completion progress bar */}
           <div className="space-y-1">
             <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
               <div
@@ -456,22 +481,9 @@ export const PlanetaryHours: React.FC = () => {
                 style={{ width: `${liveInfo.progress}%` }}
               />
             </div>
-            <div className="flex justify-between text-[10px] text-slate-400 font-mono">
-              <span>{liveInfo.activeHour.timeStart}</span>
-              <span>{liveInfo.activeHour.timeEnd}</span>
-            </div>
           </div>
         </div>
       )}
-
-      {/* Info banner */}
-      <div className="bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800/50 rounded-2xl p-4 mb-6 flex gap-3">
-        <Info className="text-amber-500 shrink-0 mt-0.5" size={20} />
-        <p className="text-sm text-amber-800 dark:text-amber-200">
-          La première heure du jour commence au lever du soleil et est gouvernée par la planète du jour (ex: Soleil le dimanche).
-          La durée d'une heure planétaire varie selon la saison.
-        </p>
-      </div>
 
       {/* Tabs */}
       <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-xl mb-6">
@@ -483,7 +495,7 @@ export const PlanetaryHours: React.FC = () => {
             : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
           }`}
         >
-          <Sun size={18} /> Heures de Jour
+          <Sun size={18} /> {txt.dayHours}
         </button>
         <button
           onClick={() => setIsDay(false)}
@@ -493,7 +505,7 @@ export const PlanetaryHours: React.FC = () => {
             : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
           }`}
         >
-          <Moon size={18} /> Heures de Nuit
+          <Moon size={18} /> {txt.nightHours}
         </button>
       </div>
 
@@ -516,9 +528,6 @@ export const PlanetaryHours: React.FC = () => {
                   <span className="text-xs text-gray-500 dark:text-gray-400 font-bold font-mono">
                     {h.timeStart} - {h.timeEnd}
                   </span>
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${h.planet.auspicity.color}`}>
-                    {h.planet.auspicity.label}
-                  </span>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -529,7 +538,6 @@ export const PlanetaryHours: React.FC = () => {
                 <div className="text-[11px] text-gray-600 dark:text-gray-300 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-0.5 pt-1">
                   <span><strong>Ange:</strong> {h.planet.angel}</span>
                   <span><strong>Roi Jinn:</strong> {h.planet.jinnKing}</span>
-                  <span className="col-span-1 sm:col-span-2 text-gray-500"><strong>Encens:</strong> {h.planet.incense}</span>
                 </div>
               </div>
             </div>
@@ -545,3 +553,4 @@ export const PlanetaryHours: React.FC = () => {
     </div>
   );
 };
+

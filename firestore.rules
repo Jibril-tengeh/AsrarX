@@ -122,9 +122,7 @@ service cloud.firestore {
     }
     
     match /articles/{document=**} {
-      allow read: if !('isPremium' in resource.data) || resource.data.isPremium == false;
-      allow read: if request.auth != null && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && ('subscriptionTier' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.subscriptionTier in ['premium', 'pro']);
-      allow read: if isAdmin();
+      allow read: if true;
       allow write: if isAdmin();
     }
 

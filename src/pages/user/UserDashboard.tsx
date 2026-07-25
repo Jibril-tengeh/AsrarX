@@ -253,7 +253,10 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
 
     const q = query(collection(db, 'articles'), orderBy('createdAt', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const firestoreItems = snapshot.docs.filter(doc => doc.data().status === 'Published').map(doc => {
+      const firestoreItems = snapshot.docs.filter(doc => {
+        const st = doc.data().status;
+        return !st || st === 'Published' || st === 'published' || (st !== 'Draft' && st !== 'Archived');
+      }).map(doc => {
         const data = doc.data();
         let activeContent = data.content || '';
         if (language === 'en' && data.content_en) activeContent = data.content_en;

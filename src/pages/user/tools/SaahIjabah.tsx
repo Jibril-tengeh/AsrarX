@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Clock, Sparkles, Moon, Sun, Flame, Wind, Droplets, Mountain, Compass, Play, Activity, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Clock, Sparkles, Moon, Sun, Flame, Wind, Droplets, Mountain, Compass, Play, Activity, CheckCircle2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { getCurrentPlanetaryHour } from '../../../utils/planetaryNotifications';
@@ -13,23 +13,68 @@ const ABJAD_MAP: { [key: string]: number } = {
 };
 
 const LUNAR_MANSIONS = [
-  { id: 1, name: 'Al-Sharatain', arabic: 'الشرطين', element: 'Feu', status: 'Excellente (Ouverture)' },
-  { id: 2, name: 'Al-Butain', arabic: 'البطين', element: 'Terre', status: 'Propice (Prospérité)' },
-  { id: 3, name: 'Al-Thurayya', arabic: 'الثريا', element: 'Air', status: 'Bénie (Richesse & Gloire)' },
-  { id: 4, name: 'Al-Dabaran', arabic: 'الدبران', element: 'Eau', status: 'Neutre (Concentration)' },
-  { id: 5, name: 'Al-Haq\'ah', arabic: 'الهقعة', element: 'Feu', status: 'Excellente (Sagesse)' },
-  { id: 6, name: 'Al-Han\'ah', arabic: 'الهنعة', element: 'Terre', status: 'Propice (Amour & Paix)' },
-  { id: 7, name: 'Al-Dhira\'', arabic: 'الذراع', element: 'Air', status: 'Bénie (Protection)' },
-  { id: 8, name: 'Al-Nathrah', arabic: 'Nathrah', element: 'Eau', status: 'Favorable (Guérison)' },
+  { id: 1, name: 'Al-Sharatain', arabic: 'الشرطين', elementEn: 'Fire', elementFr: 'Feu', elementHa: 'Wuta', statusEn: 'Excellent (Opening)', statusFr: 'Excellente (Ouverture)', statusHa: 'Kyau kwarai (Budewa)' },
+  { id: 2, name: 'Al-Butain', arabic: 'البطين', elementEn: 'Earth', elementFr: 'Terre', elementHa: 'Kasa', statusEn: 'Auspicious (Prosperity)', statusFr: 'Propice (Prospérité)', statusHa: 'Kwarai (Arzuki)' },
+  { id: 3, name: 'Al-Thurayya', arabic: 'الثريا', elementEn: 'Air', elementFr: 'Air', elementHa: 'Iska', statusEn: 'Blessed (Wealth & Glory)', statusFr: 'Bénie (Richesse & Gloire)', statusHa: 'Alba\'arka (Wadatuwa da Daukaka)' },
+  { id: 4, name: 'Al-Dabaran', arabic: 'الدبران', elementEn: 'Water', elementFr: 'Eau', elementHa: 'Ruwa', statusEn: 'Neutral (Concentration)', statusFr: 'Neutre (Concentration)', statusHa: 'Matsakaici (Mai da Hankali)' },
+  { id: 5, name: 'Al-Haq\'ah', arabic: 'الهقعة', elementEn: 'Fire', elementFr: 'Feu', elementHa: 'Wuta', statusEn: 'Excellent (Wisdom)', statusFr: 'Excellente (Sagesse)', statusHa: 'Kyau kwarai (Hikima)' },
+  { id: 6, name: 'Al-Han\'ah', arabic: 'الهنعة', elementEn: 'Earth', elementFr: 'Terre', elementHa: 'Kasa', statusEn: 'Auspicious (Love & Peace)', statusFr: 'Propice (Amour & Paix)', statusHa: 'Kwarai (Soyayya da Zaman Lafiya)' },
+  { id: 7, name: 'Al-Dhira\'', arabic: 'الذراع', elementEn: 'Air', elementFr: 'Air', elementHa: 'Iska', statusEn: 'Blessed (Protection)', statusFr: 'Bénie (Protection)', statusHa: 'Alba\'arka (Kariya)' },
+  { id: 8, name: 'Al-Nathrah', arabic: 'Nathrah', elementEn: 'Water', elementFr: 'Eau', elementHa: 'Ruwa', statusEn: 'Favorable (Healing)', statusFr: 'Favorable (Guérison)', statusHa: 'Kyau (Maganin Cutar)' },
 ];
 
+const PLANET_TRANSLATIONS: Record<string, { en: string; fr: string; ha: string; favorabilityEn: string; favorabilityFr: string; favorabilityHa: string }> = {
+  Soleil: {
+    en: "Sun", fr: "Soleil", ha: "Rana",
+    favorabilityEn: "Excellent (Glory & Success)",
+    favorabilityFr: "Excellente (Gloire & Réussite)",
+    favorabilityHa: "Kyau kwarai (Daukaka da Nasara)"
+  },
+  Vénus: {
+    en: "Venus", fr: "Vénus", ha: "Zuhra",
+    favorabilityEn: "Very Favorable (Harmony & Love)",
+    favorabilityFr: "Très Favorable (Harmonie & Amour)",
+    favorabilityHa: "Yana da Kyau (Jituwa da Soyayya)"
+  },
+  Mercure: {
+    en: "Mercury", fr: "Mercure", ha: "Utarid",
+    favorabilityEn: "Neutral/Wise (Study & Writing)",
+    favorabilityFr: "Neutre/Avisé (Étude & Écrit)",
+    favorabilityHa: "Matsakaici (Karatu da Rubutu)"
+  },
+  Lune: {
+    en: "Moon", fr: "Lune", ha: "Wata",
+    favorabilityEn: "Favorable (Intuition & Dreams)",
+    favorabilityFr: "Favorable (Intuition & Rêve)",
+    favorabilityHa: "Kyau (Fahimta da Mafarki)"
+  },
+  Saturne: {
+    en: "Saturn", fr: "Saturne", ha: "Zuhal",
+    favorabilityEn: "Caution/Banishing (Discipline)",
+    favorabilityFr: "Prudence/Bannissement (Discipline)",
+    favorabilityHa: "Tsanaki da Horarwa"
+  },
+  Jupiter: {
+    en: "Jupiter", fr: "Jupiter", ha: "Mushtari",
+    favorabilityEn: "Excellent (Abundance & Wealth)",
+    favorabilityFr: "Excellente (Abondance & Richesse)",
+    favorabilityHa: "Kyau kwarai (Arzuki da Wadatuwa)"
+  },
+  Mars: {
+    en: "Mars", fr: "Mars", ha: "Mirrikh",
+    favorabilityEn: "Energetic/Raid (Strength & Courage)",
+    favorabilityFr: "Énergique/Raid (Force & Courage)",
+    favorabilityHa: "Karfi da Gwarzon Taka"
+  }
+};
+
 export const SaahIjabah: React.FC = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const navigate = useNavigate();
   const [userName, setUserName] = useState('');
   const [motherName, setMotherName] = useState('');
   const [abjadScore, setAbjadScore] = useState<number | null>(null);
-  const [element, setElement] = useState<{ name: string; icon: any; color: string; desc: string; names: string[] } | null>(null);
+  const [element, setElement] = useState<{ type: string; icon: any; color: string; names: string[] } | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [currentPlanet, setCurrentPlanet] = useState(getCurrentPlanetaryHour());
   const [countdown, setCountdown] = useState<string>('');
@@ -50,6 +95,34 @@ export const SaahIjabah: React.FC = () => {
     }, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  const getLocalizedPlanetName = (planetName: string) => {
+    const item = PLANET_TRANSLATIONS[planetName];
+    if (!item) return planetName;
+    if (language === 'en') return item.en;
+    if (language === 'ha') return item.ha;
+    return item.fr;
+  };
+
+  const getLocalizedPlanetFavorability = (planetName: string) => {
+    const item = PLANET_TRANSLATIONS[planetName];
+    if (!item) return '';
+    if (language === 'en') return item.favorabilityEn;
+    if (language === 'ha') return item.favorabilityHa;
+    return item.favorabilityFr;
+  };
+
+  const getMansionElement = (m: typeof LUNAR_MANSIONS[0]) => {
+    if (language === 'en') return m.elementEn;
+    if (language === 'ha') return m.elementHa;
+    return m.elementFr;
+  };
+
+  const getMansionStatus = (m: typeof LUNAR_MANSIONS[0]) => {
+    if (language === 'en') return m.statusEn;
+    if (language === 'ha') return m.statusHa;
+    return m.statusFr;
+  };
 
   const calculateAbjad = (text: string) => {
     let total = 0;
@@ -73,36 +146,62 @@ export const SaahIjabah: React.FC = () => {
     const remainder = total % 4;
     if (remainder === 1) {
       setElement({
-        name: "Nār (Feu - ناري)",
+        type: 'fire',
         icon: Flame,
         color: "from-amber-500 to-red-600",
-        desc: "Énergie vive, action rapide et élévation spirituelle ardente.",
         names: ["Ya Qawiyyu (يا قوي)", "Ya 'Azizu (يا عزيز)", "Ya Jabbaru (يا جبار)", "Ya Qahharu (يا قهار)"],
       });
     } else if (remainder === 2) {
       setElement({
-        name: "Turāb (Terre - ترابي)",
+        type: 'earth',
         icon: Mountain,
         color: "from-amber-700 to-yellow-800",
-        desc: "Stabilité, ancrage, concrétisation matérielle et protection durable.",
         names: ["Ya Razzaqu (يا رزاق)", "Ya Matinu (يا متين)", "Ya Hafizu (يا حفيظ)", "Ya Malik (يا مالك)"],
       });
     } else if (remainder === 3) {
       setElement({
-        name: "Hawā' (Air - هوائي)",
+        type: 'air',
         icon: Wind,
         color: "from-blue-500 to-indigo-600",
-        desc: "Intellect, communication, rayonnement et équilibre relationnel.",
         names: ["Ya Latifu (يا لطيف)", "Ya 'Alimu (يا عليم)", "Ya Khabiru (يا خبير)", "Ya Sami'u (يا سميع)"],
       });
     } else {
       setElement({
-        name: "Mā' (Eau - مائي)",
+        type: 'water',
         icon: Droplets,
         color: "from-emerald-500 to-teal-700",
-        desc: "Guérison, douceur, intuition et purification des émotions.",
         names: ["Ya Rahmanu (يا رحمن)", "Ya Rahimu (يا رحيم)", "Ya Wadudu (يا ودود)", "Ya Shafi (يا شافعي)"],
       });
+    }
+  };
+
+  const getElementName = (type: string) => {
+    switch (type) {
+      case 'fire':
+        return t('saah-ijabah.elementFireName', 'Nār (Feu - ناري)');
+      case 'earth':
+        return t('saah-ijabah.elementEarthName', 'Turāb (Terre - ترابي)');
+      case 'air':
+        return t('saah-ijabah.elementAirName', "Hawā' (Air - هوائي)");
+      case 'water':
+        return t('saah-ijabah.elementWaterName', "Mā' (Eau - مائي)");
+      default:
+        return '';
+    }
+  };
+
+  const getElementDesc = (type: string) => {
+    switch (type) {
+      case 'fire':
+        return t('saah-ijabah.elementFireDesc', 'Énergie vive, action rapide et élévation spirituelle ardente.');
+      case 'earth':
+        return t('saah-ijabah.elementEarthDesc', 'Stabilité, ancrage, concrétisation matérielle et protection durable.');
+      case 'air':
+        return t('saah-ijabah.elementAirDesc', 'Intellect, communication, rayonnement et équilibre relationnel.');
+      case 'water':
+        return t('saah-ijabah.elementWaterDesc', 'Guérison, douceur, intuition et purification des émotions.');
+      default:
+        return '';
     }
   };
 
@@ -139,13 +238,13 @@ export const SaahIjabah: React.FC = () => {
           <div className="relative z-10 space-y-3">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-zinc-950/20 text-zinc-950 font-bold text-xs">
               <Clock size={14} />
-              <span>Sā'ah al-Ijābah • Horloge d'Exaucement Divin</span>
+              <span>{t('saah-ijabah.tag', "Sā'ah al-Ijābah • Horloge d'Exaucement Divin")}</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black font-serif">
-              Fenêtres Célestes & Alignement Spirituel
+              {t('saah-ijabah.heroTitle', "Fenêtres Célestes & Alignement Spirituel")}
             </h1>
             <p className="text-xs sm:text-sm opacity-90 max-w-xl leading-relaxed">
-              Déterminez l'instant propice exact (Sa'at al-Ijaba) pour vos du'a et vos zikrs en croisant les révolutions planétaires et votre signature numérique.
+              {t('saah-ijabah.heroDesc', "Déterminez l'instant propice exact (Sa'at al-Ijaba) pour vos du'a et vos zikrs en croisant les révolutions planétaires et votre signature numérique.")}
             </p>
           </div>
         </div>
@@ -158,22 +257,22 @@ export const SaahIjabah: React.FC = () => {
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
                 <Sun size={16} />
-                Heure Planétaire Actuelle
+                {t('saah-ijabah.currentPlanetHeader', "Heure Planétaire Actuelle")}
               </span>
               <span className="text-xs font-mono font-bold bg-amber-100 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded-full">
-                {currentPlanet.isDaytime ? 'Jour ☀️' : 'Nuit 🌙'}
+                {currentPlanet.isDaytime ? t('saah-ijabah.daytime', 'Jour ☀️') : t('saah-ijabah.nighttime', 'Nuit 🌙')}
               </span>
             </div>
             <div>
               <div className="text-2xl font-black text-gray-900 dark:text-white flex items-center gap-2">
                 <span>{currentPlanet.planet.symbol}</span>
-                <span>{currentPlanet.planet.name}</span>
+                <span>{getLocalizedPlanetName(currentPlanet.planet.name)}</span>
                 <span className="text-sm font-arabic font-normal text-amber-600 dark:text-amber-400">({currentPlanet.planet.arabic})</span>
               </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{currentPlanet.planet.favorability}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{getLocalizedPlanetFavorability(currentPlanet.planet.name)}</p>
             </div>
             <div className="pt-2 border-t border-gray-100 dark:border-gray-700/60 flex items-center justify-between text-xs font-mono">
-              <span className="text-gray-400">Prochain Changement:</span>
+              <span className="text-gray-400">{t('saah-ijabah.nextChange', "Prochain Changement :")}</span>
               <span className="font-bold text-amber-600 dark:text-amber-400 animate-pulse">{countdown}</span>
             </div>
           </div>
@@ -183,10 +282,10 @@ export const SaahIjabah: React.FC = () => {
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5">
                 <Moon size={16} />
-                Demeure de la Lune
+                {t('saah-ijabah.lunarMansionHeader', "Demeure de la Lune")}
               </span>
               <span className="text-xs font-mono font-bold bg-indigo-100 dark:bg-indigo-950/50 text-indigo-800 dark:text-indigo-300 px-2 py-0.5 rounded-full">
-                {currentMansion.element}
+                {getMansionElement(currentMansion)}
               </span>
             </div>
             <div>
@@ -196,10 +295,10 @@ export const SaahIjabah: React.FC = () => {
               <div className="text-sm font-arabic text-indigo-500 dark:text-indigo-400 font-bold">
                 {currentMansion.arabic}
               </div>
-              <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1 font-semibold">{currentMansion.status}</p>
+              <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1 font-semibold">{getMansionStatus(currentMansion)}</p>
             </div>
             <div className="pt-2 border-t border-gray-100 dark:border-gray-700/60 text-[11px] text-gray-400">
-              Alignement Lunaire pour le Zikr
+              {t('saah-ijabah.lunarSubtext', "Alignement Lunaire pour le Zikr")}
             </div>
           </div>
 
@@ -208,24 +307,24 @@ export const SaahIjabah: React.FC = () => {
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-emerald-300 flex items-center gap-1.5">
                 <Sparkles size={16} />
-                Vibration de l'Heure
+                {t('saah-ijabah.vibrationHeader', "Vibration de l'Heure")}
               </span>
               <CheckCircle2 size={18} className="text-emerald-400" />
             </div>
             <div className="space-y-1">
               <div className="text-lg font-black text-emerald-200">
-                Fenêtre Propice Ouverte
+                {t('saah-ijabah.windowOpenTitle', "Fenêtre Propice Ouverte")}
               </div>
               <p className="text-xs text-emerald-100/80 leading-relaxed">
-                Moment favorable pour l'invocation divine et l'orientation des demandes spirituelles.
+                {t('saah-ijabah.windowOpenDesc', "Moment favorable pour l'invocation divine et l'orientation des demandes spirituelles.")}
               </p>
             </div>
             <button
-              onClick={() => launchTasbih(`Zikr de la Sā'ah (${currentPlanet.planet.name})`)}
+              onClick={() => launchTasbih(t('saah-ijabah.zikrPresetTitle', "Zikr de la Sā'ah ({planet})").replace('{planet}', getLocalizedPlanetName(currentPlanet.planet.name)))}
               className="w-full py-2 px-3 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-xs rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-md"
             >
               <Play size={14} fill="currentColor" />
-              <span>Démarrer Zikr Propice</span>
+              <span>{t('saah-ijabah.startZikrBtn', "Démarrer Zikr Propice")}</span>
             </button>
           </div>
 
@@ -236,10 +335,10 @@ export const SaahIjabah: React.FC = () => {
           <div className="space-y-1">
             <h2 className="text-lg font-bold text-gray-900 dark:text-white flex items-center gap-2">
               <Compass className="text-amber-500" size={20} />
-              <span>Alignement Élémentaire & Nom Personnel</span>
+              <span>{t('saah-ijabah.elementalSectionTitle', "Alignement Élémentaire & Nom Personnel")}</span>
             </h2>
             <p className="text-xs text-gray-500 dark:text-gray-400">
-              Entrez votre prénom (en lettres arabes de préférence) pour calculer votre tempérament et vos Noms Divins associés.
+              {t('saah-ijabah.elementalSectionDesc', "Entrez votre prénom (en lettres arabes de préférence) pour calculer votre tempérament et vos Noms Divins associés.")}
             </p>
           </div>
 
@@ -248,14 +347,14 @@ export const SaahIjabah: React.FC = () => {
               type="text"
               value={userName}
               onChange={(e) => setUserName(e.target.value)}
-              placeholder="Votre Prénom (ex: محمد)"
+              placeholder={t('saah-ijabah.inputFirstName', "Votre Prénom (ex: محمد)")}
               className="px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-amber-500 font-arabic"
             />
             <input
               type="text"
               value={motherName}
               onChange={(e) => setMotherName(e.target.value)}
-              placeholder="Nom de la Mère (Optionnel ex: مريم)"
+              placeholder={t('saah-ijabah.inputMotherName', "Nom de la Mère (Optionnel ex: مريم)")}
               className="px-4 py-3 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-amber-500 font-arabic"
             />
             <button
@@ -263,7 +362,7 @@ export const SaahIjabah: React.FC = () => {
               className="py-3 px-6 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-600 text-zinc-950 font-bold text-sm hover:from-amber-600 hover:to-yellow-700 transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
             >
               <Sparkles size={16} />
-              <span>Calculer l'Alignement</span>
+              <span>{t('saah-ijabah.btnCalculate', "Calculer l'Alignement")}</span>
             </button>
           </form>
 
@@ -280,18 +379,20 @@ export const SaahIjabah: React.FC = () => {
                     <element.icon size={24} />
                   </div>
                   <div>
-                    <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">Poids Abjad : {abjadScore}</span>
-                    <h3 className="text-base font-bold text-gray-900 dark:text-white">{element.name}</h3>
+                    <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+                      {t('saah-ijabah.abjadWeight', "Poids Abjad : {score}").replace('{score}', String(abjadScore))}
+                    </span>
+                    <h3 className="text-base font-bold text-gray-900 dark:text-white">{getElementName(element.type)}</h3>
                   </div>
                 </div>
-                <span className="text-xs text-gray-600 dark:text-gray-300 max-w-sm">{element.desc}</span>
+                <span className="text-xs text-gray-600 dark:text-gray-300 max-w-sm">{getElementDesc(element.type)}</span>
               </div>
 
               {/* Recommended Divine Names */}
               <div className="space-y-3">
                 <h4 className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-widest flex items-center gap-1.5">
                   <Activity size={14} className="text-amber-500" />
-                  <span>Noms Divins Recommandés pour cet Alignement :</span>
+                  <span>{t('saah-ijabah.recommendedNamesHeader', "Noms Divins Recommandés pour cet Alignement :")}</span>
                 </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {element.names.map((n, idx) => (
@@ -305,7 +406,7 @@ export const SaahIjabah: React.FC = () => {
                         className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold text-xs rounded-lg transition-all flex items-center gap-1 cursor-pointer"
                       >
                         <Play size={12} fill="currentColor" />
-                        <span>Pratiquer</span>
+                        <span>{t('saah-ijabah.btnPractice', "Pratiquer")}</span>
                       </button>
                     </div>
                   ))}
@@ -320,3 +421,4 @@ export const SaahIjabah: React.FC = () => {
     </div>
   );
 };
+

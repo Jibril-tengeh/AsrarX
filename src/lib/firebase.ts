@@ -33,11 +33,9 @@ const isMobileOrIframe = typeof window !== 'undefined' && (
 );
 
 export const db = initializeFirestore(app, {
-  experimentalForceLongPolling: true,
   localCache: persistentLocalCache({
     tabManager: isMobileOrIframe ? persistentSingleTabManager({}) : persistentMultipleTabManager()
-  }),
-  ...({ useFetchStreams: false } as any)
+  })
 });
 
 // Helper to check if IndexedDB is fully functional (especially inside iframes where it can hang)

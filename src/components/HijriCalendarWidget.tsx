@@ -2,42 +2,31 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Calendar, Moon } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useFeatures } from '../contexts/FeatureContext';
+import { calculateHijriDate } from '../utils/hijriDate';
 
 export const HijriCalendarWidget: React.FC = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const { featureToggles } = useFeatures();
   const [hijriDate, setHijriDate] = useState<{ day: number, month: string, year: number } | null>(null);
   const [gregorianDate, setGregorianDate] = useState<string>('');
   
   useEffect(() => {
-    // Simple Hijri calculation or API fetch
-    // For now we simulate it using an Intl API if available or mock
     try {
       const date = new Date();
       setGregorianDate(date.toLocaleDateString(t('locale', 'fr-FR'), { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }));
       
-      const hijriFormatter = new Intl.DateTimeFormat('fr-TN-u-ca-islamic', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric'
-      });
-      const parts = hijriFormatter.formatToParts(date);
-      let day = 1;
-      let month = '';
-      let year = 1445;
+      const offset = featureToggles?.hijriOffset || 0;
+      const res = calculateHijriDate(date, offset);
       
-      parts.forEach(p => {
-        if (p.type === 'day') day = parseInt(p.value, 10);
-        if (p.type === 'month') month = p.value;
-        if (p.type === 'year') year = parseInt(p.value.split(' ')[0], 10); // Handle '1445 AH' cases
-      });
+      const monthName = language === 'en' ? res.monthNameEn : (language === 'ha' ? res.monthNameHa : res.monthNameFr);
       
-      setHijriDate({ day, month, year });
+      setHijriDate({ day: res.day, month: monthName, year: res.year });
     } catch (e) {
       console.error(e);
-      // Fallback
-      setHijriDate({ day: 1, month: 'Ramadan', year: 1445 });
+      setHijriDate({ day: 10, month: 'Ṣafar', year: 1448 });
     }
-  }, [t]);
+  }, [t, language, featureToggles]);
 
   return (
     <div className="bg-gradient-to-br from-emerald-800 to-teal-900 rounded-3xl p-5 sm:p-6 shadow-sm border border-emerald-700 flex flex-col justify-center relative overflow-hidden text-white h-full">

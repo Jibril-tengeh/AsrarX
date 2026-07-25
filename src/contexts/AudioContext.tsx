@@ -336,8 +336,40 @@ export const AudioProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           objectUrl = null;
         }
 
-        // Standard: Always try to play the activeUrl first so the Service Worker can
-        // handle range requests and streaming natively.
+        // 1. Check if this track is saved in Cache Storage (for offline playback)
+        try {
+          const cache = await caches.open('quran-audio-cache');
+          const matched = await cache.match(activeUrl);
+          if (matched) {
+            const blob = await matched.blob();
+            objectUrl = URL.createObjectURL(blob);
+            console.log("[AudioContext] Serving downloaded audio from Cache Storage:", activeUrl);
+            if (audioRef.current) {
+              audioRef.current.src = objectUrl;
+              const playPromise = audioRef.current.play();
+              if (playPromise !== undefined) {
+                playPromise.catch(e => {
+                  console.warn("[AudioContext] Cache blob playback warning:", e);
+                });
+              }
+            }
+            return;
+          }
+        } catch (cacheErr) {
+          console.warn("[AudioContext] Cache Storage check failed:", cacheErr);
+        }
+
+        // 2. Device is offline and track is not downloaded
+        if (!navigator.onLine) {
+          console.warn("[AudioContext] Device is offline and track is not cached:", activeUrl);
+          setIsPlaying(false);
+          window.dispatchEvent(new CustomEvent('asrarhub_offline_audio_missing', {
+            detail: { title: currentTrack?.title || 'Audios' }
+          }));
+          return;
+        }
+
+        // 3. Device is online: play via network
         const resolvedSrc = activeUrl;
 
         if (audioRef.current) {

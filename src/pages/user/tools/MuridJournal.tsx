@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, BookOpen, Check, Plus, Trash2, Calendar, Sparkles, Feather, Shield, Moon, Eye } from 'lucide-react';
-import { motion } from 'motion/react';
+import { ArrowLeft, BookOpen, Check, Plus, Trash2, Sparkles, Moon } from 'lucide-react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { useLanguage } from '../../../contexts/LanguageContext';
@@ -19,9 +18,97 @@ interface MuridLogEntry {
   interpretation?: string;
 }
 
+const dicts = {
+  fr: {
+    title: "Carnet de Bord du Murīd",
+    subtitle: "Journal Spirituel Personnel & Suivi de la Retraite des 40 Jours (Arba'īn)",
+    arbainTitle: "Retraite Spirituelle (Arba'īn - 40 Jours)",
+    daysCountLabel: "Jours",
+    intentionLabel: "Intention de la Retraite",
+    defaultIntention: "40 Jours de Dhikr & Purification",
+    addNoteTitle: "Ajouter une Note au Carnet",
+    dailyZikr: "Zikr Quotidien",
+    dreamVision: "🌙 Rêve / Vision",
+    arbain: "Arba'īn",
+    titlePlaceholderDream: "Titre du Rêve (ex: Rêve de la Clé dorée)",
+    titlePlaceholderZikr: "Titre (ex: Zikr Ya Rahim)",
+    repetitionsPlaceholder: "Répétitions",
+    ibnSirinAvail: "Interprétation Ibn Sirin disponible",
+    notesPlaceholderDream: "Racontez votre rêve en détail...",
+    notesPlaceholderZikr: "Notes spirituelles, ressentis ou visions durant la séance...",
+    saveBtn: "Enregistrer dans le Carnet",
+    historyTitle: "Historique du Carnet",
+    fullDreamLog: "Journal des Rêves Complet →",
+    noEntries: "Aucune note enregistrée dans votre carnet.",
+    dreamBadge: "🌙 Rêve",
+    interpreting: "Analyse...",
+    interpretBtn: "Interpréter (Ibn Sirin)",
+    ibnSirinHeader: "Interprétation d'Ibn Sirin & Savants",
+    defaultZikrTitle: "Ya Latif (129x)",
+    defaultNotes: "Séance de matinée apaisante et sereine."
+  },
+  en: {
+    title: "Murīd Spiritual Logbook",
+    subtitle: "Personal Spiritual Journal & 40-Day Retreat (Arba'īn) Tracker",
+    arbainTitle: "Spiritual Retreat (Arba'īn - 40 Days)",
+    daysCountLabel: "Days",
+    intentionLabel: "Retreat Intention",
+    defaultIntention: "40 Days of Dhikr & Purification",
+    addNoteTitle: "Add a Note to Logbook",
+    dailyZikr: "Daily Zikr",
+    dreamVision: "🌙 Dream / Vision",
+    arbain: "Arba'īn",
+    titlePlaceholderDream: "Dream Title (e.g. Dream of the Golden Key)",
+    titlePlaceholderZikr: "Title (e.g. Zikr Ya Rahim)",
+    repetitionsPlaceholder: "Repetitions",
+    ibnSirinAvail: "Ibn Sirin Interpretation Available",
+    notesPlaceholderDream: "Describe your dream in detail...",
+    notesPlaceholderZikr: "Spiritual notes, feelings, or visions during session...",
+    saveBtn: "Save to Logbook",
+    historyTitle: "Logbook History",
+    fullDreamLog: "Full Dream Journal →",
+    noEntries: "No notes saved in your logbook.",
+    dreamBadge: "🌙 Dream",
+    interpreting: "Analyzing...",
+    interpretBtn: "Interpret (Ibn Sirin)",
+    ibnSirinHeader: "Ibn Sirin & Scholars Interpretation",
+    defaultZikrTitle: "Ya Latif (129x)",
+    defaultNotes: "Calming and serene morning session."
+  },
+  ha: {
+    title: "Kwandatsin Mujallan Murīd",
+    subtitle: "Mujallan Ruhaniya na Murid da Binciken Arba'in (Kwanki 40)",
+    arbainTitle: "Yin Babi / Khalwa na Ruhaniya (Arba'īn - Ranakun 40)",
+    daysCountLabel: "Ranakun",
+    intentionLabel: "Niyyar Yin Khalwa",
+    defaultIntention: "Kwanaki 40 na Ambato (Zikr) da Tsarkake Zuciya",
+    addNoteTitle: "Ƙara Bayani a Mujalla",
+    dailyZikr: "Ambato na Yau da Kullum",
+    dreamVision: "🌙 Mafarki / Tunanin Ruhu",
+    arbain: "Arba'īn",
+    titlePlaceholderDream: "Kan Labarin Mafarki (misali: Mafarkin Maƙalli)",
+    titlePlaceholderZikr: "Kan Magana (misali: Zikr Ya Rahim)",
+    repetitionsPlaceholder: "Lamba/Yawan Zikr",
+    ibnSirinAvail: "Akwai fassarar Ibn Sirin",
+    notesPlaceholderDream: "Raita labarin mafarkinka daki-daki...",
+    notesPlaceholderZikr: "Bayanai na ruhaniya ko abubuwan da ka ji a lokacin zikr...",
+    saveBtn: "Ajiye a Mujalla",
+    historyTitle: "Tarihin Mujalla",
+    fullDreamLog: "Cikakken Mujallan Mafarki →",
+    noEntries: "Babu wani bayani da aka ajiye a mujallarka.",
+    dreamBadge: "🌙 Mafarki",
+    interpreting: "Ana fassara...",
+    interpretBtn: "Fassara (Ibn Sirin)",
+    ibnSirinHeader: "Fassarar Ibn Sirin da Malaman Musulunci",
+    defaultZikrTitle: "Ya Latif (129x)",
+    defaultNotes: "Zaman ambato na safe mai nutsuwa."
+  }
+};
+
 export const MuridJournal: React.FC = () => {
-  const { t, language } = useLanguage();
+  const { language } = useLanguage();
   const { user } = useAuth();
+  const dict = dicts[(language as 'fr' | 'en' | 'ha')] || dicts.fr;
 
   // 40-Day Arba'in Retreat State
   const [arbainProgress, setArbainProgress] = useState<boolean[]>(() => {
@@ -30,7 +117,7 @@ export const MuridJournal: React.FC = () => {
   });
 
   const [arbainIntention, setArbainIntention] = useState<string>(() => {
-    return localStorage.getItem('asrarhub_arbain_intention') || '40 Jours de Dhikr & Purification';
+    return localStorage.getItem('asrarhub_arbain_intention') || dict.defaultIntention;
   });
 
   // Journal Entries State
@@ -42,9 +129,9 @@ export const MuridJournal: React.FC = () => {
           {
             id: '1',
             date: new Date().toISOString().split('T')[0],
-            zikrTitle: 'Ya Latif (129x)',
+            zikrTitle: dict.defaultZikrTitle,
             count: 129,
-            notes: 'Séance de matinée apaisante et sereine.',
+            notes: dict.defaultNotes,
             type: 'zikr',
           },
         ];
@@ -128,15 +215,11 @@ export const MuridJournal: React.FC = () => {
         </Link>
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <span>Carnet de Bord du Murīd</span>
+            <span>{dict.title}</span>
             <BookOpen className="w-6 h-6 text-emerald-500" />
           </h1>
           <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
-            {language === 'fr'
-              ? 'Journal Spirituel Personnel & Suivi de la Retraite des 40 Jours (Arba\'īn)'
-              : language === 'ha'
-              ? 'Mujallan Ruhaniya na Murid da Binciken Arba\'in'
-              : 'Spiritual Journal & 40-Day Retreat (Arba\'in) Tracker'}
+            {dict.subtitle}
           </p>
         </div>
         <ToolInfoTooltip toolId="murid-journal" />
@@ -147,15 +230,15 @@ export const MuridJournal: React.FC = () => {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Sparkles className="w-5 h-5 text-amber-400" />
-            <h2 className="text-lg font-bold font-serif">Retraite Spirituelle (Arba'īn - 40 Jours)</h2>
+            <h2 className="text-lg font-bold font-serif">{dict.arbainTitle}</h2>
           </div>
           <span className="text-xs font-mono font-bold px-3 py-1 rounded-full bg-emerald-800/80 text-amber-300 border border-amber-500/30">
-            {completedArbainCount} / 40 Jours
+            {completedArbainCount} / 40 {dict.daysCountLabel}
           </span>
         </div>
 
         <div>
-          <label className="block text-xs text-emerald-300 mb-1">Intention de la Retraite</label>
+          <label className="block text-xs text-emerald-300 mb-1">{dict.intentionLabel}</label>
           <input
             type="text"
             value={arbainIntention}
@@ -187,7 +270,7 @@ export const MuridJournal: React.FC = () => {
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="text-sm font-bold text-gray-800 dark:text-white uppercase tracking-widest flex items-center gap-2">
             <Plus className="w-4 h-4 text-emerald-500" />
-            <span>Ajouter une Note au Carnet</span>
+            <span>{dict.addNoteTitle}</span>
           </h3>
           <div className="flex items-center gap-1.5 bg-gray-100 dark:bg-gray-900 p-1 rounded-xl">
             <button
@@ -195,21 +278,21 @@ export const MuridJournal: React.FC = () => {
               onClick={() => setNewType('zikr')}
               className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all ${newType === 'zikr' ? 'bg-emerald-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'}`}
             >
-              Zikr Quotidien
+              {dict.dailyZikr}
             </button>
             <button
               type="button"
               onClick={() => setNewType('dream')}
               className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all ${newType === 'dream' ? 'bg-purple-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'}`}
             >
-              🌙 Rêve / Vision
+              {dict.dreamVision}
             </button>
             <button
               type="button"
               onClick={() => setNewType('arbain')}
               className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all ${newType === 'arbain' ? 'bg-amber-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'}`}
             >
-              Arba'īn
+              {dict.arbain}
             </button>
           </div>
         </div>
@@ -220,7 +303,7 @@ export const MuridJournal: React.FC = () => {
               type="text"
               value={newTitle}
               onChange={(e) => setNewTitle(e.target.value)}
-              placeholder={newType === 'dream' ? 'Titre du Rêve (ex: Rêve de la Clé dorée)' : 'Titre (ex: Zikr Ya Rahim)'}
+              placeholder={newType === 'dream' ? dict.titlePlaceholderDream : dict.titlePlaceholderZikr}
               className="sm:col-span-2 px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white text-xs outline-none focus:ring-2 focus:ring-emerald-500"
             />
             {newType !== 'dream' ? (
@@ -228,12 +311,12 @@ export const MuridJournal: React.FC = () => {
                 type="number"
                 value={newCount}
                 onChange={(e) => setNewCount(Number(e.target.value))}
-                placeholder="Répétitions"
+                placeholder={dict.repetitionsPlaceholder}
                 className="px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white text-xs outline-none focus:ring-2 focus:ring-emerald-500"
               />
             ) : (
               <div className="flex items-center px-3 py-2 bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-300 rounded-xl text-[11px] font-bold border border-purple-200 dark:border-purple-800">
-                <span>Interprétation Ibn Sirin disponible</span>
+                <span>{dict.ibnSirinAvail}</span>
               </div>
             )}
           </div>
@@ -241,7 +324,7 @@ export const MuridJournal: React.FC = () => {
           <textarea
             value={newNotes}
             onChange={(e) => setNewNotes(e.target.value)}
-            placeholder={newType === 'dream' ? 'Racontez votre rêve en détail...' : 'Notes spirituelles, ressentis ou visions durant la séance...'}
+            placeholder={newType === 'dream' ? dict.notesPlaceholderDream : dict.notesPlaceholderZikr}
             className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white text-xs outline-none focus:ring-2 focus:ring-emerald-500 h-24 resize-none"
           />
 
@@ -250,7 +333,7 @@ export const MuridJournal: React.FC = () => {
             className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-md"
           >
             <Plus className="w-4 h-4" />
-            <span>Enregistrer dans le Carnet</span>
+            <span>{dict.saveBtn}</span>
           </button>
         </form>
       </div>
@@ -258,15 +341,15 @@ export const MuridJournal: React.FC = () => {
       {/* Section 3: Entries List */}
       <div className="space-y-4">
         <h3 className="text-sm font-bold text-gray-800 dark:text-white uppercase tracking-widest flex items-center justify-between">
-          <span>Historique du Carnet</span>
+          <span>{dict.historyTitle}</span>
           <Link to="/tools/dreams" className="text-xs text-purple-600 dark:text-purple-400 font-bold hover:underline flex items-center gap-1">
             <Moon size={14} />
-            <span>Journal des Rêves Complet →</span>
+            <span>{dict.fullDreamLog}</span>
           </Link>
         </h3>
 
         {entries.length === 0 ? (
-          <p className="text-xs text-gray-500 text-center py-6">Aucune note enregistrée dans votre carnet.</p>
+          <p className="text-xs text-gray-500 text-center py-6">{dict.noEntries}</p>
         ) : (
           entries.map((entry) => (
             <div
@@ -279,7 +362,7 @@ export const MuridJournal: React.FC = () => {
                     <span className="text-sm font-bold text-gray-900 dark:text-white">{entry.zikrTitle}</span>
                     {entry.type === 'dream' ? (
                       <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 border border-purple-300 dark:border-purple-700">
-                        🌙 Rêve
+                        {dict.dreamBadge}
                       </span>
                     ) : (
                       <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 font-bold">
@@ -299,7 +382,7 @@ export const MuridJournal: React.FC = () => {
                       className="px-2.5 py-1 rounded-lg bg-gradient-to-r from-purple-600 to-indigo-600 text-white text-xs font-bold hover:from-purple-700 hover:to-indigo-700 transition-all flex items-center gap-1 shadow-sm disabled:opacity-50 cursor-pointer"
                     >
                       <Sparkles size={12} />
-                      {isInterpreting ? 'Analyse...' : 'Interpréter (Ibn Sirin)'}
+                      {isInterpreting ? dict.interpreting : dict.interpretBtn}
                     </button>
                   )}
                   <button
@@ -316,7 +399,7 @@ export const MuridJournal: React.FC = () => {
                   <div className="flex items-center justify-between font-bold text-purple-800 dark:text-purple-300">
                     <span className="flex items-center gap-1.5">
                       <BookOpen size={14} className="text-purple-600 dark:text-purple-400" />
-                      Interprétation d'Ibn Sirin & Savants
+                      {dict.ibnSirinHeader}
                     </span>
                   </div>
                   <div className="prose dark:prose-invert max-w-none text-xs text-gray-700 dark:text-gray-300">
@@ -331,3 +414,4 @@ export const MuridJournal: React.FC = () => {
     </div>
   );
 };
+

@@ -597,8 +597,72 @@ export const FULL_28_LETTERS_DATA: LetterInfo[] = [
   }
 ];
 
+const scienceDict = {
+  fr: {
+    title: "Science Initiatique des Lettres",
+    subtitle: "Explorez les 28 vérités primordiales, la Rouhaniyya des anges, les correspondances anatomiques et les Wirds secrets des grands maîtres (Ibn 'Arabi, Al-Buni, At-Tijani, Ash-Shadhili).",
+    tabGrid: "Grille (28 Lettres)",
+    tabCalc: "Extracteur (Nom)",
+    tabTawafuq: "Compatibilité (Tawafuq)",
+    tabKhatim: "Carrés Magiques",
+    tabClock: "Horloge Planétaire",
+    tabVault: "Caveau des Secrets",
+    all: "Tous",
+    luminous: "Lumineuse",
+    dark: "Sombre",
+    filterElem: "Élément:",
+    filterNature: "Nature:",
+    searchPlaceholder: "Chercher lettre, secret...",
+    fire: "Feu",
+    earth: "Terre",
+    air: "Air",
+    water: "Eau"
+  },
+  en: {
+    title: "Initiatic Science of Letters",
+    subtitle: "Explore the 28 primordial truths, the Rouhaniyya of angels, anatomical correspondences, and secret Wirds of the great masters (Ibn 'Arabi, Al-Buni, At-Tijani, Ash-Shadhili).",
+    tabGrid: "Grid (28 Letters)",
+    tabCalc: "Name Extractor",
+    tabTawafuq: "Compatibility (Tawafuq)",
+    tabKhatim: "Magic Squares",
+    tabClock: "Planetary Clock",
+    tabVault: "Vault of Secrets",
+    all: "All",
+    luminous: "Luminous",
+    dark: "Dark",
+    filterElem: "Element:",
+    filterNature: "Nature:",
+    searchPlaceholder: "Search letter, secret...",
+    fire: "Fire",
+    earth: "Earth",
+    air: "Air",
+    water: "Water"
+  },
+  ha: {
+    title: "Ilmin Haruffa na Asiri",
+    subtitle: "Binciki gaskiya 28 na farko, Mala'ikun Rouhaniyya, alaƙa da jiki, da Wirds na asiri daga manyan malamai (Ibn 'Arabi, Al-Buni, At-Tijani, Ash-Shadhili).",
+    tabGrid: "Jadawalin Haruffa 28",
+    tabCalc: "Fitar da Suna",
+    tabTawafuq: "Dacewa (Tawafuq)",
+    tabKhatim: "Kayan Khatim da Wafq",
+    tabClock: "Agogon Taurari",
+    tabVault: "Gidan Asiri",
+    all: "Duka",
+    luminous: "Mai Haske",
+    dark: "Mai Duhu",
+    filterElem: "Mazauni:",
+    filterNature: "Yanayi:",
+    searchPlaceholder: "Nemi harafi, asiri...",
+    fire: "Wuta",
+    earth: "Turɓaya",
+    air: "Iska",
+    water: "Ruwa"
+  }
+};
+
 export const ScienceOfLetters: React.FC = () => {
   const { t, language } = useLanguage();
+  const dict = scienceDict[(language as 'fr' | 'en' | 'ha') || 'fr'] || scienceDict.fr;
   const { isPremium } = useAuth();
   const [selectedLetter, setSelectedLetter] = useState<LetterInfo | null>(FULL_28_LETTERS_DATA[0]);
   const [activeTab, setActiveTab] = useState<'grid' | 'calculator' | 'tawafuq' | 'khatim' | 'clock' | 'vault'>('grid');
@@ -721,10 +785,10 @@ export const ScienceOfLetters: React.FC = () => {
           <div>
             <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
               <Type className="text-emerald-500 shrink-0" size={22} />
-              <span>Science Initiatique des Lettres <span className="font-arabic text-base sm:text-xl font-normal text-emerald-600 dark:text-emerald-400">(علم الحروف)</span></span>
+              <span>{dict.title} <span className="font-arabic text-base sm:text-xl font-normal text-emerald-600 dark:text-emerald-400">(علم الحروف)</span></span>
             </h1>
             <p className="text-gray-500 dark:text-gray-400 mt-1 text-xs sm:text-sm leading-relaxed">
-              Explorez les 28 vérités primordiales, la Rouhaniyya des anges, les correspondances anatomiques et les Wirds secrets des grands maîtres (Ibn 'Arabi, Al-Buni, At-Tijani, Ash-Shadhili).
+              {dict.subtitle}
             </p>
           </div>
         </div>
@@ -741,7 +805,7 @@ export const ScienceOfLetters: React.FC = () => {
           }`}
         >
           <Layers size={15} />
-          <span>Grille (28 Lettres)</span>
+          <span>{dict.tabGrid}</span>
         </button>
 
         <button
@@ -753,7 +817,7 @@ export const ScienceOfLetters: React.FC = () => {
           }`}
         >
           <Calculator size={15} />
-          <span>Extracteur (Nom)</span>
+          <span>{dict.tabCalc}</span>
         </button>
 
         <button
@@ -765,7 +829,7 @@ export const ScienceOfLetters: React.FC = () => {
           }`}
         >
           <Heart size={15} />
-          <span>Compatibilité (Tawafuq)</span>
+          <span>{dict.tabTawafuq}</span>
         </button>
 
         <button
@@ -777,7 +841,7 @@ export const ScienceOfLetters: React.FC = () => {
           }`}
         >
           <Grid size={15} />
-          <span>Carrés Magiques</span>
+          <span>{dict.tabKhatim}</span>
         </button>
 
         <button
@@ -789,7 +853,7 @@ export const ScienceOfLetters: React.FC = () => {
           }`}
         >
           <Clock size={15} />
-          <span>Horloge Planétaire</span>
+          <span>{dict.tabClock}</span>
         </button>
 
         <button
@@ -801,7 +865,7 @@ export const ScienceOfLetters: React.FC = () => {
           }`}
         >
           <Key size={15} />
-          <span>Caveau des Secrets</span>
+          <span>{dict.tabVault}</span>
         </button>
       </div>
 
@@ -816,7 +880,7 @@ export const ScienceOfLetters: React.FC = () => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Chercher lettre, secret..."
+                placeholder={dict.searchPlaceholder}
                 className="w-full pl-8 pr-3 py-1.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-xs text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
@@ -824,38 +888,44 @@ export const ScienceOfLetters: React.FC = () => {
             <div className="flex items-center gap-2 overflow-x-auto hide-scrollbar touch-pan-x max-w-full">
               {/* Element Filter */}
               <div className="flex items-center gap-0.5 bg-gray-50 dark:bg-gray-900 p-0.5 rounded-xl border border-gray-200 dark:border-gray-700 text-[11px] shrink-0">
-                <span className="text-gray-400 px-1.5 font-semibold text-[10px] shrink-0">Élément:</span>
-                {['Tous', 'Feu', 'Terre', 'Air', 'Eau'].map(elem => (
-                  <button
-                    key={elem}
-                    onClick={() => setFilterElement(elem)}
-                    className={`px-2 py-0.5 rounded-lg font-bold shrink-0 transition-all cursor-pointer ${
-                      filterElement === elem
-                        ? 'bg-emerald-500 text-white shadow-sm'
-                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                    }`}
-                  >
-                    {elem}
-                  </button>
-                ))}
+                <span className="text-gray-400 px-1.5 font-semibold text-[10px] shrink-0">{dict.filterElem}</span>
+                {['Tous', 'Feu', 'Terre', 'Air', 'Eau'].map(elem => {
+                  const label = elem === 'Tous' ? dict.all : (dict[elem.toLowerCase() as keyof typeof dict] || elem);
+                  return (
+                    <button
+                      key={elem}
+                      onClick={() => setFilterElement(elem)}
+                      className={`px-2 py-0.5 rounded-lg font-bold shrink-0 transition-all cursor-pointer ${
+                        filterElement === elem
+                          ? 'bg-emerald-500 text-white shadow-sm'
+                          : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
               </div>
 
               {/* Nature Filter */}
               <div className="flex items-center gap-0.5 bg-gray-50 dark:bg-gray-900 p-0.5 rounded-xl border border-gray-200 dark:border-gray-700 text-[11px] shrink-0">
-                <span className="text-gray-400 px-1.5 font-semibold text-[10px] shrink-0">Nature:</span>
-                {['Tous', 'Lumineuse', 'Sombre'].map(nat => (
-                  <button
-                    key={nat}
-                    onClick={() => setFilterNature(nat)}
-                    className={`px-2 py-0.5 rounded-lg font-bold shrink-0 transition-all cursor-pointer ${
-                      filterNature === nat
-                        ? 'bg-indigo-600 text-white shadow-sm'
-                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                    }`}
-                  >
-                    {nat}
-                  </button>
-                ))}
+                <span className="text-gray-400 px-1.5 font-semibold text-[10px] shrink-0">{dict.filterNature}</span>
+                {['Tous', 'Lumineuse', 'Sombre'].map(nat => {
+                  const label = nat === 'Tous' ? dict.all : (nat === 'Lumineuse' ? dict.luminous : dict.dark);
+                  return (
+                    <button
+                      key={nat}
+                      onClick={() => setFilterNature(nat)}
+                      className={`px-2 py-0.5 rounded-lg font-bold shrink-0 transition-all cursor-pointer ${
+                        filterNature === nat
+                          ? 'bg-indigo-600 text-white shadow-sm'
+                          : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>
