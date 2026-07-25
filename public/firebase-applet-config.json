@@ -1,8 +1,8 @@
 {
-  "apiKey": "AIzaSyDummyKeyForAppletConfigPlaceholder",
+  "apiKey": "AIzaSyAfEoh3EawDtYAmxDreZ13OiNWCCR9ccow",
   "authDomain": "asrartemple.firebaseapp.com",
   "projectId": "asrartemple",
-  "storageBucket": "asrartemple.appspot.com",
-  "messagingSenderId": "123456789012",
-  "appId": "1:123456789012:web:abcdef1234567890"
+  "storageBucket": "asrartemple.firebasestorage.app",
+  "messagingSenderId": "1072626978186",
+  "appId": "1:1072626978186:web:b3834ed5653d7214aa0c73"
 }

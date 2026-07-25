@@ -674,29 +674,8 @@ export const SecretDetail: React.FC = () => {
       setBookmarkFolders([]);
     }
     const locationState = location.state as { item?: AsrarItem } | null;
-    let foundItem: AsrarItem | undefined = locationState?.item;
-
-    if (!foundItem && id) {
-      try {
-        const cachedList = JSON.parse(localStorage.getItem('asrarhub_cached_articles_list') || '[]');
-        if (Array.isArray(cachedList)) {
-          foundItem = cachedList.find((i: any) => i.id === id);
-        }
-      } catch (e) {}
-    }
-
-    if (!foundItem && id) {
-      try {
-        const customList = JSON.parse(localStorage.getItem('asrar_custom_articles') || '[]');
-        if (Array.isArray(customList)) {
-          foundItem = customList.find((i: any) => i.id === id);
-        }
-      } catch (e) {}
-    }
-
-    if (!foundItem && id) {
-      foundItem = getAsrarItems().find((i) => i.id === id);
-    }
+    const items = getAsrarItems();
+    const foundItem = locationState?.item || items.find((i) => i.id === id);
     
     const checkBookmark = (itemId: string) => {
       try {

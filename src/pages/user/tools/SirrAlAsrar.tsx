@@ -3,12 +3,16 @@ import { Eye, ArrowLeft, RefreshCw, Key, Flame, Wind, Droplets, Mountain, Sparkl
 import { Link, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { useAuth } from '../../../contexts/AuthContext';
+import { useFeatures } from '../../../contexts/FeatureContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { PremiumWrapper } from '../../../components/PremiumWrapper';
 
 export const SirrAlAsrar: React.FC = () => {
   const { t } = useLanguage();
   const { user } = useAuth();
+  const { featureToggles } = useFeatures();
+  const toolStatus = featureToggles['tool_sirr'] || 'active';
+  const isPremiumRequired = toolStatus === 'premium';
   const navigate = useNavigate();
   const [name, setName] = useState('');
   const [motherName, setMotherName] = useState('');
@@ -100,7 +104,7 @@ export const SirrAlAsrar: React.FC = () => {
   );
 
   return (
-    <PremiumWrapper fallbackTitle="Sirr Al-Asrar" previewContent={previewUI}>
+    <PremiumWrapper enabled={isPremiumRequired} fallbackTitle="Sirr Al-Asrar" previewContent={previewUI}>
       <div className="max-w-3xl mx-auto p-4 sm:p-6 lg:p-8 safe-area-pt pb-24 border-none min-h-screen">
         <div className="flex items-center gap-4 mb-6">
           <Link 

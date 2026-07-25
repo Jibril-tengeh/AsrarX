@@ -27,10 +27,11 @@ export const PremiumWrapper: React.FC<PremiumWrapperProps> = ({
     return <>{children}</>;
   }
 
-  const isPremium = user?.subscriptionTier === 'premium' || user?.subscriptionTier === 'pro';
-  const isPro = user?.subscriptionTier === 'pro';
+  const isAdmin = user?.role === 'admin';
+  const isPremium = user?.subscriptionTier === 'premium' || user?.subscriptionTier === 'pro' || (user as any)?.isPremium || isAdmin;
+  const isPro = user?.subscriptionTier === 'pro' || isAdmin;
 
-  const hasAccess = requiredTier === 'pro' ? isPro : isPremium;
+  const hasAccess = isAdmin || (requiredTier === 'pro' ? isPro : isPremium);
 
   if (!hasAccess) {
     if (showPreview && previewContent) {

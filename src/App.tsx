@@ -22,6 +22,7 @@ import { getApiUrl } from './lib/api';
 import { FloatingBackButton } from './components/FloatingBackButton';
 import { ErrorToastContainer } from './components/ErrorToastContainer';
 import { DownloadNotificationPopup } from './components/DownloadNotificationPopup';
+import { CollapsibleFloatingWidget } from './components/CollapsibleFloatingWidget';
 import { FeatureProvider, useFeatures } from './contexts/FeatureContext';
 import UserDashboard from './pages/user/UserDashboard';
 
@@ -111,6 +112,7 @@ const ZikrLevelsCalculator = lazyWithRetry(() => import('./pages/user/tools/Zikr
 const HijriFullMoonCalculator = lazyWithRetry(() => import('./pages/user/tools/HijriFullMoonCalculator'));
 const MuridJournal = lazyWithRetry(() => import('./pages/user/tools/MuridJournal'));
 const SaahIjabah = lazyWithRetry(() => import('./pages/user/tools/SaahIjabah'));
+const SealsCatalogue = lazyWithRetry(() => import('./pages/user/tools/SealsCatalogue'));
 const Store = lazyWithRetry(() => import('./pages/user/Store'));
 const FaqPage = lazyWithRetry(() => import('./pages/FaqPage'));
 
@@ -827,6 +829,8 @@ export default function App() {
                   <Route path="/tools/daira-as-sirr" element={<DairaAsSirr />} />
                   <Route path="/tools/dairah" element={<DairaAsSirr />} />
                   <Route path="/tools/saah-ijabah" element={<SaahIjabah />} />
+                  <Route path="/tools/seals-catalogue" element={<SealsCatalogue />} />
+                  <Route path="/tools/seals" element={<SealsCatalogue />} />
                   <Route path="/tools/seven-kings" element={<SevenKingsSeals />} />
                   <Route path="/tools/quran-analogy" element={<CoranAnalogyAbjad />} />
                   <Route path="/tools/zikr-levels" element={<ZikrLevelsCalculator />} />
@@ -898,6 +902,9 @@ export default function App() {
         </AnimatePresence>
         {/* Download pop-up notification */}
         <DownloadNotificationPopup />
+
+        {/* Collapsible Floating App-Wide Quick Widget */}
+        <CollapsibleFloatingWidget />
 
         {/* Connection success notification */}
         <AnimatePresence>

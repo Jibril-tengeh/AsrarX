@@ -12,6 +12,7 @@ import { CosmicEnergyAstrolabe } from './CosmicEnergyAstrolabe';
 import { ContemplativeAudioPlayer } from './ContemplativeAudioPlayer';
 import { RitualIncenseTimer } from './RitualIncenseTimer';
 import { MuraqabahLogModal } from './MuraqabahLogModal';
+import { LunarSealVarietiesSection } from './LunarSealVarietiesSection';
 import { calculateSolarTimes } from '../utils/solarCalculator';
 import {
   getLocalizedHijriMonths,
@@ -201,6 +202,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
   const [isJournalExpanded, setIsJournalExpanded] = useState<boolean>(false);
   const [isSolarClocksExpanded, setIsSolarClocksExpanded] = useState<boolean>(false);
   const [isSacredWavesExpanded, setIsSacredWavesExpanded] = useState<boolean>(false);
+  const [isLunarSealsExpanded, setIsLunarSealsExpanded] = useState<boolean>(false);
   const [morningIntention, setMorningIntention] = useState<string>('');
   const [eveningGratitude, setEveningGratitude] = useState<string>('');
   const [journalMood, setJournalMood] = useState<string>('peaceful');
@@ -366,7 +368,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
         title = language === 'fr' ? "Zénith Solaire ☀️" : language === 'ha' ? "Tsakiyar Rana ☀️" : "Solar Zenith ☀️";
         message = language === 'fr' ? "Le Soleil atteint son zénith. Heure sacrée pour la méditation et l'alignement." : language === 'ha' ? "Rana ta kai kololuwarta. Lokaci ne na albarka don yin zikiri da samun natsuwa." : "The Sun has reached its zenith. Sacred hour for meditation and alignment.";
       } else if (currentHM === solarTimes.goldenHour) {
-        title = language === 'fr' ? "Heure Dorée 🌟" : language === 'ha' ? "Lokacin Zinariya ��" : "Golden Hour 🌟";
+        title = language === 'fr' ? "Heure Dorée 🌟" : language === 'ha' ? "Lokacin Zinariya 🌟" : "Golden Hour 🌟";
         message = language === 'fr' ? "L'Heure Dorée commence. Les ondes spirituelles sont idéales pour le Tasbih et le calme." : language === 'ha' ? "Lokacin Zinariya ya fara. Lokaci ne mai kyau don Tasbahi da natsuwa." : "The Golden Hour begins. Spiritual waves are perfect for Tasbih and serenity.";
       } else if (currentHM === solarTimes.sunset) {
         title = language === 'fr' ? "Coucher du Soleil 🌇" : language === 'ha' ? "Faɗuwar Rana 🌇" : "Sunset 🌇";
@@ -2855,6 +2857,73 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
               </AnimatePresence>
             </div>
 
+            {/* Accordion 12: Collection des 17 Sceaux & Khawatim de la Lune */}
+            <div>
+              <button
+                onClick={() => setIsLunarSealsExpanded(!isLunarSealsExpanded)}
+                className={`w-full flex items-center justify-between p-3 rounded-xl border transition-all duration-300 cursor-pointer ${
+                  isReadingMode
+                    ? isLunarSealsExpanded
+                      ? 'bg-[#181512] border-amber-950/60 text-amber-100 shadow-[0_0_12px_rgba(245,158,11,0.06)]'
+                      : 'bg-[#0f0d0b] border-amber-200/60 text-amber-200/60 hover:text-amber-100'
+                    : isLunarSealsExpanded
+                    ? 'bg-amber-500/[0.03] dark:bg-amber-500/[0.02] border-amber-500/20 text-gray-900 dark:text-white shadow-sm'
+                    : 'bg-gray-50/70 dark:bg-gray-850/40 border-gray-100 dark:border-gray-800/60 text-gray-700 dark:text-gray-300 hover:bg-gray-100/50'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
+                    isReadingMode
+                      ? isLunarSealsExpanded ? 'bg-amber-500/25 text-amber-400' : 'bg-amber-500/10 text-amber-500/40'
+                      : isLunarSealsExpanded
+                      ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-500'
+                  }`}>
+                    <Zap size={13} />
+                  </div>
+                  <div>
+                    <span className="text-[12px] sm:text-xs font-extrabold uppercase tracking-wider block">
+                      {language === 'fr' 
+                        ? "17 Variétés de Sceaux & Khawatim de la Lune" 
+                        : language === 'ha' 
+                        ? "Rukunin Hatimi 17 na Wata" 
+                        : "17 Lunar Seal & Khawatim Varieties"}
+                    </span>
+                    <span className={`text-[9px] block ${isReadingMode ? 'text-amber-500/50' : 'text-gray-400'}`}>
+                      {language === 'fr' 
+                        ? "Collection complète, administration des statuts & téléchargement HD" 
+                        : language === 'ha' 
+                        ? "Tarin hatimai, saitun admin da sauke hotuna" 
+                        : "Complete collection, admin controls & HD downloads"}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <motion.div animate={{ rotate: isLunarSealsExpanded ? 180 : 0 }}>
+                    <ChevronDown size={14} />
+                  </motion.div>
+                </div>
+              </button>
+
+              <AnimatePresence initial={false}>
+                {isLunarSealsExpanded && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="py-3">
+                      <LunarSealVarietiesSection 
+                        language={language}
+                        onTriggerPremiumModal={() => triggerProtectionModal('download')}
+                      />
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
           </div>
 
           {/* Interactive Moon Phase Deep Mystery Overlay (Raised on click) */}
@@ -3048,10 +3117,20 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                             <Compass size={40} className="text-purple-400" />
                           </div>
                           
-                          <span className="text-[9px] font-bold uppercase tracking-wider text-purple-400 block mb-1 flex items-center gap-1">
-                            <Zap size={10} />
-                            {language === 'fr' ? "SCEAU & TALSAM MYSTIQUE" : language === 'ha' ? "HARSHE DA SIRRIN TALSAM" : "SACRED SEAL & TALSAM"}
-                          </span>
+                          <div className="flex flex-wrap items-center justify-between gap-1 mb-2">
+                            <span className="text-[9px] font-bold uppercase tracking-wider text-purple-400 flex items-center gap-1">
+                              <Zap size={10} />
+                              {language === 'fr' ? "SCEAU & TALSAM MYSTIQUE" : language === 'ha' ? "HARSHE DA SIRRIN TALSAM" : "SACRED SEAL & TALSAM"}
+                            </span>
+                            {activeMoonMystery.talsamDetails.scienceOrigin && (
+                              <span className="text-[9px] font-extrabold px-2.5 py-0.5 rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/30 flex items-center gap-1 shadow-sm">
+                                <Sparkles size={9} className="text-amber-400" />
+                                {typeof activeMoonMystery.talsamDetails.scienceOrigin === 'object'
+                                  ? (activeMoonMystery.talsamDetails.scienceOrigin[language] || activeMoonMystery.talsamDetails.scienceOrigin.fr)
+                                  : activeMoonMystery.talsamDetails.scienceOrigin}
+                              </span>
+                            )}
+                          </div>
                           
                           <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center mt-2">
                             <div className="md:col-span-5 flex flex-col items-center justify-center gap-2">
@@ -3095,7 +3174,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                                 className="group relative cursor-pointer w-full flex flex-col items-center justify-center bg-black/80 border border-purple-500/40 hover:border-amber-400/60 p-3 rounded-xl transition-all duration-300 shadow-inner hover:shadow-purple-500/20 select-none min-h-[140px]"
                                 title={language === 'fr' ? "Cliquez pour agrandir en plein écran et télécharger le Sceau" : language === 'ha' ? "Danna don faɗaɗawa da saukar da Hatimi" : "Click to enlarge in full screen and download Seal"}
                               >
-                                <pre className="text-purple-300 text-[10px] sm:text-[11px] font-mono leading-none tracking-tight text-center whitespace-pre max-w-full overflow-x-auto">
+                                <pre className="text-purple-300 text-[10px] sm:text-[11px] font-mono leading-relaxed py-1.5 tracking-tight text-center whitespace-pre max-w-full overflow-x-auto">
                                   {selectedSealVersion === 2 && activeMoonMystery.talsamDetails.graphicSymbolV2
                                     ? activeMoonMystery.talsamDetails.graphicSymbolV2
                                     : activeMoonMystery.talsamDetails.graphicSymbol}
@@ -3180,14 +3259,18 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                                   {language === 'fr' ? "Vertu Spirituelle" : language === 'ha' ? "Amfanin Ruhaniya" : "Spiritual Utility"}
                                 </span>
                                 <p className="text-xs text-emerald-300 font-semibold leading-snug">
-                                  {activeMoonMystery.talsamDetails.spiritualUtility}
+                                  {typeof activeMoonMystery.talsamDetails.spiritualUtility === 'object'
+                                    ? (activeMoonMystery.talsamDetails.spiritualUtility[language] || activeMoonMystery.talsamDetails.spiritualUtility.fr)
+                                    : activeMoonMystery.talsamDetails.spiritualUtility}
                                 </p>
                               </div>
                             </div>
                           </div>
                           
                           <p className="text-[11px] text-gray-300 leading-relaxed mt-2.5 pt-2 border-t border-purple-500/10">
-                            {activeMoonMystery.talsamDetails.description}
+                            {typeof activeMoonMystery.talsamDetails.description === 'object'
+                              ? (activeMoonMystery.talsamDetails.description[language] || activeMoonMystery.talsamDetails.description.fr)
+                              : activeMoonMystery.talsamDetails.description}
                           </p>
                         </div>
                       )}
@@ -3383,7 +3466,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
 
                     {/* Big Sceau view */}
                     <div className="w-full flex flex-col items-center justify-center gap-4 py-6 bg-black/95 border border-purple-500/40 rounded-2xl p-4 sm:p-8 shadow-2xl relative overflow-hidden select-all mb-6">
-                      <pre className="text-purple-300 font-mono text-xl sm:text-2xl md:text-3xl leading-none tracking-normal text-center whitespace-pre select-all overflow-x-auto max-w-full">
+                      <pre className="text-purple-300 font-mono text-xl sm:text-2xl md:text-3xl leading-relaxed py-3 tracking-normal text-center whitespace-pre select-all overflow-x-auto max-w-full">
                         {selectedSealVersion === 2 && activeMoonMystery.talsamDetails.graphicSymbolV2
                           ? activeMoonMystery.talsamDetails.graphicSymbolV2
                           : activeMoonMystery.talsamDetails.graphicSymbol}

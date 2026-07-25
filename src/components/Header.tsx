@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { Moon, Sun, Languages, User, Users, Shield, LogOut, LogIn, Bell, BellOff, Store, ChevronDown, ChevronUp, Megaphone, X, ExternalLink, MessageCircle, Search, Inbox, MessageSquare, Vote, Radio } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
-import { useAuth, ADMIN_EMAILS } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
 import { useFeatures } from '../contexts/FeatureContext';
 import { signOut, db } from '../lib/firebase';
 import { collection, query, orderBy, onSnapshot, limit, doc, updateDoc } from 'firebase/firestore';
@@ -543,7 +543,7 @@ export const Header: React.FC = () => {
               </div>
             )}
 
-            {(user?.role === 'admin' || ADMIN_EMAILS.includes(user?.email?.toLowerCase() || '')) && (
+            {(user?.role === 'admin' || ['jibriltengeh4@gmail.com', 'sbireino@gmail.com', 'tenibawwal10@gmail.com', 'jibriltengeh57@gmail.com'].includes(user?.email?.toLowerCase() || '')) && (
               <Link to="/admin">
                 <motion.div
                   whileHover={{ scale: 1.05 }}

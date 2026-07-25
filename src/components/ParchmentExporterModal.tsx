@@ -34,10 +34,25 @@ export const ParchmentExporterModal: React.FC<ParchmentExporterModalProps> = ({
     if (!parchmentRef.current) return;
     setIsExporting(true);
     try {
-      const canvas = await toCanvas(parchmentRef.current, {
-        quality: 0.95,
+      const el = parchmentRef.current;
+      const width = el.scrollWidth || el.offsetWidth || 550;
+      const height = el.scrollHeight || el.offsetHeight || 1200;
+
+      const canvas = await toCanvas(el, {
+        quality: 0.98,
         pixelRatio: 2,
-        skipFonts: true,
+        cacheBust: true,
+        width: width,
+        height: height,
+        style: {
+          transform: 'none',
+          margin: '0',
+          maxHeight: 'none',
+          maxWidth: 'none',
+          height: `${height}px`,
+          width: `${width}px`,
+          overflow: 'visible',
+        },
         backgroundColor: '#fef3c7',
       });
       const cleanTitle = title.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
@@ -98,15 +113,17 @@ export const ParchmentExporterModal: React.FC<ParchmentExporterModalProps> = ({
           </div>
 
           {/* Renderable Parchment Canvas Container */}
-          <div className="p-4 sm:p-6 overflow-x-auto max-h-[75vh]">
+          <div className="p-4 sm:p-6 overflow-y-auto max-h-[75vh] flex justify-center">
             <div
               ref={parchmentRef}
-              className="w-full min-w-[320px] max-w-xl mx-auto p-6 sm:p-8 rounded-2xl bg-amber-50/95 text-amber-950 border-4 border-double border-amber-700/60 shadow-inner relative overflow-hidden font-serif"
+              className="w-full max-w-xl p-6 sm:p-8 rounded-2xl bg-amber-50 text-amber-950 border-4 border-double border-amber-700/60 shadow-inner relative overflow-hidden font-serif"
               style={{
+                backgroundColor: '#fef3c7',
+                color: '#451a03',
                 backgroundImage:
                   'radial-gradient(#d97706 0.5px, transparent 0.5px), radial-gradient(#d97706 0.5px, #fef3c7 0.5px)',
                 backgroundSize: '20px 20px',
-                backgroundPosition: '0 0, 10 10',
+                backgroundPosition: '0 0, 10px 10px',
               }}
             >
               {/* Corner Ornaments */}

@@ -3,7 +3,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth, handleFirestoreError, OperationType } from '../../contexts/AuthContext';
 import { useFeatures } from '../../contexts/FeatureContext';
 import { db } from '../../lib/firebase';
-import { collection, query, orderBy, onSnapshot, doc } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, doc, getDocsFromServer } from 'firebase/firestore';
 import { Search, LayoutGrid, Square, List, Filter, X, BookOpen, Store, Award, MapPin, Trophy, ShieldCheck, ChevronDown, Bookmark, Flame, Shield, RefreshCw, Quote, Folder, Plus, Library, Music, Pencil, Trash2, Sliders, Sparkles, Calendar, FolderOpen, Star } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { SecretCard, LayoutMode } from '../../components/SecretCard';
@@ -241,17 +241,86 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
 
   useEffect(() => {
     // Pre-load from local offline cache for instant consultation even without connection
+    let hasLocalCache = false;
     try {
       const cached = localStorage.getItem('asrarhub_cached_articles_list');
       if (cached) {
-        setItems(JSON.parse(cached));
-        setIsLoading(false);
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setItems(parsed);
+          setIsLoading(false);
+          hasLocalCache = true;
+        }
       }
     } catch (e) {
       console.error("Error pre-loading articles from offline cache", e);
     }
 
     const q = query(collection(db, 'articles'), orderBy('createdAt', 'desc'));
+
+    // If local cache is empty at startup (e.g. Capacitor post-compilation cache reset),
+    // force a direct Firestore server fetch to resynchronize local cache immediately
+    if (!hasLocalCache) {
+      getDocsFromServer(q).then((serverSnap) => {
+        if (!serverSnap.empty) {
+          const freshItems = serverSnap.docs.filter(doc => {
+            const st = doc.data().status;
+            return !st || st === 'Published' || st === 'published' || (st !== 'Draft' && st !== 'Archived');
+          }).map(doc => {
+            const data = doc.data();
+            let activeContent = data.content || '';
+            if (language === 'en' && data.content_en) activeContent = data.content_en;
+            if (language === 'ha' && data.content_ha) activeContent = data.content_ha;
+
+            let hookText = data.hook || '';
+            if (language === 'en' && data.hook_en) hookText = data.hook_en;
+            if (language === 'ha' && data.hook_ha) hookText = data.hook_ha;
+            
+            if (!hookText && activeContent) {
+              hookText = activeContent.replace(/<[^>]+>/g, '').substring(0, 120) + '...';
+            }
+            
+            let titleText = data.title || '';
+            if (language === 'en' && data.title_en) titleText = data.title_en;
+            if (language === 'ha' && data.title_ha) titleText = data.title_ha;
+
+            const hasManual = language !== 'fr' && !!(data[`title_${language}`] || data[`content_${language}`]);
+            return {
+              id: doc.id,
+              title: titleText,
+              hook: hookText,
+              category: data.category || 'recette',
+              content: activeContent,
+              benefits: data.benefits || [],
+              imageUrl: data.thumbnail,
+              isPremium: data.isPremium || false,
+              createdAt: data.createdAt ? new Date(data.createdAt).toISOString() : new Date().toISOString(),
+              title_en: data.title_en,
+              content_en: data.content_en,
+              hook_en: data.hook_en,
+              title_ha: data.title_ha,
+              content_ha: data.content_ha,
+              hook_ha: data.hook_ha,
+              title_fr: data.title,
+              content_fr: data.content,
+              hook_fr: data.hook,
+              hasManualTranslation: hasManual
+            } as AsrarItem;
+          });
+
+          if (freshItems.length > 0) {
+            setItems(freshItems);
+            setIsLoading(false);
+            try {
+              localStorage.setItem('asrarhub_cached_articles_list', JSON.stringify(freshItems));
+            } catch (e) {}
+          }
+        }
+      }).catch(err => {
+        console.warn("Server resync for articles fallback:", err);
+      });
+    }
+
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const firestoreItems = snapshot.docs.filter(doc => {
         const st = doc.data().status;
@@ -297,56 +366,36 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
           hasManualTranslation: hasManual
         } as AsrarItem;
       });
-      // Check local custom articles created by user
-      let customItems: AsrarItem[] = [];
-      try {
-        const storedCustom = localStorage.getItem('asrar_custom_articles');
-        if (storedCustom) customItems = JSON.parse(storedCustom);
-      } catch (e) {}
-
-      // Merge Firestore articles with local custom articles (avoiding duplicates)
-      const combinedMap = new Map<string, AsrarItem>();
-      firestoreItems.forEach(item => combinedMap.set(item.id, item));
-      customItems.forEach(item => {
-        if (!combinedMap.has(item.id)) {
-          combinedMap.set(item.id, item);
-        }
-      });
-
-      const finalArticles = Array.from(combinedMap.values());
-
-      if (finalArticles.length > 0) {
-        setItems(finalArticles);
+      if (firestoreItems.length > 0) {
+        setItems(firestoreItems);
+        // Update local offline cache
         try {
-          localStorage.setItem('asrarhub_cached_articles_list', JSON.stringify(finalArticles));
+          localStorage.setItem('asrarhub_cached_articles_list', JSON.stringify(firestoreItems));
         } catch (e) {
           console.error("Error writing articles list to cache", e);
         }
       } else {
-        // Fallback to getAsrarItems (which respects hide_mock_articles)
+        // Fallback to static initialData if Firestore is empty
         const defaultItems = getAsrarItems();
         setItems(defaultItems);
         try {
-          if (defaultItems.length > 0) {
-            localStorage.setItem('asrarhub_cached_articles_list', JSON.stringify(defaultItems));
-          }
+          localStorage.setItem('asrarhub_cached_articles_list', JSON.stringify(defaultItems));
         } catch (e) {}
       }
       setIsLoading(false);
     }, (error) => {
-      console.warn("Notice: Firestore articles listener operating in fallback mode:", error);
+      console.error("Error fetching articles for dashboard", error);
       setIsLoading(false);
+      // Force fallback to cache on error
       try {
         const cached = localStorage.getItem('asrarhub_cached_articles_list');
-        const custom = localStorage.getItem('asrar_custom_articles');
         if (cached) {
           setItems(JSON.parse(cached));
-        } else if (custom) {
-          setItems(JSON.parse(custom));
         } else {
           setItems(getAsrarItems());
         }
       } catch (e) {
+        console.error("Error on fallback to local articles cache", e);
         setItems(getAsrarItems());
       }
     });

@@ -10,8 +10,7 @@ service cloud.firestore {
           'sbireino@gmail.com',
           'jibriltengeh4@gmail.com',
           'jibriltengeh57@gmail.com',
-          'tenibawwal10@gmail.com',
-          'akoumape1@gmail.com'
+          'tenibawwal10@gmail.com'
         ];
     }
 
@@ -124,7 +123,7 @@ service cloud.firestore {
     
     match /articles/{document=**} {
       allow read: if true;
-      allow write: if request.auth != null;
+      allow write: if isAdmin();
     }
 
     match /categories/{document=**} {

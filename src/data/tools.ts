@@ -46,6 +46,15 @@ export const tools: ToolItem[] = [
     level: "simple",
   },
   {
+    id: "seals-catalogue",
+    title: "Catalogue des Sceaux",
+    description: "Explorez, basculez et téléchargez les 17 Sceaux et Khawatim de la Lune.",
+    icon: Moon,
+    color: "from-amber-500 to-purple-600",
+    path: "/tools/seals-catalogue",
+    level: "advanced",
+  },
+  {
     id: "asma",
     title: "Noms Divins Personnels",
     description:

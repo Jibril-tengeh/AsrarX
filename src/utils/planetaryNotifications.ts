@@ -230,8 +230,27 @@ export function checkAndTriggerPlanetaryNotification() {
       }
     }
 
-    // Standard Web Notification
-    if ('Notification' in window && Notification.permission === 'granted') {
+    // Service Worker Background Notification Dispatch
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.ready.then((registration) => {
+        registration.showNotification(title, {
+          body,
+          icon: '/icon-192.png',
+          badge: '/icon-192.png',
+          tag: 'planetary-hour-alert',
+          vibrate: [200, 100, 200, 100, 300],
+          data: { url: '/' }
+        } as any).catch(() => {
+          if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification(title, { body, icon: '/icon-192.png', tag: 'planetary-hour-alert' });
+          }
+        });
+      }).catch(() => {
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification(title, { body, icon: '/icon-192.png', tag: 'planetary-hour-alert' });
+        }
+      });
+    } else if ('Notification' in window && Notification.permission === 'granted') {
       new Notification(title, {
         body,
         icon: '/icon-192.png',

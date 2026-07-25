@@ -4,7 +4,7 @@ import { Compass, Book, Shield, Heart, Sparkles, Moon, Sun, ArrowRight, Wallet, 
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useFeatures } from '../../contexts/FeatureContext';
-import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, getDocsFromServer } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { getAsrarItems } from '../../data/store';
 
@@ -91,7 +91,54 @@ export const ExploreDashboard: React.FC = () => {
       setBookmarks([]);
     }
 
+    // Pre-load from cache if available
+    let hasExploreCache = false;
+    try {
+      const cached = localStorage.getItem('asrarhub_cached_explore_articles');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setArticles(parsed);
+          hasExploreCache = true;
+        }
+      }
+    } catch (e) {}
+
     const q = query(collection(db, 'articles'), orderBy('createdAt', 'desc'));
+
+    // Forced server resync if zero articles in cache at startup (e.g. Capacitor build)
+    if (!hasExploreCache) {
+      getDocsFromServer(q).then((serverSnap) => {
+        if (!serverSnap.empty) {
+          const fresh = serverSnap.docs.map(doc => {
+            const data = doc.data();
+            const activeTitle = language === 'fr' ? data.title : data[`title_${language}`] || data.title;
+            const activeContent = language === 'fr' ? data.content : data[`content_${language}`] || data.content;
+            let activeHook = language === 'fr' ? data.hook : data[`hook_${language}`] || data.hook || '';
+            if (!activeHook && activeContent) {
+              activeHook = activeContent.replace(/<[^>]+>/g, '').substring(0, 120) + '...';
+            }
+            return {
+              id: doc.id,
+              ...data,
+              title: activeTitle,
+              content: activeContent,
+              hook: activeHook
+            };
+          }).filter((art: any) => !art.status || art.status === 'Published' || art.status === 'published' || (art.status !== 'Draft' && art.status !== 'Archived'));
+
+          if (fresh.length > 0) {
+            setArticles(fresh);
+            try {
+              localStorage.setItem('asrarhub_cached_explore_articles', JSON.stringify(fresh));
+            } catch (e) {}
+          }
+        }
+      }).catch(err => {
+        console.warn("Explore articles server resync error:", err);
+      });
+    }
+
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const allArticles = snapshot.docs.map(doc => {
         const data = doc.data();
@@ -111,35 +158,13 @@ export const ExploreDashboard: React.FC = () => {
       });
       // Support filtering by Published
       const publishedArticles = allArticles.filter((art: any) => !art.status || art.status === 'Published' || art.status === 'published' || (art.status !== 'Draft' && art.status !== 'Archived'));
-      // Check custom articles
-      let customArticles: any[] = [];
-      try {
-        const storedCustom = localStorage.getItem('asrar_custom_articles');
-        if (storedCustom) customArticles = JSON.parse(storedCustom);
-      } catch (e) {}
-
-      const combinedMap = new Map<string, any>();
-      publishedArticles.forEach(art => combinedMap.set(art.id, art));
-      customArticles.forEach(art => {
-        if (!combinedMap.has(art.id)) {
-          combinedMap.set(art.id, {
-            id: art.id,
-            title: art.title,
-            content: art.content,
-            thumbnail: art.imageUrl || art.thumbnail,
-            status: 'Published'
-          });
-        }
-      });
-
-      const finalArticles = Array.from(combinedMap.values());
-
-      if (finalArticles.length > 0) {
-        setArticles(finalArticles);
+      if (publishedArticles.length > 0) {
+        setArticles(publishedArticles);
         try {
-          localStorage.setItem('asrarhub_cached_explore_articles', JSON.stringify(finalArticles));
+          localStorage.setItem('asrarhub_cached_explore_articles', JSON.stringify(publishedArticles));
         } catch (e) {}
       } else {
+        // Fallback to static articles from store.ts
         const fallback = getAsrarItems().map(item => ({
           id: item.id,
           title: item.title,
@@ -150,20 +175,11 @@ export const ExploreDashboard: React.FC = () => {
         setArticles(fallback);
       }
     }, (error) => {
-      console.warn("Notice: Firestore explore articles listener fallback:", error);
+      console.error("Error fetching articles", error);
       try {
         const cached = localStorage.getItem('asrarhub_cached_explore_articles');
-        const custom = localStorage.getItem('asrar_custom_articles');
         if (cached) {
           setArticles(JSON.parse(cached));
-        } else if (custom) {
-          setArticles(JSON.parse(custom).map((item: any) => ({
-            id: item.id,
-            title: item.title,
-            content: item.content,
-            thumbnail: item.imageUrl || item.thumbnail,
-            status: 'Published'
-          })));
         } else {
           const fallback = getAsrarItems().map(item => ({
             id: item.id,

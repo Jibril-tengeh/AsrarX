@@ -51,47 +51,20 @@ export const initialData: AsrarItem[] = [
 
 export const getAsrarItems = (): AsrarItem[] => {
   try {
-    const hideMocks = localStorage.getItem('asrar_hide_mock_articles') === 'true';
-
-    // 1. Check cached real articles list
-    const cachedArticles = localStorage.getItem('asrarhub_cached_articles_list');
-    if (cachedArticles) {
-      const parsed = JSON.parse(cachedArticles);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
-      }
-    }
-
-    // 2. Check custom user articles in local storage
-    const customArticles = localStorage.getItem('asrar_custom_articles');
-    if (customArticles) {
-      const parsed = JSON.parse(customArticles);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed;
-      }
-    }
-
-    // 3. Check explicitly stored items
     const stored = localStorage.getItem('asrar_items');
     if (stored) {
       const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed) && (parsed.length > 0 || hideMocks)) {
+      if (Array.isArray(parsed)) {
         return parsed.map(item => ({
           ...item,
           hook: item.hook || (item.content ? item.content.replace(/<[^>]+>/g, '').substring(0, 120) + '...' : '')
         }));
       }
     }
-
-    // 4. If mock articles are explicitly disabled/purged, return empty array
-    if (hideMocks) {
-      return [];
-    }
   } catch (e) {
-    console.error("Error parsing stored articles", e);
+    console.error("Error parsing asrar_items", e);
   }
-
-  // Fallback to initial mock data only if mock articles are not hidden and no user articles exist
+  localStorage.setItem('asrar_items', JSON.stringify(initialData));
   return initialData.map(item => ({
     ...item,
     hook: item.hook || (item.content ? item.content.replace(/<[^>]+>/g, '').substring(0, 120) + '...' : '')
