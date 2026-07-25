@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { db, isAutoSaveEnabled } from '../lib/firebase';
+import { auth, db, isAutoSaveEnabled } from '../lib/firebase';
 import { doc, onSnapshot, updateDoc, collection } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
@@ -122,8 +122,8 @@ export const DailyGoalsTracker: React.FC = () => {
   useEffect(() => {
     const today = getTodayStr();
 
-    if (!user) {
-      // Local storage for guests
+    if (!user || !auth.currentUser) {
+      // Local storage for guests or offline user fallback
       try {
         const localGoals = localStorage.getItem('asrarhub_daily_goals');
         const localReset = localStorage.getItem('asrarhub_daily_goals_last_reset');
@@ -178,7 +178,7 @@ export const DailyGoalsTracker: React.FC = () => {
             updateDoc(userRef, {
               dailyRoutines: resetGoals,
               dailyRoutinesLastReset: today
-            }).catch(err => console.error("Error resetting daily routines in DB:", err));
+            }).catch(err => console.warn("Error resetting daily routines in DB:", err));
           }
         } else {
           setGoals(dbGoals);
@@ -191,8 +191,12 @@ export const DailyGoalsTracker: React.FC = () => {
       }
       setSyncStatus('synced');
       setLoading(false);
-    }, (error) => {
-      console.error("Error in daily goals listener:", error);
+    }, (error: any) => {
+      if (error?.code === 'permission-denied' || error?.message?.includes('permission')) {
+        console.warn("Firestore permissions unavailable for daily goals listener (operating locally):", error);
+      } else {
+        console.error("Error in daily goals listener:", error);
+      }
       setSyncStatus('local');
       setLoading(false);
     });
@@ -206,7 +210,7 @@ export const DailyGoalsTracker: React.FC = () => {
     const today = getTodayStr();
     setSyncStatus('syncing');
 
-    if (user) {
+    if (user && auth.currentUser) {
       const userRef = doc(db, 'users', user.uid);
       try {
         if (isAutoSaveEnabled()) {
@@ -221,8 +225,14 @@ export const DailyGoalsTracker: React.FC = () => {
           localStorage.setItem('asrarhub_daily_goals_last_reset', today);
           setSyncStatus('local');
         }
-      } catch (err) {
-        console.error("Error updating daily routines in Firestore:", err);
+      } catch (err: any) {
+        if (err?.code === 'permission-denied' || err?.message?.includes('permission')) {
+          console.warn("Firestore permissions unavailable for daily routines update (operating locally):", err);
+        } else {
+          console.error("Error updating daily routines in Firestore:", err);
+        }
+        localStorage.setItem('asrarhub_daily_goals', JSON.stringify(updatedGoals));
+        localStorage.setItem('asrarhub_daily_goals_last_reset', today);
         setSyncStatus('local');
       }
     } else {

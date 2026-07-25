@@ -962,51 +962,69 @@ export const AdminDashboard: React.FC = () => {
         return;
       }
       
+      // Hide mock articles whenever user publishes custom articles
+      localStorage.setItem('asrar_hide_mock_articles', 'true');
+
+      let savedId = editingArticle ? editingArticle.id : 'art_' + Date.now();
+      
+      const payload = {
+        title: newArticle.title,
+        hook: newArticle.hook || (newArticle.content ? newArticle.content.replace(/<[^>]+>/g, '').substring(0, 120) + '...' : ''),
+        hook_en: (newArticle as any).hook_en || '',
+        hook_ha: (newArticle as any).hook_ha || '',
+        title_en: (newArticle as any).title_en || '',
+        title_ha: (newArticle as any).title_ha || '',
+        thumbnail: newArticle.thumbnail || '',
+        content: newArticle.content,
+        content_en: (newArticle as any).content_en || '',
+        content_ha: (newArticle as any).content_ha || '',
+        benefits: (newArticle as any).benefits || [],
+        type: newArticle.type || 'richtext',
+        status: newArticle.status || 'Published',
+        publishDate: newArticle.publishDate || '',
+        isPremium: newArticle.isPremium || false,
+        category: newArticle.category || 'recette',
+        subCategory: (newArticle as any).subCategory || ''
+      };
+
       if (editingArticle) {
-        await updateDoc(doc(db, 'articles', editingArticle.id), {
-          title: newArticle.title,
-          hook: newArticle.hook || '',
-          hook_en: (newArticle as any).hook_en || '',
-          hook_ha: (newArticle as any).hook_ha || '',
-          title_en: (newArticle as any).title_en || '',
-          title_ha: (newArticle as any).title_ha || '',
-          thumbnail: newArticle.thumbnail || '',
-          content: newArticle.content,
-          content_en: (newArticle as any).content_en || '',
-          content_ha: (newArticle as any).content_ha || '',
-          benefits: (newArticle as any).benefits || [],
-          type: newArticle.type || 'richtext',
-          status: newArticle.status || 'Published',
-          publishDate: newArticle.publishDate || '',
-          isPremium: newArticle.isPremium || false,
-          category: newArticle.category || 'wird',
-          subCategory: (newArticle as any).subCategory || ''
-        });
+        await updateDoc(doc(db, 'articles', editingArticle.id), payload).catch(err => console.warn("Firestore updateDoc fallback:", err));
         setEditingArticle(null);
         showToast("Article mis à jour avec succès !");
       } else {
-        await addDoc(collection(db, 'articles'), {
-          title: newArticle.title,
-          hook: newArticle.hook || '',
-          hook_en: (newArticle as any).hook_en || '',
-          hook_ha: (newArticle as any).hook_ha || '',
-          title_en: (newArticle as any).title_en || '',
-          title_ha: (newArticle as any).title_ha || '',
-          thumbnail: newArticle.thumbnail || '',
-          content: newArticle.content,
-          content_en: (newArticle as any).content_en || '',
-          content_ha: (newArticle as any).content_ha || '',
-          benefits: (newArticle as any).benefits || [],
-          type: newArticle.type || 'richtext',
-          status: newArticle.status || 'Published',
-          publishDate: newArticle.publishDate || '',
-          isPremium: newArticle.isPremium || false,
-          category: newArticle.category || 'wird',
-          subCategory: (newArticle as any).subCategory || '',
+        const docRef = await addDoc(collection(db, 'articles'), {
+          ...payload,
           createdAt: Date.now()
+        }).catch(err => {
+          console.warn("Firestore addDoc fallback:", err);
+          return null;
         });
+        if (docRef?.id) {
+          savedId = docRef.id;
+        }
         showToast("Article publié avec succès !");
       }
+
+      // Sync to local storage
+      try {
+        const customObj = { id: savedId, ...payload, imageUrl: payload.thumbnail, createdAt: new Date().toISOString() };
+        let customList: any[] = [];
+        try {
+          customList = JSON.parse(localStorage.getItem('asrar_custom_articles') || '[]');
+        } catch (e) { customList = []; }
+
+        const idx = customList.findIndex((item: any) => item.id === savedId);
+        if (idx >= 0) {
+          customList[idx] = customObj;
+        } else {
+          customList.unshift(customObj);
+        }
+        localStorage.setItem('asrar_custom_articles', JSON.stringify(customList));
+        localStorage.setItem('asrarhub_cached_articles_list', JSON.stringify(customList));
+      } catch (e) {
+        console.error("Local storage article sync error:", e);
+      }
+
       setNewArticle({ title: '', hook: '', thumbnail: '', content: '', type: 'richtext', status: 'Published', publishDate: '', benefits: [], category: '', subCategory: '' } as any);
       localStorage.removeItem('asrarhub_article_draft');
     } catch (error: any) {
@@ -1017,7 +1035,13 @@ export const AdminDashboard: React.FC = () => {
 
   const handleDeleteArticle = async (id: string) => {
     try {
-      await deleteDoc(doc(db, 'articles', id));
+      await deleteDoc(doc(db, 'articles', id)).catch(e => console.warn("Delete doc error:", e));
+      try {
+        let customList: any[] = JSON.parse(localStorage.getItem('asrar_custom_articles') || '[]');
+        customList = customList.filter((a: any) => a.id !== id);
+        localStorage.setItem('asrar_custom_articles', JSON.stringify(customList));
+        localStorage.setItem('asrarhub_cached_articles_list', JSON.stringify(customList));
+      } catch (e) {}
       showToast("Article supprimé.");
     } catch (error) {
       console.error("Error deleting article", error);
@@ -1028,8 +1052,13 @@ export const AdminDashboard: React.FC = () => {
   const handleDeleteAllArticles = async () => {
     if (!window.confirm("Êtes-vous sûr de vouloir supprimer TOUS les articles ? Cette action est irréversible.")) return;
     try {
-      const promises = articles.map(article => deleteDoc(doc(db, 'articles', article.id)));
+      const promises = articles.map(article => deleteDoc(doc(db, 'articles', article.id)).catch(e => {}));
       await Promise.all(promises);
+      localStorage.removeItem('asrar_custom_articles');
+      localStorage.removeItem('asrarhub_cached_articles_list');
+      localStorage.removeItem('asrar_items');
+      localStorage.removeItem('asrarhub_cached_explore_articles');
+      localStorage.setItem('asrar_hide_mock_articles', 'true');
       showToast("Tous les articles ont été supprimés.");
     } catch (error) {
       console.error("Error deleting all articles", error);

@@ -1098,8 +1098,24 @@ export const getLocalizedMoonDayMystery = (hDay: number, lang: 'fr' | 'en' | 'ha
         botanicalName: "Salvia officinalis / Thymus serpyllum",
         element: lang === 'fr' ? "Terre Subtile & Air Froid" : lang === 'ha' ? "Ƙasa da Iska mai sanyi" : "Subtle Earth & Cool Air",
         spiritualProperties: lang === 'fr' ? "Purification des pensées résiduelles, protection du cercle rituel et renforcement de l'ancrage intérieur." : lang === 'ha' ? "Goge tunani marasa amfani, tsarkake filin zikiri da samar da natsuwa." : "Cleansing residual mental clutter, ritual circle protection, and inner grounding.",
-        usageMethod: lang === 'fr' ? "Fumigation de sauge séchée à la tombée de la nuit avant l'examen de con                      : lang === 'ha' ? "Sirrin boye na wannan lokacin shi ne Fana' (kawar da son kai) kafin samun Baqa' (rayuwa tare da Allah). Domin sabon haske ya fito, dole ne tsohon duhu ya kau baki daya."
-                      : "The esoteric secret of Mahaq is Fana' (ego annihilation) preceding Baqa' (subsistence in Divine Light). For new light to dawn, the false ego identity must dissolve into divine majesty.",
+        usageMethod: lang === 'fr' ? "Fumigation de sauge séchée à la tombée de la nuit avant l'examen de conscience." : lang === 'ha' ? "Incin turaren sauge da daddare kafin yin hisabi." : "Smudging dried sage at dusk before self-reflection.",
+        binauralFreq: 528,
+        frequencyName: lang === 'fr' ? "528 Hz - Purification & Transformation" : "528 Hz - Purification & Transformation",
+        essentialOils: lang === 'fr' ? "Huile Essentielle de Sauge Officinale & Thym" : "Sage & Thyme Essential Oil"
+      }
+    };
+  } else if (hDay === 29 || hDay === 30) {
+      return {
+        name: lang === 'fr' ? "Lune Noire (Al-Mahaq / Al-Ghaffar)" : lang === 'ha' ? "Bakin Wata (Al-Mahaq)" : "Black Moon (Al-Mahaq)",
+        arabicName: "المحاق - الغفار",
+        manzil: lang === 'fr' ? "Al-Risha & Al-Batan (الرِّشَاء - Demeure de l'Aube)" : lang === 'ha' ? "Al-Risha" : "Al-Risha",
+        energy: lang === 'fr' ? "Annihilation de l'Égo (Fana'), Grand Pardon (Maghfirah) et Dissolution des Dettes Spirituelles" : "Ego Annihilation & Grand Forgiveness",
+        mysticMeaning: lang === 'fr' ? "L'obscurité ultime du Mahaq précède la renaissance. C'est la nuit du grand pardon et du scellement du cycle sous la miséricorde divine." : "Ultimate darkness of Mahaq preceding rebirth.",
+        recommendedPractice: lang === 'fr' ? "Réciter le Istighfar 100 fois à l'Aube (Sahar) et méditer sur le renouveau." : "Recite Istighfar 100 times at dawn.",
+        vibration: lang === 'fr' ? "Pardon divin, dissolution du passé et paix absolue" : "Divine forgiveness and absolute peace",
+        spiritualSecret: lang === 'fr' ? "Le secret ésotérique du Mahaq est le Fana' (anéantissement de l'égo) précédant le Baqa' (subsistence dans la Lumière Divine). Pour qu'une nouvelle lumière émerge, l'ancienne identité doit se dissoudre."
+                     : lang === 'ha' ? "Sirrin boye na wannan lokacin shi ne Fana' (kawar da son kai) kafin samun Baqa' (rayuwa tare da Allah). Domin sabon haske ya fito, dole ne tsohon duhu ya kau baki daya."
+                     : "The esoteric secret of Mahaq is Fana' (ego annihilation) preceding Baqa' (subsistence in Divine Light). For new light to dawn, the false ego identity must dissolve into divine majesty.",
        astronomicalInfo: lang === 'fr' ? "L'élongation est inférieure à 30° à l'Ouest du Soleil. Le très fin croissant est observable uniquement dans les lueurs dorées de l'aube (Sahar) peu avant le lever du Soleil, s'amenuisant jusqu'à la conjonction finale."
                        : lang === 'ha' ? "Siririn jinjirin wata da ake iya gani kawai a jinjirin safiya (Sahar) a Gabas kafin rana ta fito."
                        : "Elongation drops below 30° West of the Sun. The fragile crescent is observable only during golden predawn twilight (Sahar) shortly before sunrise.",
@@ -1115,21 +1131,16 @@ export const getLocalizedMoonDayMystery = (hDay: number, lang: 'fr' | 'en' | 'ha
          count: 100,
          description: lang === 'fr' ? "À réciter pendant l'aube (Sahar). Dissout les nœuds karmiques, libère des fautes passées et prépare le cœur à la renaissance du nouveau cycle." : "Recite at predawn twilight (Sahar). Dissolves subtle knots, cleanses past slips, and prepares the heart for cycle rebirth."
        },
-       talsamDetails: {
-         formula: "غَفَّارٌ صَمَدٌ (غ-ف-ا-ر / 1281)",
-         spiritualUtility: {
-           fr: "Scellement du mois, effacement des dettes spirituelles et ouverture d'une nouvelle ère de pureté.",
-           en: "Month sealing, erasure of spiritual debts, and opening a new era of purity.",
-           ha: "Rufe watan, goge basussuka na ruhi da buɗe sabon shafi na tsarki."
-         },
-         description: {
-           fr: "Le Talsam de l'Aube (Khatim Al-Ghaffar) scelle le cycle sous le manteau de la Miséricorde divine.",
-           en: "The Talsam of Dawn (Khatim Al-Ghaffar) seals the cycle under the mantle of Divine Mercy.",
-           ha: "Talsam na Asuba (Khatim Al-Ghaffar) yana rufe kewaye a ƙarƙashin tufafin Rahamar Ubangiji."
-         }
-       }
-     };
-   }
+        talsamDetails: {
+          formula: "غَفَّارٌ صَمَدٌ (غ-ف-ا-ر / 1281)",
+          graphicSymbol: "┌──────────────┐\n│ ۞ 1000 1060 ۞ │\n└──────────────┘",
+          spiritualUtility: lang === "fr" ? "Scellement du mois, effacement des dettes spirituelles et ouverture d'une nouvelle ère de pureté." : lang === "ha" ? "Rufe watan, goge basussuka na ruhi da buɗe sabon shafi na tsarki." : "Month sealing, erasure of spiritual debts, and opening a new era of purity.",
+          description: lang === "fr" ? "Le Talsam de l'Aube (Khatim Al-Ghaffar) scelle le cycle sous le manteau de la Miséricorde divine." : lang === "ha" ? "Talsam na Asuba (Khatim Al-Ghaffar) yana rufe kewaye a ƙarƙashin tufafin Rahamar Ubangiji." : "The Talsam of Dawn (Khatim Al-Ghaffar) seals the cycle under the mantle of Divine Mercy."
+        }
+      };
+    }
+    return {} as MoonPhaseMystery;
+  })();
 
    const generateGraphicSymbol = (dayNum: number): string => {
      const seals: Record<number, string> = {
@@ -1166,49 +1177,7 @@ export const getLocalizedMoonDayMystery = (hDay: number, lang: 'fr' | 'en' | 'ha
      };
 
      return seals[dayNum] || seals[1];
-   };     28: `   🛡️   ضَامِنٌ ظَاهِرٌ   🛡️\n\n┌──────────────────┐\n│  ض (800)│ 1005   │\n├──────────────────┤\n│ 1106    │ م (40) │\n└──────────────────┘\n\n  ✦ GUARDIAN OF DDAD ✦`,
-      29: `   🪞   ظَاهِرٌ زَكِيٌّ   🪞\n\n┌──────────────────┐\n│  ظ (900)│ 1106   │\n├──────────────────┤\n│  37     │ هـ (5) │\n└──────────────────┘\n\n  ✦ MIRROR OF ZZA ✦`,
-      30: `    ۞  غَنِيٌّ غَفُورٌ  ۞\n\n┌──────────────────┐\n│  غ (1000)│ 1060  │\n├──────────────────┤\n│  1286    │ 1000  │\n└──────────────────┘\n\n✦ CROWN OF GHAYN 1000 ✦`
-    };
-
-    return seals[dayNum] || seals[1];
-  };62  👁️  215  𐎍 │────\n     𐎖  └──────────────────┘  𐎖\n\n         👁️   ط   ط   👁️\n\n   ✦ KHATIM TAH AN-NUR - VISION CLAIRVOYANTE ✦`,
-      10: `    🌟  Sceau Clé de Ya An-Nur  🌟\n\n         🗝️   يَسِيرٌ مُبِينٌ   🗝️\n\n     𐎃  ┌──────────────────┐  𐎃\n    ────│ 𐎓  102 🗝️ 214 𐎓  │────\n     𐎖  └──────────────────┘  𐎖\n\n         🗝️   ي (10)  س (60)  🗝️\n\n   ✦ KHATIM YA AN-NUR - DÉBLOCAGE IMMÉDIAT ✦`,
-      11: `    🌟  Couronne de Kaf An-Nur  🌟\n\n         👑   كٰفِي كَرِيمٌ   👑\n\n     𐎏  ┌──────────────────┐  𐎏\n    ────│ 𐎐  20   80  111  │────\n     𐎓  └──────────────────┘  𐎓\n\n         👑   ك (20)  ف (80)  👑\n\n   ✦ KHATIM KAF AN-NUR - ABONDANCE ROYALE ✦`,
-      12: `    🌟  Sceau Latif An-Nur  🌟\n\n         🕊️   لَطِيفٌ جَمِيلٌ   🕊️\n\n     𐎃  ┌──────────────────┐  𐎃\n    ────│ 🕊️ 129 ── 129 🕊️ │────\n     𐎖  └──────────────────┘  𐎖\n\n         🕊️   ل   ط   ي   ف   🕊️\n\n   ✦ KHATIM LATIF AN-NUR - GRÂCE SUBTILE ✦`,
-      13: `    🌟  Matrice Majid An-Nur  🌟\n\n         🌕   مَجِيدٌ مُتَعَالٍ   🌕\n\n     𐎄  ┌──────────────────┐  𐎄\n    ────│ 𐎓  57   541  40  │────\n     𐎏  └──────────────────┘  𐎏\n\n         🌕   م   ج   ي   د   🌕\n\n   ✦ KHATIM MAJID AN-NUR - PLEINE LUNE SUBLIME ✦`,
-      14: `    🌟  Grand Sceau Badr An-Nur  🌟\n\n         ☆   بَدْرٌ مُكْتَمِلٌ   ☆\n\n     𐎃  ┌──────────────────┐  𐎃\n    ────│ 166 ── 🌟 ── 166 │────\n     𐎖  └──────────────────┘  𐎖\n\n         ☆   ب   د   ر   ☆\n\n   ✦ KHATIM BADR AN-NUR - APOGÉE SPIRITUELLE ✦`,
-      15: `    🌟  Sceau Quddus An-Nur  🌟\n\n         🕊️   قُدُّوسٌ سَلَامٌ   🕊️\n\n     𐎏  ┌──────────────────┐  𐎏\n    ────│ 𐎐  100  170  131 │────\n     𐎓  └──────────────────┘  𐎓\n\n         🕊️   ق   س   ل   م   🕊️\n\n   ✦ KHATIM QUDDUS AN-NUR - PAIX SANCTIFIÉE ✦`,
-      16: `    🌟  Matrice Nun An-Nur  🌟\n\n         💡   نُورٌ نَافِعٌ   💡\n\n     𐎃  ┌──────────────────┐  𐎃\n    ────│ 💡 50  256  201 💡│────\n     𐎖  └──────────────────┘  𐎖\n\n         💡   ن   و   ر   💡\n\n   ✦ KHATIM NUN AN-NUR - ILLUMINATION UNIVERSELLE ✦`,
-      17: `    🌟  Sceau Sin An-Nur  🌟\n\n         👂   سَمِيعٌ بَصِيرٌ   👁️\n\n     𐎄  ┌──────────────────┐  𐎄\n    ────│ 𐎓  60   420  302 │────\n     𐎏  └──────────────────┘  𐎏\n\n         👂   س   م   ي   ع   👁️\n\n   ✦ KHATIM SIN AN-NUR - ÉCOUTE ET VISION SUPRÊME ✦`,
-      18: `    🌟  Sceau Ayn An-Nur  🌟\n\n         📖   عَلِيمٌ عَظِيمٌ   📖\n\n     𐎃  ┌──────────────────┐  𐎃\n    ────│ 📖 70  150  1020 📖│────\n     𐎖  └──────────────────┘  𐎖\n\n         📖   ع   ل   ي   م   📖\n\n   ✦ KHATIM AYN AN-NUR - SAGESSE DIVINE ✦`,
-      19: `    🌟  Clef de Fa An-Nur  🌟\n\n         🔓   فَتَّاحُ فَرْدٌ   🔓\n\n     𐎏  ┌──────────────────┐  𐎏\n    ────│ 𐎐  80   489  284 │────\n     𐎓  └──────────────────┘  𐎓\n\n         🔓   ف   ت   ح   🔓\n\n   ✦ KHATIM FA AN-NUR - OUVERTURE DES PORTES ✦`,
-      20: `    🌟  Citadelle Sad An-Nur  🌟\n\n         🏛️   صَمَدٌ صَادِقٌ   🏛️\n\n     𐎃  ┌──────────────────┐  𐎃\n    ────│ 🏛️ 90   134  161 🏛️│────\n     𐎖  └──────────────────┘  𐎖\n\n         🏛️   ص   م   د   🏛️\n\n   ✦ KHATIM SAD AN-NUR - PROTECTION INÉBRANLABLE ✦`,
-      21: `    🌟  Tour de Qaf An-Nur  🌟\n\n         ⚡   قُدُّوسٌ قَادِرٌ   ⚡\n\n     𐎄  ┌──────────────────┐  𐎄\n    ────│ 𐎓  100  305  170 │────\n     𐎏  └──────────────────┘  𐎏\n\n         ⚡   ق   د   ر   ⚡\n\n   ✦ KHATIM QAF AN-NUR - PUISSANCE SUPRÊME ✦`,
-      22: `    🌟  Sceau Ra An-Nur  🌟\n\n         🌧️   رَحْمٰنٌ رَحِيمٌ   🌧️\n\n     𐎃  ┌──────────────────┐  𐎃\n    ────│ 🌧️ 200  298  258 🌧️│────\n     𐎖  └──────────────────┘  𐎖\n\n         🌧️   ر   ح   م   🌧️\n\n   ✦ KHATIM RA AN-NUR - OCEAN DE MISÉRICORDE ✦`,
-      23: `    🌟  Moisson Shin An-Nur  🌟\n\n         🌾   شَكُورٌ شَهِيدٌ   🌾\n\n     𐎏  ┌──────────────────┐  𐎏\n    ────│ 𐎐  300  526  319 │────\n     𐎓  └──────────────────┘  𐎓\n\n         🌾   ش   ك   ر   🌾\n\n   ✦ KHATIM SHIN AN-NUR - ABONDANCE ET RECONNAISSANCE ✦`,
-      24: `    🌟  Source Taw An-Nur  🌟\n\n         🌊   تَوَّابٌ ثَابِتٌ   🌊\n\n     𐎃  ┌──────────────────┐  𐎃\n    ────│ 🌊 400  409  503 🌊│────\n     𐎖  └──────────────────┘  𐎖\n\n         🌊   ت   و   ب   🌊\n\n   ✦ KHATIM TAW AN-NUR - PURIFICATION ET REPENTIR ✦`,
-      25: `    🌟  Ancre Tha An-Nur  🌟\n\n         ⚓   ثَابِتٌ ثِقَةٌ   ⚓\n\n     𐎄  ┌──────────────────┐  𐎄\n    ────│ 𐎓  500  503  905 │────\n     𐎏  └──────────────────┘  𐎏\n\n         ⚓   ث   ب   ت   ⚓\n\n   ✦ KHATIM THA AN-NUR - FOI ET ANCRAGE ✦`,
-      26: `    🌟  Matrice Kha An-Nur  🌟\n\n         ⚛️   خَالِقُ خَبِيرٌ   ⚛️\n\n     𐎃  ┌──────────────────┐  𐎃\n    ────│ ⚛️ 600  731  812 ⚛️│────\n     𐎖  └──────────────────┘  𐎖\n\n         ⚛️   خ   ل   ق   ⚛️\n\n   ✦ KHATIM KHA AN-NUR - CRÉATION ET CONNAISSANCE ✦`,
-      27: `    🌟  Sceau Majesté 786 An-Nur  🌟\n\n         👑  ذُو الْجَلَالِ  👑\n\n     𐎏  ┌──────────────────┐  𐎏\n    ────│ 𐎐  700  1100 786 │────\n     𐎓  └──────────────────┘  𐎓\n\n         👑   ﷽   ذ   ل   👑\n\n   ✦ KHATIM MAJESTÉ 786 AN-NUR - MAJESTÉ DIVINE ✦`,
-      28: `    🌟  Gardien Ddad An-Nur  🌟\n\n         🛡️   ضَامِنٌ ظَاهِرٌ   🛡️\n\n     𐎃  ┌──────────────────┐  𐎃\n    ────│ 🛡️ 800 1005 1106 🛡️│────\n     𐎖  └──────────────────┘  𐎖\n\n         🛡️   ض   م   ن   🛡️\n\n   ✦ KHATIM DDAD AN-NUR - PROTECTION INTEGRALE ✦`,
-      29: `    🌟  Miroir Zza An-Nur  🌟\n\n         𪞞   ظَاهِرٌ زَكِيٌّ   𪞞\n\n     𐎄  ┌──────────────────┐  𐎄\n    ────│ 𐎓  900 1106  37  │────\n     𐎏  └──────────────────┘  𐎏\n\n         𪞞   ظ   هـ   ز   𪞞\n\n   ✦ KHATIM ZZA AN-NUR - MIROIR DE CLARTÉ ✦`,
-      30: `    🌟  Couronne Ghayn 1000 An-Nur  🌟\n\n         ۞  غَنِيٌّ غَفُورٌ  ۞\n\n     𐎃  ┌──────────────────┐  𐎃\n    ────│ ۞ 1000 1060 1286 ۞│────\n     𐎖  └──────────────────┘  𐎖\n\n         ۞   غ (1000)  1000 ۞\n\n   ✦ KHATIM GHAYN 1000 AN-NUR - ABONDANCE INFINIE ✦`
-    };
-
-    return sealsV2[dayNum] || sealsV2[1];
-  };�───────────────┘\n  ✦ HARVEST OF SHIN ✦`,
-      24: `   🌊   تَوَّابٌ ثَابِتٌ   🌊\n┌──────────────────┐\n│  ت (400)│ 409    │\n├──────────────────┤\n│ 503     │ و (6)  │\n└──────────────────┘\n  ✦ FOUNTAIN OF TAW ✦`,
-      25: `   ⚓   ثَابِتٌ ثِقَةٌ   ⚓\n┌──────────────────┐\n│  ث (500)│ 503    │\n├──────────────────┤\n│ 905     │ ا (1)  │\n└──────────────────┘\n  ✦ ANCHOR OF THA ✦`,
-      26: `   ⚛️   خَالِقُ خَبِيرٌ   ⚛️\n┌──────────────────┐\n│  خ (600)│ 731    │\n├──────────────────┤\n│ 812     │ ل (30) │\n└──────────────────┘\n  ✦ MATRIX OF KHA ✦`,
-      27: `    👑  ذُو الْجَلَالِ  👑\n┌──────────────────┐\n│  ذ (700)│ 1100   │\n├──────────────────┤\n│  786    │ ﷽     │\n└──────────────────┘\n ✦ SEAL OF MAJESTY 786 ✦`,
-      28: `   🛡️   ضَامِنٌ ظَاهِرٌ   🛡️\n┌──────────────────┐\n│  ض (800)│ 1005   │\n├──────────────────┤\n│ 1106    │ م (40) │\n└──────────────────┘\n  ✦ GUARDIAN OF DDAD ✦`,
-      29: `   🪞   ظَاهِرٌ زَكِيٌّ   🪞\n┌──────────────────┐\n│  ظ (900)│ 1106   │\n├──────────────────┤\n│  37     │ هـ (5) │\n└──────────────────┘\n  ✦ MIRROR OF ZZA ✦`,
-      30: `    ۞  غَنِيٌّ غَفُورٌ  ۞\n┌──────────────────┐\n│  غ (1000)│ 1060  │\n├──────────────────┤\n│  1286    │ 1000  │\n└──────────────────┘\n✦ CROWN OF GHAYN 1000 ✦`
-    };
-
-    return seals[dayNum] || seals[1];
-  };
+   };
 
   const generateGraphicSymbolV2 = (dayNum: number): string => {
     const sealsV2: Record<number, string> = {
@@ -1640,9 +1609,10 @@ export const getLocalizedMoonDayMystery = (hDay: number, lang: 'fr' | 'en' | 'ha
     }
   };
 
+  const d = Math.max(1, Math.min(30, hDay));
   const rec = dayRecords[d] || dayRecords[1];
 
-  return {
+  const dynamicTalsam = {
     formula: rec.formula,
     graphicSymbol: generateGraphicSymbol(d),
     graphicSymbolV2: generateGraphicSymbolV2(d),
@@ -1650,6 +1620,11 @@ export const getLocalizedMoonDayMystery = (hDay: number, lang: 'fr' | 'en' | 'ha
     version2Title: lang === 'fr' ? "Version 2 : Khatim An-Nur" : lang === 'ha' ? "Siga 2: Khatim An-Nur" : "Version 2: Khatim Seal",
     spiritualUtility: rec.spiritualUtility[lang] || rec.spiritualUtility.fr,
     description: rec.description[lang] || rec.description.fr
+  };
+
+  return {
+    ...baseObj,
+    talsamDetails: baseObj.talsamDetails ? { ...dynamicTalsam, ...baseObj.talsamDetails } : dynamicTalsam
   };
 };
 

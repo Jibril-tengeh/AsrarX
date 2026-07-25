@@ -111,13 +111,35 @@ export const ExploreDashboard: React.FC = () => {
       });
       // Support filtering by Published
       const publishedArticles = allArticles.filter((art: any) => !art.status || art.status === 'Published' || art.status === 'published' || (art.status !== 'Draft' && art.status !== 'Archived'));
-      if (publishedArticles.length > 0) {
-        setArticles(publishedArticles);
+      // Check custom articles
+      let customArticles: any[] = [];
+      try {
+        const storedCustom = localStorage.getItem('asrar_custom_articles');
+        if (storedCustom) customArticles = JSON.parse(storedCustom);
+      } catch (e) {}
+
+      const combinedMap = new Map<string, any>();
+      publishedArticles.forEach(art => combinedMap.set(art.id, art));
+      customArticles.forEach(art => {
+        if (!combinedMap.has(art.id)) {
+          combinedMap.set(art.id, {
+            id: art.id,
+            title: art.title,
+            content: art.content,
+            thumbnail: art.imageUrl || art.thumbnail,
+            status: 'Published'
+          });
+        }
+      });
+
+      const finalArticles = Array.from(combinedMap.values());
+
+      if (finalArticles.length > 0) {
+        setArticles(finalArticles);
         try {
-          localStorage.setItem('asrarhub_cached_explore_articles', JSON.stringify(publishedArticles));
+          localStorage.setItem('asrarhub_cached_explore_articles', JSON.stringify(finalArticles));
         } catch (e) {}
       } else {
-        // Fallback to static articles from store.ts
         const fallback = getAsrarItems().map(item => ({
           id: item.id,
           title: item.title,
@@ -128,11 +150,20 @@ export const ExploreDashboard: React.FC = () => {
         setArticles(fallback);
       }
     }, (error) => {
-      console.error("Error fetching articles", error);
+      console.warn("Notice: Firestore explore articles listener fallback:", error);
       try {
         const cached = localStorage.getItem('asrarhub_cached_explore_articles');
+        const custom = localStorage.getItem('asrar_custom_articles');
         if (cached) {
           setArticles(JSON.parse(cached));
+        } else if (custom) {
+          setArticles(JSON.parse(custom).map((item: any) => ({
+            id: item.id,
+            title: item.title,
+            content: item.content,
+            thumbnail: item.imageUrl || item.thumbnail,
+            status: 'Published'
+          })));
         } else {
           const fallback = getAsrarItems().map(item => ({
             id: item.id,

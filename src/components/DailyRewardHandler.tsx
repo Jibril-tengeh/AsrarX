@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { doc, updateDoc, increment } from 'firebase/firestore';
-import { db, isAutoSaveEnabled } from '../lib/firebase';
+import { auth, db, isAutoSaveEnabled } from '../lib/firebase';
 import { useLanguage } from '../contexts/LanguageContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, X } from 'lucide-react';
@@ -38,8 +38,8 @@ export const DailyRewardHandler: React.FC = () => {
 
         // If never claimed, or more than 24h ago
         if (lastRewardTime === 0 || (now - lastRewardTime) >= twentyFourHours) {
-          const userRef = doc(db, 'users', uid);
-          if (isAutoSaveEnabled()) {
+          if (auth.currentUser && isAutoSaveEnabled()) {
+            const userRef = doc(db, 'users', uid);
             await updateDoc(userRef, {
               spiritualPoints: increment(10),
               lastDailyRewardDate: now
@@ -50,8 +50,14 @@ export const DailyRewardHandler: React.FC = () => {
             setShowDaily10(false);
           }, 8000);
         }
-      } catch (error) {
-        console.error("Error checking/awarding daily 10 points:", error);
+      } catch (error: any) {
+        if (error?.code === 'permission-denied' || error?.message?.includes('permission')) {
+          console.warn("Firestore permissions unavailable for daily 10 points (operating locally):", error);
+          setShowDaily10(true);
+          setTimeout(() => setShowDaily10(false), 8000);
+        } else {
+          console.error("Error checking/awarding daily 10 points:", error);
+        }
       }
     };
 
@@ -104,8 +110,8 @@ export const DailyRewardHandler: React.FC = () => {
         localStorage.setItem(earnedKey, pointsToday.toString());
 
         try {
-          const userRef = doc(db, 'users', uid);
-          if (isAutoSaveEnabled()) {
+          if (auth.currentUser && isAutoSaveEnabled()) {
+            const userRef = doc(db, 'users', uid);
             await updateDoc(userRef, {
               spiritualPoints: increment(1)
             });
@@ -118,8 +124,15 @@ export const DailyRewardHandler: React.FC = () => {
           setTimeout(() => {
             setShowReward(false);
           }, 5000);
-        } catch (error) {
-          console.error("Error updating duration-based spiritual points:", error);
+        } catch (error: any) {
+          if (error?.code === 'permission-denied' || error?.message?.includes('permission')) {
+            console.warn("Firestore permissions unavailable for duration-based spiritual points (operating locally):", error);
+            setPointsEarned(pointsToday);
+            setShowReward(true);
+            setTimeout(() => setShowReward(false), 5000);
+          } else {
+            console.error("Error updating duration-based spiritual points:", error);
+          }
         }
       }
     }, 1000);

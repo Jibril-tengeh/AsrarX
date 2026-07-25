@@ -74,12 +74,19 @@ interface AuthContextType {
   isPremium: boolean;
 }
 
+export const ADMIN_EMAILS = [
+  'jibriltengeh4@gmail.com',
+  'sbireino@gmail.com',
+  'tenibawwal10@gmail.com',
+  'jibriltengeh57@gmail.com',
+  'akoumape1@gmail.com'
+];
+
 export const checkIsPremium = (user: UserData | null): boolean => {
   if (!user) return false;
   if (user.role === 'admin') return true;
   if (user.subscriptionTier === 'premium' || user.subscriptionTier === 'pro') return true;
-  const adminEmails = ['jibriltengeh4@gmail.com', 'sbireino@gmail.com', 'tenibawwal10@gmail.com', 'jibriltengeh57@gmail.com'];
-  if (user.email && adminEmails.includes(user.email.toLowerCase())) return true;
+  if (user.email && ADMIN_EMAILS.includes(user.email.toLowerCase())) return true;
   return false;
 };
 
@@ -131,9 +138,8 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
 }
 
 export const setLocalUserSession = (email: string, name?: string, country?: string, phone?: string): UserData => {
-  const adminEmails = ['jibriltengeh4@gmail.com', 'sbireino@gmail.com', 'tenibawwal10@gmail.com', 'jibriltengeh57@gmail.com'];
   const normalizedEmail = (email || 'user@asrarhub.com').trim().toLowerCase();
-  const isAdmin = adminEmails.includes(normalizedEmail);
+  const isAdmin = ADMIN_EMAILS.includes(normalizedEmail);
   const role = isAdmin ? 'admin' : 'user';
   
   const userData: UserData = {
@@ -235,8 +241,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         // ----------------------------
 
         // Auto-promote to admin in DB if email matches
-        const adminEmails = ['jibriltengeh4@gmail.com', 'sbireino@gmail.com', 'tenibawwal10@gmail.com', 'jibriltengeh57@gmail.com'];
-        if (firebaseUser.email && adminEmails.includes(firebaseUser.email.toLowerCase())) {
+        if (firebaseUser.email && ADMIN_EMAILS.includes(firebaseUser.email.toLowerCase())) {
           getDoc(userRef).then(async (snap) => {
              if (snap.exists() && snap.data().role !== 'admin') {
                 try {
@@ -260,8 +265,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (docSnap.exists()) {
             currentRole = docSnap.data().role || 'user';
           }
-          const adminEmailsList = ['jibriltengeh4@gmail.com', 'sbireino@gmail.com', 'tenibawwal10@gmail.com', 'jibriltengeh57@gmail.com'];
-          if (firebaseUser.email && adminEmailsList.includes(firebaseUser.email.toLowerCase())) {
+          if (firebaseUser.email && ADMIN_EMAILS.includes(firebaseUser.email.toLowerCase())) {
              currentRole = 'admin';
           }
           if (docSnap.exists()) {
@@ -333,6 +337,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(local);
         setLoading(false);
       }
+    }, (error) => {
+      console.warn("AuthContext onAuthStateChanged warning/error (operating offline or placeholder API key):", error);
+      const local = getLocalUser();
+      setUser(local);
+      setLoading(false);
     });
 
     const handleLocalUserChange = () => {

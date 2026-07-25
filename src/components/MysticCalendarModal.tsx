@@ -366,7 +366,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
         title = language === 'fr' ? "Zénith Solaire ☀️" : language === 'ha' ? "Tsakiyar Rana ☀️" : "Solar Zenith ☀️";
         message = language === 'fr' ? "Le Soleil atteint son zénith. Heure sacrée pour la méditation et l'alignement." : language === 'ha' ? "Rana ta kai kololuwarta. Lokaci ne na albarka don yin zikiri da samun natsuwa." : "The Sun has reached its zenith. Sacred hour for meditation and alignment.";
       } else if (currentHM === solarTimes.goldenHour) {
-        title = language === 'fr' ? "Heure Dorée 🌟" : language === 'ha' ? "Lokacin Zinariya ������" : "Golden Hour 🌟";
+        title = language === 'fr' ? "Heure Dorée 🌟" : language === 'ha' ? "Lokacin Zinariya ��" : "Golden Hour 🌟";
         message = language === 'fr' ? "L'Heure Dorée commence. Les ondes spirituelles sont idéales pour le Tasbih et le calme." : language === 'ha' ? "Lokacin Zinariya ya fara. Lokaci ne mai kyau don Tasbahi da natsuwa." : "The Golden Hour begins. Spiritual waves are perfect for Tasbih and serenity.";
       } else if (currentHM === solarTimes.sunset) {
         title = language === 'fr' ? "Coucher du Soleil 🌇" : language === 'ha' ? "Faɗuwar Rana 🌇" : "Sunset 🌇";

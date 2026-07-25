@@ -5,7 +5,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { X, Mail, Lock, User as UserIcon, AlertCircle, Eye, EyeOff, KeyRound, CheckCircle, Globe, Phone, Search, ExternalLink, Sparkles, ShieldAlert } from 'lucide-react';
 import { signInWithGoogle, signInWithEmail, signUpWithEmail, sendVerificationEmail, auth, db, signOut } from '../lib/firebase';
 import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
-import { useAuth, setLocalUserSession } from '../contexts/AuthContext';
+import { useAuth, setLocalUserSession, ADMIN_EMAILS } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { sendPasswordResetEmail } from 'firebase/auth';
 
@@ -338,7 +338,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
         }
 
         let isUserAdmin = false;
-        const adminEmails = ['jibriltengeh4@gmail.com', 'sbireino@gmail.com', 'tenibawwal10@gmail.com', 'jibriltengeh57@gmail.com'];
 
         try {
           const userRef = doc(db, 'users', result.user.uid);
@@ -346,7 +345,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
           
           if (docSnap?.exists() && docSnap.data().role === 'admin') {
             isUserAdmin = true;
-          } else if (result.user.email && adminEmails.includes(result.user.email.toLowerCase())) {
+          } else if (result.user.email && ADMIN_EMAILS.includes(result.user.email.toLowerCase())) {
             if (docSnap?.exists()) {
                await updateDoc(userRef, { role: 'admin' }).catch(() => {});
             } else {
@@ -356,7 +355,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
           }
         } catch (dbErr) {
           console.warn("Firestore user record fetch failed:", dbErr);
-          if (result.user.email && adminEmails.includes(result.user.email.toLowerCase())) {
+          if (result.user.email && ADMIN_EMAILS.includes(result.user.email.toLowerCase())) {
             isUserAdmin = true;
           }
         }
@@ -376,7 +375,23 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
       }
     } catch (err: any) {
       console.error("Auth error:", err);
-      if (err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+      if (err.code === 'auth/api-key-not-valid' || err.message?.includes('api-key-not-valid') || err.message?.includes('api-key') || err.message?.includes('API key')) {
+        console.warn("Firebase Auth API key unconfigured/invalid. Falling back to local offline user session.");
+        const userSession = setLocalUserSession(email, name, country, phone);
+        const isUserAdmin = userSession.role === 'admin';
+        if (adminOnly) {
+          if (isUserAdmin) {
+            onClose();
+            navigate('/admin');
+          } else {
+            setError(t('auth.accessDenied', "Accès refusé. Vous n'êtes pas administrateur."));
+            setLoading(false);
+          }
+        } else {
+          onClose();
+        }
+        return;
+      } else if (err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
         setError(t('auth.invalidCredentials', 'Email ou mot de passe incorrect.'));
       } else if (err.code === 'auth/email-already-in-use') {
         setError(t('auth.emailInUse', 'Cet email est déjà utilisé.'));
@@ -396,7 +411,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
       const result = await signInWithGoogle();
       if (result?.user) {
         let isUserAdmin = false;
-        const adminEmails = ['jibriltengeh4@gmail.com', 'sbireino@gmail.com', 'tenibawwal10@gmail.com', 'jibriltengeh57@gmail.com'];
 
         try {
           const userRef = doc(db, 'users', result.user.uid);
@@ -404,7 +418,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
           
           if (docSnap?.exists() && docSnap.data().role === 'admin') {
             isUserAdmin = true;
-          } else if (result.user.email && adminEmails.includes(result.user.email.toLowerCase())) {
+          } else if (result.user.email && ADMIN_EMAILS.includes(result.user.email.toLowerCase())) {
             if (docSnap?.exists()) {
                await updateDoc(userRef, { role: 'admin' }).catch(() => {});
             } else {
@@ -416,7 +430,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
           }
         } catch (dbErr) {
           console.warn("Google sign in firestore sync warning:", dbErr);
-          if (result.user.email && adminEmails.includes(result.user.email.toLowerCase())) {
+          if (result.user.email && ADMIN_EMAILS.includes(result.user.email.toLowerCase())) {
             isUserAdmin = true;
           }
         }
@@ -436,7 +450,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
       }
     } catch (err: any) {
       console.error("Google sign in error:", err);
-      if (err.code === 'auth/network-request-failed' || err.message?.includes('network')) {
+      if (err.code === 'auth/api-key-not-valid' || err.message?.includes('api-key-not-valid') || err.message?.includes('api-key') || err.message?.includes('API key')) {
+        console.warn("Firebase Auth API key unconfigured/invalid. Falling back to local offline user session.");
+        const userSession = setLocalUserSession('user@asrarhub.com', 'Utilisateur Local', '', '');
+        if (adminOnly) {
+          setError(t('auth.accessDenied', "Accès refusé. Veuillez utiliser un compte administrateur."));
+          setLoading(false);
+        } else {
+          onClose();
+        }
+        return;
+      } else if (err.code === 'auth/network-request-failed' || err.message?.includes('network')) {
         setError(t('auth.networkError', "La connexion aux serveurs d'authentification a échoué. Cela peut être dû à un adblocker ou à des restrictions d'iframe. Essayez d'ouvrir l'application dans un nouvel onglet ou utilisez le mode secours."));
       } else {
         setError(t('auth.googleError', 'Erreur lors de la connexion avec Google.'));

@@ -297,36 +297,56 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
           hasManualTranslation: hasManual
         } as AsrarItem;
       });
-      if (firestoreItems.length > 0) {
-        setItems(firestoreItems);
-        // Update local offline cache
+      // Check local custom articles created by user
+      let customItems: AsrarItem[] = [];
+      try {
+        const storedCustom = localStorage.getItem('asrar_custom_articles');
+        if (storedCustom) customItems = JSON.parse(storedCustom);
+      } catch (e) {}
+
+      // Merge Firestore articles with local custom articles (avoiding duplicates)
+      const combinedMap = new Map<string, AsrarItem>();
+      firestoreItems.forEach(item => combinedMap.set(item.id, item));
+      customItems.forEach(item => {
+        if (!combinedMap.has(item.id)) {
+          combinedMap.set(item.id, item);
+        }
+      });
+
+      const finalArticles = Array.from(combinedMap.values());
+
+      if (finalArticles.length > 0) {
+        setItems(finalArticles);
         try {
-          localStorage.setItem('asrarhub_cached_articles_list', JSON.stringify(firestoreItems));
+          localStorage.setItem('asrarhub_cached_articles_list', JSON.stringify(finalArticles));
         } catch (e) {
           console.error("Error writing articles list to cache", e);
         }
       } else {
-        // Fallback to static initialData if Firestore is empty
+        // Fallback to getAsrarItems (which respects hide_mock_articles)
         const defaultItems = getAsrarItems();
         setItems(defaultItems);
         try {
-          localStorage.setItem('asrarhub_cached_articles_list', JSON.stringify(defaultItems));
+          if (defaultItems.length > 0) {
+            localStorage.setItem('asrarhub_cached_articles_list', JSON.stringify(defaultItems));
+          }
         } catch (e) {}
       }
       setIsLoading(false);
     }, (error) => {
-      console.error("Error fetching articles for dashboard", error);
+      console.warn("Notice: Firestore articles listener operating in fallback mode:", error);
       setIsLoading(false);
-      // Force fallback to cache on error
       try {
         const cached = localStorage.getItem('asrarhub_cached_articles_list');
+        const custom = localStorage.getItem('asrar_custom_articles');
         if (cached) {
           setItems(JSON.parse(cached));
+        } else if (custom) {
+          setItems(JSON.parse(custom));
         } else {
           setItems(getAsrarItems());
         }
       } catch (e) {
-        console.error("Error on fallback to local articles cache", e);
         setItems(getAsrarItems());
       }
     });

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { BookOpen, Shield, ArrowLeft, ArrowRight, Search, Play, Pause, ChevronDown, AlignJustify, Settings, Type, Volume2, FastForward, Headphones, X, Download, Check, Bookmark, BookmarkCheck, Share2, RefreshCw, Moon, Sun, Activity, Clock, TrendingUp, Copy, Image as ImageIcon, Maximize, Minimize2, ListPlus, ListMusic, GripVertical, Database, CloudOff, Sliders } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
-import { useAuth } from '../../../contexts/AuthContext';
+import { useAuth, ADMIN_EMAILS } from '../../../contexts/AuthContext';
 import { triggerProtectionModal } from '../../../components/ContentProtectionManager';
 import { motion, AnimatePresence } from 'motion/react';
 import { toCanvas } from 'html-to-image';
@@ -752,7 +752,7 @@ export const QuranFull: React.FC = () => {
   const { user, isPremium } = useAuth();
   const { featureToggles } = useFeatures();
   const defaultReciterFromConfig = featureToggles?.default_reciter_id || featureToggles?.default_quran_reciter;
-  const isAdmin = user?.role === 'admin' || (user?.email && ['jibriltengeh4@gmail.com', 'sbireino@gmail.com', 'tenibawwal10@gmail.com', 'jibriltengeh57@gmail.com'].includes(user.email.toLowerCase()));
+  const isAdmin = user?.role === 'admin' || (user?.email && ADMIN_EMAILS.includes(user.email.toLowerCase()));
   const [showAuthModal, setShowAuthModal] = useState(false);
   
   interface RuqyahPlaylist {
