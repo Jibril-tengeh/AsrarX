@@ -54,7 +54,7 @@ export const getAsrarItems = (): AsrarItem[] => {
     const stored = localStorage.getItem('asrar_items');
     if (stored) {
       const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed)) {
+      if (Array.isArray(parsed) && parsed.length > 0) {
         return parsed.map(item => ({
           ...item,
           hook: item.hook || (item.content ? item.content.replace(/<[^>]+>/g, '').substring(0, 120) + '...' : '')

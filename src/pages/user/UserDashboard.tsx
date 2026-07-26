@@ -256,7 +256,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
       console.error("Error pre-loading articles from offline cache", e);
     }
 
-    const q = query(collection(db, 'articles'), orderBy('createdAt', 'desc'));
+    const q = collection(db, 'articles');
 
     // If local cache is empty at startup (e.g. Capacitor post-compilation cache reset),
     // force a direct Firestore server fetch to resynchronize local cache immediately

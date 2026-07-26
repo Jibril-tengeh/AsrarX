@@ -149,7 +149,7 @@ export const Header: React.FC = () => {
 
   useEffect(() => {
     if (user) {
-      const q = query(collection(db, 'articles'), orderBy('createdAt', 'desc'), limit(1));
+      const q = query(collection(db, 'articles'), limit(1));
       const unsubscribe = onSnapshot(q, (snapshot) => {
         if (!snapshot.empty) {
           const firstDoc = snapshot.docs[0];

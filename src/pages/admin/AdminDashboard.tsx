@@ -22,6 +22,7 @@ import { db } from '../../lib/firebase';
 import { collection, getDocs, doc, getDoc, updateDoc, deleteDoc, addDoc, onSnapshot, query, orderBy, setDoc, writeBatch } from 'firebase/firestore';
 import { useAuth } from '../../contexts/AuthContext';
 import { TipTapEditor } from '../../components/TipTapEditor';
+import { getAsrarItems } from '../../data/store';
 // import SimpleEditor from 'react-simple-code-editor';
 // import Prism from 'prismjs';
 // import 'prismjs/components/prism-javascript';
@@ -468,9 +469,50 @@ export const AdminDashboard: React.FC = () => {
       setNotifications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification)));
     }, (error) => console.warn("Admin Notifs listener note:", error));
 
-    const unsubscribeArticles = onSnapshot(query(collection(db, 'articles'), orderBy('createdAt', 'desc')), (snapshot) => {
-      setArticles(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Article)));
-    }, (error) => console.warn("Admin Articles listener note:", error));
+    const unsubscribeArticles = onSnapshot(collection(db, 'articles'), (snapshot) => {
+      const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Article));
+      if (list.length > 0) {
+        list.sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
+        setArticles(list);
+      } else {
+        const fallback = getAsrarItems().map(item => ({
+          id: item.id,
+          title: item.title,
+          content: item.content,
+          thumbnail: item.imageUrl,
+          status: 'Published'
+        }));
+        setArticles(fallback as any);
+      }
+    }, (error) => {
+      console.warn("Admin Articles listener note:", error);
+      getDocs(collection(db, 'articles')).then((snap) => {
+        const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Article));
+        if (list.length > 0) {
+          list.sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
+          setArticles(list);
+        } else {
+          const fallback = getAsrarItems().map(item => ({
+            id: item.id,
+            title: item.title,
+            content: item.content,
+            thumbnail: item.imageUrl,
+            status: 'Published'
+          }));
+          setArticles(fallback as any);
+        }
+      }).catch(e => {
+        console.error("Admin Articles fallback error:", e);
+        const fallback = getAsrarItems().map(item => ({
+          id: item.id,
+          title: item.title,
+          content: item.content,
+          thumbnail: item.imageUrl,
+          status: 'Published'
+        }));
+        setArticles(fallback as any);
+      });
+    });
 
     const unsubscribeCategories = onSnapshot(collection(db, 'categories'), (snapshot) => {
       if (!snapshot.empty) {

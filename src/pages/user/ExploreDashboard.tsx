@@ -104,7 +104,7 @@ export const ExploreDashboard: React.FC = () => {
       }
     } catch (e) {}
 
-    const q = query(collection(db, 'articles'), orderBy('createdAt', 'desc'));
+    const q = collection(db, 'articles');
 
     // Forced server resync if zero articles in cache at startup (e.g. Capacitor build)
     if (!hasExploreCache) {
