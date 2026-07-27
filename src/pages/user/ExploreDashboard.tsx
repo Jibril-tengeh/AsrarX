@@ -110,6 +110,11 @@ export const ExploreDashboard: React.FC = () => {
     if (!hasExploreCache) {
       getDocsFromServer(q).then((serverSnap) => {
         if (!serverSnap.empty) {
+          const isPublishedStatus = (st: string) => {
+            const statusStr = (st || '').toString().trim().toLowerCase();
+            return !statusStr || statusStr === 'published' || statusStr === 'publié' || statusStr === 'approved' || (statusStr !== 'draft' && statusStr !== 'brouillon' && statusStr !== 'archived' && statusStr !== 'archivé');
+          };
+
           const fresh = serverSnap.docs.map(doc => {
             const data = doc.data();
             const activeTitle = language === 'fr' ? data.title : data[`title_${language}`] || data.title;
@@ -125,7 +130,7 @@ export const ExploreDashboard: React.FC = () => {
               content: activeContent,
               hook: activeHook
             };
-          }).filter((art: any) => !art.status || art.status === 'Published' || art.status === 'published' || (art.status !== 'Draft' && art.status !== 'Archived'));
+          }).filter((art: any) => isPublishedStatus(art.status));
 
           if (fresh.length > 0) {
             setArticles(fresh);
@@ -157,7 +162,11 @@ export const ExploreDashboard: React.FC = () => {
         };
       });
       // Support filtering by Published
-      const publishedArticles = allArticles.filter((art: any) => !art.status || art.status === 'Published' || art.status === 'published' || (art.status !== 'Draft' && art.status !== 'Archived'));
+      const isPublishedStatus = (st: string) => {
+        const statusStr = (st || '').toString().trim().toLowerCase();
+        return !statusStr || statusStr === 'published' || statusStr === 'publié' || statusStr === 'approved' || (statusStr !== 'draft' && statusStr !== 'brouillon' && statusStr !== 'archived' && statusStr !== 'archivé');
+      };
+      const publishedArticles = allArticles.filter((art: any) => isPublishedStatus(art.status));
       setArticles(publishedArticles);
       try {
         localStorage.setItem('asrarhub_cached_explore_articles', JSON.stringify(publishedArticles));

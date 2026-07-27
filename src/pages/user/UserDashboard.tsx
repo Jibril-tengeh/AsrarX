@@ -256,57 +256,67 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
       console.error("Error pre-loading articles from offline cache", e);
     }
 
+    const processDocData = (docSnap: any) => {
+      const data = docSnap.data();
+      const st = (data.status || '').toString().trim().toLowerCase();
+      const isAdmin = user?.role === 'admin';
+      
+      // Non-admin users see items that are published or have no status set
+      if (!isAdmin && (st === 'draft' || st === 'brouillon' || st === 'archived' || st === 'archivé')) {
+        return null;
+      }
+
+      let activeContent = data.content || '';
+      if (language === 'en' && data.content_en) activeContent = data.content_en;
+      if (language === 'ha' && data.content_ha) activeContent = data.content_ha;
+
+      let hookText = data.hook || '';
+      if (language === 'en' && data.hook_en) hookText = data.hook_en;
+      if (language === 'ha' && data.hook_ha) hookText = data.hook_ha;
+      
+      if (!hookText && activeContent) {
+        hookText = activeContent.replace(/<[^>]+>/g, '').substring(0, 120) + '...';
+      }
+      
+      let titleText = data.title || '';
+      if (language === 'en' && data.title_en) titleText = data.title_en;
+      if (language === 'ha' && data.title_ha) titleText = data.title_ha;
+
+      const hasManual = language !== 'fr' && !!(data[`title_${language}`] || data[`content_${language}`]);
+      return {
+        id: docSnap.id,
+        title: titleText,
+        hook: hookText,
+        category: data.category || 'recette',
+        subCategory: data.subCategory || '',
+        status: data.status || 'Published',
+        content: activeContent,
+        benefits: data.benefits || [],
+        imageUrl: data.thumbnail,
+        isPremium: data.isPremium || false,
+        createdAt: data.createdAt ? new Date(data.createdAt).toISOString() : new Date().toISOString(),
+        title_en: data.title_en,
+        content_en: data.content_en,
+        hook_en: data.hook_en,
+        title_ha: data.title_ha,
+        content_ha: data.content_ha,
+        hook_ha: data.hook_ha,
+        title_fr: data.title,
+        content_fr: data.content,
+        hook_fr: data.hook,
+        hasManualTranslation: hasManual
+      } as AsrarItem;
+    };
+
     const q = collection(db, 'articles');
 
-    // If local cache is empty at startup (e.g. Capacitor post-compilation cache reset),
-    // force a direct Firestore server fetch to resynchronize local cache immediately
+    // If local cache is empty at startup, force a direct Firestore server fetch
     if (!hasLocalCache) {
       getDocsFromServer(q).then((serverSnap) => {
         if (!serverSnap.empty) {
-          const freshItems = serverSnap.docs.filter(doc => {
-            const st = doc.data().status;
-            return !st || st === 'Published' || st === 'published' || (st !== 'Draft' && st !== 'Archived');
-          }).map(doc => {
-            const data = doc.data();
-            let activeContent = data.content || '';
-            if (language === 'en' && data.content_en) activeContent = data.content_en;
-            if (language === 'ha' && data.content_ha) activeContent = data.content_ha;
-
-            let hookText = data.hook || '';
-            if (language === 'en' && data.hook_en) hookText = data.hook_en;
-            if (language === 'ha' && data.hook_ha) hookText = data.hook_ha;
-            
-            if (!hookText && activeContent) {
-              hookText = activeContent.replace(/<[^>]+>/g, '').substring(0, 120) + '...';
-            }
-            
-            let titleText = data.title || '';
-            if (language === 'en' && data.title_en) titleText = data.title_en;
-            if (language === 'ha' && data.title_ha) titleText = data.title_ha;
-
-            const hasManual = language !== 'fr' && !!(data[`title_${language}`] || data[`content_${language}`]);
-            return {
-              id: doc.id,
-              title: titleText,
-              hook: hookText,
-              category: data.category || 'recette',
-              content: activeContent,
-              benefits: data.benefits || [],
-              imageUrl: data.thumbnail,
-              isPremium: data.isPremium || false,
-              createdAt: data.createdAt ? new Date(data.createdAt).toISOString() : new Date().toISOString(),
-              title_en: data.title_en,
-              content_en: data.content_en,
-              hook_en: data.hook_en,
-              title_ha: data.title_ha,
-              content_ha: data.content_ha,
-              hook_ha: data.hook_ha,
-              title_fr: data.title,
-              content_fr: data.content,
-              hook_fr: data.hook,
-              hasManualTranslation: hasManual
-            } as AsrarItem;
-          });
+          const freshItems = serverSnap.docs
+            .map(d => processDocData(d))
+            .filter((item): item is AsrarItem => item !== null);
 
           if (freshItems.length > 0) {
             setItems(freshItems);
@@ -322,52 +332,11 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
     }
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const firestoreItems = snapshot.docs.filter(doc => {
-        const st = doc.data().status;
-        return !st || st === 'Published' || st === 'published' || (st !== 'Draft' && st !== 'Archived');
-      }).map(doc => {
-        const data = doc.data();
-        let activeContent = data.content || '';
-        if (language === 'en' && data.content_en) activeContent = data.content_en;
-        if (language === 'ha' && data.content_ha) activeContent = data.content_ha;
+      const firestoreItems = snapshot.docs
+        .map(d => processDocData(d))
+        .filter((item): item is AsrarItem => item !== null);
 
-        let hookText = data.hook || '';
-        if (language === 'en' && data.hook_en) hookText = data.hook_en;
-        if (language === 'ha' && data.hook_ha) hookText = data.hook_ha;
-        
-        if (!hookText && activeContent) {
-          hookText = activeContent.replace(/<[^>]+>/g, '').substring(0, 120) + '...';
-        }
-        
-        let titleText = data.title || '';
-        if (language === 'en' && data.title_en) titleText = data.title_en;
-        if (language === 'ha' && data.title_ha) titleText = data.title_ha;
-
-        const hasManual = language !== 'fr' && !!(data[`title_${language}`] || data[`content_${language}`]);
-        return {
-          id: doc.id,
-          title: titleText,
-          hook: hookText,
-          category: data.category || 'recette',
-          content: activeContent,
-          benefits: data.benefits || [],
-          imageUrl: data.thumbnail,
-          isPremium: data.isPremium || false,
-          createdAt: data.createdAt ? new Date(data.createdAt).toISOString() : new Date().toISOString(),
-          title_en: data.title_en,
-          content_en: data.content_en,
-          hook_en: data.hook_en,
-          title_ha: data.title_ha,
-          content_ha: data.content_ha,
-          hook_ha: data.hook_ha,
-          title_fr: data.title,
-          content_fr: data.content,
-          hook_fr: data.hook,
-          hasManualTranslation: hasManual
-        } as AsrarItem;
-      });
       setItems(firestoreItems);
-      // Update local offline cache
       try {
         localStorage.setItem('asrarhub_cached_articles_list', JSON.stringify(firestoreItems));
       } catch (e) {
@@ -598,7 +567,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
     if (aiSearchResults) {
       matchesSearch = aiSearchResults.includes(item.id);
     } else {
-      const q = searchQuery.toLowerCase();
+      const q = searchQuery.toLowerCase().trim();
       matchesSearch = !q || [
         item.title,
         item.content,
@@ -610,17 +579,27 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
     }
     
     let matchesFilter = false;
-    if (filter === 'all') matchesFilter = true;
-    else if (filter === 'favoris') {
+    if (filter === 'all') {
+      matchesFilter = true;
+    } else if (filter === 'favoris') {
       if (activeFolder) {
         const folder = bookmarkFolders.find(f => f.id === activeFolder);
         matchesFilter = folder ? folder.items.includes(item.id) : false;
       } else {
         matchesFilter = bookmarks.includes(item.id);
       }
-    }
-    else {
-      matchesFilter = item.category === filter && (!selectedSubCategory || (item as any).subCategory === selectedSubCategory);
+    } else {
+      const itemCat = (item.category || '').toString().toLowerCase().trim();
+      const filterCat = (filter || '').toString().toLowerCase().trim();
+      
+      const categoryObj = categories.find(c => c.id === filter || c.id?.toLowerCase() === filterCat);
+      const categoryName = categoryObj ? (categoryObj.name || '').toLowerCase().trim() : '';
+
+      const matchesCategory = itemCat === filterCat || (categoryName && itemCat === categoryName) || (filterCat === 'wird' && itemCat.includes('wird')) || (filterCat === 'secret' && itemCat.includes('secret')) || (filterCat === 'recette' && itemCat.includes('recette'));
+      const itemSubCat = item.subCategory || (item as any).subCategory || '';
+      const matchesSubCat = !selectedSubCategory || itemSubCat === selectedSubCategory;
+
+      matchesFilter = matchesCategory && matchesSubCat;
     }
 
     return matchesSearch && matchesFilter;
@@ -1482,11 +1461,58 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
             );
           })
         ) : (
-          <div className="col-span-full py-12 text-center flex flex-col items-center">
-            <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mb-4">
-              <Search className="text-gray-400" size={24} />
+          <div className="col-span-full py-12 px-4 text-center flex flex-col items-center bg-white dark:bg-gray-800/60 rounded-3xl border border-gray-100 dark:border-gray-700/50 shadow-sm my-4">
+            <div className="w-16 h-16 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center mb-4 border border-emerald-200 dark:border-emerald-800/50 shadow-inner">
+              <Search size={28} />
             </div>
-            <p className="text-gray-500 dark:text-gray-400">{t('dashboardContent.noResults', "Aucun résultat trouvé.")}</p>
+            
+            <h3 className="text-base font-bold text-gray-900 dark:text-white mb-1">
+              {filter === 'favoris'
+                ? (language === 'fr' ? 'Aucun article favori' : 'No saved favorites')
+                : searchQuery
+                ? (language === 'fr' ? `Aucun résultat pour "${searchQuery}"` : `No results for "${searchQuery}"`)
+                : items.length > 0
+                ? (language === 'fr' ? 'Aucun article dans cette catégorie' : 'No articles in this category')
+                : (language === 'fr' ? 'Aucun article disponible' : 'No articles available')}
+            </h3>
+
+            <p className="text-xs text-gray-500 dark:text-gray-400 max-w-md mb-5 leading-relaxed">
+              {filter === 'favoris'
+                ? (language === 'fr' ? 'Vous n\'avez pas encore ajouté d\'articles à vos favoris. Cliquez sur l\'icône marque-page pour sauvegarder un article.' : 'You have not added any articles to your favorites yet.')
+                : searchQuery
+                ? (language === 'fr' ? 'Essayez de chercher avec d\'autres mots-clés ou réinitialisez le filtre.' : 'Try searching with other keywords.')
+                : items.length > 0
+                ? (language === 'fr' ? `Les ${items.length} articles disponibles appartiennent à d'autres catégories.` : `Articles belong to other categories.`)
+                : (language === 'fr' ? 'La base de données ne contient aucun article publié pour le moment.' : 'No articles found in database.')}
+            </p>
+
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              {(filter !== 'all' || searchQuery || selectedSubCategory || aiSearchResults) && (
+                <button
+                  onClick={() => {
+                    setFilter('all');
+                    setSelectedSubCategory('');
+                    setSearchQuery('');
+                    setAiSearchResults(null);
+                    setAiMessage(null);
+                  }}
+                  className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md transition-all flex items-center gap-2 cursor-pointer"
+                >
+                  <FolderOpen size={15} />
+                  <span>{language === 'fr' ? `Voir tous les articles (${items.length})` : `Show all articles (${items.length})`}</span>
+                </button>
+              )}
+
+              {user?.role === 'admin' && (
+                <Link
+                  to="/admin"
+                  className="px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs shadow-md transition-all flex items-center gap-2"
+                >
+                  <Sparkles size={15} />
+                  <span>{language === 'fr' ? 'Publier un article (Admin)' : 'Publish an article (Admin)'}</span>
+                </Link>
+              )}
+            </div>
           </div>
         )}
       </div>

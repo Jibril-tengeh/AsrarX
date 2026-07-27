@@ -477,6 +477,8 @@ export default function App() {
 
   const [showConnectedToast, setShowConnectedToast] = React.useState(false);
   const [toastUserName, setToastUserName] = React.useState('');
+  const [backExitToast, setBackExitToast] = React.useState(false);
+  const lastBackPressTimeRef = React.useRef<number>(0);
 
   React.useEffect(() => {
     if (user && !sessionStorage.getItem('asrarhub_welcome_shown')) {
@@ -553,7 +555,7 @@ export default function App() {
 
       // 2. Fallback check for active modal overlays or close buttons in DOM
       const activeModalCloseBtn = document.querySelector<HTMLElement>(
-        '[data-modal-overlay="true"] button[aria-label="Close"], [data-modal-overlay="true"] button.close-modal, .modal-backdrop button, [role="dialog"] button[aria-label="Close"]'
+        '[data-modal-overlay="true"] button[aria-label="Close"], [data-modal-overlay="true"] button.close-modal, .modal-backdrop button, [role="dialog"] button[aria-label="Close"], .modal-close-btn'
       );
       if (activeModalCloseBtn) {
         console.log('[Navigation] Closing active modal overlay via DOM close button.');
@@ -562,10 +564,32 @@ export default function App() {
       }
       
       // 3. Handle page navigation back
+      // A. If on primary home / dashboard screen, require double back press to exit
       if (currentPath === '/user/dashboard' || currentPath === '/' || currentPath === '/home') {
-        console.log(`[Navigation] Exiting app from home/dashboard.`);
-        CapacitorApp.exitApp();
-      } else if (window.history.state && window.history.state.idx > 0) {
+        const now = Date.now();
+        if (now - lastBackPressTimeRef.current < 2000) {
+          console.log(`[Navigation] Double back press confirmed. Exiting app from home/dashboard.`);
+          CapacitorApp.exitApp();
+        } else {
+          lastBackPressTimeRef.current = now;
+          setBackExitToast(true);
+          setTimeout(() => {
+            setBackExitToast(false);
+          }, 2000);
+        }
+        return;
+      }
+
+      // B. If on a secondary main tab, return to Home / Dashboard
+      const secondaryMainTabs = ['/tools', '/explore', '/journal', '/saved', '/profile', '/community'];
+      if (secondaryMainTabs.includes(currentPath)) {
+        console.log(`[Navigation] Secondary main tab "${currentPath}". Redirecting to /user/dashboard.`);
+        navigate('/user/dashboard');
+        return;
+      }
+
+      // C. If on a detail sub-page, navigate back in history or to parent section
+      if (window.history.state && typeof window.history.state.idx === 'number' && window.history.state.idx > 0) {
         console.log(`[Navigation] Navigating -1 (previous history entry) from ${currentPath}`);
         navigate(-1);
       } else {
@@ -935,6 +959,27 @@ export default function App() {
                   : language === 'ha'
                   ? `An haɗa mai amfani cikin nasara: ${toastUserName} !`
                   : `User connected successfully: ${toastUserName}!`}
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Back button exit app confirmation toast */}
+        <AnimatePresence>
+          {backExitToast && (
+            <motion.div
+              initial={{ opacity: 0, y: 40, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.9 }}
+              className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[9999] px-5 py-3 rounded-2xl bg-gray-900/95 dark:bg-gray-800/95 text-white shadow-2xl flex items-center gap-3 border border-amber-500/40 backdrop-blur-md"
+            >
+              <div className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping" />
+              <span className="text-xs sm:text-sm font-bold tracking-tight text-amber-300">
+                {language === 'fr' 
+                  ? "Appuyez à nouveau pour quitter l'application" 
+                  : language === 'ha'
+                  ? "Danna sake don fita daga aikace-aikacen"
+                  : "Press back again to exit the app"}
               </span>
             </motion.div>
           )}

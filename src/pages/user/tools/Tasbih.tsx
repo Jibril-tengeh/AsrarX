@@ -442,7 +442,7 @@ export const Tasbih: React.FC = () => {
     }
   }, [location.search, lang]);
   
-  const [soundEnabled, setSoundEnabled] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(true);
   const [soundStyle, setSoundStyle] = useState<string>('bead_wood');
   const [soundTriggerMode, setSoundTriggerMode] = useState<'target' | 'every'>('target');
   const [vibrationEnabled, setVibrationEnabled] = useState(true);
@@ -534,7 +534,7 @@ export const Tasbih: React.FC = () => {
         const parsedSettings = JSON.parse(savedSettings);
         if (parsedSettings && typeof parsedSettings === 'object') {
           const { sound, vibe, soundStyle: savedStyle, soundTriggerMode: savedTriggerMode, lastActiveId } = parsedSettings;
-          setSoundEnabled(!!sound);
+          setSoundEnabled(sound !== false);
           setVibrationEnabled(vibe !== false);
           if (savedStyle) setSoundStyle(savedStyle);
           if (savedTriggerMode) setSoundTriggerMode(savedTriggerMode);
