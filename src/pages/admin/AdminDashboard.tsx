@@ -38,6 +38,7 @@ import {
 } from 'recharts';
 
 import { AdminStoreManager } from '../../components/AdminStoreManager';
+import { INITIAL_DEFAULT_ARTICLES } from '../../data/defaultArticles';
 import { AdminRecitersManager } from '../../components/admin/AdminRecitersManager';
 import { DEFAULT_OATHS } from '../user/tools/GrandOaths';
 import { QURAN_RECITERS } from '../../data/reciters';
@@ -471,18 +472,94 @@ export const AdminDashboard: React.FC = () => {
     }, (error) => console.warn("Admin Notifs listener note:", error));
 
     const unsubscribeArticles = onSnapshot(collection(db, 'articles'), (snapshot) => {
-      const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Article));
-      list.sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
-      setArticles(list as any);
+      if (!snapshot.empty) {
+        const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Article));
+        list.sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
+        setArticles(list as any);
+        try {
+          localStorage.setItem('asrarhub_cached_admin_articles', JSON.stringify(list));
+        } catch (e) {}
+      } else {
+        // Fallback to local cache or INITIAL_DEFAULT_ARTICLES
+        let fallbackList: any[] = [];
+        try {
+          const cached = localStorage.getItem('asrarhub_cached_admin_articles');
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              fallbackList = parsed;
+            }
+          }
+        } catch (e) {}
+
+        if (fallbackList.length === 0) {
+          fallbackList = INITIAL_DEFAULT_ARTICLES.map(art => ({
+            id: art.id,
+            title: art.title,
+            hook: art.hook,
+            thumbnail: art.thumbnail,
+            content: art.content,
+            type: 'richtext',
+            status: art.status || 'Published',
+            publishDate: '',
+            isPremium: art.isPremium || false,
+            category: art.category,
+            subCategory: art.subCategory || '',
+            benefits: art.benefits || [],
+            title_en: art.title_en,
+            content_en: art.content_en,
+            hook_en: art.hook_en,
+            title_ha: art.title_ha,
+            content_ha: art.content_ha,
+            hook_ha: art.hook_ha,
+            createdAt: typeof art.createdAt === 'number' ? art.createdAt : Date.now()
+          }));
+        }
+        setArticles(fallbackList as any);
+      }
     }, (error) => {
       console.warn("Admin Articles listener note:", error);
       getDocs(collection(db, 'articles')).then((snap) => {
-        const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Article));
-        list.sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
-        setArticles(list as any);
+        if (!snap.empty) {
+          const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Article));
+          list.sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
+          setArticles(list as any);
+        } else {
+          const defaultArts = INITIAL_DEFAULT_ARTICLES.map(art => ({
+            id: art.id,
+            title: art.title,
+            hook: art.hook,
+            thumbnail: art.thumbnail,
+            content: art.content,
+            type: 'richtext',
+            status: art.status || 'Published',
+            publishDate: '',
+            isPremium: art.isPremium || false,
+            category: art.category,
+            subCategory: art.subCategory || '',
+            benefits: art.benefits || [],
+            createdAt: typeof art.createdAt === 'number' ? art.createdAt : Date.now()
+          }));
+          setArticles(defaultArts as any);
+        }
       }).catch(e => {
         console.error("Admin Articles fallback error:", e);
-        setArticles([]);
+        const defaultArts = INITIAL_DEFAULT_ARTICLES.map(art => ({
+          id: art.id,
+          title: art.title,
+          hook: art.hook,
+          thumbnail: art.thumbnail,
+          content: art.content,
+          type: 'richtext',
+          status: art.status || 'Published',
+          publishDate: '',
+          isPremium: art.isPremium || false,
+          category: art.category,
+          subCategory: art.subCategory || '',
+          benefits: art.benefits || [],
+          createdAt: typeof art.createdAt === 'number' ? art.createdAt : Date.now()
+        }));
+        setArticles(defaultArts as any);
       });
     });
 
@@ -1049,6 +1126,45 @@ export const AdminDashboard: React.FC = () => {
     } catch (error) {
       console.error("Error deleting all articles", error);
       showToast("Erreur lors de la suppression.", "error");
+    }
+  };
+
+  const [isSeedingArticles, setIsSeedingArticles] = useState(false);
+
+  const handleSeedDefaultArticles = async () => {
+    if (isSeedingArticles) return;
+    setIsSeedingArticles(true);
+    try {
+      let count = 0;
+      for (const art of INITIAL_DEFAULT_ARTICLES) {
+        await addDoc(collection(db, 'articles'), {
+          title: art.title,
+          hook: art.hook || '',
+          hook_en: art.hook_en || '',
+          hook_ha: art.hook_ha || '',
+          title_en: art.title_en || '',
+          title_ha: art.title_ha || '',
+          thumbnail: art.thumbnail || '',
+          content: art.content || '',
+          content_en: art.content_en || '',
+          content_ha: art.content_ha || '',
+          benefits: art.benefits || [],
+          type: 'richtext',
+          status: art.status || 'Published',
+          publishDate: '',
+          isPremium: art.isPremium || false,
+          category: art.category || 'recette',
+          subCategory: art.subCategory || '',
+          createdAt: Date.now()
+        });
+        count++;
+      }
+      showToast(`${count} articles par défaut importés avec succès dans Firebase !`);
+    } catch (err: any) {
+      console.error("Error seeding articles:", err);
+      showToast(`Erreur d'importation : ${err?.message || "Échec"}`, "error");
+    } finally {
+      setIsSeedingArticles(false);
     }
   };
 
@@ -3178,14 +3294,24 @@ export const AdminDashboard: React.FC = () => {
               </button>
             </div>
           </div>
-          {articles.length > 0 && (
+          <div className="flex items-center gap-3 flex-wrap">
             <button
-              onClick={handleDeleteAllArticles}
-              className="px-4 py-2 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 rounded-xl text-sm font-semibold flex items-center gap-2 transition-colors"
+              onClick={handleSeedDefaultArticles}
+              disabled={isSeedingArticles}
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
+              title="Importer tous les articles par défaut dans Firebase"
             >
-              <Trash2 size={16} /> Effacer tout
+              <Sparkles size={16} /> {isSeedingArticles ? "Importation..." : `Importer les Articles par Défaut (${INITIAL_DEFAULT_ARTICLES.length})`}
             </button>
-          )}
+            {articles.length > 0 && (
+              <button
+                onClick={handleDeleteAllArticles}
+                className="px-4 py-2 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 transition-colors cursor-pointer"
+              >
+                <Trash2 size={16} /> Effacer tout
+              </button>
+            )}
+          </div>
         </div>
         <div className={`grid gap-4 ${
           articlesLayoutMode === 'grid' ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'
@@ -4489,14 +4615,37 @@ export const AdminDashboard: React.FC = () => {
                 <span className="text-xs font-mono font-bold text-gray-300 flex items-center gap-1.5">
                   <Terminal size={14} className="text-emerald-500" /> Console de Diagnostics Réseau ({diagnosticLogs.length})
                 </span>
-                {diagnosticLogs.length > 0 && (
+                <div className="flex items-center gap-2">
                   <button
-                    onClick={() => clearNetworkLogs()}
-                    className="text-[10px] text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 transition-colors px-2.5 py-1 rounded-lg font-mono font-bold cursor-pointer"
+                    onClick={() => {
+                      if (typeof (window as any).asrarhub_test_webview_fetch === 'function') {
+                        (window as any).asrarhub_test_webview_fetch();
+                      } else {
+                        const targetUrl = window.location.origin || window.location.href || '/';
+                        addNetworkLog('info', 'ssl_cors', `Diagnostic WebView: Fetch manuel sur URL racine "${targetUrl}"`);
+                        fetch(targetUrl, { method: 'GET', cache: 'no-store' })
+                          .then(res => {
+                            addNetworkLog('success', 'ssl_cors', `Fetch URL racine réussi (${res.status} ${res.statusText || 'OK'})`);
+                          })
+                          .catch(err => {
+                            addNetworkLog('error', 'ssl_cors', `Échec fetch URL racine: ${err?.message || err}`);
+                          });
+                      }
+                    }}
+                    className="text-[10px] text-amber-300 hover:text-amber-200 bg-amber-950/60 border border-amber-500/30 hover:bg-amber-900/80 transition-colors px-2.5 py-1 rounded-lg font-mono font-bold cursor-pointer"
+                    title="Tester la connectivité WebView/CORS vers l'URL racine"
                   >
-                    Vider
+                    Test Fetch WebView
                   </button>
-                )}
+                  {diagnosticLogs.length > 0 && (
+                    <button
+                      onClick={() => clearNetworkLogs()}
+                      className="text-[10px] text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 transition-colors px-2.5 py-1 rounded-lg font-mono font-bold cursor-pointer"
+                    >
+                      Vider
+                    </button>
+                  )}
+                </div>
               </div>
 
               <div className="p-3 font-mono text-[10px] leading-relaxed max-h-56 overflow-y-auto flex flex-col gap-2">

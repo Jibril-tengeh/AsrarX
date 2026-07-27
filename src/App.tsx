@@ -143,14 +143,58 @@ const FaqButton = () => {
 };
 
 import { App as CapacitorApp } from '@capacitor/app';
-import { pingFirestore } from './utils/networkLogger';
+import { pingFirestore, addNetworkLog } from './utils/networkLogger';
 
 const NetworkStatus = () => {
   const [isOnline, setIsOnline] = React.useState(navigator.onLine);
   const [checking, setChecking] = React.useState(false);
   const [statusFeedback, setStatusFeedback] = React.useState<string | null>(null);
 
+  const handleTestWebViewFetch = async () => {
+    setChecking(true);
+    setStatusFeedback("Test fetch URL racine...");
+    const rootUrl = window.location.origin || window.location.href || '/';
+    console.log(`[NetworkStatus] Diagnostic fetch test to application root URL: "${rootUrl}"`);
+
+    addNetworkLog(
+      'info',
+      'ssl_cors',
+      `Diagnostic WebView: Fetch déclenché sur URL racine "${rootUrl}"`,
+      `Protocol: ${window.location.protocol}, UserAgent: ${navigator.userAgent}`
+    );
+
+    try {
+      const response = await fetch(rootUrl, { method: 'GET', cache: 'no-store' });
+      console.log(`[NetworkStatus] Root fetch succeeded! Status: ${response.status}, Type: ${response.type}`);
+      addNetworkLog(
+        'success',
+        'ssl_cors',
+        `Fetch URL racine réussi (${response.status} ${response.statusText || 'OK'})`,
+        `URL: ${rootUrl}, Response type: ${response.type}, Redirected: ${response.redirected}`
+      );
+      setStatusFeedback(`Root Fetch OK (${response.status} ${response.type})`);
+    } catch (err: any) {
+      const msg = err?.message || String(err);
+      console.warn(`[NetworkStatus] WebView fetch to root URL failed! Possible CORS or scheme issue:`, err);
+      addNetworkLog(
+        'error',
+        'ssl_cors',
+        `Échec du fetch WebView URL racine (${rootUrl}): ${msg}`,
+        `Blocage potentiel CORS / Schème WebView (file:/capacitor:) dans Android/iOS: ${msg}`
+      );
+      setStatusFeedback(`[CORS/WebView Error] ${msg}`);
+    } finally {
+      setChecking(false);
+      setTimeout(() => setStatusFeedback(null), 8000);
+    }
+  };
+
   React.useEffect(() => {
+    // Expose diagnostic tool on window for debugging in console
+    if (typeof window !== 'undefined') {
+      (window as any).asrarhub_test_webview_fetch = handleTestWebViewFetch;
+    }
+
     const doubleCheckOnline = () => {
       fetch('https://www.google.com/favicon.ico', { method: 'HEAD', mode: 'no-cors' })
         .then(() => {
@@ -223,15 +267,15 @@ const NetworkStatus = () => {
     }
   };
 
-  if (isOnline) return null;
+  if (isOnline && !statusFeedback) return null;
 
   return (
     <div className="fixed top-0 left-0 right-0 z-[10001] bg-red-600 text-white text-center py-2 text-xs font-semibold shadow-md flex flex-col sm:flex-row items-center justify-center gap-2 px-4 animate-bounce">
       <div className="flex items-center gap-1.5">
         <span className="w-2 h-2 rounded-full bg-white animate-ping" />
-        <span>Connexion Internet perdue. Mode hors ligne activé.</span>
+        <span>{!isOnline ? "Connexion Internet perdue. Mode hors ligne activé." : "Mode Diagnostic Réseau WebView Activé"}</span>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center justify-center gap-2">
         <button 
           onClick={handleCheckStatus}
           disabled={checking}
@@ -239,8 +283,16 @@ const NetworkStatus = () => {
         >
           {checking ? "Analyse..." : "Vérifier le statut"}
         </button>
+        <button 
+          onClick={handleTestWebViewFetch}
+          disabled={checking}
+          className="px-2 py-0.5 bg-red-900 text-white hover:bg-red-950 border border-red-400 disabled:opacity-50 rounded text-[10px] font-bold transition-all cursor-pointer uppercase tracking-wider"
+          title="Tester si le WebView Capacitor bloque les requêtes (CORS / Schème local)"
+        >
+          Diag WebView / CORS
+        </button>
         {statusFeedback && (
-          <span className="text-[10px] bg-red-800 border border-red-700 px-2 py-0.5 rounded font-mono">
+          <span className="text-[10px] bg-red-950 border border-red-500 px-2 py-0.5 rounded font-mono text-amber-200">
             {statusFeedback}
           </span>
         )}
