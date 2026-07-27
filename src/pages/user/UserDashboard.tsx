@@ -3,7 +3,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth, handleFirestoreError, OperationType } from '../../contexts/AuthContext';
 import { useFeatures } from '../../contexts/FeatureContext';
 import { db } from '../../lib/firebase';
-import { collection, query, orderBy, onSnapshot, doc, getDocsFromServer } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, doc, getDocsFromServer, getDocs } from 'firebase/firestore';
 import { Search, LayoutGrid, Square, List, Filter, X, BookOpen, Store, Award, MapPin, Trophy, ShieldCheck, ChevronDown, Bookmark, Flame, Shield, RefreshCw, Quote, Folder, Plus, Library, Music, Pencil, Trash2, Sliders, Sparkles, Calendar, FolderOpen, Star } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { SecretCard, LayoutMode } from '../../components/SecretCard';
@@ -240,6 +240,36 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
   }, [pullProgress]);
 
   useEffect(() => {
+    const formatCreatedAt = (val: any): string => {
+      if (!val) return new Date().toISOString();
+      try {
+        if (typeof val === 'object' && typeof val.toDate === 'function') {
+          return val.toDate().toISOString();
+        }
+        if (typeof val === 'object' && typeof val.seconds === 'number') {
+          return new Date(val.seconds * 1000).toISOString();
+        }
+        const d = new Date(val);
+        if (isNaN(d.getTime())) {
+          return new Date().toISOString();
+        }
+        return d.toISOString();
+      } catch (e) {
+        return new Date().toISOString();
+      }
+    };
+
+    const isPublishedArticleStatus = (st: any) => {
+      if (!st) return true;
+      const statusStr = st.toString().trim().toLowerCase();
+      if (!statusStr) return true;
+      const draftOrArchived = [
+        'draft', 'brouillon', 'archived', 'archivé', 'archive', 
+        'inactive', 'inactif', 'disabled', 'desactive', 'désactivé'
+      ];
+      return !draftOrArchived.includes(statusStr);
+    };
+
     // Pre-load from local offline cache for instant consultation even without connection
     let hasLocalCache = false;
     try {
@@ -247,9 +277,13 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
       if (cached) {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setItems(parsed);
-          setIsLoading(false);
-          hasLocalCache = true;
+          const isAdmin = user?.role === 'admin';
+          const validItems = isAdmin ? parsed : parsed.filter((it: any) => isPublishedArticleStatus(it.status));
+          if (validItems.length > 0) {
+            setItems(validItems);
+            setIsLoading(false);
+            hasLocalCache = true;
+          }
         }
       }
     } catch (e) {
@@ -257,106 +291,117 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
     }
 
     const processDocData = (docSnap: any) => {
-      const data = docSnap.data();
-      const st = (data.status || '').toString().trim().toLowerCase();
-      const isAdmin = user?.role === 'admin';
-      
-      // Non-admin users see items that are published or have no status set
-      if (!isAdmin && (st === 'draft' || st === 'brouillon' || st === 'archived' || st === 'archivé')) {
+      try {
+        const data = docSnap.data();
+        if (!data) return null;
+
+        const isAdmin = user?.role === 'admin';
+        
+        // Non-admin users ONLY see published articles
+        if (!isAdmin && !isPublishedArticleStatus(data.status)) {
+          return null;
+        }
+
+        let activeContent = data.content || '';
+        if (language === 'en' && data.content_en) activeContent = data.content_en;
+        if (language === 'ha' && data.content_ha) activeContent = data.content_ha;
+
+        let hookText = data.hook || '';
+        if (language === 'en' && data.hook_en) hookText = data.hook_en;
+        if (language === 'ha' && data.hook_ha) hookText = data.hook_ha;
+        
+        if (!hookText && activeContent) {
+          hookText = activeContent.replace(/<[^>]+>/g, '').substring(0, 120) + '...';
+        }
+        
+        let titleText = data.title || '';
+        if (language === 'en' && data.title_en) titleText = data.title_en;
+        if (language === 'ha' && data.title_ha) titleText = data.title_ha;
+
+        const hasManual = language !== 'fr' && !!(data[`title_${language}`] || data[`content_${language}`]);
+        return {
+          id: docSnap.id,
+          title: titleText || 'Sans titre',
+          hook: hookText,
+          category: data.category || 'recette',
+          subCategory: data.subCategory || '',
+          status: data.status || 'Published',
+          content: activeContent,
+          benefits: data.benefits || [],
+          imageUrl: data.thumbnail,
+          isPremium: data.isPremium || false,
+          createdAt: formatCreatedAt(data.createdAt),
+          title_en: data.title_en,
+          content_en: data.content_en,
+          hook_en: data.hook_en,
+          title_ha: data.title_ha,
+          content_ha: data.content_ha,
+          hook_ha: data.hook_ha,
+          title_fr: data.title,
+          content_fr: data.content,
+          hook_fr: data.hook,
+          hasManualTranslation: hasManual
+        } as AsrarItem;
+      } catch (err) {
+        console.error("Error parsing article document:", docSnap.id, err);
         return null;
       }
-
-      let activeContent = data.content || '';
-      if (language === 'en' && data.content_en) activeContent = data.content_en;
-      if (language === 'ha' && data.content_ha) activeContent = data.content_ha;
-
-      let hookText = data.hook || '';
-      if (language === 'en' && data.hook_en) hookText = data.hook_en;
-      if (language === 'ha' && data.hook_ha) hookText = data.hook_ha;
-      
-      if (!hookText && activeContent) {
-        hookText = activeContent.replace(/<[^>]+>/g, '').substring(0, 120) + '...';
-      }
-      
-      let titleText = data.title || '';
-      if (language === 'en' && data.title_en) titleText = data.title_en;
-      if (language === 'ha' && data.title_ha) titleText = data.title_ha;
-
-      const hasManual = language !== 'fr' && !!(data[`title_${language}`] || data[`content_${language}`]);
-      return {
-        id: docSnap.id,
-        title: titleText,
-        hook: hookText,
-        category: data.category || 'recette',
-        subCategory: data.subCategory || '',
-        status: data.status || 'Published',
-        content: activeContent,
-        benefits: data.benefits || [],
-        imageUrl: data.thumbnail,
-        isPremium: data.isPremium || false,
-        createdAt: data.createdAt ? new Date(data.createdAt).toISOString() : new Date().toISOString(),
-        title_en: data.title_en,
-        content_en: data.content_en,
-        hook_en: data.hook_en,
-        title_ha: data.title_ha,
-        content_ha: data.content_ha,
-        hook_ha: data.hook_ha,
-        title_fr: data.title,
-        content_fr: data.content,
-        hook_fr: data.hook,
-        hasManualTranslation: hasManual
-      } as AsrarItem;
     };
 
     const q = collection(db, 'articles');
+    console.log(`[Articles Query - UserDashboard] Querying collection 'articles'. User role: "${user?.role || 'user'}".`);
 
-    // If local cache is empty at startup, force a direct Firestore server fetch
-    if (!hasLocalCache) {
-      getDocsFromServer(q).then((serverSnap) => {
-        if (!serverSnap.empty) {
-          const freshItems = serverSnap.docs
-            .map(d => processDocData(d))
-            .filter((item): item is AsrarItem => item !== null);
+    // Standard getDocs fallback for reliable loading on native mobile/Capacitor builds
+    getDocs(q).then((snap) => {
+      console.log(`[Articles getDocs - UserDashboard] Received ${snap.docs.length} raw documents from Firestore server.`);
+      if (!snap.empty) {
+        const freshItems = snap.docs
+          .map(d => processDocData(d))
+          .filter((item): item is AsrarItem => item !== null);
 
-          if (freshItems.length > 0) {
-            setItems(freshItems);
-            setIsLoading(false);
-            try {
-              localStorage.setItem('asrarhub_cached_articles_list', JSON.stringify(freshItems));
-            } catch (e) {}
-          }
+        console.log(`[Articles getDocs - UserDashboard] ${freshItems.length} published articles parsed.`);
+        if (freshItems.length > 0) {
+          setItems(freshItems);
+          setIsLoading(false);
+          try {
+            localStorage.setItem('asrarhub_cached_articles_list', JSON.stringify(freshItems));
+          } catch (e) {}
         }
-      }).catch(err => {
-        console.warn("Server resync for articles fallback:", err);
-      });
-    }
+      }
+    }).catch(err => {
+      console.warn("[Articles getDocs - UserDashboard] Error during getDocs query:", err?.code || err?.message || err);
+    });
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
+      console.log(`[Articles onSnapshot - UserDashboard] Listener update received (${snapshot.docs.length} raw docs, fromCache: ${snapshot.metadata?.fromCache}).`);
       const firestoreItems = snapshot.docs
         .map(d => processDocData(d))
         .filter((item): item is AsrarItem => item !== null);
 
-      setItems(firestoreItems);
-      try {
-        localStorage.setItem('asrarhub_cached_articles_list', JSON.stringify(firestoreItems));
-      } catch (e) {
-        console.error("Error writing articles list to cache", e);
+      console.log(`[Articles onSnapshot - UserDashboard] ${firestoreItems.length} published articles ready to display.`);
+      if (firestoreItems.length > 0) {
+        setItems(firestoreItems);
+        try {
+          localStorage.setItem('asrarhub_cached_articles_list', JSON.stringify(firestoreItems));
+        } catch (e) {
+          console.error("Error writing articles list to cache", e);
+        }
       }
       setIsLoading(false);
     }, (error) => {
-      console.error("Error fetching articles for dashboard", error);
+      console.error("[Articles onSnapshot - UserDashboard] Firestore permission or network error:", error.code, error.message, error);
       setIsLoading(false);
-      // Force fallback to cache on error
       try {
         const cached = localStorage.getItem('asrarhub_cached_articles_list');
         if (cached) {
-          setItems(JSON.parse(cached));
-        } else {
-          setItems([]);
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            console.log(`[Articles - UserDashboard] Restored ${parsed.length} articles from localStorage fallback.`);
+            setItems(parsed);
+          }
         }
       } catch (e) {
         console.error("Error on fallback to local articles cache", e);
-        setItems([]);
       }
     });
 
@@ -596,7 +641,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
       const categoryName = categoryObj ? (categoryObj.name || '').toLowerCase().trim() : '';
 
       const matchesCategory = itemCat === filterCat || (categoryName && itemCat === categoryName) || (filterCat === 'wird' && itemCat.includes('wird')) || (filterCat === 'secret' && itemCat.includes('secret')) || (filterCat === 'recette' && itemCat.includes('recette'));
-      const itemSubCat = item.subCategory || (item as any).subCategory || '';
+      const itemSubCat = (item as any).subCategory || '';
       const matchesSubCat = !selectedSubCategory || itemSubCat === selectedSubCategory;
 
       matchesFilter = matchesCategory && matchesSubCat;

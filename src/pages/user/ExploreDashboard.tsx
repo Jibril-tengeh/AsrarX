@@ -4,7 +4,8 @@ import { Compass, Book, Shield, Heart, Sparkles, Moon, Sun, ArrowRight, Wallet, 
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useFeatures } from '../../contexts/FeatureContext';
-import { collection, query, orderBy, onSnapshot, getDocsFromServer } from 'firebase/firestore';
+import { useAuth } from '../../contexts/AuthContext';
+import { collection, query, orderBy, onSnapshot, getDocsFromServer, getDocs } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { getAsrarItems } from '../../data/store';
 
@@ -14,6 +15,7 @@ import { PremiumWrapper } from '../../components/PremiumWrapper';
 export const ExploreDashboard: React.FC = () => {
   const { t, language } = useLanguage();
   const { featureToggles } = useFeatures();
+  const { user } = useAuth();
 
   const categories = [
     {
@@ -91,98 +93,124 @@ export const ExploreDashboard: React.FC = () => {
       setBookmarks([]);
     }
 
+    const isPublishedStatus = (st: any) => {
+      if (!st) return true;
+      const statusStr = st.toString().trim().toLowerCase();
+      if (!statusStr) return true;
+      const draftOrArchived = [
+        'draft', 'brouillon', 'archived', 'archivé', 'archive', 
+        'inactive', 'inactif', 'disabled', 'desactive', 'désactivé'
+      ];
+      return !draftOrArchived.includes(statusStr);
+    };
+
+    const formatCreatedAt = (val: any): string => {
+      if (!val) return new Date().toISOString();
+      try {
+        if (typeof val === 'object' && typeof val.toDate === 'function') {
+          return val.toDate().toISOString();
+        }
+        if (typeof val === 'object' && typeof val.seconds === 'number') {
+          return new Date(val.seconds * 1000).toISOString();
+        }
+        const d = new Date(val);
+        if (isNaN(d.getTime())) {
+          return new Date().toISOString();
+        }
+        return d.toISOString();
+      } catch (e) {
+        return new Date().toISOString();
+      }
+    };
+
+    const isAdmin = user?.role === 'admin';
+
     // Pre-load from cache if available
-    let hasExploreCache = false;
     try {
       const cached = localStorage.getItem('asrarhub_cached_explore_articles');
       if (cached) {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setArticles(parsed);
-          hasExploreCache = true;
+          const valid = isAdmin ? parsed : parsed.filter((art: any) => isPublishedStatus(art.status));
+          if (valid.length > 0) {
+            setArticles(valid);
+          }
         }
       }
     } catch (e) {}
 
     const q = collection(db, 'articles');
 
-    // Forced server resync if zero articles in cache at startup (e.g. Capacitor build)
-    if (!hasExploreCache) {
-      getDocsFromServer(q).then((serverSnap) => {
-        if (!serverSnap.empty) {
-          const isPublishedStatus = (st: string) => {
-            const statusStr = (st || '').toString().trim().toLowerCase();
-            return !statusStr || statusStr === 'published' || statusStr === 'publié' || statusStr === 'approved' || (statusStr !== 'draft' && statusStr !== 'brouillon' && statusStr !== 'archived' && statusStr !== 'archivé');
-          };
-
-          const fresh = serverSnap.docs.map(doc => {
-            const data = doc.data();
-            const activeTitle = language === 'fr' ? data.title : data[`title_${language}`] || data.title;
-            const activeContent = language === 'fr' ? data.content : data[`content_${language}`] || data.content;
-            let activeHook = language === 'fr' ? data.hook : data[`hook_${language}`] || data.hook || '';
-            if (!activeHook && activeContent) {
-              activeHook = activeContent.replace(/<[^>]+>/g, '').substring(0, 120) + '...';
-            }
-            return {
-              id: doc.id,
-              ...data,
-              title: activeTitle,
-              content: activeContent,
-              hook: activeHook
-            };
-          }).filter((art: any) => isPublishedStatus(art.status));
-
-          if (fresh.length > 0) {
-            setArticles(fresh);
-            try {
-              localStorage.setItem('asrarhub_cached_explore_articles', JSON.stringify(fresh));
-            } catch (e) {}
-          }
-        }
-      }).catch(err => {
-        console.warn("Explore articles server resync error:", err);
-      });
-    }
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const allArticles = snapshot.docs.map(doc => {
-        const data = doc.data();
-        const activeTitle = language === 'fr' ? data.title : data[`title_${language}`] || data.title;
-        const activeContent = language === 'fr' ? data.content : data[`content_${language}`] || data.content;
+    const processExploreDoc = (docSnap: any) => {
+      try {
+        const data = docSnap.data();
+        if (!data) return null;
+        const activeTitle = language === 'fr' ? data.title : data[`title_${language}`] || data.title || 'Sans titre';
+        const activeContent = language === 'fr' ? data.content : data[`content_${language}`] || data.content || '';
         let activeHook = language === 'fr' ? data.hook : data[`hook_${language}`] || data.hook || '';
         if (!activeHook && activeContent) {
           activeHook = activeContent.replace(/<[^>]+>/g, '').substring(0, 120) + '...';
         }
         return {
-          id: doc.id,
+          id: docSnap.id,
           ...data,
           title: activeTitle,
           content: activeContent,
-          hook: activeHook
+          hook: activeHook,
+          createdAt: formatCreatedAt(data.createdAt)
         };
-      });
-      // Support filtering by Published
-      const isPublishedStatus = (st: string) => {
-        const statusStr = (st || '').toString().trim().toLowerCase();
-        return !statusStr || statusStr === 'published' || statusStr === 'publié' || statusStr === 'approved' || (statusStr !== 'draft' && statusStr !== 'brouillon' && statusStr !== 'archived' && statusStr !== 'archivé');
-      };
-      const publishedArticles = allArticles.filter((art: any) => isPublishedStatus(art.status));
-      setArticles(publishedArticles);
-      try {
-        localStorage.setItem('asrarhub_cached_explore_articles', JSON.stringify(publishedArticles));
-      } catch (e) {}
+      } catch (err) {
+        console.error("Error processing explore doc:", docSnap.id, err);
+        return null;
+      }
+    };
+
+    // Standard getDocs fallback for reliable loading on native mobile/Capacitor builds
+    console.log(`[Articles Query - ExploreDashboard] Querying collection 'articles'. User role: "${user?.role || 'user'}".`);
+    getDocs(q).then((snap) => {
+      console.log(`[Articles getDocs - ExploreDashboard] Received ${snap.docs.length} raw documents from Firestore server.`);
+      if (!snap.empty) {
+        const fresh = snap.docs
+          .map(d => processExploreDoc(d))
+          .filter((art: any) => art !== null && (isAdmin || isPublishedStatus(art.status)));
+
+        console.log(`[Articles getDocs - ExploreDashboard] ${fresh.length} published articles parsed.`);
+        if (fresh.length > 0) {
+          setArticles(fresh);
+          try {
+            localStorage.setItem('asrarhub_cached_explore_articles', JSON.stringify(fresh));
+          } catch (e) {}
+        }
+      }
+    }).catch(err => {
+      console.warn("[Articles getDocs - ExploreDashboard] Error during getDocs query:", err?.code || err?.message || err);
+    });
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      console.log(`[Articles onSnapshot - ExploreDashboard] Listener update received (${snapshot.docs.length} raw docs, fromCache: ${snapshot.metadata?.fromCache}).`);
+      const allArticles = snapshot.docs
+        .map(d => processExploreDoc(d))
+        .filter((art: any) => art !== null && (isAdmin || isPublishedStatus(art.status)));
+
+      console.log(`[Articles onSnapshot - ExploreDashboard] ${allArticles.length} published articles ready to display.`);
+      if (allArticles.length > 0) {
+        setArticles(allArticles);
+        try {
+          localStorage.setItem('asrarhub_cached_explore_articles', JSON.stringify(allArticles));
+        } catch (e) {}
+      }
     }, (error) => {
-      console.error("Error fetching articles", error);
+      console.error("[Articles onSnapshot - ExploreDashboard] Firestore permission or network error:", error.code, error.message, error);
       try {
         const cached = localStorage.getItem('asrarhub_cached_explore_articles');
         if (cached) {
-          setArticles(JSON.parse(cached));
-        } else {
-          setArticles([]);
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            console.log(`[Articles - ExploreDashboard] Restored ${parsed.length} articles from localStorage fallback.`);
+            setArticles(parsed);
+          }
         }
-      } catch (e) {
-        setArticles([]);
-      }
+      } catch (e) {}
     });
 
     return () => unsubscribe();

@@ -738,6 +738,25 @@ export const SecretDetail: React.FC = () => {
             }
             
             const hasManual = language !== 'fr' && !!(data[`title_${language}`] || data[`content_${language}`]);
+            const formatCreatedAt = (val: any): string => {
+              if (!val) return new Date().toISOString();
+              try {
+                if (typeof val === 'object' && typeof val.toDate === 'function') {
+                  return val.toDate().toISOString();
+                }
+                if (typeof val === 'object' && typeof val.seconds === 'number') {
+                  return new Date(val.seconds * 1000).toISOString();
+                }
+                const d = new Date(val);
+                if (isNaN(d.getTime())) {
+                  return new Date().toISOString();
+                }
+                return d.toISOString();
+              } catch (e) {
+                return new Date().toISOString();
+              }
+            };
+
             const fetchedItem: AsrarItem = {
               id: docSnap.id,
               title: activeTitle,
@@ -747,7 +766,7 @@ export const SecretDetail: React.FC = () => {
               benefits: data.benefits || [],
               imageUrl: data.thumbnail,
               isPremium: data.isPremium || false,
-              createdAt: data.createdAt ? new Date(data.createdAt).toISOString() : new Date().toISOString(),
+              createdAt: formatCreatedAt(data.createdAt),
               title_en: data.title_en,
               content_en: data.content_en,
               hook_en: data.hook_en,

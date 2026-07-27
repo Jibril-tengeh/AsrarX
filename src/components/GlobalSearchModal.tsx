@@ -63,6 +63,17 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, on
     }
   }, [isOpen]);
 
+  // Handle Capacitor Android hardware back button press when search modal is open
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleAppBack = (e: Event) => {
+      e.preventDefault();
+      onClose();
+    };
+    window.addEventListener('app:backbutton', handleAppBack);
+    return () => window.removeEventListener('app:backbutton', handleAppBack);
+  }, [isOpen, onClose]);
+
   // Lock background scroll and disable pull-to-refresh when search is open
   useEffect(() => {
     if (isOpen) {

@@ -597,6 +597,510 @@ export const FULL_28_LETTERS_DATA: LetterInfo[] = [
   }
 ];
 
+// Helper maps for letter translations
+const LETTER_TRANSLATIONS_EN = [
+  {
+    element: 'Fire', nature: 'Luminous (Nourani)', incense: 'Musk & Frankincense', planet: 'Sun', bodyPart: 'Head & Brain',
+    secret: "Letter of the Divine Axis. It governs the creative principle, ultimate spiritual authority, and command.",
+    secretWird: { title: "Wird of the Primordial Alif", translation: "O Allah, O Ever-Living, O Self-Subsisting, by the secret of the standing Alif, set right my affairs.", benefits: ["Moral authority", "Clarity of thought", "Spiritual elevation"], bestTime: "Dawn (Fajr)" }
+  },
+  {
+    element: 'Earth', nature: 'Luminous (Nourani)', incense: 'Male Frankincense (Luban)', planet: 'Moon', bodyPart: 'Heart & Thorax',
+    secret: "The Point beneath the Ba contains all of existence. Letter of manifestation, blessing, and healing.",
+    secretWird: { title: "Wird of the Point of Ba", translation: "In the name of Allah, the Most Gracious. O Creator, O Expander, send down Your blessing upon me.", benefits: ["Material blessing", "Healing from pain", "Opening of hearts"], bestTime: "Evening" }
+  },
+  {
+    element: 'Air', nature: 'Dark (Zulmani)', incense: 'Red Sandalwood', planet: 'Mars', bodyPart: 'Lungs & Respiratory Tract',
+    secret: "Letter of Majesty and Prosperity. Attracts wealth and eradicates poverty.",
+    secretWird: { title: "Wird of Jim of Abundance", translation: "O Gatherer, O Majestic One, gather for me the good of this world and the Hereafter.", benefits: ["Legitimate wealth", "Uniting hearts", "Victory"], bestTime: "Morning" }
+  },
+  {
+    element: 'Water', nature: 'Dark (Zulmani)', incense: 'Pure Oud', planet: 'Mercury', bodyPart: 'Liver & Gallbladder',
+    secret: "Letter of Stability and Spiritual Love. Useful for restoring peace in households.",
+    secretWird: { title: "Wird of Dal of Affection", translation: "O Eternal, O Supreme Judge, instill affection and love into hearts.", benefits: ["Marital harmony", "Reconciliation", "Stability"], bestTime: "Sunset" }
+  },
+  {
+    element: 'Fire', nature: 'Luminous (Nourani)', incense: 'Saffron', planet: 'Jupiter', bodyPart: 'Nervous System',
+    secret: "Letter of the Breath Huwa (He). Key to Muraqabah, mental calm, and clairvoyance.",
+    secretWird: { title: "Wird of Ha of Divine Presence", translation: "O He, O Guide, guide me to Your supreme light.", benefits: ["Clairvoyance", "Psychic peace", "Divine inspiration"], bestTime: "Midnight (Tahajjud)" }
+  },
+  {
+    element: 'Earth', nature: 'Dark (Zulmani)', incense: 'Mastic', planet: 'Venus', bodyPart: 'Spinal Column',
+    secret: "Letter of Junction (Atf). It binds the celestial world to the terrestrial world.",
+    secretWird: { title: "Wird of Waw of Union", translation: "O Loving One, O Bestower, grant me mercy and sincere affection from Yourself.", benefits: ["Facilitating marriage", "Mutual agreement", "Protection of bonds"], bestTime: "Dawn" }
+  },
+  {
+    element: 'Air', nature: 'Dark (Zulmani)', incense: 'Coriander', planet: 'Saturn', bodyPart: 'Kidneys',
+    secret: "Letter of Radiance and Commercial Success. Protects against financial losses.",
+    secretWird: { title: "Wird of Zay of Prosperity", translation: "O Pure One, O Radiant One, purify my soul and manifest my right.", benefits: ["Commercial success", "Protection against theft", "Personal charisma"], bestTime: "Morning" }
+  },
+  {
+    element: 'Water', nature: 'Luminous (Nourani)', incense: 'Myrrh', planet: 'Sun', bodyPart: 'Stomach & Digestive System',
+    secret: "Letter of Life (Al-Hayat) and Purity. Eradicates dark spells and impurities.",
+    secretWird: { title: "Wird of Ha of Healing", translation: "O Ever-Living, O Forbearing, heal me from every disease and trial.", benefits: ["Physical healing", "Dissolution of blockages", "Vitality"], bestTime: "Noon" }
+  },
+  {
+    element: 'Fire', nature: 'Luminous (Nourani)', incense: 'Frankincense', planet: 'Moon', bodyPart: 'Limbs & Musculature',
+    secret: "Letter of Coercive Force and Night Protection. Repels negative attacks.",
+    secretWird: { title: "Wird of Ta of Luminous Shield", translation: "O Pure One, O Healer, purify my heart and preserve me from the ruse of oppressors.", benefits: ["Night protection", "Dispelling fears", "Physical strength"], bestTime: "Night" }
+  },
+  {
+    element: 'Earth', nature: 'Luminous (Nourani)', incense: 'Rosewood', planet: 'Mars', bodyPart: 'Hands & Fingers',
+    secret: "Letter of Certainty (Yaqin) and Fulfillment. Unlocks rapid learning capability.",
+    secretWird: { title: "Wird of Ya of Certainty", translation: "O Certainty, O Helper, assist me in Your obedience and grant me wisdom.", benefits: ["Phenomenal memory", "Work efficiency", "Peace of mind"], bestTime: "After Fajr" }
+  },
+  {
+    element: 'Air', nature: 'Luminous (Nourani)', incense: 'Benzoin (Jawi)', planet: 'Mercury', bodyPart: 'Throat & Vocal Cords',
+    secret: "Letter of Kafi (The All-Sufficient). Ensures self-sufficiency and protects from the evil eye.",
+    secretWird: { title: "Wird of Kaf of Divine Sufficiency", translation: "O Sufficient, O Generous, suffice me in all my concerns of this world and the Hereafter.", benefits: ["Financial autonomy", "Anti-evil eye protection", "Eloquence"], bestTime: "Dusk" }
+  },
+  {
+    element: 'Water', nature: 'Luminous (Nourani)', incense: 'Ambergris', planet: 'Jupiter', bodyPart: 'Tongue & Speech',
+    secret: "Letter of Gentleness and Grace. Facilitates forgiveness and reconciliation.",
+    secretWird: { title: "Wird of Lam of Divine Grace", translation: "O Subtle One, O Allah, be gentle with me in Your decrees and ease for me every difficulty.", benefits: ["Softening of trials", "Family peace", "Subtle charisma"], bestTime: "Evening" }
+  },
+  {
+    element: 'Fire', nature: 'Luminous (Nourani)', incense: 'Clove', planet: 'Venus', bodyPart: 'Blood System',
+    secret: "Letter of the Kingdom (Mulk) and Prophet Muhammad. Seal of elevation and charisma.",
+    secretWird: { title: "Wird of Mim of Spiritual Royalty", translation: "O Sovereign, O Dominant, give me control over my soul and grant me charisma.", benefits: ["Self-control", "Respect from entourage", "Social elevation"], bestTime: "Dawn" }
+  },
+  {
+    element: 'Earth', nature: 'Luminous (Nourani)', incense: 'Wild Rue (Harmal)', planet: 'Saturn', bodyPart: 'Eyes & Vision',
+    secret: "Letter of Light (Nur) and Celestial Knowledge. Opens subtle perception.",
+    secretWird: { title: "Wird of Nun of Light", translation: "O Light, O Guide, illuminate my heart and vision with the light of knowledge.", benefits: ["Opening of spiritual 3rd eye", "Absolute serenity", "Protection"], bestTime: "Midnight" }
+  },
+  {
+    element: 'Air', nature: 'Dark (Zulmani)', incense: 'Camphor', planet: 'Sun', bodyPart: 'Teeth & Jaw',
+    secret: "Letter of Secret (Sirr) and Peace (Salam). Repels poverty and accelerates journeys.",
+    secretWird: { title: "Wird of Sin of Secret and Peace", translation: "O Peace, O All-Hearing, preserve me from all evil and answer my supplication.", benefits: ["Safety during travel", "Peace of heart", "Financial protection"], bestTime: "After Maghrib prayer" }
+  },
+  {
+    element: 'Water', nature: 'Luminous (Nourani)', incense: 'Indian Costus', planet: 'Moon', bodyPart: 'Blood Vessels',
+    secret: "Letter of the Fountain ('Ayn) and Knowledge. Grants high eloquence and discernment.",
+    secretWird: { title: "Wird of Ayn of Eloquence", translation: "O All-Knowing, O Supreme, teach me that which benefits me and increase me in knowledge.", benefits: ["Great public eloquence", "Exam success", "Clairvoyance"], bestTime: "Friday morning" }
+  },
+  {
+    element: 'Fire', nature: 'Dark (Zulmani)', incense: 'Storax (Styrax)', planet: 'Mars', bodyPart: 'Nose & Olfaction',
+    secret: "Letter of Victory (Fath) and Relief. Frees from debt and blockages.",
+    secretWird: { title: "Wird of Fa of Opening", translation: "O Opener, O Provider, open for me all gates of goodness.", benefits: ["Relief from debt", "Commercial opening", "Finding lost items"], bestTime: "Morning after Fajr" }
+  },
+  {
+    element: 'Earth', nature: 'Luminous (Nourani)', incense: 'Galbanum', planet: 'Mercury', bodyPart: 'Bones & Skeleton',
+    secret: "Letter of Sincerity (Sidq) and Patience (Sabr). Confers unwavering firmness.",
+    secretWird: { title: "Wird of Sad of Sincerity", translation: "O Sincere One, O Patient One, establish me upon truth and guide me to the path of the righteous.", benefits: ["Supreme courage", "Physical endurance", "Dispels hesitation"], bestTime: "Afternoon" }
+  },
+  {
+    element: 'Air', nature: 'Luminous (Nourani)', incense: 'Aloeswood', planet: 'Jupiter', bodyPart: 'Cerebellum & Nape',
+    secret: "Letter of Coercive Power (Qudrah) and Divine Proximity. Dominates enemies.",
+    secretWird: { title: "Wird of Qaf of Power", translation: "O All-Powerful, O Strong One, cast fear of me into the hearts of my enemies and give me victory.", benefits: ["Victory over tyrants", "Psychic invulnerability", "High status"], bestTime: "Tuesday at dawn" }
+  },
+  {
+    element: 'Water', nature: 'Dark (Zulmani)', incense: 'White Sandalwood', planet: 'Venus', bodyPart: 'Feet & Legs',
+    secret: "Letter of Mercy (Rahmah) and Balance. Dissipates depression and sadness.",
+    secretWird: { title: "Wird of Ra of Mercy", translation: "O Most Gracious, O Most Merciful, have mercy on me, relieve my distress, and place joy in my heart.", benefits: ["Healing from depression", "Generosity from people", "Spiritual joy"], bestTime: "Morning" }
+  },
+  {
+    element: 'Fire', nature: 'Dark (Zulmani)', incense: 'Damask Rose', planet: 'Saturn', bodyPart: 'Shoulders',
+    secret: "Letter of Radiance (Shu'a') and Justice. Bends injustice and disperses conspiracies.",
+    secretWird: { title: "Wird of Shin of Justice", translation: "O All-Appreciative, O Witness, aid me against whoever wronged me and strengthen my back.", benefits: ["Obtaining justice", "Dispersing machinations", "Courage"], bestTime: "Night of Thursday to Friday" }
+  },
+  {
+    element: 'Earth', nature: 'Dark (Zulmani)', incense: 'Cinnamon', planet: 'Sun', bodyPart: 'Skin & Epidermis',
+    secret: "Letter of Repentance (Tawbah) and Solidity. Roots projects and protects the household.",
+    secretWird: { title: "Wird of Ta of Firmness", translation: "O Acceptor of Repentance, O Firm One, turn to me in forgiveness and make my steps firm in every endeavor.", benefits: ["Anchoring projects", "Forgiveness of sins", "Business stability"], bestTime: "Dusk" }
+  },
+  {
+    element: 'Air', nature: 'Dark (Zulmani)', incense: 'Pure Saffron', planet: 'Moon', bodyPart: 'Joints',
+    secret: "Letter of Constancy (Thabat) and Divine Love. Brings good news.",
+    secretWird: { title: "Wird of Tha of Good News", translation: "O Constant One, O Self-Sufficient, make my faith firm and provide for me from where I do not expect.", benefits: ["Receiving good news", "Unshakable faith", "Unexpected sustenance"], bestTime: "Dawn" }
+  },
+  {
+    element: 'Water', nature: 'Dark (Zulmani)', incense: 'Dried Garlic & Rue', planet: 'Mars', bodyPart: 'Lymph & Blood',
+    secret: "Letter of the Creator (Khaliq) and Protection against occult attacks.",
+    secretWird: { title: "Wird of Kha of Occult Shield", translation: "O Creator, O All-Aware, preserve me from the evil of creation and hidden plots.", benefits: ["Purifying haunted places", "Neutralizing jealousy", "Psychic shield"], bestTime: "Night" }
+  },
+  {
+    element: 'Fire', nature: 'Dark (Zulmani)', incense: 'Black Seed (Nigella)', planet: 'Mercury', bodyPart: 'Ears & Hearing',
+    secret: "Letter of Remembrance (Dhikr) and Dignity. Silences slander.",
+    secretWird: { title: "Wird of Dhal of Divine Dignity", translation: "O Possessor of Majesty and Honor, elevate my status and suffice me against the evil of lying tongues.", benefits: ["Silencing slander", "Moral dignity", "Reputation protection"], bestTime: "Evening" }
+  },
+  {
+    element: 'Earth', nature: 'Dark (Zulmani)', incense: 'Mustard Seed', planet: 'Jupiter', bodyPart: 'Sides & Ribs',
+    secret: "Letter of Light (Diya') and Restitution of Stolen Rights.",
+    secretWird: { title: "Wird of Dhad of Restitution", translation: "O You Who cause harm or benefit, restore to me my usurped right and give me victory over oppressors.", benefits: ["Recovery of due money", "Unblocking obstacles", "Victory"], bestTime: "Tuesday night" }
+  },
+  {
+    element: 'Air', nature: 'Dark (Zulmani)', incense: 'Ammoniacum Gum', planet: 'Venus', bodyPart: 'Nails & Hair',
+    secret: "Letter of Manifestation (Zuhur) and Absolute Protection.",
+    secretWird: { title: "Wird of Zha of Inviolable Protection", translation: "O Manifest One, O Supreme One, manifest my proof and guard me with Your eye that never sleeps.", benefits: ["Invulnerability against plots", "Winning court cases", "Protection"], bestTime: "Dawn" }
+  },
+  {
+    element: 'Water', nature: 'Dark (Zulmani)', incense: 'Asafoetida', planet: 'Saturn', bodyPart: 'Bone Marrow',
+    secret: "Letter of Independence (Ghina) and Concealed Mystery. Keeps extreme poverty away.",
+    secretWird: { title: "Wird of Ghayn of Divine Opulence", translation: "O Absolutely Rich, O Oft-Forgiving, enrich me with Your lawful away from Your unlawful and forgive my sins.", benefits: ["End of poverty", "Secret of mysteries", "Dissipation of heavy debts"], bestTime: "Midnight" }
+  }
+];
+
+const LETTER_TRANSLATIONS_HA = [
+  {
+    element: 'Wuta', nature: 'Mai Haske (Nourani)', incense: 'Musk da Luban', planet: 'Rana', bodyPart: 'Kai da Kwakwalwa',
+    secret: "Harafin Tsakiyar Ubangiji. Yana sarrafa farkon halitta, ikonsa na ruhaniya da umarni.",
+    secretWird: { title: "Wird na Alif na Farko", translation: "Ya Allah, Ya Mai Rayuwa, Ya Mai Tabbata, da asirin Alif madaidaici, gyara al'amara ta.", benefits: ["Ikon ɗabi'a", "Bayyanar tunani", "Dukiyar ruhaniya"], bestTime: "Hatsin Bara (Fajr)" }
+  },
+  {
+    element: 'Turɓaya', nature: 'Mai Haske (Nourani)', incense: 'Luban Dhakar', planet: 'Wata', bodyPart: 'Zuciya da Ƙirji',
+    secret: "Ɗigon da ke ƙarƙashin Ba yana ɗauke da dukkan halitta. Harafi na bayyanawa, albarka da waraka.",
+    secretWird: { title: "Wird na Ɗigon Ba", translation: "Da sunan Allah Mai Rahama. Ya Mai Halitta, Ya Mai Buɗewa, saukar da albarkarka a gare ni.", benefits: ["Albarkar dukiya", "Waraka daga ciwo", "Buɗe zukata"], bestTime: "Maraice" }
+  },
+  {
+    element: 'Iska', nature: 'Mai Duhu (Zulmani)', incense: 'Santal Ja', planet: 'Mars', bodyPart: 'Huhu da Hanyoyin Numfashi',
+    secret: "Harafin Girma da Arziki. Yana janyo dukiya da kawar da talauci.",
+    secretWird: { title: "Wird na Jim na Arziki", translation: "Ya Mai Tara Halitta, Ya Mai Girma, tara mini alheiran duniya da lahira.", benefits: ["Dukiyar halal", "Hada zukata", "Nasara"], bestTime: "Safe" }
+  },
+  {
+    element: 'Ruwa', nature: 'Mai Duhu (Zulmani)', incense: 'Oud Tsantsa', planet: 'Makarani', bodyPart: 'Hanta da Maɗaci',
+    secret: "Harafin Tabbata da Soyayyar Ruhaniya. Yana da amfani don samar da zaman lafiya a gida.",
+    secretWird: { title: "Wird na Dal na Soyayya", translation: "Ya Mai Tabbata, Ya Mai Sakamako, jefa ƙauna da soyayya a zukata.", benefits: ["Zaman lafiyar aure", "Sassanta tsakani", "Tabbata"], bestTime: "Faɗuwar Rana" }
+  },
+  {
+    element: 'Wuta', nature: 'Mai Haske (Nourani)', incense: 'Safran', planet: 'Mushtari', bodyPart: 'Lissafin Jijiyoyi',
+    secret: "Harafin Numfashi na Huwa. Makullin Muraqabah, kwanciyar hankali da hangen nesa.",
+    secretWird: { title: "Wird na Ha na Kasancewar Ubangiji", translation: "Ya Shi, Ya Mai Shiryarwa, shiryar da ni zuwa haskenka mafi girma.", benefits: ["Hangen nesa", "Kwanciyar hankali", "Wahayi na ruhaniya"], bestTime: "Tsakar Dare (Tahajjud)" }
+  },
+  {
+    element: 'Turɓaya', nature: 'Mai Duhu (Zulmani)', incense: 'Mastic', planet: 'Zahrah', bodyPart: 'Tsbatsban Baya',
+    secret: "Harafin Haɗawa (Atf). Yana haɗa samaniyya da ƙasa.",
+    secretWird: { title: "Wird na Waw na Haɗin Kai", translation: "Ya Mai Quna, Ya Mai Kyauta, ka ba ni rahama da soyayya daga wajenka.", benefits: ["Sauƙaƙa aure", "Jituwa tsakani", "Kariya ga alaƙa"], bestTime: "Gari ya waye" }
+  },
+  {
+    element: 'Iska', nature: 'Mai Duhu (Zulmani)', incense: 'Coriander', planet: 'Zuhal', bodyPart: 'Koda da Kodar Ruhu',
+    secret: "Harafin Haskakawa da Nasarar Kasuwanci. Yana kare dukiya daga asara.",
+    secretWird: { title: "Wird na Zay na Arziki", translation: "Ya Mai Tsarki, Ya Mai Haske, tsarkake raina kuma ka bayyana haƙƙina.", benefits: ["Nasarar kasuwanci", "Kariya daga sata", "Hasken mutum"], bestTime: "Safe" }
+  },
+  {
+    element: 'Ruwa', nature: 'Mai Haske (Nourani)', incense: 'Myrrh', planet: 'Rana', bodyPart: 'Ciki da Abincin Abinci',
+    secret: "Harafin Rai (Al-Hayat) da Tsarki. Yana rushe maita da ƙazanta.",
+    secretWird: { title: "Wird na Ha na Waraka", translation: "Ya Mai Rayuwa, Ya Mai Hakuri, warkar da ni daga dukkan ciwo da jarabawa.", benefits: ["Warakar jiki", "Rushe katanga", "Ƙarfin jiki"], bestTime: "Tsakar rana" }
+  },
+  {
+    element: 'Wuta', nature: 'Mai Haske (Nourani)', incense: 'Oliban', planet: 'Wata', bodyPart: 'Gabban Jiki da Tsoka',
+    secret: "Harafin Iko da Kariyar Dare. Yana tunkuɗa hare-haren duhu.",
+    secretWird: { title: "Wird na Ta na Garkuwar Haske", translation: "Ya Mai Tsarki, Ya Mai Magani, tsarkake zuciyata kuma ka tsare ni daga kaidin azalumai.", benefits: ["Kariyar dare", "Kawar da tsoro", "Ƙarfin jiki"], bestTime: "Dare" }
+  },
+  {
+    element: 'Turɓaya', nature: 'Mai Haske (Nourani)', incense: 'Rosewood', planet: 'Mars', bodyPart: 'Hannaye da Yatsun Hannu',
+    secret: "Harafin Yakini (Yaqin) da Cikasa. Yana buɗe fahimta da hanzarin karatu.",
+    secretWird: { title: "Wird na Ya na Yakini", translation: "Ya Yakini, Ya Mai Taimako, taimake ni a kan yi muku biyayya kuma ka ba ni hikima.", benefits: ["Ƙwaƙwalwa mai ƙarfi", "Aiki mai amfani", "Kwanciyar hankali"], bestTime: "Bayan Fajr" }
+  },
+  {
+    element: 'Iska', nature: 'Mai Haske (Nourani)', incense: 'Benjoin (Jawi)', planet: 'Makarani', bodyPart: 'Makogwaro da Muryoyi',
+    secret: "Harafin Kafi (Mai Wadatarwa). Yana ba da wadatar kai da kariya daga mummunan ido.",
+    secretWird: { title: "Wird na Kaf na Wadatar Ubangiji", translation: "Ya Mai Wadatarwa, Ya Mai Karramawa, wadatar da ni a dukkan damuwata ta duniya da lahira.", benefits: ["Wadatar dukiya", "Kariya daga mummunan ido", "Magana mai ratsa jiki"], bestTime: "Makarain Rana" }
+  },
+  {
+    element: 'Ruwa', nature: 'Mai Haske (Nourani)', incense: 'Ambre Gris', planet: 'Mushtari', bodyPart: 'Harshe da Magana',
+    secret: "Harafin Tausayi da Albarka. Yana sauƙaƙa yafiya da zaman lafiya.",
+    secretWird: { title: "Wird na Lam na Albarkacin Ubangiji", translation: "Ya Mai Tausayi, Ya Allah, ka yi mini tausayi a ƙaddararka kuma ka sauƙaƙa mini kowace tsanani.", benefits: ["Sassauta jarabawa", "Zaman lafiyar iyali", "Kwarjini mai nutsuwa"], bestTime: "Maraice" }
+  },
+  {
+    element: 'Wuta', nature: 'Mai Haske (Nourani)', incense: 'Kanumfari', planet: 'Zahrah', bodyPart: 'Jijiyoyin Jani da Jini',
+    secret: "Harafin Mulki da Annabi Muhammad (SAW). Hatimin ɗaukaka da kwarjini.",
+    secretWird: { title: "Wird na Mim na Mulkin Ruhu", translation: "Ya Mai Mulki, Ya Mai Iko, ka ba ni ikon sarrafa raina kuma ka ba ni kwarjini.", benefits: ["Ikon sarrafa kai", "Bada girma a mutane", "Ɗaukaka a al'umma"], bestTime: "Gari ya waye" }
+  },
+  {
+    element: 'Turɓaya', nature: 'Mai Haske (Nourani)', incense: 'Harmal', planet: 'Zuhal', bodyPart: 'Idanu da Hangen Nesa',
+    secret: "Harafin Haske (Nur) da Ilimin Samaniya. Yana buɗe idon ruhaniya.",
+    secretWird: { title: "Wird na Nun na Haske", translation: "Ya Haske, Ya Mai Shiryarwa, haskaka zuciyata da idona da hasken ilimi.", benefits: ["Buɗe idon ruhaniya", "Kwanciyar hankali sosai", "Kariya"], bestTime: "Tsakar dare" }
+  },
+  {
+    element: 'Iska', nature: 'Mai Duhu (Zulmani)', incense: 'Kafur', planet: 'Rana', bodyPart: 'Hakora da Mota',
+    secret: "Harafin Asiri (Sirr) da Zaman Lafiya (Salam). Yana nesanta talauci da hanzarta tafiya.",
+    secretWird: { title: "Wird na Sin na Asiri da Aminci", translation: "Ya Aminci, Ya Mai Ji, kubutar da ni daga dukkan sharri kuma ka amsa addu'ata.", benefits: ["Kariya a tafiye-tafiye", "Kwanciyar zuciya", "Kariyar dukiya"], bestTime: "Bayan Sallar Magariba" }
+  },
+  {
+    element: 'Ruwa', nature: 'Mai Haske (Nourani)', incense: 'Qustul Hindi', planet: 'Wata', bodyPart: 'Mahaɗar Jijiyoyi',
+    secret: "Harafin Mabuɗi da Ilimi. Yana ba da fasahar magana da gaskiyar fahimta.",
+    secretWird: { title: "Wird na Ayn na Fasahar Magana", translation: "Ya Mai Ilimi, Ya Mai Girma, koya mini abin da zai amfane ni kuma ka ƙara mini ilimi.", benefits: ["Fasahar magana a fili", "Nasarar jarrabawa", "Hangen nesa"], bestTime: "Jumma'a da safe" }
+  },
+  {
+    element: 'Wuta', nature: 'Mai Duhu (Zulmani)', incense: 'Styrax', planet: 'Mars', bodyPart: 'Hanci da Jin Warin Abubuwa',
+    secret: "Harafin Nasara (Fath) da Samun Sauƙi. Yana 'yantar da mutum daga bashi da katanga.",
+    secretWird: { title: "Wird na Fa na Buɗe Ƙofofi", translation: "Ya Mai Buɗewa, Ya Mai Azurtawa, buɗe mini dukkan ƙofofin alheri.", benefits: ["Biya bashi", "Buɗe kasuwanci", "Gano abubuwan da suka ɓace"], bestTime: "Safe bayan Fajr" }
+  },
+  {
+    element: 'Turɓaya', nature: 'Mai Haske (Nourani)', incense: 'Galbanum', planet: 'Makarani', bodyPart: 'Kashin Jiki da Tsarin Jiki',
+    secret: "Harafin Gaskiya (Sidq) da Hakuri (Sabr). Yana ba da dagewar da ba ta girgiza.",
+    secretWird: { title: "Wird na Sad na Gaskiya", translation: "Ya Mai Gaskiya, Ya Mai Hakuri, tabbatar da ni a kan gaskiya kuma ka shiryar da ni hanyar mutanen kwarai.", benefits: ["Babban ƙarfin zuciya", "Juriyar jiki", "Kawar da shakka"], bestTime: "Yamma" }
+  },
+  {
+    element: 'Iska', nature: 'Mai Haske (Nourani)', incense: 'Oud Agarwood', planet: 'Mushtari', bodyPart: 'Kwakwalwar Baya da Keya',
+    secret: "Harafin Iko (Qudrah) da Kusanci da Ubangiji. Yana rinjayar makiya.",
+    secretWird: { title: "Wird na Qaf na Iko", translation: "Ya Mai Iko, Ya Mai Ƙarfi, jefa tsorona a zukatan makiyana kuma ka ba ni nasara.", benefits: ["Nasara a kan azalumai", "Kariyar zuciya", "Babban matsayi"], bestTime: "Talata da asuba" }
+  },
+  {
+    element: 'Ruwa', nature: 'Mai Duhu (Zulmani)', incense: 'Santal Fari', planet: 'Zahrah', bodyPart: 'Ƙafafuwa',
+    secret: "Harafin Rahama da Daidaito. Yana kawar da damuwa da bakin ciki.",
+    secretWird: { title: "Wird na Ra na Rahama", translation: "Ya Mai Rahama, Ya Mai Jin Ƙai, yi mini rahama, ka yaye damuwata kuma ka jefa farin ciki a zuciyata.", benefits: ["Waraka daga bacin rai", "Kyautatawa daga mutane", "Farin cikin ruhaniya"], bestTime: "Safe" }
+  },
+  {
+    element: 'Wuta', nature: 'Mai Duhu (Zulmani)', incense: 'Furen Rose', planet: 'Zuhal', bodyPart: 'Kaha da Kafa',
+    secret: "Harafin Haske (Shu'a') da Adalci. Yana karayar azalumai da warwatsa kaidi.",
+    secretWird: { title: "Wird na Shin na Adalci", translation: "Ya Mai Godiya, Ya Mai Shaida, taimake ni a kan wanda ya zalunce ni kuma ka ƙarfafa baya na.", benefits: ["Samun adalci", "Warwatsa maita da kaidi", "Ƙarfin zuciya"], bestTime: "Daren Alhamis zuwa Juma'a" }
+  },
+  {
+    element: 'Turɓaya', nature: 'Mai Duhu (Zulmani)', incense: 'Girfa / Cinnamon', planet: 'Rana', bodyPart: 'Fata da Jiki',
+    secret: "Harafin Tuba (Tawbah) da Tabbata. Yana kafa ayyuka da kare gida.",
+    secretWird: { title: "Wird na Ta na Tabbata", translation: "Ya Mai Karɓar Tuba, Ya Mai Tabbata, karɓi tubana kuma ka tabbatar da matakina a kowane aiki.", benefits: ["Kafa ayyuka mai ɗorewa", "Gafara ga zunubai", "Dorewar sana'a"], bestTime: "Makarain Rana" }
+  },
+  {
+    element: 'Iska', nature: 'Mai Duhu (Zulmani)', incense: 'Safran Tsantsa', planet: 'Wata', bodyPart: 'Mahaɗar Kashin Jiki',
+    secret: "Harafin Tabbata da Soyayyar Ubangiji. Yana kawo labarai masu daɗi.",
+    secretWird: { title: "Wird na Tha na Albishir", translation: "Ya Mai Tabbata, Ya Mai Wadatar Kai, tabbatar da imanina kuma ka azurta ni ta inda ban zata ba.", benefits: ["Samun labari mai daɗi", "Imani marar girgizawa", "Arziki ta hanyar ban mamaki"], bestTime: "Hatsin Bara" }
+  },
+  {
+    element: 'Ruwa', nature: 'Mai Duhu (Zulmani)', incense: 'Tafarnuwa da Harmal', planet: 'Mars', bodyPart: 'Lymphe da Jini',
+    secret: "Harafin Mai Halitta (Khaliq) da Kariya daga maita.",
+    secretWird: { title: "Wird na Kha na Garkuwar Asiri", translation: "Ya Mai Halitta, Ya Mai Sani, ka kare ni daga sharrin halitta da kaidi na boye.", benefits: ["Tsarkake wurin da ke da aljanu", "Rushe hassada", "Garkuwar ruhaniya"], bestTime: "Dare" }
+  },
+  {
+    element: 'Wuta', nature: 'Mai Duhu (Zulmani)', incense: 'Habbat al-Baraka', planet: 'Makarani', bodyPart: 'Kune da Jin Magana',
+    secret: "Harafin Ambato (Dhikr) da Girma. Yana rufe bakin marasa gaskiya.",
+    secretWird: { title: "Wird na Dhal na Girman Ubangiji", translation: "Ya Mai Girma da Bada Girma, ɗaukaka matsayina kuma ka tsare ni daga sharrin harsunan ƙarya.", benefits: ["Rufe bakin 'yan sa-ido", "Mutunci da daraja", "Kariyar suna"], bestTime: "Maraice" }
+  },
+  {
+    element: 'Turɓaya', nature: 'Mai Duhu (Zulmani)', incense: 'Kwallon Mustard', planet: 'Mushtari', bodyPart: 'Hakarkari da Gefen Jiki',
+    secret: "Harafin Haske (Diya') da Karɓo Haƙƙi da Aka Ƙwace.",
+    secretWird: { title: "Wird na Dhad na Karɓo Haƙƙi", translation: "Ya Mai Cutarwa, Ya Mai Amfanarwa, ka maido mini haƙƙina da aka ƙwace kuma ka ba ni nasara a kan azalumai.", benefits: ["Maido da dukiyar da aka hana", "Warware matsaloli", "Nasara"], bestTime: "Daren Talata" }
+  },
+  {
+    element: 'Iska', nature: 'Mai Duhu (Zulmani)', incense: 'Turaren Ammoniacum', planet: 'Zahrah', bodyPart: 'Tatsuniya da Gashi',
+    secret: "Harafin Bayyanawa (Zuhur) da Cikakkiyar Kariya.",
+    secretWird: { title: "Wird na Zha na Kariyar Kariya", translation: "Ya Mai Bayyana, Ya Mai Girma, bayyana hujjata kuma ka kare ni da idonku da ba ya barci.", benefits: ["Tsari daga makirci", "Nasara a shari'a", "Kariya"], bestTime: "Hatsin Bara" }
+  },
+  {
+    element: 'Ruwa', nature: 'Mai Duhu (Zulmani)', incense: 'Turaren Haltit', planet: 'Zuhal', bodyPart: 'Anini na Kashin Jiki',
+    secret: "Harafin Arziki da Wadatar Kai (Ghina). Yana nesanta matsanancin talauci.",
+    secretWird: { title: "Wird na Ghayn na Arzikin Ubangiji", translation: "Ya Mai Wadatuwa, Ya Mai Yafiya, wadata ni da halal ɗinka nesa da haram ɗinka kuma ka gafarce ni zunubaina.", benefits: ["Ƙarshen talauci", "Asirin abubuwan boye", "Biyan bashi mai nauyi"], bestTime: "Tsakar dare" }
+  }
+];
+
+const MASTER_WORDS_TRANSLATIONS: { [key: string]: { [lang: string]: { title?: string; translation?: string; ritual?: string; benefits?: string[] } } } = {
+  ibn_arabi_alif: {
+    en: {
+      title: "Wird Al-Alif Al-A'zam (Secret of Primordial Oneness)",
+      translation: "O Allah, I ask You by the secret of the upright and eternal Alif from which the heavens and earths draw support, to set my tongue firm in truth and fill my heart with the light of gnostic knowledge.",
+      ritual: "To recite at sunrise (Fajr) facing the Qibla, burning pure Musk or Luban Dhakar incense.",
+      benefits: ["Elevation of spiritual consciousness", "Clarity of mind and royal charisma", "Unlocking psychic locks"]
+    },
+    ha: {
+      title: "Wird Al-Alif Al-A'zam (Asirin Kaɗaitakar Ubangiji)",
+      translation: "Ya Allah, ina roƙonku da asirin Alif madaidaici na har abada wanda sammai da ƙasaye ke dogara gare shi, ka tabbatar da harshena a gaskiya kuma ka cika zuciyata da hasken ilimi.",
+      ritual: "A karanta da fitar rana (Fajr) ana fuskantar Qibla, da ƙona turaren Musk ko Luban Dhakar.",
+      benefits: ["Ɗaukakar sanin ruhaniya", "Bayyanar tunani da kwarjini", "Buɗe makullin asiri"]
+    }
+  },
+  ghazali_qaf: {
+    en: {
+      title: "Wird Al-Qaf Al-Qahhariyya (Domination of Subtle Forces)",
+      translation: "O All-Powerful, O Supreme Subduer, by the secret of the glorious Qaf, instill awe and veneration into the hearts of creation and preserve me from all distress.",
+      ritual: "Ideally on Tuesday during the planetary hour of Mars or Jupiter.",
+      benefits: ["Prestige among decision makers", "Invulnerability against black magic", "Judicial success"]
+    },
+    ha: {
+      title: "Wird Al-Qaf Al-Qahhariyya (Rinjayar Ƙarfin Asiri)",
+      translation: "Ya Mai Iko, Ya Mai Rinjaye, da asirin Qaf mai girma, jefa kwarjini da girma a zukatan halitta kuma ka kare ni daga dukkan tsanani.",
+      ritual: "A ranar Talata a sa'ar tauraron Mars ko Jupiter.",
+      benefits: ["Girma a wajen shugabanni", "Kariya daga maita da sihiri", "Nasara a shari'a"]
+    }
+  },
+  ghazali_muthallath: {
+    en: {
+      title: "Wird Al-Muthallath Al-Ghazali (Secret of Grace & Relief)",
+      translation: "O Subtle One Who never ceases to be Gentle, be Gentle with us in what descends. You are the incomparable Gentle One, extend Your benevolence upon us by the celestial mystery of the Seal of Ghazali.",
+      ritual: "Recite 129 times after Fajr prayer or in times of urgent need with Oliban or Mastic incense.",
+      benefits: ["Miraculous resolution of complex difficulties", "Protection from oppression", "Attracting divine gentleness"]
+    },
+    ha: {
+      title: "Wird Al-Muthallath Al-Ghazali (Asirin Tausayi da Samun Sauƙi)",
+      translation: "Ya Mai Tausayi da ba ya ɗaukewa, ka yi mana tausayi a jarabawar da ke sauka. Kai ne Mai Tausayi marar tamkar, faɗaɗa tausayinka gare mu da asirin Hatimin Ghazali.",
+      ritual: "A karanta sau 129 bayan sallar Fajr ko lokacin buƙata ta gaggawa da ƙona turaren Oliban.",
+      benefits: ["Warware matsaloli masu wuya cikin mamaki", "Kariya daga zalunci", "Samun tausayin Ubangiji"]
+    }
+  },
+  jilani_kaf: {
+    en: {
+      title: "Wird Al-Sultani Al-Qadiri (Secret of Spiritual Sovereignty)",
+      translation: "O Mighty, O All-Sufficient, O All-Determining, O Omnipotent! Suffice me against all that I fear and dread, and clothe me in the mantle of spiritual sovereignty and nobility in both worlds.",
+      ritual: "After Subh prayer or during Tahajjud while burning pure Oud wood.",
+      benefits: ["Unshakable courage and serenity", "Radiance of spiritual authority", "Healing of fears and weaknesses"]
+    },
+    ha: {
+      title: "Wird Al-Sultani Al-Qadiri (Asirin Mulkin Ruhu)",
+      translation: "Ya Mai Iko, Ya Mai Wadatarwa, Ya Mai Ƙaddarawa, Ya Mai Ikon Duka! Wadatar da ni daga abin da nake tsoro, kuma ka tufatar da ni rigar mulki na ruhaniya a duniya da lahira.",
+      ritual: "Bayan sallar Asuba ko lokacin Tahajjud tare da ƙona itacen Oud tsantsa.",
+      benefits: ["Ƙarfin zuciya marar girgizawa", "Haskewar ikon ruhaniya", "Warakar tsoro da rauni"]
+    }
+  },
+  nawawi_bism: {
+    en: {
+      title: "Hizb Al-Hifz Wal-Aman (Shield of Prophets & Righteous)",
+      translation: "In the name of Allah, Allah is Greatest (3x)! I place under the protection of a thousand 'Bismillah' my soul, my faith, my family, my children, my wealth, and my companions.",
+      ritual: "Ritual recitation every morning at dawn and every evening at sunset.",
+      benefits: ["Absolute immunity from evil eye and sorcery", "Complete protection of home and children", "Inviolability of mind"]
+    },
+    ha: {
+      title: "Hizb Al-Hifz Wal-Aman (Garkuwar Annabawa da Bayin Allah)",
+      translation: "Da sunan Allah, Allah ne Mafi Girma (3x)! Ina sanya a ƙarƙashin kariyar Bismillah dubu raina, imanina, iyalina, 'ya'yana, dukiyata da abokan tafiyata.",
+      ritual: "Karanta a kowace asuba da kuma lokacin faɗuwar rana.",
+      benefits: ["Tsarinsu daga mummunan ido da sihiri", "Cikakkiyar kariya ga gida da yara", "Kariyar zuciya da hankali"]
+    }
+  },
+  albuni_mim: {
+    en: {
+      title: "Wird Al-Mim Al-Muhammadiyya (Seal of Mysteries)",
+      translation: "O Ever-Living, O Bestower, by the secret of the praised Mim, reveal to me the ultimate truth of things and unlock the closed gates of Your mercy.",
+      ritual: "Perform 40 repetitions every night for 40 consecutive days with clove incense.",
+      benefits: ["Acquisition of inspired wisdom (Ilm Ladunni)", "Protection against pride", "Deep inner peace"]
+    },
+    ha: {
+      title: "Wird Al-Mim Al-Muhammadiyya (Hatimin Asirai)",
+      translation: "Ya Mai Tabbata, Ya Mai Kyauta, da asirin Mim mai girma, bayyana mini gaskiyar abubuwa kuma ka buɗe ƙofofin rahamarka a gare ni.",
+      ritual: "Maimaita sau 40 kowane daren tsawon kwanaki 40 tare da ƙona kanumfari.",
+      benefits: ["Samun ilimin wahayi (Ilm Ladunni)", "Kariya daga girman kai", "Kwanciyar hankali mai zurfi"]
+    }
+  },
+  tijani_nun: {
+    en: {
+      title: "Wird Al-Nun Wal-Qalam (Ink of the Preserved Tablet)",
+      translation: "Nun. By the pen and what they write. O Allah, illuminate my inner vision with the light of Nun, and count me among those You have guided to Your straight path.",
+      ritual: "Recitation after 'Isha prayer, ideally on full moon nights.",
+      benefits: ["Activation of Kashf (Subtle vision)", "Improvement of memory and learning capacities", "Protection of children"]
+    },
+    ha: {
+      title: "Wird Al-Nun Wal-Qalam (Alƙalamin Allo)",
+      translation: "Nun. Wallahi da alƙalami da abin da suke rubutawa. Ya Allah, haskaka idon ruhina da hasken Nun, kuma ka sanya ni cikin wadanda ka shiryar zuwa hanyarka madaidaiciya.",
+      ritual: "Karanta bayan sallar 'Isha, musamman a dararen cikar wata.",
+      benefits: ["Taikata Kashf (Hangen ruhaniya)", "Ƙara ƙwaƙwalwa da hanzarin karatu", "Kariyar yara"]
+    }
+  },
+  shadhili_lam_alif: {
+    en: {
+      title: "Wird Al-Lam-Alif (Liberation from Chains & Shackles)",
+      translation: "There is no deity except Allah, the True, the Evident. By the combined secret of Lam and Alif, fulfill my needs and repel from me the malice of the envious and schemers.",
+      ritual: "To repeat at the time of Asr prayer with pure amber incense.",
+      benefits: ["Dissolution of financial and relational blockages", "Victory over conspiracies", "Attraction of charisma"]
+    },
+    ha: {
+      title: "Wird Al-Lam-Alif (Yantawa daga Sarka da Tarnaƙi)",
+      translation: "Babu abun bautawa da gaskiya sai Allah Mai Gaskiya Bayyananne. Da asirin Lam da Alif, biya mini buƙatuna kuma ka tunkuɗa mini sharri na masu hassada.",
+      ritual: "Maimaita a lokacin sallar Asr tare da ƙona turaren Ambre.",
+      benefits: ["Warware matsalolin dukiya da alaƙa", "Nasara a kan makirci", "Kwarjini da mutunci"]
+    }
+  },
+  rifai_shin: {
+    en: {
+      title: "Wird Al-Sirr Al-Rifa'i (Key of Humility & Succor)",
+      translation: "O Succor of those who seek help, O Refuge of the fearful, join me by the secret of humility and place me under Your inviolable protection.",
+      ritual: "To recite after Maghrib with heart presence and sandalwood incense.",
+      benefits: ["Immediate relief in emergencies", "Protection during trials", "Attraction of clemency"]
+    },
+    ha: {
+      title: "Wird Al-Sirr Al-Rifa'i (Makullin Agaji da Sauƙi)",
+      translation: "Ya Mai Agaza wa masu neman agaji, Ya Wurin Neman Tsari na masu tsoro, taimake ni da asirin ƙanƙan da kai kuma ka sanya ni a kariyar kariya da ba a shiga.",
+      ritual: "Karanta bayan Magariba da samun halartar zuciya da ƙona turaren Santal.",
+      benefits: ["Ceto na gaggawa a tsanani", "Kariya lokacin jarabawa", "Samun tausayin Ubangiji"]
+    }
+  },
+  busiri_burda: {
+    en: {
+      title: "Wird Al-Burda Al-Mubaraka (Mantle of Healing)",
+      translation: "My Master, send blessings and peace continuously and forever upon Your Beloved, the best of all creation. He is the Beloved whose intercession is hoped for against every surging terror.",
+      ritual: "To recite on Thursday night with rose water and musk.",
+      benefits: ["Healing of physical and spiritual ailments", "Blessed vision in dreams", "Prosperity and serenity"]
+    },
+    ha: {
+      title: "Wird Al-Burda Al-Mubaraka (Rigunwar Waraka)",
+      translation: "Ubangijina, ka saukar da tsira da amincinka har abada a kan Masoyinka mafi alherin halitta baki ɗaya. Shi ne Masoyin da ake tsammmanin intercession ɗinsa daga kowane tsoro.",
+      ritual: "Karanta a daren Juma'a da ruwan rose da turaren Musk.",
+      benefits: ["Warakar cututtukan jiki da na ruhaniya", "Ganin mafarki mai albarka", "Wadatar dukiya da nutsuwa"]
+    }
+  },
+  tilimsani_ayn: {
+    en: {
+      title: "Wird Al-'Ayn Al-Basirah (Source of Clairvoyance)",
+      translation: "O All-Knowing, O Supreme, by the secret of the penetrating Ayn, give me victory over my ego and Satan, and grant me beneficial knowledge.",
+      ritual: "To perform on Friday before Jumu'ah prayer.",
+      benefits: ["Sublime eloquence", "Light in gaze and persuasion", "Elimination of doubts"]
+    },
+    ha: {
+      title: "Wird Al-'Ayn Al-Basirah (Mabuɗin Hangen Nesa)",
+      translation: "Ya Mai Ilimi, Ya Mai Girma, da asirin Ayn mai ratsa jiki, ka ba ni nasara a kan zuciyata da Shaidan kuma ka ba ni ilimi mai amfani.",
+      ritual: "Gudanar a ranar Juma'a kafin sallar Juma'a.",
+      benefits: ["Fasahar magana mai ratsa jiki", "Haske a idanu da ikon magana", "Kawar da kokanto"]
+    }
+  },
+  maalaynahn_alif: {
+    en: {
+      title: "Wird Al-Fath Al-Mubin (Light of Sands and Spirit)",
+      translation: "O Manifest One, O Hidden One, O Light, O Truth! Open for me a clear victory, guide me on the straight path, and grant me glorious aid.",
+      ritual: "Before sunrise in a peaceful place or quiet room.",
+      benefits: ["Victory over impossible obstacles", "Gnosis and clarity of vision", "Unlocking sacred knowledge"]
+    },
+    ha: {
+      title: "Wird Al-Fath Al-Mubin (Hasken Ruhaniya)",
+      translation: "Ya Mai Bayyana, Ya Mai Ɓoyewa, Ya Haske, Ya Gaskiya! Buɗe mini buɗi mai bayyana, shiryar da ni zuwa hanyar madaidaiciya kuma ka ba ni nasara mai girma.",
+      ritual: "Kafin fitar rana a wuri mai nutsuwa.",
+      benefits: ["Nasara a kan matsaloli masu wuya", "Samun ilimin gaskiya", "Buɗe makullin asiri"]
+    }
+  }
+};
+
+export function getLocalizedLetter(letter: LetterInfo, language: string): LetterInfo {
+  if (!letter) return letter;
+  const lang = (language as 'fr' | 'en' | 'ha') || 'fr';
+  if (lang === 'fr') return letter;
+
+  const letterIndex = FULL_28_LETTERS_DATA.findIndex(l => l.char === letter.char);
+  if (letterIndex === -1) return letter;
+
+  const tData = lang === 'en' ? LETTER_TRANSLATIONS_EN[letterIndex] : (lang === 'ha' ? LETTER_TRANSLATIONS_HA[letterIndex] : null);
+  if (!tData) return letter;
+
+  return {
+    ...letter,
+    element: (tData.element || letter.element) as any,
+    nature: (tData.nature || letter.nature) as any,
+    incense: tData.incense || letter.incense,
+    planet: tData.planet || letter.planet,
+    bodyPart: tData.bodyPart || letter.bodyPart,
+    secret: tData.secret || letter.secret,
+    secretWird: {
+      ...letter.secretWird,
+      title: tData.secretWird?.title || letter.secretWird.title,
+      translation: tData.secretWird?.translation || letter.secretWird.translation,
+      benefits: tData.secretWird?.benefits || letter.secretWird.benefits,
+      bestTime: tData.secretWird?.bestTime || letter.secretWird.bestTime,
+    }
+  };
+}
+
+export function getLocalizedMasterWord(word: typeof GRAND_MASTER_WORDS[0], language: string) {
+  if (!word) return word;
+  const lang = (language as 'fr' | 'en' | 'ha') || 'fr';
+  if (lang === 'fr') return word;
+
+  const tData = MASTER_WORDS_TRANSLATIONS[word.id]?.[lang];
+  if (!tData) return word;
+
+  return {
+    ...word,
+    title: tData.title || word.title,
+    translation: tData.translation || word.translation,
+    ritual: tData.ritual || word.ritual,
+    benefits: tData.benefits || word.benefits,
+  };
+}
+
 const scienceDict = {
   fr: {
     title: "Science Initiatique des Lettres",
@@ -616,7 +1120,41 @@ const scienceDict = {
     fire: "Feu",
     earth: "Terre",
     air: "Air",
-    water: "Eau"
+    water: "Eau",
+    spiritualAnatomy: "Anatomie Spirituelle :",
+    stdAbjad: "Abjad Standard :",
+    kabirAbjad: "Abjad Kabir :",
+    elementLabel: "Élément :",
+    natureLabel: "Nature :",
+    planetLabel: "Astre :",
+    initiaticSecret: "Le Secret Initiatique (Sirr al-Huruf)",
+    servingAngel: "Ange Serviteur (Rouhaniyya)",
+    earthlyServant: "Serviteur Terrestre (Khadim)",
+    sacredIncense: "Encens Sacré (Bakhour)",
+    secretWird: "Wird Secret",
+    repetition: "Répétition :",
+    transliteration: "Phonétique :",
+    translation: "Traduction :",
+    benefits: "Bienfaits :",
+    copyText: "Copier le texte",
+    copiedText: "Copié !",
+    extractorTitle: "Extracteur de Rouhaniyya & Lettres de Nom",
+    extractorDesc: "Saisissez un prénom ou un mot en arabe (ex: \"محمد\" ou \"علي\" ou votre prénom) pour extraire la composition des lettres, l'élément dominant et la formule de Wird personnalisée.",
+    extractorPlaceholder: "Ex: محمد...",
+    extractBtn: "Extraire la Rouhaniyya",
+    totalAbjadVal: "Total Valeur Abjad",
+    dominantElem: "Élément Dominant",
+    recommendedRep: "Répétition Recommandée",
+    componentLetters: "Lettres Composantes",
+    deducedFormula: "Formule d'Invocation Déduite",
+    repeatFormula: "Répéter la formule",
+    timesAfterFajr: "fois après la prière du Fajr ou du 'Isha avec l'encens recommandé (",
+    vaultTitle: "Le Caveau des Wirds Secrets des Grands Maîtres Initiés",
+    vaultDesc: "Ces invocations et wirds sacrés sont attribués aux plus grands imams et cheikhs.",
+    filterByMaster: "Filtrer par Maître :",
+    allMasters: "Tous les Maîtres",
+    executionRitual: "Rituel d'Exécution :",
+    targetLetter: "Lettre :"
   },
   en: {
     title: "Initiatic Science of Letters",
@@ -636,7 +1174,41 @@ const scienceDict = {
     fire: "Fire",
     earth: "Earth",
     air: "Air",
-    water: "Water"
+    water: "Water",
+    spiritualAnatomy: "Spiritual Anatomy:",
+    stdAbjad: "Standard Abjad:",
+    kabirAbjad: "Abjad Kabir:",
+    elementLabel: "Element:",
+    natureLabel: "Nature:",
+    planetLabel: "Planet:",
+    initiaticSecret: "The Initiatic Secret (Sirr al-Huruf)",
+    servingAngel: "Serving Angel (Rouhaniyya)",
+    earthlyServant: "Earthly Servant (Khadim)",
+    sacredIncense: "Sacred Incense (Bakhour)",
+    secretWird: "Secret Wird",
+    repetition: "Repetition:",
+    transliteration: "Transliteration:",
+    translation: "Translation:",
+    benefits: "Benefits:",
+    copyText: "Copy text",
+    copiedText: "Copied!",
+    extractorTitle: "Rouhaniyya & Name Letter Extractor",
+    extractorDesc: "Enter a first name or Arabic word (e.g., \"محمد\" or \"علي\" or your name) to extract letter composition, dominant element, and custom Wird formula.",
+    extractorPlaceholder: "E.g., محمد...",
+    extractBtn: "Extract Rouhaniyya",
+    totalAbjadVal: "Total Abjad Value",
+    dominantElem: "Dominant Element",
+    recommendedRep: "Recommended Repetition",
+    componentLetters: "Component Letters",
+    deducedFormula: "Deduced Invocation Formula",
+    repeatFormula: "Recite formula",
+    timesAfterFajr: "times after Fajr or 'Isha prayer with recommended incense (",
+    vaultTitle: "Vault of Secret Wirds of the Great Masters",
+    vaultDesc: "These sacred invocations and wirds are attributed to the greatest imams and sheikhs.",
+    filterByMaster: "Filter by Master:",
+    allMasters: "All Masters",
+    executionRitual: "Execution Ritual:",
+    targetLetter: "Letter:"
   },
   ha: {
     title: "Ilmin Haruffa na Asiri",
@@ -656,7 +1228,41 @@ const scienceDict = {
     fire: "Wuta",
     earth: "Turɓaya",
     air: "Iska",
-    water: "Ruwa"
+    water: "Ruwa",
+    spiritualAnatomy: "Sassan Jiki na Ruhu:",
+    stdAbjad: "Lissafin Abjad:",
+    kabirAbjad: "Abjad Kabir:",
+    elementLabel: "Mazauni:",
+    natureLabel: "Yanayi:",
+    planetLabel: "Tauraro:",
+    initiaticSecret: "Sirrin Haruffa (Sirr al-Huruf)",
+    servingAngel: "Mala'ikan Hidima (Rouhaniyya)",
+    earthlyServant: "Bawan Duniya (Khadim)",
+    sacredIncense: "Turaren Wuta Sacré (Bakhour)",
+    secretWird: "Wird na Asiri",
+    repetition: "Maimaitawa:",
+    transliteration: "Furuci:",
+    translation: "Fassaras:",
+    benefits: "Amfani:",
+    copyText: "Kwafa rubutun",
+    copiedText: "An kwafa!",
+    extractorTitle: "Fitar da Rouhaniyya da Haruffan Suna",
+    extractorDesc: "Shigar da suna ko kalmar Larabci (misali: \"محمد\" ko \"علي\" ko sunanka) don fitar da tsarin haruffa, mazauni mafi ƙarfi da addu'ar zikiri.",
+    extractorPlaceholder: "Misali: محمد...",
+    extractBtn: "Fitar da Rouhaniyya",
+    totalAbjadVal: "Jimillar Valu na Abjad",
+    dominantElem: "Mazauni Mafi Karfi",
+    recommendedRep: "Maimaitawa da Ake Shawara",
+    componentLetters: "Haruffan da Suka Haɗa",
+    deducedFormula: "Dabarar Addu'a da Aka Samo",
+    repeatFormula: "Maimaita dabarar sau",
+    timesAfterFajr: "bayan sallar Fajr ko 'Isha tare da turaren wuta na shawara (",
+    vaultTitle: "Gidan Asirin Wirds na Manyan Malamai",
+    vaultDesc: "Waɗannan addu'o'i na asiri ana jingina su ga manyan malamai da imamai.",
+    filterByMaster: "Tace ta Malam:",
+    allMasters: "Dukkan Malamai",
+    executionRitual: "Tsarin Gudanarwa:",
+    targetLetter: "Harafi:"
   }
 };
 
@@ -698,6 +1304,8 @@ export const ScienceOfLetters: React.FC = () => {
     }, 100);
   };
 
+  const locSelectedLetter = selectedLetter ? getLocalizedLetter(selectedLetter, language) : null;
+
   const handleCopy = (text: string, id: string) => {
     if (disableDuaCopy) return;
     if (!isPremium) {
@@ -711,10 +1319,17 @@ export const ScienceOfLetters: React.FC = () => {
 
   const getElementIcon = (element: string) => {
     switch(element) {
-      case 'Feu': return <Flame size={16} className="text-red-500" />;
-      case 'Eau': return <Droplets size={16} className="text-blue-500" />;
-      case 'Terre': return <Mountain size={16} className="text-amber-600" />;
-      case 'Air': return <Wind size={16} className="text-cyan-500" />;
+      case 'Feu':
+      case 'Fire':
+      case 'Wuta': return <Flame size={16} className="text-red-500" />;
+      case 'Eau':
+      case 'Water':
+      case 'Ruwa': return <Droplets size={16} className="text-blue-500" />;
+      case 'Terre':
+      case 'Earth':
+      case 'Turɓaya': return <Mountain size={16} className="text-amber-600" />;
+      case 'Air':
+      case 'Iska': return <Wind size={16} className="text-cyan-500" />;
       default: return <Star size={16} />;
     }
   };
@@ -732,10 +1347,11 @@ export const ScienceOfLetters: React.FC = () => {
     for (const char of cleanStr) {
       const match = FULL_28_LETTERS_DATA.find(l => l.char === char);
       if (match) {
+        const locMatch = getLocalizedLetter(match, language);
         total += match.abjad;
         letterCounts[char] = (letterCounts[char] || 0) + 1;
         if (!foundLetters.some(l => l.char === char)) {
-          foundLetters.push(match);
+          foundLetters.push(locMatch);
         }
       }
     }
@@ -743,12 +1359,14 @@ export const ScienceOfLetters: React.FC = () => {
     // Determine dominant element
     const elemScores = { Feu: 0, Terre: 0, Air: 0, Eau: 0 };
     foundLetters.forEach(l => {
-      elemScores[l.element] += 1;
+      const rawMatch = FULL_28_LETTERS_DATA.find(raw => raw.char === l.char);
+      if (rawMatch) elemScores[rawMatch.element] += 1;
     });
-    const dominantElem = (Object.keys(elemScores) as Array<keyof typeof elemScores>).reduce((a, b) => elemScores[a] > elemScores[b] ? a : b);
+    const dominantElemKey = (Object.keys(elemScores) as Array<keyof typeof elemScores>).reduce((a, b) => elemScores[a] > elemScores[b] ? a : b);
+    const dominantElemLabel = language === 'en' ? (dominantElemKey === 'Feu' ? 'Fire' : dominantElemKey === 'Terre' ? 'Earth' : dominantElemKey === 'Air' ? 'Air' : 'Water')
+      : language === 'ha' ? (dominantElemKey === 'Feu' ? 'Wuta' : dominantElemKey === 'Terre' ? 'Turɓaya' : dominantElemKey === 'Air' ? 'Iska' : 'Ruwa')
+      : dominantElemKey;
 
-    // Derived Angelic Name formula (Al-Buni tradition)
-    const angelSuffix = "يَائِيلُ"; // -ya'il
     const derivedAngelName = `روُحَانِيَّةُ (${cleanStr}) — [${foundLetters[0]?.angel || 'Hatmaya\'il'}]`;
 
     setExtractedResult({
@@ -756,15 +1374,17 @@ export const ScienceOfLetters: React.FC = () => {
       totalAbjad: total,
       lettersCount: cleanStr.length,
       foundLetters,
-      dominantElement: dominantElem,
+      dominantElement: dominantElemLabel,
       derivedAngelName,
       recommendedZikrCount: total > 0 ? total : 111
     });
   };
 
   const filteredLetters = FULL_28_LETTERS_DATA.filter(l => {
+    const locL = getLocalizedLetter(l, language);
     const matchesSearch = l.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           l.char.includes(searchQuery) || 
+                          locL.secret.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           l.secret.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesElement = filterElement === 'Tous' || l.element === filterElement;
     const matchesNature = filterNature === 'Tous' || 
@@ -959,9 +1579,9 @@ export const ScienceOfLetters: React.FC = () => {
           {/* Selected Letter Detailed Breakdown Section */}
           <div ref={detailsRef} className="pt-2 w-full max-w-full">
             <AnimatePresence mode="wait">
-              {selectedLetter && (
+              {locSelectedLetter && (
                 <motion.div
-                  key={selectedLetter.char}
+                  key={locSelectedLetter.char}
                   initial={{ opacity: 0, y: 15 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -15 }}
@@ -972,40 +1592,40 @@ export const ScienceOfLetters: React.FC = () => {
                   {/* Header Info */}
                   <div className="flex flex-col sm:flex-row items-center sm:items-start gap-3 sm:gap-4 border-b border-gray-100 dark:border-gray-700 pb-4 relative z-10 w-full max-w-full">
                     <div className="w-16 h-16 sm:w-24 sm:h-24 bg-gradient-to-br from-emerald-500 to-teal-700 text-white flex items-center justify-center rounded-2xl text-3xl sm:text-5xl font-arabic shadow-md shrink-0 border-2 border-emerald-200 dark:border-emerald-900/60">
-                      {selectedLetter.char}
+                      {locSelectedLetter.char}
                     </div>
 
                     <div className="flex-1 w-full max-w-full min-w-0 text-center sm:text-left space-y-2">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 w-full max-w-full">
                         <div className="min-w-0">
                           <div className="flex items-center justify-center sm:justify-start gap-2 flex-wrap">
-                            <h2 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white truncate">{selectedLetter.name}</h2>
-                            <span className="text-base sm:text-lg font-arabic text-emerald-600 dark:text-emerald-400">({selectedLetter.nameAr})</span>
+                            <h2 className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white truncate">{locSelectedLetter.name}</h2>
+                            <span className="text-base sm:text-lg font-arabic text-emerald-600 dark:text-emerald-400">({locSelectedLetter.nameAr})</span>
                           </div>
                           <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 break-words">
-                            Anatomie Spirituelle : <strong className="text-emerald-600 dark:text-emerald-400">{selectedLetter.bodyPart}</strong>
+                            {dict.spiritualAnatomy} <strong className="text-emerald-600 dark:text-emerald-400">{locSelectedLetter.bodyPart}</strong>
                           </p>
                         </div>
 
                         <div className="flex flex-wrap justify-center sm:justify-end gap-1.5 shrink-0">
                           <span className="text-[10px] sm:text-xs font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 px-2.5 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800/50 whitespace-nowrap">
-                            Abjad Standard : {selectedLetter.abjad}
+                            {dict.stdAbjad} {locSelectedLetter.abjad}
                           </span>
                           <span className="text-[10px] sm:text-xs font-bold bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 px-2.5 py-0.5 rounded-full border border-purple-200 dark:border-purple-800/50 whitespace-nowrap">
-                            Abjad Kabir : {selectedLetter.abjadKabir}
+                            {dict.kabirAbjad} {locSelectedLetter.abjadKabir}
                           </span>
                         </div>
                       </div>
 
                       <div className="flex flex-wrap justify-center sm:justify-start gap-1.5 pt-1 w-full max-w-full">
                         <span className="text-[10px] sm:text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded-md flex items-center gap-1 font-medium whitespace-nowrap">
-                          {getElementIcon(selectedLetter.element)} Élément : {selectedLetter.element}
+                          {getElementIcon(locSelectedLetter.element)} {dict.elementLabel} {locSelectedLetter.element}
                         </span>
-                        <span className={`text-[10px] sm:text-xs px-2 py-0.5 rounded-md font-medium whitespace-nowrap ${selectedLetter.nature.includes('Lumineuse') ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300' : 'bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-300'}`}>
-                          Nature : {selectedLetter.nature}
+                        <span className={`text-[10px] sm:text-xs px-2 py-0.5 rounded-md font-medium whitespace-nowrap ${locSelectedLetter.nature.includes('Lumineuse') || locSelectedLetter.nature.includes('Luminous') || locSelectedLetter.nature.includes('Mai Haske') ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300' : 'bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-300'}`}>
+                          {dict.natureLabel} {locSelectedLetter.nature}
                         </span>
                         <span className="text-[10px] sm:text-xs bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 px-2 py-0.5 rounded-md font-medium whitespace-nowrap">
-                          Astre : {selectedLetter.planet}
+                          {dict.planetLabel} {locSelectedLetter.planet}
                         </span>
                       </div>
                     </div>
@@ -1014,10 +1634,10 @@ export const ScienceOfLetters: React.FC = () => {
                   {/* Le Secret (Sirr) */}
                   <div className="bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-transparent rounded-2xl p-3.5 sm:p-5 border border-emerald-500/20 w-full max-w-full overflow-hidden">
                     <h3 className="font-bold text-emerald-800 dark:text-emerald-300 text-sm sm:text-base mb-1.5 flex items-center gap-2">
-                      <Key size={18} className="text-emerald-500 shrink-0" /> Le Secret Initiatique (Sirr al-Huruf)
+                      <Key size={18} className="text-emerald-500 shrink-0" /> {dict.initiaticSecret}
                     </h3>
                     <p className="text-gray-800 dark:text-gray-200 leading-relaxed font-medium text-xs sm:text-base break-words">
-                      "{selectedLetter.secret}"
+                      "{locSelectedLetter.secret}"
                     </p>
                   </div>
 
@@ -1026,31 +1646,31 @@ export const ScienceOfLetters: React.FC = () => {
                     {/* Ange / Rouhaniyya */}
                     <div className="p-3.5 sm:p-4 rounded-2xl bg-blue-50/50 dark:bg-blue-950/20 border border-blue-200/50 dark:border-blue-900/30 w-full max-w-full overflow-hidden">
                       <p className="text-[10px] sm:text-xs text-blue-600 dark:text-blue-400 font-bold uppercase tracking-wider mb-1 flex items-center gap-1.5">
-                        <Sparkles size={14} className="shrink-0" /> Ange Serviteur (Rouhaniyya)
+                        <Sparkles size={14} className="shrink-0" /> {dict.servingAngel}
                       </p>
                       <div className="flex justify-between items-end mt-1.5 gap-2 w-full">
-                        <p className="font-extrabold text-gray-900 dark:text-white text-sm sm:text-base truncate">{selectedLetter.angel}</p>
-                        <p className="text-lg sm:text-xl font-arabic font-bold text-blue-600 dark:text-blue-400 shrink-0" dir="rtl">{selectedLetter.angelArabic}</p>
+                        <p className="font-extrabold text-gray-900 dark:text-white text-sm sm:text-base truncate">{locSelectedLetter.angel}</p>
+                        <p className="text-lg sm:text-xl font-arabic font-bold text-blue-600 dark:text-blue-400 shrink-0" dir="rtl">{locSelectedLetter.angelArabic}</p>
                       </div>
                     </div>
 
                     {/* Serviteur / Jinn */}
                     <div className="p-3.5 sm:p-4 rounded-2xl bg-red-50/50 dark:bg-red-950/20 border border-red-200/50 dark:border-red-900/30 w-full max-w-full overflow-hidden">
                       <p className="text-[10px] sm:text-xs text-red-600 dark:text-red-400 font-bold uppercase tracking-wider mb-1 flex items-center gap-1.5">
-                        <Shield size={14} className="shrink-0" /> Serviteur Terrestre (Khadim)
+                        <Shield size={14} className="shrink-0" /> {dict.earthlyServant}
                       </p>
                       <div className="flex justify-between items-end mt-1.5 gap-2 w-full">
-                        <p className="font-extrabold text-gray-900 dark:text-white text-sm sm:text-base truncate">{selectedLetter.demon}</p>
-                        <p className="text-lg sm:text-xl font-arabic font-bold text-red-600 dark:text-red-400 shrink-0" dir="rtl">{selectedLetter.demonArabic}</p>
+                        <p className="font-extrabold text-gray-900 dark:text-white text-sm sm:text-base truncate">{locSelectedLetter.demon}</p>
+                        <p className="text-lg sm:text-xl font-arabic font-bold text-red-600 dark:text-red-400 shrink-0" dir="rtl">{locSelectedLetter.demonArabic}</p>
                       </div>
                     </div>
 
                     {/* Encens (Bakhour) */}
                     <div className="p-3.5 sm:p-4 rounded-2xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-900/30 w-full max-w-full overflow-hidden">
                       <p className="text-[10px] sm:text-xs text-amber-700 dark:text-amber-400 font-bold uppercase tracking-wider mb-1 flex items-center gap-1.5">
-                        <Wind size={14} className="shrink-0" /> Encens Sacré (Bakhour)
+                        <Wind size={14} className="shrink-0" /> {dict.sacredIncense}
                       </p>
-                      <p className="font-extrabold text-gray-900 dark:text-white text-sm sm:text-base mt-1.5 truncate">{selectedLetter.incense}</p>
+                      <p className="font-extrabold text-gray-900 dark:text-white text-sm sm:text-base mt-1.5 truncate">{locSelectedLetter.incense}</p>
                     </div>
                   </div>
 
@@ -1059,12 +1679,12 @@ export const ScienceOfLetters: React.FC = () => {
                     <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 border-b border-indigo-800/50 pb-3 w-full max-w-full">
                       <div className="min-w-0 flex-1">
                         <span className="text-[10px] font-bold uppercase tracking-widest text-amber-400 flex items-center gap-1 flex-wrap">
-                          <Star size={12} className="shrink-0" /> Wird Secret ({selectedLetter.secretWird.master})
+                          <Star size={12} className="shrink-0" /> {dict.secretWird} ({locSelectedLetter.secretWird.master})
                         </span>
-                        <h4 className="text-base sm:text-lg font-bold text-white mt-1 break-words">{selectedLetter.secretWird.title}</h4>
+                        <h4 className="text-base sm:text-lg font-bold text-white mt-1 break-words">{locSelectedLetter.secretWird.title}</h4>
                       </div>
                       <span className="text-[11px] sm:text-xs bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2.5 py-1 rounded-full font-mono font-bold self-start sm:self-auto shrink-0 whitespace-nowrap">
-                        Répétition : {selectedLetter.secretWird.repetitionCount}x
+                        {dict.repetition} {locSelectedLetter.secretWird.repetitionCount}x
                       </span>
                     </div>
 
@@ -1077,30 +1697,30 @@ export const ScienceOfLetters: React.FC = () => {
                       onContextMenu={(e) => { if (disableDuaCopy) e.preventDefault(); }}
                     >
                       <p className="text-xl sm:text-3xl font-quran leading-relaxed sm:leading-loose text-amber-100 break-words px-2" dir="rtl" style={{ direction: 'rtl' }}>
-                        {selectedLetter.secretWird.arabicText}
+                        {locSelectedLetter.secretWird.arabicText}
                       </p>
                       {!disableDuaCopy && (
                         <button
-                          onClick={() => handleCopy(selectedLetter.secretWird.arabicText, `card-${selectedLetter.char}`)}
+                          onClick={() => handleCopy(locSelectedLetter.secretWird.arabicText, `card-${locSelectedLetter.char}`)}
                           className="absolute top-2 right-2 p-1.5 bg-indigo-900/60 hover:bg-indigo-800 text-indigo-200 rounded-lg text-xs flex items-center gap-1 transition-colors cursor-pointer"
-                          title="Copier le texte"
+                          title={dict.copyText}
                         >
-                          {copiedText === `card-${selectedLetter.char}` ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+                          {copiedText === `card-${locSelectedLetter.char}` ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
                         </button>
                       )}
                     </div>
 
                     <p className="text-xs text-indigo-200 italic break-words">
-                      <strong>Phonétique :</strong> "{selectedLetter.secretWird.transliteration}"
+                      <strong>{dict.transliteration} :</strong> "{locSelectedLetter.secretWird.transliteration}"
                     </p>
 
                     <p className="text-xs text-gray-300 break-words">
-                      <strong>Traduction :</strong> "{selectedLetter.secretWird.translation}"
+                      <strong>{dict.translation} :</strong> "{locSelectedLetter.secretWird.translation}"
                     </p>
 
                     <div className="pt-2 flex flex-wrap gap-1.5 text-xs border-t border-indigo-900/40 w-full max-w-full">
-                      <span className="text-emerald-400 font-bold shrink-0">Bienfaits :</span>
-                      {selectedLetter.secretWird.benefits.map((b, idx) => (
+                      <span className="text-emerald-400 font-bold shrink-0">{dict.benefits} :</span>
+                      {locSelectedLetter.secretWird.benefits.map((b, idx) => (
                         <span key={idx} className="bg-indigo-900/40 text-indigo-200 px-2.5 py-0.5 rounded-md text-[11px] break-words">
                           ✓ {b}
                         </span>
@@ -1119,10 +1739,10 @@ export const ScienceOfLetters: React.FC = () => {
         <div className="bg-white dark:bg-gray-800 p-4 sm:p-8 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm space-y-6 w-full max-w-full overflow-hidden">
           <div className="border-b border-gray-100 dark:border-gray-700 pb-4">
             <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <Calculator className="text-emerald-500 shrink-0" size={20} /> {t("sciencePage.rouhaniyyaExtractorTitle", "Extracteur de Rouhaniyya & Lettres de Nom")}
+              <Calculator className="text-emerald-500 shrink-0" size={20} /> {dict.extractorTitle}
             </h2>
             <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
-              {t("sciencePage.rouhaniyyaExtractorDesc", "Saisissez un prénom ou un mot en arabe (ex: \"محمد\" ou \"علي\" ou votre prénom) pour extraire la composition des lettres, l'élément dominant et la formule de Wird personnalisée.")}
+              {dict.extractorDesc}
             </p>
           </div>
 
@@ -1131,7 +1751,7 @@ export const ScienceOfLetters: React.FC = () => {
               type="text"
               value={inputName}
               onChange={(e) => setInputName(e.target.value)}
-              placeholder="Ex: محمد..."
+              placeholder={dict.extractorPlaceholder}
               className="flex-1 w-full px-4 py-3 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl text-base sm:text-lg font-arabic text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
               dir="rtl"
             />
@@ -1139,7 +1759,7 @@ export const ScienceOfLetters: React.FC = () => {
               onClick={calculateNameRouhaniyya}
               className="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-2xl shadow-lg transition-colors flex items-center justify-center gap-2 shrink-0 cursor-pointer"
             >
-              <Sparkles size={18} /> {t("sciencePage.extractRouhaniyya", "Extraire la Rouhaniyya")}
+              <Sparkles size={18} /> {dict.extractBtn}
             </button>
           </div>
 
@@ -1151,33 +1771,33 @@ export const ScienceOfLetters: React.FC = () => {
             >
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 w-full max-w-full">
                 <div className="p-4 bg-emerald-50 dark:bg-emerald-950/30 rounded-2xl border border-emerald-200 dark:border-emerald-800/40 text-center">
-                  <span className="text-xs text-emerald-600 dark:text-emerald-400 font-bold uppercase">{t("sciencePage.totalAbjadValue", "Total Valeur Abjad")}</span>
+                  <span className="text-xs text-emerald-600 dark:text-emerald-400 font-bold uppercase">{dict.totalAbjadVal}</span>
                   <p className="text-2xl sm:text-3xl font-black text-emerald-700 dark:text-emerald-300 mt-1">{extractedResult.totalAbjad}</p>
                 </div>
 
                 <div className="p-4 bg-blue-50 dark:bg-blue-950/30 rounded-2xl border border-blue-200 dark:border-blue-800/40 text-center">
-                  <span className="text-xs text-blue-600 dark:text-blue-400 font-bold uppercase">{t("sciencePage.dominantElement", "Élément Dominant")}</span>
+                  <span className="text-xs text-blue-600 dark:text-blue-400 font-bold uppercase">{dict.dominantElem}</span>
                   <p className="text-xl sm:text-2xl font-bold text-blue-700 dark:text-blue-300 mt-1 flex items-center justify-center gap-1">
                     {getElementIcon(extractedResult.dominantElement)} {extractedResult.dominantElement}
                   </p>
                 </div>
 
                 <div className="p-4 bg-purple-50 dark:bg-purple-950/30 rounded-2xl border border-purple-200 dark:border-purple-800/40 text-center">
-                  <span className="text-xs text-purple-600 dark:text-purple-400 font-bold uppercase">{t("sciencePage.recommendedRepetition", "Répétition Recommandée")}</span>
+                  <span className="text-xs text-purple-600 dark:text-purple-400 font-bold uppercase">{dict.recommendedRep}</span>
                   <p className="text-2xl sm:text-3xl font-black text-purple-700 dark:text-purple-300 mt-1">{extractedResult.recommendedZikrCount}x</p>
                 </div>
               </div>
 
               {/* Individual Found Letters */}
               <div className="w-full max-w-full">
-                <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3">{t("sciencePage.componentLetters", "Lettres Composantes")} ({extractedResult.foundLetters.length})</h3>
+                <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3">{dict.componentLetters} ({extractedResult.foundLetters.length})</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 w-full max-w-full">
                   {extractedResult.foundLetters.map((l: LetterInfo, idx: number) => (
                     <div key={idx} className="p-3 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 flex items-center justify-between min-w-0">
                       <span className="text-2xl font-arabic font-bold text-emerald-600 dark:text-emerald-400 shrink-0">{l.char}</span>
                       <div className="text-right min-w-0 truncate">
                         <p className="text-xs font-bold text-gray-800 dark:text-gray-200 truncate">{l.name}</p>
-                        <p className="text-[10px] text-gray-400">Abjad : {l.abjad}</p>
+                        <p className="text-[10px] text-gray-400">{dict.stdAbjad} {l.abjad}</p>
                       </div>
                     </div>
                   ))}
@@ -1186,12 +1806,12 @@ export const ScienceOfLetters: React.FC = () => {
 
               {/* Custom Generated Wird */}
               <div className="p-4 sm:p-6 rounded-2xl bg-slate-900 text-white border border-emerald-500/30 space-y-3 w-full max-w-full overflow-hidden">
-                <h4 className="text-xs sm:text-sm font-bold text-amber-400 uppercase tracking-wider">{t("sciencePage.deducedInvocationFormula", "Formule d'Invocation Déduite")}</h4>
+                <h4 className="text-xs sm:text-sm font-bold text-amber-400 uppercase tracking-wider">{dict.deducedFormula}</h4>
                 <p className="text-base sm:text-lg font-arabic leading-relaxed text-amber-100 break-words" dir="rtl">
                   يَا {extractedResult.foundLetters[0]?.angelArabic || 'هَطْمَائِيلُ'} بِحَقِّ سِرِّ الحُرُوفِ ({extractedResult.foundLetters.map((l: LetterInfo) => l.char).join(' - ')}) اِجْعَلْ لِي مِنْ كُلِّ ضِيقٍ مَخْرَجًا
                 </p>
                 <p className="text-xs text-gray-300 leading-relaxed break-words">
-                  Répéter la formule <strong>{extractedResult.recommendedZikrCount} fois</strong> après la prière du Fajr ou du 'Isha avec l'encens recommandé (<strong>{extractedResult.foundLetters[0]?.incense || 'Musc'}</strong>).
+                  {dict.repeatFormula} <strong>{extractedResult.recommendedZikrCount}x</strong> {dict.timesAfterFajr}<strong>{extractedResult.foundLetters[0]?.incense || 'Musc'}</strong>).
                 </p>
               </div>
             </motion.div>
@@ -1217,17 +1837,17 @@ export const ScienceOfLetters: React.FC = () => {
         <div className="space-y-6 w-full max-w-full">
           <div className="bg-gradient-to-r from-amber-500/10 via-indigo-500/10 to-emerald-500/10 p-4 sm:p-6 rounded-3xl border border-amber-500/30 w-full max-w-full">
             <h2 className="text-lg sm:text-xl font-bold text-amber-800 dark:text-amber-300 flex items-center gap-2">
-              <Key className="text-amber-500 shrink-0" size={20} /> {t("sciencePage.secretVaultTitle", "Le Caveau des Wirds Secrets des Grands Maîtres Initiés")}
+              <Key className="text-amber-500 shrink-0" size={20} /> {dict.vaultTitle}
             </h2>
             <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mt-1 leading-relaxed">
-              {t("sciencePage.secretVaultDesc", "Ces invocations et wirds sacrés sont attribués aux plus grands imams et cheikhs.")}
+              {dict.vaultDesc}
             </p>
 
             {/* Master Filter Buttons Bar */}
             <div className="mt-4 flex items-center gap-1.5 overflow-x-auto hide-scrollbar touch-pan-x pb-1 pt-1">
-              <span className="text-xs font-bold text-amber-700 dark:text-amber-400 shrink-0 mr-1">{t("sciencePage.filterByMaster", "Filtrer par Maître :")}</span>
+              <span className="text-xs font-bold text-amber-700 dark:text-amber-400 shrink-0 mr-1">{dict.filterByMaster}</span>
               {[
-                { label: t("sciencePage.allMasters", "Tous les Maîtres"), value: 'Tous' },
+                { label: dict.allMasters, value: 'Tous' },
                 { label: 'Imam Al-Ghazali', value: 'Ghazali' },
                 { label: 'Ibn \'Arabi', value: 'Arabi' },
                 { label: 'Cheikh \'Abdul Qadir al-Jilani', value: 'Jilani' },
@@ -1260,60 +1880,63 @@ export const ScienceOfLetters: React.FC = () => {
               if (selectedMasterFilter === 'Tous') return true;
               return w.master.toLowerCase().includes(selectedMasterFilter.toLowerCase()) || 
                      w.id.toLowerCase().includes(selectedMasterFilter.toLowerCase());
-            }).map((w) => (
-              <div key={w.id} className="p-4 sm:p-6 rounded-3xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg space-y-4 relative overflow-hidden w-full max-w-full">
-                <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 border-b border-gray-100 dark:border-gray-700 pb-3 w-full max-w-full">
-                  <div className="min-w-0">
-                    <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">{w.master}</span>
-                    <h3 className="text-base sm:text-lg font-black text-gray-900 dark:text-white mt-0.5 break-words">{w.title}</h3>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-[11px] sm:text-xs bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 px-2.5 py-1 rounded-full font-bold">
-                      Lettre : {w.targetLetter}
-                    </span>
-                    <span className="text-[11px] sm:text-xs bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 px-2.5 py-1 rounded-full font-mono font-bold">
-                      {w.repetitionCount}x
-                    </span>
-                  </div>
-                </div>
-
-                {/* Arabic Text */}
-                <div 
-                  className={`p-3.5 sm:p-4 bg-slate-900 text-amber-100 rounded-2xl border border-slate-800 text-center relative w-full max-w-full overflow-hidden ${
-                    disableDuaCopy ? 'select-none' : ''
-                  }`}
-                  onCopy={(e) => { if (disableDuaCopy) e.preventDefault(); }}
-                  onContextMenu={(e) => { if (disableDuaCopy) e.preventDefault(); }}
-                >
-                  <p className="text-lg sm:text-2xl font-arabic leading-relaxed sm:leading-loose break-words px-2" dir="rtl">{w.arabicText}</p>
-                  {!disableDuaCopy && (
-                    <button
-                      onClick={() => handleCopy(w.arabicText, w.id)}
-                      className="absolute top-2 right-2 p-1.5 bg-slate-800 hover:bg-slate-700 text-gray-300 rounded-lg text-xs transition-colors cursor-pointer"
-                      title="Copier le texte"
-                    >
-                      {copiedText === w.id ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
-                    </button>
-                  )}
-                </div>
-
-                <div className="space-y-1 text-xs break-words">
-                  <p className="text-gray-600 dark:text-gray-400"><strong>Phonétique :</strong> "{w.transliteration}"</p>
-                  <p className="text-gray-800 dark:text-gray-200"><strong>Traduction :</strong> "{w.translation}"</p>
-                </div>
-
-                <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-xl text-xs space-y-1 w-full max-w-full">
-                  <p className="text-emerald-700 dark:text-emerald-400 font-bold break-words"><strong>Rituel d'Exécution :</strong> {w.ritual}</p>
-                  <div className="flex flex-wrap gap-1.5 pt-1 w-full max-w-full">
-                    {w.benefits.map((b, i) => (
-                      <span key={i} className="bg-emerald-100 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 px-2 py-0.5 rounded-md font-medium text-[11px] break-words">
-                        ✓ {b}
+            }).map((rawW) => {
+              const w = getLocalizedMasterWord(rawW, language);
+              return (
+                <div key={w.id} className="p-4 sm:p-6 rounded-3xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg space-y-4 relative overflow-hidden w-full max-w-full">
+                  <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 border-b border-gray-100 dark:border-gray-700 pb-3 w-full max-w-full">
+                    <div className="min-w-0">
+                      <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">{w.master}</span>
+                      <h3 className="text-base sm:text-lg font-black text-gray-900 dark:text-white mt-0.5 break-words">{w.title}</h3>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-[11px] sm:text-xs bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 px-2.5 py-1 rounded-full font-bold">
+                        {dict.targetLetter} {w.targetLetter}
                       </span>
-                    ))}
+                      <span className="text-[11px] sm:text-xs bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 px-2.5 py-1 rounded-full font-mono font-bold">
+                        {w.repetitionCount}x
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Arabic Text */}
+                  <div 
+                    className={`p-3.5 sm:p-4 bg-slate-900 text-amber-100 rounded-2xl border border-slate-800 text-center relative w-full max-w-full overflow-hidden ${
+                      disableDuaCopy ? 'select-none' : ''
+                    }`}
+                    onCopy={(e) => { if (disableDuaCopy) e.preventDefault(); }}
+                    onContextMenu={(e) => { if (disableDuaCopy) e.preventDefault(); }}
+                  >
+                    <p className="text-lg sm:text-2xl font-arabic leading-relaxed sm:leading-loose break-words px-2" dir="rtl">{w.arabicText}</p>
+                    {!disableDuaCopy && (
+                      <button
+                        onClick={() => handleCopy(w.arabicText, w.id)}
+                        className="absolute top-2 right-2 p-1.5 bg-slate-800 hover:bg-slate-700 text-gray-300 rounded-lg text-xs transition-colors cursor-pointer"
+                        title={dict.copyText}
+                      >
+                        {copiedText === w.id ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="space-y-1 text-xs break-words">
+                    <p className="text-gray-600 dark:text-gray-400"><strong>{dict.transliteration} :</strong> "{w.transliteration}"</p>
+                    <p className="text-gray-800 dark:text-gray-200"><strong>{dict.translation} :</strong> "{w.translation}"</p>
+                  </div>
+
+                  <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-xl text-xs space-y-1 w-full max-w-full">
+                    <p className="text-emerald-700 dark:text-emerald-400 font-bold break-words"><strong>{dict.executionRitual}</strong> {w.ritual}</p>
+                    <div className="flex flex-wrap gap-1.5 pt-1 w-full max-w-full">
+                      {w.benefits.map((b, i) => (
+                        <span key={i} className="bg-emerald-100 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 px-2 py-0.5 rounded-md font-medium text-[11px] break-words">
+                          ✓ {b}
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}

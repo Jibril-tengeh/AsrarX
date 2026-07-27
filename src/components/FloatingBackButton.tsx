@@ -41,7 +41,7 @@ export const FloatingBackButton: React.FC = () => {
           whileHover={{ scale: 1.1, x: 5 }}
           whileTap={{ scale: 0.9 }}
           onClick={() => {
-            if (window.history.state && window.history.state.idx > 0) {
+            if (window.history.length > 1) {
               navigate(-1);
             } else {
               if (location.pathname.startsWith('/tools/')) {

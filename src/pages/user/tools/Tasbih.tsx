@@ -444,7 +444,7 @@ export const Tasbih: React.FC = () => {
   
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [soundStyle, setSoundStyle] = useState<string>('bead_wood');
-  const [soundTriggerMode, setSoundTriggerMode] = useState<'target' | 'every'>('target');
+  const [soundTriggerMode, setSoundTriggerMode] = useState<'target' | 'every'>('every');
   const [vibrationEnabled, setVibrationEnabled] = useState(true);
   
   const [activeTab, setActiveTab] = useState<'main' | 'settings' | 'history' | 'stats'>('main');

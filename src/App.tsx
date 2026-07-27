@@ -515,8 +515,26 @@ export default function App() {
   const location = useLocation();
   const navigate = useNavigate();
 
+  // Navigation history tracking stack for Capacitor Android back button
+  const internalHistoryStackRef = React.useRef<string[]>([]);
+
   // Global scroll-to-top and route changed logger on route changes
   React.useEffect(() => {
+    const currentPath = location.pathname + location.search;
+    const stack = internalHistoryStackRef.current;
+
+    if (stack.length === 0) {
+      stack.push(currentPath);
+    } else if (stack[stack.length - 1] !== currentPath) {
+      if (stack.length >= 2 && stack[stack.length - 2] === currentPath) {
+        // Navigated back
+        stack.pop();
+      } else {
+        // Navigated forward
+        stack.push(currentPath);
+      }
+    }
+
     console.log(`[Navigation] Route transitioned to: "${location.pathname}"`);
     window.scrollTo(0, 0);
     if (document.documentElement) {
@@ -538,7 +556,7 @@ export default function App() {
     if (mainPaths.includes(location.pathname)) {
       sessionStorage.setItem('last_active_main_path', location.pathname);
     }
-  }, [location.pathname]);
+  }, [location.pathname, location.search]);
 
   React.useEffect(() => {
     const handleBackButton = () => {
@@ -555,7 +573,7 @@ export default function App() {
 
       // 2. Fallback check for active modal overlays or close buttons in DOM
       const activeModalCloseBtn = document.querySelector<HTMLElement>(
-        '[data-modal-overlay="true"] button[aria-label="Close"], [data-modal-overlay="true"] button.close-modal, .modal-backdrop button, [role="dialog"] button[aria-label="Close"], .modal-close-btn'
+        '[data-modal-overlay="true"] button[aria-label="Close"], [data-modal-overlay="true"] button.close-modal, .modal-backdrop button, [role="dialog"] button[aria-label="Close"], .modal-close-btn, button[data-close-modal="true"]'
       );
       if (activeModalCloseBtn) {
         console.log('[Navigation] Closing active modal overlay via DOM close button.');
@@ -564,11 +582,12 @@ export default function App() {
       }
       
       // 3. Handle page navigation back
-      // A. If on primary home / dashboard screen, require double back press to exit
-      if (currentPath === '/user/dashboard' || currentPath === '/' || currentPath === '/home') {
+      // A. If on primary root home screen, require double back press to exit app
+      const rootHomePaths = ['/user/dashboard', '/', '/home', '/login'];
+      if (rootHomePaths.includes(currentPath)) {
         const now = Date.now();
         if (now - lastBackPressTimeRef.current < 2000) {
-          console.log(`[Navigation] Double back press confirmed. Exiting app from home/dashboard.`);
+          console.log(`[Navigation] Double back press confirmed on root home (${currentPath}). Exiting app.`);
           CapacitorApp.exitApp();
         } else {
           lastBackPressTimeRef.current = now;
@@ -580,20 +599,14 @@ export default function App() {
         return;
       }
 
-      // B. If on a secondary main tab, return to Home / Dashboard
-      const secondaryMainTabs = ['/tools', '/explore', '/journal', '/saved', '/profile', '/community'];
-      if (secondaryMainTabs.includes(currentPath)) {
-        console.log(`[Navigation] Secondary main tab "${currentPath}". Redirecting to /user/dashboard.`);
-        navigate('/user/dashboard');
-        return;
-      }
-
-      // C. If on a detail sub-page, navigate back in history or to parent section
-      if (window.history.state && typeof window.history.state.idx === 'number' && window.history.state.idx > 0) {
-        console.log(`[Navigation] Navigating -1 (previous history entry) from ${currentPath}`);
+      // B. If on any other screen, navigate back in history to the previous screen
+      const stack = internalHistoryStackRef.current;
+      if (stack.length > 1) {
+        stack.pop();
+        console.log(`[Navigation] Navigating back (-1) from ${currentPath}. Remaining stack depth: ${stack.length}`);
         navigate(-1);
       } else {
-        // Fallback navigation when no history stack exists
+        // Fallback navigation when no history stack exists (e.g. direct deep link opening)
         if (currentPath.startsWith('/tools/')) {
           console.log(`[Navigation] Direct tool path fallback. Redirecting to /tools`);
           navigate('/tools');
