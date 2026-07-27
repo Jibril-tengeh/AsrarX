@@ -1,4 +1,5 @@
 import { downloadCanvasImage } from './downloadHelper';
+import { getKhatimGridData, KhatimGridData } from '../components/KhatimVisualizer';
 
 interface ExportSealParams {
   title: string;
@@ -10,11 +11,12 @@ interface ExportSealParams {
   groupTitle: string;
   lang: 'fr' | 'en' | 'ha';
   versionTitle?: string;
+  version?: number;
 }
 
 /**
  * Renders a Lunar Seal onto a high-resolution canvas with gold & dark velvet aesthetic,
- * sacred borders, and triggers a clean download.
+ * sacred borders, visual Khatim grid table, and triggers a clean download.
  */
 export async function generateAndDownloadSealCard(params: ExportSealParams): Promise<boolean> {
   const canvas = document.createElement('canvas');
@@ -61,6 +63,7 @@ export async function generateAndDownloadSealCard(params: ExportSealParams): Pro
   ctx.fillStyle = '#f59e0b';
   ctx.font = 'bold 32px serif';
   ctx.textAlign = 'center';
+  ctx.textBaseline = 'alphabetic';
   ctx.fillText('ASRARHUB • SCEAUX ET KHAWATIM DE LA LUNE', width / 2, 100);
 
   // Group Badge
@@ -110,23 +113,110 @@ export async function generateAndDownloadSealCard(params: ExportSealParams): Pro
   ctx.lineWidth = 3;
   ctx.strokeRect(boxX, boxY, boxW, boxH);
 
-  // Render Graphic Symbol Text
-  ctx.fillStyle = '#d8b4fe'; // Light Purple
-  ctx.font = '20px monospace';
-  ctx.textAlign = 'center';
+  // Check if we can build visual Khatim Grid
+  const gridData: KhatimGridData | null = params.version
+    ? getKhatimGridData(params.version, params.title, params.arabicName, params.formula)
+    : null;
 
-  const symbolLines = params.graphicSymbol.split('\n');
-  const lineSpacing = 30;
-  const startY = boxY + 50 + Math.max(0, (boxH - symbolLines.length * lineSpacing) / 2);
+  if (gridData) {
+    // 1. Draw Grid Header
+    ctx.fillStyle = '#fbbf24';
+    ctx.font = 'bold 28px serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(gridData.header, width / 2, boxY + 50);
 
-  symbolLines.forEach((line, idx) => {
-    ctx.fillText(line, width / 2, startY + idx * lineSpacing);
-  });
+    // 2. Draw Corner Texts if any
+    if (gridData.cornerText) {
+      ctx.fillStyle = '#fef08a';
+      ctx.font = 'bold 24px serif';
+      if (gridData.cornerText.topLeft) {
+        ctx.textAlign = 'left';
+        ctx.fillText(gridData.cornerText.topLeft, boxX + 30, boxY + 50);
+      }
+      if (gridData.cornerText.topRight) {
+        ctx.textAlign = 'right';
+        ctx.fillText(gridData.cornerText.topRight, boxX + boxW - 30, boxY + 50);
+      }
+      if (gridData.cornerText.bottomLeft) {
+        ctx.textAlign = 'left';
+        ctx.fillText(gridData.cornerText.bottomLeft, boxX + 30, boxY + boxH - 30);
+      }
+      if (gridData.cornerText.bottomRight) {
+        ctx.textAlign = 'right';
+        ctx.fillText(gridData.cornerText.bottomRight, boxX + boxW - 30, boxY + boxH - 30);
+      }
+    }
+
+    // 3. Draw Grid Footer
+    ctx.fillStyle = '#c084fc';
+    ctx.font = 'bold 22px serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(gridData.footer, width / 2, boxY + boxH - 35);
+
+    // 4. Draw Cells Matrix
+    const size = gridData.gridSize;
+    const topOffset = 75;
+    const bottomOffset = 65;
+    const availH = boxH - topOffset - bottomOffset;
+    const availW = boxW - 60;
+
+    const cellSize = Math.min(Math.floor(availW / size), Math.floor(availH / size));
+    const gridTotalW = cellSize * size;
+    const gridTotalH = cellSize * size;
+    const startX = boxX + (boxW - gridTotalW) / 2;
+    const startY = boxY + topOffset + (availH - gridTotalH) / 2;
+
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        const cellX = startX + c * cellSize;
+        const cellY = startY + r * cellSize;
+        const val = gridData.cells[r][c];
+
+        const isAlt = (r + c) % 2 === 0;
+        ctx.fillStyle = isAlt ? '#1a0b2e' : '#07020f';
+        ctx.fillRect(cellX + 2, cellY + 2, cellSize - 4, cellSize - 4);
+
+        ctx.strokeStyle = isAlt ? '#d97706' : '#a855f7';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(cellX + 2, cellY + 2, cellSize - 4, cellSize - 4);
+
+        let fontSize = Math.floor(cellSize * 0.38);
+        if (val.length > 6) {
+          fontSize = Math.floor(cellSize * 0.18);
+        } else if (val.length > 3) {
+          fontSize = Math.floor(cellSize * 0.26);
+        }
+
+        ctx.fillStyle = '#fef08a';
+        ctx.font = `bold ${Math.max(10, fontSize)}px serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(val, cellX + cellSize / 2, cellY + cellSize / 2);
+      }
+    }
+  } else {
+    // Render Graphic Symbol Text (Monospace Fallback)
+    ctx.fillStyle = '#d8b4fe';
+    ctx.font = '20px monospace';
+    ctx.textAlign = 'center';
+
+    const symbolLines = params.graphicSymbol.split('\n');
+    const lineSpacing = 30;
+    const startY = boxY + 50 + Math.max(0, (boxH - symbolLines.length * lineSpacing) / 2);
+
+    symbolLines.forEach((line, idx) => {
+      ctx.fillText(line, width / 2, startY + idx * lineSpacing);
+    });
+  }
+
+  // Reset text baseline
+  ctx.textBaseline = 'alphabetic';
 
   // Footer Section - Formula and Abjad Value
   const footerY = boxY + boxH + 60;
   ctx.fillStyle = '#fef08a';
   ctx.font = 'bold 26px serif';
+  ctx.textAlign = 'center';
   ctx.fillText(`FORMULE : ${params.formula}`, width / 2, footerY);
 
   ctx.fillStyle = '#c084fc';
@@ -146,10 +236,6 @@ export async function generateAndDownloadSealCard(params: ExportSealParams): Pro
 export function generateAndDownloadSealSVG(params: ExportSealParams): boolean {
   const width = 1200;
   const height = 1500;
-  
-  const symbolLines = params.graphicSymbol.split('\n');
-  const lineSpacing = 32;
-  const startY = 480;
 
   const escapeXml = (unsafe: string) => {
     return unsafe
@@ -160,12 +246,95 @@ export function generateAndDownloadSealSVG(params: ExportSealParams): boolean {
       .replace(/'/g, '&apos;');
   };
 
-  const svgLinesText = symbolLines
-    .map((line, idx) => {
-      const y = startY + idx * lineSpacing;
-      return `<text x="${width / 2}" y="${y}" fill="#d8b4fe" font-family="monospace" font-size="20" text-anchor="middle" xml:space="preserve">${escapeXml(line)}</text>`;
-    })
-    .join('\n    ');
+  const boxX = 80;
+  const boxY = params.versionTitle ? 390 : 360;
+  const boxW = width - 160;
+  const boxH = 760;
+
+  const gridData: KhatimGridData | null = params.version
+    ? getKhatimGridData(params.version, params.title, params.arabicName, params.formula)
+    : null;
+
+  let symbolBoxContentSvg = '';
+
+  if (gridData) {
+    const size = gridData.gridSize;
+    const topOffset = 75;
+    const bottomOffset = 65;
+    const availH = boxH - topOffset - bottomOffset;
+    const availW = boxW - 60;
+
+    const cellSize = Math.min(Math.floor(availW / size), Math.floor(availH / size));
+    const gridTotalW = cellSize * size;
+    const gridTotalH = cellSize * size;
+    const startX = boxX + (boxW - gridTotalW) / 2;
+    const startY = boxY + topOffset + (availH - gridTotalH) / 2;
+
+    let cellsSvg = '';
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) {
+        const cellX = startX + c * cellSize;
+        const cellY = startY + r * cellSize;
+        const val = gridData.cells[r][c];
+        const isAlt = (r + c) % 2 === 0;
+
+        const bg = isAlt ? '#1a0b2e' : '#07020f';
+        const stroke = isAlt ? '#d97706' : '#a855f7';
+
+        let fontSize = Math.floor(cellSize * 0.38);
+        if (val.length > 6) {
+          fontSize = Math.floor(cellSize * 0.18);
+        } else if (val.length > 3) {
+          fontSize = Math.floor(cellSize * 0.26);
+        }
+        fontSize = Math.max(10, fontSize);
+
+        const centerX = cellX + cellSize / 2;
+        const centerY = cellY + cellSize / 2;
+
+        cellsSvg += `
+        <rect x="${cellX + 2}" y="${cellY + 2}" width="${cellSize - 4}" height="${cellSize - 4}" rx="4" fill="${bg}" stroke="${stroke}" stroke-width="2" />
+        <text x="${centerX}" y="${centerY}" fill="#fef08a" font-family="serif" font-size="${fontSize}" font-weight="bold" text-anchor="middle" dominant-baseline="central">${escapeXml(val)}</text>`;
+      }
+    }
+
+    let cornerSvg = '';
+    if (gridData.cornerText) {
+      if (gridData.cornerText.topLeft) {
+        cornerSvg += `<text x="${boxX + 30}" y="${boxY + 50}" fill="#fef08a" font-family="serif" font-size="24" font-weight="bold" text-anchor="start">${escapeXml(gridData.cornerText.topLeft)}</text>`;
+      }
+      if (gridData.cornerText.topRight) {
+        cornerSvg += `<text x="${boxX + boxW - 30}" y="${boxY + 50}" fill="#fef08a" font-family="serif" font-size="24" font-weight="bold" text-anchor="end">${escapeXml(gridData.cornerText.topRight)}</text>`;
+      }
+      if (gridData.cornerText.bottomLeft) {
+        cornerSvg += `<text x="${boxX + 30}" y="${boxY + boxH - 30}" fill="#fef08a" font-family="serif" font-size="24" font-weight="bold" text-anchor="start">${escapeXml(gridData.cornerText.bottomLeft)}</text>`;
+      }
+      if (gridData.cornerText.bottomRight) {
+        cornerSvg += `<text x="${boxX + boxW - 30}" y="${boxY + boxH - 30}" fill="#fef08a" font-family="serif" font-size="24" font-weight="bold" text-anchor="end">${escapeXml(gridData.cornerText.bottomRight)}</text>`;
+      }
+    }
+
+    symbolBoxContentSvg = `
+    <!-- Header -->
+    <text x="${width / 2}" y="${boxY + 50}" fill="#fbbf24" font-family="serif" font-size="28" font-weight="bold" text-anchor="middle">${escapeXml(gridData.header)}</text>
+    ${cornerSvg}
+    <!-- Grid Cells -->
+    ${cellsSvg}
+    <!-- Footer -->
+    <text x="${width / 2}" y="${boxY + boxH - 35}" fill="#c084fc" font-family="serif" font-size="22" font-weight="bold" text-anchor="middle">${escapeXml(gridData.footer)}</text>
+    `;
+  } else {
+    const symbolLines = params.graphicSymbol.split('\n');
+    const lineSpacing = 32;
+    const startY = 480;
+
+    symbolBoxContentSvg = symbolLines
+      .map((line, idx) => {
+        const y = startY + idx * lineSpacing;
+        return `<text x="${width / 2}" y="${y}" fill="#d8b4fe" font-family="monospace" font-size="20" text-anchor="middle" xml:space="preserve">${escapeXml(line)}</text>`;
+      })
+      .join('\n    ');
+  }
 
   const svgString = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">
@@ -207,10 +376,10 @@ export function generateAndDownloadSealSVG(params: ExportSealParams): boolean {
   ${params.versionTitle ? `<text x="${width / 2}" y="365" fill="#e9d5ff" font-family="sans-serif" font-size="22" font-style="italic" text-anchor="middle">${escapeXml(params.versionTitle)}</text>` : ''}
 
   <!-- Symbol Box Container -->
-  <rect x="80" y="${params.versionTitle ? 390 : 360}" width="${width - 160}" height="760" fill="#030008" stroke="#9333ea" stroke-width="3" rx="16" />
+  <rect x="${boxX}" y="${boxY}" width="${boxW}" height="${boxH}" fill="#030008" stroke="#9333ea" stroke-width="3" rx="16" />
 
-  <!-- Monospace Seal Graphic Symbol Lines -->
-  ${svgLinesText}
+  <!-- Visual Seal / Grid Content -->
+  ${symbolBoxContentSvg}
 
   <!-- Footer Info -->
   <text x="${width / 2}" y="1220" fill="#fef08a" font-family="serif" font-size="26" font-weight="bold" text-anchor="middle">FORMULE : ${escapeXml(params.formula)}</text>
@@ -235,3 +404,4 @@ export function generateAndDownloadSealSVG(params: ExportSealParams): boolean {
     return false;
   }
 }
+

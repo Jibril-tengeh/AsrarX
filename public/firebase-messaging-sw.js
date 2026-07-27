@@ -9,10 +9,28 @@ self.addEventListener('activate', (event) => {
   event.waitUntil(self.clients.claim());
 });
 
-// Handle notification click to open or focus app
+// Handle notification click to open or focus app & action button clicks
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+
+  const action = event.action;
   const urlToOpen = new URL(event.notification.data?.url || '/', self.location.origin).href;
+
+  if (action === 'increment_zikr') {
+    let currentZikr = (event.notification.data?.zikrCount || 0) + 1;
+    self.registration.showNotification('📿 Zikr AsrarHub (+1)', {
+      body: `Total Zikr : ${currentZikr} répétitions. Qu'Allah accepte !`,
+      icon: '/icon-192.png',
+      badge: '/icon-192.png',
+      tag: 'asrarhub-system-widget',
+      data: { ...event.notification.data, zikrCount: currentZikr },
+      actions: [
+        { action: 'increment_zikr', title: '📿 Compter +1' },
+        { action: 'open_app', title: '📜 Ouvrir AsrarHub' }
+      ]
+    });
+    return;
+  }
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
@@ -32,17 +50,22 @@ self.addEventListener('notificationclick', (event) => {
 // Handle messages sent directly from React app thread for background execution
 self.addEventListener('message', (event) => {
   if (!event.data) return;
-  const { type, title, body, icon, delayMs, url } = event.data;
+  const { type, title, body, icon, image, delayMs, url, actions, tag } = event.data;
 
-  if (type === 'SCHEDULE_BACKGROUND_REMINDER' || type === 'SHOW_NOTIFICATION') {
+  if (type === 'SCHEDULE_BACKGROUND_REMINDER' || type === 'SHOW_NOTIFICATION' || type === 'SEND_FULL_WIDGET_NOTIFICATION') {
     const show = () => {
-      self.registration.showNotification(title || 'Rappel Spirituel AsrarHub', {
-        body: body || "C'est l'heure de votre Zikr & Heure Planétaire !",
+      self.registration.showNotification(title || '📜 Widget Sacré AsrarHub', {
+        body: body || "Heure Planétaire & Sceau Actif. Cliquez pour consulter le rituel.",
         icon: icon || '/icon-192.png',
         badge: '/icon-192.png',
-        tag: 'asrarhub-background-reminder',
+        image: image || undefined,
+        tag: tag || 'asrarhub-system-widget',
         vibrate: [200, 100, 200, 100, 300],
-        data: { url: url || '/' },
+        data: { url: url || '/', zikrCount: 0 },
+        actions: actions || [
+          { action: 'increment_zikr', title: '📿 Compter Zikr (+1)' },
+          { action: 'open_app', title: '📜 Ouvrir AsrarHub' }
+        ]
       });
     };
 

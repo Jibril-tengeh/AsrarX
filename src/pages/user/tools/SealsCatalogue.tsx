@@ -18,10 +18,14 @@ import {
   isGlobalSealMaintenance, 
   setGlobalSealMaintenance, 
   subscribeSealAdminConfigFromFirestore,
+  SEAL_VERSIONS_LIST,
+  getSealVersionSymbol,
+  getSealVersionDetails,
   SealStatus, 
   SealTargetUser 
 } from '../../../data/lunarSealVarieties';
 import { generateAndDownloadSealCard, generateAndDownloadSealSVG } from '../../../utils/sealCanvasExporter';
+import { KhatimVisualizer } from '../../../components/KhatimVisualizer';
 
 export const SealsCatalogue: React.FC = () => {
   const { language, t } = useLanguage();
@@ -32,7 +36,7 @@ export const SealsCatalogue: React.FC = () => {
   const [seals, setSeals] = useState(() => getLocalizedLunarSealVarieties(language));
   const [selectedGroup, setSelectedGroup] = useState<number | 'all'>('all');
   const [selectedSealId, setSelectedSealId] = useState<string>('seal_wafq_9x9');
-  const [selectedVersion, setSelectedVersion] = useState<1 | 2>(1);
+  const [selectedVersion, setSelectedVersion] = useState<number>(1);
   const [searchQuery, setSearchQuery] = useState('');
   
   const [copiedSymbol, setCopiedSymbol] = useState(false);
@@ -66,6 +70,7 @@ export const SealsCatalogue: React.FC = () => {
   }, [language]);
 
   const activeSeal = seals.find((s) => s.id === selectedSealId) || seals[0];
+  const activeVersionDetails = activeSeal ? getSealVersionDetails(activeSeal, selectedVersion, language) : null;
 
   // Filtering
   const filteredSeals = seals.filter((seal) => {
@@ -131,29 +136,11 @@ export const SealsCatalogue: React.FC = () => {
   };
 
   const handleDownloadPNG = async () => {
-    if (!activeSeal) return;
+    if (!activeSeal || !activeVersionDetails) return;
     if (checkProtection()) return;
     if (activeSeal.status === 'maintenance') return;
 
     setIsDownloadingPNG(true);
-
-    const symbolText =
-      selectedVersion === 2 && activeSeal.graphicSymbolV2
-        ? activeSeal.graphicSymbolV2
-        : activeSeal.graphicSymbol;
-
-    const versionTitle =
-      selectedVersion === 2 && activeSeal.graphicSymbolV2
-        ? language === 'fr'
-          ? 'Version 2 : Khatim An-Nur'
-          : language === 'ha'
-          ? 'Siga 2: Khatim An-Nur'
-          : 'Version 2: Khatim Seal'
-        : language === 'fr'
-        ? 'Version 1 : Wafq Abjad'
-        : language === 'ha'
-        ? 'Siga 1: Hatimin Wafq'
-        : 'Version 1: Wafq Seal';
 
     try {
       await generateAndDownloadSealCard({
@@ -162,10 +149,11 @@ export const SealsCatalogue: React.FC = () => {
         arabicName: activeSeal.arabicName,
         formula: activeSeal.formula,
         abjadValue: activeSeal.abjadValue,
-        graphicSymbol: symbolText,
+        graphicSymbol: activeVersionDetails.symbol,
         groupTitle: activeSeal.groupTitle,
         lang: language,
-        versionTitle
+        versionTitle: `${activeVersionDetails.title} • Puissance: ${activeVersionDetails.powerLevel}%`,
+        version: selectedVersion
       });
     } catch (e) {
       console.error('Download PNG error:', e);
@@ -175,29 +163,11 @@ export const SealsCatalogue: React.FC = () => {
   };
 
   const handleDownloadSVG = () => {
-    if (!activeSeal) return;
+    if (!activeSeal || !activeVersionDetails) return;
     if (checkProtection()) return;
     if (activeSeal.status === 'maintenance') return;
 
     setIsDownloadingSVG(true);
-
-    const symbolText =
-      selectedVersion === 2 && activeSeal.graphicSymbolV2
-        ? activeSeal.graphicSymbolV2
-        : activeSeal.graphicSymbol;
-
-    const versionTitle =
-      selectedVersion === 2 && activeSeal.graphicSymbolV2
-        ? language === 'fr'
-          ? 'Version 2 : Khatim An-Nur'
-          : language === 'ha'
-          ? 'Siga 2: Khatim An-Nur'
-          : 'Version 2: Khatim Seal'
-        : language === 'fr'
-        ? 'Version 1 : Wafq Abjad'
-        : language === 'ha'
-        ? 'Siga 1: Hatimin Wafq'
-        : 'Version 1: Wafq Seal';
 
     try {
       generateAndDownloadSealSVG({
@@ -206,10 +176,11 @@ export const SealsCatalogue: React.FC = () => {
         arabicName: activeSeal.arabicName,
         formula: activeSeal.formula,
         abjadValue: activeSeal.abjadValue,
-        graphicSymbol: symbolText,
+        graphicSymbol: activeVersionDetails.symbol,
         groupTitle: activeSeal.groupTitle,
         lang: language,
-        versionTitle
+        versionTitle: `${activeVersionDetails.title} • Puissance: ${activeVersionDetails.powerLevel}%`,
+        version: selectedVersion
       });
     } catch (e) {
       console.error('Download SVG error:', e);
@@ -219,15 +190,10 @@ export const SealsCatalogue: React.FC = () => {
   };
 
   const handleCopySymbol = () => {
-    if (!activeSeal) return;
+    if (!activeSeal || !activeVersionDetails) return;
     if (checkProtection()) return;
 
-    const textToCopy =
-      selectedVersion === 2 && activeSeal.graphicSymbolV2
-        ? activeSeal.graphicSymbolV2
-        : activeSeal.graphicSymbol;
-
-    navigator.clipboard.writeText(textToCopy);
+    navigator.clipboard.writeText(activeVersionDetails.symbol);
     setCopiedSymbol(true);
     setTimeout(() => setCopiedSymbol(false), 2500);
   };
@@ -295,38 +261,55 @@ export const SealsCatalogue: React.FC = () => {
         {/* Hero Banner Header */}
         <div className="relative overflow-hidden bg-gradient-to-r from-purple-950 via-[#15072b] to-black border border-amber-500/30 rounded-3xl p-6 sm:p-8 shadow-2xl">
           <div className="absolute top-0 right-0 -mt-8 -mr-8 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
-          
-          <div className="relative z-10 space-y-4">
+                 <div className="relative z-10 space-y-4">
             <div className="flex flex-wrap items-center gap-2">
               <span className="bg-amber-500/20 text-amber-300 border border-amber-500/40 text-xs font-extrabold px-3 py-1 rounded-full uppercase tracking-wider flex items-center gap-1.5">
                 <Moon size={14} className="text-amber-400 animate-pulse" />
-                <span>Catalogue des 17 Sceaux Lunaires</span>
+                <span>
+                  {language === 'fr'
+                    ? 'Catalogue des 17 Sceaux Lunaires'
+                    : language === 'ha'
+                    ? 'Dandalin Hatimi guda 17 na Wata'
+                    : 'Catalog of 17 Lunar Seals'}
+                </span>
               </span>
               <span className="bg-purple-900/60 text-purple-200 border border-purple-500/30 text-xs font-medium px-3 py-1 rounded-full">
-                Science des Awfaq & Khawatim
+                {language === 'fr'
+                  ? 'Science des Awfaq & Khawatim'
+                  : language === 'ha'
+                  ? 'Ilimin Awfaq da Khawatim'
+                  : 'Science of Awfaq & Khawatim'}
               </span>
             </div>
 
             <h1 className="text-2xl sm:text-4xl font-serif font-bold text-white tracking-wide">
-              Catalogue & Répertoire Sacré des Sceaux de la Lune
+              {language === 'fr'
+                ? 'Catalogue & Répertoire Sacré des Sceaux de la Lune'
+                : language === 'ha'
+                ? 'Tarin Asirai da Hatimai na Wata'
+                : 'Catalog & Sacred Repository of Lunar Seals'}
             </h1>
 
             <p className="text-sm sm:text-base text-purple-200/90 max-w-3xl leading-relaxed">
-              Explorez les 17 matrices numériques et géométriques sacrées de la Lune. Chaque sceau est répertorié selon son origine scientifique, son utilité théurgique et son utilité rituelle. Visualisez, basculez entre les versions Wafq et Khatim, et téléchargez vos supports en Haute Définition (PNG & Vectoriel SVG).
+              {language === 'fr'
+                ? 'Explorez les 17 matrices numériques et géométriques sacrées de la Lune. Chaque sceau est répertorié selon son origine scientifique, son utilité théurgique et son utilité rituelle. Visualisez, basculez entre les versions Wafq et Khatim, et téléchargez vos supports en Haute Définition (PNG & Vectoriel SVG).'
+                : language === 'ha'
+                ? 'Binciki asirai guda 17 na wata a gidan lissafi na zahiri. Kowane hatimi yana dauke da bayanai masu zurfi na amfani da hanyoyin gudanarwa. Sauke hoto a tsarin PNG da SVG.'
+                : 'Explore the 17 sacred numerical and geometric matrices of the Moon. Every seal is categorized by its scientific origin, theurgic purpose, and ritual application. Toggle through Wafq and Khatim versions, and export in High Definition (PNG & Vector SVG).'}
             </p>
 
             <div className="flex flex-wrap items-center gap-4 pt-2 text-xs text-amber-300 font-mono">
               <span className="flex items-center gap-1.5">
                 <CheckCircle2 size={14} className="text-amber-400" />
-                17 Variétés Complètes
+                {language === 'fr' ? '17 Variétés Complètes' : language === 'ha' ? 'Iri 17 Cikakku' : '17 Complete Varieties'}
               </span>
               <span className="flex items-center gap-1.5">
                 <CheckCircle2 size={14} className="text-amber-400" />
-                Exportation PNG & SVG
+                {language === 'fr' ? 'Exportation PNG & SVG' : language === 'ha' ? 'Saukar da PNG da SVG' : 'PNG & SVG Export'}
               </span>
               <span className="flex items-center gap-1.5">
                 <CheckCircle2 size={14} className="text-amber-400" />
-                Protections & Rituels Sacrés
+                {language === 'fr' ? 'Protections & Rituels Sacrés' : language === 'ha' ? 'Garkuwa da Ayyukan Asiri' : 'Protections & Sacred Rituals'}
               </span>
             </div>
           </div>
@@ -631,57 +614,75 @@ export const SealsCatalogue: React.FC = () => {
                 {activeSeal.status !== 'disabled' && (
                   <div className="space-y-4">
                     
-                    {/* Version Selector (if V2 is available) */}
-                    {activeSeal.graphicSymbolV2 && (
-                      <div className="flex items-center gap-2 bg-black/80 p-1.5 rounded-2xl border border-purple-500/30">
-                        <button
-                          type="button"
-                          onClick={() => setSelectedVersion(1)}
-                          className={`flex-1 py-2 px-3 text-xs font-extrabold rounded-xl transition-all cursor-pointer ${
-                            selectedVersion === 1
-                              ? 'bg-amber-500 text-black shadow-md'
-                              : 'text-purple-300 hover:text-white hover:bg-purple-900/40'
-                          }`}
-                        >
-                          Version 1 : Wafq Abjad
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setSelectedVersion(2)}
-                          className={`flex-1 py-2 px-3 text-xs font-extrabold rounded-xl transition-all cursor-pointer ${
-                            selectedVersion === 2
-                              ? 'bg-amber-500 text-black shadow-md'
-                              : 'text-purple-300 hover:text-white hover:bg-purple-900/40'
-                          }`}
-                        >
-                          Version 2 : Khatim An-Nur
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Graphic Box Container */}
-                    <div
-                      onClick={() => {
-                        if (checkProtection()) return;
-                        setIsFullScreen(true);
-                      }}
-                      className={`group relative cursor-pointer w-full bg-black/95 border border-purple-500/40 hover:border-amber-400 p-6 rounded-3xl shadow-2xl select-none min-h-[260px] flex flex-col items-center justify-center transition-all duration-300 overflow-x-auto ${
-                        activeSeal.status === 'premium' && !isPremium && !isAdmin ? 'blur-[3px] opacity-60 pointer-events-none' : ''
-                      }`}
-                      title="Cliquer pour agrandir en plein écran"
-                    >
-                      <pre className="text-purple-300 font-mono text-xs sm:text-sm leading-relaxed py-2 tracking-tight text-center whitespace-pre max-w-full overflow-x-auto select-all">
-                        {selectedVersion === 2 && activeSeal.graphicSymbolV2
-                          ? activeSeal.graphicSymbolV2
-                          : activeSeal.graphicSymbol}
-                      </pre>
-
-                      <div className="absolute inset-0 bg-purple-950/20 opacity-0 group-hover:opacity-100 transition-opacity rounded-3xl flex items-center justify-center backdrop-blur-[2px]">
-                        <span className="bg-purple-950/90 text-amber-300 text-xs font-extrabold px-4 py-2 rounded-xl border border-amber-500/40 shadow-2xl flex items-center gap-2 uppercase tracking-wider">
-                          <Eye size={16} className="animate-pulse" />
-                          Agrandir Plein Écran
+                    {/* 12-Version Selector Grid & Power Level Badge */}
+                    <div className="bg-black/90 p-3 rounded-2xl border border-purple-500/30 space-y-2">
+                      <div className="flex items-center justify-between px-1">
+                        <span className="text-[11px] font-extrabold text-amber-400 uppercase tracking-widest flex items-center gap-1.5">
+                          <Sparkles size={12} className="text-amber-400 animate-spin" />
+                          {language === 'fr'
+                            ? '12 Versions Théurgiques Suprêmes'
+                            : language === 'ha'
+                            ? 'Siga 12 Masu Karfi'
+                            : '12 Supreme Sacred Versions'}
                         </span>
+                        {activeVersionDetails && (
+                          <span className="text-[10px] font-bold text-purple-300 bg-purple-950/80 px-2 py-0.5 rounded-full border border-purple-500/30">
+                            {activeVersionDetails.powerLevel}% {language === 'fr' ? 'Puissance' : language === 'ha' ? 'Karfi' : 'Power'}
+                          </span>
+                        )}
                       </div>
+
+                      {/* Scrollable grid for 12 versions */}
+                      <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5 max-h-[120px] overflow-y-auto pr-1">
+                        {SEAL_VERSIONS_LIST.map((v) => {
+                          const isSel = selectedVersion === v.version;
+                          return (
+                            <button
+                              key={v.version}
+                              type="button"
+                              onClick={() => setSelectedVersion(v.version)}
+                              className={`py-1.5 px-1 text-[10px] font-extrabold rounded-lg transition-all cursor-pointer flex flex-col items-center justify-center border ${
+                                isSel
+                                  ? 'bg-amber-500 text-black border-amber-300 shadow-md scale-105'
+                                  : 'bg-purple-950/40 text-purple-300 border-purple-800/40 hover:bg-purple-900/60 hover:text-white'
+                              }`}
+                              title={v.title[language] || v.title.fr}
+                            >
+                              <span>V{v.version}</span>
+                              <span className="text-[8px] opacity-80 truncate max-w-full font-normal">
+                                {v.badge[language] || v.badge.fr}
+                              </span>
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      {/* Selected Version Meta */}
+                      {activeVersionDetails && (
+                        <div className="bg-purple-950/60 p-2 rounded-xl border border-amber-500/20 text-center">
+                          <p className="text-xs font-bold text-amber-300">
+                            {activeVersionDetails.title}
+                          </p>
+                          <p className="text-[10px] text-purple-300/80 mt-0.5 italic">
+                            {activeVersionDetails.subtitle}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Interactive Khatim Visualizer */}
+                    <div className={activeSeal.status === 'premium' && !isPremium && !isAdmin ? 'blur-[3px] opacity-60 pointer-events-none' : ''}>
+                      <KhatimVisualizer
+                        version={selectedVersion}
+                        sealTitle={activeSeal.title}
+                        arabicName={activeSeal.arabicName}
+                        asciiSymbol={activeVersionDetails ? activeVersionDetails.symbol : activeSeal.graphicSymbol}
+                        language={language}
+                        onExpandFullScreen={() => {
+                          if (checkProtection()) return;
+                          setIsFullScreen(true);
+                        }}
+                      />
                     </div>
 
                     {/* Action Buttons: PNG, SVG, Copy */}
@@ -693,7 +694,11 @@ export const SealsCatalogue: React.FC = () => {
                         className="flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black font-extrabold py-3 px-4 rounded-2xl shadow-lg transition-all cursor-pointer disabled:opacity-50 text-xs"
                       >
                         <Download size={16} />
-                        <span>{isDownloadingPNG ? 'Téléchargement...' : 'Télécharger PNG'}</span>
+                        <span>
+                          {isDownloadingPNG
+                            ? (language === 'fr' ? 'Téléchargement...' : language === 'ha' ? 'Ana Saukewa...' : 'Downloading...')
+                            : (language === 'fr' ? 'Télécharger PNG' : language === 'ha' ? 'Sauke PNG' : 'Download PNG')}
+                        </span>
                       </button>
 
                       <button
@@ -703,7 +708,7 @@ export const SealsCatalogue: React.FC = () => {
                         className="flex items-center justify-center gap-2 bg-purple-900/80 hover:bg-purple-800 text-purple-200 border border-purple-500/40 font-extrabold py-3 px-4 rounded-2xl shadow-lg transition-all cursor-pointer disabled:opacity-50 text-xs"
                       >
                         <FileCode size={16} className="text-amber-400" />
-                        <span>Télécharger SVG</span>
+                        <span>{language === 'fr' ? 'Télécharger SVG' : language === 'ha' ? 'Sauke SVG' : 'Download SVG'}</span>
                       </button>
 
                       <button
@@ -715,12 +720,12 @@ export const SealsCatalogue: React.FC = () => {
                         {copiedSymbol ? (
                           <>
                             <Check size={16} className="text-emerald-400" />
-                            <span className="text-emerald-300">Copié !</span>
+                            <span className="text-emerald-300">{language === 'fr' ? 'Copié !' : language === 'ha' ? 'An Kwafa!' : 'Copied!'}</span>
                           </>
                         ) : (
                           <>
                             <Copy size={16} className="text-gray-400" />
-                            <span>Copier le Symbole</span>
+                            <span>{language === 'fr' ? 'Copier le Symbole' : language === 'ha' ? 'Kwafi Hatimi' : 'Copy Symbol'}</span>
                           </>
                         )}
                       </button>
@@ -732,7 +737,11 @@ export const SealsCatalogue: React.FC = () => {
                       {/* Description */}
                       <div className="bg-black/60 p-4 rounded-2xl border border-purple-500/20 space-y-1 sm:col-span-2">
                         <span className="font-extrabold text-amber-300 uppercase tracking-wider block text-[10px]">
-                          Description de la Matrice Sacrée
+                          {language === 'fr'
+                            ? 'Description de la Matrice Sacrée'
+                            : language === 'ha'
+                            ? 'Bayanin Hatimin Mai Tsarki'
+                            : 'Sacred Matrix Description'}
                         </span>
                         <p className="text-gray-200 leading-relaxed">
                           {activeSeal.description}
@@ -742,7 +751,11 @@ export const SealsCatalogue: React.FC = () => {
                       {/* Spiritual Utility */}
                       <div className="bg-black/60 p-4 rounded-2xl border border-purple-500/20 space-y-1">
                         <span className="font-extrabold text-amber-300 uppercase tracking-wider block text-[10px]">
-                          Vertus & Effets Spirituels
+                          {language === 'fr'
+                            ? 'Vertus & Effets Spirituels'
+                            : language === 'ha'
+                            ? 'Amfani da Tasirin Ruhi'
+                            : 'Virtues & Spiritual Effects'}
                         </span>
                         <p className="text-gray-300 leading-relaxed">
                           {activeSeal.spiritualUtility}
@@ -752,7 +765,11 @@ export const SealsCatalogue: React.FC = () => {
                       {/* Ritual Usage */}
                       <div className="bg-black/60 p-4 rounded-2xl border border-purple-500/20 space-y-1">
                         <span className="font-extrabold text-amber-300 uppercase tracking-wider block text-[10px]">
-                          Mode d'Utilisation Rituelle
+                          {language === 'fr'
+                            ? "Mode d'Utilisation Rituelle"
+                            : language === 'ha'
+                            ? 'Hanyar Amfani a Aiki'
+                            : 'Ritual Usage Method'}
                         </span>
                         <p className="text-gray-300 leading-relaxed">
                           {activeSeal.ritualUsage}
@@ -762,7 +779,11 @@ export const SealsCatalogue: React.FC = () => {
                       {/* Incense & Timing */}
                       <div className="bg-black/60 p-4 rounded-2xl border border-purple-500/20 space-y-1">
                         <span className="font-extrabold text-amber-300 uppercase tracking-wider block text-[10px]">
-                          Encens d'Invocations (Bakhour)
+                          {language === 'fr'
+                            ? "Encens d'Invocations (Bakhour)"
+                            : language === 'ha'
+                            ? "Turaren Addu'a (Bakhour)"
+                            : 'Invocation Incense (Bakhour)'}
                         </span>
                         <p className="text-gray-300 leading-relaxed">
                           {activeSeal.incense}
@@ -771,7 +792,11 @@ export const SealsCatalogue: React.FC = () => {
 
                       <div className="bg-black/60 p-4 rounded-2xl border border-purple-500/20 space-y-1">
                         <span className="font-extrabold text-amber-300 uppercase tracking-wider block text-[10px]">
-                          Propriété Élémentaire & Moment Optimal
+                          {language === 'fr'
+                            ? 'Propriété Élémentaire & Moment Optimal'
+                            : language === 'ha'
+                            ? 'Yanayin Shi da Lokaci Mai Kyau'
+                            : 'Elemental Property & Optimal Time'}
                         </span>
                         <p className="text-gray-300 leading-relaxed">
                           {activeSeal.elementalProperty} • {activeSeal.timing}
@@ -781,7 +806,11 @@ export const SealsCatalogue: React.FC = () => {
                       {/* Formula */}
                       <div className="bg-black/80 p-4 rounded-2xl border border-amber-500/30 space-y-1 sm:col-span-2 text-center">
                         <span className="font-extrabold text-amber-300 uppercase tracking-wider block text-[10px]">
-                          Formule Invocatoire Sacrée
+                          {language === 'fr'
+                            ? 'Formule Invocatoire Sacrée'
+                            : language === 'ha'
+                            ? "Addu'ar Kira Mai Tsarki"
+                            : 'Sacred Invocation Formula'}
                         </span>
                         <p className="text-amber-200 font-serif font-bold text-sm tracking-wide" dir="rtl">
                           {activeSeal.formula}
@@ -835,12 +864,20 @@ export const SealsCatalogue: React.FC = () => {
                 </p>
               </div>
 
-              <div className="bg-black p-6 rounded-2xl border border-purple-500/40 text-center overflow-x-auto">
-                <pre className="text-purple-200 font-mono text-sm leading-relaxed whitespace-pre inline-block">
-                  {selectedVersion === 2 && activeSeal.graphicSymbolV2
-                    ? activeSeal.graphicSymbolV2
-                    : activeSeal.graphicSymbol}
-                </pre>
+              {activeVersionDetails && (
+                <p className="text-xs font-semibold text-purple-300 text-center">
+                  {activeVersionDetails.title} • {language === 'fr' ? 'Puissance' : language === 'ha' ? 'Karfi' : 'Power'}: {activeVersionDetails.powerLevel}%
+                </p>
+              )}
+
+              <div className="w-full text-left">
+                <KhatimVisualizer
+                  version={selectedVersion}
+                  sealTitle={activeSeal.title}
+                  arabicName={activeSeal.arabicName}
+                  asciiSymbol={activeVersionDetails ? activeVersionDetails.symbol : activeSeal.graphicSymbol}
+                  language={language}
+                />
               </div>
 
               <div className="flex justify-center gap-4">
@@ -850,7 +887,7 @@ export const SealsCatalogue: React.FC = () => {
                   className="bg-amber-500 hover:bg-amber-600 text-black font-extrabold px-6 py-3 rounded-2xl text-xs flex items-center gap-2 cursor-pointer shadow-lg"
                 >
                   <Download size={16} />
-                  <span>Télécharger PNG HD</span>
+                  <span>{language === 'fr' ? 'Télécharger PNG HD' : language === 'ha' ? 'Sauke PNG HD' : 'Download PNG HD'}</span>
                 </button>
 
                 <button
@@ -859,7 +896,7 @@ export const SealsCatalogue: React.FC = () => {
                   className="bg-purple-900 hover:bg-purple-800 text-purple-200 border border-purple-500/40 font-extrabold px-6 py-3 rounded-2xl text-xs flex items-center gap-2 cursor-pointer shadow-lg"
                 >
                   <FileCode size={16} className="text-amber-400" />
-                  <span>Télécharger Vectoriel SVG</span>
+                  <span>{language === 'fr' ? 'Télécharger Vectoriel SVG' : language === 'ha' ? 'Sauke SVG' : 'Download Vector SVG'}</span>
                 </button>
               </div>
             </div>

@@ -366,21 +366,12 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
           hasManualTranslation: hasManual
         } as AsrarItem;
       });
-      if (firestoreItems.length > 0) {
-        setItems(firestoreItems);
-        // Update local offline cache
-        try {
-          localStorage.setItem('asrarhub_cached_articles_list', JSON.stringify(firestoreItems));
-        } catch (e) {
-          console.error("Error writing articles list to cache", e);
-        }
-      } else {
-        // Fallback to static initialData if Firestore is empty
-        const defaultItems = getAsrarItems();
-        setItems(defaultItems);
-        try {
-          localStorage.setItem('asrarhub_cached_articles_list', JSON.stringify(defaultItems));
-        } catch (e) {}
+      setItems(firestoreItems);
+      // Update local offline cache
+      try {
+        localStorage.setItem('asrarhub_cached_articles_list', JSON.stringify(firestoreItems));
+      } catch (e) {
+        console.error("Error writing articles list to cache", e);
       }
       setIsLoading(false);
     }, (error) => {
@@ -392,11 +383,11 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
         if (cached) {
           setItems(JSON.parse(cached));
         } else {
-          setItems(getAsrarItems());
+          setItems([]);
         }
       } catch (e) {
         console.error("Error on fallback to local articles cache", e);
-        setItems(getAsrarItems());
+        setItems([]);
       }
     });
 

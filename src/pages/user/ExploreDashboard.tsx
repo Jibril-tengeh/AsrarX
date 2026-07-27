@@ -158,22 +158,10 @@ export const ExploreDashboard: React.FC = () => {
       });
       // Support filtering by Published
       const publishedArticles = allArticles.filter((art: any) => !art.status || art.status === 'Published' || art.status === 'published' || (art.status !== 'Draft' && art.status !== 'Archived'));
-      if (publishedArticles.length > 0) {
-        setArticles(publishedArticles);
-        try {
-          localStorage.setItem('asrarhub_cached_explore_articles', JSON.stringify(publishedArticles));
-        } catch (e) {}
-      } else {
-        // Fallback to static articles from store.ts
-        const fallback = getAsrarItems().map(item => ({
-          id: item.id,
-          title: item.title,
-          content: item.content,
-          thumbnail: item.imageUrl,
-          status: 'Published'
-        }));
-        setArticles(fallback);
-      }
+      setArticles(publishedArticles);
+      try {
+        localStorage.setItem('asrarhub_cached_explore_articles', JSON.stringify(publishedArticles));
+      } catch (e) {}
     }, (error) => {
       console.error("Error fetching articles", error);
       try {
@@ -181,24 +169,10 @@ export const ExploreDashboard: React.FC = () => {
         if (cached) {
           setArticles(JSON.parse(cached));
         } else {
-          const fallback = getAsrarItems().map(item => ({
-            id: item.id,
-            title: item.title,
-            content: item.content,
-            thumbnail: item.imageUrl,
-            status: 'Published'
-          }));
-          setArticles(fallback);
+          setArticles([]);
         }
       } catch (e) {
-        const fallback = getAsrarItems().map(item => ({
-          id: item.id,
-          title: item.title,
-          content: item.content,
-          thumbnail: item.imageUrl,
-          status: 'Published'
-        }));
-        setArticles(fallback);
+        setArticles([]);
       }
     });
 

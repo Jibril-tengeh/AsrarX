@@ -20,6 +20,7 @@ import { Filesystem, Directory } from '@capacitor/filesystem';
 import { AuthModal } from '../../../components/AuthModal';
 import { getApiUrl } from '../../../lib/api';
 import { QURAN_RECITERS } from '../../../data/reciters';
+import { getEffectiveQuranReciters } from '../../../utils/reciterManager';
 import { LunarDailyInspirationCard } from '../../../components/LunarDailyInspirationCard';
 
 const MUSHAF_OPTIONS = [
@@ -751,6 +752,9 @@ export const QuranFull: React.FC = () => {
 
   const { user, isPremium } = useAuth();
   const { featureToggles } = useFeatures();
+  const activeQuranReciters = React.useMemo(() => {
+    return getEffectiveQuranReciters(featureToggles);
+  }, [featureToggles]);
   const defaultReciterFromConfig = featureToggles?.default_reciter_id || featureToggles?.default_quran_reciter;
   const isAdmin = user?.role === 'admin' || (user?.email && ['jibriltengeh4@gmail.com', 'sbireino@gmail.com', 'tenibawwal10@gmail.com', 'jibriltengeh57@gmail.com'].includes(user.email.toLowerCase()));
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -1613,15 +1617,13 @@ export const QuranFull: React.FC = () => {
   });
 
   useEffect(() => {
-    if (defaultReciterFromConfig) {
-      try {
-        const saved = localStorage.getItem('quran_user_selected_reciter');
-        if (!saved) {
-          setSelectedReciterId(defaultReciterFromConfig);
-        }
-      } catch (_) {}
+    if (activeQuranReciters.length > 0 && !activeQuranReciters.some(r => r.id === selectedReciterId)) {
+      const fallback = (defaultReciterFromConfig && activeQuranReciters.some(r => r.id === defaultReciterFromConfig))
+        ? defaultReciterFromConfig
+        : activeQuranReciters[0].id;
+      setSelectedReciterId(fallback);
     }
-  }, [defaultReciterFromConfig]);
+  }, [activeQuranReciters, selectedReciterId, defaultReciterFromConfig]);
 
   const handleSelectReciter = (newId: string) => {
     setSelectedReciterId(newId);
@@ -1850,7 +1852,7 @@ export const QuranFull: React.FC = () => {
       
       let targetUrl = url;
       let isLocalIntercept = false;
-      const reciterApiId = QURAN_RECITERS.find(r => r.id === selectedReciterId)?.apiId || 'ar.alafasy';
+      const reciterApiId = (activeQuranReciters.find(r => r.id === selectedReciterId) || QURAN_RECITERS.find(r => r.id === selectedReciterId))?.apiId || 'ar.alafasy';
       
       if (url === 'https://api.alquran.cloud/v1/surah') {
         targetUrl = '/data/quran/surahs.json';
@@ -1996,7 +1998,7 @@ export const QuranFull: React.FC = () => {
     setDownloadProgress(Math.round((initialProgress / totalItems) * 100));
 
     try {
-      const reciterApiId = QURAN_RECITERS.find(r => r.id === selectedReciterId)?.apiId || 'ar.alafasy';
+      const reciterApiId = (activeQuranReciters.find(r => r.id === selectedReciterId) || QURAN_RECITERS.find(r => r.id === selectedReciterId))?.apiId || 'ar.alafasy';
       const editions = [
         reciterApiId,
         'fr.hamidullah',
@@ -2065,7 +2067,7 @@ export const QuranFull: React.FC = () => {
             // Also cache the full continuous Surah MP3 file for background audio context play
             if (type === 'surah') {
               try {
-                const reciter = QURAN_RECITERS.find(r => r.id === selectedReciterId) || QURAN_RECITERS[0];
+      const reciter = activeQuranReciters.find(r => r.id === selectedReciterId) || QURAN_RECITERS.find(r => r.id === selectedReciterId) || activeQuranReciters[0];
                 const surahNumStr = String(s).padStart(3, '0');
                 const fullSurahAudioUrl = `${reciter.server}${surahNumStr}.mp3`;
                 
@@ -2201,7 +2203,7 @@ export const QuranFull: React.FC = () => {
 
   useEffect(() => {
     if (activeSurah && activeSurah !== 999) {
-      const reciterApiId = QURAN_RECITERS.find(r => r.id === selectedReciterId)?.apiId || 'ar.alafasy';
+      const reciterApiId = (activeQuranReciters.find(r => r.id === selectedReciterId) || QURAN_RECITERS.find(r => r.id === selectedReciterId))?.apiId || 'ar.alafasy';
       fetchWithCache(`https://api.alquran.cloud/v1/surah/${activeSurah}/${reciterApiId}`)
         .then(data => {
           if (data && data.code === 200) {
@@ -2215,7 +2217,7 @@ export const QuranFull: React.FC = () => {
   // Instant switch recitation when reciter is changed
   useEffect(() => {
     if (currentTrack && globalIsPlaying) {
-      const reciter = QURAN_RECITERS.find(r => r.id === selectedReciterId) || QURAN_RECITERS[0];
+      const reciter = activeQuranReciters.find(r => r.id === selectedReciterId) || QURAN_RECITERS.find(r => r.id === selectedReciterId) || activeQuranReciters[0];
       const reciterApiId = reciter.apiId || 'ar.alafasy';
       
       if (currentTrack.id.startsWith("surah-")) {
@@ -2299,7 +2301,7 @@ export const QuranFull: React.FC = () => {
         id: `quran-${activeSurah}-${ayah.numberInSurah}`,
         title: `Verset ${ayah.numberInSurah} - Sourate ${surahArabic?.name || activeSurah}`,
         url: ayah.audio,
-        artist: QURAN_RECITERS.find(r => r.id === selectedReciterId)?.name || 'Qari',
+        artist: (activeQuranReciters.find(r => r.id === selectedReciterId) || QURAN_RECITERS.find(r => r.id === selectedReciterId))?.name || 'Qari',
         coverImage: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=500',
         isQuranVerse: true,
         surahNumber: activeSurah,
@@ -2314,7 +2316,7 @@ export const QuranFull: React.FC = () => {
             id: `quran-${activeSurah}-${a.numberInSurah}`,
             title: `Verset ${a.numberInSurah} - Sourate ${surahArabic.name}`,
             url: a.audio || '',
-            artist: QURAN_RECITERS.find(r => r.id === selectedReciterId)?.name || 'Qari',
+            artist: (activeQuranReciters.find(r => r.id === selectedReciterId) || QURAN_RECITERS.find(r => r.id === selectedReciterId))?.name || 'Qari',
             coverImage: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=500',
             isQuranVerse: true,
             surahNumber: activeSurah,
@@ -2448,7 +2450,7 @@ export const QuranFull: React.FC = () => {
 
   useEffect(() => {
     if (playingPlaylist) {
-      const reciterApiId = QURAN_RECITERS.find(r => r.id === selectedReciterId)?.apiId || 'ar.alafasy';
+      const reciterApiId = (activeQuranReciters.find(r => r.id === selectedReciterId) || QURAN_RECITERS.find(r => r.id === selectedReciterId))?.apiId || 'ar.alafasy';
       const pseudoAyahs = playingPlaylist.ayahs.map(a => ({
         number: a.number,
         numberInSurah: a.ayahNumberInSurah,
@@ -2505,7 +2507,7 @@ export const QuranFull: React.FC = () => {
         setPlayingAyah(null);
       }
 
-      const reciterApiId = QURAN_RECITERS.find(r => r.id === selectedReciterId)?.apiId || 'ar.alafasy';
+      const reciterApiId = (activeQuranReciters.find(r => r.id === selectedReciterId) || QURAN_RECITERS.find(r => r.id === selectedReciterId))?.apiId || 'ar.alafasy';
       
       let endpointAr = '';
       let endpointTajweed = '';
@@ -2594,7 +2596,7 @@ export const QuranFull: React.FC = () => {
       setPlayingAyah(null);
     }
 
-    const reciter = QURAN_RECITERS.find(r => r.id === selectedReciterId) || QURAN_RECITERS[0];
+    const reciter = activeQuranReciters.find(r => r.id === selectedReciterId) || QURAN_RECITERS.find(r => r.id === selectedReciterId) || activeQuranReciters[0];
     const trackId = `surah-${activeSurah}-${reciter.id}`;
     
     if (currentTrack?.id === trackId) {
@@ -2656,7 +2658,7 @@ export const QuranFull: React.FC = () => {
       id: `quran-${activeSurah}-${a.numberInSurah}`,
       title: `Verset ${a.numberInSurah} - Sourate ${surahArabic.name || activeSurah}`,
       url: a.audio || '',
-      artist: QURAN_RECITERS.find(r => r.id === selectedReciterId)?.name || 'Qari',
+      artist: (activeQuranReciters.find(r => r.id === selectedReciterId) || QURAN_RECITERS.find(r => r.id === selectedReciterId))?.name || 'Qari',
       coverImage: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=500',
       isQuranVerse: true,
       surahNumber: activeSurah,
@@ -3370,11 +3372,11 @@ export const QuranFull: React.FC = () => {
                           style={{ fontSize: '13.5px' }}
                         >
                          {Object.entries(
-                           QURAN_RECITERS.reduce((acc, r) => {
+                           activeQuranReciters.reduce((acc, r) => {
                              if (!acc[r.country]) acc[r.country] = [];
                              acc[r.country].push(r);
                              return acc;
-                           }, {} as Record<string, typeof QURAN_RECITERS>)
+                           }, {} as Record<string, typeof activeQuranReciters>)
                          ).map(([country, reciters]) => (
                            <optgroup key={country} label={country} className="font-bold text-gray-950 dark:text-gray-100 bg-white dark:bg-gray-900 text-[12.5px]" style={{ fontSize: "12.5px" }}>
                              {reciters.map(r => (
@@ -3405,7 +3407,7 @@ export const QuranFull: React.FC = () => {
                                     await setDoc(doc(db, 'settings', 'features'), {
                                       default_reciter_id: selectedReciterId
                                     }, { merge: true });
-                                    const reciterName = QURAN_RECITERS.find(r => r.id === selectedReciterId)?.name || selectedReciterId;
+                                    const reciterName = (activeQuranReciters.find(r => r.id === selectedReciterId) || QURAN_RECITERS.find(r => r.id === selectedReciterId))?.name || selectedReciterId;
                                     showToast(`Récitateur "${reciterName}" défini comme défaut système !`);
                                   } catch (err) {
                                     console.error("Failed setting default reciter:", err);
@@ -5227,7 +5229,7 @@ export const QuranFull: React.FC = () => {
                            <h4 className="font-bold text-gray-900 dark:text-white">{p.name}</h4>
                            <div className="flex gap-2">
                              <button onClick={() => {
-                               const reciterApiId = QURAN_RECITERS.find(r => r.id === selectedReciterId)?.apiId || 'ar.alafasy';
+                               const reciterApiId = (activeQuranReciters.find(r => r.id === selectedReciterId) || QURAN_RECITERS.find(r => r.id === selectedReciterId))?.apiId || 'ar.alafasy';
                                const tracks = p.ayahs.map(a => ({
                                  id: `roqya-${a.number}`,
                                  title: `Sourate ${a.surahNumber}, Verset ${a.ayahNumberInSurah}`,

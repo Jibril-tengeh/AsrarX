@@ -1,3 +1,10 @@
+import { LocalNotifications } from '@capacitor/local-notifications';
+import { PushNotifications } from '@capacitor/push-notifications';
+import { Geolocation } from '@capacitor/geolocation';
+import { Camera } from '@capacitor/camera';
+import { Filesystem } from '@capacitor/filesystem';
+import { Capacitor } from '@capacitor/core';
+
 /**
  * Utility for Planetary Hours Browser & Capacitor Push Notifications with Audio Sound Alerts
  * Notifies the user in real-time when favorable planetary hours (e.g. Jupiter, Venus, Sun) begin.
@@ -49,17 +56,32 @@ export function playNotificationTone() {
 }
 
 /**
- * Request Push Notifications Permission (Web & Capacitor Native)
+ * Request Push & Local Notifications Permission (Web & Capacitor Native)
  */
 export async function requestNotificationPermission(): Promise<boolean> {
-  // Check Capacitor Native LocalNotifications first if present
-  const cap = (window as any).Capacitor;
-  if (cap?.Plugins?.LocalNotifications) {
+  if (Capacitor.isNativePlatform()) {
     try {
-      const perm = await cap.Plugins.LocalNotifications.requestPermissions();
-      if (perm?.display === 'granted') return true;
+      try {
+        await LocalNotifications.createChannel({
+          id: 'asrarhub_alerts',
+          name: 'AsrarHub Alerts',
+          description: 'Notifications des heures planétaires et rappels de méditation',
+          importance: 5,
+          visibility: 1,
+          vibration: true,
+        });
+      } catch (e) {
+        console.warn('Channel creation error:', e);
+      }
+
+      const localPerm = await LocalNotifications.requestPermissions();
+      const pushPerm = await PushNotifications.requestPermissions();
+
+      if (localPerm.display === 'granted' || pushPerm.receive === 'granted') {
+        return true;
+      }
     } catch (e) {
-      console.warn('Capacitor LocalNotifications permission request error:', e);
+      console.warn('Capacitor Notifications permission request error:', e);
     }
   }
 
@@ -99,35 +121,39 @@ export async function requestMicrophonePermission(): Promise<boolean> {
  * Request Storage Permission (For offline cache, file exports, parchment downloads)
  */
 export async function requestStoragePermission(): Promise<boolean> {
-  let webPersisted = false;
-  
-  // Web Persistent Storage API request
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const perm = await Filesystem.requestPermissions();
+      if (perm.publicStorage === 'granted') return true;
+    } catch (e) {
+      console.warn('Capacitor Filesystem permission error:', e);
+    }
+  }
+
   if (typeof navigator !== 'undefined' && navigator.storage && navigator.storage.persist) {
     try {
-      webPersisted = await navigator.storage.persist();
-      console.log('[AsrarHub] Persistent storage authorization:', webPersisted);
+      await navigator.storage.persist();
     } catch (e) {
       console.warn('Storage persistence request notice:', e);
     }
   }
 
-  const cap = (window as any).Capacitor;
-  if (cap?.Plugins?.Filesystem) {
-    try {
-      const perm = await cap.Plugins.Filesystem.requestPermissions();
-      if (perm?.publicStorage === 'granted') return true;
-    } catch (e) {
-      console.warn('Capacitor Filesystem permission error:', e);
-    }
-  }
-  
-  return true; // Web storage authorized
+  return true;
 }
 
 /**
  * Request Geolocation Permission (For Qibla, exact sunrise/sunset & prayer calculations)
  */
 export async function requestGeolocationPermission(): Promise<boolean> {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const perm = await Geolocation.requestPermissions();
+      if (perm.location === 'granted' || perm.coarseLocation === 'granted') return true;
+    } catch (e) {
+      console.warn('Capacitor Geolocation permission error:', e);
+    }
+  }
+
   try {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -144,15 +170,37 @@ export async function requestGeolocationPermission(): Promise<boolean> {
 }
 
 /**
- * Force authorization of all essential permissions (Notifications + Microphone + Storage + Geolocation)
+ * Request Camera Permission
+ */
+export async function requestCameraPermission(): Promise<boolean> {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const perm = await Camera.requestPermissions();
+      if (perm.camera === 'granted') return true;
+    } catch (e) {
+      console.warn('Capacitor Camera permission error:', e);
+    }
+  }
+  return false;
+}
+
+/**
+ * Force authorization of all essential permissions (Notifications + Microphone + Storage + Geolocation + Camera)
  */
 export async function requestAllPermissions() {
   const notifGranted = await requestNotificationPermission();
   const micGranted = await requestMicrophonePermission();
   const storageGranted = await requestStoragePermission();
   const geoGranted = await requestGeolocationPermission();
-  console.log('[AsrarHub] Permissions granted:', { notifications: notifGranted, microphone: micGranted, storage: storageGranted, geolocation: geoGranted });
-  return { notifications: notifGranted, microphone: micGranted, storage: storageGranted, geolocation: geoGranted };
+  const cameraGranted = await requestCameraPermission();
+  console.log('[AsrarHub] Permissions granted:', {
+    notifications: notifGranted,
+    microphone: micGranted,
+    storage: storageGranted,
+    geolocation: geoGranted,
+    camera: cameraGranted
+  });
+  return { notifications: notifGranted, microphone: micGranted, storage: storageGranted, geolocation: geoGranted, camera: cameraGranted };
 }
 
 export function getCurrentPlanetaryHour() {
@@ -207,11 +255,10 @@ export function checkAndTriggerPlanetaryNotification() {
     // Ring audio alert
     playNotificationTone();
 
-    // Check Capacitor LocalNotifications plugin first if running in Capacitor
-    const cap = (window as any).Capacitor;
-    if (cap?.Plugins?.LocalNotifications) {
+    // Check Capacitor LocalNotifications
+    if (Capacitor.isNativePlatform()) {
       try {
-        cap.Plugins.LocalNotifications.schedule({
+        LocalNotifications.schedule({
           notifications: [
             {
               title,
@@ -220,6 +267,7 @@ export function checkAndTriggerPlanetaryNotification() {
               schedule: { at: new Date(Date.now() + 100) },
               sound: 'res://raw/notification_sound',
               actionTypeId: '',
+              channelId: 'asrarhub_alerts',
               extra: null,
             },
           ],

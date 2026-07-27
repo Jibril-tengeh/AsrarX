@@ -113,6 +113,7 @@ const HijriFullMoonCalculator = lazyWithRetry(() => import('./pages/user/tools/H
 const MuridJournal = lazyWithRetry(() => import('./pages/user/tools/MuridJournal'));
 const SaahIjabah = lazyWithRetry(() => import('./pages/user/tools/SaahIjabah'));
 const SealsCatalogue = lazyWithRetry(() => import('./pages/user/tools/SealsCatalogue'));
+const RajmaCharms = lazyWithRetry(() => import('./pages/user/tools/RajmaCharms'));
 const Store = lazyWithRetry(() => import('./pages/user/Store'));
 const FaqPage = lazyWithRetry(() => import('./pages/FaqPage'));
 
@@ -541,36 +542,46 @@ export default function App() {
     const handleBackButton = () => {
       const currentPath = window.location.pathname;
       console.log(`[Navigation] Capacitor backButton event triggered on path: "${currentPath}"`);
+
+      // 1. Dispatch custom event so open modals/drawers can handle back press and close themselves
+      const customBackEvent = new CustomEvent('app:backbutton', { cancelable: true });
+      const wasCancelled = !window.dispatchEvent(customBackEvent);
+      if (wasCancelled) {
+        console.log('[Navigation] Back press consumed by modal/overlay handler.');
+        return;
+      }
+
+      // 2. Fallback check for active modal overlays or close buttons in DOM
+      const activeModalCloseBtn = document.querySelector<HTMLElement>(
+        '[data-modal-overlay="true"] button[aria-label="Close"], [data-modal-overlay="true"] button.close-modal, .modal-backdrop button, [role="dialog"] button[aria-label="Close"]'
+      );
+      if (activeModalCloseBtn) {
+        console.log('[Navigation] Closing active modal overlay via DOM close button.');
+        activeModalCloseBtn.click();
+        return;
+      }
       
+      // 3. Handle page navigation back
       if (currentPath === '/user/dashboard' || currentPath === '/' || currentPath === '/home') {
         console.log(`[Navigation] Exiting app from home/dashboard.`);
         CapacitorApp.exitApp();
-      } else if (
-        currentPath === '/explore' ||
-        currentPath === '/tools' ||
-        currentPath === '/journal' ||
-        currentPath === '/saved' ||
-        currentPath === '/profile' ||
-        currentPath === '/community'
-      ) {
-        console.log(`[Navigation] Root sub-page. Redirecting back to dashboard.`);
-        navigate('/user/dashboard');
+      } else if (window.history.state && window.history.state.idx > 0) {
+        console.log(`[Navigation] Navigating -1 (previous history entry) from ${currentPath}`);
+        navigate(-1);
       } else {
-        if (currentPath.startsWith('/tools/') || currentPath.startsWith('/secret/')) {
-          const backPath = sessionStorage.getItem('last_active_main_path') || '/user/dashboard';
-          console.log(`[Navigation] Sub-tool or secret path. Redirecting to last active: ${backPath}`);
-          navigate(backPath);
-        } else if (window.history.state && window.history.state.idx > 0) {
-          console.log(`[Navigation] Navigating -1 (previous history entry).`);
-          navigate(-1);
+        // Fallback navigation when no history stack exists
+        if (currentPath.startsWith('/tools/')) {
+          console.log(`[Navigation] Direct tool path fallback. Redirecting to /tools`);
+          navigate('/tools');
+        } else if (currentPath.startsWith('/explore/')) {
+          console.log(`[Navigation] Direct explore path fallback. Redirecting to /explore`);
+          navigate('/explore');
+        } else if (currentPath.startsWith('/secret/')) {
+          console.log(`[Navigation] Direct secret path fallback. Redirecting to /user/dashboard`);
+          navigate('/user/dashboard');
         } else {
-          if (currentPath.startsWith('/explore/')) {
-            console.log(`[Navigation] Sub-explore path. Redirecting to /explore.`);
-            navigate('/explore');
-          } else {
-            console.log(`[Navigation] Fallback redirecting to /user/dashboard.`);
-            navigate('/user/dashboard');
-          }
+          console.log(`[Navigation] Root sub-page or fallback. Redirecting to /user/dashboard.`);
+          navigate('/user/dashboard');
         }
       }
     };
@@ -836,6 +847,8 @@ export default function App() {
                   <Route path="/tools/zikr-levels" element={<ZikrLevelsCalculator />} />
                   <Route path="/tools/hijri-full-moon" element={<HijriFullMoonCalculator />} />
                   <Route path="/tools/murid-journal" element={<MuridJournal />} />
+                  <Route path="/tools/rajma-charms" element={<RajmaCharms />} />
+                  <Route path="/tools/rajma" element={<RajmaCharms />} />
                   
                   {/* Additional Protected Routes */}
                   <Route path="/explore" element={<ExploreDashboard />} />

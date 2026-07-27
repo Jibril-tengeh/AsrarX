@@ -12,7 +12,24 @@ import {
   updateProfile,
   User
 } from 'firebase/auth';
-import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager, persistentSingleTabManager, enableIndexedDbPersistence, doc, getDoc, setDoc, updateDoc, collection, getDocs, addDoc, deleteDoc, query, where, orderBy } from 'firebase/firestore';
+import { 
+  getFirestore, 
+  initializeFirestore, 
+  persistentLocalCache, 
+  persistentMultipleTabManager, 
+  memoryLocalCache,
+  doc, 
+  getDoc, 
+  setDoc, 
+  updateDoc, 
+  collection, 
+  getDocs, 
+  addDoc, 
+  deleteDoc, 
+  query, 
+  where, 
+  orderBy 
+} from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 
 export const app = initializeApp(firebaseConfig);
@@ -20,106 +37,36 @@ export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const storage = getStorage(app);
 
-// Detect if running on mobile or in an iframe environment
-const isMobileOrIframe = typeof window !== 'undefined' && (
-  window.self !== window.top ||
-  window.location.origin.startsWith('capacitor:') ||
-  window.location.origin.startsWith('http://localhost') ||
-  window.location.origin.startsWith('https://localhost') ||
-  window.location.hostname === 'localhost' ||
-  (window as any).Capacitor !== undefined ||
-  (window as any).cordova !== undefined ||
-  /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent || '')
-);
+// Initialize Firestore safely:
+// In iframe preview sandboxes or multi-tab contexts, persistent IndexedDB locking can throw
+// internal assertion errors. We use memoryLocalCache in iframe environments and fall back gracefully.
+const isInIframe = typeof window !== 'undefined' && window.self !== window.top;
 
-export const db = initializeFirestore(app, {
-  localCache: persistentLocalCache({
-    tabManager: isMobileOrIframe ? persistentSingleTabManager({}) : persistentMultipleTabManager()
-  })
-});
-
-// Helper to check if IndexedDB is fully functional (especially inside iframes where it can hang)
-const checkIndexedDBFunctional = (): Promise<boolean> => {
-  return new Promise((resolve) => {
-    try {
-      // Skip IndexedDB if not supported
-      if (!window.indexedDB) {
-        resolve(false);
-        return;
-      }
-      
-      // If we are in an iframe, third-party storage is highly likely to be blocked/hang
-      if (window.self !== window.top) {
-        console.warn("App is running inside an iframe. Skipping IndexedDB persistence to prevent connection hangs.");
-        resolve(false);
-        return;
-      }
-
-      const request = window.indexedDB.open("firestore_persistence_test", 1);
-      let resolved = false;
-      
-      const timeout = setTimeout(() => {
-        if (!resolved) {
-          resolved = true;
-          console.warn("IndexedDB open timed out. Storage access is likely restricted inside iframe sandbox.");
-          resolve(false);
-        }
-      }, 1000);
-
-      request.onsuccess = () => {
-        if (!resolved) {
-          resolved = true;
-          clearTimeout(timeout);
-          try {
-            request.result.close();
-            window.indexedDB.deleteDatabase("firestore_persistence_test");
-          } catch (e) {}
-          resolve(true);
-        }
-      };
-
-      request.onerror = () => {
-        if (!resolved) {
-          resolved = true;
-          clearTimeout(timeout);
-          resolve(false);
-        }
-      };
-    } catch (e) {
-      resolve(false);
+const initFirestore = () => {
+  try {
+    if (isInIframe) {
+      return initializeFirestore(app, {
+        localCache: memoryLocalCache()
+      });
     }
-  });
+    return initializeFirestore(app, {
+      localCache: persistentLocalCache({
+        tabManager: persistentMultipleTabManager()
+      })
+    });
+  } catch (err) {
+    console.warn('[Firestore] Cache init fallback to memoryLocalCache:', err);
+    try {
+      return initializeFirestore(app, {
+        localCache: memoryLocalCache()
+      });
+    } catch (fallbackErr) {
+      return getFirestore(app);
+    }
+  }
 };
 
-// Since we now initialize Firestore with persistentLocalCache directly,
-// we also explicitly configure enableIndexedDbPersistence to optimize local data caching
-// for mobile browser environments (Capacitor) and ensure maximum stability,
-// but only if IndexedDB is verified functional and we are not in an iframe sandbox.
-checkIndexedDBFunctional().then((functional) => {
-  if (functional && !isMobileOrIframe) {
-    try {
-      enableIndexedDbPersistence(db)
-        .then(() => {
-          console.log("[Firestore] Explicit IndexedDB persistence enabled successfully.");
-        })
-        .catch((err) => {
-          if (err.code === 'failed-precondition') {
-            console.warn('[Firestore] Persistence failed-precondition (multiple tabs open)');
-          } else if (err.code === 'unimplemented') {
-            console.warn('[Firestore] Persistence unimplemented in this browser');
-          } else {
-            console.error('[Firestore] Error enabling offline persistence:', err);
-          }
-        });
-    } catch (e) {
-      console.warn("[Firestore] Error during explicit persistence initialization:", e);
-    }
-  } else {
-    console.log("[Firestore] Skipping explicit enableIndexedDbPersistence to avoid iframe sandbox connection hangs.");
-  }
-}).catch((e) => {
-  console.warn("[Firestore] Error during persistence check:", e);
-});
+export const db = initFirestore();
 
 export const googleProvider = new GoogleAuthProvider();
 

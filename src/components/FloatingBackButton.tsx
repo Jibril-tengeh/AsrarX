@@ -41,14 +41,19 @@ export const FloatingBackButton: React.FC = () => {
           whileHover={{ scale: 1.1, x: 5 }}
           whileTap={{ scale: 0.9 }}
           onClick={() => {
-            if (location.pathname.startsWith('/tools/') || location.pathname.startsWith('/secret/')) {
-              const backPath = sessionStorage.getItem('last_active_main_path') || '/user/dashboard';
-              navigate(backPath);
-            } else if (window.history.state && window.history.state.idx > 0) {
+            if (window.history.state && window.history.state.idx > 0) {
               navigate(-1);
             } else {
-              const backPath = sessionStorage.getItem('last_active_main_path') || '/user/dashboard';
-              navigate(backPath);
+              if (location.pathname.startsWith('/tools/')) {
+                navigate('/tools');
+              } else if (location.pathname.startsWith('/explore/')) {
+                navigate('/explore');
+              } else if (location.pathname.startsWith('/secret/')) {
+                navigate('/user/dashboard');
+              } else {
+                const backPath = sessionStorage.getItem('last_active_main_path') || '/user/dashboard';
+                navigate(backPath);
+              }
             }
           }}
           className="fixed left-4 bottom-24 z-[100] w-14 h-14 flex items-center justify-center bg-black/20 dark:bg-black/40 backdrop-blur-md border border-white/30 dark:border-white/20 rounded-full shadow-lg text-white transition-all hover:bg-black/30 dark:hover:bg-black/60 hover:scale-110 active:scale-95"

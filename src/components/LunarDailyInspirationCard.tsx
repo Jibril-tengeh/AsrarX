@@ -21,7 +21,9 @@ export const LUNAR_PHASE_DAILY_VERSES = [
     translationFr: "Il fend l'aube, fait de la nuit un repos, et du soleil et de la lune une mesure du temps. Tel est l'ordre établi par le Puissant, l'Omniscient.",
     translationEn: "He causes the dawn to break and made the night for rest and the sun and moon for calculation. That is the determination of the Exalted in Might, the Knowing.",
     translationHa: "Mai tsaga Asuba shine Ya sanya dare ya zama natsuwa da rana da wata domin lissafi.",
-    benefitFr: "Méditation sur le renouveau spirituel et la clarté divine de l'aube."
+    benefitFr: "Méditation sur le renouveau spirituel et la clarté divine de l'aube.",
+    benefitEn: "Meditation on spiritual renewal and divine clarity at dawn.",
+    benefitHa: "Bimbini akan sabuntawar ruhani da hasken Asuba na Ubangiji."
   },
   {
     phaseNameFr: "Premier Croissant (Al-Hilal)",
@@ -34,7 +36,9 @@ export const LUNAR_PHASE_DAILY_VERSES = [
     translationFr: "Ils t'interrogent sur les nouvelles lunes. Dis : 'Elles servent aux hommes à mesurer le temps et pour le Pèlerinage.'",
     translationEn: "They ask you about the new moons. Say: 'They are measurements of time for the people and for Hajj.'",
     translationHa: "Suna tambayarka game da sabbin watanni. Ka ce: Su abubuwan auna lokaci ne ga mutane.",
-    benefitFr: "Bénédiction pour l'initiation de nouveaux projets et la fixation d'intentions pures."
+    benefitFr: "Bénédiction pour l'initiation de nouveaux projets et la fixation d'intentions pures.",
+    benefitEn: "Blessing for initiating new endeavors and setting pure intentions.",
+    benefitHa: "Albarka don fara sabbin ayyuka da sanya tsantsar niyya."
   },
   {
     phaseNameFr: "Premier Quartier (Al-Tarbii' Al-Awwal)",
@@ -47,7 +51,9 @@ export const LUNAR_PHASE_DAILY_VERSES = [
     translationFr: "Et la lune, Nous lui avons déterminé des phases jusqu'à ce qu'elle devienne comme la palme desséchée.",
     translationEn: "And the moon - We have determined for it phases, until it returns like the old date stalk.",
     translationHa: "Shi kuma wata Mun sanya masa tsaya-tsaya har ya koma kamar busasshen goyon kwan kwan.",
-    benefitFr: "Équilibre intérieur, sérénité et harmonie dans la traversée des étapes."
+    benefitFr: "Équilibre intérieur, sérénité et harmonie dans la traversée des étapes.",
+    benefitEn: "Inner balance, serenity, and harmony throughout life's stages.",
+    benefitHa: "Daidaito na ciki, kwanciyar hankali da daidaituwa a kowane mataki."
   },
   {
     phaseNameFr: "Lune Gibbeuse Croissante (Al-Ahdab)",
@@ -60,7 +66,9 @@ export const LUNAR_PHASE_DAILY_VERSES = [
     translationFr: "L'Heure approche et la lune s'est fendue.",
     translationEn: "The Hour has come near, and the moon has split.",
     translationHa: "Sawa ta kusanta kuma wata ya tsage.",
-    benefitFr: "Ouverture des portes de la sagesse et illumination des secrets cachés."
+    benefitFr: "Ouverture des portes de la sagesse et illumination des secrets cachés.",
+    benefitEn: "Opening of the gates of wisdom and illumination of hidden secrets.",
+    benefitHa: "Buɗe ƙofofin hikima da bayyana asirai maɓoyata."
   },
   {
     phaseNameFr: "Pleine Lune (Al-Badr)",
@@ -73,7 +81,9 @@ export const LUNAR_PHASE_DAILY_VERSES = [
     translationFr: "Et quant au ciel, Il l'a élevé bien haut. Et Il a établi la balance, afin que vous ne transgressiez pas dans la pesée. Et établissez le poids avec équité.",
     translationEn: "And the heaven He raised and imposed the balance, that you not transgress within the balance. And establish weight in justice.",
     translationHa: "Kuma sama Ya daga ta kuma Ya sanya ma'auni domin kada ku yi keta a ma'auni.",
-    benefitFr: "Puissance contemplative maximale, justice divine et plénitude de la lumière spirituelle."
+    benefitFr: "Puissance contemplative maximale, justice divine et plénitude de la lumière spirituelle.",
+    benefitEn: "Maximum contemplative power, divine justice, and fullness of spiritual light.",
+    benefitHa: "Karfin bimbini mafi girma, adalci na Ubangiji da cikar hasken ruhani."
   },
   {
     phaseNameFr: "Lune Gibbeuse Décroissante",
@@ -86,7 +96,9 @@ export const LUNAR_PHASE_DAILY_VERSES = [
     translationFr: "Le soleil et la lune évoluent selon un calcul minutieux.",
     translationEn: "The sun and the moon move by precise calculation.",
     translationHa: "Rana da wata suna tafiya ne bisa ga lissafi.",
-    benefitFr: "Précision céleste, gratitude et reconnaissance du décret parfait."
+    benefitFr: "Précision céleste, gratitude et reconnaissance du décret parfait.",
+    benefitEn: "Celestial precision, gratitude, and acknowledgment of divine decree.",
+    benefitHa: "Cikakken lissafin sama, godiya da yarda da kaddara mai kyau."
   },
   {
     phaseNameFr: "Dernier Quartier (Al-Tarbii' Al-Thani)",
@@ -99,7 +111,9 @@ export const LUNAR_PHASE_DAILY_VERSES = [
     translationFr: "Béni soit Celui qui a placé dans le ciel des constellations et y a placé un flambeau et une lune éclairante !",
     translationEn: "Blessed is He who has placed in the sky constellations and placed therein a lamp and a luminous moon!",
     translationHa: "Albarka ta tabbata ga wanda Ya sanya Buruj a sama kuma Ya sanya fitila da wata mai haskakawa.",
-    benefitFr: "Lumière dans les ténèbres, protection contre les illusions et paix du cœur."
+    benefitFr: "Lumière dans les ténèbres, protection contre les illusions et paix du cœur.",
+    benefitEn: "Light in darkness, protection against illusions, and peace of heart.",
+    benefitHa: "Haske a cikin duhu, tsari daga rude-rude da kwanciyar hankali."
   },
   {
     phaseNameFr: "Dernier Croissant (Al-Mahaq)",
@@ -112,7 +126,9 @@ export const LUNAR_PHASE_DAILY_VERSES = [
     translationFr: "Et y a fait de la lune une lumière et du soleil une lampe.",
     translationEn: "And made the moon therein a light and made the sun a burning lamp.",
     translationHa: "Kuma Ya sanya wata a cikinsu ya zama haske kuma Ya sanya rana tana fitila.",
-    benefitFr: "Introspection profonde, purification des pensées et réconfort intérieur."
+    benefitFr: "Introspection profonde, purification des pensées et réconfort intérieur.",
+    benefitEn: "Deep introspection, purification of thoughts, and inner solace.",
+    benefitHa: "Tunanin cikin zuciya mai zurfi, tsarkake tunani da natsuwa na ciki."
   }
 ];
 
@@ -150,6 +166,12 @@ export const LunarDailyInspirationCard: React.FC<LunarDailyInspirationCardProps>
     ? verseData.translationHa
     : verseData.translationEn;
 
+  const benefit = language === 'fr'
+    ? verseData.benefitFr
+    : language === 'ha'
+    ? verseData.benefitHa
+    : verseData.benefitEn;
+
   return (
     <div className={`bg-gradient-to-br from-slate-950 via-indigo-950/80 to-slate-900 border border-emerald-500/30 rounded-2xl p-4 text-white shadow-xl relative overflow-hidden backdrop-blur-sm transition-all ${className}`}>
       {/* Background glowing particles */}
@@ -162,7 +184,11 @@ export const LunarDailyInspirationCard: React.FC<LunarDailyInspirationCardProps>
           <span className="text-2xl p-2 rounded-xl bg-amber-500/10 border border-amber-500/20 shrink-0">{verseData.emoji}</span>
           <div>
             <span className="text-[10px] font-black uppercase tracking-wider text-amber-400 block">
-              {language === 'fr' ? "CARTE D'INSPIRATION DU JOUR • PHASE LUNAIRE" : "DAILY LUNAR INSPIRATION CARD"}
+              {language === 'fr' 
+                ? "CARTE D'INSPIRATION DU JOUR • PHASE LUNAIRE" 
+                : language === 'ha' 
+                ? "KATIN HURAMAR WATA TA RANAR • WATA" 
+                : "DAILY LUNAR INSPIRATION CARD • LUNAR PHASE"}
             </span>
             <div className="flex flex-wrap items-center gap-2">
               <h4 className="text-xs sm:text-sm font-bold text-amber-200">
@@ -181,18 +207,20 @@ export const LunarDailyInspirationCard: React.FC<LunarDailyInspirationCardProps>
             className="hidden sm:flex px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500/20 to-emerald-500/20 hover:from-amber-500/30 hover:to-emerald-500/30 border border-amber-400/30 text-amber-200 text-xs font-bold items-center gap-1.5 transition-all shadow-md cursor-pointer"
           >
             <ImageIcon size={14} className="text-amber-400" />
-            <span>{language === 'fr' ? "Visuel" : "Visual"}</span>
+            <span>{language === 'fr' ? "Visuel" : language === 'ha' ? "Hoto" : "Visual"}</span>
           </button>
 
           <button
             onClick={() => setIsExpanded(!isExpanded)}
             className="p-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 text-xs font-bold flex items-center gap-1.5 border border-amber-500/30 transition-all cursor-pointer"
-            aria-label={isExpanded ? "Fermer la carte" : "Ouvrir la carte"}
+            aria-label={isExpanded 
+              ? (language === 'fr' ? "Fermer la carte" : language === 'ha' ? "Rufe katin" : "Close card") 
+              : (language === 'fr' ? "Ouvrir la carte" : language === 'ha' ? "Bude katin" : "Expand card")}
           >
             <span className="hidden sm:inline text-xs">
               {isExpanded 
-                ? (language === 'fr' ? 'Fermer' : 'Close') 
-                : (language === 'fr' ? 'Ouvrir' : 'Expand')}
+                ? (language === 'fr' ? 'Fermer' : language === 'ha' ? 'Rufe' : 'Close') 
+                : (language === 'fr' ? 'Ouvrir' : language === 'ha' ? 'Bude' : 'Expand')}
             </span>
             {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
           </button>
@@ -228,10 +256,10 @@ export const LunarDailyInspirationCard: React.FC<LunarDailyInspirationCardProps>
                 « {translation} »
               </p>
 
-              {verseData.benefitFr && (
+              {benefit && (
                 <p className="text-[11px] text-amber-300/80 font-medium mt-3 pt-2 border-t border-emerald-500/10 flex items-center justify-center gap-1">
                   <Sparkles size={12} className="text-amber-400" />
-                  {verseData.benefitFr}
+                  {benefit}
                 </p>
               )}
             </div>

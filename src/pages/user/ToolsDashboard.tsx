@@ -50,6 +50,45 @@ export const ToolsDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"simple" | "advanced">(
     () => (localStorage.getItem("active_tools_tab") as "simple" | "advanced") || "simple"
   );
+  const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
+  const [touchEnd, setTouchEnd] = useState<{ x: number; y: number } | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart({
+      x: e.targetTouches[0].clientX,
+      y: e.targetTouches[0].clientY,
+    });
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd({
+      x: e.targetTouches[0].clientX,
+      y: e.targetTouches[0].clientY,
+    });
+  };
+
+  const handleTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    const distanceX = touchStart.x - touchEnd.x;
+    const distanceY = touchStart.y - touchEnd.y;
+    const minSwipeDistance = 45;
+
+    // Check if horizontal swipe is dominant over vertical scroll
+    if (Math.abs(distanceX) > minSwipeDistance && Math.abs(distanceX) > Math.abs(distanceY) * 1.2) {
+      if (distanceX > 0) {
+        // Swiped Left -> Switch to Advanced
+        if (activeTab === "simple") {
+          setActiveTab("advanced");
+        }
+      } else {
+        // Swiped Right -> Switch to Simple
+        if (activeTab === "advanced") {
+          setActiveTab("simple");
+        }
+      }
+    }
+  };
 
   useEffect(() => {
     localStorage.setItem("active_tools_tab", activeTab);
@@ -258,7 +297,12 @@ export const ToolsDashboard: React.FC = () => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 safe-area-pt pb-24 w-full max-w-full overflow-x-hidden min-w-0">
+    <div 
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      className="max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 safe-area-pt pb-24 w-full max-w-full overflow-x-hidden min-w-0 touch-pan-y"
+    >
       <BannerAd />
       <div className="mb-8">
         <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
@@ -283,7 +327,7 @@ export const ToolsDashboard: React.FC = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-xl mb-8 relative">
+      <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-xl mb-3 relative">
         <button
           onClick={() => setActiveTab("simple")}
           className={`relative flex-1 py-2.5 rounded-lg text-sm font-medium transition-colors ${activeTab === "simple" ? "text-gray-900 dark:text-white" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"}`}
@@ -318,6 +362,19 @@ export const ToolsDashboard: React.FC = () => {
             {t("toolsDashboard.advancedTools", "Outils Avancés")}
           </span>
         </button>
+      </div>
+
+      {/* Mobile Swipe Hint Indicator */}
+      <div className="flex justify-center items-center gap-2 text-[11px] text-gray-400 dark:text-gray-500 mb-6 select-none sm:hidden bg-gray-50 dark:bg-gray-800/50 py-1.5 px-3 rounded-full w-fit mx-auto border border-gray-200/50 dark:border-gray-700/50">
+        <span className="text-emerald-500 font-bold animate-pulse">👈</span>
+        <span>
+          {language === 'fr'
+            ? 'Balayez l\'écran pour basculer d\'outil'
+            : language === 'ha'
+            ? 'Goga allon domin sauya kayan aiki'
+            : 'Swipe screen to switch tools'}
+        </span>
+        <span className="text-emerald-500 font-bold animate-pulse">👉</span>
       </div>
 
       {(() => {
@@ -474,7 +531,10 @@ export const ToolsDashboard: React.FC = () => {
         </div>
       ) : (
         <motion.div
-          layout
+          key={activeTab}
+          initial={{ opacity: 0, x: activeTab === "advanced" ? 25 : -25 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ duration: 0.25, ease: "easeOut" }}
           className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6"
         >
           <AnimatePresence mode="popLayout">

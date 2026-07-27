@@ -23,14 +23,18 @@ import {
   LunarSealVariety,
   SealStatus,
   SealTargetUser,
+  SEAL_VERSIONS_LIST,
   getLocalizedLunarSealVarieties,
   getSealAdminConfig,
   saveSealAdminConfig,
   isGlobalSealMaintenance,
-  setGlobalSealMaintenance
+  setGlobalSealMaintenance,
+  getSealVersionSymbol,
+  getSealVersionDetails
 } from '../data/lunarSealVarieties';
 import { generateAndDownloadSealCard } from '../utils/sealCanvasExporter';
 import { useAuth } from '../contexts/AuthContext';
+import { KhatimVisualizer } from './KhatimVisualizer';
 
 interface LunarSealVarietiesSectionProps {
   language: 'fr' | 'en' | 'ha';
@@ -47,7 +51,7 @@ export const LunarSealVarietiesSection: React.FC<LunarSealVarietiesSectionProps>
   const [seals, setSeals] = useState(() => getLocalizedLunarSealVarieties(language));
   const [selectedGroup, setSelectedGroup] = useState<number | 'all'>('all');
   const [selectedSealId, setSelectedSealId] = useState<string>('seal_wafq_9x9');
-  const [selectedVersion, setSelectedVersion] = useState<1 | 2>(1);
+  const [selectedVersion, setSelectedVersion] = useState<number>(1);
   const [copiedSymbol, setCopiedSymbol] = useState<boolean>(false);
   const [isDownloading, setIsDownloading] = useState<boolean>(false);
   const [isFullScreen, setIsFullScreen] = useState<boolean>(false);
@@ -63,6 +67,7 @@ export const LunarSealVarietiesSection: React.FC<LunarSealVarietiesSectionProps>
   }, [language, adminConfig, globalMaintenance]);
 
   const activeSeal = seals.find((s) => s.id === selectedSealId) || seals[0];
+  const activeVersionDetails = activeSeal ? getSealVersionDetails(activeSeal, selectedVersion, language) : null;
 
   const handleStatusChange = (sealId: string, newStatus: SealStatus) => {
     const updated = {
@@ -106,26 +111,8 @@ export const LunarSealVarietiesSection: React.FC<LunarSealVarietiesSectionProps>
   };
 
   const handleDownloadSeal = async () => {
-    if (!activeSeal) return;
+    if (!activeSeal || !activeVersionDetails) return;
     setIsDownloading(true);
-
-    const symbolText =
-      selectedVersion === 2 && activeSeal.graphicSymbolV2
-        ? activeSeal.graphicSymbolV2
-        : activeSeal.graphicSymbol;
-
-    const versionTitle =
-      selectedVersion === 2 && activeSeal.graphicSymbolV2
-        ? language === 'fr'
-          ? 'Version 2 : Khatim An-Nur'
-          : language === 'ha'
-          ? 'Siga 2: Khatim An-Nur'
-          : 'Version 2: Khatim Seal'
-        : language === 'fr'
-        ? 'Version 1 : Wafq Abjad'
-        : language === 'ha'
-        ? 'Siga 1: Hatimin Wafq'
-        : 'Version 1: Wafq Seal';
 
     try {
       await generateAndDownloadSealCard({
@@ -134,10 +121,11 @@ export const LunarSealVarietiesSection: React.FC<LunarSealVarietiesSectionProps>
         arabicName: activeSeal.arabicName,
         formula: activeSeal.formula,
         abjadValue: activeSeal.abjadValue,
-        graphicSymbol: symbolText,
+        graphicSymbol: activeVersionDetails.symbol,
         groupTitle: activeSeal.groupTitle,
         lang: language,
-        versionTitle
+        versionTitle: `${activeVersionDetails.title} • Puissance: ${activeVersionDetails.powerLevel}%`,
+        version: selectedVersion
       });
     } catch (e) {
       console.error('Download error:', e);
@@ -147,13 +135,8 @@ export const LunarSealVarietiesSection: React.FC<LunarSealVarietiesSectionProps>
   };
 
   const handleCopySymbol = () => {
-    if (!activeSeal) return;
-    const textToCopy =
-      selectedVersion === 2 && activeSeal.graphicSymbolV2
-        ? activeSeal.graphicSymbolV2
-        : activeSeal.graphicSymbol;
-
-    navigator.clipboard.writeText(textToCopy);
+    if (!activeSeal || !activeVersionDetails) return;
+    navigator.clipboard.writeText(activeVersionDetails.symbol);
     setCopiedSymbol(true);
     setTimeout(() => setCopiedSymbol(false), 2500);
   };
@@ -526,57 +509,67 @@ export const LunarSealVarietiesSection: React.FC<LunarSealVarietiesSectionProps>
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
               {/* Left Column: Graphic Symbol Box */}
               <div className="lg:col-span-5 space-y-3">
-                {/* Version Switcher if V2 exists */}
-                {activeSeal.graphicSymbolV2 && (
-                  <div className="flex items-center gap-1.5 bg-black/80 p-1.5 rounded-xl border border-purple-500/30">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedVersion(1)}
-                      className={`flex-1 py-1.5 px-2 text-xs font-extrabold rounded-lg transition-all cursor-pointer ${
-                        selectedVersion === 1
-                          ? 'bg-amber-500 text-black shadow-md'
-                          : 'text-purple-300 hover:text-white hover:bg-purple-900/40'
-                      }`}
-                    >
-                      {language === 'fr' ? 'V1 : Wafq Abjad' : 'V1: Wafq Seal'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedVersion(2)}
-                      className={`flex-1 py-1.5 px-2 text-xs font-extrabold rounded-lg transition-all cursor-pointer ${
-                        selectedVersion === 2
-                          ? 'bg-amber-500 text-black shadow-md'
-                          : 'text-purple-300 hover:text-white hover:bg-purple-900/40'
-                      }`}
-                    >
-                      {language === 'fr' ? 'V2 : Khatim An-Nur' : 'V2: Khatim Seal'}
-                    </button>
-                  </div>
-                )}
-
-                {/* Graphic Box */}
-                <div
-                  onClick={() => setIsFullScreen(true)}
-                  className="group relative cursor-pointer w-full bg-black/95 border border-purple-500/40 hover:border-amber-400/80 p-4 sm:p-6 rounded-2xl shadow-inner hover:shadow-purple-500/20 select-none min-h-[220px] flex flex-col items-center justify-center transition-all duration-300 overflow-x-auto"
-                  title={
-                    language === 'fr'
-                      ? 'Cliquez pour agrandir en plein écran et télécharger le Sceau'
-                      : 'Click to view full screen'
-                  }
-                >
-                  <pre className="text-purple-300 font-mono text-xs sm:text-sm leading-relaxed py-2 tracking-tight text-center whitespace-pre max-w-full overflow-x-auto select-all">
-                    {selectedVersion === 2 && activeSeal.graphicSymbolV2
-                      ? activeSeal.graphicSymbolV2
-                      : activeSeal.graphicSymbol}
-                  </pre>
-
-                  <div className="absolute inset-0 bg-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl flex items-center justify-center backdrop-blur-[2px]">
-                    <span className="bg-purple-950/90 text-amber-300 text-xs font-extrabold px-3 py-1.5 rounded-xl border border-amber-500/40 shadow-xl flex items-center gap-2 uppercase tracking-wider">
-                      <Eye size={14} className="animate-pulse" />
-                      {language === 'fr' ? 'Plein Écran HD' : 'Full Screen'}
+                {/* 12-Version Selector Grid & Power Level Badge */}
+                <div className="bg-black/90 p-2.5 rounded-2xl border border-purple-500/30 space-y-2">
+                  <div className="flex items-center justify-between px-1">
+                    <span className="text-[11px] font-extrabold text-amber-400 uppercase tracking-widest flex items-center gap-1.5">
+                      <Sparkles size={12} className="text-amber-400 animate-spin" />
+                      {language === 'fr' ? '12 Versions Théurgiques' : '12 Sacred Versions'}
                     </span>
+                    {activeVersionDetails && (
+                      <span className="text-[10px] font-bold text-purple-300 bg-purple-950/80 px-2 py-0.5 rounded-full border border-purple-500/30">
+                        {activeVersionDetails.powerLevel}% {language === 'fr' ? 'Puissance' : 'Power'}
+                      </span>
+                    )}
                   </div>
+
+                  {/* Versions Scrollable Grid */}
+                  <div className="grid grid-cols-4 sm:grid-cols-6 gap-1 max-h-[110px] overflow-y-auto pr-1">
+                    {SEAL_VERSIONS_LIST.map((v) => {
+                      const isSel = selectedVersion === v.version;
+                      return (
+                        <button
+                          key={v.version}
+                          type="button"
+                          onClick={() => setSelectedVersion(v.version)}
+                          className={`py-1.5 px-1 text-[10px] font-extrabold rounded-lg transition-all cursor-pointer flex flex-col items-center justify-center border ${
+                            isSel
+                              ? 'bg-amber-500 text-black border-amber-300 shadow-md scale-105'
+                              : 'bg-purple-950/40 text-purple-300 border-purple-800/40 hover:bg-purple-900/60 hover:text-white'
+                          }`}
+                          title={v.title[language] || v.title.fr}
+                        >
+                          <span>V{v.version}</span>
+                          <span className="text-[8px] opacity-80 truncate max-w-full font-normal">
+                            {v.badge[language] || v.badge.fr}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Active Selected Version Title */}
+                  {activeVersionDetails && (
+                    <div className="bg-purple-950/60 p-2 rounded-xl border border-amber-500/20 text-center">
+                      <p className="text-xs font-bold text-amber-300">
+                        {activeVersionDetails.title}
+                      </p>
+                      <p className="text-[10px] text-purple-300/80 mt-0.5 italic">
+                        {activeVersionDetails.subtitle}
+                      </p>
+                    </div>
+                  )}
                 </div>
+
+                {/* Interactive Khatim Visualizer */}
+                <KhatimVisualizer
+                  version={selectedVersion}
+                  sealTitle={activeSeal.title}
+                  arabicName={activeSeal.arabicName}
+                  asciiSymbol={activeVersionDetails ? activeVersionDetails.symbol : activeSeal.graphicSymbol}
+                  language={language}
+                  onExpandFullScreen={() => setIsFullScreen(true)}
+                />
 
                 {/* Control Action Buttons */}
                 <div className="grid grid-cols-2 gap-2">
@@ -726,17 +719,24 @@ export const LunarSealVarietiesSection: React.FC<LunarSealVarietiesSectionProps>
                   {activeSeal.groupTitle}
                 </span>
                 <h3 className="text-2xl font-serif font-bold text-white">{activeSeal.title}</h3>
+                {activeVersionDetails && (
+                  <p className="text-xs font-semibold text-purple-300 mt-1">
+                    {activeVersionDetails.title} • {activeVersionDetails.powerLevel}% {language === 'fr' ? 'Puissance Théurgique' : 'Theurgic Power'}
+                  </p>
+                )}
                 <span className="text-xl font-serif text-amber-300 block mt-1" dir="rtl">
                   {activeSeal.arabicName}
                 </span>
               </div>
 
-              <div className="bg-black/95 border border-purple-500/40 rounded-2xl p-6 overflow-x-auto shadow-inner select-all">
-                <pre className="text-purple-300 font-mono text-lg sm:text-xl md:text-2xl leading-relaxed py-4 text-center whitespace-pre max-w-full">
-                  {selectedVersion === 2 && activeSeal.graphicSymbolV2
-                    ? activeSeal.graphicSymbolV2
-                    : activeSeal.graphicSymbol}
-                </pre>
+              <div className="w-full text-left">
+                <KhatimVisualizer
+                  version={selectedVersion}
+                  sealTitle={activeSeal.title}
+                  arabicName={activeSeal.arabicName}
+                  asciiSymbol={activeVersionDetails ? activeVersionDetails.symbol : activeSeal.graphicSymbol}
+                  language={language}
+                />
               </div>
 
               <div className="flex items-center justify-center gap-3">

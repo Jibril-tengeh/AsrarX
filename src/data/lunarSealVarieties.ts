@@ -1390,10 +1390,10 @@ export function subscribeSealAdminConfigFromFirestore(callback?: (config: SealAd
         }
       }
     }, (err) => {
-      console.warn("Firestore seal config snapshot listener warning:", err);
+      console.warn("Firestore seal config subscription error:", err);
     });
   } catch (err) {
-    console.warn("Firestore seal config subscription failed:", err);
+    console.warn("Firestore seal config listener initialization error:", err);
     return () => {};
   }
 }
@@ -1430,3 +1430,430 @@ export function getLocalizedLunarSealVarieties(lang: 'fr' | 'en' | 'ha') {
     };
   });
 }
+export interface SealVersionMeta {
+  version: number;
+  title: { fr: string; en: string; ha: string };
+  subtitle: { fr: string; en: string; ha: string };
+  badge: { fr: string; en: string; ha: string };
+  element: { fr: string; en: string; ha: string };
+  powerLevel: number;
+}
+
+export const SEAL_VERSIONS_LIST: SealVersionMeta[] = [
+  {
+    version: 1,
+    title: {
+      fr: "Version 1 : Wafq Abjad Classique",
+      en: "Version 1: Classic Abjad Wafq",
+      ha: "Siga 1: Hatimin Wafq Abjad"
+    },
+    subtitle: {
+      fr: "Matrice numérique originale & Carré Magique d'Ancrage",
+      en: "Original numerical matrix & Foundational Magic Square",
+      ha: "Gidan lissafi na tushe da hatimin za'afaran"
+    },
+    badge: { fr: "Fondation", en: "Foundation", ha: "Tushe" },
+    element: { fr: "Eau Céleste (Mā'i)", en: "Celestial Water", ha: "Ruwan Samaniya" },
+    powerLevel: 88
+  },
+  {
+    version: 2,
+    title: {
+      fr: "Version 2 : Khatim An-Nur (Sceau de Lumière)",
+      en: "Version 2: Khatim An-Nur (Seal of Light)",
+      ha: "Siga 2: Hatimin An-Nur (Haske)"
+    },
+    subtitle: {
+      fr: "Sceau angélique géométrique d'illumination spirituelle",
+      en: "Geometric angelic seal of spiritual illumination",
+      ha: "Hatimin mala'iku da hasken ruhi"
+    },
+    badge: { fr: "Illumination", en: "Illumination", ha: "Haske" },
+    element: { fr: "Lumière Pure (Nur)", en: "Pure Light", ha: "Fararen Haske" },
+    powerLevel: 91
+  },
+  {
+    version: 3,
+    title: {
+      fr: "Version 3 : Sirr Al-Huruf (Secret des Lettres)",
+      en: "Version 3: Sirr Al-Huruf (Secret of Letters)",
+      ha: "Siga 3: Asirin Haruffa"
+    },
+    subtitle: {
+      fr: "Matrice de lettres mystiques & Ism Al-Azam",
+      en: "Mystic letter matrix & Supreme Divine Name",
+      ha: "Asirin babban sunan Allah a haruffa"
+    },
+    badge: { fr: "Secret", en: "Secret", ha: "Asiri" },
+    element: { fr: "Air Subtil (Hawa')", en: "Subtle Air", ha: "Iska Mai Kyau" },
+    powerLevel: 93
+  },
+  {
+    version: 4,
+    title: {
+      fr: "Version 4 : Al-Muthallath Al-Ghazali (Triangle Sacré)",
+      en: "Version 4: Al-Ghazali Sacred Triangle (3x3)",
+      ha: "Siga 4: Hatimin Uku na Ghazali"
+    },
+    subtitle: {
+      fr: "Matrice 3x3 de l'Imam Ghazali pour le déblocage express",
+      en: "3x3 Ghazali matrix for express unblocking",
+      ha: "Hatimin 3x3 na Imam Ghazali na warware matsala"
+    },
+    badge: { fr: "Déblocage", en: "Unblocking", ha: "Bude Kofa" },
+    element: { fr: "Feu Spirituel (Nar)", en: "Spiritual Fire", ha: "Wutar Ruhi" },
+    powerLevel: 94
+  },
+  {
+    version: 5,
+    title: {
+      fr: "Version 5 : As-Sabaa Al-Mawaki' (7 Positions Célestes)",
+      en: "Version 5: As-Sabaa Al-Mawaki' (7 Planetary Alignment)",
+      ha: "Siga 5: Hatimin Taurari Bakwai"
+    },
+    subtitle: {
+      fr: "Alignement avec les 7 Planètes & Sceaux des Rois",
+      en: "Alignment with the 7 Planets & Planetary Kings",
+      ha: "Karfafa haɗin taurari 7 da sarakunan samaniya"
+    },
+    badge: { fr: "Harmonie", en: "Harmony", ha: "Hada Kai" },
+    element: { fr: "Ether Céleste (Ather)", en: "Celestial Ether", ha: "Ather na Samaniya" },
+    powerLevel: 95
+  },
+  {
+    version: 6,
+    title: {
+      fr: "Version 6 : Khatim An-Nar wa Al-Hawa (Feu & Air)",
+      en: "Version 6: Fire & Air Radiant Seal",
+      ha: "Siga 6: Hatimin Wuta da Iska"
+    },
+    subtitle: {
+      fr: "Activation énergétique ultra-rapide pour les besoins urgents",
+      en: "Ultra-fast energy activation for urgent needs",
+      ha: "Karfe aiki cikin hanzari na bukatun gaggawa"
+    },
+    badge: { fr: "Vitesse Express", en: "Express Speed", ha: "Hanzari" },
+    element: { fr: "Feu & Air Radiants", en: "Radiant Fire & Air", ha: "Wuta da Iska" },
+    powerLevel: 96
+  },
+  {
+    version: 7,
+    title: {
+      fr: "Version 7 : Khatim Al-Ma' wa At-Tin (Eau & Terre)",
+      en: "Version 7: Water & Earth Grounding Seal",
+      ha: "Siga 7: Hatimin Ruwa da Kasa"
+    },
+    subtitle: {
+      fr: "Sceau d'ancrage profond, annulation des blocages et guérison",
+      en: "Deep grounding, anti-blockage, and healing seal",
+      ha: "Kariyar jiki, warware sihir da warkarwa"
+    },
+    badge: { fr: "Guérison & Ancrage", en: "Healing & Grounding", ha: "Warkarwa" },
+    element: { fr: "Eau & Terre Sacrées", en: "Sacred Water & Earth", ha: "Ruwa da Kasa" },
+    powerLevel: 97
+  },
+  {
+    version: 8,
+    title: {
+      fr: "Version 8 : Al-Hisn Al-Mane' (Bouclier 12x12)",
+      en: "Version 8: Al-Hisn Al-Mane' (12x12 Shield)",
+      ha: "Siga 8: Garkuwar 12x12 Mai Karfi"
+    },
+    subtitle: {
+      fr: "Grande matrice 12x12 de protection impénétrable",
+      en: "12x12 grand matrix of impenetrable protection",
+      ha: "Babban hatimi na tsaro mai gidaje 12x12"
+    },
+    badge: { fr: "Protection Ultime", en: "Ultimate Shield", ha: "Tsaro Imman" },
+    element: { fr: "Acier Céleste", en: "Celestial Steel", ha: "Karfen Samaniya" },
+    powerLevel: 98
+  },
+  {
+    version: 9,
+    title: {
+      fr: "Version 9 : Talsam Souleymani (Les 7 Sceaux de Salomon)",
+      en: "Version 9: Solomonic Talisman (7 Seals of Solomon)",
+      ha: "Siga 9: Hatimin Annabi Sulaiman (AS)"
+    },
+    subtitle: {
+      fr: "Sceau de l'Empereur Souleymane pour l'autorité et le respect",
+      en: "Imperial Solomon seal for authority and prestige",
+      ha: "Hatimin sarauta, daukaka da cika iko"
+    },
+    badge: { fr: "Autorité Royale", en: "Royal Authority", ha: "Sarauta" },
+    element: { fr: "Rayon Royal", en: "Royal Ray", ha: "Hasken Sarauta" },
+    powerLevel: 99
+  },
+  {
+    version: 10,
+    title: {
+      fr: "Version 10 : At-Tawafuq Ash-Shamsi (Soleil & Lune)",
+      en: "Version 10: Solar-Lunar Synergy Matrix",
+      ha: "Siga 10: Haɗin Rana da Wata"
+    },
+    subtitle: {
+      fr: "Matrice unifiée du Soleil et de la Lune pour le charisme absolu",
+      en: "Unified Sun & Moon matrix for absolute aura and prestige",
+      ha: "Hatimin kwarjini da samun karbuwa"
+    },
+    badge: { fr: "Charisme Absolu", en: "Absolute Charisma", ha: "Kwarjini" },
+    element: { fr: "Duo Solaire-Lunaire", en: "Solar-Lunar Duo", ha: "Rana da Wata" },
+    powerLevel: 99
+  },
+  {
+    version: 11,
+    title: {
+      fr: "Version 11 : Khatim Ar-Rouhaniyya (Gardiens Célestes)",
+      en: "Version 11: Celestial Archangels Seal",
+      ha: "Siga 11: Hatimin Mala'iku Huɗu"
+    },
+    subtitle: {
+      fr: "Invocations théurgiques des 4 Archanges majeurs",
+      en: "Theurgic invocations of the 4 Archangels",
+      ha: "Kira ga Jibrilu, Mikailu, Israfilu da Azra'ilu"
+    },
+    badge: { fr: "Théurgie Archangélique", en: "Archangelic Powers", ha: "Mala'iku" },
+    element: { fr: "Présence Archangélique", en: "Archangelic Presence", ha: "Mala'iku" },
+    powerLevel: 100
+  },
+  {
+    version: 12,
+    title: {
+      fr: "Version 12 : Khatim Ism Al-Azam Al-A'zam (Sceau Suprême VIP)",
+      en: "Version 12: Supreme Ism Al-Azam Matrix (VIP)",
+      ha: "Siga 12: Hatimin Babban Suna na Allah Suprême"
+    },
+    subtitle: {
+      fr: "L'Ultime Sceau Sacré Suprême des 99 Noms Divins & Lumière Infinie",
+      en: "The Ultimate Sacred Seal of the 99 Divine Names & Infinite Light",
+      ha: "Kolo kuma kololuwar hatimi mai sunaye 99 na Allah"
+    },
+    badge: { fr: "Suprême VIP 100%", en: "Supreme VIP 100%", ha: "Cikakken 100%" },
+    element: { fr: "Lumière Divine Suprême", en: "Supreme Divine Light", ha: "Hasken Allah" },
+    powerLevel: 100
+  }
+];
+
+export function getSealVersionSymbol(seal: { graphicSymbol: string; graphicSymbolV2?: string; arabicName?: string; abjadValue?: string; formula?: string }, version: number): string {
+  if (version === 1) return seal.graphicSymbol;
+  if (version === 2 && seal.graphicSymbolV2) return seal.graphicSymbolV2;
+
+  const titleAr = seal.arabicName || 'خَاتَمٌ مُبَارَكٌ';
+  const val = seal.abjadValue || '777 / 3321';
+  const form = seal.formula || 'يَا لَطِيفُ يَا كَرِيمُ';
+
+  switch (version) {
+    case 2:
+      return ` 🌟 KHATIM AN-NUR (WAFQ 5x5) 🌟
+   ۞  ${titleAr}  ۞
+
+  +----+----+----+----+----+
+  | 17 | 24 | 01 | 08 | 15 |
+  +----+----+----+----+----+
+  | 23 | 05 | 07 | 14 | 16 |
+  +----+----+----+----+----+
+  | 04 | 06 | 13 | 20 | 22 |
+  +----+----+----+----+----+
+  | 10 | 12 | 19 | 21 | 03 |
+  +----+----+----+----+----+
+  | 11 | 18 | 25 | 02 | 09 |
+  +----+----+----+----+----+
+
+   ۞  ${form}  ۞
+  ✦ RECEPTACLE CELESTE (SOMME = 65) ✦`;
+
+    case 3:
+      return ` 📜 SIRR AL-HURUF (HURUF 4x4) 📜
+   ۞  أ - ب - ج - د - هـ - و - ز  ۞
+
+  +---+---+---+---+
+  | ا | ل | ل | ه |
+  +---+---+---+---+
+  | ل | ط | ي | ف |
+  +---+---+---+---+
+  | ح | ك | ي | م |
+  +---+---+---+---+
+  | ن | و | ر | ✨ |
+  +---+---+---+---+
+
+   ۞  سِرُّ الأَسْرَارِ وَنُورُ الأَنْوَارِ  ۞
+  ✦ MATRICE DES LETTRES SACREES ✦`;
+
+    case 4:
+      return ` 📐 WAFQ AL-GHAZALI (CARRÉ 3x3) 📐
+   ۞  بِسْمِ اللَّهِ الرَّحْمَنِ الرَّحِيمِ  ۞
+
+        +---+---+---+
+        | 4 | 9 | 2 |  (ببدوح)
+        +---+---+---+
+        | 3 | 5 | 7 |  (١ ٥ = 15)
+        +---+---+---+
+        | 8 | 1 | 6 |  (شَكُورٌ)
+        +---+---+---+
+
+   ۞  ${titleAr}  ۞
+  ✦ DEBLOCAGE EXPRESS GHAZALI (3x3) ✦`;
+
+    case 5:
+      return ` 🪐 AS-SABAA AL-MAWAKI' (7x7) 🪐
+   ۞  الكَوَاكِبُ السَّبْعَةُ المَبْرُورَةُ  ۞
+
+  +--+--+--+--+--+--+--+
+  |30|39|48|01|10|19|28|
+  +--+--+--+--+--+--+--+
+  |38|47|07|09|18|27|29|
+  +--+--+--+--+--+--+--+
+  |46|06|08|17|26|35|37|
+  +--+--+--+--+--+--+--+
+  |05|14|16|25|34|36|45|
+  +--+--+--+--+--+--+--+
+  |13|15|24|33|42|44|04|
+  +--+--+--+--+--+--+--+
+  |21|23|32|41|43|03|12|
+  +--+--+--+--+--+--+--+
+  |22|31|40|49|02|11|20|
+  +--+--+--+--+--+--+--+
+
+   ۞  ${form}  ۞
+  ✦ WAFQ PLANETAIRE SEPTENAIRE ✦`;
+
+    case 6:
+      return ` 🔥 KHATIM AN-NAR WA AL-HAWA 4x4 🔥
+   ۞  يَا سَرِيعُ يَا مُجِيبُ  ۞
+
+  +-----+-----+-----+-----+
+  |  ف  |  ج  |  ش  |  ث  |
+  +-----+-----+-----+-----+
+  |  خ  |  ذ  |  ض  |  ظ  |
+  +-----+-----+-----+-----+
+  | 111 | 222 | 333 | 444 |
+  +-----+-----+-----+-----+
+
+   ۞  عَاجِلاً غَيْرَ آَجِلٍ  ۞
+  ✦ ACTIVATION ENERGETIQUE 4x4 ✦`;
+
+    case 7:
+      return ` 🌊 KHATIM AL-MA' WA AT-TIN 5x5 🌊
+   ۞  وَجَعَلْنَا مِنَ المَاءِ كُلَّ شَيْءٍ حَيٍّ  ۞
+
+  +----+----+----+----+----+
+  | 11 | 24 | 07 | 20 | 03 |
+  +----+----+----+----+----+
+  | 04 | 12 | 25 | 08 | 16 |
+  +----+----+----+----+----+
+  | 17 | 05 | 13 | 21 | 09 |
+  +----+----+----+----+----+
+  | 10 | 18 | 01 | 14 | 22 |
+  +----+----+----+----+----+
+  | 23 | 06 | 19 | 02 | 15 |
+  +----+----+----+----+----+
+
+   ۞  طَهَارَةٌ وَحِصْنٌ دَائِمٌ  ۞
+  ✦ ANCRAGE PROFOND & GUERISON ✦`;
+
+    case 8:
+      return ` 🛡️ AL-HISN AL-MANE' (12x12) 🛡️
+   ۞  أَعُوذُ بِكَلِمَاتِ اللَّهِ التَّامَّاتِ  ۞
+
+  +-------------------------------+
+  |144 001 143 002 142 003 141 004|
+  |140 005 139 006 007 138 008 137|
+  |009 136 010 135 011 134 012 133|
+  |132 013 131 014 130 015 129 016|
+  |128 017 127 018 019 126 020 125|
+  |021 124 022 123 023 122 024 121|
+  |120 025 119 026 118 027 117 028|
+  |116 029 115 030 031 114 032 113|
+  |033 112 034 111 035 110 036 109|
+  |108 037 107 038 106 039 105 040|
+  |104 041 103 042 043 102 044 101|
+  |045 100 046 099 047 098 048 097|
+  +-------------------------------+
+
+   ۞  ${titleAr}  ۞
+  ✦ BOUCLIER MATRICIEL 12x12 ✦`;
+
+    case 9:
+      return ` 👑 TALSAM SOULEYMANI (7x7) 👑
+   ۞  فَسَيَكْفِيكَهُمُ اللَّهُ وَهُوَ السَّمِيعُ العَلِيمُ  ۞
+
+  +---+---+---+---+---+---+---+
+  | ★ | ⚔️ | 📜 | ✦ | 🗝️ | 🌙 | ۞ |
+  +---+---+---+---+---+---+---+
+  | 77| 88| 99|111|222|333|777|
+  +---+---+---+---+---+---+---+
+
+   ۞  إِنَّهُ مِنْ سُلَيْمَانَ وَإِنَّهُ بِسْمِ اللَّهِ  ۞
+  ✦ MATRICE DES 7 SCEAUX DE SALOMON ✦`;
+
+    case 10:
+      return ` ☀️ AT-TAWAFUQ ASH-SHAMSI 6x6 ☀️
+   ۞  لاَ الشَّمْسُ يَنْبَغِي لَهَا أَنْ تُدْرِكَ القَمَرَ  ۞
+
+  +----+----+----+----+----+----+
+  | 06 | 32 | 03 | 34 | 35 | 01 |
+  +----+----+----+----+----+----+
+  | 07 | 11 | 27 | 28 | 08 | 30 |
+  +----+----+----+----+----+----+
+  | 19 | 14 | 16 | 15 | 23 | 24 |
+  +----+----+----+----+----+----+
+  | 18 | 20 | 22 | 21 | 17 | 13 |
+  +----+----+----+----+----+----+
+  | 25 | 29 | 10 | 09 | 26 | 12 |
+  +----+----+----+----+----+----+
+  | 36 | 05 | 33 | 04 | 02 | 31 |
+  +----+----+----+----+----+----+
+
+   ۞  وَكُلٌّ فِي فَلَكٍ يَسْبَحُونَ  ۞
+  ✦ MATRICE SOLAIRE-LUNAIRE 6x6 ✦`;
+
+    case 11:
+      return ` 🕊️ KHATIM AR-ROUHANIYYA (4 ARCHANGES) 🕊️
+   ۞  جَبْرَائِيلُ - مِيكَائِيلُ - إِسْرَافِيلُ - عَزْرَائِيلُ  ۞
+
+  +--------+--------+--------+--------+
+  |  نُورٌ   |  حِكْمَةٌ |  قُدْرَةٌ |  رَحْمَةٌ |
+  +--------+--------+--------+--------+
+  |  256   |  512   |  1024  |  2048  |
+  +--------+--------+--------+--------+
+  |  حِفْظٌ  |  نَصْرٌ  |  فَتْحٌ  |  عِزٌّ   |
+  +--------+--------+--------+--------+
+  |  777   |  999   |  333   |  111   |
+  +--------+--------+--------+--------+
+
+   ۞  ${titleAr}  ۞
+  ✦ INVOCATION DES 4 ARCHANGES ✦`;
+
+    case 12:
+    default:
+      return ` 💎 KHATIM ISM AL-AZAM (9x9) 💎
+   ۞  اللَّهُ لا إِلَهَ إِلاَّ هُوَ الحَيُّ القَيُّومُ  ۞
+
+  +-----+-----+-----+-----+-----+-----+-----+-----+-----+
+  |رَحْمَن|رَحِيم| مَلِك |قُدُّوس|سَلاَم|مُؤْمِن|مُهَيْمِن|عَزِيز|جَبَّار|
+  +-----+-----+-----+-----+-----+-----+-----+-----+-----+
+  |مُتَكَبِّر|خَالِق| بَارِئ|مُصَوِّر|غَفَّار|قَهَّار| وَهَّاب|رَزَّاق|فَتَّاح|
+  +-----+-----+-----+-----+-----+-----+-----+-----+-----+
+  |عَلِيم |قَابِض| بَاسِط|خَافِض|رَافِع| مُعِزّ| مُذِلّ|سَمِيع|بَصِير|
+  +-----+-----+-----+-----+-----+-----+-----+-----+-----+
+
+   ۞  لَهُ الأَسْمَاءُ الحُسْنَى  ۞
+  ✦ MATRICE 9x9 DES NOMS DIVINS ✦`;
+  }
+}
+
+export function getSealVersionDetails(seal: { graphicSymbol: string; graphicSymbolV2?: string; arabicName?: string; abjadValue?: string; formula?: string }, version: number, lang: 'fr' | 'en' | 'ha' = 'fr') {
+  const meta = SEAL_VERSIONS_LIST.find((v) => v.version === version) || SEAL_VERSIONS_LIST[0];
+  const symbol = getSealVersionSymbol(seal, version);
+
+  return {
+    version: meta.version,
+    title: meta.title[lang] || meta.title.fr,
+    subtitle: meta.subtitle[lang] || meta.subtitle.fr,
+    badge: meta.badge[lang] || meta.badge.fr,
+    element: meta.element[lang] || meta.element.fr,
+    powerLevel: meta.powerLevel,
+    symbol
+  };
+}
+

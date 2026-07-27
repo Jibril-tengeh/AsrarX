@@ -38,6 +38,7 @@ import {
 } from 'recharts';
 
 import { AdminStoreManager } from '../../components/AdminStoreManager';
+import { AdminRecitersManager } from '../../components/admin/AdminRecitersManager';
 import { DEFAULT_OATHS } from '../user/tools/GrandOaths';
 import { QURAN_RECITERS } from '../../data/reciters';
 import { calculateHijriDate } from '../../utils/hijriDate';
@@ -115,7 +116,7 @@ const LayoutSelector = ({ value, onChange, activeColor = 'emerald' }: { value: s
   );
 };
 
-type AdminTab = 'overview' | 'users' | 'payments' | 'community' | 'features' | 'ruqyah' | 'content' | 'notifications' | 'settings' | 'articles' | 'store' | 'grand_oaths' | 'categories' | 'seals';
+type AdminTab = 'overview' | 'users' | 'payments' | 'community' | 'features' | 'reciters' | 'ruqyah' | 'content' | 'notifications' | 'settings' | 'articles' | 'store' | 'grand_oaths' | 'categories' | 'seals';
 
 interface Article {
   id: string;
@@ -471,46 +472,17 @@ export const AdminDashboard: React.FC = () => {
 
     const unsubscribeArticles = onSnapshot(collection(db, 'articles'), (snapshot) => {
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Article));
-      if (list.length > 0) {
-        list.sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
-        setArticles(list);
-      } else {
-        const fallback = getAsrarItems().map(item => ({
-          id: item.id,
-          title: item.title,
-          content: item.content,
-          thumbnail: item.imageUrl,
-          status: 'Published'
-        }));
-        setArticles(fallback as any);
-      }
+      list.sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
+      setArticles(list as any);
     }, (error) => {
       console.warn("Admin Articles listener note:", error);
       getDocs(collection(db, 'articles')).then((snap) => {
         const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Article));
-        if (list.length > 0) {
-          list.sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
-          setArticles(list);
-        } else {
-          const fallback = getAsrarItems().map(item => ({
-            id: item.id,
-            title: item.title,
-            content: item.content,
-            thumbnail: item.imageUrl,
-            status: 'Published'
-          }));
-          setArticles(fallback as any);
-        }
+        list.sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
+        setArticles(list as any);
       }).catch(e => {
         console.error("Admin Articles fallback error:", e);
-        const fallback = getAsrarItems().map(item => ({
-          id: item.id,
-          title: item.title,
-          content: item.content,
-          thumbnail: item.imageUrl,
-          status: 'Published'
-        }));
-        setArticles(fallback as any);
+        setArticles([]);
       });
     });
 
@@ -1113,6 +1085,7 @@ export const AdminDashboard: React.FC = () => {
       { id: 'community', label: 'Communauté', icon: Users },
       { id: 'notifications', label: 'Notifications', icon: Volume2 },
       { id: 'features', label: 'Fonctionnalités', icon: ToggleLeft },
+      { id: 'reciters', label: 'Récitateurs', icon: Headphones },
       { id: 'grand_oaths', label: 'Grands Sermons', icon: Shield },
       { id: 'seals', label: 'Catalogue des Sceaux', icon: Moon },
       { id: 'content', label: 'CMS (Lexique)', icon: Database },
@@ -3846,6 +3819,17 @@ export const AdminDashboard: React.FC = () => {
                 ))}
               </select>
             </div>
+            <div className="pt-2 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <span className="text-xs text-gray-500">Pour activer, désactiver ou paramétrer les 320+ récitateurs :</span>
+              <button
+                type="button"
+                onClick={() => setActiveTab('reciters')}
+                className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+              >
+                <Sliders size={14} />
+                <span>Gestionnaire des Récitateurs</span>
+              </button>
+            </div>
           </div>
           <div className="flex flex-col p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -5639,6 +5623,7 @@ export const AdminDashboard: React.FC = () => {
         {activeTab === 'community' && renderCommunity()}
         {activeTab === 'notifications' && renderNotifications()}
         {activeTab === 'features' && renderFeatures()}
+        {activeTab === 'reciters' && <AdminRecitersManager featureToggles={featureToggles} handleToggleFeature={handleToggleFeature} />}
         {activeTab === 'ruqyah' && renderRuqyah()}
         {activeTab === 'grand_oaths' && renderGrandOaths()}
         {activeTab === 'seals' && <LunarSealVarietiesSection language="fr" />}

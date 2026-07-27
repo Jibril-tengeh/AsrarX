@@ -17,12 +17,16 @@ import {
   Radio, 
   Compass, 
   RotateCcw,
-  Zap
+  Zap,
+  Monitor,
+  Layers
 } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAudio } from '../contexts/AudioContext';
 import { getCurrentPlanetaryHour, playNotificationTone, requestNotificationPermission } from '../utils/planetaryNotifications';
 import { calculateAbjadValue } from '../utils/abjad';
+import { ExternalScreenWidgetModal } from './ExternalScreenWidgetModal';
+import { triggerSystemWidgetNotification, launchPictureInPictureWidget } from '../utils/externalWidgetSystem';
 
 export const CollapsibleFloatingWidget: React.FC = () => {
   const { language } = useLanguage();
@@ -37,6 +41,7 @@ export const CollapsibleFloatingWidget: React.FC = () => {
   };
   
   const [isExpanded, setIsExpanded] = useState(false);
+  const [showExternalWidgetModal, setShowExternalWidgetModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'planetary' | 'tasbih' | 'abjad' | 'notifications'>('planetary');
   
   // Planetary State
@@ -299,6 +304,15 @@ export const CollapsibleFloatingWidget: React.FC = () => {
                       {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
                     </button>
                   </div>
+
+                  {/* External Screen Widget Launcher Button */}
+                  <button
+                    onClick={() => setShowExternalWidgetModal(true)}
+                    className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-xs shadow-lg shadow-emerald-950/50 border border-emerald-400/30 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+                  >
+                    <Monitor className="w-4 h-4 text-amber-300" />
+                    <span>Activer Widget Flottant / Écran (PIP)</span>
+                  </button>
                 </div>
               )}
 
@@ -456,6 +470,12 @@ export const CollapsibleFloatingWidget: React.FC = () => {
           {isExpanded ? <X className="w-4 h-4" /> : <Sparkles className="w-4 h-4 text-emerald-400" />}
         </div>
       </motion.button>
+
+      {/* External Screen Widget Launcher Modal */}
+      <ExternalScreenWidgetModal
+        isOpen={showExternalWidgetModal}
+        onClose={() => setShowExternalWidgetModal(false)}
+      />
     </div>
   );
 };

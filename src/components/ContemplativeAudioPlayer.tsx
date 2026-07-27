@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Play, Pause, Volume2, VolumeX, Radio, Sparkles, Volume1, Repeat, Image as ImageIcon, Mic, BookOpen, Type } from 'lucide-react';
 import { motion } from 'motion/react';
+import { useFeatures } from '../contexts/FeatureContext';
+import { getEffectiveSacredReciters } from '../utils/reciterManager';
 
 export interface ReciterOption {
   id: string;
@@ -36,11 +38,25 @@ export const ContemplativeAudioPlayer: React.FC<ContemplativeAudioPlayerProps> =
   language,
   onOpenVisualGenerator
 }) => {
+  const { featureToggles } = useFeatures();
+  const sacredRecitersList = getEffectiveSacredReciters(featureToggles);
+  const defaultSacredReciterId = featureToggles?.sacred_default_reciter_id || sacredRecitersList[0]?.id || 'Alafasy_128kbps';
+
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [toneMode, setToneMode] = useState<'contemplative' | 'deep_mystic' | 'peaceful_drone'>('contemplative');
   const [repeatMode, setRepeatMode] = useState<'1x' | '3x' | '7x' | '11x' | '33x' | '111x' | 'infinite'>('1x');
-  const [selectedReciter, setSelectedReciter] = useState<string>('Alafasy_128kbps');
+  const [selectedReciter, setSelectedReciter] = useState<string>(defaultSacredReciterId);
+
+  useEffect(() => {
+    if (defaultSacredReciterId && !sacredRecitersList.some(r => r.id === selectedReciter)) {
+      const activeId = sacredRecitersList.some(r => r.id === defaultSacredReciterId)
+        ? defaultSacredReciterId
+        : sacredRecitersList[0]?.id || 'Alafasy_128kbps';
+      setSelectedReciter(activeId);
+      reciterRef.current = activeId;
+    }
+  }, [defaultSacredReciterId, sacredRecitersList]);
   const [audioProgress, setAudioProgress] = useState<number>(0);
   const [audioDuration, setAudioDuration] = useState<number>(30);
   const [highlightMode, setHighlightMode] = useState<'verse' | 'word'>('verse');
@@ -196,7 +212,7 @@ export const ContemplativeAudioPlayer: React.FC<ContemplativeAudioPlayerProps> =
 
     setActiveVerseIndex(index);
 
-    const currentReciterObj = SACRED_RECITERS.find(r => r.id === reciterRef.current);
+    const currentReciterObj = sacredRecitersList.find(r => r.id === reciterRef.current) || sacredRecitersList[0];
     const reciterName = currentReciterObj ? currentReciterObj.shortName : 'Récitateur';
 
     const loopCountCurrent = totalLoopsRef.current - repeatsLeftRef.current + 1;
@@ -481,7 +497,7 @@ export const ContemplativeAudioPlayer: React.FC<ContemplativeAudioPlayerProps> =
               }}
               className="bg-transparent text-amber-200 font-bold focus:outline-none cursor-pointer pr-1 shrink-0"
             >
-              {SACRED_RECITERS.map(r => (
+              {sacredRecitersList.map(r => (
                 <option key={r.id} value={r.id} className="bg-slate-900 text-gray-200">
                   {language === 'fr' ? r.nameFr : r.nameEn}
                 </option>

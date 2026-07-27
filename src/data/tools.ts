@@ -424,4 +424,13 @@ export const tools: ToolItem[] = [
     path: "/tools/murid-journal",
     level: "simple",
   },
+  {
+    id: "rajma-charms",
+    title: "Les 12 Charmes de RAJMA",
+    description: "Sceaux théurgiques, talsams radiaux et khawatim des 12 Charmes sacrés de RAJMA.",
+    icon: Sparkles,
+    color: "from-amber-500 via-purple-600 to-amber-600",
+    path: "/tools/rajma-charms",
+    level: "advanced",
+  },
 ];
