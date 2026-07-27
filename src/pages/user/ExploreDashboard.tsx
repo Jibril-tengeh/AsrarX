@@ -11,6 +11,7 @@ import { getAsrarItems } from '../../data/store';
 
 import { BannerAd } from '../../components/BannerAd';
 import { PremiumWrapper } from '../../components/PremiumWrapper';
+import { INITIAL_DEFAULT_ARTICLES } from '../../data/defaultArticles';
 
 export const ExploreDashboard: React.FC = () => {
   const { t, language } = useLanguage();
@@ -165,6 +166,35 @@ export const ExploreDashboard: React.FC = () => {
       }
     };
 
+    const getDefaultExploreArticles = () => {
+      return INITIAL_DEFAULT_ARTICLES.map(art => {
+        let activeContent = art.content || '';
+        if (language === 'en' && art.content_en) activeContent = art.content_en;
+        if (language === 'ha' && art.content_ha) activeContent = art.content_ha;
+
+        let hookText = art.hook || '';
+        if (language === 'en' && art.hook_en) hookText = art.hook_en;
+        if (language === 'ha' && art.hook_ha) hookText = art.hook_ha;
+
+        let titleText = art.title || '';
+        if (language === 'en' && art.title_en) titleText = art.title_en;
+        if (language === 'ha' && art.title_ha) titleText = art.title_ha;
+
+        return {
+          id: art.id,
+          title: titleText,
+          hook: hookText,
+          category: art.category,
+          status: art.status || 'Published',
+          content: activeContent,
+          benefits: art.benefits || [],
+          imageUrl: art.thumbnail,
+          isPremium: art.isPremium || false,
+          createdAt: art.createdAt
+        };
+      });
+    };
+
     // Standard getDocs fallback for reliable loading on native mobile/Capacitor builds
     console.log(`[Articles Query - ExploreDashboard] Querying collection 'articles'. User role: "${user?.role || 'user'}".`);
     getDocs(q).then((snap) => {
@@ -180,10 +210,15 @@ export const ExploreDashboard: React.FC = () => {
           try {
             localStorage.setItem('asrarhub_cached_explore_articles', JSON.stringify(fresh));
           } catch (e) {}
+        } else {
+          setArticles(getDefaultExploreArticles());
         }
+      } else {
+        setArticles(getDefaultExploreArticles());
       }
     }).catch(err => {
       console.warn("[Articles getDocs - ExploreDashboard] Error during getDocs query:", err?.code || err?.message || err);
+      setArticles(getDefaultExploreArticles());
     });
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -198,6 +233,8 @@ export const ExploreDashboard: React.FC = () => {
         try {
           localStorage.setItem('asrarhub_cached_explore_articles', JSON.stringify(allArticles));
         } catch (e) {}
+      } else {
+        setArticles(getDefaultExploreArticles());
       }
     }, (error) => {
       console.error("[Articles onSnapshot - ExploreDashboard] Firestore permission or network error:", error.code, error.message, error);
@@ -208,9 +245,11 @@ export const ExploreDashboard: React.FC = () => {
           if (Array.isArray(parsed) && parsed.length > 0) {
             console.log(`[Articles - ExploreDashboard] Restored ${parsed.length} articles from localStorage fallback.`);
             setArticles(parsed);
+            return;
           }
         }
       } catch (e) {}
+      setArticles(getDefaultExploreArticles());
     });
 
     return () => unsubscribe();

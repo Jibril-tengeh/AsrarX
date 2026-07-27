@@ -4,6 +4,7 @@ import { useLanguage } from "../../contexts/LanguageContext";
 import { useAuth } from "../../contexts/AuthContext";
 import { triggerProtectionModal } from "../../components/ContentProtectionManager";
 import { useFeatures } from "../../contexts/FeatureContext";
+import { INITIAL_DEFAULT_ARTICLES } from "../../data/defaultArticles";
 import {
   ArrowLeft,
   BookOpen,
@@ -827,7 +828,46 @@ export const SecretDetail: React.FC = () => {
               if (cachedDetails[id]) {
                 setItem(cachedDetails[id]);
               } else {
-                setNotFound(true);
+                const defaultArt = INITIAL_DEFAULT_ARTICLES.find(a => a.id === id);
+                if (defaultArt) {
+                  let activeContent = defaultArt.content || '';
+                  if (language === 'en' && defaultArt.content_en) activeContent = defaultArt.content_en;
+                  if (language === 'ha' && defaultArt.content_ha) activeContent = defaultArt.content_ha;
+
+                  let hookText = defaultArt.hook || '';
+                  if (language === 'en' && defaultArt.hook_en) hookText = defaultArt.hook_en;
+                  if (language === 'ha' && defaultArt.hook_ha) hookText = defaultArt.hook_ha;
+
+                  let titleText = defaultArt.title || '';
+                  if (language === 'en' && defaultArt.title_en) titleText = defaultArt.title_en;
+                  if (language === 'ha' && defaultArt.title_ha) titleText = defaultArt.title_ha;
+
+                  setItem({
+                    id: defaultArt.id,
+                    title: titleText,
+                    hook: hookText,
+                    category: defaultArt.category,
+                    subCategory: defaultArt.subCategory || '',
+                    status: defaultArt.status || 'Published',
+                    content: activeContent,
+                    benefits: defaultArt.benefits || [],
+                    imageUrl: defaultArt.thumbnail,
+                    isPremium: defaultArt.isPremium || false,
+                    createdAt: defaultArt.createdAt,
+                    title_en: defaultArt.title_en,
+                    content_en: defaultArt.content_en,
+                    hook_en: defaultArt.hook_en,
+                    title_ha: defaultArt.title_ha,
+                    content_ha: defaultArt.content_ha,
+                    hook_ha: defaultArt.hook_ha,
+                    title_fr: defaultArt.title,
+                    content_fr: defaultArt.content,
+                    hook_fr: defaultArt.hook,
+                    hasManualTranslation: language !== 'fr'
+                  } as AsrarItem);
+                } else {
+                  setNotFound(true);
+                }
               }
             }
           }
@@ -840,7 +880,24 @@ export const SecretDetail: React.FC = () => {
               if (cachedDetails[id]) {
                 setItem(cachedDetails[id]);
               } else {
-                setNotFound(true);
+                const defaultArt = INITIAL_DEFAULT_ARTICLES.find(a => a.id === id);
+                if (defaultArt) {
+                  setItem({
+                    id: defaultArt.id,
+                    title: defaultArt.title,
+                    hook: defaultArt.hook,
+                    category: defaultArt.category,
+                    subCategory: defaultArt.subCategory || '',
+                    status: defaultArt.status || 'Published',
+                    content: defaultArt.content,
+                    benefits: defaultArt.benefits || [],
+                    imageUrl: defaultArt.thumbnail,
+                    isPremium: defaultArt.isPremium || false,
+                    createdAt: defaultArt.createdAt
+                  } as AsrarItem);
+                } else {
+                  setNotFound(true);
+                }
               }
             } catch (e) {
               setNotFound(true);

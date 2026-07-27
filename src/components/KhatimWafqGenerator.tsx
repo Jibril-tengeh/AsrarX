@@ -5,6 +5,82 @@ import { FULL_28_LETTERS_DATA, LetterInfo } from '../pages/user/tools/ScienceOfL
 import { useFeatures } from '../contexts/FeatureContext';
 import { useAuth } from '../contexts/AuthContext';
 import { triggerProtectionModal } from './ContentProtectionManager';
+import { useLanguage } from '../contexts/LanguageContext';
+
+const khatimDict = {
+  fr: {
+    title: "Générateur de Carrés Magiques (Awfaq / Khatim)",
+    subtitle: "Génération automatique de carrés mystiques sacrés de 3x3 à 10x10 centrés sur la valeur de la lettre ou sur un montant Abjad personnalisé.",
+    chooseLetter: "Choisir la Lettre Clé :",
+    customAbjad: "Ou Valeur Abjad Personnalisée :",
+    customPlaceholder: "Ex: 111, 353, 786...",
+    wafqSize: "Taille du Wafq (3x3 à 10x10) :",
+    displayFormat: "Format d'affichage des cases :",
+    easternNumbers: "Chiffres Arabes (١٢٣)",
+    westernNumbers: "Chiffres Latins (123)",
+    letters: "Lettres (الحروف)",
+    sacredSeal: "Sceau Sacré du Wafq ({size}x{size})",
+    letterSquare: "Carré de la Lettre {name} ({char})",
+    customSquare: "Carré Numérique Sur-Mesure",
+    totalSum: "Somme Totale",
+    rowConstant: "Constante par Ligne",
+    angelGuardian: "Ange Gardien du Carré",
+    angelInstruction: "À prononcer lors de la traçabilité du Khatim.",
+    incenseSupport: "Encens & Support Recommandé",
+    defaultIncense: "Luban Dhakar (Oliban) & Musc",
+    tracingInstruction: "À tracer sur papier safran à l'heure du lever du Soleil.",
+    copyGrid: "Copier la grille du Khatim",
+    gridCopied: "Carré copié !"
+  },
+  en: {
+    title: "Magic Square Generator (Awfaq / Khatim)",
+    subtitle: "Automatic generation of sacred mystical squares from 3x3 to 10x10 centered on letter values or a custom Abjad total.",
+    chooseLetter: "Choose Key Letter:",
+    customAbjad: "Or Custom Abjad Value:",
+    customPlaceholder: "Ex: 111, 353, 786...",
+    wafqSize: "Wafq Size (3x3 to 10x10):",
+    displayFormat: "Cell Display Format:",
+    easternNumbers: "Eastern Arabic (١٢٣)",
+    westernNumbers: "Western Digits (123)",
+    letters: "Abjad Letters (الحروف)",
+    sacredSeal: "Sacred Seal of Wafq ({size}x{size})",
+    letterSquare: "Square of Letter {name} ({char})",
+    customSquare: "Custom Numerical Square",
+    totalSum: "Total Sum",
+    rowConstant: "Row Constant",
+    angelGuardian: "Guardian Angel of the Square",
+    angelInstruction: "To be pronounced when tracing the Khatim.",
+    incenseSupport: "Incense & Recommended Support",
+    defaultIncense: "Frankincense (Luban) & Musk",
+    tracingInstruction: "To be traced on saffron paper at sunrise.",
+    copyGrid: "Copy Khatim Grid",
+    gridCopied: "Square Copied!"
+  },
+  ha: {
+    title: "Mai Wafq da Khatimi (Awfaq / Khatim)",
+    subtitle: "Hada wafq na asiri na 3x3 zuwa 10x10 bisa ga ma'aunin harafi ko adadin Abjad da ka zaba.",
+    chooseLetter: "Zabi Harfin Makulli:",
+    customAbjad: "Ko Lambar Abjad Ta Musamman:",
+    customPlaceholder: "Misali: 111, 353, 786...",
+    wafqSize: "Girman Wafq (3x3 zuwa 10x10):",
+    displayFormat: "Yanayin Nuna Kwayoyin Wafq:",
+    easternNumbers: "Lambar Larabci (١٢٣)",
+    westernNumbers: "Lambar Turanci (123)",
+    letters: "Haruffan Abjad (الحروف)",
+    sacredSeal: "Khatimin Wafq Mai Tsarki ({size}x{size})",
+    letterSquare: "Wafq na Harafi {name} ({char})",
+    customSquare: "Wafq na Lambobi na Musamman",
+    totalSum: "Jimillar Adadi",
+    rowConstant: "Adadin Layi Daya",
+    angelGuardian: "Mala'ikan Tsaron Wafq",
+    angelInstruction: "A karanta lokacin rubuta Khatimi.",
+    incenseSupport: "Turare da Abin Rubutu",
+    defaultIncense: "Turaren Luban Dhakar da Musk",
+    tracingInstruction: "A rubuta a kan takardar za'afaran da hualowar rana.",
+    copyGrid: "Kwafi Jadawalin Khatimi",
+    gridCopied: "An Kwafi Jadawalin!"
+  }
+};
 
 // Convert integer to Eastern Arabic Numerals
 const toEasternArabicNumerals = (num: number): string => {
@@ -124,6 +200,8 @@ function generateBaseMagicSquare(n: number): number[][] {
 }
 
 export const KhatimWafqGenerator: React.FC = () => {
+  const { language } = useLanguage();
+  const dict = khatimDict[(language as 'fr' | 'en' | 'ha') || 'fr'] || khatimDict.fr;
   const { featureToggles } = useFeatures();
   const { isPremium } = useAuth();
   const disableDuaCopy = !!featureToggles?.disable_dua_copy;
@@ -248,10 +326,10 @@ export const KhatimWafqGenerator: React.FC = () => {
       {/* Title */}
       <div className="border-b border-gray-100 dark:border-gray-700 pb-4">
         <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-          <Grid className="text-amber-500" /> Générateur de Carrés Magiques (Awfaq / Khatim)
+          <Grid className="text-amber-500" /> {dict.title}
         </h2>
         <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Génération automatique de carrés mystiques sacrés de 3x3 à 10x10 centrés sur la valeur de la lettre ou sur un montant Abjad personnalisé.
+          {dict.subtitle}
         </p>
       </div>
 
@@ -259,7 +337,7 @@ export const KhatimWafqGenerator: React.FC = () => {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Letter Selector */}
         <div>
-          <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1 font-medium">Choisir la Lettre Clé :</label>
+          <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1 font-medium">{dict.chooseLetter}</label>
           <select
             value={selectedLetterChar}
             onChange={(e) => {
@@ -278,19 +356,19 @@ export const KhatimWafqGenerator: React.FC = () => {
 
         {/* Custom Abjad Value Input */}
         <div>
-          <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1 font-medium">Ou Valeur Abjad Personnalisée :</label>
+          <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1 font-medium">{dict.customAbjad}</label>
           <input
             type="number"
             value={customValue}
             onChange={(e) => setCustomValue(e.target.value)}
-            placeholder="Ex: 111, 353, 786..."
+            placeholder={dict.customPlaceholder}
             className="w-full px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm font-mono text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
           />
         </div>
 
         {/* Wafq Dimension & Format */}
         <div className="md:col-span-1">
-          <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1 font-medium">Taille du Wafq (3x3 à 10x10) :</label>
+          <label className="text-xs text-gray-500 dark:text-gray-400 block mb-1 font-medium">{dict.wafqSize}</label>
           <div className="grid grid-cols-4 sm:grid-cols-8 gap-1 bg-gray-100 dark:bg-gray-900 p-1 rounded-xl border border-gray-200 dark:border-gray-700">
             {[3, 4, 5, 6, 7, 8, 9, 10].map((sz) => (
               <button
@@ -309,7 +387,7 @@ export const KhatimWafqGenerator: React.FC = () => {
 
       {/* Display Mode Switcher */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-gray-50 dark:bg-gray-900/60 p-3 rounded-2xl border border-gray-200 dark:border-gray-700 text-xs gap-2">
-        <span className="font-bold text-gray-700 dark:text-gray-300">Format d'affichage des cases :</span>
+        <span className="font-bold text-gray-700 dark:text-gray-300">{dict.displayFormat}</span>
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setDisplayMode('eastern')}
@@ -317,7 +395,7 @@ export const KhatimWafqGenerator: React.FC = () => {
               displayMode === 'eastern' ? 'bg-emerald-600 text-white' : 'bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
             }`}
           >
-            Chiffres Arabes (١٢٣)
+            {dict.easternNumbers}
           </button>
           <button
             onClick={() => setDisplayMode('western')}
@@ -325,7 +403,7 @@ export const KhatimWafqGenerator: React.FC = () => {
               displayMode === 'western' ? 'bg-emerald-600 text-white' : 'bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
             }`}
           >
-            Chiffres Latins (123)
+            {dict.westernNumbers}
           </button>
           <button
             onClick={() => setDisplayMode('letters')}
@@ -333,7 +411,7 @@ export const KhatimWafqGenerator: React.FC = () => {
               displayMode === 'letters' ? 'bg-emerald-600 text-white' : 'bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300'
             }`}
           >
-            Lettres (الحروف)
+            {dict.letters}
           </button>
         </div>
       </div>
@@ -344,20 +422,20 @@ export const KhatimWafqGenerator: React.FC = () => {
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-amber-500/20 pb-4">
           <div>
             <span className="text-[10px] font-bold uppercase tracking-widest text-amber-400 flex items-center gap-1">
-              <Sparkles size={12} /> Sceau Sacré du Wafq ({wafqSize}x{wafqSize})
+              <Sparkles size={12} /> {dict.sacredSeal.replace('{size}', String(wafqSize))}
             </span>
             <h3 className="text-xl font-black text-amber-100 mt-1">
-              {currentLetterInfo ? `Carré de la Lettre ${currentLetterInfo.name} (${currentLetterInfo.char})` : 'Carré Numérique Sur-Mesure'}
+              {currentLetterInfo ? dict.letterSquare.replace('{name}', currentLetterInfo.name).replace('{char}', currentLetterInfo.char) : dict.customSquare}
             </h3>
           </div>
 
           <div className="flex items-center gap-2">
             <div className="text-right">
-              <span className="text-[10px] text-gray-400 block font-mono">Somme Totale</span>
+              <span className="text-[10px] text-gray-400 block font-mono">{dict.totalSum}</span>
               <span className="text-lg font-extrabold text-amber-300 font-mono">{targetAbjad}</span>
             </div>
             <div className="text-right pl-3 border-l border-amber-500/30">
-              <span className="text-[10px] text-gray-400 block font-mono">Constante par Ligne</span>
+              <span className="text-[10px] text-gray-400 block font-mono">{dict.rowConstant}</span>
               <span className="text-lg font-extrabold text-emerald-400 font-mono">{rowSum}</span>
             </div>
           </div>
@@ -403,20 +481,20 @@ export const KhatimWafqGenerator: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs pt-2 border-t border-amber-500/20">
           <div className="p-3 bg-black/40 rounded-xl border border-amber-500/20 space-y-1">
             <span className="text-amber-400 font-bold block flex items-center gap-1">
-              <Shield size={12} /> Ange Gardien du Carré
+              <Shield size={12} /> {dict.angelGuardian}
             </span>
             <p className="text-gray-200 font-arabic text-sm">{angelName}</p>
-            <p className="text-[10px] text-gray-400">À prononcer lors de la traçabilité du Khatim.</p>
+            <p className="text-[10px] text-gray-400">{dict.angelInstruction}</p>
           </div>
 
           <div className="p-3 bg-black/40 rounded-xl border border-amber-500/20 space-y-1">
             <span className="text-amber-400 font-bold block flex items-center gap-1">
-              <Flame size={12} /> Encens & Support Recommandé
+              <Flame size={12} /> {dict.incenseSupport}
             </span>
             <p className="text-gray-200">
-              {currentLetterInfo ? currentLetterInfo.incense : 'Luban Dhakar (Oliban) & Musc'}
+              {currentLetterInfo ? currentLetterInfo.incense : dict.defaultIncense}
             </p>
-            <p className="text-[10px] text-gray-400">À tracer sur papier safran à l'heure du lever du Soleil.</p>
+            <p className="text-[10px] text-gray-400">{dict.tracingInstruction}</p>
           </div>
         </div>
 
@@ -428,7 +506,7 @@ export const KhatimWafqGenerator: React.FC = () => {
               className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-lg transition-colors cursor-pointer"
             >
               {copied ? <Check size={14} /> : <Copy size={14} />}
-              <span>{copied ? "Carré copié !" : "Copier la grille du Khatim"}</span>
+              <span>{copied ? dict.gridCopied : dict.copyGrid}</span>
             </button>
           </div>
         )}

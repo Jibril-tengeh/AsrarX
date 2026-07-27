@@ -1509,22 +1509,25 @@ export const ScienceOfLetters: React.FC = () => {
               {/* Element Filter */}
               <div className="flex items-center gap-0.5 bg-gray-50 dark:bg-gray-900 p-0.5 rounded-xl border border-gray-200 dark:border-gray-700 text-[11px] shrink-0">
                 <span className="text-gray-400 px-1.5 font-semibold text-[10px] shrink-0">{dict.filterElem}</span>
-                {['Tous', 'Feu', 'Terre', 'Air', 'Eau'].map(elem => {
-                  const label = elem === 'Tous' ? dict.all : (dict[elem.toLowerCase() as keyof typeof dict] || elem);
-                  return (
-                    <button
-                      key={elem}
-                      onClick={() => setFilterElement(elem)}
-                      className={`px-2 py-0.5 rounded-lg font-bold shrink-0 transition-all cursor-pointer ${
-                        filterElement === elem
-                          ? 'bg-emerald-500 text-white shadow-sm'
-                          : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  );
-                })}
+                {[
+                  { id: 'Tous', label: dict.all },
+                  { id: 'Feu', label: dict.fire },
+                  { id: 'Terre', label: dict.earth },
+                  { id: 'Air', label: dict.air },
+                  { id: 'Eau', label: dict.water }
+                ].map(item => (
+                  <button
+                    key={item.id}
+                    onClick={() => setFilterElement(item.id)}
+                    className={`px-2 py-0.5 rounded-lg font-bold shrink-0 transition-all cursor-pointer ${
+                      filterElement === item.id
+                        ? 'bg-emerald-500 text-white shadow-sm'
+                        : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                ))}
               </div>
 
               {/* Nature Filter */}

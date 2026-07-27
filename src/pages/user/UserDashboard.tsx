@@ -14,6 +14,8 @@ import { OnboardingTour } from '../../components/OnboardingTour';
 import { GlobalSearchModal } from '../../components/GlobalSearchModal';
 import { MysticCalendarModal } from '../../components/MysticCalendarModal';
 
+import { INITIAL_DEFAULT_ARTICLES, DefaultArticle } from '../../data/defaultArticles';
+
 const LucideIcon = ({ name, className, size }: { name: string; className?: string; size?: number }) => {
   const IconComponent = (Icons as any)[name];
   if (!IconComponent) {
@@ -348,6 +350,46 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
       }
     };
 
+    const getDefaultItemsAsAsrarItems = (): AsrarItem[] => {
+      return INITIAL_DEFAULT_ARTICLES.map(art => {
+        let activeContent = art.content || '';
+        if (language === 'en' && art.content_en) activeContent = art.content_en;
+        if (language === 'ha' && art.content_ha) activeContent = art.content_ha;
+
+        let hookText = art.hook || '';
+        if (language === 'en' && art.hook_en) hookText = art.hook_en;
+        if (language === 'ha' && art.hook_ha) hookText = art.hook_ha;
+
+        let titleText = art.title || '';
+        if (language === 'en' && art.title_en) titleText = art.title_en;
+        if (language === 'ha' && art.title_ha) titleText = art.title_ha;
+
+        return {
+          id: art.id,
+          title: titleText,
+          hook: hookText,
+          category: art.category,
+          subCategory: art.subCategory || '',
+          status: art.status || 'Published',
+          content: activeContent,
+          benefits: art.benefits || [],
+          imageUrl: art.thumbnail,
+          isPremium: art.isPremium || false,
+          createdAt: art.createdAt,
+          title_en: art.title_en,
+          content_en: art.content_en,
+          hook_en: art.hook_en,
+          title_ha: art.title_ha,
+          content_ha: art.content_ha,
+          hook_ha: art.hook_ha,
+          title_fr: art.title,
+          content_fr: art.content,
+          hook_fr: art.hook,
+          hasManualTranslation: language !== 'fr'
+        } as AsrarItem;
+      });
+    };
+
     const q = collection(db, 'articles');
     console.log(`[Articles Query - UserDashboard] Querying collection 'articles'. User role: "${user?.role || 'user'}".`);
 
@@ -366,10 +408,21 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
           try {
             localStorage.setItem('asrarhub_cached_articles_list', JSON.stringify(freshItems));
           } catch (e) {}
+        } else {
+          const defaults = getDefaultItemsAsAsrarItems();
+          setItems(defaults);
+          setIsLoading(false);
         }
+      } else {
+        const defaults = getDefaultItemsAsAsrarItems();
+        setItems(defaults);
+        setIsLoading(false);
       }
     }).catch(err => {
       console.warn("[Articles getDocs - UserDashboard] Error during getDocs query:", err?.code || err?.message || err);
+      const defaults = getDefaultItemsAsAsrarItems();
+      setItems(defaults);
+      setIsLoading(false);
     });
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -386,6 +439,9 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
         } catch (e) {
           console.error("Error writing articles list to cache", e);
         }
+      } else {
+        const defaults = getDefaultItemsAsAsrarItems();
+        setItems(defaults);
       }
       setIsLoading(false);
     }, (error) => {
@@ -398,11 +454,13 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
           if (Array.isArray(parsed) && parsed.length > 0) {
             console.log(`[Articles - UserDashboard] Restored ${parsed.length} articles from localStorage fallback.`);
             setItems(parsed);
+            return;
           }
         }
       } catch (e) {
         console.error("Error on fallback to local articles cache", e);
       }
+      setItems(getDefaultItemsAsAsrarItems());
     });
 
     try {
@@ -640,7 +698,15 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
       const categoryObj = categories.find(c => c.id === filter || c.id?.toLowerCase() === filterCat);
       const categoryName = categoryObj ? (categoryObj.name || '').toLowerCase().trim() : '';
 
-      const matchesCategory = itemCat === filterCat || (categoryName && itemCat === categoryName) || (filterCat === 'wird' && itemCat.includes('wird')) || (filterCat === 'secret' && itemCat.includes('secret')) || (filterCat === 'recette' && itemCat.includes('recette'));
+      const isRecette = (filterCat === 'recette' || filterCat === 'recipes') && (itemCat.includes('recette') || itemCat.includes('recipe'));
+      const isWird = (filterCat === 'wird' || filterCat === 'wirds' || filterCat === 'zikr') && (itemCat.includes('wird') || itemCat.includes('zikr'));
+      const isSecret = (filterCat === 'secret' || filterCat === 'secrets' || filterCat === 'sirr') && (itemCat.includes('secret') || itemCat.includes('sirr'));
+      const isRouqyah = (filterCat === 'rouqyah' || filterCat === 'ruqyah') && (itemCat.includes('rouqyah') || itemCat.includes('ruqyah'));
+      const isMuraqabah = (filterCat === 'muraqabah' || filterCat === 'meditation') && (itemCat.includes('muraqabah') || itemCat.includes('meditation'));
+
+      const matchesCategory = itemCat === filterCat 
+        || (categoryName && (itemCat === categoryName || itemCat.includes(categoryName) || categoryName.includes(itemCat)))
+        || isRecette || isWird || isSecret || isRouqyah || isMuraqabah;
       const itemSubCat = (item as any).subCategory || '';
       const matchesSubCat = !selectedSubCategory || itemSubCat === selectedSubCategory;
 

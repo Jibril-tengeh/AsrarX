@@ -3,6 +3,127 @@ import { Heart, Sparkles, Flame, Droplets, Mountain, Wind, RefreshCw, ShieldAler
 import { motion, AnimatePresence } from 'motion/react';
 import { FULL_28_LETTERS_DATA, LetterInfo } from '../pages/user/tools/ScienceOfLetters';
 import { useFeatures } from '../contexts/FeatureContext';
+import { useLanguage } from '../contexts/LanguageContext';
+
+const tawafuqDict = {
+  fr: {
+    title: "Calculateur de Compatibilité Spirituelle (Tawafuq)",
+    subtitle: "Analyse d'harmonie entre deux personnes ou projets, basée sur les 4 éléments des lettres (Feu, Terre, Air, Eau) et les valeurs Abjad.",
+    entity1: "Entité / Personne 1",
+    name1Label: "Nom / Prénom / Projet :",
+    name1Placeholder: "Ex: Muhammad / محمد",
+    mother1Label: "Nom Mère (Optionnel) :",
+    mother1Placeholder: "Ex: Amina / آمنة",
+    entity2: "Entité / Personne 2",
+    name2Label: "Nom / Prénom / Projet 2 :",
+    name2Placeholder: "Ex: Fatima / فاطمة",
+    mother2Label: "Nom Mère 2 (Optionnel) :",
+    mother2Placeholder: "Ex: Khadija / خديجة",
+    calculateBtn: "Calculer le Tawafuq Spirituel",
+    bannerTitle: "TAWAFUQ • HARMONIE SPIRITUELLE DES LETTRES",
+    abjadLabel: "Abjad :",
+    feu: "Feu",
+    terre: "Terre",
+    air: "Air",
+    eau: "Eau",
+    harmonyAirFireType: "Harmonie Élevée (L'Air attise le Feu)",
+    harmonyAirFireDesc: "Excellente synergie spirituelle et créative. L'un apporte la vision et l'inspiration, l'autre la force et l'exécution.",
+    harmonyWaterEarthType: "Harmonie Profonde (L'Eau fertilise la Terre)",
+    harmonyWaterEarthDesc: "Relation très stable, féconde et protectrice. Ancrage solide, confiance mutuelle et paix du foyer.",
+    harmonySameType: "Amplification",
+    harmonySameDesc: "Affinité naturelle directe. Vous partagez le même tempérament énergétique, favorisant une compréhension spontanée.",
+    harmonyFireWaterType: "Tension Élémentaire (Le Feu et l'Eau)",
+    harmonyFireWaterDesc: "Opposition d'éléments. L'Eau peut éteindre le Feu ou le Feu peut faire bouillir l'Eau. Nécessite le Wird d'harmonisation pour adoucir les tempéraments.",
+    harmonyNeutralType: "Complémentarité Neutre",
+    harmonyNeutralDesc: "Équilibre passif nécessitant une communication claire et de la patience mutuelle.",
+    modBeneficial: "Nombre d'alliance bénéfique (Barakah & Ouverture).",
+    modStable: "Nombre de stabilité et de construction réciproque.",
+    modPatience: "Nombre nécessitant de la patience et la récitation de Ya Latif.",
+    recommendedTitle: "Recommandation & Invocation d'Harmonisation",
+    wird75Trans: "Ô Bienveillant, Ô Rassembleur, unis-les dans le bien et la bénédiction.",
+    wirdLess75Trans: "Ô Subtil, Ô Paix, insuffle l'affection et la sérénité entre eux.",
+    copyBtn: "Copier la formule",
+    copied: "Copié !"
+  },
+  en: {
+    title: "Spiritual Compatibility Calculator (Tawafuq)",
+    subtitle: "Harmony analysis between two people or projects, based on the 4 elements of letters (Fire, Earth, Air, Water) and Abjad values.",
+    entity1: "Entity / Person 1",
+    name1Label: "Name / First Name / Project:",
+    name1Placeholder: "Ex: Muhammad / محمد",
+    mother1Label: "Mother's Name (Optional):",
+    mother1Placeholder: "Ex: Amina / آمنة",
+    entity2: "Entity / Person 2",
+    name2Label: "Name / First Name / Project 2:",
+    name2Placeholder: "Ex: Fatima / فاطمة",
+    mother2Label: "Mother's Name 2 (Optional):",
+    mother2Placeholder: "Ex: Khadija / خديجة",
+    calculateBtn: "Calculate Spiritual Tawafuq",
+    bannerTitle: "TAWAFUQ • SPIRITUAL HARMONY OF LETTERS",
+    abjadLabel: "Abjad:",
+    feu: "Fire",
+    terre: "Earth",
+    air: "Air",
+    eau: "Water",
+    harmonyAirFireType: "High Harmony (Air fanning Fire)",
+    harmonyAirFireDesc: "Excellent spiritual and creative synergy. One brings vision and inspiration, the other strength and execution.",
+    harmonyWaterEarthType: "Deep Harmony (Water fertilizing Earth)",
+    harmonyWaterEarthDesc: "Very stable, fruitful and protective relationship. Solid grounding, mutual trust and peace of home.",
+    harmonySameType: "Amplification",
+    harmonySameDesc: "Direct natural affinity. You share the same energetic temperament, fostering spontaneous understanding.",
+    harmonyFireWaterType: "Elemental Tension (Fire and Water)",
+    harmonyFireWaterDesc: "Opposition of elements. Water can extinguish Fire or Fire can boil Water. Requires the alignment Wird to soften temperaments.",
+    harmonyNeutralType: "Neutral Complementarity",
+    harmonyNeutralDesc: "Passive balance requiring clear communication and mutual patience.",
+    modBeneficial: "Beneficial alliance number (Barakah & Opening).",
+    modStable: "Number of stability and mutual building.",
+    modPatience: "Number requiring patience and the recitation of Ya Latif.",
+    recommendedTitle: "Alignment Recommendation & Invocation",
+    wird75Trans: "O Loving One, O Gatherer, unite them in goodness and blessing.",
+    wirdLess75Trans: "O Subtle One, O Peace, instill affection and serenity between them.",
+    copyBtn: "Copy formula",
+    copied: "Copied!"
+  },
+  ha: {
+    title: "Kwamfutar Daidaiton Ruhaniya (Tawafuq)",
+    subtitle: "Binciken daidaito tsakanin mutane biyu ko ayyuka, bisa ga abubuwa 4 na haruffa (Wuta, Kasa, Iska, Ruwa) da ma'aunin Abjad.",
+    entity1: "Rukuni / Mutum Na 1",
+    name1Label: "Suna / Sunan Farko / Aiki:",
+    name1Placeholder: "Misali: Muhammad / محمد",
+    mother1Label: "Sunan Uwa (Zabi):",
+    mother1Placeholder: "Misali: Amina / آمنة",
+    entity2: "Rukuni / Mutum Na 2",
+    name2Label: "Suna / Sunan Farko / Aiki 2:",
+    name2Placeholder: "Misali: Fatima / فاطمة",
+    mother2Label: "Sunan Uwa 2 (Zabi):",
+    mother2Placeholder: "Misali: Khadija / خديجة",
+    calculateBtn: "Lissafta Tawafuq na Ruhaniya",
+    bannerTitle: "TAWAFUQ • DAIDAITON RUHANIYA NA HARUFFA",
+    abjadLabel: "Abjad:",
+    feu: "Wuta",
+    terre: "Kasa",
+    air: "Iska",
+    eau: "Ruwa",
+    harmonyAirFireType: "Sadarwa Mai Girma (Iska tana hura Wuta)",
+    harmonyAirFireDesc: "Kyakkyawan haɗin gwiwa na ruhaniya da ƙirƙira. Ɗaya yana kawo hangen nesa da wahayi, ɗayan kuma ƙarfi da cika aiki.",
+    harmonyWaterEarthType: "Daidaito Mai Zurfi (Ruwa yana takaita Kasa)",
+    harmonyWaterEarthDesc: "Sadarwa mai ƙarfi, albarka da kariya. Ginshiƙi mai ƙarfi, yarda da juna da zaman lafiyar gida.",
+    harmonySameType: "Ƙarfafawa",
+    harmonySameDesc: "Ilimin dabi'a na kai tsaye. Kuna raba hali na kuzari iri ɗaya, wanda ke tallata fahimtar juna nan take.",
+    harmonyFireWaterType: "Rikicin Element (Wuta da Ruwa)",
+    harmonyFireWaterDesc: "Sabanin abubuwa. Ruwa na iya kashe Wuta ko Wuta ta tafasa Ruwa. Yana buƙatar Wiridin daidaitawa don tausasa halaye.",
+    harmonyNeutralType: "Cika Juna na Tsakatsaki",
+    harmonyNeutralDesc: "Auna aiki wanda ke buƙatar bayyananniyar magana da haƙuri na juna.",
+    modBeneficial: "Lambar haɗin gwiwa mai albarka (Albarka & Buxuwa).",
+    modStable: "Lambar zaman lafiya da gini na juna.",
+    modPatience: "Lamba mai buƙatar haƙuri da karatun Ya Latif.",
+    recommendedTitle: "Bayanin Shawara & Addu'ar Daidaitawa",
+    wird75Trans: "Ya Mai Soyayya, Ya Mai Tara Mutane, ka haɗa su a cikin alheri da albarka.",
+    wirdLess75Trans: "Ya Mai Takaita, Ya Aminci, ka jefa soyayya da zaman lafiya a tsakaninsu.",
+    copyBtn: "Kwafi addu'a",
+    copied: "An kwafa!"
+  }
+};
 
 // Helper map for Latin to Arabic transliteration for names
 const LATIN_TO_ARABIC_MAP: { [key: string]: string } = {
@@ -70,6 +191,8 @@ const analyzeNameElements = (rawName: string): ElementalBreakdown => {
 };
 
 export const SpiritualCompatibilityTawafuq: React.FC = () => {
+  const { language } = useLanguage();
+  const dict = tawafuqDict[(language as 'fr' | 'en' | 'ha') || 'fr'] || tawafuqDict.fr;
   const { featureToggles } = useFeatures();
   const disableDuaCopy = !!featureToggles?.disable_dua_copy;
   const [name1, setName1] = useState('');
@@ -90,13 +213,6 @@ export const SpiritualCompatibilityTawafuq: React.FC = () => {
 
     if (elem1.totalLetters === 0 || elem2.totalLetters === 0) return;
 
-    // Elemental compatibility weights
-    // Fire + Air = High (+25)
-    // Earth + Water = High (+25)
-    // Fire + Fire / Earth + Earth / etc = Medium (+15)
-    // Air + Water / Earth + Fire = Neutral (+10)
-    // Fire + Water / Air + Earth = Conflict (-10 or needs balance)
-
     let score = 50; // base score
 
     // Dominant elements
@@ -108,29 +224,37 @@ export const SpiritualCompatibilityTawafuq: React.FC = () => {
     const dom1 = getDominant(elem1);
     const dom2 = getDominant(elem2);
 
-    let interactionType = 'Neutre';
-    let interactionDesc = '';
+    const getElemName = (el: string) => {
+      if (el === 'Feu') return dict.feu;
+      if (el === 'Terre') return dict.terre;
+      if (el === 'Air') return dict.air;
+      if (el === 'Eau') return dict.eau;
+      return el;
+    };
+
+    let interactionType = dict.harmonyNeutralType;
+    let interactionDesc = dict.harmonyNeutralDesc;
 
     if ((dom1 === 'Feu' && dom2 === 'Air') || (dom1 === 'Air' && dom2 === 'Feu')) {
       score += 35;
-      interactionType = 'Harmonie Élevée (L\'Air attise le Feu)';
-      interactionDesc = 'Excellente synergie spirituelle et créative. L\'un apporte la vision et l\'inspiration, l\'autre la force et l\'exécution.';
+      interactionType = dict.harmonyAirFireType;
+      interactionDesc = dict.harmonyAirFireDesc;
     } else if ((dom1 === 'Eau' && dom2 === 'Terre') || (dom1 === 'Terre' && dom2 === 'Eau')) {
       score += 35;
-      interactionType = 'Harmonie Profonde (L\'Eau fertilise la Terre)';
-      interactionDesc = 'Relation très stable, féconde et protectrice. Ancrage solide, confiance mutuelle et paix du foyer.';
+      interactionType = dict.harmonyWaterEarthType;
+      interactionDesc = dict.harmonyWaterEarthDesc;
     } else if (dom1 === dom2) {
       score += 25;
-      interactionType = `Amplification (${dom1} + ${dom2})`;
-      interactionDesc = 'Affinité naturelle directe. Vous partagez le même tempérament énergétique, favorisant une compréhension spontanée.';
+      interactionType = `${dict.harmonySameType} (${getElemName(dom1)} + ${getElemName(dom2)})`;
+      interactionDesc = dict.harmonySameDesc;
     } else if ((dom1 === 'Feu' && dom2 === 'Eau') || (dom1 === 'Eau' && dom2 === 'Feu')) {
       score -= 10;
-      interactionType = 'Tension Élémentaire (Le Feu et l\'Eau)';
-      interactionDesc = 'Opposition d\'éléments. L\'Eau peut éteindre le Feu ou le Feu peut faire bouillir l\'Eau. Nécessite le Wird d\'harmonisation pour adoucir les tempéraments.';
+      interactionType = dict.harmonyFireWaterType;
+      interactionDesc = dict.harmonyFireWaterDesc;
     } else {
       score += 15;
-      interactionType = 'Complémentarité Neutre';
-      interactionDesc = 'Équilibre passif nécessitant une communication claire et de la patience mutuelle.';
+      interactionType = dict.harmonyNeutralType;
+      interactionDesc = dict.harmonyNeutralDesc;
     }
 
     // Abjad modulo harmony (traditional Tawafuq formula)
@@ -140,12 +264,12 @@ export const SpiritualCompatibilityTawafuq: React.FC = () => {
     let tawafuqModDesc = '';
     if ([1, 3, 7, 9].includes(modulo9)) {
       score += 10;
-      tawafuqModDesc = 'Nombre d\'alliance bénéfique (Barakah & Ouverture).';
+      tawafuqModDesc = dict.modBeneficial;
     } else if ([2, 4, 6].includes(modulo9)) {
       score += 5;
-      tawafuqModDesc = 'Nombre de stabilité et de construction réciproque.';
+      tawafuqModDesc = dict.modStable;
     } else {
-      tawafuqModDesc = 'Nombre nécessitant de la patience et la récitation de Ya Latif.';
+      tawafuqModDesc = dict.modPatience;
     }
 
     const finalScore = Math.min(99, Math.max(35, score));
@@ -160,8 +284,8 @@ export const SpiritualCompatibilityTawafuq: React.FC = () => {
         ? "Ya Wadudu ya Jami'u ijma' baynahuma fi khayr."
         : "Ya Latifu ya Salamu alqi al-mawaddata was-sakinata baynahuma.",
       translation: finalScore >= 75
-        ? "Ô Bienveillant, Ô Rassembleur, unis-les dans le bien et la bénédiction."
-        : "Ô Subtil, Ô Paix, insuffle l'affection et la sérénité entre eux."
+        ? dict.wird75Trans
+        : dict.wirdLess75Trans
     };
 
     setAnalysisResult({
@@ -193,10 +317,10 @@ export const SpiritualCompatibilityTawafuq: React.FC = () => {
       <div className="border-b border-gray-100 dark:border-gray-700 pb-3">
         <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
           <Heart className="text-rose-500 shrink-0" size={20} />
-          <span>Calculateur de Compatibilité Spirituelle (Tawafuq)</span>
+          <span>{dict.title}</span>
         </h2>
         <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
-          Analyse d'harmonie entre deux personnes ou projets, basée sur les 4 éléments des lettres (Feu, Terre, Air, Eau) et les valeurs Abjad.
+          {dict.subtitle}
         </p>
       </div>
 
@@ -205,27 +329,27 @@ export const SpiritualCompatibilityTawafuq: React.FC = () => {
         {/* Entity / Person 1 */}
         <div className="p-3 sm:p-4 bg-gray-50 dark:bg-gray-900/60 rounded-xl border border-gray-200 dark:border-gray-700 space-y-2.5">
           <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase">
-            <Users size={14} /> Entité / Personne 1
+            <Users size={14} /> {dict.entity1}
           </div>
 
           <div>
-            <label className="text-[11px] text-gray-500 dark:text-gray-400 block mb-1 font-medium">Nom / Prénom / Projet :</label>
+            <label className="text-[11px] text-gray-500 dark:text-gray-400 block mb-1 font-medium">{dict.name1Label}</label>
             <input
               type="text"
               value={name1}
               onChange={(e) => setName1(e.target.value)}
-              placeholder="Ex: Muhammad / محمد"
+              placeholder={dict.name1Placeholder}
               className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs sm:text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-arabic"
             />
           </div>
 
           <div>
-            <label className="text-[11px] text-gray-500 dark:text-gray-400 block mb-1 font-medium">Nom Mère (Optionnel) :</label>
+            <label className="text-[11px] text-gray-500 dark:text-gray-400 block mb-1 font-medium">{dict.mother1Label}</label>
             <input
               type="text"
               value={mother1}
               onChange={(e) => setMother1(e.target.value)}
-              placeholder="Ex: Amina / آمنة"
+              placeholder={dict.mother1Placeholder}
               className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs sm:text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 font-arabic"
             />
           </div>
@@ -234,27 +358,27 @@ export const SpiritualCompatibilityTawafuq: React.FC = () => {
         {/* Entity / Person 2 */}
         <div className="p-3 sm:p-4 bg-gray-50 dark:bg-gray-900/60 rounded-xl border border-gray-200 dark:border-gray-700 space-y-2.5">
           <div className="flex items-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase">
-            <Heart size={14} /> Entité / Personne 2
+            <Heart size={14} /> {dict.entity2}
           </div>
 
           <div>
-            <label className="text-[11px] text-gray-500 dark:text-gray-400 block mb-1 font-medium">Nom / Prénom / Projet 2 :</label>
+            <label className="text-[11px] text-gray-500 dark:text-gray-400 block mb-1 font-medium">{dict.name2Label}</label>
             <input
               type="text"
               value={name2}
               onChange={(e) => setName2(e.target.value)}
-              placeholder="Ex: Fatima / فاطمة"
+              placeholder={dict.name2Placeholder}
               className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs sm:text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-arabic"
             />
           </div>
 
           <div>
-            <label className="text-[11px] text-gray-500 dark:text-gray-400 block mb-1 font-medium">Nom Mère 2 (Optionnel) :</label>
+            <label className="text-[11px] text-gray-500 dark:text-gray-400 block mb-1 font-medium">{dict.mother2Label}</label>
             <input
               type="text"
               value={mother2}
               onChange={(e) => setMother2(e.target.value)}
-              placeholder="Ex: Khadija / خديجة"
+              placeholder={dict.mother2Placeholder}
               className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs sm:text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 font-arabic"
             />
           </div>
@@ -267,7 +391,7 @@ export const SpiritualCompatibilityTawafuq: React.FC = () => {
         disabled={!name1.trim() || !name2.trim()}
         className="w-full py-3 bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-600 hover:from-emerald-500 hover:to-indigo-500 text-white font-bold rounded-xl text-xs sm:text-sm shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
       >
-        <Sparkles size={16} /> Calculer le Tawafuq Spirituel
+        <Sparkles size={16} /> {dict.calculateBtn}
       </button>
 
       {/* Results Section */}
@@ -280,7 +404,7 @@ export const SpiritualCompatibilityTawafuq: React.FC = () => {
           {/* Main Compatibility Score Banner */}
           <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-6 text-white text-center shadow-xl border border-indigo-500/30 relative overflow-hidden">
             <span className="text-xs uppercase tracking-widest text-amber-400 font-bold block mb-1">
-              TAWAFUQ • HARMONIE SPIRITUELLE DES LETTRES
+              {dict.bannerTitle}
             </span>
 
             <div className="flex items-center justify-center gap-3 my-2">
@@ -307,13 +431,13 @@ export const SpiritualCompatibilityTawafuq: React.FC = () => {
             <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700">
               <div className="flex justify-between items-center mb-2">
                 <span className="text-xs font-bold text-gray-900 dark:text-white">{name1}</span>
-                <span className="text-xs font-mono text-emerald-600 dark:text-emerald-400 font-bold">Abjad : {analysisResult.elem1.totalAbjad}</span>
+                <span className="text-xs font-mono text-emerald-600 dark:text-emerald-400 font-bold">{dict.abjadLabel} {analysisResult.elem1.totalAbjad}</span>
               </div>
               <div className="grid grid-cols-4 gap-1.5 text-center text-[10px] font-bold">
-                <div className="p-1.5 bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 rounded-lg">Feu: {analysisResult.elem1.Feu}</div>
-                <div className="p-1.5 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 rounded-lg">Terre: {analysisResult.elem1.Terre}</div>
-                <div className="p-1.5 bg-cyan-50 dark:bg-cyan-950/40 text-cyan-600 dark:text-cyan-400 rounded-lg">Air: {analysisResult.elem1.Air}</div>
-                <div className="p-1.5 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 rounded-lg">Eau: {analysisResult.elem1.Eau}</div>
+                <div className="p-1.5 bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 rounded-lg">{dict.feu}: {analysisResult.elem1.Feu}</div>
+                <div className="p-1.5 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 rounded-lg">{dict.terre}: {analysisResult.elem1.Terre}</div>
+                <div className="p-1.5 bg-cyan-50 dark:bg-cyan-950/40 text-cyan-600 dark:text-cyan-400 rounded-lg">{dict.air}: {analysisResult.elem1.Air}</div>
+                <div className="p-1.5 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 rounded-lg">{dict.eau}: {analysisResult.elem1.Eau}</div>
               </div>
             </div>
 
@@ -321,13 +445,13 @@ export const SpiritualCompatibilityTawafuq: React.FC = () => {
             <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700">
               <div className="flex justify-between items-center mb-2">
                 <span className="text-xs font-bold text-gray-900 dark:text-white">{name2}</span>
-                <span className="text-xs font-mono text-indigo-600 dark:text-indigo-400 font-bold">Abjad : {analysisResult.elem2.totalAbjad}</span>
+                <span className="text-xs font-mono text-indigo-600 dark:text-indigo-400 font-bold">{dict.abjadLabel} {analysisResult.elem2.totalAbjad}</span>
               </div>
               <div className="grid grid-cols-4 gap-1.5 text-center text-[10px] font-bold">
-                <div className="p-1.5 bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 rounded-lg">Feu: {analysisResult.elem2.Feu}</div>
-                <div className="p-1.5 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 rounded-lg">Terre: {analysisResult.elem2.Terre}</div>
-                <div className="p-1.5 bg-cyan-50 dark:bg-cyan-950/40 text-cyan-600 dark:text-cyan-400 rounded-lg">Air: {analysisResult.elem2.Air}</div>
-                <div className="p-1.5 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 rounded-lg">Eau: {analysisResult.elem2.Eau}</div>
+                <div className="p-1.5 bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 rounded-lg">{dict.feu}: {analysisResult.elem2.Feu}</div>
+                <div className="p-1.5 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 rounded-lg">{dict.terre}: {analysisResult.elem2.Terre}</div>
+                <div className="p-1.5 bg-cyan-50 dark:bg-cyan-950/40 text-cyan-600 dark:text-cyan-400 rounded-lg">{dict.air}: {analysisResult.elem2.Air}</div>
+                <div className="p-1.5 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 rounded-lg">{dict.eau}: {analysisResult.elem2.Eau}</div>
               </div>
             </div>
           </div>
@@ -336,7 +460,7 @@ export const SpiritualCompatibilityTawafuq: React.FC = () => {
           <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-emerald-950 via-teal-950 to-slate-900 text-white border border-emerald-500/30 space-y-3 relative w-full max-w-full overflow-hidden">
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-1.5">
               <span className="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
-                <Sparkles size={14} className="shrink-0" /> Recommandation & Invocation d'Harmonisation
+                <Sparkles size={14} className="shrink-0" /> {dict.recommendedTitle}
               </span>
               <span className="text-[10px] bg-amber-500/20 text-amber-300 px-2.5 py-0.5 rounded-full font-bold self-start sm:self-auto whitespace-nowrap">
                 {analysisResult.recommendedWird.name}
@@ -370,7 +494,7 @@ export const SpiritualCompatibilityTawafuq: React.FC = () => {
                   className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
                 >
                   {copiedText ? <Check size={14} className="text-amber-300" /> : <Copy size={14} />}
-                  <span>{copiedText ? "Copié !" : "Copier la formule"}</span>
+                  <span>{copiedText ? dict.copied : dict.copyBtn}</span>
                 </button>
               </div>
             )}

@@ -643,9 +643,12 @@ export const UserProfile: React.FC = () => {
   const handleLogout = async () => {
     try {
       await signOut();
-      navigate('/');
     } catch (error) {
       console.error('Logout error', error);
+    } finally {
+      localStorage.removeItem('asrarhub_local_user');
+      localStorage.removeItem('asrarhub_session_id');
+      window.location.href = '/';
     }
   };
 

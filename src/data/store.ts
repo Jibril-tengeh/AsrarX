@@ -1,4 +1,5 @@
 import { AsrarItem } from '../types';
+import { INITIAL_DEFAULT_ARTICLES } from './defaultArticles';
 
 export const initialData: AsrarItem[] = [];
 
@@ -7,7 +8,7 @@ export const getAsrarItems = (): AsrarItem[] => {
     const stored = localStorage.getItem('asrar_items');
     if (stored) {
       const parsed = JSON.parse(stored);
-      if (Array.isArray(parsed)) {
+      if (Array.isArray(parsed) && parsed.length > 0) {
         return parsed.map(item => ({
           ...item,
           hook: item.hook || (item.content ? item.content.replace(/<[^>]+>/g, '').substring(0, 120) + '...' : '')
@@ -17,7 +18,19 @@ export const getAsrarItems = (): AsrarItem[] => {
   } catch (e) {
     console.error("Error parsing asrar_items", e);
   }
-  return [];
+  return INITIAL_DEFAULT_ARTICLES.map(art => ({
+    id: art.id,
+    title: art.title,
+    hook: art.hook,
+    category: art.category,
+    subCategory: art.subCategory || '',
+    status: art.status,
+    content: art.content,
+    benefits: art.benefits,
+    imageUrl: art.thumbnail,
+    isPremium: art.isPremium,
+    createdAt: art.createdAt
+  })) as AsrarItem[];
 };
 
 

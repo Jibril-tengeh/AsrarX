@@ -38,18 +38,27 @@ export const auth = getAuth(app);
 export const storage = getStorage(app);
 
 // Initialize Firestore safely:
-// In iframe preview sandboxes or multi-tab contexts, persistent IndexedDB locking can throw
-// internal assertion errors. We use memoryLocalCache in iframe environments and fall back gracefully.
+// In iframe preview sandboxes, Capacitor, or multi-tab contexts, persistent IndexedDB locking can throw
+// internal assertion errors or deadlock listeners. We use memoryLocalCache in restricted environments and fall back gracefully.
 const isInIframe = typeof window !== 'undefined' && window.self !== window.top;
+const isCapacitor = typeof window !== 'undefined' && (
+  !!(window as any).Capacitor ||
+  window.location.protocol === 'capacitor:' ||
+  window.location.hostname === 'localhost' ||
+  navigator.userAgent.includes('Capacitor') ||
+  navigator.userAgent.includes('wv')
+);
 
 const initFirestore = () => {
   try {
-    if (isInIframe) {
+    if (isInIframe || isCapacitor) {
       return initializeFirestore(app, {
+        experimentalAutoDetectLongPolling: true,
         localCache: memoryLocalCache()
       });
     }
     return initializeFirestore(app, {
+      experimentalAutoDetectLongPolling: true,
       localCache: persistentLocalCache({
         tabManager: persistentMultipleTabManager()
       })
@@ -58,6 +67,7 @@ const initFirestore = () => {
     console.warn('[Firestore] Cache init fallback to memoryLocalCache:', err);
     try {
       return initializeFirestore(app, {
+        experimentalAutoDetectLongPolling: true,
         localCache: memoryLocalCache()
       });
     } catch (fallbackErr) {
@@ -140,15 +150,28 @@ export const signOut = async () => {
     const sessionId = localStorage.getItem('asrarhub_session_id');
     if (user && sessionId) {
       const sessionRef = doc(db, 'users', user.uid, 'sessions', sessionId);
-      await deleteDoc(sessionRef).catch(() => {});
+      deleteDoc(sessionRef).catch(() => {});
     }
   } catch (err) {
     console.error("Error deleting session on signout", err);
   }
+
+  // Clear local storage session tokens immediately
   localStorage.removeItem('asrarhub_session_id');
   localStorage.removeItem('asrarhub_local_user');
+  
+  // Notify listeners immediately
   window.dispatchEvent(new Event('asrarhub_local_user_changed'));
-  return firebaseSignOut(auth).catch(() => {});
+
+  // Race firebaseSignOut with a 1-second fallback timeout so it never blocks
+  try {
+    await Promise.race([
+      firebaseSignOut(auth),
+      new Promise((resolve) => setTimeout(resolve, 1000))
+    ]);
+  } catch (e) {
+    console.error("firebaseSignOut error", e);
+  }
 };
 
 export const isAutoSaveEnabled = () => {
