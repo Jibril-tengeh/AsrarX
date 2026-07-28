@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { Globe, Sparkles, Compass, Book, Moon, Users, DoorOpen, ChevronRight } from 'lucide-react';
+import { requestAllPermissions } from '../utils/planetaryNotifications';
 
 export const Onboarding: React.FC<{ onComplete: () => void }> = ({ onComplete }) => {
   const { t, language, setLanguage } = useLanguage();
@@ -64,16 +65,25 @@ export const Onboarding: React.FC<{ onComplete: () => void }> = ({ onComplete })
     setStep(1);
   };
 
+  const finishOnboarding = async () => {
+    try {
+      await requestAllPermissions();
+    } catch (e) {
+      console.warn('Error requesting permissions during onboarding:', e);
+    }
+    onComplete();
+  };
+
   const nextStep = () => {
     if (step < slides.length) {
       setStep(step + 1);
     } else {
-      onComplete();
+      finishOnboarding();
     }
   };
 
   const skip = () => {
-    onComplete();
+    finishOnboarding();
   };
 
   return (

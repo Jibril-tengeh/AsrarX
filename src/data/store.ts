@@ -1,5 +1,6 @@
 import { AsrarItem } from '../types';
 import { INITIAL_DEFAULT_ARTICLES } from './defaultArticles';
+import { isPubliclyVisibleArticle } from '../lib/articleUtils';
 
 export const initialData: AsrarItem[] = [];
 
@@ -9,28 +10,32 @@ export const getAsrarItems = (): AsrarItem[] => {
     if (stored) {
       const parsed = JSON.parse(stored);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed.map(item => ({
-          ...item,
-          hook: item.hook || (item.content ? item.content.replace(/<[^>]+>/g, '').substring(0, 120) + '...' : '')
-        }));
+        return parsed
+          .filter(item => isPubliclyVisibleArticle(item.status))
+          .map(item => ({
+            ...item,
+            hook: item.hook || (item.content ? item.content.replace(/<[^>]+>/g, '').substring(0, 120) + '...' : '')
+          }));
       }
     }
   } catch (e) {
     console.error("Error parsing asrar_items", e);
   }
-  return INITIAL_DEFAULT_ARTICLES.map(art => ({
-    id: art.id,
-    title: art.title,
-    hook: art.hook,
-    category: art.category,
-    subCategory: art.subCategory || '',
-    status: art.status,
-    content: art.content,
-    benefits: art.benefits,
-    imageUrl: art.thumbnail,
-    isPremium: art.isPremium,
-    createdAt: art.createdAt
-  })) as AsrarItem[];
+  return INITIAL_DEFAULT_ARTICLES
+    .filter(art => isPubliclyVisibleArticle(art.status))
+    .map(art => ({
+      id: art.id,
+      title: art.title,
+      hook: art.hook,
+      category: art.category,
+      subCategory: art.subCategory || '',
+      status: art.status,
+      content: art.content,
+      benefits: art.benefits,
+      imageUrl: art.thumbnail,
+      isPremium: art.isPremium,
+      createdAt: art.createdAt
+    })) as AsrarItem[];
 };
 
 

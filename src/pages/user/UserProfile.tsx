@@ -9,7 +9,8 @@ import { PremiumBadge } from '../../components/PremiumBadge';
 import { AuthModal } from '../../components/AuthModal';
 import { PremiumWrapper } from '../../components/PremiumWrapper';
 import { signOut, db, auth } from '../../lib/firebase';
-import { doc, setDoc, collection, deleteDoc, onSnapshot, updateDoc, query } from 'firebase/firestore';
+import { doc, setDoc, collection, deleteDoc, onSnapshot, updateDoc, query, where } from 'firebase/firestore';
+import { isPubliclyVisibleArticle } from '../../lib/articleUtils';
 import { useNavigate, Link } from 'react-router-dom';
 import { getFCMToken, checkNotificationSupport, onMessageListener } from '../../lib/fcm';
 import { getApiUrl } from '../../lib/api';
@@ -288,18 +289,21 @@ export const UserProfile: React.FC = () => {
   const [selectedFavArticle, setSelectedFavArticle] = useState<any | null>(null);
 
   useEffect(() => {
-    const q = query(collection(db, 'articles'));
+    const isAdmin = user?.role === 'admin';
+    const q = isAdmin
+      ? query(collection(db, 'articles'))
+      : query(collection(db, 'articles'), where('status', 'in', ['Published', 'published']));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const allItems = snapshot.docs.map(doc => ({
+      const allItems: any[] = snapshot.docs.map(doc => ({
         id: doc.id,
-        ...doc.data()
+        ...(doc.data() as any)
       }));
 
       // Get saved bookmarks
       try {
         const savedIds: string[] = JSON.parse(localStorage.getItem('asrar_bookmarks') || '[]');
         if (Array.isArray(savedIds)) {
-          const bookmarkedItems = allItems.filter(item => savedIds.includes(item.id));
+          const bookmarkedItems = allItems.filter(item => savedIds.includes(item.id) && (isAdmin || isPubliclyVisibleArticle(item.status)));
           setFavorites(bookmarkedItems);
         } else {
           setFavorites([]);

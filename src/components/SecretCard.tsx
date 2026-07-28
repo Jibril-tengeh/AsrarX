@@ -9,6 +9,7 @@ export type LayoutMode = 'grid2' | 'grid1' | 'list';
 interface SecretCardProps {
   item: AsrarItem;
   layoutMode?: LayoutMode;
+  categories?: any[];
 }
 
 const ImageWithFallback: React.FC<{ src: string; alt: string; className?: string; [key: string]: any }> = ({ src, alt, className, ...props }) => {
@@ -38,7 +39,7 @@ const ImageWithFallback: React.FC<{ src: string; alt: string; className?: string
   );
 };
 
-export const SecretCard: React.FC<SecretCardProps> = ({ item, layoutMode = 'grid2' }) => {
+export const SecretCard: React.FC<SecretCardProps> = ({ item, layoutMode = 'grid2', categories }) => {
   const { t, language } = useLanguage();
   
   // Use cached translation if available
@@ -58,8 +59,38 @@ export const SecretCard: React.FC<SecretCardProps> = ({ item, layoutMode = 'grid
     }
   }
   
+  // Dynamic category resolution
+  let categoryLabel = '';
+  const catList = (categories && categories.length > 0) ? categories : (() => {
+    try {
+      const cached = localStorage.getItem('asrarhub_cached_categories');
+      return cached ? JSON.parse(cached) : [];
+    } catch { return []; }
+  })();
+
+  if (catList && catList.length > 0) {
+    const matchedCat = catList.find((c: any) => 
+      c.id === item.category || 
+      c.id?.toLowerCase() === item.category?.toLowerCase() ||
+      c.name?.toLowerCase() === item.category?.toLowerCase()
+    );
+    if (matchedCat) {
+      categoryLabel = language === 'en' 
+        ? (matchedCat.name_en || matchedCat.name) 
+        : language === 'ha' 
+        ? (matchedCat.name_ha || matchedCat.name) 
+        : matchedCat.name;
+    }
+  }
+
+  if (!categoryLabel) {
+    if (item.category === 'secret') categoryLabel = t('secrets', "Secrets");
+    else if (item.category === 'recette') categoryLabel = t('recettes', "Recettes");
+    else if (item.category === 'wird') categoryLabel = t('wirds', "Wirds");
+    else categoryLabel = item.category ? (item.category.charAt(0).toUpperCase() + item.category.slice(1)) : t('wirds', "Wirds");
+  }
+
   const CategoryIcon = item.category === 'secret' ? BookOpen : item.category === 'recette' ? Sparkles : ScrollText;
-  const categoryLabel = t(item.category === 'secret' ? 'secrets' : item.category === 'recette' ? 'recettes' : 'wirds');
 
   if (layoutMode === 'list') {
     return (

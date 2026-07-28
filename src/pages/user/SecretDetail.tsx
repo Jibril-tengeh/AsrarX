@@ -6,6 +6,7 @@ import { triggerProtectionModal } from "../../components/ContentProtectionManage
 import { useFeatures } from "../../contexts/FeatureContext";
 import { INITIAL_DEFAULT_ARTICLES } from "../../data/defaultArticles";
 import { fetchSingleArticleFromRest } from "../../lib/firestoreRest";
+import { isPubliclyVisibleArticle } from "../../lib/articleUtils";
 import {
   ArrowLeft,
   BookOpen,
@@ -731,6 +732,11 @@ export const SecretDetail: React.FC = () => {
           const docSnap = await getDoc(docRef);
           if (docSnap.exists()) {
             const data = docSnap.data();
+            const isAdmin = user?.role === 'admin';
+            if (!isAdmin && !isPubliclyVisibleArticle(data.status)) {
+              setNotFound(true);
+              return;
+            }
             const activeTitle = language === 'fr' ? data.title : data[`title_${language}`] || data.title;
             const activeContent = language === 'fr' ? data.content : data[`content_${language}`] || data.content;
             let activeHook = language === 'fr' ? data.hook : data[`hook_${language}`] || data.hook || '';
@@ -764,6 +770,7 @@ export const SecretDetail: React.FC = () => {
               title: activeTitle,
               hook: activeHook,
               category: data.category || 'recette',
+              status: data.status || 'Published',
               content: activeContent,
               benefits: data.benefits || [],
               imageUrl: data.thumbnail,
@@ -827,6 +834,11 @@ export const SecretDetail: React.FC = () => {
               // Try fetching via REST API before falling back
               const restItem = await fetchSingleArticleFromRest(id);
               if (restItem) {
+                const isAdmin = user?.role === 'admin';
+                if (!isAdmin && !isPubliclyVisibleArticle(restItem.status)) {
+                  setNotFound(true);
+                  return;
+                }
                 let activeContent = restItem.content || '';
                 if (language === 'en' && restItem.content_en) activeContent = restItem.content_en;
                 if (language === 'ha' && restItem.content_ha) activeContent = restItem.content_ha;
@@ -858,7 +870,12 @@ export const SecretDetail: React.FC = () => {
                 // Check if we have a cached version
                 const cachedDetails = JSON.parse(localStorage.getItem('asrarhub_cached_article_details') || '{}');
                 if (cachedDetails[id]) {
-                  setItem(cachedDetails[id]);
+                  const isAdmin = user?.role === 'admin';
+                  if (!isAdmin && !isPubliclyVisibleArticle(cachedDetails[id].status)) {
+                    setNotFound(true);
+                  } else {
+                    setItem(cachedDetails[id]);
+                  }
                 } else {
                   const defaultArt = INITIAL_DEFAULT_ARTICLES.find(a => a.id === id);
                   if (defaultArt) {

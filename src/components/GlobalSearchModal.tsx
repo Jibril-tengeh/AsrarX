@@ -4,6 +4,7 @@ import { Search, X, Book, HelpCircle, ChevronRight, Sparkles, Sliders, ShoppingB
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import { getAsrarItems } from '../data/store';
+import { isPubliclyVisibleArticle } from '../lib/articleUtils';
 import { db } from '../lib/firebase';
 import { collection, onSnapshot, query as fsQuery, where } from 'firebase/firestore';
 import { asmaListData } from '../data/asmaListData';
@@ -227,7 +228,9 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, on
       } else {
         items = getAsrarItems();
       }
-      return items.map((item: any) => ({
+      return items
+        .filter((item: any) => isPubliclyVisibleArticle(item.status))
+        .map((item: any) => ({
         id: `asrar-${item.id}`,
         title: item.title,
         description: item.content || item.hook || '',

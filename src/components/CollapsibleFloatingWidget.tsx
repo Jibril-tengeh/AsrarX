@@ -96,10 +96,21 @@ export const CollapsibleFloatingWidget: React.FC = () => {
       if ('serviceWorker' in navigator) {
         try {
           const reg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+          const notifTitle = language === 'fr' 
+            ? 'AsrarHub — Notifications Activées' 
+            : language === 'ha'
+            ? 'AsrarHub — An Kunna Sanarwa'
+            : 'AsrarHub — Notifications Enabled';
+          const notifBody = language === 'fr'
+            ? 'Vous recevrez les rappels spirituels et heures planétaires en arrière-plan.'
+            : language === 'ha'
+            ? 'Za ku sami tunatarwar ruhi da na sa’o’in taurari a bango.'
+            : 'You will receive spiritual reminders and planetary hour alerts in the background.';
+
           reg.active?.postMessage({
             type: 'SHOW_NOTIFICATION',
-            title: 'AsrarHub — Notifications Activées',
-            body: 'Vous recevrez les rappels spirituels et heures planétaires en arrière-plan.',
+            title: notifTitle,
+            body: notifBody,
           });
         } catch (e) {
           console.warn('Service worker registration notice:', e);
@@ -113,20 +124,32 @@ export const CollapsibleFloatingWidget: React.FC = () => {
     setTestSent(true);
     playNotificationTone();
 
+    const notifTitle = language === 'fr'
+      ? '✨ Rappel Spirituel en Arrière-Plan'
+      : language === 'ha'
+      ? '✨ Tunatarwar Ruhi a Bango'
+      : '✨ Background Spiritual Reminder';
+
+    const notifBody = language === 'fr'
+      ? `Sceau Actif: ${currentPlanet.planet.name} (${currentPlanet.planet.arabic}) — C'est l'heure propice pour votre Zikr !`
+      : language === 'ha'
+      ? `Hatimi Mai Aiki: ${currentPlanet.planet.name} (${currentPlanet.planet.arabic}) — Wannan ne lokaci mai kyau don Zikirinku!`
+      : `Active Seal: ${currentPlanet.planet.name} (${currentPlanet.planet.arabic}) — Optimal time for your Zikr!`;
+
     if ('serviceWorker' in navigator) {
       try {
         const reg = await navigator.serviceWorker.ready;
         reg.active?.postMessage({
           type: 'SCHEDULE_BACKGROUND_REMINDER',
-          title: '✨ Rappel Spirituel en Arrière-Plan',
-          body: `Sceau Actif: ${currentPlanet.planet.name} (${currentPlanet.planet.arabic}) — C'est l'heure propice pour votre Zikr !`,
+          title: notifTitle,
+          body: notifBody,
           delayMs: 3000,
         });
       } catch (e) {
         if ('Notification' in window && Notification.permission === 'granted') {
           setTimeout(() => {
-            new Notification('✨ Rappel Spirituel AsrarHub', {
-              body: `Heure Planétaire : ${currentPlanet.planet.name} (${currentPlanet.planet.arabic})`,
+            new Notification(notifTitle, {
+              body: notifBody,
               icon: '/icon-192.png',
             });
           }, 3000);
@@ -134,8 +157,8 @@ export const CollapsibleFloatingWidget: React.FC = () => {
       }
     } else if ('Notification' in window && Notification.permission === 'granted') {
       setTimeout(() => {
-        new Notification('✨ Rappel Spirituel AsrarHub', {
-          body: `Heure Planétaire : ${currentPlanet.planet.name} (${currentPlanet.planet.arabic})`,
+        new Notification(notifTitle, {
+          body: notifBody,
           icon: '/icon-192.png',
         });
       }, 3000);
@@ -388,18 +411,28 @@ export const CollapsibleFloatingWidget: React.FC = () => {
                 <div className="space-y-3">
                   <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-200">Statut Autorisation :</span>
+                      <span className="text-xs font-bold text-slate-200">
+                        {language === 'fr' ? 'Statut Autorisation :' : language === 'ha' ? 'Matsayin Izini :' : 'Authorization Status:'}
+                      </span>
                       <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
                         notifPermission === 'granted' 
                           ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
                           : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
                       }`}>
-                        {notifPermission === 'granted' ? 'Autorisé ✓' : 'Permission Requise'}
+                        {notifPermission === 'granted' 
+                          ? (language === 'fr' ? 'Autorisé ✓' : language === 'ha' ? 'An amince ✓' : 'Granted ✓')
+                          : (language === 'fr' ? 'Permission Requise' : language === 'ha' ? 'Ana buƙatar izini' : 'Permission Required')
+                        }
                       </span>
                     </div>
 
                     <p className="text-[11px] text-slate-400 leading-relaxed">
-                      Recevez les rappels d'heures planétaires, Sa'ah Ijabah et Zikr quotidien directement en arrière-plan même lorsque vous n'êtes pas sur l'application.
+                      {language === 'fr'
+                        ? "Recevez les rappels d'heures planétaires, Sa'ah Ijabah et Zikr quotidien directement en arrière-plan même lorsque vous n'êtes pas sur l'application."
+                        : language === 'ha'
+                        ? "Sami tunatarwar sa'o'in taurari, Sa'ah Ijabah da Zikr na yau da kullun a bango ko da ba ka cikin manhaja."
+                        : "Receive planetary hours, Sa'ah Ijabah, and daily Zikr reminders directly in the background even when off the app."
+                      }
                     </p>
                   </div>
 
@@ -409,7 +442,9 @@ export const CollapsibleFloatingWidget: React.FC = () => {
                       className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-xs shadow-lg shadow-emerald-900/50 transition-all flex items-center justify-center gap-2"
                     >
                       <Bell className="w-4 h-4" />
-                      <span>Activer les Notifications Arrière-Plan</span>
+                      <span>
+                        {language === 'fr' ? 'Activer les Notifications Arrière-Plan' : language === 'ha' ? 'Kunna Sanarwar Bango' : 'Enable Background Notifications'}
+                      </span>
                     </button>
                   ) : (
                     <div className="space-y-2">
@@ -421,18 +456,22 @@ export const CollapsibleFloatingWidget: React.FC = () => {
                         {testSent ? (
                           <>
                             <Check className="w-4 h-4 text-emerald-400 animate-bounce" />
-                            <span>Notification envoyée ! (Regardez en haut dans 3s)</span>
+                            <span>
+                              {language === 'fr' ? 'Notification envoyée ! (Regardez en haut dans 3s)' : language === 'ha' ? 'An tura sanarwa! (Duba sama cikin sakan 3)' : 'Notification sent! (Look at top in 3s)'}
+                            </span>
                           </>
                         ) : (
                           <>
                             <ShieldCheck className="w-4 h-4 text-emerald-400" />
-                            <span>Tester la Notification d'Arrière-Plan (3s)</span>
+                            <span>
+                              {language === 'fr' ? 'Tester la Notification d\'Arrière-Plan (3s)' : language === 'ha' ? 'Gwada Sanarwar Bango (3s)' : 'Test Background Notification (3s)'}
+                            </span>
                           </>
                         )}
                       </button>
 
                       <div className="text-[10px] text-slate-400 text-center italic">
-                        Changez d'onglet ou réduisez le navigateur après avoir cliqué sur tester.
+                        {language === 'fr' ? 'Changez d\'onglet ou réduisez le navigateur après avoir cliqué sur tester.' : language === 'ha' ? 'Canza shafi ko rage girman mai bincike bayan danna gwada.' : 'Switch tabs or minimize browser after clicking test.'}
                       </div>
                     </div>
                   )}

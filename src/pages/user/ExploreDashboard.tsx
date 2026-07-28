@@ -5,7 +5,7 @@ import { Link } from 'react-router-dom';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useFeatures } from '../../contexts/FeatureContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { collection, query, orderBy, onSnapshot, getDocsFromServer, getDocs } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, getDocsFromServer, getDocs, where } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { getAsrarItems } from '../../data/store';
 
@@ -14,6 +14,7 @@ import { PremiumWrapper } from '../../components/PremiumWrapper';
 import { AsrarQuickWidget } from '../../components/AsrarQuickWidget';
 import { INITIAL_DEFAULT_ARTICLES } from '../../data/defaultArticles';
 import { fetchArticlesFromRest } from '../../lib/firestoreRest';
+import { isPubliclyVisibleArticle } from '../../lib/articleUtils';
 
 export const ExploreDashboard: React.FC = () => {
   const { t, language } = useLanguage();
@@ -98,14 +99,7 @@ export const ExploreDashboard: React.FC = () => {
     }
 
     const isPublishedStatus = (st: any) => {
-      if (!st) return true;
-      const statusStr = st.toString().trim().toLowerCase();
-      if (!statusStr) return true;
-      const draftOrArchived = [
-        'draft', 'brouillon', 'archived', 'archivé', 'archive', 
-        'inactive', 'inactif', 'disabled', 'desactive', 'désactivé'
-      ];
-      return !draftOrArchived.includes(statusStr);
+      return isPubliclyVisibleArticle(st);
     };
 
     const formatCreatedAt = (val: any): string => {
@@ -135,7 +129,7 @@ export const ExploreDashboard: React.FC = () => {
       if (cached) {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const valid = isAdmin ? parsed : parsed.filter((art: any) => isPublishedStatus(art.status));
+          const valid = parsed.filter((art: any) => isPublishedStatus(art.status));
           if (valid.length > 0) {
             setArticles(valid);
             setIsLoading(false);
@@ -144,10 +138,13 @@ export const ExploreDashboard: React.FC = () => {
       }
     } catch (e) {}
 
-    const q = collection(db, 'articles');
+    const q = isAdmin 
+      ? collection(db, 'articles') 
+      : query(collection(db, 'articles'), where('status', 'in', ['Published', 'published']));
 
     const processExploreRaw = (data: any, docId: string) => {
       if (!data) return null;
+      if (!isPublishedStatus(data.status)) return null;
       const activeTitle = language === 'fr' ? data.title : data[`title_${language}`] || data.title || 'Sans titre';
       const activeContent = language === 'fr' ? data.content : data[`content_${language}`] || data.content || '';
       let activeHook = language === 'fr' ? data.hook : data[`hook_${language}`] || data.hook || '';
@@ -209,7 +206,7 @@ export const ExploreDashboard: React.FC = () => {
         if (cached) {
           const parsed = JSON.parse(cached);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            const valid = isAdmin ? parsed : parsed.filter((art: any) => isPublishedStatus(art.status));
+            const valid = parsed.filter((art: any) => isPublishedStatus(art.status));
             if (valid.length > 0) {
               setArticles(valid);
               setIsLoading(false);
@@ -218,7 +215,7 @@ export const ExploreDashboard: React.FC = () => {
           }
         }
       } catch (e) {}
-      setArticles(getDefaultExploreArticles());
+      setArticles(getDefaultExploreArticles().filter((art: any) => isPublishedStatus(art.status)));
       setIsLoading(false);
     };
 
@@ -227,7 +224,7 @@ export const ExploreDashboard: React.FC = () => {
       if (Array.isArray(restDocs) && restDocs.length > 0) {
         const fresh = restDocs
           .map(d => processExploreRaw(d, d.id))
-          .filter((art: any) => art !== null && (isAdmin || isPublishedStatus(art.status)));
+          .filter((art: any) => art !== null && isPublishedStatus(art.status));
         if (fresh.length > 0) {
           console.log(`[Articles REST - ExploreDashboard] Loaded ${fresh.length} articles via REST API!`);
           setArticles(fresh);
@@ -248,7 +245,7 @@ export const ExploreDashboard: React.FC = () => {
       if (!snap.empty) {
         const fresh = snap.docs
           .map(d => processExploreDoc(d))
-          .filter((art: any) => art !== null && (isAdmin || isPublishedStatus(art.status)));
+          .filter((art: any) => art !== null && isPublishedStatus(art.status));
 
         console.log(`[Articles getDocs - ExploreDashboard] ${fresh.length} published articles parsed.`);
         if (fresh.length > 0) {

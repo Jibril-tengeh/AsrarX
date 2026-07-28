@@ -5,6 +5,8 @@ export interface AsrarItem {
   title: string;
   hook?: string; // Short hook text
   category: Category;
+  subCategory?: string;
+  status?: string;
   verse?: string; // Optional related Quran verse
   reference?: string; // e.g. Sourate Al-Baqarah, verset 255
   content: string;

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Clock, ArrowLeft, Sun, Moon, Info, Settings2, MapPin, Bell, Database, Wifi, Sparkles, Compass, AlertCircle } from 'lucide-react';
+import { Clock, ArrowLeft, Sun, Moon, MapPin, Bell, Settings2, Sparkles, AlertCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { motion, AnimatePresence } from 'motion/react';
@@ -8,134 +8,194 @@ const planetaryI18n = {
   fr: {
     title: "Heures Planétaires, Sā'ah al-Ijābah & Éclipses",
     desc: "Calcul précis des heures inégales (Sā'āt Zamaniyyah), notifications push 15 min avant la Sā'ah al-Ijābah et géolocalisation du coucher/lever du soleil.",
-    geolocateBtn: "Obtenir la Position Exacte GPS",
+    calcGpsLabel: "Calcul Sā'āt Zamaniyyah par GPS",
+    geolocateBtn: "Obtenir la Position GPS Exacte",
     geolocatedSuccess: "Géolocalisation réussie ! Lever/Coucher ajustés.",
-    ijabahTitle: "Alerte Sā'ah al-Ijābah (Heure d'Exaucement Prophétique)",
-    ijabahDesc: "Dernière heure du Vendredi avant le Maghrib ou le tiers de nuit. Notification programmée 15 min avant.",
-    eclipseTitle: "Prévision des Éclipses (Kusūf / Khusūf)",
+    geoNotSupported: "Géolocalisation indisponible sur cet appareil.",
+    geoDenied: "Position non autorisée - Réglage par défaut conservé.",
+    ijabahTitle: "SĀ'AH AL-IJĀBAH ALERT (HEURE D'EXAUCEMENT)",
+    ijabahDesc: "Dernière heure du Vendredi avant le Maghrib ou dernier tiers de nuit. Notification programmée 15 min avant.",
+    eclipseTitle: "SUIVI DES ÉCLIPSES (KUSŪF / KHUSŪF)",
     eclipseDesc: "Prochaine Éclipse Lunaire/Solaire : Éclipse partielle calculée. Moment propice à la prière de Salāt al-Kusūf.",
     dayHours: "Heures de Jour",
     nightHours: "Heures de Nuit",
     activeHourLabel: "Heure Planétaire en Cours (Temps Réel)",
     timeRemaining: "Temps Restant",
-    notificationsOn: "Notifications Push & Alertes PWA activées !"
+    notificationsOn: "Notifications Push & Alertes PWA activées !",
+    enableNotifsTitle: "Activer les notifications",
+    dayOfWeekLabel: "Jour de la semaine",
+    sunriseLabel: "Lever du soleil (Fajr / Shuruq)",
+    sunsetLabel: "Coucher du soleil (Maghrib)",
+    angelRegent: "Ange Régent",
+    jinnKingLabel: "Roi Jinn",
+    angel: "Ange",
+    jinnKing: "Roi Jinn",
+    daysOfWeek: ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'],
+    notifNotSupported: "Ce navigateur ne supporte pas les notifications."
   },
   en: {
     title: "Planetary Hours, Sā'ah al-Ijābah & Eclipses",
     desc: "Precise calculation of unequal hours (Sā'āt Zamaniyyah), 15-min push notifications before Sā'ah al-Ijābah and GPS sunset/sunrise.",
+    calcGpsLabel: "Sā'āt Zamaniyyah GPS Calculation",
     geolocateBtn: "Get Exact GPS Location",
     geolocatedSuccess: "Geolocation successful! Sunrise/Sunset updated.",
-    ijabahTitle: "Sā'ah al-Ijābah Alert (Hour of Answer)",
+    geoNotSupported: "Geolocation unavailable on this device.",
+    geoDenied: "Location permission denied. Default settings kept.",
+    ijabahTitle: "SĀ'AH AL-IJĀBAH ALERT (HOUR OF ANSWER)",
     ijabahDesc: "The final hour of Friday before Maghrib or last third of the night. Push alert set 15 mins prior.",
-    eclipseTitle: "Eclipse Tracker (Kusūf / Khusūf)",
+    eclipseTitle: "ECLIPSE TRACKER (KUSŪF / KHUSŪF)",
     eclipseDesc: "Next Solar/Lunar Eclipse: Partial eclipse calculated. Time for Salāt al-Kusūf prayer.",
     dayHours: "Day Hours",
     nightHours: "Night Hours",
     activeHourLabel: "Current Planetary Hour (Real Time)",
     timeRemaining: "Time Remaining",
-    notificationsOn: "Push Notifications & PWA Alerts active!"
+    notificationsOn: "Push Notifications & PWA Alerts active!",
+    enableNotifsTitle: "Enable notifications",
+    dayOfWeekLabel: "Day of the week",
+    sunriseLabel: "Sunrise (Fajr / Shuruq)",
+    sunsetLabel: "Sunset (Maghrib)",
+    angelRegent: "Ruling Angel",
+    jinnKingLabel: "Jinn King",
+    angel: "Angel",
+    jinnKing: "Jinn King",
+    daysOfWeek: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+    notifNotSupported: "This browser does not support notifications."
   },
   ha: {
     title: "Awanni Masu Sarauta, Sā'ah al-Ijābah & Husufi",
     desc: "Lissafin sa'o'i daidai ta hanyar GPS, sanarwar minti 15 kafin Sa'ar Ijabah da Husufi.",
+    calcGpsLabel: "Lissafin Sā'āt Zamaniyyah ta GPS",
     geolocateBtn: "Sami Wurin GPS Yanzu",
     geolocatedSuccess: "An sami wurin GPS! An gyara fitowa da faɗuwar rana.",
-    ijabahTitle: "Sanarwar Sā'ah al-Ijābah (Sa'ar karɓar addu'a)",
-    ijabahDesc: "Sa'a ta ƙarshe ta ranar Juma'a kafin Magriba. Sanarwa minti 15 kafin lokacin.",
-    eclipseTitle: "Lissafin Husufin Rana da Wata",
+    geoNotSupported: "Na'urar ba ta goyon bayan GPS.",
+    geoDenied: "An hana damar GPS. An adana saitin asali.",
+    ijabahTitle: "SANARWAR SĀ'AH AL-IJĀBAH (SA'AR KARƁAR ADDU'A)",
+    ijabahDesc: "Sa'a ta ƙarshe ta ranar Juma'a kafin Magriba ko kashi ɗaya bisa uku na dare. Sanarwa minti 15 kafin lokacin.",
+    eclipseTitle: "LISSAFIN HUSUFIN RANA DA WATA (KUSŪF / KHUSŪF)",
     eclipseDesc: "Husufi na gaba a shirye yake. Lokaci ne na yin Salāt al-Kusūf.",
     dayHours: "Awannin Rana",
     nightHours: "Awannin Dare",
-    activeHourLabel: "Awa Mai Sarauta Yanzu",
+    activeHourLabel: "Awa Mai Sarauta Yanzu (Lokacin Yanzu)",
     timeRemaining: "Lokacin Da Ya Rage",
-    notificationsOn: "An kunna sanarwar PWA da Push!"
+    notificationsOn: "An kunna sanarwar PWA da Push!",
+    enableNotifsTitle: "Kunna sanarwa",
+    dayOfWeekLabel: "Rana ta mako",
+    sunriseLabel: "Fitowar rana (Shuruq)",
+    sunsetLabel: "Faɗuwar rana (Magriba)",
+    angelRegent: "Mala'ika Mai Tsaro",
+    jinnKingLabel: "Sarkin Aljanu",
+    angel: "Mala'ika",
+    jinnKing: "Sarkin Aljanu",
+    daysOfWeek: ['Lahadi', 'Litinin', 'Talata', 'Laraba', 'Alhamis', 'Juma\'a', 'Asabar'],
+    notifNotSupported: "Wannan bincike ba ya goyon bayan sanarwa."
   }
 };
 
-const planets = [
+const planetsBase = [
   { 
-    name: 'Soleil', 
+    id: 'sun',
     arabic: 'الشمس', 
     color: 'text-amber-500', 
     bg: 'bg-amber-100 dark:bg-amber-900/30', 
     border: 'border-amber-200 dark:border-amber-800', 
-    desc: 'Succès, pouvoir, guérison, illumination',
     angel: 'Ruqiyail (روفيائيل)',
     jinnKing: 'Al-Mudhib (المذهب / Roi du Dimanche)',
-    incense: 'Luban Mâle, Oud & Safran',
-    auspicity: { status: 'neutral', label: 'Favorable / Neutre (Noblesse)', color: 'bg-amber-500 text-white' }
+    names: { fr: 'Soleil', en: 'Sun', ha: 'Rana (Soleil)' },
+    descs: { 
+      fr: 'Succès, pouvoir, guérison, illumination', 
+      en: 'Success, power, healing, enlightenment', 
+      ha: 'Nasara, mulki, waraka, illumination' 
+    }
   },
   { 
-    name: 'Vénus', 
+    id: 'venus',
     arabic: 'الزهرة', 
     color: 'text-emerald-500', 
     bg: 'bg-emerald-100 dark:bg-emerald-900/30', 
     border: 'border-emerald-200 dark:border-emerald-800', 
-    desc: 'Amour, beauté, attraction, harmonie',
     angel: 'Aniyail (عنيائيل)',
     jinnKing: 'Zouba\'ah (زوبعة / Roi du Vendredi)',
-    incense: 'Mastic, Oud Blanc & Eau de Rose',
-    auspicity: { status: 'favorable', label: 'Très Favorable (Grâce & Amour)', color: 'bg-emerald-500 text-white' }
+    names: { fr: 'Vénus', en: 'Venus', ha: 'Zahra (Vénus)' },
+    descs: { 
+      fr: 'Amour, beauté, attraction, harmonie', 
+      en: 'Love, beauty, attraction, harmony', 
+      ha: 'Soyayya, kyau, janyo hankali, zaman lafiya' 
+    }
   },
   { 
-    name: 'Mercure', 
+    id: 'mercury',
     arabic: 'عطارد', 
-    color: 'text-blue-400', 
+    color: 'text-blue-500 dark:text-blue-400', 
     bg: 'bg-blue-100 dark:bg-blue-900/30', 
     border: 'border-blue-200 dark:border-blue-800', 
-    desc: 'Communication, intelligence, commerce, rapidité',
     angel: 'Mikail (ميكائيل)',
     jinnKing: 'Barqan (برقان / Roi du Mercredi)',
-    incense: 'Sandaraque, Mastic & Musc',
-    auspicity: { status: 'neutral', label: 'Favorable / Neutre (Commerce)', color: 'bg-blue-500 text-white' }
+    names: { fr: 'Mercure', en: 'Mercury', ha: 'Utarid (Mercure)' },
+    descs: { 
+      fr: 'Communication, intelligence, commerce, rapidité', 
+      en: 'Communication, intelligence, trade, swiftness', 
+      ha: 'Sadarwa, hikima, kasuwanci, hanzari' 
+    }
   },
   { 
-    name: 'Lune', 
+    id: 'moon',
     arabic: 'القمر', 
-    color: 'text-slate-400', 
+    color: 'text-slate-600 dark:text-slate-300', 
     bg: 'bg-slate-100 dark:bg-slate-800', 
     border: 'border-slate-200 dark:border-slate-700', 
-    desc: 'Rêves, intuition, émotions, magie d\'eau',
     angel: 'Jibril / Gabriel (جبرائيل)',
     jinnKing: 'Al-Abyad (الأبيض / Roi du Lundi)',
-    incense: 'Musc Blanc & Encens de Cambodge',
-    auspicity: { status: 'neutral', label: 'Favorable / Neutre (Intuition)', color: 'bg-slate-500 text-white' }
+    names: { fr: 'Lune', en: 'Moon', ha: 'Wata (Lune)' },
+    descs: { 
+      fr: 'Rêves, intuition, émotions, mystères', 
+      en: 'Dreams, intuition, emotions, mysteries', 
+      ha: 'Mafarki, fahimta, ji da firgita, ruhi' 
+    }
   },
   { 
-    name: 'Saturne', 
+    id: 'saturn',
     arabic: 'زحل', 
-    color: 'text-zinc-600 dark:text-zinc-400', 
+    color: 'text-zinc-700 dark:text-zinc-300', 
     bg: 'bg-zinc-100 dark:bg-zinc-800', 
     border: 'border-zinc-200 dark:border-zinc-700', 
-    desc: 'Discipline, karma, séparation, protection, bannissement',
     angel: 'Kasfiyail (كسفيائيل)',
     jinnKing: 'Maymun (ميمون / Roi du Samedi)',
-    incense: 'Myrrhe, Santal Noir & Soufre',
-    auspicity: { status: 'unfavorable', label: 'Prudence / Défavorable (Rigoureux)', color: 'bg-zinc-700 text-white' }
+    names: { fr: 'Saturne', en: 'Saturn', ha: 'Zuhal (Saturne)' },
+    descs: { 
+      fr: 'Discipline, karma, séparation, protection', 
+      en: 'Discipline, karma, protection, banishing', 
+      ha: 'Kariya, horo, kaucewa cutarwa' 
+    }
   },
   { 
-    name: 'Jupiter', 
+    id: 'jupiter',
     arabic: 'المشتري', 
     color: 'text-orange-500', 
     bg: 'bg-orange-100 dark:bg-orange-900/30', 
     border: 'border-orange-200 dark:border-orange-800', 
-    desc: 'Chance, richesse, expansion, justice',
     angel: 'Sarfiyail (صرفيائيل)',
     jinnKing: 'Shamhurish (شمهورش / Roi du Jeudi)',
-    incense: 'Ambre Gris, Oud & Santal',
-    auspicity: { status: 'favorable', label: 'Très Favorable (Prospérité)', color: 'bg-emerald-500 text-white' }
+    names: { fr: 'Jupiter', en: 'Jupiter', ha: 'Mushtari (Jupiter)' },
+    descs: { 
+      fr: 'Chance, richesse, expansion, justice', 
+      en: 'Luck, wealth, expansion, justice', 
+      ha: 'Arziki, sa\'a, haɓaka, adalci' 
+    }
   },
   { 
-    name: 'Mars', 
+    id: 'mars',
     arabic: 'المريخ', 
     color: 'text-red-500', 
     bg: 'bg-red-100 dark:bg-red-900/30', 
     border: 'border-red-200 dark:border-red-800', 
-    desc: 'Courage, force, conflit, victoire',
     angel: 'Samsamail (سمسائيل)',
     jinnKing: 'Al-Ahmar (الأحمر / Roi du Mardi)',
-    incense: 'Santal Rouge, Poivre & Casserole',
-    auspicity: { status: 'unfavorable', label: 'Prudence / Défavorable (Combat)', color: 'bg-red-600 text-white' }
+    names: { fr: 'Mars', en: 'Mars', ha: 'Mirrikh (Mars)' },
+    descs: { 
+      fr: 'Courage, force, conflit, victoire', 
+      en: 'Courage, strength, victory, protection', 
+      ha: 'Jaruntaka, ƙarfi, nasara a yaƙi' 
+    }
   }
 ];
 
@@ -155,6 +215,13 @@ export const PlanetaryHours: React.FC = () => {
   const [nowTime, setNowTime] = useState<Date>(new Date());
   const [geoStatus, setGeoStatus] = useState('');
 
+  // Localized planets helper
+  const planets = planetsBase.map(p => ({
+    ...p,
+    name: p.names[langKey] || p.names.fr,
+    desc: p.descs[langKey] || p.descs.fr
+  }));
+
   useEffect(() => {
     const timer = setInterval(() => {
       setNowTime(new Date());
@@ -164,15 +231,13 @@ export const PlanetaryHours: React.FC = () => {
 
   const handleGeolocate = () => {
     if (!navigator.geolocation) {
-      setGeoStatus("Géolocalisation indisponible");
+      setGeoStatus(txt.geoNotSupported);
       return;
     }
-    setGeoStatus("Localisation en cours...");
+    setGeoStatus("...");
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        const lat = pos.coords.latitude;
         const lng = pos.coords.longitude;
-        // Approximate solar calculation for sunrise/sunset
         const srHour = 6 - Math.round((lng / 15) * 10) / 10;
         const ssHour = 18 + Math.round((lng / 15) * 10) / 10;
         
@@ -188,12 +253,10 @@ export const PlanetaryHours: React.FC = () => {
         setTimeout(() => setGeoStatus(''), 4000);
       },
       () => {
-        setGeoStatus("Position non autorisée - Réglage par défaut conservé");
+        setGeoStatus(txt.geoDenied);
       }
     );
   };
-
-  const daysOfWeek = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
 
   const parseTime = (timeStr: string) => {
     const [h, m] = timeStr.split(':').map(Number);
@@ -298,7 +361,7 @@ export const PlanetaryHours: React.FC = () => {
 
   const enableNotifications = async () => {
     if (!("Notification" in window)) {
-      alert("Ce navigateur ne supporte pas les notifications.");
+      alert(txt.notifNotSupported);
       return;
     }
     let permission = Notification.permission;
@@ -333,53 +396,61 @@ export const PlanetaryHours: React.FC = () => {
         <div className="flex gap-2">
           <button 
             onClick={enableNotifications}
-            className="p-2 rounded-xl transition-colors hover:bg-amber-100 text-amber-600 dark:hover:bg-amber-900/30"
-            title="Activer les notifications"
+            className="p-2 rounded-xl transition-colors hover:bg-amber-100 text-amber-600 dark:hover:bg-amber-900/30 cursor-pointer"
+            title={txt.enableNotifsTitle}
           >
             <Bell size={24} />
           </button>
           <button 
             onClick={() => setShowSettings(!showSettings)}
-            className={`p-2 rounded-xl transition-colors ${showSettings ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30' : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500'}`}
+            className={`p-2 rounded-xl transition-colors cursor-pointer ${showSettings ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30' : 'hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500'}`}
           >
             <Settings2 size={24} />
           </button>
         </div>
       </div>
 
-      {/* Geolocation Button */}
+      {/* Geolocation Button Bar */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3 bg-amber-500/10 border border-amber-500/30 p-3.5 rounded-2xl">
-        <div className="flex items-center gap-2 text-xs text-amber-700 dark:text-amber-300 font-bold">
+        <div className="flex items-center gap-2 text-xs sm:text-sm text-amber-800 dark:text-amber-300 font-bold">
           <MapPin className="w-4 h-4 text-amber-500 shrink-0" />
-          <span>Calcul Sā'āt Zamaniyyah par GPS</span>
+          <span>{txt.calcGpsLabel}</span>
         </div>
         <button
           onClick={handleGeolocate}
-          className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-zinc-950 font-extrabold text-xs rounded-xl shadow-sm transition-all cursor-pointer"
+          className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-zinc-950 font-extrabold text-xs sm:text-sm rounded-xl shadow-sm transition-all cursor-pointer"
         >
           {txt.geolocateBtn}
         </button>
-        {geoStatus && <p className="text-xs text-emerald-500 font-semibold w-full">{geoStatus}</p>}
+        {geoStatus && <p className="text-xs text-emerald-600 dark:text-emerald-400 font-bold w-full">{geoStatus}</p>}
       </div>
 
-      {/* Sa'ah al Ijabah & Eclipse alert banners */}
+      {/* Sa'ah al Ijabah & Eclipse Alert Cards - High Contrast & Crystal Clear Text */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <div className="bg-emerald-950/30 border border-emerald-500/30 p-4 rounded-2xl space-y-2">
-          <h3 className="text-xs font-bold text-emerald-400 uppercase tracking-widest flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-emerald-400" />
+        {/* Sa'ah al-Ijabah Card */}
+        <div className="bg-emerald-50 dark:bg-emerald-950/50 border-2 border-emerald-500/60 p-4 sm:p-5 rounded-2xl space-y-2 shadow-sm">
+          <h3 className="text-xs sm:text-sm font-black text-emerald-800 dark:text-emerald-300 uppercase tracking-wider flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
             {txt.ijabahTitle}
           </h3>
-          <p className="text-xs text-zinc-300">{txt.ijabahDesc}</p>
+          <p className="text-xs sm:text-sm text-emerald-950 dark:text-emerald-100 font-semibold leading-relaxed">
+            {txt.ijabahDesc}
+          </p>
         </div>
-        <div className="bg-indigo-950/30 border border-indigo-500/30 p-4 rounded-2xl space-y-2">
-          <h3 className="text-xs font-bold text-indigo-400 uppercase tracking-widest flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-indigo-400" />
+
+        {/* Eclipse Tracker Card */}
+        <div className="bg-indigo-50 dark:bg-indigo-950/50 border-2 border-indigo-500/60 p-4 sm:p-5 rounded-2xl space-y-2 shadow-sm">
+          <h3 className="text-xs sm:text-sm font-black text-indigo-800 dark:text-indigo-300 uppercase tracking-wider flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
             {txt.eclipseTitle}
           </h3>
-          <p className="text-xs text-zinc-300">{txt.eclipseDesc}</p>
+          <p className="text-xs sm:text-sm text-indigo-950 dark:text-indigo-100 font-semibold leading-relaxed">
+            {txt.eclipseDesc}
+          </p>
         </div>
       </div>
 
+      {/* Settings Panel */}
       <AnimatePresence>
         {showSettings && (
           <motion.div
@@ -388,15 +459,17 @@ export const PlanetaryHours: React.FC = () => {
             exit={{ opacity: 0, height: 0 }}
             className="overflow-hidden mb-6"
           >
-            <div className="bg-white dark:bg-gray-800 p-4 sm:p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm space-y-4">
+            <div className="bg-white dark:bg-gray-800 p-4 sm:p-5 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Jour de la semaine</label>
+                <label className="block text-sm font-bold text-gray-800 dark:text-gray-200 mb-2">
+                  {txt.dayOfWeekLabel}
+                </label>
                 <div className="flex flex-wrap gap-2">
-                  {daysOfWeek.map((day, idx) => (
+                  {txt.daysOfWeek.map((day, idx) => (
                     <button
                       key={day}
                       onClick={() => setSelectedDay(idx)}
-                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${selectedDay === idx ? 'bg-amber-500 text-white shadow-sm' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}
+                      className={`px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition-colors cursor-pointer ${selectedDay === idx ? 'bg-amber-500 text-white shadow-sm' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}
                     >
                       {day}
                     </button>
@@ -406,21 +479,25 @@ export const PlanetaryHours: React.FC = () => {
               
               <div className="grid grid-cols-2 gap-4 pt-2">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Lever du soleil</label>
+                  <label className="block text-xs sm:text-sm font-bold text-gray-800 dark:text-gray-200 mb-2">
+                    {txt.sunriseLabel}
+                  </label>
                   <input 
                     type="time" 
                     value={sunrise}
                     onChange={(e) => setSunrise(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none text-gray-900 dark:text-white"
+                    className="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-amber-500 outline-none text-gray-900 dark:text-white font-mono font-bold"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Coucher du soleil</label>
+                  <label className="block text-xs sm:text-sm font-bold text-gray-800 dark:text-gray-200 mb-2">
+                    {txt.sunsetLabel}
+                  </label>
                   <input 
                     type="time" 
                     value={sunset}
                     onChange={(e) => setSunset(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none text-gray-900 dark:text-white"
+                    className="w-full px-3 py-2 rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 focus:ring-2 focus:ring-amber-500 outline-none text-gray-900 dark:text-white font-mono font-bold"
                   />
                 </div>
               </div>
@@ -438,13 +515,13 @@ export const PlanetaryHours: React.FC = () => {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
               </span>
-              <span className="text-xs uppercase font-extrabold tracking-widest text-amber-300">
+              <span className="text-xs uppercase font-black tracking-wider text-amber-300">
                 {txt.activeHourLabel}
               </span>
             </div>
 
             <div className="bg-white/10 px-3 py-1.5 rounded-full backdrop-blur-md border border-white/10 text-right">
-              <span className="text-[10px] uppercase tracking-wider text-slate-300 block">{txt.timeRemaining}</span>
+              <span className="text-[10px] uppercase tracking-wider text-slate-300 block font-bold">{txt.timeRemaining}</span>
               <strong className="text-base font-mono font-bold text-emerald-400">{liveInfo.remainingStr}</strong>
             </div>
           </div>
@@ -459,23 +536,23 @@ export const PlanetaryHours: React.FC = () => {
                   {liveInfo.activeHour.planet.arabic}
                 </span>
               </div>
-              <p className="text-xs text-slate-300 mt-1">{liveInfo.activeHour.planet.desc}</p>
+              <p className="text-xs text-slate-200 font-medium mt-1">{liveInfo.activeHour.planet.desc}</p>
             </div>
 
-            <div className="bg-white/5 p-3 rounded-2xl border border-white/10 space-y-1.5 text-xs">
+            <div className="bg-white/10 p-3 rounded-2xl border border-white/10 space-y-1.5 text-xs">
               <div>
-                <span className="text-slate-400 block text-[10px]">Ange Régent:</span>
-                <strong className="text-amber-300">{liveInfo.activeHour.planet.angel}</strong>
+                <span className="text-slate-300 block text-[11px] font-bold">{txt.angelRegent}:</span>
+                <strong className="text-amber-300 font-bold">{liveInfo.activeHour.planet.angel}</strong>
               </div>
               <div>
-                <span className="text-slate-400 block text-[10px]">Roi Jinn:</span>
-                <strong className="text-emerald-300">{liveInfo.activeHour.planet.jinnKing}</strong>
+                <span className="text-slate-300 block text-[11px] font-bold">{txt.jinnKingLabel}:</span>
+                <strong className="text-emerald-300 font-bold">{liveInfo.activeHour.planet.jinnKing}</strong>
               </div>
             </div>
           </div>
 
           <div className="space-y-1">
-            <div className="w-full h-1.5 bg-white/10 rounded-full overflow-hidden">
+            <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
               <div
                 className="h-full bg-gradient-to-r from-amber-400 to-emerald-400 transition-all duration-1000"
                 style={{ width: `${liveInfo.progress}%` }}
@@ -489,9 +566,9 @@ export const PlanetaryHours: React.FC = () => {
       <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-xl mb-6">
         <button
           onClick={() => setIsDay(true)}
-          className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+          className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
             isDay 
-            ? 'bg-white dark:bg-gray-700 text-amber-500 shadow-sm' 
+            ? 'bg-white dark:bg-gray-700 text-amber-600 dark:text-amber-400 shadow-sm' 
             : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
           }`}
         >
@@ -499,9 +576,9 @@ export const PlanetaryHours: React.FC = () => {
         </button>
         <button
           onClick={() => setIsDay(false)}
-          className={`flex-1 py-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${
+          className={`flex-1 py-2.5 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2 cursor-pointer ${
             !isDay 
-            ? 'bg-white dark:bg-gray-700 text-indigo-400 shadow-sm' 
+            ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm' 
             : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
           }`}
         >
@@ -517,7 +594,7 @@ export const PlanetaryHours: React.FC = () => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.03 }}
-            className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-5 rounded-2xl border ${h.planet.bg} ${h.planet.border} gap-4 relative overflow-hidden`}
+            className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-5 rounded-2xl border ${h.planet.bg} ${h.planet.border} gap-4 relative overflow-hidden shadow-xs`}
           >
             <div className="flex items-start sm:items-center gap-4 flex-1">
               <div className={`w-10 h-10 rounded-full bg-white dark:bg-gray-800 flex items-center justify-center font-bold shadow-sm ${h.planet.color} shrink-0 mt-1 sm:mt-0`}>
@@ -525,19 +602,19 @@ export const PlanetaryHours: React.FC = () => {
               </div>
               <div className="flex-1 min-w-0 space-y-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-xs text-gray-500 dark:text-gray-400 font-bold font-mono">
+                  <span className="text-xs text-gray-600 dark:text-gray-300 font-extrabold font-mono">
                     {h.timeStart} - {h.timeEnd}
                   </span>
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className={`font-extrabold text-lg ${h.planet.color}`}>{h.planet.name}</span>
-                  <span className="text-xs text-gray-500 font-medium">({h.planet.desc})</span>
+                  <span className={`font-black text-base sm:text-lg ${h.planet.color}`}>{h.planet.name}</span>
+                  <span className="text-xs text-gray-700 dark:text-gray-300 font-medium">({h.planet.desc})</span>
                 </div>
 
-                <div className="text-[11px] text-gray-600 dark:text-gray-300 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-0.5 pt-1">
-                  <span><strong>Ange:</strong> {h.planet.angel}</span>
-                  <span><strong>Roi Jinn:</strong> {h.planet.jinnKing}</span>
+                <div className="text-[11px] text-gray-700 dark:text-gray-200 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-0.5 pt-1">
+                  <span><strong>{txt.angel}:</strong> {h.planet.angel}</span>
+                  <span><strong>{txt.jinnKing}:</strong> {h.planet.jinnKing}</span>
                 </div>
               </div>
             </div>
@@ -553,4 +630,5 @@ export const PlanetaryHours: React.FC = () => {
     </div>
   );
 };
+
 

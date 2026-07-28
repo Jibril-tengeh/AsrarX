@@ -21,6 +21,7 @@ const LucideIcon = ({ name, className, size }: { name: string; className?: strin
 import { db } from '../../lib/firebase';
 import { collection, getDocs, doc, getDoc, updateDoc, deleteDoc, addDoc, onSnapshot, query, orderBy, setDoc, writeBatch } from 'firebase/firestore';
 import { useAuth } from '../../contexts/AuthContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { TipTapEditor } from '../../components/TipTapEditor';
 import { getAsrarItems } from '../../data/store';
 // import SimpleEditor from 'react-simple-code-editor';
@@ -40,6 +41,7 @@ import {
 import { AdminStoreManager } from '../../components/AdminStoreManager';
 import { INITIAL_DEFAULT_ARTICLES } from '../../data/defaultArticles';
 import { fetchArticlesFromRest } from '../../lib/firestoreRest';
+import { isPubliclyVisibleArticle } from '../../lib/articleUtils';
 import { AdminRecitersManager } from '../../components/admin/AdminRecitersManager';
 import { DEFAULT_OATHS } from '../user/tools/GrandOaths';
 import { QURAN_RECITERS } from '../../data/reciters';
@@ -185,6 +187,7 @@ interface Notification {
 }
 
 export const AdminDashboard: React.FC = () => {
+  const { language } = useLanguage();
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
   
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
@@ -313,6 +316,7 @@ export const AdminDashboard: React.FC = () => {
 
   // Categories State
   const [categories, setCategories] = useState<any[]>([]);
+  const [editingCategory, setEditingCategory] = useState<any | null>(null);
   const [newCategory, setNewCategory] = useState({ name: '', name_en: '', name_ha: '' });
   const [newSubCategory, setNewSubCategory] = useState({ categoryId: '', name: '', name_en: '', name_ha: '' });
   const [showQuickCategoryForm, setShowQuickCategoryForm] = useState(false);
@@ -565,41 +569,57 @@ export const AdminDashboard: React.FC = () => {
         list.sort((a: any, b: any) => (a.createdAt || 0) - (b.createdAt || 0));
         setCategories(list);
       } else {
-        const defaultCats = [
-          {
-            id: 'wird',
-            name: 'Versets & Wirds',
-            name_en: 'Verses & Wirds',
-            name_ha: 'Wirdoshi & Ayoyi',
-            iconName: 'BookOpen',
-            subCategories: [
-              { id: 'wird-protection', name: 'Protection', name_en: 'Protection', name_ha: 'Kariya' },
-              { id: 'wird-guerison', name: 'Guérison', name_en: 'Healing', name_ha: 'Waraka' }
-            ]
-          },
-          {
-            id: 'secret',
-            name: "Secrets d'Asrar",
-            name_en: 'Secrets of Asrar',
-            name_ha: 'Asrarai',
-            iconName: 'Sparkles',
-            subCategories: [
-              { id: 'secret-richesse', name: 'Prospérité', name_en: 'Prosperity', name_ha: 'Arziki' },
-              { id: 'secret-amour', name: 'Affection', name_en: 'Affection', name_ha: 'Soyayya' }
-            ]
-          },
-          {
-            id: 'recette',
-            name: 'Recettes Spirituelles',
-            name_en: 'Spiritual Recipes',
-            name_ha: 'Hanyoyi',
-            iconName: 'Shield',
-            subCategories: [
-              { id: 'recette-sante', name: 'Santé', name_en: 'Health', name_ha: 'Lafiya' }
-            ]
-          }
-        ];
-        setCategories(defaultCats);
+        if (!localStorage.getItem('asrarhub_categories_seeded')) {
+          const defaultCats = [
+            {
+              id: 'wird',
+              name: 'Versets & Wirds',
+              name_en: 'Verses & Wirds',
+              name_ha: 'Wirdoshi & Ayoyi',
+              iconName: 'BookOpen',
+              subCategories: [
+                { id: 'wird-protection', name: 'Protection', name_en: 'Protection', name_ha: 'Kariya' },
+                { id: 'wird-guerison', name: 'Guérison', name_en: 'Healing', name_ha: 'Waraka' }
+              ],
+              createdAt: Date.now()
+            },
+            {
+              id: 'secret',
+              name: "Secrets d'Asrar",
+              name_en: 'Secrets of Asrar',
+              name_ha: 'Asrarai',
+              iconName: 'Sparkles',
+              subCategories: [
+                { id: 'secret-richesse', name: 'Prospérité', name_en: 'Prosperity', name_ha: 'Arziki' },
+                { id: 'secret-amour', name: 'Affection', name_en: 'Affection', name_ha: 'Soyayya' }
+              ],
+              createdAt: Date.now() + 1
+            },
+            {
+              id: 'recette',
+              name: 'Recettes Spirituelles',
+              name_en: 'Spiritual Recipes',
+              name_ha: 'Hanyoyi',
+              iconName: 'Shield',
+              subCategories: [
+                { id: 'recette-sante', name: 'Santé', name_en: 'Health', name_ha: 'Lafiya' }
+              ],
+              createdAt: Date.now() + 2
+            }
+          ];
+          
+          defaultCats.forEach(async (cat) => {
+            try {
+              await setDoc(doc(db, 'categories', cat.id), cat);
+            } catch (e) {
+              console.warn("Category seed error:", e);
+            }
+          });
+          localStorage.setItem('asrarhub_categories_seeded', 'true');
+          setCategories(defaultCats);
+        } else {
+          setCategories([]);
+        }
       }
     }, (error) => console.warn("Admin Categories listener note:", error));
 
@@ -955,15 +975,22 @@ export const AdminDashboard: React.FC = () => {
   const handleAddNotification = async () => {
     if (!newNotification.title_fr || !newNotification.message_fr) return;
     try {
+      const title_fr = newNotification.title_fr;
+      const title_en = newNotification.title_en || title_fr;
+      const title_ha = newNotification.title_ha || title_fr;
+      const message_fr = newNotification.message_fr;
+      const message_en = newNotification.message_en || message_fr;
+      const message_ha = newNotification.message_ha || message_fr;
+
       await addDoc(collection(db, 'notifications'), {
-        title: newNotification.title_fr,
-        title_fr: newNotification.title_fr,
-        title_en: newNotification.title_en,
-        title_ha: newNotification.title_ha,
-        message: newNotification.message_fr,
-        message_fr: newNotification.message_fr,
-        message_en: newNotification.message_en,
-        message_ha: newNotification.message_ha,
+        title: title_fr,
+        title_fr,
+        title_en,
+        title_ha,
+        message: message_fr,
+        message_fr,
+        message_en,
+        message_ha,
         date: new Date().toISOString(),
         createdAt: new Date()
       });
@@ -1041,6 +1068,16 @@ export const AdminDashboard: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
+  const clearArticleCaches = () => {
+    try {
+      localStorage.removeItem('asrarhub_cached_articles_list');
+      localStorage.removeItem('asrarhub_cached_explore_articles');
+      localStorage.removeItem('asrarhub_cached_admin_articles');
+      localStorage.removeItem('asrarhub_cached_article_details');
+      localStorage.removeItem('asrar_items');
+    } catch (e) {}
+  };
+
   const handleSaveArticle = async () => {
     try {
       console.log("Saving article:", newArticle);
@@ -1097,6 +1134,7 @@ export const AdminDashboard: React.FC = () => {
       }
       setNewArticle({ title: '', hook: '', thumbnail: '', content: '', type: 'richtext', status: 'Published', publishDate: '', benefits: [], category: '', subCategory: '' } as any);
       localStorage.removeItem('asrarhub_article_draft');
+      clearArticleCaches();
     } catch (error: any) {
       console.error("Error saving article:", error);
       showToast(`Erreur : ${error?.message || "Erreur lors de la publication de l'article."}`, "error");
@@ -1106,6 +1144,7 @@ export const AdminDashboard: React.FC = () => {
   const handleDeleteArticle = async (id: string) => {
     try {
       await deleteDoc(doc(db, 'articles', id));
+      clearArticleCaches();
       showToast("Article supprimé.");
     } catch (error) {
       console.error("Error deleting article", error);
@@ -1118,6 +1157,7 @@ export const AdminDashboard: React.FC = () => {
     try {
       const promises = articles.map(article => deleteDoc(doc(db, 'articles', article.id)));
       await Promise.all(promises);
+      clearArticleCaches();
       showToast("Tous les articles ont été supprimés.");
     } catch (error) {
       console.error("Error deleting all articles", error);
@@ -2294,6 +2334,7 @@ export const AdminDashboard: React.FC = () => {
 
   const ALL_USER_TOOLS = [
     { id: 'inspector', label: 'Inspecteur de diagnostic', desc: 'Active ou désactive le bouton rouge Inspecteur / Débogueur de mise en page dans le coin inférieur droit' },
+    { id: 'quick_widget', label: 'Widget Rapide AsrarHub (AsrarQuickWidget)', desc: 'Widget de recherche rapide, favoris et raccourcis d\'exploration sur le tableau de bord (désactivé par défaut)' },
     { id: 'explore', label: 'Explore', desc: 'Dashboard explorer (Secrets, Lexique, etc)' },
     { id: 'store', label: 'Store (Boutique)', desc: 'Boutique en ligne' },
     { id: 'community', label: 'Communauté', desc: 'Forum communautaire' },
@@ -2383,7 +2424,7 @@ export const AdminDashboard: React.FC = () => {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {filteredTools.map((tool) => {
-                const status = featureToggles[`tool_${tool.id}`] || (tool.id === 'inspector' ? 'inactive' : 'active');
+                const status = featureToggles[`tool_${tool.id}`] || (['inspector', 'quick_widget'].includes(tool.id) ? 'inactive' : 'active');
                 return (
                   <div key={tool.id} className="flex flex-col p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-3 hover:border-gray-250 dark:hover:border-gray-650 transition-all">
                     <div>
@@ -2636,14 +2677,7 @@ export const AdminDashboard: React.FC = () => {
 
   const renderArticles = () => {
     const isPublicVisibleStatus = (st: any) => {
-      if (!st) return true;
-      const statusStr = st.toString().trim().toLowerCase();
-      if (!statusStr) return true;
-      const draftOrArchived = [
-        'draft', 'brouillon', 'archived', 'archivé', 'archive', 
-        'inactive', 'inactif', 'disabled', 'desactive', 'désactivé'
-      ];
-      return !draftOrArchived.includes(statusStr);
+      return isPubliclyVisibleArticle(st);
     };
 
     const publishedCount = articles.filter(a => isPublicVisibleStatus(a.status)).length;
@@ -2772,6 +2806,7 @@ export const AdminDashboard: React.FC = () => {
                               try {
                                 const newSt = isVisible ? 'Draft' : 'Published';
                                 await updateDoc(doc(db, 'articles', art.id), { status: newSt });
+                                clearArticleCaches();
                                 showToast(`Statut mis à jour vers '${newSt}'`);
                               } catch (e: any) {
                                 showToast("Erreur : " + e.message, "error");
@@ -3512,18 +3547,22 @@ export const AdminDashboard: React.FC = () => {
 
         <h3 className="font-bold text-gray-900 dark:text-white mb-4">Historique des Notifications</h3>
         <div className="space-y-4">
-          {notifications.map(notif => (
-            <div key={notif.id} className="p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl flex justify-between items-start gap-4">
-              <div>
-                <h4 className="font-bold text-sm text-gray-900 dark:text-white">{notif.title}</h4>
-                <p className="text-xs text-gray-500 mt-1 mb-2">{new Date(notif.date).toLocaleString('fr-FR')}</p>
-                <p className="text-sm text-gray-600 dark:text-gray-300">{notif.message}</p>
+          {notifications.map(notif => {
+            const displayTitle = (notif as any)[`title_${activeLangTab}`] || (notif as any)[`title_${language}`] || notif.title || (notif as any).title_fr || '';
+            const displayMessage = (notif as any)[`message_${activeLangTab}`] || (notif as any)[`message_${language}`] || notif.message || (notif as any).message_fr || '';
+            return (
+              <div key={notif.id} className="p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl flex justify-between items-start gap-4">
+                <div>
+                  <h4 className="font-bold text-sm text-gray-900 dark:text-white">{displayTitle}</h4>
+                  <p className="text-xs text-gray-500 mt-1 mb-2">{new Date(notif.date).toLocaleString(language === 'fr' ? 'fr-FR' : language === 'ha' ? 'ha-GH' : 'en-US')}</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-300">{displayMessage}</p>
+                </div>
+                <button onClick={() => handleDeleteNotification(notif.id)} className="p-2 text-gray-400 hover:text-red-500 transition-colors rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600">
+                  <Trash2 size={16} />
+                </button>
               </div>
-              <button onClick={() => handleDeleteNotification(notif.id)} className="p-2 text-gray-400 hover:text-red-500 transition-colors rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600">
-                <Trash2 size={16} />
-              </button>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </div>
@@ -5357,19 +5396,37 @@ export const AdminDashboard: React.FC = () => {
       }
     };
 
+    const handleUpdateCategory = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!editingCategory || !editingCategory.name?.trim()) {
+        showToast("Le nom de la catégorie est requis", "error");
+        return;
+      }
+
+      try {
+        await updateDoc(doc(db, 'categories', editingCategory.id), {
+          name: editingCategory.name.trim(),
+          name_en: (editingCategory.name_en || '').trim() || editingCategory.name.trim(),
+          name_ha: (editingCategory.name_ha || '').trim() || editingCategory.name.trim(),
+          iconName: editingCategory.iconName || 'FolderOpen'
+        });
+
+        setEditingCategory(null);
+        showToast("Catégorie modifiée avec succès !");
+      } catch (err: any) {
+        console.error("Error updating category", err);
+        showToast(`Erreur: ${err.message}`, "error");
+      }
+    };
+
     const handleDeleteCategory = async (catId: string) => {
-      if (['wird', 'secret', 'recette'].includes(catId)) {
-        if (!window.confirm("Cette catégorie est une catégorie système par défaut. La supprimer pourrait affecter l'affichage des articles existants. Voulez-vous vraiment continuer ?")) {
-          return;
-        }
-      } else {
-        if (!window.confirm("Êtes-vous sûr de vouloir supprimer cette catégorie et toutes ses sous-catégories ?")) {
-          return;
-        }
+      if (!window.confirm("Êtes-vous sûr de vouloir supprimer cette catégorie et toutes ses sous-catégories ?")) {
+        return;
       }
 
       try {
         await deleteDoc(doc(db, 'categories', catId));
+        localStorage.setItem('asrarhub_categories_seeded', 'true');
         showToast("Catégorie supprimée avec succès !");
       } catch (err: any) {
         console.error("Error deleting category", err);
@@ -5444,6 +5501,92 @@ export const AdminDashboard: React.FC = () => {
 
     return (
       <div className="space-y-6 text-gray-900 dark:text-white">
+        {/* Edit Category Panel */}
+        {editingCategory && (
+          <div className="bg-amber-50/50 dark:bg-amber-950/20 border-2 border-amber-500/30 rounded-3xl p-6 shadow-md transition-all">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="font-bold text-amber-900 dark:text-amber-200 flex items-center gap-2 text-base">
+                <Edit2 size={18} className="text-amber-500" />
+                Modifier la Catégorie : <span className="underline">{editingCategory.name}</span>
+              </h3>
+              <button 
+                type="button"
+                onClick={() => setEditingCategory(null)}
+                className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <form onSubmit={handleUpdateCategory} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-1">Nom (FR)</label>
+                  <input
+                    type="text"
+                    value={editingCategory.name || ''}
+                    onChange={(e) => setEditingCategory({ ...editingCategory, name: e.target.value })}
+                    className="w-full bg-white dark:bg-gray-900 border border-amber-300 dark:border-amber-700/50 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500 outline-none"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-1">Nom (EN)</label>
+                  <input
+                    type="text"
+                    value={editingCategory.name_en || ''}
+                    onChange={(e) => setEditingCategory({ ...editingCategory, name_en: e.target.value })}
+                    className="w-full bg-white dark:bg-gray-900 border border-amber-300 dark:border-amber-700/50 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500 outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-1">Nom (HA)</label>
+                  <input
+                    type="text"
+                    value={editingCategory.name_ha || ''}
+                    onChange={(e) => setEditingCategory({ ...editingCategory, name_ha: e.target.value })}
+                    className="w-full bg-white dark:bg-gray-900 border border-amber-300 dark:border-amber-700/50 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500 outline-none"
+                  />
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-1">Icône</label>
+                <select
+                  value={editingCategory.iconName || 'FolderOpen'}
+                  onChange={(e) => setEditingCategory({ ...editingCategory, iconName: e.target.value })}
+                  className="w-full bg-white dark:bg-gray-900 border border-amber-300 dark:border-amber-700/50 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500 outline-none"
+                >
+                  <option value="BookOpen">BookOpen (Livre/Vird)</option>
+                  <option value="Sparkles">Sparkles (Secrets/Étoiles)</option>
+                  <option value="Shield">Shield (Protection/Bouclier)</option>
+                  <option value="Activity">Activity (Santé/Guérison)</option>
+                  <option value="Crown">Crown (Pouvoir/Reine)</option>
+                  <option value="Heart">Heart (Amour/Mariage)</option>
+                  <option value="Sun">Sun (Ouverture/Succès)</option>
+                  <option value="Moon">Moon (Nuit/Dhikr)</option>
+                  <option value="Flame">Flame (Énergie)</option>
+                  <option value="Compass">Compass (Orientation)</option>
+                  <option value="FolderOpen">FolderOpen (Dossier)</option>
+                </select>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  type="submit"
+                  className="bg-amber-600 hover:bg-amber-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-colors"
+                >
+                  <Save size={16} /> Enregistrer la modification
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingCategory(null)}
+                  className="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 px-5 py-2.5 rounded-xl font-bold text-sm transition-colors"
+                >
+                  Annuler
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
         {/* Create Category Panel */}
         <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
           <h3 className="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
@@ -5518,13 +5661,22 @@ export const AdminDashboard: React.FC = () => {
                         </p>
                       </div>
                     </div>
-                    <button
-                      onClick={() => handleDeleteCategory(cat.id)}
-                      className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors"
-                      title="Supprimer la catégorie"
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => setEditingCategory({ ...cat })}
+                        className="p-2 text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-xl transition-colors"
+                        title="Modifier la catégorie"
+                      >
+                        <Edit2 size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteCategory(cat.id)}
+                        className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors"
+                        title="Supprimer la catégorie"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </div>
 
                   {/* Subcategories */}

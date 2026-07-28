@@ -16,7 +16,9 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useFeatures } from '../contexts/FeatureContext';
 import { INITIAL_DEFAULT_ARTICLES } from '../data/defaultArticles';
+import { isPubliclyVisibleArticle } from '../lib/articleUtils';
 
 interface AsrarQuickWidgetProps {
   variant?: 'inline' | 'floating';
@@ -28,7 +30,14 @@ export const AsrarQuickWidget: React.FC<AsrarQuickWidgetProps> = ({
   onCloseFloating 
 }) => {
   const { language, t } = useLanguage();
+  const { featureToggles } = useFeatures();
   const navigate = useNavigate();
+
+  // Check feature toggle: disabled by default unless explicitly set to 'active'
+  const widgetStatus = featureToggles?.['tool_quick_widget'] || 'inactive';
+  if (widgetStatus !== 'active') {
+    return null;
+  }
 
   const [searchQuery, setSearchQuery] = useState('');
   const [showSavedModal, setShowSavedModal] = useState(false);
@@ -42,9 +51,12 @@ export const AsrarQuickWidget: React.FC<AsrarQuickWidgetProps> = ({
       if (cached) {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setSavedArticles(parsed.slice(0, 5));
-          setSavedCount(parsed.length >= 5 ? parsed.length : 5);
-          return;
+          const valid = parsed.filter((art: any) => isPubliclyVisibleArticle(art.status));
+          if (valid.length > 0) {
+            setSavedArticles(valid.slice(0, 5));
+            setSavedCount(valid.length >= 5 ? valid.length : 5);
+            return;
+          }
         }
       }
     } catch (e) {}
@@ -73,7 +85,10 @@ export const AsrarQuickWidget: React.FC<AsrarQuickWidgetProps> = ({
         savedModalTitle: 'Fichiers & Favoris Téléchargés',
         savedModalSubtitle: 'Vos recettes et wirds sauvegardés hors-ligne',
         openSecret: 'Ouvrir',
-        noResults: 'Aucun favori correspondant'
+        noResults: 'Aucun favori correspondant',
+        viewSavedTooltip: 'Voir les fichiers enregistrés',
+        offlineTag: 'Hors-ligne',
+        close: 'Fermer'
       };
     } else if (language === 'ha') {
       return {
@@ -86,7 +101,10 @@ export const AsrarQuickWidget: React.FC<AsrarQuickWidgetProps> = ({
         savedModalTitle: 'Fayiloli da Sirruka da Aka Sauke',
         savedModalSubtitle: 'Adana sirruka da wuridai don karanta su ba tare da intanet ba',
         openSecret: 'Bude',
-        noResults: 'Ba a sami sakamako ba'
+        noResults: 'Ba a sami sakamako ba',
+        viewSavedTooltip: 'Duba fayilolin da aka adana',
+        offlineTag: 'Ba tare da intanet ba',
+        close: 'Rufe'
       };
     } else {
       return {
@@ -99,7 +117,10 @@ export const AsrarQuickWidget: React.FC<AsrarQuickWidgetProps> = ({
         savedModalTitle: 'Downloaded Files & Favorites',
         savedModalSubtitle: 'Your saved recipes and wirds available offline',
         openSecret: 'Open',
-        noResults: 'No matching favorites found'
+        noResults: 'No matching favorites found',
+        viewSavedTooltip: 'View saved files',
+        offlineTag: 'Offline',
+        close: 'Close'
       };
     }
   };
@@ -138,7 +159,7 @@ export const AsrarQuickWidget: React.FC<AsrarQuickWidgetProps> = ({
           <button
             onClick={() => setShowSavedModal(true)}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-500/30 text-emerald-700 dark:text-emerald-400 font-bold text-xs hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-all cursor-pointer group active:scale-95"
-            title="Voir les fichiers enregistrés"
+            title={labels.viewSavedTooltip}
           >
             <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0 fill-emerald-500/20" />
             <span className="truncate max-w-[170px] sm:max-w-none">
@@ -289,7 +310,7 @@ export const AsrarQuickWidget: React.FC<AsrarQuickWidgetProps> = ({
                           {art.title}
                         </h4>
                         <span className="text-[10px] text-slate-400 capitalize">
-                          {art.category || 'Secret'} • Hors-ligne
+                          {art.category || 'Secret'} • {labels.offlineTag}
                         </span>
                       </div>
                     </div>
@@ -313,7 +334,7 @@ export const AsrarQuickWidget: React.FC<AsrarQuickWidgetProps> = ({
                   onClick={() => setShowSavedModal(false)}
                   className="w-full py-2.5 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-xs hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
                 >
-                  Fermer
+                  {labels.close}
                 </button>
               </div>
             </motion.div>

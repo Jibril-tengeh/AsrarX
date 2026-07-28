@@ -237,7 +237,13 @@ export const ExternalScreenWidgetModal: React.FC<ExternalScreenWidgetModalProps>
                   <div className="p-3 rounded-xl bg-amber-950/30 border border-amber-500/20 text-xs text-amber-200 flex items-start gap-2">
                     <Info className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                     <div>
-                      <strong>Boutons Interactifs :</strong> La notification contient un bouton <code>📿 Compter Zikr (+1)</code> qui incrémente directement votre score sur l'écran verrouillé.
+                      {language === 'fr' ? (
+                        <><strong>Boutons Interactifs :</strong> La notification contient un bouton <code>📿 Compter Zikr (+1)</code> qui incrémente directement votre score sur l'écran verrouillé.</>
+                      ) : language === 'ha' ? (
+                        <><strong>Maballin Aiki :</strong> Sanarwar tana ɗauke da maballin <code>📿 Ƙirga Zikiri (+1)</code> wanda ke ƙara maki kai tsaye.</>
+                      ) : (
+                        <><strong>Interactive Buttons:</strong> The notification contains a <code>📿 Count Zikr (+1)</code> button that increments your score on the lockscreen.</>
+                      )}
                     </div>
                   </div>
                 </div>

@@ -3,7 +3,7 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth, handleFirestoreError, OperationType } from '../../contexts/AuthContext';
 import { useFeatures } from '../../contexts/FeatureContext';
 import { db } from '../../lib/firebase';
-import { collection, query, orderBy, onSnapshot, doc, getDocsFromServer, getDocs } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, doc, getDocsFromServer, getDocs, where } from 'firebase/firestore';
 import { Search, LayoutGrid, Square, List, Filter, X, BookOpen, Store, Award, MapPin, Trophy, ShieldCheck, ChevronDown, Bookmark, Flame, Shield, RefreshCw, Quote, Folder, Plus, Library, Music, Pencil, Trash2, Sliders, Sparkles, Calendar, FolderOpen, Star } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { SecretCard, LayoutMode } from '../../components/SecretCard';
@@ -17,6 +17,7 @@ import { AsrarQuickWidget } from '../../components/AsrarQuickWidget';
 
 import { INITIAL_DEFAULT_ARTICLES, DefaultArticle } from '../../data/defaultArticles';
 import { fetchArticlesFromRest } from '../../lib/firestoreRest';
+import { isPubliclyVisibleArticle } from '../../lib/articleUtils';
 
 const LucideIcon = ({ name, className, size }: { name: string; className?: string; size?: number }) => {
   const IconComponent = (Icons as any)[name];
@@ -264,14 +265,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
     };
 
     const isPublishedArticleStatus = (st: any) => {
-      if (!st) return true;
-      const statusStr = st.toString().trim().toLowerCase();
-      if (!statusStr) return true;
-      const draftOrArchived = [
-        'draft', 'brouillon', 'archived', 'archivé', 'archive', 
-        'inactive', 'inactif', 'disabled', 'desactive', 'désactivé'
-      ];
-      return !draftOrArchived.includes(statusStr);
+      return isPubliclyVisibleArticle(st);
     };
 
     // Pre-load from local offline cache for instant consultation even without connection
@@ -281,8 +275,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
       if (cached) {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const isAdmin = user?.role === 'admin';
-          const validItems = isAdmin ? parsed : parsed.filter((it: any) => isPublishedArticleStatus(it.status));
+          const validItems = parsed.filter((it: any) => isPublishedArticleStatus(it.status));
           if (validItems.length > 0) {
             setItems(validItems);
             setIsLoading(false);
@@ -307,10 +300,8 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
     const processRawObject = (data: any, docId: string) => {
       if (!data) return null;
 
-      const isAdmin = user?.role === 'admin';
-      
-      // Non-admin users ONLY see published articles
-      if (!isAdmin && !isPublishedArticleStatus(data.status)) {
+      // User Dashboard feed ONLY displays published/public articles (drafts & archived belong in Admin Panel)
+      if (!isPublishedArticleStatus(data.status)) {
         return null;
       }
 
@@ -403,8 +394,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
         if (cached) {
           const parsed = JSON.parse(cached);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            const isAdmin = user?.role === 'admin';
-            const validItems = isAdmin ? parsed : parsed.filter((it: any) => isPublishedArticleStatus(it.status));
+            const validItems = parsed.filter((it: any) => isPublishedArticleStatus(it.status));
             if (validItems.length > 0) {
               setItems(validItems);
               setIsLoading(false);
@@ -436,7 +426,10 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
       console.warn("[Articles REST - UserDashboard] REST fetch warning:", err);
     });
 
-    const q = collection(db, 'articles');
+    const isAdmin = user?.role === 'admin';
+    const q = isAdmin 
+      ? collection(db, 'articles') 
+      : query(collection(db, 'articles'), where('status', 'in', ['Published', 'published']));
     console.log(`[Articles Query - UserDashboard] Querying collection 'articles'. User role: "${user?.role || 'user'}".`);
 
     // Standard getDocs fallback for reliable loading on native mobile/Capacitor builds
@@ -1202,6 +1195,11 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
         )}
       </div>
 
+      {/* Hijri Calendar Widget */}
+      <div className="mb-4">
+        <HijriCalendarWidget />
+      </div>
+
       {/* Daily Goals Tracking */}
       <div className="mb-4">
         <DailyGoalsTracker />
@@ -1548,7 +1546,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
             return (
               <div key={item.id} className="flex flex-col h-full">
                 <div className="flex-1">
-                  <SecretCard item={item} layoutMode={layoutMode} />
+                  <SecretCard item={item} layoutMode={layoutMode} categories={categories} />
                 </div>
                 
                 {filter === 'favoris' && (

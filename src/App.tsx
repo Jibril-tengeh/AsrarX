@@ -22,6 +22,7 @@ import { getApiUrl } from './lib/api';
 import { FloatingBackButton } from './components/FloatingBackButton';
 import { ErrorToastContainer } from './components/ErrorToastContainer';
 import { DownloadNotificationPopup } from './components/DownloadNotificationPopup';
+import { FirstOpenPermissionsModal } from './components/FirstOpenPermissionsModal';
 import { CollapsibleFloatingWidget } from './components/CollapsibleFloatingWidget';
 import { FeatureProvider, useFeatures } from './contexts/FeatureContext';
 import UserDashboard from './pages/user/UserDashboard';
@@ -865,6 +866,7 @@ export default function App() {
 
   return (
     <MaintenanceOverlay>
+      <FirstOpenPermissionsModal />
       <ContentProtectionManager />
       <NetworkStatus />
       <ErrorToastContainer />
