@@ -13,8 +13,10 @@ import { HijriCalendarWidget } from '../../components/HijriCalendarWidget';
 import { OnboardingTour } from '../../components/OnboardingTour';
 import { GlobalSearchModal } from '../../components/GlobalSearchModal';
 import { MysticCalendarModal } from '../../components/MysticCalendarModal';
+import { AsrarQuickWidget } from '../../components/AsrarQuickWidget';
 
 import { INITIAL_DEFAULT_ARTICLES, DefaultArticle } from '../../data/defaultArticles';
+import { fetchArticlesFromRest } from '../../lib/firestoreRest';
 
 const LucideIcon = ({ name, className, size }: { name: string; className?: string; size?: number }) => {
   const IconComponent = (Icons as any)[name];
@@ -295,59 +297,63 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
     const processDocData = (docSnap: any) => {
       try {
         const data = docSnap.data();
-        if (!data) return null;
-
-        const isAdmin = user?.role === 'admin';
-        
-        // Non-admin users ONLY see published articles
-        if (!isAdmin && !isPublishedArticleStatus(data.status)) {
-          return null;
-        }
-
-        let activeContent = data.content || '';
-        if (language === 'en' && data.content_en) activeContent = data.content_en;
-        if (language === 'ha' && data.content_ha) activeContent = data.content_ha;
-
-        let hookText = data.hook || '';
-        if (language === 'en' && data.hook_en) hookText = data.hook_en;
-        if (language === 'ha' && data.hook_ha) hookText = data.hook_ha;
-        
-        if (!hookText && activeContent) {
-          hookText = activeContent.replace(/<[^>]+>/g, '').substring(0, 120) + '...';
-        }
-        
-        let titleText = data.title || '';
-        if (language === 'en' && data.title_en) titleText = data.title_en;
-        if (language === 'ha' && data.title_ha) titleText = data.title_ha;
-
-        const hasManual = language !== 'fr' && !!(data[`title_${language}`] || data[`content_${language}`]);
-        return {
-          id: docSnap.id,
-          title: titleText || 'Sans titre',
-          hook: hookText,
-          category: data.category || 'recette',
-          subCategory: data.subCategory || '',
-          status: data.status || 'Published',
-          content: activeContent,
-          benefits: data.benefits || [],
-          imageUrl: data.thumbnail,
-          isPremium: data.isPremium || false,
-          createdAt: formatCreatedAt(data.createdAt),
-          title_en: data.title_en,
-          content_en: data.content_en,
-          hook_en: data.hook_en,
-          title_ha: data.title_ha,
-          content_ha: data.content_ha,
-          hook_ha: data.hook_ha,
-          title_fr: data.title,
-          content_fr: data.content,
-          hook_fr: data.hook,
-          hasManualTranslation: hasManual
-        } as AsrarItem;
+        return processRawObject(data, docSnap.id);
       } catch (err) {
         console.error("Error parsing article document:", docSnap.id, err);
         return null;
       }
+    };
+
+    const processRawObject = (data: any, docId: string) => {
+      if (!data) return null;
+
+      const isAdmin = user?.role === 'admin';
+      
+      // Non-admin users ONLY see published articles
+      if (!isAdmin && !isPublishedArticleStatus(data.status)) {
+        return null;
+      }
+
+      let activeContent = data.content || '';
+      if (language === 'en' && data.content_en) activeContent = data.content_en;
+      if (language === 'ha' && data.content_ha) activeContent = data.content_ha;
+
+      let hookText = data.hook || '';
+      if (language === 'en' && data.hook_en) hookText = data.hook_en;
+      if (language === 'ha' && data.hook_ha) hookText = data.hook_ha;
+      
+      if (!hookText && activeContent) {
+        hookText = activeContent.replace(/<[^>]+>/g, '').substring(0, 120) + '...';
+      }
+      
+      let titleText = data.title || '';
+      if (language === 'en' && data.title_en) titleText = data.title_en;
+      if (language === 'ha' && data.title_ha) titleText = data.title_ha;
+
+      const hasManual = language !== 'fr' && !!(data[`title_${language}`] || data[`content_${language}`]);
+      return {
+        id: docId || data.id,
+        title: titleText || data.title || 'Sans titre',
+        hook: hookText,
+        category: data.category || 'recette',
+        subCategory: data.subCategory || '',
+        status: data.status || 'Published',
+        content: activeContent,
+        benefits: data.benefits || [],
+        imageUrl: data.thumbnail || data.imageUrl || '',
+        isPremium: data.isPremium || false,
+        createdAt: formatCreatedAt(data.createdAt),
+        title_en: data.title_en,
+        content_en: data.content_en,
+        hook_en: data.hook_en,
+        title_ha: data.title_ha,
+        content_ha: data.content_ha,
+        hook_ha: data.hook_ha,
+        title_fr: data.title,
+        content_fr: data.content,
+        hook_fr: data.hook,
+        hasManualTranslation: hasManual
+      } as AsrarItem;
     };
 
     const getDefaultItemsAsAsrarItems = (): AsrarItem[] => {
@@ -390,6 +396,46 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
       });
     };
 
+    // Helper to attempt restoring real articles from local storage cache before defaulting
+    const tryRestoreCachedOrDefaults = () => {
+      try {
+        const cached = localStorage.getItem('asrarhub_cached_articles_list');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const isAdmin = user?.role === 'admin';
+            const validItems = isAdmin ? parsed : parsed.filter((it: any) => isPublishedArticleStatus(it.status));
+            if (validItems.length > 0) {
+              setItems(validItems);
+              setIsLoading(false);
+              return;
+            }
+          }
+        }
+      } catch (e) {}
+      setItems(getDefaultItemsAsAsrarItems());
+      setIsLoading(false);
+    };
+
+    // Direct REST API fetch to guarantee real articles load on Capacitor/mobile WebView
+    fetchArticlesFromRest().then(restDocs => {
+      if (Array.isArray(restDocs) && restDocs.length > 0) {
+        const parsed = restDocs
+          .map(d => processRawObject(d, d.id))
+          .filter((item): item is AsrarItem => item !== null);
+        if (parsed.length > 0) {
+          console.log(`[Articles REST - UserDashboard] Successfully loaded ${parsed.length} real public articles via REST API!`);
+          setItems(parsed);
+          setIsLoading(false);
+          try {
+            localStorage.setItem('asrarhub_cached_articles_list', JSON.stringify(parsed));
+          } catch (e) {}
+        }
+      }
+    }).catch(err => {
+      console.warn("[Articles REST - UserDashboard] REST fetch warning:", err);
+    });
+
     const q = collection(db, 'articles');
     console.log(`[Articles Query - UserDashboard] Querying collection 'articles'. User role: "${user?.role || 'user'}".`);
 
@@ -409,20 +455,14 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
             localStorage.setItem('asrarhub_cached_articles_list', JSON.stringify(freshItems));
           } catch (e) {}
         } else {
-          const defaults = getDefaultItemsAsAsrarItems();
-          setItems(defaults);
-          setIsLoading(false);
+          tryRestoreCachedOrDefaults();
         }
       } else {
-        const defaults = getDefaultItemsAsAsrarItems();
-        setItems(defaults);
-        setIsLoading(false);
+        tryRestoreCachedOrDefaults();
       }
     }).catch(err => {
       console.warn("[Articles getDocs - UserDashboard] Error during getDocs query:", err?.code || err?.message || err);
-      const defaults = getDefaultItemsAsAsrarItems();
-      setItems(defaults);
-      setIsLoading(false);
+      tryRestoreCachedOrDefaults();
     });
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -440,27 +480,13 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
           console.error("Error writing articles list to cache", e);
         }
       } else {
-        const defaults = getDefaultItemsAsAsrarItems();
-        setItems(defaults);
+        tryRestoreCachedOrDefaults();
       }
       setIsLoading(false);
     }, (error) => {
       console.error("[Articles onSnapshot - UserDashboard] Firestore permission or network error:", error.code, error.message, error);
       setIsLoading(false);
-      try {
-        const cached = localStorage.getItem('asrarhub_cached_articles_list');
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            console.log(`[Articles - UserDashboard] Restored ${parsed.length} articles from localStorage fallback.`);
-            setItems(parsed);
-            return;
-          }
-        }
-      } catch (e) {
-        console.error("Error on fallback to local articles cache", e);
-      }
-      setItems(getDefaultItemsAsAsrarItems());
+      tryRestoreCachedOrDefaults();
     });
 
     try {
@@ -1074,6 +1100,11 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
 
       {/* Spacer to compensate for fixed toolbar */}
       <div className="h-[44px] w-full" />
+
+      {/* Interactive Quick Favorites Widget (Exact design & translation as requested) */}
+      <div className="mb-4">
+        <AsrarQuickWidget variant="inline" />
+      </div>
 
       {/* Banner Section */}
       <div className="mb-4 grid grid-cols-1 gap-4">

@@ -37,51 +37,65 @@ export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const storage = getStorage(app);
 
-// Initialize Firestore safely:
-// In iframe preview sandboxes, Capacitor, or multi-tab contexts, persistent IndexedDB locking can throw
-// internal assertion errors or deadlock listeners. We use memoryLocalCache in restricted environments and fall back gracefully.
+// Initialize Firestore safely with offline persistence:
+// Persistent local cache (IndexedDB) stores queries offline so data remains accessible on intermittent mobile connections.
+// If multi-tab locks or iframe constraints fail, we fallback gracefully to persistent single-tab cache or memoryLocalCache.
 const isInIframe = typeof window !== 'undefined' && window.self !== window.top;
 const isCapacitor = typeof window !== 'undefined' && (
   !!(window as any).Capacitor ||
   window.location.protocol === 'capacitor:' ||
   window.location.protocol === 'file:' ||
-  window.location.hostname === 'localhost' ||
   navigator.userAgent.includes('Capacitor') ||
-  navigator.userAgent.includes('wv') ||
-  navigator.userAgent.includes('Android') ||
-  navigator.userAgent.includes('iPhone') ||
-  navigator.userAgent.includes('iPad')
+  navigator.userAgent.includes('wv')
 );
 
 const initFirestore = () => {
   try {
-    if (isCapacitor || isInIframe) {
-      console.log('[Firestore] Initializing with experimentalAutoDetectLongPolling & memoryLocalCache for Capacitor/WebView/Mobile.');
-      return initializeFirestore(app, {
-        experimentalAutoDetectLongPolling: true,
-        localCache: memoryLocalCache()
-      });
-    }
+    console.log('[Firestore Init] Setting up Firestore with persistentLocalCache for offline support & autoDetectLongPolling.');
     return initializeFirestore(app, {
       experimentalAutoDetectLongPolling: true,
       localCache: persistentLocalCache({
         tabManager: persistentMultipleTabManager()
       })
     });
-  } catch (err) {
-    console.warn('[Firestore] Cache init fallback to memoryLocalCache:', err);
+  } catch (err1) {
+    console.warn('[Firestore Init] Multi-tab persistent cache failed, trying single-tab persistentLocalCache:', err1);
     try {
       return initializeFirestore(app, {
         experimentalAutoDetectLongPolling: true,
-        localCache: memoryLocalCache()
+        localCache: persistentLocalCache({})
       });
-    } catch (fallbackErr) {
-      return getFirestore(app);
+    } catch (err2) {
+      console.warn('[Firestore Init] Persistent cache failed, falling back to memoryLocalCache:', err2);
+      try {
+        return initializeFirestore(app, {
+          experimentalAutoDetectLongPolling: true,
+          localCache: memoryLocalCache()
+        });
+      } catch (fallbackErr) {
+        return getFirestore(app);
+      }
     }
   }
 };
 
 export const db = initFirestore();
+
+// Auto-run diagnostics on startup in Capacitor or mobile environments to isolate network/CORS issues
+if (typeof window !== 'undefined') {
+  window.addEventListener('online', () => {
+    console.log('[Network Monitor] Device status changed: ONLINE. Syncing Firestore cache...');
+  });
+  window.addEventListener('offline', () => {
+    console.warn('[Network Monitor] Device status changed: OFFLINE. Using Firestore local persistent cache...');
+  });
+
+  if (isCapacitor || process.env.NODE_ENV === 'development') {
+    setTimeout(() => {
+      import('./firestoreDiagnostics').then(m => m.runFirestoreDiagnostics()).catch(() => {});
+    }, 2000);
+  }
+}
 
 export const googleProvider = new GoogleAuthProvider();
 

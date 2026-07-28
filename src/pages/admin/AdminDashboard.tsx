@@ -39,6 +39,7 @@ import {
 
 import { AdminStoreManager } from '../../components/AdminStoreManager';
 import { INITIAL_DEFAULT_ARTICLES } from '../../data/defaultArticles';
+import { fetchArticlesFromRest } from '../../lib/firestoreRest';
 import { AdminRecitersManager } from '../../components/admin/AdminRecitersManager';
 import { DEFAULT_OATHS } from '../user/tools/GrandOaths';
 import { QURAN_RECITERS } from '../../data/reciters';
@@ -471,6 +472,19 @@ export const AdminDashboard: React.FC = () => {
       setNotifications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification)));
     }, (error) => console.warn("Admin Notifs listener note:", error));
 
+    // Direct REST API fetch to ensure real admin articles are retrieved on mobile WebView/Capacitor
+    fetchArticlesFromRest().then(restDocs => {
+      if (Array.isArray(restDocs) && restDocs.length > 0) {
+        const list = restDocs.map(doc => ({ id: doc.id, ...doc } as any));
+        list.sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
+        console.log(`[Admin REST Articles] Loaded ${list.length} articles via REST API!`);
+        setArticles(list as any);
+        try {
+          localStorage.setItem('asrarhub_cached_admin_articles', JSON.stringify(list));
+        } catch (e) {}
+      }
+    }).catch(e => console.warn("[Admin REST Articles] REST fetch note:", e));
+
     const unsubscribeArticles = onSnapshot(collection(db, 'articles'), (snapshot) => {
       if (!snapshot.empty) {
         const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Article));
@@ -480,7 +494,7 @@ export const AdminDashboard: React.FC = () => {
           localStorage.setItem('asrarhub_cached_admin_articles', JSON.stringify(list));
         } catch (e) {}
       } else {
-        // Fallback to local cache or INITIAL_DEFAULT_ARTICLES
+        // Fallback to local cache or REST or INITIAL_DEFAULT_ARTICLES
         let fallbackList: any[] = [];
         try {
           const cached = localStorage.getItem('asrarhub_cached_admin_articles');
@@ -492,74 +506,56 @@ export const AdminDashboard: React.FC = () => {
           }
         } catch (e) {}
 
-        if (fallbackList.length === 0) {
-          fallbackList = INITIAL_DEFAULT_ARTICLES.map(art => ({
-            id: art.id,
-            title: art.title,
-            hook: art.hook,
-            thumbnail: art.thumbnail,
-            content: art.content,
-            type: 'richtext',
-            status: art.status || 'Published',
-            publishDate: '',
-            isPremium: art.isPremium || false,
-            category: art.category,
-            subCategory: art.subCategory || '',
-            benefits: art.benefits || [],
-            title_en: art.title_en,
-            content_en: art.content_en,
-            hook_en: art.hook_en,
-            title_ha: art.title_ha,
-            content_ha: art.content_ha,
-            hook_ha: art.hook_ha,
-            createdAt: typeof art.createdAt === 'number' ? art.createdAt : Date.now()
-          }));
+        if (fallbackList.length > 0) {
+          setArticles(fallbackList as any);
+        } else {
+          fetchArticlesFromRest().then(restDocs => {
+            if (restDocs && restDocs.length > 0) {
+              const list = restDocs.map(doc => ({ id: doc.id, ...doc } as any));
+              list.sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
+              setArticles(list as any);
+            } else {
+              setArticles(INITIAL_DEFAULT_ARTICLES.map(art => ({
+                id: art.id,
+                title: art.title,
+                hook: art.hook,
+                thumbnail: art.thumbnail,
+                content: art.content,
+                type: 'richtext',
+                status: art.status || 'Published',
+                publishDate: '',
+                isPremium: art.isPremium || false,
+                category: art.category,
+                subCategory: art.subCategory || '',
+                benefits: art.benefits || [],
+                title_en: art.title_en,
+                content_en: art.content_en,
+                hook_en: art.hook_en,
+                title_ha: art.title_ha,
+                content_ha: art.content_ha,
+                hook_ha: art.hook_ha,
+                createdAt: typeof art.createdAt === 'number' ? art.createdAt : Date.now()
+              })) as any);
+            }
+          });
         }
-        setArticles(fallbackList as any);
       }
     }, (error) => {
       console.warn("Admin Articles listener note:", error);
-      getDocs(collection(db, 'articles')).then((snap) => {
-        if (!snap.empty) {
-          const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Article));
+      fetchArticlesFromRest().then(restDocs => {
+        if (restDocs && restDocs.length > 0) {
+          const list = restDocs.map(doc => ({ id: doc.id, ...doc } as any));
           list.sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
           setArticles(list as any);
         } else {
-          const defaultArts = INITIAL_DEFAULT_ARTICLES.map(art => ({
-            id: art.id,
-            title: art.title,
-            hook: art.hook,
-            thumbnail: art.thumbnail,
-            content: art.content,
-            type: 'richtext',
-            status: art.status || 'Published',
-            publishDate: '',
-            isPremium: art.isPremium || false,
-            category: art.category,
-            subCategory: art.subCategory || '',
-            benefits: art.benefits || [],
-            createdAt: typeof art.createdAt === 'number' ? art.createdAt : Date.now()
-          }));
-          setArticles(defaultArts as any);
+          getDocs(collection(db, 'articles')).then((snap) => {
+            if (!snap.empty) {
+              const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() } as Article));
+              list.sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
+              setArticles(list as any);
+            }
+          });
         }
-      }).catch(e => {
-        console.error("Admin Articles fallback error:", e);
-        const defaultArts = INITIAL_DEFAULT_ARTICLES.map(art => ({
-          id: art.id,
-          title: art.title,
-          hook: art.hook,
-          thumbnail: art.thumbnail,
-          content: art.content,
-          type: 'richtext',
-          status: art.status || 'Published',
-          publishDate: '',
-          isPremium: art.isPremium || false,
-          category: art.category,
-          subCategory: art.subCategory || '',
-          benefits: art.benefits || [],
-          createdAt: typeof art.createdAt === 'number' ? art.createdAt : Date.now()
-        }));
-        setArticles(defaultArts as any);
       });
     });
 

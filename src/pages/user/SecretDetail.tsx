@@ -5,6 +5,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { triggerProtectionModal } from "../../components/ContentProtectionManager";
 import { useFeatures } from "../../contexts/FeatureContext";
 import { INITIAL_DEFAULT_ARTICLES } from "../../data/defaultArticles";
+import { fetchSingleArticleFromRest } from "../../lib/firestoreRest";
 import {
   ArrowLeft,
   BookOpen,
@@ -823,50 +824,82 @@ export const SecretDetail: React.FC = () => {
             }
           } else {
             if (!initialItem) {
-              // Check if we have a cached version
-              const cachedDetails = JSON.parse(localStorage.getItem('asrarhub_cached_article_details') || '{}');
-              if (cachedDetails[id]) {
-                setItem(cachedDetails[id]);
+              // Try fetching via REST API before falling back
+              const restItem = await fetchSingleArticleFromRest(id);
+              if (restItem) {
+                let activeContent = restItem.content || '';
+                if (language === 'en' && restItem.content_en) activeContent = restItem.content_en;
+                if (language === 'ha' && restItem.content_ha) activeContent = restItem.content_ha;
+
+                let hookText = restItem.hook || '';
+                if (language === 'en' && restItem.hook_en) hookText = restItem.hook_en;
+                if (language === 'ha' && restItem.hook_ha) hookText = restItem.hook_ha;
+
+                let titleText = restItem.title || '';
+                if (language === 'en' && restItem.title_en) titleText = restItem.title_en;
+                if (language === 'ha' && restItem.title_ha) titleText = restItem.title_ha;
+
+                const parsedRestItem = {
+                  id: restItem.id,
+                  title: titleText || 'Sans titre',
+                  hook: hookText,
+                  category: restItem.category || 'recette',
+                  subCategory: restItem.subCategory || '',
+                  status: restItem.status || 'Published',
+                  content: activeContent,
+                  benefits: restItem.benefits || [],
+                  imageUrl: restItem.thumbnail || restItem.imageUrl || '',
+                  isPremium: restItem.isPremium || false,
+                  createdAt: restItem.createdAt || new Date().toISOString()
+                } as AsrarItem;
+
+                setItem(parsedRestItem);
               } else {
-                const defaultArt = INITIAL_DEFAULT_ARTICLES.find(a => a.id === id);
-                if (defaultArt) {
-                  let activeContent = defaultArt.content || '';
-                  if (language === 'en' && defaultArt.content_en) activeContent = defaultArt.content_en;
-                  if (language === 'ha' && defaultArt.content_ha) activeContent = defaultArt.content_ha;
-
-                  let hookText = defaultArt.hook || '';
-                  if (language === 'en' && defaultArt.hook_en) hookText = defaultArt.hook_en;
-                  if (language === 'ha' && defaultArt.hook_ha) hookText = defaultArt.hook_ha;
-
-                  let titleText = defaultArt.title || '';
-                  if (language === 'en' && defaultArt.title_en) titleText = defaultArt.title_en;
-                  if (language === 'ha' && defaultArt.title_ha) titleText = defaultArt.title_ha;
-
-                  setItem({
-                    id: defaultArt.id,
-                    title: titleText,
-                    hook: hookText,
-                    category: defaultArt.category,
-                    subCategory: defaultArt.subCategory || '',
-                    status: defaultArt.status || 'Published',
-                    content: activeContent,
-                    benefits: defaultArt.benefits || [],
-                    imageUrl: defaultArt.thumbnail,
-                    isPremium: defaultArt.isPremium || false,
-                    createdAt: defaultArt.createdAt,
-                    title_en: defaultArt.title_en,
-                    content_en: defaultArt.content_en,
-                    hook_en: defaultArt.hook_en,
-                    title_ha: defaultArt.title_ha,
-                    content_ha: defaultArt.content_ha,
-                    hook_ha: defaultArt.hook_ha,
-                    title_fr: defaultArt.title,
-                    content_fr: defaultArt.content,
-                    hook_fr: defaultArt.hook,
-                    hasManualTranslation: language !== 'fr'
-                  } as AsrarItem);
+                // Check if we have a cached version
+                const cachedDetails = JSON.parse(localStorage.getItem('asrarhub_cached_article_details') || '{}');
+                if (cachedDetails[id]) {
+                  setItem(cachedDetails[id]);
                 } else {
-                  setNotFound(true);
+                  const defaultArt = INITIAL_DEFAULT_ARTICLES.find(a => a.id === id);
+                  if (defaultArt) {
+                    let activeContent = defaultArt.content || '';
+                    if (language === 'en' && defaultArt.content_en) activeContent = defaultArt.content_en;
+                    if (language === 'ha' && defaultArt.content_ha) activeContent = defaultArt.content_ha;
+
+                    let hookText = defaultArt.hook || '';
+                    if (language === 'en' && defaultArt.hook_en) hookText = defaultArt.hook_en;
+                    if (language === 'ha' && defaultArt.hook_ha) hookText = defaultArt.hook_ha;
+
+                    let titleText = defaultArt.title || '';
+                    if (language === 'en' && defaultArt.title_en) titleText = defaultArt.title_en;
+                    if (language === 'ha' && defaultArt.title_ha) titleText = defaultArt.title_ha;
+
+                    setItem({
+                      id: defaultArt.id,
+                      title: titleText,
+                      hook: hookText,
+                      category: defaultArt.category,
+                      subCategory: defaultArt.subCategory || '',
+                      status: defaultArt.status || 'Published',
+                      content: activeContent,
+                      benefits: defaultArt.benefits || [],
+                      imageUrl: defaultArt.thumbnail,
+                      isPremium: defaultArt.isPremium || false,
+                      createdAt: defaultArt.createdAt,
+                      title_en: defaultArt.title_en,
+                      content_en: defaultArt.content_en,
+                      hook_en: defaultArt.hook_en,
+                      title_ha: defaultArt.title_ha,
+                      content_ha: defaultArt.content_ha,
+                      hook_ha: defaultArt.hook_ha,
+                      title_fr: defaultArt.title,
+                      content_fr: defaultArt.content,
+                      hook_fr: defaultArt.hook,
+                      hasManualTranslation: language !== 'fr'
+                    } as AsrarItem);
+                  } else {
+                    setNotFound(true);
+                  }
                 }
               }
             }
@@ -874,6 +907,27 @@ export const SecretDetail: React.FC = () => {
         } catch (error) {
           console.error("Error fetching article from Firestore", error);
           if (!initialItem) {
+            // Try fetching via REST API
+            try {
+              const restItem = await fetchSingleArticleFromRest(id);
+              if (restItem) {
+                setItem({
+                  id: restItem.id,
+                  title: restItem.title || 'Sans titre',
+                  hook: restItem.hook || '',
+                  category: restItem.category || 'recette',
+                  subCategory: restItem.subCategory || '',
+                  status: restItem.status || 'Published',
+                  content: restItem.content || '',
+                  benefits: restItem.benefits || [],
+                  imageUrl: restItem.thumbnail || restItem.imageUrl || '',
+                  isPremium: restItem.isPremium || false,
+                  createdAt: restItem.createdAt || new Date().toISOString()
+                } as AsrarItem);
+                return;
+              }
+            } catch (rErr) {}
+
             // Fallback to offline cache
             try {
               const cachedDetails = JSON.parse(localStorage.getItem('asrarhub_cached_article_details') || '{}');

@@ -11,7 +11,9 @@ import { getAsrarItems } from '../../data/store';
 
 import { BannerAd } from '../../components/BannerAd';
 import { PremiumWrapper } from '../../components/PremiumWrapper';
+import { AsrarQuickWidget } from '../../components/AsrarQuickWidget';
 import { INITIAL_DEFAULT_ARTICLES } from '../../data/defaultArticles';
+import { fetchArticlesFromRest } from '../../lib/firestoreRest';
 
 export const ExploreDashboard: React.FC = () => {
   const { t, language } = useLanguage();
@@ -77,6 +79,7 @@ export const ExploreDashboard: React.FC = () => {
   ];
   const [sagesse, setSagesse] = useState(sagesses[0]);
   const [articles, setArticles] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [visibleCount, setVisibleCount] = useState(3);
   const [bookmarks, setBookmarks] = useState<string[]>([]);
   const [selectedArticle, setSelectedArticle] = useState<any | null>(null);
@@ -135,6 +138,7 @@ export const ExploreDashboard: React.FC = () => {
           const valid = isAdmin ? parsed : parsed.filter((art: any) => isPublishedStatus(art.status));
           if (valid.length > 0) {
             setArticles(valid);
+            setIsLoading(false);
           }
         }
       }
@@ -142,24 +146,28 @@ export const ExploreDashboard: React.FC = () => {
 
     const q = collection(db, 'articles');
 
+    const processExploreRaw = (data: any, docId: string) => {
+      if (!data) return null;
+      const activeTitle = language === 'fr' ? data.title : data[`title_${language}`] || data.title || 'Sans titre';
+      const activeContent = language === 'fr' ? data.content : data[`content_${language}`] || data.content || '';
+      let activeHook = language === 'fr' ? data.hook : data[`hook_${language}`] || data.hook || '';
+      if (!activeHook && activeContent) {
+        activeHook = activeContent.replace(/<[^>]+>/g, '').substring(0, 120) + '...';
+      }
+      return {
+        id: docId || data.id,
+        ...data,
+        title: activeTitle,
+        content: activeContent,
+        hook: activeHook,
+        createdAt: formatCreatedAt(data.createdAt)
+      };
+    };
+
     const processExploreDoc = (docSnap: any) => {
       try {
         const data = docSnap.data();
-        if (!data) return null;
-        const activeTitle = language === 'fr' ? data.title : data[`title_${language}`] || data.title || 'Sans titre';
-        const activeContent = language === 'fr' ? data.content : data[`content_${language}`] || data.content || '';
-        let activeHook = language === 'fr' ? data.hook : data[`hook_${language}`] || data.hook || '';
-        if (!activeHook && activeContent) {
-          activeHook = activeContent.replace(/<[^>]+>/g, '').substring(0, 120) + '...';
-        }
-        return {
-          id: docSnap.id,
-          ...data,
-          title: activeTitle,
-          content: activeContent,
-          hook: activeHook,
-          createdAt: formatCreatedAt(data.createdAt)
-        };
+        return processExploreRaw(data, docSnap.id);
       } catch (err) {
         console.error("Error processing explore doc:", docSnap.id, err);
         return null;
@@ -195,6 +203,44 @@ export const ExploreDashboard: React.FC = () => {
       });
     };
 
+    const tryRestoreExploreCacheOrDefaults = () => {
+      try {
+        const cached = localStorage.getItem('asrarhub_cached_explore_articles');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            const valid = isAdmin ? parsed : parsed.filter((art: any) => isPublishedStatus(art.status));
+            if (valid.length > 0) {
+              setArticles(valid);
+              setIsLoading(false);
+              return;
+            }
+          }
+        }
+      } catch (e) {}
+      setArticles(getDefaultExploreArticles());
+      setIsLoading(false);
+    };
+
+    // Direct REST API fetch to guarantee real articles load on Capacitor/mobile WebView
+    fetchArticlesFromRest().then(restDocs => {
+      if (Array.isArray(restDocs) && restDocs.length > 0) {
+        const fresh = restDocs
+          .map(d => processExploreRaw(d, d.id))
+          .filter((art: any) => art !== null && (isAdmin || isPublishedStatus(art.status)));
+        if (fresh.length > 0) {
+          console.log(`[Articles REST - ExploreDashboard] Loaded ${fresh.length} articles via REST API!`);
+          setArticles(fresh);
+          setIsLoading(false);
+          try {
+            localStorage.setItem('asrarhub_cached_explore_articles', JSON.stringify(fresh));
+          } catch (e) {}
+        }
+      }
+    }).catch(err => {
+      console.warn("[Articles REST - ExploreDashboard] REST fetch warning:", err);
+    });
+
     // Standard getDocs fallback for reliable loading on native mobile/Capacitor builds
     console.log(`[Articles Query - ExploreDashboard] Querying collection 'articles'. User role: "${user?.role || 'user'}".`);
     getDocs(q).then((snap) => {
@@ -207,18 +253,19 @@ export const ExploreDashboard: React.FC = () => {
         console.log(`[Articles getDocs - ExploreDashboard] ${fresh.length} published articles parsed.`);
         if (fresh.length > 0) {
           setArticles(fresh);
+          setIsLoading(false);
           try {
             localStorage.setItem('asrarhub_cached_explore_articles', JSON.stringify(fresh));
           } catch (e) {}
         } else {
-          setArticles(getDefaultExploreArticles());
+          tryRestoreExploreCacheOrDefaults();
         }
       } else {
-        setArticles(getDefaultExploreArticles());
+        tryRestoreExploreCacheOrDefaults();
       }
     }).catch(err => {
       console.warn("[Articles getDocs - ExploreDashboard] Error during getDocs query:", err?.code || err?.message || err);
-      setArticles(getDefaultExploreArticles());
+      tryRestoreExploreCacheOrDefaults();
     });
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -230,26 +277,16 @@ export const ExploreDashboard: React.FC = () => {
       console.log(`[Articles onSnapshot - ExploreDashboard] ${allArticles.length} published articles ready to display.`);
       if (allArticles.length > 0) {
         setArticles(allArticles);
+        setIsLoading(false);
         try {
           localStorage.setItem('asrarhub_cached_explore_articles', JSON.stringify(allArticles));
         } catch (e) {}
       } else {
-        setArticles(getDefaultExploreArticles());
+        tryRestoreExploreCacheOrDefaults();
       }
     }, (error) => {
       console.error("[Articles onSnapshot - ExploreDashboard] Firestore permission or network error:", error.code, error.message, error);
-      try {
-        const cached = localStorage.getItem('asrarhub_cached_explore_articles');
-        if (cached) {
-          const parsed = JSON.parse(cached);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            console.log(`[Articles - ExploreDashboard] Restored ${parsed.length} articles from localStorage fallback.`);
-            setArticles(parsed);
-            return;
-          }
-        }
-      } catch (e) {}
-      setArticles(getDefaultExploreArticles());
+      tryRestoreExploreCacheOrDefaults();
     });
 
     return () => unsubscribe();
@@ -319,6 +356,11 @@ export const ExploreDashboard: React.FC = () => {
   return (
     <div className="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8 safe-area-pt pb-24">
       <BannerAd />
+
+      {/* Interactive Quick Favorites Widget */}
+      <div className="mb-6">
+        <AsrarQuickWidget variant="inline" />
+      </div>
       
       {/* Hero Section */}
       <motion.div 
@@ -500,7 +542,32 @@ export const ExploreDashboard: React.FC = () => {
       </div>
 
       {/* Derniers Articles */}
-      {articles.length > 0 && (
+      {isLoading ? (
+        <div className="mt-12 bg-white dark:bg-gray-800 rounded-3xl p-6 sm:p-8 border border-gray-100 dark:border-gray-700 shadow-sm animate-pulse">
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-3">
+              <div className="w-5 h-5 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin" />
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+                {language === 'fr' ? 'Chargement des secrets...' : language === 'ha' ? 'Ana neman sirruka...' : 'Loading secrets...'}
+              </h2>
+            </div>
+            <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-3 py-1 rounded-full border border-emerald-500/20">
+              Firestore Sync
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3].map((n) => (
+              <div key={n} className="rounded-2xl border border-gray-100 dark:border-gray-700/80 p-4 space-y-4 bg-slate-50/50 dark:bg-slate-800/40">
+                <div className="w-full h-36 bg-gray-200 dark:bg-gray-700/80 rounded-xl" />
+                <div className="h-5 w-3/4 bg-gray-200 dark:bg-gray-700/80 rounded-md" />
+                <div className="h-4 w-5/6 bg-gray-100 dark:bg-gray-700/50 rounded-md" />
+                <div className="h-8 w-28 bg-emerald-100/60 dark:bg-emerald-950/40 rounded-xl" />
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : articles.length > 0 && (
         <div className="mt-12">
           <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Derniers Articles</h2>
           
