@@ -4595,8 +4595,8 @@ export const AdminDashboard: React.FC = () => {
                   <span className="font-semibold text-emerald-600 dark:text-emerald-400">Actif (Optimisé mobile)</span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-gray-100 dark:border-gray-800">
-                  <span className="text-gray-500">Long Polling (Capacitor) :</span>
-                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">Forcé (experimentalForceLongPolling)</span>
+                  <span className="text-gray-500">Long Polling / WebSockets (Capacitor) :</span>
+                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">Auto-détection (experimentalAutoDetect)</span>
                 </div>
                 <div className="flex justify-between py-1 border-b border-gray-100 dark:border-gray-800">
                   <span className="text-gray-500">Protocole de la page :</span>

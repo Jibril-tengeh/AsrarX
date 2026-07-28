@@ -56,9 +56,9 @@ const isCapacitor = typeof window !== 'undefined' && (
 const initFirestore = () => {
   try {
     if (isCapacitor || isInIframe) {
-      console.log('[Firestore] Initializing with experimentalForceLongPolling & memoryLocalCache for Capacitor/WebView/Mobile.');
+      console.log('[Firestore] Initializing with experimentalAutoDetectLongPolling & memoryLocalCache for Capacitor/WebView/Mobile.');
       return initializeFirestore(app, {
-        experimentalForceLongPolling: true,
+        experimentalAutoDetectLongPolling: true,
         localCache: memoryLocalCache()
       });
     }
@@ -69,10 +69,10 @@ const initFirestore = () => {
       })
     });
   } catch (err) {
-    console.warn('[Firestore] Cache init fallback to memoryLocalCache with force long polling:', err);
+    console.warn('[Firestore] Cache init fallback to memoryLocalCache:', err);
     try {
       return initializeFirestore(app, {
-        experimentalForceLongPolling: true,
+        experimentalAutoDetectLongPolling: true,
         localCache: memoryLocalCache()
       });
     } catch (fallbackErr) {
