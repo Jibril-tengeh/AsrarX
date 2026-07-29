@@ -26,6 +26,7 @@ import { FirstOpenPermissionsModal } from './components/FirstOpenPermissionsModa
 import { CollapsibleFloatingWidget } from './components/CollapsibleFloatingWidget';
 import { FeatureProvider, useFeatures } from './contexts/FeatureContext';
 import UserDashboard from './pages/user/UserDashboard';
+import { FreeTrial24hModal } from './components/FreeTrial24hModal';
 
 function lazyWithRetry<T extends React.ComponentType<any> = React.ComponentType<any>>(
   componentImport: () => Promise<any>
@@ -115,6 +116,7 @@ const MuridJournal = lazyWithRetry(() => import('./pages/user/tools/MuridJournal
 const SaahIjabah = lazyWithRetry(() => import('./pages/user/tools/SaahIjabah'));
 const SealsCatalogue = lazyWithRetry(() => import('./pages/user/tools/SealsCatalogue'));
 const RajmaCharms = lazyWithRetry(() => import('./pages/user/tools/RajmaCharms'));
+const SacredBooksLibrary = lazyWithRetry(() => import('./pages/user/tools/SacredBooksLibrary'));
 const AlBuniShams = lazyWithRetry(() => import('./pages/user/tools/AlBuniShams'));
 const Store = lazyWithRetry(() => import('./pages/user/Store'));
 const FaqPage = lazyWithRetry(() => import('./pages/FaqPage'));
@@ -521,7 +523,7 @@ const ProtectedToolsLayout: React.FC = () => {
 };
 
 export default function App() {
-  const { user } = useAuth();
+  const { user, showTrialPopup, markTrialPopupSeen } = useAuth();
   const { language } = useLanguage();
   const { featureToggles } = useFeatures();
   const { isPlaying: globalIsPlaying, currentTrack, quranRepeatCount: repeatCount, setQuranRepeatCount: setRepeatCount } = useAudio();
@@ -941,6 +943,9 @@ export default function App() {
                   <Route path="/tools/murid-journal" element={<MuridJournal />} />
                   <Route path="/tools/rajma-charms" element={<RajmaCharms />} />
                   <Route path="/tools/rajma" element={<RajmaCharms />} />
+                  <Route path="/tools/sacred-books" element={<SacredBooksLibrary />} />
+                  <Route path="/tools/books" element={<SacredBooksLibrary />} />
+                  <Route path="/tools/grimoires" element={<SacredBooksLibrary />} />
                   <Route path="/tools/al-buni-shams" element={<AlBuniShams />} />
                   <Route path="/tools/buni" element={<AlBuniShams />} />
                   <Route path="/tools/shams" element={<AlBuniShams />} />
@@ -1055,6 +1060,8 @@ export default function App() {
             </motion.div>
           )}
         </AnimatePresence>
+        {/* 24-Hour Free Premium Trial Modal */}
+        <FreeTrial24hModal isOpen={showTrialPopup} onClose={markTrialPopupSeen} />
       </div>
     </MaintenanceOverlay>
   );
