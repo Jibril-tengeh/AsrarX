@@ -115,6 +115,7 @@ const MuridJournal = lazyWithRetry(() => import('./pages/user/tools/MuridJournal
 const SaahIjabah = lazyWithRetry(() => import('./pages/user/tools/SaahIjabah'));
 const SealsCatalogue = lazyWithRetry(() => import('./pages/user/tools/SealsCatalogue'));
 const RajmaCharms = lazyWithRetry(() => import('./pages/user/tools/RajmaCharms'));
+const AlBuniShams = lazyWithRetry(() => import('./pages/user/tools/AlBuniShams'));
 const Store = lazyWithRetry(() => import('./pages/user/Store'));
 const FaqPage = lazyWithRetry(() => import('./pages/FaqPage'));
 
@@ -940,6 +941,9 @@ export default function App() {
                   <Route path="/tools/murid-journal" element={<MuridJournal />} />
                   <Route path="/tools/rajma-charms" element={<RajmaCharms />} />
                   <Route path="/tools/rajma" element={<RajmaCharms />} />
+                  <Route path="/tools/al-buni-shams" element={<AlBuniShams />} />
+                  <Route path="/tools/buni" element={<AlBuniShams />} />
+                  <Route path="/tools/shams" element={<AlBuniShams />} />
                   
                   {/* Additional Protected Routes */}
                   <Route path="/explore" element={<ExploreDashboard />} />

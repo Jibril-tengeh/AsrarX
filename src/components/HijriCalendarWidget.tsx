@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Calendar, Moon, MapPin, RefreshCw, ChevronRight, Sparkles, Compass, Plus, Minus, CheckCircle2, ShieldCheck, ChevronDown, ChevronUp } from 'lucide-react';
+import { Calendar, Moon, MapPin, RefreshCw, ChevronRight, Sparkles, Compass, Plus, Minus, CheckCircle2, ShieldCheck, ChevronDown, ChevronUp, Sliders, Maximize2, Minimize2, RotateCcw } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useFeatures } from '../contexts/FeatureContext';
+import { useAuth } from '../contexts/AuthContext';
 import { calculateHijriDate } from '../utils/hijriDate';
 import { Link } from 'react-router-dom';
 
@@ -48,6 +49,43 @@ const getLocalizedGregorianDate = (date: Date, lang: string): string => {
 export const HijriCalendarWidget: React.FC = () => {
   const { language } = useLanguage();
   const { featureToggles } = useFeatures();
+  const { user } = useAuth();
+
+  const isAdmin = user?.role === 'admin' || 
+                  user?.role === 'master' || 
+                  user?.role === 'super_admin' || 
+                  (user?.email && ['jibriltengeh4@gmail.com', 'sbireino@gmail.com', 'tenibawwal10@gmail.com', 'jibriltengeh57@gmail.com'].includes(user.email.toLowerCase()));
+
+  const [globalCardScale, setGlobalCardScale] = useState<number>(() => {
+    const saved = localStorage.getItem('asrarhub_admin_calendar_global_scale');
+    return saved ? parseFloat(saved) : 1.0;
+  });
+
+  const [subCardScale, setSubCardScale] = useState<number>(() => {
+    const saved = localStorage.getItem('asrarhub_admin_calendar_subcards_scale');
+    return saved ? parseFloat(saved) : 1.0;
+  });
+
+  const [showAdminControls, setShowAdminControls] = useState<boolean>(false);
+
+  const changeGlobalScale = (delta: number) => {
+    const next = Math.min(1.8, Math.max(0.6, Math.round((globalCardScale + delta) * 100) / 100));
+    setGlobalCardScale(next);
+    localStorage.setItem('asrarhub_admin_calendar_global_scale', next.toString());
+  };
+
+  const changeSubCardScale = (delta: number) => {
+    const next = Math.min(1.8, Math.max(0.6, Math.round((subCardScale + delta) * 100) / 100));
+    setSubCardScale(next);
+    localStorage.setItem('asrarhub_admin_calendar_subcards_scale', next.toString());
+  };
+
+  const resetScales = () => {
+    setGlobalCardScale(1.0);
+    setSubCardScale(1.0);
+    localStorage.setItem('asrarhub_admin_calendar_global_scale', '1.0');
+    localStorage.setItem('asrarhub_admin_calendar_subcards_scale', '1.0');
+  };
 
   const [isExpanded, setIsExpanded] = useState(false);
 
@@ -236,7 +274,12 @@ export const HijriCalendarWidget: React.FC = () => {
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4 }}
-      className="relative w-full rounded-[28px] bg-white dark:bg-slate-900 p-4 sm:p-5 shadow-xl border border-slate-200/90 dark:border-slate-800 text-slate-800 dark:text-slate-100 overflow-hidden"
+      style={{
+        padding: `${Math.round(20 * globalCardScale)}px`,
+        borderRadius: `${Math.round(28 * globalCardScale)}px`,
+        fontSize: `${Math.round(100 * globalCardScale)}%`
+      }}
+      className="relative w-full bg-white dark:bg-slate-900 shadow-xl border border-slate-200/90 dark:border-slate-800 text-slate-800 dark:text-slate-100 overflow-hidden transition-all duration-200"
     >
       {/* 1. TOP HEADER BAR */}
       <div 
@@ -262,6 +305,26 @@ export const HijriCalendarWidget: React.FC = () => {
 
         {/* Status Badge & Toggle Expand/Collapse */}
         <div className="flex items-center gap-2">
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowAdminControls(!showAdminControls);
+                if (!isExpanded) setIsExpanded(true);
+              }}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-extrabold transition-all cursor-pointer border ${
+                showAdminControls
+                  ? 'bg-amber-500 text-white border-amber-600 shadow-md'
+                  : 'bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30 hover:bg-amber-500/20'
+              }`}
+              title="Ajuster les tailles du calendrier (Admin)"
+            >
+              <Sliders className="w-3.5 h-3.5" />
+              <span>Tailles</span>
+            </button>
+          )}
+
           <Link 
             to="/explore/calendar" 
             onClick={(e) => e.stopPropagation()}
@@ -295,55 +358,217 @@ export const HijriCalendarWidget: React.FC = () => {
             transition={{ duration: 0.3 }}
             className="overflow-hidden"
           >
+            {/* ADMIN SIZE ADJUSTMENT PANEL */}
+            <AnimatePresence>
+              {showAdminControls && isAdmin && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="mb-4 p-4 rounded-2xl bg-amber-50/95 dark:bg-amber-950/60 border-2 border-amber-500/40 text-xs shadow-lg space-y-3"
+                >
+                  <div className="flex items-center justify-between border-b border-amber-500/20 pb-2">
+                    <span className="font-extrabold text-amber-900 dark:text-amber-200 flex items-center gap-1.5 uppercase tracking-wider text-[11px]">
+                      <Sliders className="w-4 h-4 text-amber-500" />
+                      Ajustement des Tailles du Calendrier (Contrôle Admin)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={resetScales}
+                      className="px-2.5 py-1 rounded-lg bg-amber-200 dark:bg-amber-900/80 text-amber-900 dark:text-amber-100 font-extrabold hover:bg-amber-300 transition-colors text-[10px] flex items-center gap-1 cursor-pointer"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      Réinitialiser (100%)
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {/* Control 1: Global Card Scale */}
+                    <div className="p-3 rounded-xl bg-white/90 dark:bg-slate-900/90 border border-amber-500/30 flex flex-col justify-between shadow-sm">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-bold text-slate-800 dark:text-slate-200 text-xs flex items-center gap-1.5">
+                          <Maximize2 className="w-3.5 h-3.5 text-amber-600" />
+                          Carte Globale du Calendrier
+                        </span>
+                        <span className="font-mono font-black text-amber-600 dark:text-amber-400 text-xs bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                          {Math.round(globalCardScale * 100)}%
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => changeGlobalScale(-0.05)}
+                          className="p-1.5 rounded-lg bg-slate-200 dark:bg-slate-800 hover:bg-amber-500 hover:text-white transition-colors cursor-pointer"
+                          title="Réduire la carte globale"
+                        >
+                          <Minus className="w-3.5 h-3.5" />
+                        </button>
+                        <input
+                          type="range"
+                          min="0.6"
+                          max="1.6"
+                          step="0.05"
+                          value={globalCardScale}
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value);
+                            setGlobalCardScale(val);
+                            localStorage.setItem('asrarhub_admin_calendar_global_scale', val.toString());
+                          }}
+                          className="w-full accent-amber-500 cursor-pointer h-2 bg-slate-200 dark:bg-slate-700 rounded-lg"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => changeGlobalScale(0.05)}
+                          className="p-1.5 rounded-lg bg-slate-200 dark:bg-slate-800 hover:bg-amber-500 hover:text-white transition-colors cursor-pointer"
+                          title="Augmenter la carte globale"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Control 2: Sub-Cards Scale */}
+                    <div className="p-3 rounded-xl bg-white/90 dark:bg-slate-900/90 border border-amber-500/30 flex flex-col justify-between shadow-sm">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-bold text-slate-800 dark:text-slate-200 text-xs flex items-center gap-1.5">
+                          <Minimize2 className="w-3.5 h-3.5 text-emerald-600" />
+                          Cartes Intérieures (Sous-Cartes)
+                        </span>
+                        <span className="font-mono font-black text-amber-600 dark:text-amber-400 text-xs bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                          {Math.round(subCardScale * 100)}%
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => changeSubCardScale(-0.05)}
+                          className="p-1.5 rounded-lg bg-slate-200 dark:bg-slate-800 hover:bg-amber-500 hover:text-white transition-colors cursor-pointer"
+                          title="Réduire les sous-cartes"
+                        >
+                          <Minus className="w-3.5 h-3.5" />
+                        </button>
+                        <input
+                          type="range"
+                          min="0.6"
+                          max="1.6"
+                          step="0.05"
+                          value={subCardScale}
+                          onChange={(e) => {
+                            const val = parseFloat(e.target.value);
+                            setSubCardScale(val);
+                            localStorage.setItem('asrarhub_admin_calendar_subcards_scale', val.toString());
+                          }}
+                          className="w-full accent-amber-500 cursor-pointer h-2 bg-slate-200 dark:bg-slate-700 rounded-lg"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => changeSubCardScale(0.05)}
+                          className="p-1.5 rounded-lg bg-slate-200 dark:bg-slate-800 hover:bg-amber-500 hover:text-white transition-colors cursor-pointer"
+                          title="Augmenter les sous-cartes"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             {/* MAIN CALENDAR DISPLAY CARD */}
-            <div className="bg-gradient-to-br from-emerald-950 via-slate-900 to-teal-950 rounded-2xl p-4 sm:p-5 text-white mb-4 border border-emerald-500/30 shadow-lg relative overflow-hidden">
-              <Moon className="absolute -bottom-8 -right-8 text-emerald-500/10 pointer-events-none stroke-[1]" size={150} />
+            <div 
+              style={{
+                padding: `${Math.round(20 * subCardScale)}px`,
+                borderRadius: `${Math.round(16 * subCardScale)}px`,
+                marginBottom: `${Math.round(16 * subCardScale)}px`
+              }}
+              className="bg-gradient-to-br from-emerald-950 via-slate-900 to-teal-950 text-white border border-emerald-500/30 shadow-lg relative overflow-hidden transition-all duration-200"
+            >
+              <Moon className="absolute -bottom-8 -right-8 text-emerald-500/10 pointer-events-none stroke-[1]" size={Math.round(150 * subCardScale)} />
 
               <div className="relative z-10 flex flex-wrap items-center justify-between gap-2 mb-2">
-                <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400 bg-emerald-900/50 px-2.5 py-0.5 rounded-full border border-emerald-500/30">
+                <span 
+                  style={{ fontSize: `${Math.round(11 * subCardScale)}px` }}
+                  className="font-bold uppercase tracking-wider text-emerald-400 bg-emerald-900/50 px-2.5 py-0.5 rounded-full border border-emerald-500/30"
+                >
                   {txt.monthNumber}
                 </span>
 
-                <span className="text-xs text-slate-300 font-medium capitalize flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5 text-emerald-400" />
+                <span 
+                  style={{ fontSize: `${Math.round(12 * subCardScale)}px` }}
+                  className="text-slate-300 font-medium capitalize flex items-center gap-1.5"
+                >
+                  <Calendar style={{ width: `${Math.round(14 * subCardScale)}px`, height: `${Math.round(14 * subCardScale)}px` }} className="text-emerald-400" />
                   {gregorianStr}
                 </span>
               </div>
 
               {/* Arabic Calligraphy Big Title */}
-              <div dir="rtl" className="text-2xl sm:text-3xl font-black text-amber-300 font-serif tracking-wide leading-tight my-1 drop-shadow">
+              <div 
+                dir="rtl" 
+                style={{ fontSize: `${Math.round(28 * subCardScale)}px` }}
+                className="font-black text-amber-300 font-serif tracking-wide leading-tight my-1 drop-shadow"
+              >
                 {arabicDateStr}
               </div>
 
               {/* Localized Date & White Days */}
               <div className="flex flex-wrap items-center justify-between gap-2 mt-2 pt-2 border-t border-emerald-800/50">
-                <div className="flex items-center gap-1.5 text-sm font-bold text-white">
-                  <Moon className="w-4 h-4 text-emerald-400" />
+                <div 
+                  style={{ fontSize: `${Math.round(14 * subCardScale)}px` }}
+                  className="flex items-center gap-1.5 font-bold text-white"
+                >
+                  <Moon style={{ width: `${Math.round(16 * subCardScale)}px`, height: `${Math.round(16 * subCardScale)}px` }} className="text-emerald-400" />
                   <span>{hijri.day} {monthName} {hijri.year} AH</span>
                 </div>
 
                 {isWhiteDays && (
-                  <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-400/20 text-amber-300 border border-amber-400/30">
+                  <span 
+                    style={{ fontSize: `${Math.round(12 * subCardScale)}px` }}
+                    className="px-2.5 py-0.5 rounded-full font-bold bg-amber-400/20 text-amber-300 border border-amber-400/30"
+                  >
                     {txt.whiteDays}
                   </span>
                 )}
               </div>
             </div>
 
-            {/* THREE CIRCULAR DETAIL BUTTONS */}
-            <div className="grid grid-cols-3 gap-3 mb-3">
+            {/* THREE CIRCULAR DETAIL BUTTONS (SUB-CARDS) */}
+            <div 
+              style={{
+                gap: `${Math.round(12 * subCardScale)}px`,
+                marginBottom: `${Math.round(12 * subCardScale)}px`
+              }}
+              className="grid grid-cols-3"
+            >
               {/* Detail 1: Hijri Month Info */}
               <Link 
                 to="/explore/calendar"
-                className="flex flex-col items-center justify-center p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50 hover:bg-emerald-50 dark:hover:bg-slate-800 border border-slate-100 dark:border-slate-800 transition-all text-center group cursor-pointer"
+                style={{
+                  padding: `${Math.round(12 * subCardScale)}px`,
+                  borderRadius: `${Math.round(16 * subCardScale)}px`
+                }}
+                className="flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-800/50 hover:bg-emerald-50 dark:hover:bg-slate-800 border border-slate-100 dark:border-slate-800 transition-all text-center group cursor-pointer"
               >
-                <div className="w-12 h-12 rounded-full bg-rose-100 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center mb-2 group-hover:scale-105 transition-transform shadow-sm">
-                  <Moon className="w-5 h-5" />
+                <div 
+                  style={{
+                    width: `${Math.round(48 * subCardScale)}px`,
+                    height: `${Math.round(48 * subCardScale)}px`
+                  }}
+                  className="rounded-full bg-rose-100 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center mb-2 group-hover:scale-105 transition-transform shadow-sm shrink-0"
+                >
+                  <Moon style={{ width: `${Math.round(20 * subCardScale)}px`, height: `${Math.round(20 * subCardScale)}px` }} />
                 </div>
-                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block truncate max-w-full">
+                <span 
+                  style={{ fontSize: `${Math.round(12 * subCardScale)}px` }}
+                  className="font-bold text-slate-800 dark:text-slate-200 block truncate max-w-full"
+                >
                   {monthName}
                 </span>
-                <span className="text-[10px] text-slate-400 font-medium block truncate max-w-full">
+                <span 
+                  style={{ fontSize: `${Math.round(10 * subCardScale)}px` }}
+                  className="text-slate-400 font-medium block truncate max-w-full"
+                >
                   {txt.hijriLabel}
                 </span>
               </Link>
@@ -351,51 +576,95 @@ export const HijriCalendarWidget: React.FC = () => {
               {/* Detail 2: GPS Location */}
               <div 
                 onClick={detectLocation}
-                className="flex flex-col items-center justify-center p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50 hover:bg-emerald-50 dark:hover:bg-slate-800 border border-slate-100 dark:border-slate-800 transition-all text-center group cursor-pointer"
+                style={{
+                  padding: `${Math.round(12 * subCardScale)}px`,
+                  borderRadius: `${Math.round(16 * subCardScale)}px`
+                }}
+                className="flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-800/50 hover:bg-emerald-50 dark:hover:bg-slate-800 border border-slate-100 dark:border-slate-800 transition-all text-center group cursor-pointer"
               >
-                <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-2 group-hover:scale-105 transition-transform shadow-sm relative">
-                  <MapPin className="w-5 h-5" />
+                <div 
+                  style={{
+                    width: `${Math.round(48 * subCardScale)}px`,
+                    height: `${Math.round(48 * subCardScale)}px`
+                  }}
+                  className="rounded-full bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-2 group-hover:scale-105 transition-transform shadow-sm relative shrink-0"
+                >
+                  <MapPin style={{ width: `${Math.round(20 * subCardScale)}px`, height: `${Math.round(20 * subCardScale)}px` }} />
                   {isRefreshingGps && (
                     <RefreshCw className="w-3 h-3 text-emerald-500 animate-spin absolute top-1 right-1" />
                   )}
                 </div>
-                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block truncate max-w-full">
+                <span 
+                  style={{ fontSize: `${Math.round(12 * subCardScale)}px` }}
+                  className="font-bold text-slate-800 dark:text-slate-200 block truncate max-w-full"
+                >
                   {locationInfo.city}
                 </span>
-                <span className="text-[10px] text-slate-400 font-medium block truncate max-w-full">
+                <span 
+                  style={{ fontSize: `${Math.round(10 * subCardScale)}px` }}
+                  className="text-slate-400 font-medium block truncate max-w-full"
+                >
                   {txt.gpsLabel}
                 </span>
               </div>
 
               {/* Detail 3: Moon Offset Control */}
-              <div className="flex flex-col items-center justify-center p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/50 hover:bg-emerald-50 dark:hover:bg-slate-800 border border-slate-100 dark:border-slate-800 transition-all text-center group">
-                <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-2 shadow-sm">
-                  <Compass className="w-5 h-5" />
+              <div 
+                style={{
+                  padding: `${Math.round(12 * subCardScale)}px`,
+                  borderRadius: `${Math.round(16 * subCardScale)}px`
+                }}
+                className="flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-800/50 hover:bg-emerald-50 dark:hover:bg-slate-800 border border-slate-100 dark:border-slate-800 transition-all text-center group"
+              >
+                <div 
+                  style={{
+                    width: `${Math.round(48 * subCardScale)}px`,
+                    height: `${Math.round(48 * subCardScale)}px`
+                  }}
+                  className="rounded-full bg-indigo-100 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-2 shadow-sm shrink-0"
+                >
+                  <Compass style={{ width: `${Math.round(20 * subCardScale)}px`, height: `${Math.round(20 * subCardScale)}px` }} />
                 </div>
                 
                 <div className="flex items-center gap-1.5 my-0.5">
                   <button
                     type="button"
                     onClick={() => changeOffset(-1)}
-                    className="w-5 h-5 rounded-md bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-emerald-600 hover:text-white flex items-center justify-center text-xs font-bold transition-colors cursor-pointer"
+                    style={{
+                      width: `${Math.round(20 * subCardScale)}px`,
+                      height: `${Math.round(20 * subCardScale)}px`,
+                      fontSize: `${Math.round(12 * subCardScale)}px`
+                    }}
+                    className="rounded-md bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-emerald-600 hover:text-white flex items-center justify-center font-bold transition-colors cursor-pointer shrink-0"
                     title="-1 day"
                   >
                     -
                   </button>
-                  <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 font-mono">
+                  <span 
+                    style={{ fontSize: `${Math.round(12 * subCardScale)}px` }}
+                    className="font-black text-emerald-600 dark:text-emerald-400 font-mono"
+                  >
                     {hijriOffset > 0 ? `+${hijriOffset}` : hijriOffset}d
                   </span>
                   <button
                     type="button"
                     onClick={() => changeOffset(1)}
-                    className="w-5 h-5 rounded-md bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-emerald-600 hover:text-white flex items-center justify-center text-xs font-bold transition-colors cursor-pointer"
+                    style={{
+                      width: `${Math.round(20 * subCardScale)}px`,
+                      height: `${Math.round(20 * subCardScale)}px`,
+                      fontSize: `${Math.round(12 * subCardScale)}px`
+                    }}
+                    className="rounded-md bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 hover:bg-emerald-600 hover:text-white flex items-center justify-center font-bold transition-colors cursor-pointer shrink-0"
                     title="+1 day"
                   >
                     +
                   </button>
                 </div>
 
-                <span className="text-[10px] text-slate-400 font-medium block truncate max-w-full">
+                <span 
+                  style={{ fontSize: `${Math.round(10 * subCardScale)}px` }}
+                  className="text-slate-400 font-medium block truncate max-w-full"
+                >
                   {txt.adjustOffset}
                 </span>
               </div>
