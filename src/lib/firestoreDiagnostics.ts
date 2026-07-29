@@ -47,7 +47,7 @@ export const runFirestoreDiagnostics = async (): Promise<DiagnosticResult> => {
   };
 
   // 1. Test direct REST API endpoint to isolate CORS or raw network blockage
-  const restUrl = `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/articles?pageSize=1`;
+  const restUrl = `https://firestore.googleapis.com/v1/projects/${firebaseConfig.projectId}/databases/(default)/documents/articles?key=${firebaseConfig.apiKey}&pageSize=1`;
   const restStartTime = performance.now();
 
   try {
