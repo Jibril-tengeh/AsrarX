@@ -34,7 +34,7 @@ export const SacredAudioPlayer: React.FC = () => {
   const planetaryInfo = planetaryDaysInfo[dayIndex] || planetaryDaysInfo[0];
   const lunarInfo = calculateLunarInfo(now, language);
 
-  if (featureToggles?.sacredAudioPlayerVisible === false) {
+  if (featureToggles?.sacredAudioPlayerVisible !== true) {
     return null;
   }
 

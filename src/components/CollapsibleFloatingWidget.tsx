@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useAudio } from '../contexts/AudioContext';
-import { getCurrentPlanetaryHour, playNotificationTone, requestNotificationPermission } from '../utils/planetaryNotifications';
+import { getCurrentPlanetaryHour, playNotificationTone, requestNotificationPermission, multilingualPlanets } from '../utils/planetaryNotifications';
 import { calculateAbjadValue } from '../utils/abjad';
 import { ExternalScreenWidgetModal } from './ExternalScreenWidgetModal';
 import { triggerSystemWidgetNotification, launchPictureInPictureWidget } from '../utils/externalWidgetSystem';
@@ -124,6 +124,10 @@ export const CollapsibleFloatingWidget: React.FC = () => {
     setTestSent(true);
     playNotificationTone();
 
+    const rawPlanet = multilingualPlanets[currentPlanet.planetIndex] || multilingualPlanets[0];
+    const langKey = (['fr', 'en', 'ha'].includes(language) ? language : 'fr') as 'fr' | 'en' | 'ha';
+    const planetName = rawPlanet.name[langKey] || rawPlanet.name.fr;
+
     const notifTitle = language === 'fr'
       ? '✨ Rappel Spirituel en Arrière-Plan'
       : language === 'ha'
@@ -131,10 +135,10 @@ export const CollapsibleFloatingWidget: React.FC = () => {
       : '✨ Background Spiritual Reminder';
 
     const notifBody = language === 'fr'
-      ? `Sceau Actif: ${currentPlanet.planet.name} (${currentPlanet.planet.arabic}) — C'est l'heure propice pour votre Zikr !`
+      ? `Sceau Actif: ${planetName} (${rawPlanet.arabic}) — C'est l'heure propice pour votre Zikr !`
       : language === 'ha'
-      ? `Hatimi Mai Aiki: ${currentPlanet.planet.name} (${currentPlanet.planet.arabic}) — Wannan ne lokaci mai kyau don Zikirinku!`
-      : `Active Seal: ${currentPlanet.planet.name} (${currentPlanet.planet.arabic}) — Optimal time for your Zikr!`;
+      ? `Hatimi Mai Aiki: ${planetName} (${rawPlanet.arabic}) — Wannan ne lokaci mai kyau don Zikirinku!`
+      : `Active Seal: ${planetName} (${rawPlanet.arabic}) — Optimal time for your Zikr!`;
 
     if ('serviceWorker' in navigator) {
       try {

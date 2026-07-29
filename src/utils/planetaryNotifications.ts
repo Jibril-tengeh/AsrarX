@@ -10,15 +10,102 @@ import { Capacitor } from '@capacitor/core';
  * Notifies the user in real-time when favorable planetary hours (e.g. Jupiter, Venus, Sun) begin.
  */
 
-const planets = [
-  { name: 'Soleil', arabic: 'الشمس', symbol: '☉', favorability: 'Excellente (Gloire & Réussite)' },
-  { name: 'Vénus', arabic: 'الزهرة', symbol: '♀', favorability: 'Très Favorable (Harmonie & Amour)' },
-  { name: 'Mercure', arabic: 'عطارد', symbol: '☿', favorability: 'Neutre/Avisé (Étude & Écrit)' },
-  { name: 'Lune', arabic: 'القمر', symbol: '☽', favorability: 'Favorable (Intuition & Rêve)' },
-  { name: 'Saturne', arabic: 'زحل', symbol: '♄', favorability: 'Prudence/Bannissement (Discipline)' },
-  { name: 'Jupiter', arabic: 'المشتري', symbol: '♃', favorability: 'Excellente (Abondance & Richesse)' },
-  { name: 'Mars', arabic: 'المريخ', symbol: '♂', favorability: 'Énergique/Raid (Force & Courage)' },
+export type SupportedLanguage = 'fr' | 'en' | 'ha';
+
+export interface MultilingualPlanet {
+  name: Record<SupportedLanguage, string>;
+  arabic: string;
+  symbol: string;
+  favorability: Record<SupportedLanguage, string>;
+  isPropitious: boolean;
+}
+
+export const multilingualPlanets: MultilingualPlanet[] = [
+  {
+    name: { fr: 'Soleil', en: 'Sun', ha: 'Rana' },
+    arabic: 'الشمس',
+    symbol: '☉',
+    favorability: {
+      fr: 'Excellente (Gloire & Réussite)',
+      en: 'Excellent (Glory & Success)',
+      ha: 'Madalla (Daukaka & Nasara)',
+    },
+    isPropitious: true,
+  },
+  {
+    name: { fr: 'Vénus', en: 'Venus', ha: 'Zuhura' },
+    arabic: 'الزهرة',
+    symbol: '♀',
+    favorability: {
+      fr: 'Très Favorable (Harmonie & Amour)',
+      en: 'Very Favorable (Harmony & Love)',
+      ha: 'Mai Kyau Kwarai (Zaman Lafiya & Soyayya)',
+    },
+    isPropitious: true,
+  },
+  {
+    name: { fr: 'Mercure', en: 'Mercury', ha: 'Utaridu' },
+    arabic: 'عطارد',
+    symbol: '☿',
+    favorability: {
+      fr: 'Neutre/Avisé (Étude & Écrit)',
+      en: 'Neutral/Wise (Study & Writing)',
+      ha: 'Na Tsakiya (Karatu & Rubutu)',
+    },
+    isPropitious: false,
+  },
+  {
+    name: { fr: 'Lune', en: 'Moon', ha: 'Wata' },
+    arabic: 'القمر',
+    symbol: '☽',
+    favorability: {
+      fr: 'Favorable (Intuition & Rêve)',
+      en: 'Favorable (Intuition & Dream)',
+      ha: 'Mai Kyau (Hankali & Mafarki)',
+    },
+    isPropitious: false,
+  },
+  {
+    name: { fr: 'Saturne', en: 'Saturn', ha: 'Zuhalu' },
+    arabic: 'زحل',
+    symbol: '♄',
+    favorability: {
+      fr: 'Prudence/Bannissement (Discipline)',
+      en: 'Caution/Banishing (Discipline)',
+      ha: 'Kiyayewa (Hukunci & Horammaku)',
+    },
+    isPropitious: false,
+  },
+  {
+    name: { fr: 'Jupiter', en: 'Jupiter', ha: 'Mushtari' },
+    arabic: 'المشتري',
+    symbol: '♃',
+    favorability: {
+      fr: 'Excellente (Abondance & Richesse)',
+      en: 'Excellent (Abundance & Wealth)',
+      ha: 'Madalla (Arziki & Wadada)',
+    },
+    isPropitious: true,
+  },
+  {
+    name: { fr: 'Mars', en: 'Mars', ha: 'Mirriku' },
+    arabic: 'المريخ',
+    symbol: '♂',
+    favorability: {
+      fr: 'Énergique/Raid (Force & Courage)',
+      en: 'Energetic/Action (Strength & Courage)',
+      ha: 'Karfin Aiki (Karfi & Jarumtaka)',
+    },
+    isPropitious: false,
+  },
 ];
+
+const planets = multilingualPlanets.map(p => ({
+  name: p.name.fr,
+  arabic: p.arabic,
+  symbol: p.symbol,
+  favorability: p.favorability.fr
+}));
 
 const chaldeanSequence = [4, 5, 6, 0, 1, 2, 3];
 const dayRulerMap = [0, 3, 6, 2, 5, 1, 4];
@@ -249,14 +336,33 @@ export function getCurrentPlanetaryHour() {
 
 let lastNotifiedPlanet: string | null = null;
 
-export function checkAndTriggerPlanetaryNotification() {
+export function checkAndTriggerPlanetaryNotification(overrideLang?: SupportedLanguage) {
   const current = getCurrentPlanetaryHour();
-  if (current.planet.name !== lastNotifiedPlanet) {
-    lastNotifiedPlanet = current.planet.name;
+  const rawPlanet = multilingualPlanets[current.planetIndex] || multilingualPlanets[0];
 
-    const isPropitious = ['Jupiter', 'Vénus', 'Soleil'].includes(current.planet.name);
-    const title = `Heure Planétaire : ${current.planet.name} (${current.planet.arabic})`;
-    const body = `Prospérité : ${current.planet.favorability}.\nUne période ${isPropitious ? 'hautement bénéfique' : 'particulière'} vient de débuter.`;
+  if (rawPlanet.arabic !== lastNotifiedPlanet) {
+    lastNotifiedPlanet = rawPlanet.arabic;
+
+    const currentLang = (overrideLang || localStorage.getItem('language') || 'fr') as SupportedLanguage;
+    const langKey: SupportedLanguage = ['fr', 'en', 'ha'].includes(currentLang) ? currentLang : 'fr';
+
+    const planetName = rawPlanet.name[langKey] || rawPlanet.name.fr;
+    const favorability = rawPlanet.favorability[langKey] || rawPlanet.favorability.fr;
+    const isPropitious = rawPlanet.isPropitious;
+
+    let title = '';
+    let body = '';
+
+    if (langKey === 'en') {
+      title = `Planetary Hour: ${planetName} (${rawPlanet.arabic})`;
+      body = `Influence: ${favorability}.\nA ${isPropitious ? 'highly beneficial' : 'special'} period has just begun.`;
+    } else if (langKey === 'ha') {
+      title = `Sa'ar Tauraro: ${planetName} (${rawPlanet.arabic})`;
+      body = `Tasiri: ${favorability}.\nLokaci mai ${isPropitious ? 'albarka mai yawa' : 'muhimmanci'} ya soma.`;
+    } else {
+      title = `Heure Planétaire : ${planetName} (${rawPlanet.arabic})`;
+      body = `Prospérité : ${favorability}.\nUne période ${isPropitious ? 'hautement bénéfique' : 'particulière'} vient de débuter.`;
+    }
 
     // Ring audio alert
     playNotificationTone();

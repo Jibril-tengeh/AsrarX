@@ -47,8 +47,17 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { categoryId } = useParams<{ categoryId?: string }>();
-  const [items, setItems] = useState<AsrarItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [items, setItems] = useState<AsrarItem[]>(() => {
+    try {
+      const cached = localStorage.getItem('asrarhub_cached_articles_list') || localStorage.getItem('asrarhub_cached_explore_articles');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return [];
+  });
+  const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<Category | 'all' | 'favoris'>(initialFilter);
   const [layoutMode, setLayoutMode] = useState<LayoutMode>('grid2');
@@ -410,6 +419,9 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
       setItems(merged);
       setIsLoading(false);
     };
+
+    // Restore cached articles immediately for zero latency offline access
+    tryRestoreCachedOrDefaults();
 
     // Direct REST API fetch to guarantee real articles load on Capacitor/mobile WebView
     fetchArticlesFromRest().then(restDocs => {
@@ -805,73 +817,172 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
         </AnimatePresence>
 
         {featureToggles['tool_store'] !== 'inactive' && (
-          <Link
-            id="tour-store"
-            to="/store"
-            className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50 hover:bg-amber-100 dark:hover:bg-amber-900/50 h-[34px] w-[34px] sm:h-[42px] sm:w-[42px] flex items-center justify-center shadow-sm flex-shrink-0 transition-opacity duration-200 ${isSearchOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
-            title="Store"
+          <motion.div
+            whileHover={{ scale: 1.08, y: -1.5 }}
+            whileTap={{ scale: 0.92 }}
+            className={`relative flex-shrink-0 transition-opacity duration-200 ${isSearchOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
           >
-            <Store className="w-[15px] h-[15px] sm:w-[18px] sm:h-[18px]" />
-          </Link>
+            <Link
+              id="tour-store"
+              to="/store"
+              className="group relative p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-gradient-to-br from-amber-500/15 via-amber-500/10 to-amber-600/20 dark:from-amber-900/40 dark:via-amber-800/30 dark:to-amber-950/50 text-amber-600 dark:text-amber-400 border border-amber-300/50 dark:border-amber-700/50 h-[34px] w-[34px] sm:h-[42px] sm:w-[42px] flex items-center justify-center shadow-sm overflow-hidden"
+              title="Store"
+            >
+              <motion.div
+                className="absolute inset-0 bg-gradient-to-tr from-transparent via-amber-200/30 dark:via-amber-400/20 to-transparent opacity-0 group-hover:opacity-100"
+                animate={{ x: ['-100%', '200%'] }}
+                transition={{ repeat: Infinity, duration: 2.5, ease: 'linear' }}
+              />
+              <motion.div
+                animate={{ y: [0, -1.5, 0], scale: [1, 1.05, 1] }}
+                transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
+              >
+                <Store className="w-[15px] h-[15px] sm:w-[18px] sm:h-[18px] drop-shadow-[0_1px_3px_rgba(245,158,11,0.4)]" />
+              </motion.div>
+            </Link>
+          </motion.div>
         )}
 
         {featureToggles['tool_lexique'] !== 'inactive' && (
-          <Link
-            id="tour-lexique"
-            to="/explore/lexique"
-            className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-purple-50 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-800/50 hover:bg-purple-100 dark:hover:bg-purple-900/50 h-[34px] w-[34px] sm:h-[42px] sm:w-[42px] flex items-center justify-center shadow-sm flex-shrink-0 transition-opacity duration-200 ${isSearchOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
-            title={t('nav.lexique', 'Lexique')}
+          <motion.div
+            whileHover={{ scale: 1.08, y: -1.5 }}
+            whileTap={{ scale: 0.92 }}
+            className={`relative flex-shrink-0 transition-opacity duration-200 ${isSearchOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
           >
-            <Library className="w-[15px] h-[15px] sm:w-[18px] sm:h-[18px]" />
-          </Link>
+            <Link
+              id="tour-lexique"
+              to="/explore/lexique"
+              className="group relative p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-gradient-to-br from-purple-500/15 via-purple-500/10 to-indigo-600/20 dark:from-purple-900/40 dark:via-purple-800/30 dark:to-indigo-950/50 text-purple-600 dark:text-purple-400 border border-purple-300/50 dark:border-purple-700/50 h-[34px] w-[34px] sm:h-[42px] sm:w-[42px] flex items-center justify-center shadow-sm overflow-hidden"
+              title={t('nav.lexique', 'Lexique')}
+            >
+              <motion.div
+                className="absolute inset-0 bg-gradient-to-tr from-transparent via-purple-200/30 dark:via-purple-400/20 to-transparent opacity-0 group-hover:opacity-100"
+                animate={{ x: ['-100%', '200%'] }}
+                transition={{ repeat: Infinity, duration: 2.8, ease: 'linear' }}
+              />
+              <motion.div
+                animate={{ rotate: [0, -3, 3, 0], scale: [1, 1.05, 1] }}
+                transition={{ repeat: Infinity, duration: 3.2, ease: 'easeInOut' }}
+              >
+                <Library className="w-[15px] h-[15px] sm:w-[18px] sm:h-[18px] drop-shadow-[0_1px_3px_rgba(168,85,247,0.4)]" />
+              </motion.div>
+            </Link>
+          </motion.div>
         )}
 
         {featureToggles['tool_quran'] !== 'inactive' && (
-          <Link
-            id="tour-quran"
-            to="/tools/quran"
-            className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 h-[34px] w-[34px] sm:h-[42px] sm:w-[42px] flex items-center justify-center shadow-sm flex-shrink-0 transition-opacity duration-200 ${isSearchOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
-            title="Le Saint Coran"
+          <motion.div
+            whileHover={{ scale: 1.08, y: -1.5 }}
+            whileTap={{ scale: 0.92 }}
+            className={`relative flex-shrink-0 transition-opacity duration-200 ${isSearchOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
           >
-            <BookOpen className="w-[15px] h-[15px] sm:w-[18px] sm:h-[18px]" />
-          </Link>
+            <Link
+              id="tour-quran"
+              to="/tools/quran"
+              className="group relative p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-gradient-to-br from-emerald-500/15 via-emerald-500/10 to-teal-600/20 dark:from-emerald-900/40 dark:via-emerald-800/30 dark:to-teal-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-300/50 dark:border-emerald-700/50 h-[34px] w-[34px] sm:h-[42px] sm:w-[42px] flex items-center justify-center shadow-sm overflow-hidden"
+              title="Le Saint Coran"
+            >
+              <motion.div
+                className="absolute inset-0 bg-gradient-to-tr from-transparent via-emerald-200/30 dark:via-emerald-400/20 to-transparent opacity-0 group-hover:opacity-100"
+                animate={{ x: ['-100%', '200%'] }}
+                transition={{ repeat: Infinity, duration: 2.3, ease: 'linear' }}
+              />
+              <motion.div
+                animate={{ scale: [1, 1.08, 1], rotate: [0, 2, -2, 0] }}
+                transition={{ repeat: Infinity, duration: 2.7, ease: 'easeInOut' }}
+              >
+                <BookOpen className="w-[15px] h-[15px] sm:w-[18px] sm:h-[18px] drop-shadow-[0_1px_3px_rgba(16,185,129,0.4)]" />
+              </motion.div>
+            </Link>
+          </motion.div>
         )}
 
-        <Link
-          id="tour-calendar-mystic"
-          to="/explore/calendar"
-          className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/50 hover:bg-amber-100 dark:hover:bg-amber-900/50 h-[34px] w-[34px] sm:h-[42px] sm:w-[42px] flex items-center justify-center shadow-sm flex-shrink-0 transition-opacity duration-200 ${isSearchOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
-          title="Calendrier Mystique"
+        <motion.div
+          whileHover={{ scale: 1.08, y: -1.5 }}
+          whileTap={{ scale: 0.92 }}
+          className={`relative flex-shrink-0 transition-opacity duration-200 ${isSearchOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
         >
-          <Calendar className="w-[15px] h-[15px] sm:w-[18px] sm:h-[18px]" />
-        </Link>
+          <Link
+            id="tour-calendar-mystic"
+            to="/explore/calendar"
+            className="group relative p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-gradient-to-br from-amber-500/15 via-amber-500/10 to-orange-600/20 dark:from-amber-900/40 dark:via-amber-800/30 dark:to-orange-950/50 text-amber-600 dark:text-amber-400 border border-amber-300/50 dark:border-amber-700/50 h-[34px] w-[34px] sm:h-[42px] sm:w-[42px] flex items-center justify-center shadow-sm overflow-hidden"
+            title="Calendrier Mystique"
+          >
+            <motion.div
+              className="absolute inset-0 bg-gradient-to-tr from-transparent via-amber-200/30 dark:via-amber-400/20 to-transparent opacity-0 group-hover:opacity-100"
+              animate={{ x: ['-100%', '200%'] }}
+              transition={{ repeat: Infinity, duration: 3, ease: 'linear' }}
+            />
+            <motion.div
+              animate={{ y: [0, -1.5, 0], rotate: [0, 3, 0] }}
+              transition={{ repeat: Infinity, duration: 3.5, ease: 'easeInOut' }}
+            >
+              <Calendar className="w-[15px] h-[15px] sm:w-[18px] sm:h-[18px] drop-shadow-[0_1px_3px_rgba(245,158,11,0.4)]" />
+            </motion.div>
+          </Link>
+        </motion.div>
 
-        <button
-          id="tour-search"
-          onClick={() => setIsGlobalSearchOpen(true)}
-          className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 h-[34px] w-[34px] sm:h-[42px] sm:w-[42px] flex items-center justify-center shadow-sm flex-shrink-0 transition-opacity duration-200 ${isSearchOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
-          aria-label="Search"
+        <motion.div
+          whileHover={{ scale: 1.08, y: -1.5 }}
+          whileTap={{ scale: 0.92 }}
+          className={`relative flex-shrink-0 transition-opacity duration-200 ${isSearchOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
         >
-          <Search className="w-[15px] h-[15px] sm:w-[18px] sm:h-[18px]" />
-        </button>
+          <button
+            id="tour-search"
+            onClick={() => setIsGlobalSearchOpen(true)}
+            className="group relative p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-gradient-to-br from-gray-50 via-gray-100 to-gray-200 dark:from-gray-800 dark:via-gray-800 dark:to-gray-900 text-gray-700 dark:text-gray-200 border border-gray-300/60 dark:border-gray-700 h-[34px] w-[34px] sm:h-[42px] sm:w-[42px] flex items-center justify-center shadow-sm overflow-hidden"
+            aria-label="Search"
+          >
+            <motion.div
+              className="absolute inset-0 bg-gradient-to-tr from-transparent via-cyan-200/30 dark:via-cyan-400/20 to-transparent opacity-0 group-hover:opacity-100"
+              animate={{ x: ['-100%', '200%'] }}
+              transition={{ repeat: Infinity, duration: 2.2, ease: 'linear' }}
+            />
+            <motion.div
+              animate={{ scale: [1, 1.08, 1], rotate: [0, 8, 0] }}
+              transition={{ repeat: Infinity, duration: 3.8, ease: 'easeInOut' }}
+            >
+              <Search className="w-[15px] h-[15px] sm:w-[18px] sm:h-[18px] drop-shadow-[0_1px_2px_rgba(0,0,0,0.3)]" />
+            </motion.div>
+          </button>
+        </motion.div>
 
         <div className={`relative transition-opacity duration-200 ${isSearchOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
-          <button
-            id="tour-filter"
-            onClick={() => setIsCategoryModalOpen(true)}
-            className={`p-1.5 sm:p-2 rounded-lg sm:rounded-xl border h-[34px] w-[34px] sm:h-[42px] sm:w-[42px] flex items-center justify-center transition-colors shadow-sm flex-shrink-0 relative ${
-              filter !== 'all' || isCategoryModalOpen
-                ? 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
-                : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
-            }`}
-            aria-label="Filter"
-            title="Catégories"
+          <motion.div
+            whileHover={{ scale: 1.08, y: -1.5 }}
+            whileTap={{ scale: 0.92 }}
           >
-            <Filter className="w-[15px] h-[15px] sm:w-[18px] sm:h-[18px]" />
-            {filter !== 'all' && (
-              <span className="absolute top-0 right-0 w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500 border border-white dark:border-gray-800" />
-            )}
-          </button>
+            <button
+              id="tour-filter"
+              onClick={() => setIsCategoryModalOpen(true)}
+              className={`group relative p-1.5 sm:p-2 rounded-lg sm:rounded-xl border h-[34px] w-[34px] sm:h-[42px] sm:w-[42px] flex items-center justify-center transition-colors shadow-sm flex-shrink-0 overflow-hidden ${
+                filter !== 'all' || isCategoryModalOpen
+                  ? 'bg-gradient-to-br from-emerald-500/20 via-emerald-500/10 to-teal-600/20 dark:from-emerald-900/50 dark:via-emerald-800/40 dark:to-teal-950/60 text-emerald-600 dark:text-emerald-400 border-emerald-400/60 dark:border-emerald-700'
+                  : 'bg-gradient-to-br from-gray-50 via-gray-100 to-gray-200 dark:from-gray-800 dark:via-gray-800 dark:to-gray-900 text-gray-700 dark:text-gray-200 border-gray-300/60 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700'
+              }`}
+              aria-label="Filter"
+              title="Catégories"
+            >
+              <motion.div
+                className="absolute inset-0 bg-gradient-to-tr from-transparent via-emerald-200/30 dark:via-emerald-400/20 to-transparent opacity-0 group-hover:opacity-100"
+                animate={{ x: ['-100%', '200%'] }}
+                transition={{ repeat: Infinity, duration: 2.4, ease: 'linear' }}
+              />
+              <motion.div
+                animate={{ scale: [1, 1.06, 1], y: [0, 1, 0] }}
+                transition={{ repeat: Infinity, duration: 3.1, ease: 'easeInOut' }}
+              >
+                <Filter className="w-[15px] h-[15px] sm:w-[18px] sm:h-[18px]" />
+              </motion.div>
+              {filter !== 'all' && (
+                <motion.span
+                  animate={{ scale: [1, 1.3, 1] }}
+                  transition={{ repeat: Infinity, duration: 2 }}
+                  className="absolute top-0.5 right-0.5 w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-emerald-500 border border-white dark:border-gray-800 shadow-[0_0_6px_rgba(16,185,129,0.8)]"
+                />
+              )}
+            </button>
+          </motion.div>
 
           {/* Categories Filter Modal */}
           <AnimatePresence>

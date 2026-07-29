@@ -80,8 +80,17 @@ export const ExploreDashboard: React.FC = () => {
     { arabic: "الْحَمْدُ لِلَّهِ الَّذِي بِنِعْمَتِهِ تَتِمُّ الصَّالِحَاتُ", french: t('exploreDashboard.wisdom.4.text', "Louange à Allah par la grâce de qui s'accomplissent les bonnes œuvres."), source: t('exploreDashboard.wisdom.4.source', "Invocation prophétique") },
   ];
   const [sagesse, setSagesse] = useState(sagesses[0]);
-  const [articles, setArticles] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [articles, setArticles] = useState<any[]>(() => {
+    try {
+      const cached = localStorage.getItem('asrarhub_cached_explore_articles') || localStorage.getItem('asrarhub_cached_articles_list');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return [];
+  });
+  const [isLoading, setIsLoading] = useState(false);
   const [visibleCount, setVisibleCount] = useState(3);
   const [bookmarks, setBookmarks] = useState<string[]>([]);
   const [selectedArticle, setSelectedArticle] = useState<any | null>(null);
@@ -222,6 +231,9 @@ export const ExploreDashboard: React.FC = () => {
       setArticles(merged);
       setIsLoading(false);
     };
+
+    // Restore cached/local articles immediately so articles are available offline with zero latency
+    tryRestoreExploreCacheOrDefaults();
 
     // Direct REST API fetch to guarantee real articles load on Capacitor/mobile WebView
     fetchArticlesFromRest().then(restDocs => {

@@ -5,7 +5,7 @@ import { LayoutTester } from './components/LayoutTester';
 import { useAuth } from './contexts/AuthContext';
 import { useLanguage } from './contexts/LanguageContext';
 import { AuthModal } from './components/AuthModal';
-import { ShieldAlert, LogIn, RefreshCw, Sparkles } from 'lucide-react';
+import { ShieldAlert, LogIn, RefreshCw, Sparkles, WifiOff, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { db, isAutoSaveEnabled } from './lib/firebase';
 import { BottomNav } from './components/BottomNav';
@@ -130,7 +130,7 @@ const PlaceholderPage = ({ title }: { title: string }) => (
 const FaqButton = () => {
   const { featureToggles } = useFeatures();
   
-  if (featureToggles['tool_faq'] === 'inactive' || featureToggles['assistantIconVisible'] === false) return null;
+  if (featureToggles['tool_faq'] === 'inactive' || featureToggles['assistantIconVisible'] !== true) return null;
   
   return (
     <Link 
@@ -153,6 +153,7 @@ const NetworkStatus = () => {
   const [isOnline, setIsOnline] = React.useState(navigator.onLine);
   const [checking, setChecking] = React.useState(false);
   const [statusFeedback, setStatusFeedback] = React.useState<string | null>(null);
+  const [isDismissed, setIsDismissed] = React.useState(false);
 
   const handleTestWebViewFetch = async () => {
     setChecking(true);
@@ -203,6 +204,7 @@ const NetworkStatus = () => {
       fetch('https://www.google.com/favicon.ico', { method: 'HEAD', mode: 'no-cors' })
         .then(() => {
           setIsOnline(true);
+          setIsDismissed(false);
           console.log("[NetworkStatus] Connection verified successfully via fetch.");
         })
         .catch(() => {
@@ -213,6 +215,7 @@ const NetworkStatus = () => {
 
     const handleOnline = () => {
       setIsOnline(true);
+      setIsDismissed(false);
       console.log("[NetworkStatus] Device went online.");
     };
     const handleOffline = () => {
@@ -226,25 +229,6 @@ const NetworkStatus = () => {
     // Initial check on mount
     if (!navigator.onLine) {
       doubleCheckOnline();
-    }
-
-    // Capacitor / WebView specific environment logging for debugging
-    console.log(`[NetworkStatus] Diagnostic check on boot:`);
-    console.log(` - navigator.onLine: ${navigator.onLine}`);
-    console.log(` - window.location.origin: "${window.location.origin}"`);
-    console.log(` - window.location.protocol: "${window.location.protocol}"`);
-    console.log(` - navigator.userAgent: "${navigator.userAgent}"`);
-
-    if (
-      window.location.protocol === 'file:' || 
-      window.location.origin.includes('localhost') || 
-      window.location.origin.includes('capacitor:')
-    ) {
-      console.info(
-        `[NetworkStatus] Detected Mobile Capacitor WebView environment. ` +
-        `Ensure that target API server CORS headers allow "${window.location.origin}" ` +
-        `and that SSL certificates are fully valid (auto-signed or HTTP connections may be blocked by iOS/Android).`
-      );
     }
 
     return () => {
@@ -273,33 +257,86 @@ const NetworkStatus = () => {
 
   if (isOnline && !statusFeedback) return null;
 
+  // If user dismissed modal while offline, show a subtle floating pill at bottom corner to let them re-open or check
+  if (isDismissed && !isOnline) {
+    return (
+      <button 
+        onClick={() => setIsDismissed(false)}
+        className="fixed bottom-20 left-4 z-[9990] bg-amber-600 hover:bg-amber-700 text-white text-xs px-3 py-1.5 rounded-full flex items-center gap-2 shadow-lg transition-all font-medium cursor-pointer border-0"
+        title="Connexion hors ligne - Cliquer pour ouvrir les détails"
+      >
+        <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+        <span>Hors ligne (Mode local)</span>
+      </button>
+    );
+  }
+
+  // Pop Up Modal avertissant l'utilisateur qu'il est hors ligne
   return (
-    <div className="fixed top-0 left-0 right-0 z-[10001] bg-red-600 text-white text-center py-2 text-xs font-semibold shadow-md flex flex-col sm:flex-row items-center justify-center gap-2 px-4 animate-bounce">
-      <div className="flex items-center gap-1.5">
-        <span className="w-2 h-2 rounded-full bg-white animate-ping" />
-        <span>{!isOnline ? "Connexion Internet perdue. Mode hors ligne activé." : "Mode Diagnostic Réseau WebView Activé"}</span>
-      </div>
-      <div className="flex flex-wrap items-center justify-center gap-2">
+    <div className="fixed inset-0 z-[10001] bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+      <div className="bg-white dark:bg-slate-900 border border-amber-500/30 dark:border-amber-500/20 text-slate-800 dark:text-slate-100 rounded-2xl shadow-2xl p-6 max-w-md w-full relative space-y-4">
+        {/* Close Button X */}
         <button 
-          onClick={handleCheckStatus}
-          disabled={checking}
-          className="px-2 py-0.5 bg-white text-red-600 hover:bg-red-50 disabled:bg-white/50 rounded text-[10px] font-bold transition-all cursor-pointer border-0 uppercase tracking-wider"
+          onClick={() => setIsDismissed(true)}
+          className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-white p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer border-0"
+          title="Fermer la notification"
         >
-          {checking ? "Analyse..." : "Vérifier le statut"}
+          <X className="w-5 h-5" />
         </button>
-        <button 
-          onClick={handleTestWebViewFetch}
-          disabled={checking}
-          className="px-2 py-0.5 bg-red-900 text-white hover:bg-red-950 border border-red-400 disabled:opacity-50 rounded text-[10px] font-bold transition-all cursor-pointer uppercase tracking-wider"
-          title="Tester si le WebView Capacitor bloque les requêtes (CORS / Schème local)"
-        >
-          Diag WebView / CORS
-        </button>
+
+        <div className="flex items-start gap-4">
+          <div className="p-3 bg-amber-500/10 dark:bg-amber-500/20 rounded-xl text-amber-600 dark:text-amber-400 shrink-0">
+            <WifiOff className="w-7 h-7" />
+          </div>
+          <div className="space-y-1 pr-4">
+            <h3 className="font-bold text-lg text-slate-900 dark:text-white flex items-center gap-2">
+              {!isOnline ? "Connexion Hors Ligne" : "Diagnostic Réseau"}
+            </h3>
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              {!isOnline 
+                ? "Vous êtes actuellement hors ligne. Vos articles publiés, wirds et données enregistrées restent consultables localement sans connexion."
+                : "Ajustement ou analyse de la connectivité réseau en cours."
+              }
+            </p>
+          </div>
+        </div>
+
+        {/* Status Feedback readout */}
         {statusFeedback && (
-          <span className="text-[10px] bg-red-950 border border-red-500 px-2 py-0.5 rounded font-mono text-amber-200">
+          <div className="p-3 bg-slate-950 text-amber-200 text-xs font-mono rounded-xl border border-amber-500/30 break-words">
             {statusFeedback}
-          </span>
+          </div>
         )}
+
+        {/* Actions */}
+        <div className="pt-2 border-t border-slate-200 dark:border-slate-800 flex flex-col gap-2">
+          <div className="flex flex-wrap gap-2">
+            <button 
+              onClick={handleCheckStatus}
+              disabled={checking}
+              className="flex-1 px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 border-0"
+            >
+              {checking ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : null}
+              {checking ? "Analyse..." : "Vérifier le statut"}
+            </button>
+
+            <button 
+              onClick={handleTestWebViewFetch}
+              disabled={checking}
+              className="flex-1 px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-xl text-xs font-semibold transition-all cursor-pointer border-0"
+              title="Tester si le WebView Capacitor bloque les requêtes (CORS / Schème local)"
+            >
+              Diag WebView / CORS
+            </button>
+          </div>
+
+          <button 
+            onClick={() => setIsDismissed(true)}
+            className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-md text-center cursor-pointer border-0"
+          >
+            Compris / Continuer en mode local
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -557,12 +594,12 @@ export default function App() {
   // Real-Time Planetary Hours Push Notifications & Forced Permissions (Notifications + Microphone)
   React.useEffect(() => {
     requestAllPermissions();
-    checkAndTriggerPlanetaryNotification();
+    checkAndTriggerPlanetaryNotification(language as any);
     const interval = setInterval(() => {
-      checkAndTriggerPlanetaryNotification();
+      checkAndTriggerPlanetaryNotification(language as any);
     }, 5 * 60 * 1000); // Check every 5 minutes
     return () => clearInterval(interval);
-  }, []);
+  }, [language]);
 
   const isCompletedOnboarding = hasCompletedOnboarding || 
     sessionStorage.getItem('hasCompletedOnboarding') === 'true' || 
@@ -742,11 +779,34 @@ export default function App() {
         lastCheckedMinute = currentMinute;
         const currentTimeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
         
+        const currentLang = (language || localStorage.getItem('language') || 'fr') as 'fr' | 'en' | 'ha';
+
         // Custom manually created reminders
         reminders.forEach((rem: any) => {
           if (rem.enabled && rem.time === currentTimeString) {
-            const title = rem.isZikr ? 'Rappel de Zikr Quotidien 📿' : 'AsrarHub';
-            const body = rem.isZikr ? `Il est temps pour votre Zikr : ${rem.label}` : `Il est temps pour : ${rem.label}`;
+            let title = '';
+            let body = '';
+            if (rem.isZikr) {
+              if (currentLang === 'en') {
+                title = 'Daily Dhikr Reminder 📿';
+                body = `It is time for your Dhikr: ${rem.label}`;
+              } else if (currentLang === 'ha') {
+                title = 'Tunasatar Dhikri 📿';
+                body = `Lokaci ya yi na Dhikri: ${rem.label}`;
+              } else {
+                title = 'Rappel de Zikr Quotidien 📿';
+                body = `Il est temps pour votre Zikr : ${rem.label}`;
+              }
+            } else {
+              title = 'AsrarHub';
+              if (currentLang === 'en') {
+                body = `Time for: ${rem.label}`;
+              } else if (currentLang === 'ha') {
+                body = `Lokaci ya yi na: ${rem.label}`;
+              } else {
+                body = `Il est temps pour : ${rem.label}`;
+              }
+            }
             dispatchNotification(title, body);
           }
         });
@@ -758,8 +818,18 @@ export default function App() {
               const lastPrayerDate = autoRemindersConfig.lastPrayerReminders?.[prayer];
               if (lastPrayerDate !== todayDateStr) {
                 // Trigger notification
-                const title = `Heure de la Prière 🕌`;
-                const body = `C'est l'heure de la prière de ${prayer} (${time}). Prenez un moment sacré pour invoquer Dieu.`;
+                let title = '';
+                let body = '';
+                if (currentLang === 'en') {
+                  title = 'Prayer Time 🕌';
+                  body = `It is time for ${prayer} prayer (${time}). Take a sacred moment to pray.`;
+                } else if (currentLang === 'ha') {
+                  title = 'Lokacin Salati 🕌';
+                  body = `Lokacin salati ya yi na ${prayer} (${time}). Samu lokaci mai albarka don rokon Allah.`;
+                } else {
+                  title = `Heure de la Prière 🕌`;
+                  body = `C'est l'heure de la prière de ${prayer} (${time}). Prenez un moment sacré pour invoquer Dieu.`;
+                }
                 dispatchNotification(title, body);
 
                 // Update last triggering date
@@ -779,8 +849,19 @@ export default function App() {
         const lastDhikrTime = autoRemindersConfig.lastDhikrReminder || 0;
         const intervalMs = (autoRemindersConfig.dhikrInterval || 60) * 60 * 1000;
         if (Date.now() - lastDhikrTime >= intervalMs) {
-          const title = `Rappel de Dhikr Récurrent 📿`;
-          const body = `C'est l'heure d'évoquer Allah. Prenez une minute pour faire votre Zikr et purifier votre esprit.`;
+          const currentLang = (language || localStorage.getItem('language') || 'fr') as 'fr' | 'en' | 'ha';
+          let title = '';
+          let body = '';
+          if (currentLang === 'en') {
+            title = 'Recurring Dhikr Reminder 📿';
+            body = `It is time to remember Allah. Take a minute to do your Dhikr and purify your heart.`;
+          } else if (currentLang === 'ha') {
+            title = 'Tunasatar Dhikri Mai Maimaitawa 📿';
+            body = `Lokacin ambaton Allah ya yi. Samu minti daya don yin Dhikri da tsarkake zuciya.`;
+          } else {
+            title = `Rappel de Dhikr Récurrent 📿`;
+            body = `C'est l'heure d'évoquer Allah. Prenez une minute pour faire votre Zikr et purifier votre esprit.`;
+          }
           dispatchNotification(title, body);
 
           // Update last triggering time
@@ -972,7 +1053,7 @@ export default function App() {
       </main>
         {featureToggles['tool_inspector'] === 'active' && <LayoutTester />}
         <FaqButton />
-        {featureToggles['sacredAudioPlayerVisible'] !== false && <SacredAudioPlayer />}
+        {featureToggles['sacredAudioPlayerVisible'] === true && <SacredAudioPlayer />}
         <BottomNav />
 
         {/* Global Floating Repeat Mode (visible only when Quran is playing and NOT on the Quran page itself) */}

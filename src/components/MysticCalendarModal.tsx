@@ -1405,11 +1405,40 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                 {/* 1. Global Scale */}
-                <div className="p-2 bg-white/80 dark:bg-gray-800/80 rounded-xl border border-amber-500/20 space-y-1.5">
+                <div className="p-2.5 bg-white/80 dark:bg-gray-800/80 rounded-xl border border-amber-500/20 space-y-2">
                   <div className="flex items-center justify-between font-bold text-gray-800 dark:text-gray-200 text-[11px]">
                     <span>1. Carte Globale du Calendrier :</span>
                     <span className="font-mono text-amber-600 dark:text-amber-400">{Math.round(globalCardScale * 100)}%</span>
                   </div>
+
+                  {/* Presets */}
+                  <div className="flex items-center gap-1 flex-wrap">
+                    <span className="text-[10px] text-gray-400 font-semibold mr-0.5">Presets :</span>
+                    {[
+                      { label: '-5%', val: 0.95 },
+                      { label: '-10%', val: 0.90 },
+                      { label: '-15%', val: 0.85 },
+                      { label: '-20%', val: 0.80 },
+                      { label: '100%', val: 1.00 }
+                    ].map(preset => (
+                      <button
+                        key={`m-global-${preset.label}`}
+                        type="button"
+                        onClick={() => {
+                          setGlobalCardScale(preset.val);
+                          localStorage.setItem('asrarhub_admin_calendar_global_scale', preset.val.toString());
+                        }}
+                        className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
+                          Math.abs(globalCardScale - preset.val) < 0.01
+                            ? 'bg-amber-500 text-white shadow-sm'
+                            : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-amber-500/20'
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
@@ -1420,7 +1449,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                     </button>
                     <input
                       type="range"
-                      min="0.6"
+                      min="0.5"
                       max="1.6"
                       step="0.05"
                       value={globalCardScale}
@@ -1442,11 +1471,40 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                 </div>
 
                 {/* 2. Sub-Cards Scale */}
-                <div className="p-2 bg-white/80 dark:bg-gray-800/80 rounded-xl border border-amber-500/20 space-y-1.5">
+                <div className="p-2.5 bg-white/80 dark:bg-gray-800/80 rounded-xl border border-amber-500/20 space-y-2">
                   <div className="flex items-center justify-between font-bold text-gray-800 dark:text-gray-200 text-[11px]">
                     <span>2. Cartes Intérieures (Sous-Cartes) :</span>
                     <span className="font-mono text-amber-600 dark:text-amber-400">{Math.round(subCardScale * 100)}%</span>
                   </div>
+
+                  {/* Presets */}
+                  <div className="flex items-center gap-1 flex-wrap">
+                    <span className="text-[10px] text-gray-400 font-semibold mr-0.5">Presets :</span>
+                    {[
+                      { label: '-5%', val: 0.95 },
+                      { label: '-10%', val: 0.90 },
+                      { label: '-15%', val: 0.85 },
+                      { label: '-20%', val: 0.80 },
+                      { label: '100%', val: 1.00 }
+                    ].map(preset => (
+                      <button
+                        key={`m-sub-${preset.label}`}
+                        type="button"
+                        onClick={() => {
+                          setSubCardScale(preset.val);
+                          localStorage.setItem('asrarhub_admin_calendar_subcards_scale', preset.val.toString());
+                        }}
+                        className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
+                          Math.abs(subCardScale - preset.val) < 0.01
+                            ? 'bg-amber-500 text-white shadow-sm'
+                            : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-amber-500/20'
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
@@ -1457,7 +1515,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                     </button>
                     <input
                       type="range"
-                      min="0.6"
+                      min="0.5"
                       max="1.6"
                       step="0.05"
                       value={subCardScale}

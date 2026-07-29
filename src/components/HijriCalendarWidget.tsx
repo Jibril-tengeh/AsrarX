@@ -296,7 +296,7 @@ export const HijriCalendarWidget: React.FC = () => {
               <span className="text-base font-black tracking-tight text-slate-900 dark:text-white">
                 Asrar<span className="text-emerald-600 dark:text-emerald-400">Hub</span>
               </span>
-              <span className="text-[11px] font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-800">
+              <span className="text-[8px] font-bold text-emerald-800 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-[7px] py-[0.5px] rounded-full border border-emerald-200 dark:border-emerald-800">
                 {hijri.day} {monthName} {hijri.year} AH
               </span>
             </div>
@@ -384,8 +384,8 @@ export const HijriCalendarWidget: React.FC = () => {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {/* Control 1: Global Card Scale */}
-                    <div className="p-3 rounded-xl bg-white/90 dark:bg-slate-900/90 border border-amber-500/30 flex flex-col justify-between shadow-sm">
-                      <div className="flex items-center justify-between mb-2">
+                    <div className="p-3 rounded-xl bg-white/90 dark:bg-slate-900/90 border border-amber-500/30 flex flex-col justify-between shadow-sm space-y-2">
+                      <div className="flex items-center justify-between">
                         <span className="font-bold text-slate-800 dark:text-slate-200 text-xs flex items-center gap-1.5">
                           <Maximize2 className="w-3.5 h-3.5 text-amber-600" />
                           Carte Globale du Calendrier
@@ -394,6 +394,35 @@ export const HijriCalendarWidget: React.FC = () => {
                           {Math.round(globalCardScale * 100)}%
                         </span>
                       </div>
+
+                      {/* Presets */}
+                      <div className="flex items-center gap-1 flex-wrap">
+                        <span className="text-[10px] text-gray-400 font-semibold mr-0.5">Presets :</span>
+                        {[
+                          { label: '-5%', val: 0.95 },
+                          { label: '-10%', val: 0.90 },
+                          { label: '-15%', val: 0.85 },
+                          { label: '-20%', val: 0.80 },
+                          { label: '100%', val: 1.00 }
+                        ].map(preset => (
+                          <button
+                            key={`w-global-${preset.label}`}
+                            type="button"
+                            onClick={() => {
+                              setGlobalCardScale(preset.val);
+                              localStorage.setItem('asrarhub_admin_calendar_global_scale', preset.val.toString());
+                            }}
+                            className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
+                              Math.abs(globalCardScale - preset.val) < 0.01
+                                ? 'bg-amber-500 text-white shadow-sm'
+                                : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-amber-500/20'
+                            }`}
+                          >
+                            {preset.label}
+                          </button>
+                        ))}
+                      </div>
+
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
@@ -405,7 +434,7 @@ export const HijriCalendarWidget: React.FC = () => {
                         </button>
                         <input
                           type="range"
-                          min="0.6"
+                          min="0.5"
                           max="1.6"
                           step="0.05"
                           value={globalCardScale}
@@ -428,8 +457,8 @@ export const HijriCalendarWidget: React.FC = () => {
                     </div>
 
                     {/* Control 2: Sub-Cards Scale */}
-                    <div className="p-3 rounded-xl bg-white/90 dark:bg-slate-900/90 border border-amber-500/30 flex flex-col justify-between shadow-sm">
-                      <div className="flex items-center justify-between mb-2">
+                    <div className="p-3 rounded-xl bg-white/90 dark:bg-slate-900/90 border border-amber-500/30 flex flex-col justify-between shadow-sm space-y-2">
+                      <div className="flex items-center justify-between">
                         <span className="font-bold text-slate-800 dark:text-slate-200 text-xs flex items-center gap-1.5">
                           <Minimize2 className="w-3.5 h-3.5 text-emerald-600" />
                           Cartes Intérieures (Sous-Cartes)
@@ -438,6 +467,35 @@ export const HijriCalendarWidget: React.FC = () => {
                           {Math.round(subCardScale * 100)}%
                         </span>
                       </div>
+
+                      {/* Presets */}
+                      <div className="flex items-center gap-1 flex-wrap">
+                        <span className="text-[10px] text-gray-400 font-semibold mr-0.5">Presets :</span>
+                        {[
+                          { label: '-5%', val: 0.95 },
+                          { label: '-10%', val: 0.90 },
+                          { label: '-15%', val: 0.85 },
+                          { label: '-20%', val: 0.80 },
+                          { label: '100%', val: 1.00 }
+                        ].map(preset => (
+                          <button
+                            key={`w-sub-${preset.label}`}
+                            type="button"
+                            onClick={() => {
+                              setSubCardScale(preset.val);
+                              localStorage.setItem('asrarhub_admin_calendar_subcards_scale', preset.val.toString());
+                            }}
+                            className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
+                              Math.abs(subCardScale - preset.val) < 0.01
+                                ? 'bg-amber-500 text-white shadow-sm'
+                                : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-amber-500/20'
+                            }`}
+                          >
+                            {preset.label}
+                          </button>
+                        ))}
+                      </div>
+
                       <div className="flex items-center gap-2">
                         <button
                           type="button"
@@ -449,7 +507,7 @@ export const HijriCalendarWidget: React.FC = () => {
                         </button>
                         <input
                           type="range"
-                          min="0.6"
+                          min="0.5"
                           max="1.6"
                           step="0.05"
                           value={subCardScale}

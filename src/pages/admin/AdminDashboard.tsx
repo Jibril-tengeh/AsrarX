@@ -4445,20 +4445,54 @@ export const AdminDashboard: React.FC = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-3 bg-white dark:bg-gray-800 rounded-xl border border-amber-500/20 space-y-2">
+                <div className="p-3 bg-white dark:bg-gray-800 rounded-xl border border-amber-500/20 space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-gray-800 dark:text-gray-200">
                       1. Carte Globale du Calendrier :
                     </span>
-                    <span className="font-mono text-xs font-black text-amber-600 dark:text-amber-400">
+                    <span className="font-mono text-xs font-black text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 px-2 py-0.5 rounded border border-amber-500/30">
                       {Math.round(calendarGlobalScale * 100)}%
+                      {calendarGlobalScale < 1 && (
+                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400 ml-1">
+                          (-{Math.round((1 - calendarGlobalScale) * 100)}%)
+                        </span>
+                      )}
                     </span>
                   </div>
+
+                  {/* Preset Quick Reduction Buttons */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[10px] text-gray-400 font-semibold mr-1">Réductions :</span>
+                    {[
+                      { label: '-5%', val: 0.95 },
+                      { label: '-10%', val: 0.90 },
+                      { label: '-15%', val: 0.85 },
+                      { label: '-20%', val: 0.80 },
+                      { label: '100%', val: 1.00 }
+                    ].map(preset => (
+                      <button
+                        key={`global-${preset.label}`}
+                        type="button"
+                        onClick={() => {
+                          setCalendarGlobalScale(preset.val);
+                          localStorage.setItem('asrarhub_admin_calendar_global_scale', preset.val.toString());
+                        }}
+                        className={`px-2 py-0.5 rounded text-[11px] font-bold transition-all cursor-pointer ${
+                          Math.abs(calendarGlobalScale - preset.val) < 0.01
+                            ? 'bg-amber-500 text-white shadow-sm scale-105'
+                            : 'bg-gray-100 dark:bg-gray-700/80 text-gray-700 dark:text-gray-300 hover:bg-amber-500/20'
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() => {
-                        const next = Math.max(0.6, Math.round((calendarGlobalScale - 0.05) * 100) / 100);
+                        const next = Math.max(0.5, Math.round((calendarGlobalScale - 0.05) * 100) / 100);
                         setCalendarGlobalScale(next);
                         localStorage.setItem('asrarhub_admin_calendar_global_scale', next.toString());
                       }}
@@ -4468,7 +4502,7 @@ export const AdminDashboard: React.FC = () => {
                     </button>
                     <input
                       type="range"
-                      min="0.6"
+                      min="0.5"
                       max="1.6"
                       step="0.05"
                       value={calendarGlobalScale}
@@ -4493,20 +4527,54 @@ export const AdminDashboard: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="p-3 bg-white dark:bg-gray-800 rounded-xl border border-amber-500/20 space-y-2">
+                <div className="p-3 bg-white dark:bg-gray-800 rounded-xl border border-amber-500/20 space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-gray-800 dark:text-gray-200">
                       2. Cartes Intérieures (Sous-Cartes) :
                     </span>
-                    <span className="font-mono text-xs font-black text-amber-600 dark:text-amber-400">
+                    <span className="font-mono text-xs font-black text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 px-2 py-0.5 rounded border border-amber-500/30">
                       {Math.round(calendarSubCardScale * 100)}%
+                      {calendarSubCardScale < 1 && (
+                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400 ml-1">
+                          (-{Math.round((1 - calendarSubCardScale) * 100)}%)
+                        </span>
+                      )}
                     </span>
                   </div>
+
+                  {/* Preset Quick Reduction Buttons */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[10px] text-gray-400 font-semibold mr-1">Réductions :</span>
+                    {[
+                      { label: '-5%', val: 0.95 },
+                      { label: '-10%', val: 0.90 },
+                      { label: '-15%', val: 0.85 },
+                      { label: '-20%', val: 0.80 },
+                      { label: '100%', val: 1.00 }
+                    ].map(preset => (
+                      <button
+                        key={`sub-${preset.label}`}
+                        type="button"
+                        onClick={() => {
+                          setCalendarSubCardScale(preset.val);
+                          localStorage.setItem('asrarhub_admin_calendar_subcards_scale', preset.val.toString());
+                        }}
+                        className={`px-2 py-0.5 rounded text-[11px] font-bold transition-all cursor-pointer ${
+                          Math.abs(calendarSubCardScale - preset.val) < 0.01
+                            ? 'bg-amber-500 text-white shadow-sm scale-105'
+                            : 'bg-gray-100 dark:bg-gray-700/80 text-gray-700 dark:text-gray-300 hover:bg-amber-500/20'
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() => {
-                        const next = Math.max(0.6, Math.round((calendarSubCardScale - 0.05) * 100) / 100);
+                        const next = Math.max(0.5, Math.round((calendarSubCardScale - 0.05) * 100) / 100);
                         setCalendarSubCardScale(next);
                         localStorage.setItem('asrarhub_admin_calendar_subcards_scale', next.toString());
                       }}
@@ -4516,7 +4584,7 @@ export const AdminDashboard: React.FC = () => {
                     </button>
                     <input
                       type="range"
-                      min="0.6"
+                      min="0.5"
                       max="1.6"
                       step="0.05"
                       value={calendarSubCardScale}
@@ -4707,14 +4775,14 @@ export const AdminDashboard: React.FC = () => {
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Afficher le bouton d'assistance :</span>
               <button
-                onClick={() => handleToggleFeature('assistantIconVisible', featureToggles['assistantIconVisible'] === false)}
+                onClick={() => handleToggleFeature('assistantIconVisible', featureToggles['assistantIconVisible'] !== true)}
                 className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors ${
-                  featureToggles['assistantIconVisible'] !== false ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
+                  featureToggles['assistantIconVisible'] === true ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
                 }`}
               >
                 <div
                   className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${
-                    featureToggles['assistantIconVisible'] !== false ? 'translate-x-6' : 'translate-x-0'
+                    featureToggles['assistantIconVisible'] === true ? 'translate-x-6' : 'translate-x-0'
                   }`}
                 />
               </button>
@@ -4727,27 +4795,27 @@ export const AdminDashboard: React.FC = () => {
             title="Widget Notification Flottant (432Hz & Celestial)"
             description="Affiche ou masque le bouton flottant '432Hz & Ciel' en bas à droite de l'application, et permet de régler sa taille."
             icon={<Radio size={18} className="text-amber-500 animate-pulse shrink-0" />}
-            badge={featureToggles['sacredAudioPlayerVisible'] !== false ? 'Actif' : 'Désactivé'}
+            badge={featureToggles['sacredAudioPlayerVisible'] === true ? 'Actif' : 'Désactivé'}
           >
             <div className="space-y-4">
               <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-800">
                 <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Activer le widget 432Hz :</span>
                 <button
-                  onClick={() => handleToggleFeature('sacredAudioPlayerVisible', featureToggles['sacredAudioPlayerVisible'] === false)}
+                  onClick={() => handleToggleFeature('sacredAudioPlayerVisible', featureToggles['sacredAudioPlayerVisible'] !== true)}
                   className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors cursor-pointer shrink-0 ${
-                    featureToggles['sacredAudioPlayerVisible'] !== false ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
+                    featureToggles['sacredAudioPlayerVisible'] === true ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
                   }`}
-                  title={featureToggles['sacredAudioPlayerVisible'] !== false ? "Cliquer pour désactiver" : "Cliquer pour activer"}
+                  title={featureToggles['sacredAudioPlayerVisible'] === true ? "Cliquer pour désactiver" : "Cliquer pour activer"}
                 >
                   <div
                     className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${
-                      featureToggles['sacredAudioPlayerVisible'] !== false ? 'translate-x-6' : 'translate-x-0'
+                      featureToggles['sacredAudioPlayerVisible'] === true ? 'translate-x-6' : 'translate-x-0'
                     }`}
                   />
                 </button>
               </div>
 
-              {featureToggles['sacredAudioPlayerVisible'] !== false && (
+              {featureToggles['sacredAudioPlayerVisible'] === true && (
                 <div className="space-y-4 pt-1">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                     <label className="text-sm font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-2">

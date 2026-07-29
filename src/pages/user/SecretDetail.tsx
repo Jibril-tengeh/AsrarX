@@ -703,7 +703,7 @@ export const SecretDetail: React.FC = () => {
         hook_fr: foundItem.hook_fr || foundItem.hook,
       };
     } else if (id) {
-      // Pre-load from local offline details cache for instant view
+      // Pre-load from local offline details cache or cached article lists for instant offline view
       try {
         const cachedDetails = JSON.parse(localStorage.getItem('asrarhub_cached_article_details') || '{}');
         if (cachedDetails[id]) {
@@ -714,6 +714,22 @@ export const SecretDetail: React.FC = () => {
             content_fr: cachedItem.content_fr || cachedItem.content,
             hook_fr: cachedItem.hook_fr || cachedItem.hook,
           };
+        } else {
+          // Check cached article lists from dashboard / explore / local storage
+          const cachedDashboard = JSON.parse(localStorage.getItem('asrarhub_cached_articles_list') || '[]');
+          const cachedExplore = JSON.parse(localStorage.getItem('asrarhub_cached_explore_articles') || '[]');
+          const localArticles = JSON.parse(localStorage.getItem('asrarhub_local_articles') || '[]');
+          
+          const combined = [...cachedDashboard, ...cachedExplore, ...localArticles];
+          const found = combined.find((art: any) => art.id === id);
+          if (found) {
+            initialItem = {
+              ...found,
+              title_fr: found.title_fr || found.title,
+              content_fr: found.content_fr || found.content,
+              hook_fr: found.hook_fr || found.hook,
+            };
+          }
         }
       } catch (e) {
         console.error("Error reading cached article detail", e);

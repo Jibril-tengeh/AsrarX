@@ -2373,12 +2373,14 @@ export const QuranFull: React.FC = () => {
         const todayDate = now.toDateString();
         
         if (lastReminded !== todayDate) {
+           const notifTitle = t('quran.readingReminderTitle', 'Rappel de lecture');
+           const notifBody = t('quran.readingReminderBody', 'Il est temps de lire votre portion quotidienne du Coran.');
            if ('Notification' in window && Notification.permission === 'granted') {
-             new Notification('Rappel de lecture', {
-                body: 'Il est temps de lire votre portion quotidienne du Coran.',
+             new Notification(notifTitle, {
+                body: notifBody,
              });
            }
-           alert('Rappel : Il est temps de lire votre portion quotidienne du Coran.');
+           alert(`${notifTitle} : ${notifBody}`);
            localStorage.setItem('asrarhub_last_reminder_date', todayDate);
         }
       }
