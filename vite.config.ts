@@ -7,6 +7,10 @@ import { VitePWA } from "vite-plugin-pwa";
 export default defineConfig(() => {
   return {
     base: "./",
+    build: {
+      target: ["es2020", "chrome80", "safari13"],
+      outDir: "dist",
+    },
     plugins: [
       react(),
       tailwindcss(),
