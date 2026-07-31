@@ -1,8 +1,10 @@
 import React, { useRef, useState } from 'react';
 import { BuniSystem } from '../data/buniSystemsData';
 import { Download, Image as ImageIcon, FileText, Sparkles, Check, Printer } from 'lucide-react';
-import { toPng } from 'html-to-image';
+import { toCanvas, toPng } from 'html-to-image';
 import { jsPDF } from 'jspdf';
+import { downloadCanvasImage } from '../utils/downloadHelper';
+import { AsrarHubWatermark } from './AsrarHubWatermark';
 
 interface BuniKhatimVisualizerProps {
   system: BuniSystem;
@@ -34,21 +36,21 @@ export const BuniKhatimVisualizer: React.FC<BuniKhatimVisualizerProps> = ({
     return system.rulesFr;
   };
 
-  // Download PNG Image of the Khatim
+  // Download PNG Image of the Khatim with automatic AsrarHub watermark
   const handleDownloadPNG = async () => {
     if (!khatimRef.current) return;
     try {
       setIsExporting(true);
-      const dataUrl = await toPng(khatimRef.current, {
+      const canvas = await toCanvas(khatimRef.current, {
         cacheBust: true,
         backgroundColor: '#fffbeb',
         pixelRatio: 2,
+        skipFonts: true,
+        fontEmbedCSS: '',
       });
 
-      const link = document.createElement('a');
-      link.download = `Al-Buni_Khatim_${system.id}_${system.titleAr.replace(/\s+/g, '_')}.png`;
-      link.href = dataUrl;
-      link.click();
+      const fileName = `Al-Buni_Khatim_${system.id}_${system.titleAr.replace(/\s+/g, '_')}.png`;
+      await downloadCanvasImage(canvas, fileName);
 
       setDownloadSuccess('png');
       setTimeout(() => setDownloadSuccess(null), 3000);
@@ -68,6 +70,8 @@ export const BuniKhatimVisualizer: React.FC<BuniKhatimVisualizerProps> = ({
         cacheBust: true,
         backgroundColor: '#fffbeb',
         pixelRatio: 2,
+        skipFonts: true,
+        fontEmbedCSS: '',
       });
 
       const pdf = new jsPDF({
@@ -309,6 +313,8 @@ export const BuniKhatimVisualizer: React.FC<BuniKhatimVisualizerProps> = ({
           backgroundSize: '16px 16px',
         }}
       >
+        {/* AsrarHub Watermark Overlay */}
+        <AsrarHubWatermark variant="parchment" opacity={0.16} showCentralSeal={true} />
         {/* Corner Filigree Deco */}
         <div className="absolute top-2 left-2 text-amber-800/40 text-xs font-serif font-bold">✧</div>
         <div className="absolute top-2 right-2 text-amber-800/40 text-xs font-serif font-bold">✧</div>

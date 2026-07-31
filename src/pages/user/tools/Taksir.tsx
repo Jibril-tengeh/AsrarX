@@ -93,42 +93,42 @@ export const Taksir: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 safe-area-pt pb-24 min-h-screen">
+    <div className="max-w-4xl w-full mx-auto p-4 sm:p-6 lg:p-8 safe-area-pt pb-24 min-h-screen box-border overflow-x-hidden">
       <div className="flex items-center gap-4 mb-6">
-        <Link to="/tools" className="p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 transition-colors">
+        <Link to="/tools" className="p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 transition-colors shrink-0">
           <ArrowLeft size={24} />
         </Link>
-        <div>
-           <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <Shuffle className="text-rose-500" />
-            {dict.title}
+        <div className="min-w-0 flex-1">
+           <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2 truncate">
+            <Shuffle className="text-rose-500 shrink-0" />
+            <span className="truncate">{dict.title}</span>
           </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-300 mt-1">{t("tools.taksir.description")}</p>
+          <p className="text-sm text-gray-500 dark:text-gray-300 mt-1 break-words">{t("tools.taksir.description")}</p>
         </div>
       </div>
 
-      <div className="bg-rose-50 dark:bg-rose-900/10 border border-rose-100 dark:border-rose-800/30 rounded-2xl p-5 mb-8 flex items-start gap-4">
-        <Info className="text-rose-500 shrink-0 mt-0.5" size={24} />
-        <p className="text-sm text-rose-800 dark:text-rose-200 font-medium leading-relaxed">
+      <div className="bg-rose-50 dark:bg-rose-900/10 border border-rose-100 dark:border-rose-800/30 rounded-2xl p-4 sm:p-5 mb-8 flex items-start gap-3 sm:gap-4">
+        <Info className="text-rose-500 shrink-0 mt-0.5" size={22} />
+        <p className="text-xs sm:text-sm text-rose-800 dark:text-rose-200 font-medium leading-relaxed min-w-0 flex-1 break-words">
           {dict.info}
         </p>
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 border border-gray-100 dark:border-gray-700 shadow-sm mb-8">
         <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-4">{dict.inputLabel}</label>
-        <div className="flex gap-4">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
            <input 
              type="text" 
              value={inputWord} 
              onChange={e => setInputWord(e.target.value)} 
              placeholder={dict.inputPlaceholder} 
-             className="flex-1 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 text-xl font-bold font-arabic text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-500"
+             className="w-full sm:flex-1 min-w-0 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl p-3.5 sm:p-4 text-lg sm:text-xl font-bold font-arabic text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-500"
              dir="auto"
            />
            <button 
              onClick={generateTaksir}
              disabled={!inputWord}
-             className="h-16 px-8 rounded-2xl bg-gradient-to-br from-orange-500 to-rose-600 text-white font-bold transition-transform hover:scale-105 active:scale-95 shadow-lg flex items-center gap-2 disabled:opacity-50 disabled:hover:scale-100"
+             className="h-14 sm:h-16 px-6 sm:px-8 rounded-2xl bg-gradient-to-br from-orange-500 to-rose-600 text-white font-bold transition-transform hover:scale-105 active:scale-95 shadow-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:hover:scale-100 shrink-0 cursor-pointer"
            >
               <Shuffle size={20} /> {dict.btnSubmit}
            </button>
@@ -144,22 +144,22 @@ export const Taksir: React.FC = () => {
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-white dark:bg-gray-800 rounded-3xl p-6 sm:p-8 border border-gray-100 dark:border-gray-700 shadow-sm"
+            className="bg-white dark:bg-gray-800 rounded-3xl p-4 sm:p-6 lg:p-8 border border-gray-100 dark:border-gray-700 shadow-sm"
           >
               <h3 className="text-sm font-bold uppercase tracking-widest text-gray-500 mb-6 text-center">{dict.matrixTitle(matrix.length)}</h3>
               
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto max-w-full">
                 <div className="inline-block min-w-full text-center">
                   {matrix.map((line, rowIdx) => (
                     <div 
                       key={rowIdx} 
-                      className={`flex justify-center gap-1 sm:gap-2 mb-2 ${rowIdx === 0 || rowIdx === matrix.length - 1 ? 'bg-rose-50 dark:bg-rose-900/20 rounded-xl p-2' : 'p-2'}`}
+                      className={`flex flex-wrap justify-center gap-1 sm:gap-2 mb-2 ${rowIdx === 0 || rowIdx === matrix.length - 1 ? 'bg-rose-50 dark:bg-rose-900/20 rounded-xl p-2' : 'p-2'}`}
                       dir="rtl"
                     >
                       {line.map((letter, colIdx) => (
                         <div 
                           key={colIdx} 
-                          className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl flex items-center justify-center font-arabic text-xl sm:text-2xl font-bold text-gray-900 dark:text-white"
+                          className="w-8 h-8 sm:w-10 sm:h-10 md:w-12 md:h-12 bg-gray-100 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl flex items-center justify-center font-arabic text-base sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white shrink-0"
                         >
                           {letter}
                         </div>
@@ -169,7 +169,7 @@ export const Taksir: React.FC = () => {
                 </div>
               </div>
 
-              <div className="mt-8 text-center text-sm font-medium text-gray-500 dark:text-gray-300">
+              <div className="mt-8 text-center text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-300 break-words">
                  {dict.matrixFooter}
               </div>
           </motion.div>

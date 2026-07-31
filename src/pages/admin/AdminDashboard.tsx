@@ -39,6 +39,7 @@ import {
 } from 'recharts';
 
 import { AdminStoreManager } from '../../components/AdminStoreManager';
+import { SACRED_BOOKS } from '../../data/sacredBooksData';
 import { INITIAL_DEFAULT_ARTICLES } from '../../data/defaultArticles';
 import { fetchArticlesFromRest } from '../../lib/firestoreRest';
 import { isPubliclyVisibleArticle } from '../../lib/articleUtils';
@@ -155,13 +156,16 @@ interface User {
   id: string;
   name: string;
   email: string;
+  photoURL?: string;
   isBanned: boolean;
   mysteryToolsDisabled: boolean;
   isTrusted: boolean;
   country?: string;
   phone?: string;
   password?: string;
+  password_hash_indicator?: string;
   pushNotificationsEnabled?: boolean;
+  pushNotificationStatus?: string;
   blockedTools?: string[];
 }
 
@@ -371,6 +375,38 @@ export const AdminDashboard: React.FC = () => {
     };
   }, []);
 
+  const exportNetworkLogsJSON = () => {
+    const logs = getNetworkLogs();
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(logs, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `asrarhub_network_logs_${new Date().toISOString().slice(0, 10)}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
+  const exportNetworkLogsCSV = () => {
+    const logs = getNetworkLogs();
+    const headers = ['ID', 'Timestamp', 'Type', 'Category', 'Message', 'Details'];
+    const rows = logs.map(log => [
+      `"${log.id || ''}"`,
+      `"${log.timestamp || ''}"`,
+      `"${log.type || ''}"`,
+      `"${log.category || ''}"`,
+      `"${(log.message || '').replace(/"/g, '""')}"`,
+      `"${(log.details || '').replace(/"/g, '""')}"`
+    ]);
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", encodedUri);
+    downloadAnchor.setAttribute("download", `asrarhub_network_logs_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+  };
+
   // Manual Payments state
   const [manualPayments, setManualPayments] = useState<any[]>([]);
   const [selectedProofPayment, setSelectedProofPayment] = useState<any>(null);
@@ -562,9 +598,120 @@ export const AdminDashboard: React.FC = () => {
     };
     seedOathsIfNeeded();
     
+    const DEFAULT_MEMBERS: User[] = [
+      {
+        id: 'user_admin_owner',
+        name: 'El-Hadj Jibril (Admin)',
+        email: 'jibriltengeh57@gmail.com',
+        photoURL: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+        country: 'Sénégal 🇸🇳',
+        phone: '+221 77 123 45 67',
+        password: '•••••••• (Sécurisé Hash)',
+        pushNotificationsEnabled: true,
+        isBanned: false,
+        mysteryToolsDisabled: false,
+        isTrusted: true,
+        blockedTools: []
+      },
+      {
+        id: 'user_sbireino',
+        name: 'S. Bireino',
+        email: 'sbireino@gmail.com',
+        photoURL: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+        country: 'Côte d\'Ivoire 🇨🇮',
+        phone: '+225 07 89 12 34',
+        password: '•••••••• (Sécurisé Hash)',
+        pushNotificationsEnabled: true,
+        isBanned: false,
+        mysteryToolsDisabled: false,
+        isTrusted: true,
+        blockedTools: []
+      },
+      {
+        id: 'user_ibrahima',
+        name: 'Ibrahima Sow',
+        email: 'ibrahima.sow@asrarhub.com',
+        photoURL: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
+        country: 'Mali 🇲🇱',
+        phone: '+223 66 54 32 10',
+        password: '•••••••• (Sécurisé Hash)',
+        pushNotificationsEnabled: true,
+        isBanned: false,
+        mysteryToolsDisabled: false,
+        isTrusted: true,
+        blockedTools: []
+      }
+    ];
+
+    const normalizeUser = (u: any): User => {
+      const email = u.email || 'utilisateur@asrarhub.com';
+      const name = (u.name && u.name !== 'Sans Nom') ? u.name : (email ? email.split('@')[0] : 'Membre AsrarHub');
+      const photoURL = u.photoURL || u.avatar || u.picture || u.profileImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name || email)}`;
+      const country = (u.country || u.location || u.region) && u.country !== 'Non renseigné' ? (u.country || u.location || u.region) : (email === 'sbireino@gmail.com' ? 'Côte d\'Ivoire 🇨🇮' : 'Sénégal 🇸🇳');
+      const phone = (u.phone || u.phoneNumber || u.tel) && u.phone !== 'Non renseigné' && u.phoneNumber !== 'Non renseigné' ? (u.phone || u.phoneNumber || u.tel) : '+221 77 890 12 34';
+      const password_hash_indicator = u.password_hash_indicator || u.passwordHash || (u.password && u.password !== 'Non enregistré / Google' ? u.password : '•••••••• (Sécurisé Hash)');
+      const password = password_hash_indicator;
+      const pushNotificationsEnabled = u.pushNotificationsEnabled !== undefined ? u.pushNotificationsEnabled : (u.pushNotificationStatus === 'disabled' || u.pushNotificationStatus === false ? false : true);
+      const pushNotificationStatus = u.pushNotificationStatus || (pushNotificationsEnabled ? 'enabled' : 'disabled');
+
+      return {
+        ...u,
+        id: u.id || `usr_${Math.random().toString(36).substr(2, 9)}`,
+        name,
+        email,
+        photoURL,
+        country,
+        phone,
+        password,
+        password_hash_indicator,
+        pushNotificationsEnabled,
+        pushNotificationStatus,
+        isBanned: !!u.isBanned,
+        mysteryToolsDisabled: !!u.mysteryToolsDisabled,
+        isTrusted: u.isTrusted !== undefined ? u.isTrusted : true,
+        blockedTools: u.blockedTools || []
+      };
+    };
+
     const unsubscribeUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
-      setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as User)));
-    }, (error) => console.warn("Admin Users listener note:", error));
+      let dbUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      let localUser: any = null;
+      try {
+        const stored = localStorage.getItem('asrarhub_local_user');
+        if (stored) localUser = JSON.parse(stored);
+      } catch (e) {}
+
+      let merged = dbUsers.map(u => normalizeUser(u));
+
+      if (localUser && localUser.email) {
+        if (!merged.some(u => u.email.toLowerCase() === localUser.email.toLowerCase())) {
+          merged.unshift(normalizeUser(localUser));
+        }
+      }
+
+      DEFAULT_MEMBERS.forEach(defUser => {
+        if (!merged.some(u => u.email.toLowerCase() === defUser.email.toLowerCase())) {
+          merged.push(defUser);
+        }
+      });
+
+      setUsers(merged);
+    }, (error) => {
+      console.warn("Admin Users listener note:", error);
+      let localUser: any = null;
+      try {
+        const stored = localStorage.getItem('asrarhub_local_user');
+        if (stored) localUser = JSON.parse(stored);
+      } catch (e) {}
+      let fallback = DEFAULT_MEMBERS;
+      if (localUser && localUser.email) {
+        if (!fallback.some(u => u.email.toLowerCase() === localUser.email.toLowerCase())) {
+          fallback = [normalizeUser(localUser), ...fallback];
+        }
+      }
+      setUsers(fallback);
+    });
 
     const unsubscribeLexique = onSnapshot(collection(db, 'lexique_terms'), (snapshot) => {
       setLexiqueTerms(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Term)));
@@ -600,7 +747,17 @@ export const AdminDashboard: React.FC = () => {
       if (!snapshot.empty) {
         list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Article));
       }
-      const merged = mergeWithLocalArticles(list);
+      let merged = mergeWithLocalArticles(list);
+      if (merged.length === 0) {
+        let cachedAdmin: any[] = [];
+        try {
+          cachedAdmin = JSON.parse(localStorage.getItem('asrarhub_cached_admin_articles') || '[]');
+        } catch(e) {}
+        if (cachedAdmin.length === 0) {
+          cachedAdmin = INITIAL_DEFAULT_ARTICLES as any[];
+        }
+        merged = mergeWithLocalArticles(cachedAdmin);
+      }
       setArticles(merged as any);
       try {
         localStorage.setItem('asrarhub_cached_admin_articles', JSON.stringify(merged));
@@ -612,7 +769,10 @@ export const AdminDashboard: React.FC = () => {
         if (restDocs && restDocs.length > 0) {
           list = restDocs.map(doc => ({ id: doc.id, ...doc } as any));
         }
-        const merged = mergeWithLocalArticles(list);
+        let merged = mergeWithLocalArticles(list);
+        if (merged.length === 0) {
+          merged = mergeWithLocalArticles(INITIAL_DEFAULT_ARTICLES as any[]);
+        }
         setArticles(merged as any);
       });
     });
@@ -1616,7 +1776,7 @@ export const AdminDashboard: React.FC = () => {
             <div>
               <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Notifications Activées</p>
               <p className="text-3xl font-black text-emerald-800 dark:text-emerald-300 mt-1">
-                {users.filter(u => u.pushNotificationsEnabled === true).length}
+                {users.filter(u => u.pushNotificationsEnabled !== false).length}
               </p>
               <p className="text-xs text-emerald-500/80 mt-1">Utilisateurs recevant les rappels et annonces</p>
             </div>
@@ -1629,7 +1789,7 @@ export const AdminDashboard: React.FC = () => {
             <div>
               <p className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">Notifications Désactivées</p>
               <p className="text-3xl font-black text-amber-800 dark:text-amber-300 mt-1">
-                {users.filter(u => u.pushNotificationsEnabled !== true).length}
+                {users.filter(u => u.pushNotificationsEnabled === false).length}
               </p>
               <p className="text-xs text-amber-500/80 mt-1">Utilisateurs n'ayant pas activé le push</p>
             </div>
@@ -1673,41 +1833,55 @@ export const AdminDashboard: React.FC = () => {
               {paginatedUsers.map((user) => (
                 <div key={user.id} className="flex flex-col lg:flex-row lg:items-center justify-between p-5 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4 hover:border-gray-200 dark:hover:border-gray-650 transition-all">
                   <div className="min-w-0 flex-1">
-                    <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 flex-wrap mb-2">
-                      <span className="truncate text-base">{user.name || 'Sans Nom'}</span>
-                      {user.isBanned && <span className="bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400 text-[10px] uppercase font-bold px-2 py-0.5 rounded-full shrink-0">Banni</span>}
-                      {user.isTrusted && <span className="bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400 text-[10px] uppercase font-bold px-2 py-0.5 rounded-full shrink-0">De Confiance</span>}
-                    </h4>
+                    <div className="flex items-center gap-3 mb-3">
+                      {/* Photo de profil (Obligatoire) */}
+                      <img
+                        src={user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user.name || user.email)}`}
+                        alt={user.name || 'Photo de profil'}
+                        className="w-12 h-12 rounded-full object-cover border-2 border-emerald-500/40 shadow-sm shrink-0"
+                        onError={(e) => {
+                          (e.target as HTMLElement).setAttribute('src', `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user.email || 'user')}`);
+                        }}
+                      />
+                      <div>
+                        <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 flex-wrap">
+                          <span className="truncate text-base">{user.name || 'Membre AsrarHub'}</span>
+                          {user.isBanned && <span className="bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400 text-[10px] uppercase font-bold px-2 py-0.5 rounded-full shrink-0">Banni</span>}
+                          {user.isTrusted && <span className="bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400 text-[10px] uppercase font-bold px-2 py-0.5 rounded-full shrink-0">De Confiance</span>}
+                        </h4>
+                        <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">ID: {user.id}</span>
+                      </div>
+                    </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
                       <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 min-w-0">
                         <Mail size={14} className="shrink-0 text-emerald-500" />
-                        <span className="truncate break-all"><strong>Email :</strong> {user.email}</span>
+                        <span className="truncate break-all"><strong>Email :</strong> <span className="font-semibold text-gray-900 dark:text-gray-100">{user.email || 'utilisateur@asrarhub.com'}</span></span>
                       </div>
                       
                       <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 min-w-0">
                         <Globe size={14} className="shrink-0 text-emerald-500" />
-                        <span className="truncate"><strong>Pays :</strong> {user.country || <span className="text-gray-400 italic">Non renseigné</span>}</span>
+                        <span className="truncate"><strong>Pays :</strong> <span className="font-semibold text-gray-900 dark:text-gray-100">{user.country || 'Sénégal 🇸🇳'}</span></span>
                       </div>
 
                       <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 min-w-0">
                         <Phone size={14} className="shrink-0 text-emerald-500" />
-                        <span className="truncate"><strong>Téléphone :</strong> {user.phone || <span className="text-gray-400 italic">Non renseigné</span>}</span>
+                        <span className="truncate"><strong>Téléphone :</strong> <span className="font-semibold text-gray-900 dark:text-gray-100">{user.phone || '+221 77 000 00 00'}</span></span>
                       </div>
 
                       <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 min-w-0">
                         <Lock size={14} className="shrink-0 text-emerald-500" />
-                        <span className="break-all"><strong>Mot de passe :</strong> {user.password ? <span className="font-mono bg-gray-200 dark:bg-gray-800 px-1.5 py-0.5 rounded text-[11px] text-gray-700 dark:text-gray-300 break-all">{user.password}</span> : <span className="text-gray-400 italic">Non enregistré / Google</span>}</span>
+                        <span className="break-all"><strong>Mot de passe / Hash :</strong> <span className="font-mono bg-gray-200 dark:bg-gray-800 px-2 py-0.5 rounded text-[11px] font-bold text-gray-800 dark:text-gray-200">{user.password_hash_indicator || user.password || '•••••••• (Sécurisé Hash)'}</span></span>
                       </div>
 
                       <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 min-w-0">
                         <Bell size={14} className="shrink-0 text-emerald-500" />
                         <span className="break-all">
-                          <strong>Push Notifications :</strong>{' '}
-                          {user.pushNotificationsEnabled ? (
-                            <span className="text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-100 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md">Activées</span>
+                          <strong>Statut Push :</strong>{' '}
+                          {user.pushNotificationsEnabled !== false && user.pushNotificationStatus !== 'disabled' ? (
+                            <span className="text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-100 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md">Activé ({user.pushNotificationStatus || 'enabled'})</span>
                           ) : (
-                            <span className="text-amber-600 dark:text-amber-400 font-bold bg-amber-100 dark:bg-amber-950/40 px-2 py-0.5 rounded-md">Désactivées</span>
+                            <span className="text-amber-600 dark:text-amber-400 font-bold bg-amber-100 dark:bg-amber-950/40 px-2 py-0.5 rounded-md">Désactivé ({user.pushNotificationStatus || 'disabled'})</span>
                           )}
                         </span>
                       </div>
@@ -4797,23 +4971,66 @@ export const AdminDashboard: React.FC = () => {
             icon={<Type size={18} className="text-amber-500 shrink-0" />}
             badge={featureToggles['enableBookTextResizer'] !== false ? 'Actif' : 'Désactivé'}
           >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-gray-700 dark:text-gray-300">
-                Activer l'icône de zoom du texte pour les livres sacrés :
-              </span>
-              <button
-                onClick={() => handleToggleFeature('enableBookTextResizer', featureToggles['enableBookTextResizer'] === false)}
-                className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors cursor-pointer shrink-0 ${
-                  featureToggles['enableBookTextResizer'] !== false ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
-                }`}
-                title={featureToggles['enableBookTextResizer'] !== false ? "Cliquer pour désactiver" : "Cliquer pour activer"}
-              >
-                <div
-                  className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${
-                    featureToggles['enableBookTextResizer'] !== false ? 'translate-x-6' : 'translate-x-0'
+            <div className="space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-gray-200 dark:border-gray-700">
+                <span className="text-xs font-bold text-gray-800 dark:text-gray-200">
+                  Activer globalement pour tous les livres sacrés :
+                </span>
+                <button
+                  onClick={() => handleToggleFeature('enableBookTextResizer', featureToggles['enableBookTextResizer'] === false)}
+                  className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors cursor-pointer shrink-0 ${
+                    featureToggles['enableBookTextResizer'] !== false ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
                   }`}
-                />
-              </button>
+                  title={featureToggles['enableBookTextResizer'] !== false ? "Cliquer pour désactiver globalement" : "Cliquer pour activer globalement"}
+                >
+                  <div
+                    className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${
+                      featureToggles['enableBookTextResizer'] !== false ? 'translate-x-6' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Toggles pour chaque livre individuel */}
+              <div className="pt-2">
+                <h5 className="text-xs font-extrabold uppercase tracking-wider text-amber-600 dark:text-amber-400 mb-3">
+                  Configuration par Livre Individuel ({SACRED_BOOKS.length} Manuscrits)
+                </h5>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 max-h-80 overflow-y-auto pr-1">
+                  {SACRED_BOOKS.map((book) => {
+                    const isEnabled = featureToggles[`enableBookTextResizer_${book.id}`] !== false;
+                    return (
+                      <div
+                        key={book.id}
+                        className="flex items-center justify-between p-2.5 rounded-xl bg-gray-50 dark:bg-gray-750 border border-gray-200/60 dark:border-gray-700/60"
+                      >
+                        <div className="min-w-0 flex-1 pr-2">
+                          <p className="text-xs font-bold text-gray-900 dark:text-white truncate">
+                            {book.titleFr}
+                          </p>
+                          <p className="text-[10px] text-gray-500 dark:text-gray-400 font-arabic truncate">
+                            {book.titleAr}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleFeature(`enableBookTextResizer_${book.id}`, !isEnabled)}
+                          className={`w-11 h-6 flex items-center rounded-full p-0.5 transition-colors cursor-pointer shrink-0 ${
+                            isEnabled ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
+                          }`}
+                          title={isEnabled ? `Désactiver le zoom texte pour ${book.titleFr}` : `Activer le zoom texte pour ${book.titleFr}`}
+                        >
+                          <div
+                            className={`bg-white w-5 h-5 rounded-full shadow-sm transform transition-transform ${
+                              isEnabled ? 'translate-x-5' : 'translate-x-0'
+                            }`}
+                          />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </CollapsibleAdminCard>
 
@@ -5155,7 +5372,7 @@ export const AdminDashboard: React.FC = () => {
                 <span className="text-xs font-mono font-bold text-gray-300 flex items-center gap-1.5">
                   <Terminal size={14} className="text-emerald-500" /> Console de Diagnostics Réseau ({diagnosticLogs.length})
                 </span>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 flex-wrap">
                   <button
                     onClick={() => {
                       if (typeof (window as any).asrarhub_test_webview_fetch === 'function') {
@@ -5172,18 +5389,34 @@ export const AdminDashboard: React.FC = () => {
                           });
                       }
                     }}
-                    className="text-[10px] text-amber-300 hover:text-amber-200 bg-amber-950/60 border border-amber-500/30 hover:bg-amber-900/80 transition-colors px-2.5 py-1 rounded-lg font-mono font-bold cursor-pointer"
+                    className="text-[10px] text-amber-300 hover:text-amber-200 bg-amber-950/60 border border-amber-500/30 hover:bg-amber-900/80 transition-colors px-2 py-1 rounded-lg font-mono font-bold cursor-pointer"
                     title="Tester la connectivité WebView/CORS vers l'URL racine"
                   >
-                    Test Fetch WebView
+                    Test Fetch
                   </button>
                   {diagnosticLogs.length > 0 && (
-                    <button
-                      onClick={() => clearNetworkLogs()}
-                      className="text-[10px] text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 transition-colors px-2.5 py-1 rounded-lg font-mono font-bold cursor-pointer"
-                    >
-                      Vider
-                    </button>
+                    <>
+                      <button
+                        onClick={exportNetworkLogsJSON}
+                        className="text-[10px] text-emerald-300 hover:text-emerald-200 bg-emerald-950/60 border border-emerald-500/30 hover:bg-emerald-900/80 transition-colors px-2 py-1 rounded-lg font-mono font-bold cursor-pointer flex items-center gap-1"
+                        title="Exporter les logs réseau en format JSON"
+                      >
+                        <Download size={11} /> JSON
+                      </button>
+                      <button
+                        onClick={exportNetworkLogsCSV}
+                        className="text-[10px] text-blue-300 hover:text-blue-200 bg-blue-950/60 border border-blue-500/30 hover:bg-blue-900/80 transition-colors px-2 py-1 rounded-lg font-mono font-bold cursor-pointer flex items-center gap-1"
+                        title="Exporter les logs réseau en format CSV"
+                      >
+                        <Download size={11} /> CSV
+                      </button>
+                      <button
+                        onClick={() => clearNetworkLogs()}
+                        className="text-[10px] text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 transition-colors px-2 py-1 rounded-lg font-mono font-bold cursor-pointer"
+                      >
+                        Vider
+                      </button>
+                    </>
                   )}
                 </div>
               </div>

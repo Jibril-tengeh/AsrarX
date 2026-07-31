@@ -533,7 +533,10 @@
     },
     "sacred-books": {
       "title": "Sacred Manuscripts Library",
-      "description": "In-depth theurgic analyses of sacred books from Al-Buni, Majriti, Ibn Arabi, Jifr, Jazuli, and great sages, with 3D Seals and downloadable Parchments."
+      "subtitle": "In-depth theurgic analyses, trilingual introductions & downloadable Seals (PNG & Parchment)",
+      "tooltip": "Compendium of in-depth studies of major esoteric books from Al-Buni, Ibn Arabi, Majriti, Jazuli, and ancient sages. Each manuscript includes a 3-language analysis and its downloadable sacred Khatim.",
+      "description": "In-depth theurgic analyses of sacred books from Al-Buni, Majriti, Ibn Arabi, Jifr, Jazuli, and great sages, with 3D Seals and downloadable Parchments.",
+      "search": "Search for a book, an author..."
     },
     "protectionModal": {
       "premiumAccess": "Premium Access Only",

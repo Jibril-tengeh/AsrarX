@@ -290,7 +290,7 @@ export const DailyGoalsTracker: React.FC = () => {
   }
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700 relative overflow-hidden transition-all duration-300">
+    <div className="bg-white dark:bg-gray-800 rounded-3xl p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700 relative overflow-hidden transition-all duration-300 w-full max-w-full min-w-0">
       {/* Background ambient light */}
       {isAllCompleted && (
         <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-teal-500/5 pointer-events-none" />
@@ -299,12 +299,12 @@ export const DailyGoalsTracker: React.FC = () => {
       {/* Clickable Header is always visible */}
       <div 
         onClick={() => setIsExpanded(!isExpanded)}
-        className="flex justify-between items-center gap-3 cursor-pointer select-none"
+        className="flex justify-between items-center gap-2 sm:gap-3 cursor-pointer select-none w-full max-w-full min-w-0"
       >
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
           <CalendarCheck className="text-emerald-500 shrink-0" size={22} />
-          <div>
-            <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 text-lg">
+          <div className="min-w-0 flex-1">
+            <h3 className="font-bold text-gray-900 dark:text-white flex flex-wrap items-center gap-1.5 sm:gap-2 text-base sm:text-lg min-w-0">
               {t('dailyGoals.title', 'Objectifs du Jour')}
               {syncStatus === 'synced' && (
                 <span className="inline-flex items-center gap-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded-full border border-emerald-100/30 dark:border-emerald-800/30" onClick={(e) => e.stopPropagation()}>
@@ -323,13 +323,13 @@ export const DailyGoalsTracker: React.FC = () => {
               )}
             </h3>
             {!isExpanded ? (
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate max-w-full">
                 {total > 0 
                   ? `${completedCount}/${total} (${percentage}%) - ${t('dailyGoals.clickToExpand', 'Cliquez pour voir')}`
                   : t('dailyGoals.emptyShort', 'Aucun objectif défini - Cliquez pour ajouter')}
               </p>
             ) : (
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate max-w-full">
                 {t('dailyGoals.subtitle', 'Routines et rituels spirituels quotidiens')}
               </p>
             )}
@@ -390,15 +390,15 @@ export const DailyGoalsTracker: React.FC = () => {
             initial={{ opacity: 0, height: 0, marginTop: 0 }}
             animate={{ opacity: 1, height: 'auto', marginTop: 20 }}
             exit={{ opacity: 0, height: 0, marginTop: 0 }}
-            className="overflow-hidden"
+            className="overflow-hidden w-full max-w-full"
           >
             {/* Action buttons */}
-            <div className="flex justify-end gap-2 mb-4">
+            <div className="flex flex-wrap justify-end gap-2 mb-4 w-full max-w-full">
               {goals.length > 0 && (
                 <button
                   type="button"
                   onClick={handleClearAll}
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 bg-red-50 dark:bg-red-900/20 px-3 py-1.5 rounded-xl transition-colors border border-red-100/50 dark:border-red-800/30 cursor-pointer"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 bg-red-50 dark:bg-red-900/20 px-3 py-1.5 rounded-xl transition-colors border border-red-100/50 dark:border-red-800/30 cursor-pointer shrink-0"
                   title={t('dailyGoals.clearAll', 'Tout effacer')}
                 >
                   <Trash2 size={14} />
@@ -409,7 +409,7 @@ export const DailyGoalsTracker: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowAddForm(!showAddForm)}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-1.5 rounded-xl transition-colors border border-emerald-100/50 dark:border-emerald-800/30 cursor-pointer"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-1.5 rounded-xl transition-colors border border-emerald-100/50 dark:border-emerald-800/30 cursor-pointer shrink-0"
               >
                 <PlusCircle size={14} />
                 {t('dailyGoals.add', 'Ajouter une routine')}
@@ -417,17 +417,17 @@ export const DailyGoalsTracker: React.FC = () => {
             </div>
 
             {/* Progress Section */}
-            <div className="mb-6 bg-gray-50 dark:bg-gray-900/50 rounded-2xl p-4 border border-gray-100/50 dark:border-gray-800/50">
+            <div className="mb-6 bg-gray-50 dark:bg-gray-900/50 rounded-2xl p-3.5 sm:p-4 border border-gray-100/50 dark:border-gray-800/50 w-full max-w-full min-w-0 overflow-hidden">
               <button
                 type="button"
                 onClick={() => setShowProgress(!showProgress)}
-                className="w-full flex justify-between items-center focus:outline-none cursor-pointer"
+                className="w-full flex justify-between items-center focus:outline-none cursor-pointer min-w-0 gap-2"
               >
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1.5 select-none">
-                  <Activity size={16} className="text-emerald-500" />
-                  {t('dailyGoals.progress', 'Progression globale')}
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1.5 select-none min-w-0 truncate">
+                  <Activity size={16} className="text-emerald-500 shrink-0" />
+                  <span className="truncate">{t('dailyGoals.progress', 'Progression globale')}</span>
                 </span>
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 shrink-0">
                   <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
                     {completedCount}/{total} ({percentage}%)
                   </span>
@@ -441,7 +441,7 @@ export const DailyGoalsTracker: React.FC = () => {
                     initial={{ opacity: 0, height: 0, marginTop: 0 }}
                     animate={{ opacity: 1, height: 'auto', marginTop: 12 }}
                     exit={{ opacity: 0, height: 0, marginTop: 0 }}
-                    className="overflow-hidden"
+                    className="overflow-hidden w-full max-w-full"
                   >
                     <div className="w-full bg-gray-200 dark:bg-gray-700 h-2.5 rounded-full overflow-hidden">
                       <motion.div 
@@ -457,10 +457,10 @@ export const DailyGoalsTracker: React.FC = () => {
                         initial={{ opacity: 0, y: 10, scale: 0.95 }}
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: -10 }}
-                        className="mt-3 flex items-center gap-2 text-emerald-700 dark:text-emerald-400 text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/40 p-2.5 rounded-xl border border-emerald-100 dark:border-emerald-900/30"
+                        className="mt-3 flex items-center gap-2 text-emerald-700 dark:text-emerald-400 text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/40 p-2.5 rounded-xl border border-emerald-100 dark:border-emerald-900/30 w-full max-w-full min-w-0"
                       >
-                        <Sparkles size={14} className="text-amber-500 animate-pulse" />
-                        <span>{t('dailyGoals.completedAll', 'Félicitations ! Tous vos objectifs spirituels sont atteints pour aujourd\'hui.')}</span>
+                        <Sparkles size={14} className="text-amber-500 animate-pulse shrink-0" />
+                        <span className="min-w-0 break-words">{t('dailyGoals.completedAll', 'Félicitations ! Tous vos objectifs spirituels sont atteints pour aujourd\'hui.')}</span>
                       </motion.div>
                     )}
                   </motion.div>
@@ -476,22 +476,22 @@ export const DailyGoalsTracker: React.FC = () => {
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}
                   onSubmit={handleAddGoal}
-                  className="mb-4 overflow-hidden"
+                  className="mb-4 overflow-hidden w-full max-w-full"
                 >
-                  <div className="flex gap-2 p-1">
+                  <div className="flex flex-wrap sm:flex-nowrap gap-2 p-1 w-full max-w-full min-w-0 items-center">
                     <input
                       type="text"
                       placeholder={t('dailyGoals.inputPlaceholder', 'Ex: Lire sourate Al-Mulk, Faire l\'aumône...')}
                       value={newGoalText}
                       onChange={(e) => setNewGoalText(e.target.value)}
-                      className="flex-1 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+                      className="flex-1 min-w-0 w-full max-w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
                       maxLength={80}
                       required
                       autoFocus
                     />
                     <button
                       type="submit"
-                      className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-xl text-sm font-bold transition-colors shadow-sm flex items-center gap-1 shrink-0"
+                      className="bg-emerald-500 hover:bg-emerald-600 text-white px-3 sm:px-4 py-2 rounded-xl text-xs sm:text-sm font-bold transition-colors shadow-sm flex items-center justify-center gap-1 shrink-0 whitespace-nowrap cursor-pointer"
                     >
                       {t('common.add', 'Ajouter')}
                     </button>
@@ -506,12 +506,12 @@ export const DailyGoalsTracker: React.FC = () => {
                 {t('dailyGoals.empty', 'Aucun objectif quotidien défini. Commencez par en ajouter un !')}
               </div>
             ) : (
-              <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+              <div className="space-y-2 max-h-72 overflow-y-auto pr-1 w-full max-w-full min-w-0">
                 {goals.map((goal) => (
                   <motion.div
                     key={goal.id}
                     layoutId={goal.id}
-                    className={`flex items-center justify-between p-3 rounded-2xl border transition-all ${
+                    className={`flex items-center justify-between p-3 rounded-2xl border transition-all w-full max-w-full min-w-0 gap-2 ${
                       goal.completed 
                         ? 'bg-emerald-50/20 border-emerald-100/50 dark:bg-emerald-950/10 dark:border-emerald-900/30' 
                         : 'bg-white dark:bg-gray-800 border-gray-100 dark:border-gray-750 hover:bg-gray-50 dark:hover:bg-gray-750'
@@ -519,7 +519,7 @@ export const DailyGoalsTracker: React.FC = () => {
                   >
                     <button
                       onClick={() => handleToggle(goal.id)}
-                      className="flex items-center gap-3 text-left flex-1"
+                      className="flex items-center gap-2.5 sm:gap-3 text-left flex-1 min-w-0"
                     >
                       <div className="shrink-0 text-emerald-500 hover:scale-110 transition-transform">
                         {goal.completed ? (
@@ -528,7 +528,7 @@ export const DailyGoalsTracker: React.FC = () => {
                           <Circle size={20} className="text-gray-300 dark:text-gray-600 hover:text-emerald-500" />
                         )}
                       </div>
-                      <span className={`text-sm font-medium transition-all ${
+                      <span className={`text-xs sm:text-sm font-medium transition-all break-words min-w-0 flex-1 ${
                         goal.completed 
                           ? 'text-gray-400 dark:text-gray-500 line-through' 
                           : 'text-gray-800 dark:text-gray-200'
@@ -539,7 +539,7 @@ export const DailyGoalsTracker: React.FC = () => {
 
                     <button
                       onClick={() => handleDeleteGoal(goal.id)}
-                      className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors ml-2"
+                      className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors shrink-0"
                       title={t('common.delete', 'Supprimer')}
                     >
                       <Trash2 size={14} />

@@ -35,6 +35,7 @@ import {
 import { generateAndDownloadSealCard } from '../utils/sealCanvasExporter';
 import { useAuth } from '../contexts/AuthContext';
 import { KhatimVisualizer } from './KhatimVisualizer';
+import { AsrarHubWatermark } from './AsrarHubWatermark';
 
 interface LunarSealVarietiesSectionProps {
   language: 'fr' | 'en' | 'ha';
@@ -55,6 +56,8 @@ export const LunarSealVarietiesSection: React.FC<LunarSealVarietiesSectionProps>
   const [copiedSymbol, setCopiedSymbol] = useState<boolean>(false);
   const [isDownloading, setIsDownloading] = useState<boolean>(false);
   const [isFullScreen, setIsFullScreen] = useState<boolean>(false);
+
+  const sealDetailsRef = React.useRef<HTMLDivElement>(null);
 
   // Admin Management State
   const [showAdminPanel, setShowAdminPanel] = useState<boolean>(false);
@@ -344,7 +347,7 @@ export const LunarSealVarietiesSection: React.FC<LunarSealVarietiesSectionProps>
           className={`py-2 px-3.5 text-xs font-bold rounded-xl transition-all whitespace-nowrap cursor-pointer ${
             selectedGroup === 'all'
               ? 'bg-amber-500 text-black shadow-lg scale-[1.02]'
-              : 'bg-purple-950/40 text-purple-200 border border-purple-500/30 hover:bg-purple-900/50'
+              : 'bg-white dark:bg-purple-950/40 text-purple-900 dark:text-purple-200 border border-purple-200 dark:border-purple-500/30 hover:bg-purple-50 dark:hover:bg-purple-900/50 shadow-sm'
           }`}
         >
           {language === 'fr'
@@ -380,7 +383,7 @@ export const LunarSealVarietiesSection: React.FC<LunarSealVarietiesSectionProps>
               className={`py-2 px-3.5 text-xs font-bold rounded-xl transition-all whitespace-nowrap cursor-pointer ${
                 selectedGroup === gNum
                   ? 'bg-amber-500 text-black shadow-lg scale-[1.02]'
-                  : 'bg-purple-950/40 text-purple-200 border border-purple-500/30 hover:bg-purple-900/50'
+                  : 'bg-white dark:bg-purple-950/40 text-purple-900 dark:text-purple-200 border border-purple-200 dark:border-purple-500/30 hover:bg-purple-50 dark:hover:bg-purple-900/50 shadow-sm'
               }`}
             >
               {groupTitle}
@@ -401,27 +404,36 @@ export const LunarSealVarietiesSection: React.FC<LunarSealVarietiesSectionProps>
               onClick={() => {
                 setSelectedSealId(seal.id);
                 setSelectedVersion(1);
+                setTimeout(() => {
+                  sealDetailsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 50);
               }}
               className={`p-2.5 rounded-2xl border text-left transition-all duration-300 flex flex-col justify-between gap-1.5 cursor-pointer relative overflow-hidden ${
                 isSelected
-                  ? 'bg-purple-900/80 border-amber-400 shadow-xl shadow-purple-900/40 ring-2 ring-amber-400/40 scale-[1.02]'
-                  : 'bg-black/60 border-purple-500/20 hover:border-purple-500/50 hover:bg-purple-950/30'
+                  ? 'bg-gradient-to-r from-purple-900 to-purple-950 border-amber-400 shadow-xl shadow-purple-900/40 ring-2 ring-amber-400/40 scale-[1.02] text-white'
+                  : 'bg-white dark:bg-black/60 border-purple-200 dark:border-purple-500/20 hover:border-purple-400 dark:hover:border-purple-500/50 hover:bg-purple-50/80 dark:hover:bg-purple-950/30 shadow-sm'
               }`}
             >
               <div>
                 <div className="flex items-center justify-between gap-1 mb-1">
-                  <span className="text-[10px] font-mono font-bold text-purple-300">
+                  <span className={`text-[10px] font-mono font-bold ${
+                    isSelected ? 'text-purple-200' : 'text-purple-700 dark:text-purple-300'
+                  }`}>
                     #{seal.id.replace('seal_', '')}
                   </span>
                   {getStatusBadge(seal.status)}
                 </div>
 
-                <h4 className="text-xs font-bold text-gray-100 line-clamp-2 leading-tight">
+                <h4 className={`text-xs font-bold line-clamp-2 leading-tight ${
+                  isSelected ? 'text-white' : 'text-gray-900 dark:text-gray-100'
+                }`}>
                   {seal.title}
                 </h4>
               </div>
 
-              <span className="text-[11px] font-serif font-semibold text-amber-300 truncate block mt-1" dir="rtl">
+              <span className={`text-[11px] font-serif font-semibold truncate block mt-1 ${
+                isSelected ? 'text-amber-300' : 'text-amber-800 dark:text-amber-300'
+              }`} dir="rtl">
                 {seal.arabicName}
               </span>
             </button>
@@ -431,7 +443,7 @@ export const LunarSealVarietiesSection: React.FC<LunarSealVarietiesSectionProps>
 
       {/* Active Seal Detailed Inspector Card */}
       {activeSeal && (
-        <div className="bg-gradient-to-b from-purple-950/40 to-black/90 border border-purple-500/40 rounded-3xl p-4 sm:p-6 shadow-2xl space-y-6">
+        <div ref={sealDetailsRef} className="scroll-mt-20 bg-gradient-to-b from-purple-950/90 via-[#100422] to-black border border-purple-500/40 rounded-3xl p-4 sm:p-6 shadow-2xl space-y-6 text-white">
           {/* Header of Active Seal */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-purple-500/30">
             <div>
@@ -442,10 +454,10 @@ export const LunarSealVarietiesSection: React.FC<LunarSealVarietiesSectionProps>
                 {getStatusBadge(activeSeal.status)}
               </div>
 
-              <h3 className="text-xl sm:text-2xl font-serif font-bold text-gray-900 dark:text-white tracking-wide">
+              <h3 className="text-xl sm:text-2xl font-serif font-bold text-white tracking-wide">
                 {activeSeal.title}
               </h3>
-              <p className="text-xs sm:text-sm text-purple-900 dark:text-purple-200 mt-0.5 font-medium">
+              <p className="text-xs sm:text-sm text-purple-200 mt-0.5 font-medium">
                 {activeSeal.subtitle}
               </p>
             </div>
@@ -510,14 +522,14 @@ export const LunarSealVarietiesSection: React.FC<LunarSealVarietiesSectionProps>
               {/* Left Column: Graphic Symbol Box */}
               <div className="lg:col-span-5 space-y-3">
                 {/* 12-Version Selector Grid & Power Level Badge */}
-                <div className="bg-purple-50/40 dark:bg-black/90 border-purple-200 dark:border-purple-500/30  p-2.5 rounded-2xl border border-purple-500/30 space-y-2">
+                <div className="bg-purple-950/60 border border-purple-500/30 p-2.5 rounded-2xl space-y-2">
                   <div className="flex items-center justify-between px-1">
                     <span className="text-[11px] font-extrabold text-amber-400 uppercase tracking-widest flex items-center gap-1.5">
                       <Sparkles size={12} className="text-amber-400 animate-spin" />
                       {language === 'fr' ? '12 Versions Théurgiques' : '12 Sacred Versions'}
                     </span>
                     {activeVersionDetails && (
-                      <span className="text-[10px] font-bold text-purple-300 bg-purple-50 dark:bg-purple-950/80 border-purple-200 dark:border-purple-500/30  px-2 py-0.5 rounded-full border border-purple-500/30">
+                      <span className="text-[10px] font-bold text-purple-200 bg-purple-900/80 px-2 py-0.5 rounded-full border border-purple-500/40">
                         {activeVersionDetails.powerLevel}% {language === 'fr' ? 'Puissance' : 'Power'}
                       </span>
                     )}
@@ -535,7 +547,7 @@ export const LunarSealVarietiesSection: React.FC<LunarSealVarietiesSectionProps>
                           className={`py-1.5 px-1 text-[10px] font-extrabold rounded-lg transition-all cursor-pointer flex flex-col items-center justify-center border ${
                             isSel
                               ? 'bg-amber-500 text-black border-amber-300 shadow-md scale-105'
-                              : 'bg-purple-950/40 text-purple-300 border-purple-800/40 hover:bg-purple-900/60 hover:text-white'
+                              : 'bg-purple-950/60 text-purple-200 border-purple-800/40 hover:bg-purple-900 hover:text-white'
                           }`}
                           title={v.title[language] || v.title.fr}
                         >
@@ -550,11 +562,11 @@ export const LunarSealVarietiesSection: React.FC<LunarSealVarietiesSectionProps>
 
                   {/* Active Selected Version Title */}
                   {activeVersionDetails && (
-                    <div className="bg-purple-50 dark:bg-purple-950/60 border-purple-200 dark:border-purple-500/30  p-2 rounded-xl border border-amber-500/20 text-center">
+                    <div className="bg-purple-900/60 p-2 rounded-xl border border-amber-500/30 text-center">
                       <p className="text-xs font-bold text-amber-300">
                         {activeVersionDetails.title}
                       </p>
-                      <p className="text-[10px] text-purple-300/80 mt-0.5 italic">
+                      <p className="text-[10px] text-purple-200/80 mt-0.5 italic">
                         {activeVersionDetails.subtitle}
                       </p>
                     </div>
@@ -594,7 +606,7 @@ export const LunarSealVarietiesSection: React.FC<LunarSealVarietiesSectionProps>
                   <button
                     type="button"
                     onClick={handleCopySymbol}
-                    className="flex items-center justify-center gap-1.5 bg-purple-50 dark:bg-purple-950/60 border-purple-200 dark:border-purple-500/30  hover:bg-purple-900/80 border border-purple-500/30 text-purple-900 dark:text-purple-200 font-bold py-2.5 px-3 rounded-xl transition-colors cursor-pointer"
+                    className="flex items-center justify-center gap-1.5 bg-purple-950/80 hover:bg-purple-900 border border-purple-500/40 text-purple-100 font-bold py-2.5 px-3 rounded-xl transition-colors cursor-pointer"
                   >
                     {copiedSymbol ? (
                       <>
@@ -618,7 +630,7 @@ export const LunarSealVarietiesSection: React.FC<LunarSealVarietiesSectionProps>
               {/* Right Column: Descriptions, Utility, Rituals */}
               <div className="lg:col-span-7 space-y-4">
                 {/* Description */}
-                <div className="bg-purple-50 dark:bg-purple-950/20 border-purple-200 dark:border-purple-500/30  border border-purple-500/20 rounded-2xl p-4">
+                <div className="bg-purple-950/60 border border-purple-500/30 rounded-2xl p-4">
                   <span className="text-[10px] uppercase font-bold tracking-wider text-amber-400 block mb-1">
                     {language === 'fr'
                       ? 'Explication & Origine Sacrée'
@@ -626,14 +638,14 @@ export const LunarSealVarietiesSection: React.FC<LunarSealVarietiesSectionProps>
                       ? 'Bayanin Hatimi da Sirrinsa'
                       : 'Sacred Origin & Description'}
                   </span>
-                  <p className="text-xs sm:text-sm text-gray-200 leading-relaxed font-normal">
+                  <p className="text-xs sm:text-sm text-purple-100 leading-relaxed font-normal">
                     {activeSeal.description}
                   </p>
                 </div>
 
                 {/* Formula & Utility Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="bg-purple-50/40 dark:bg-black/60 border-purple-200 dark:border-purple-500/30  border border-purple-500/30 rounded-2xl p-3.5">
+                  <div className="bg-purple-950/60 border border-purple-500/30 rounded-2xl p-3.5">
                     <span className="text-[10px] uppercase font-bold tracking-wider text-purple-300 block mb-1">
                       {language === 'fr' ? 'Formule & Incantation' : 'Formula & Invocation'}
                     </span>
@@ -642,7 +654,7 @@ export const LunarSealVarietiesSection: React.FC<LunarSealVarietiesSectionProps>
                     </code>
                   </div>
 
-                  <div className="bg-purple-50/40 dark:bg-black/60 border-purple-200 dark:border-purple-500/30  border border-purple-500/30 rounded-2xl p-3.5">
+                  <div className="bg-purple-950/60 border border-purple-500/30 rounded-2xl p-3.5">
                     <span className="text-[10px] uppercase font-bold tracking-wider text-purple-300 block mb-1">
                       {language === 'fr' ? 'Utilité Spirituelle Majeure' : 'Spiritual Benefit'}
                     </span>
@@ -654,25 +666,25 @@ export const LunarSealVarietiesSection: React.FC<LunarSealVarietiesSectionProps>
 
                 {/* Protocol Specifications Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
-                  <div className="bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-500/30  border border-purple-500/20 rounded-xl p-2.5">
+                  <div className="bg-purple-950/60 border border-purple-500/30 rounded-xl p-2.5">
                     <span className="text-[9px] text-purple-300 uppercase font-bold block mb-0.5">
                       {language === 'fr' ? 'Élément' : 'Element'}
                     </span>
-                    <span className="text-gray-200 font-medium">{activeSeal.elementalProperty}</span>
+                    <span className="text-purple-100 font-medium">{activeSeal.elementalProperty}</span>
                   </div>
 
-                  <div className="bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-500/30  border border-purple-500/20 rounded-xl p-2.5">
+                  <div className="bg-purple-950/60 border border-purple-500/30 rounded-xl p-2.5">
                     <span className="text-[9px] text-purple-300 uppercase font-bold block mb-0.5">
                       {language === 'fr' ? 'Encens (Bukhoor)' : 'Incense'}
                     </span>
                     <span className="text-amber-200 font-medium">{activeSeal.incense}</span>
                   </div>
 
-                  <div className="bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-500/30  border border-purple-500/20 rounded-xl p-2.5">
+                  <div className="bg-purple-950/60 border border-purple-500/30 rounded-xl p-2.5">
                     <span className="text-[9px] text-purple-300 uppercase font-bold block mb-0.5">
                       {language === 'fr' ? 'Créneau Temporel' : 'Timing Rule'}
                     </span>
-                    <span className="text-purple-900 dark:text-purple-200 font-medium">{activeSeal.timing}</span>
+                    <span className="text-purple-200 font-medium">{activeSeal.timing}</span>
                   </div>
                 </div>
 
@@ -704,8 +716,10 @@ export const LunarSealVarietiesSection: React.FC<LunarSealVarietiesSectionProps>
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-purple-50/40 dark:bg-black/90 border-purple-200 dark:border-purple-500/30  border-2 border-amber-500/50 rounded-3xl p-6 max-w-3xl w-full text-center space-y-6 shadow-2xl relative"
+              className="bg-purple-50/40 dark:bg-black/90 border-purple-200 dark:border-purple-500/30 border-2 border-amber-500/50 rounded-3xl p-6 max-w-3xl w-full text-center space-y-6 shadow-2xl relative overflow-hidden"
             >
+              {/* AsrarHub Engraved Watermark */}
+              <AsrarHubWatermark variant="dark" opacity={0.14} showCentralSeal={true} />
               <button
                 type="button"
                 onClick={() => setIsFullScreen(false)}

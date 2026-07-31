@@ -533,7 +533,10 @@
     },
     "sacred-books": {
       "title": "Bibliothèque des Manuscrits Sacrés",
-      "description": "Analyses théurgiques approfondies des livres sacrés d'Al-Buni, Majriti, Ibn Arabi, Jifr, Jazuli et des grands sages, avec Sceaux 3D et Parchemins téléchargeables."
+      "subtitle": "Analyses théurgiques approfondies, introductions trilingues & Sceaux téléchargeables (PNG & Parchemin)",
+      "tooltip": "Compendium d'études approfondies des livres ésotériques majeurs d'Al-Buni, Ibn Arabi, Majriti, Jazuli et des sages anciens. Chaque manuscrit comprend une analyse en 3 langues et son Khatim sacrée téléchargeable.",
+      "description": "Analyses théurgiques approfondies des livres sacrés d'Al-Buni, Majriti, Ibn Arabi, Jifr, Jazuli et des grands sages, avec Sceaux 3D et Parchemins téléchargeables.",
+      "search": "Rechercher un livre, un auteur..."
     },
     "protectionModal": {
       "premiumAccess": "Accès Réservé Premium",

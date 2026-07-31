@@ -340,8 +340,33 @@ export function checkAndTriggerPlanetaryNotification(overrideLang?: SupportedLan
   const current = getCurrentPlanetaryHour();
   const rawPlanet = multilingualPlanets[current.planetIndex] || multilingualPlanets[0];
 
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const notifKey = `asrar_planetary_notif_${current.planetIndex}_H${current.hourNumber}_${current.isDaytime ? 'D' : 'N'}_${todayStr}`;
+  const lastSentStr = localStorage.getItem('asrar_planetary_notif_lastSent');
+  const lastSentKey = localStorage.getItem('asrar_planetary_notif_lastKey');
+  const now = Date.now();
+
+  // Check if this exact alert key was already triggered today OR sent within the last 35 minutes to prevent flooding
+  if (lastSentKey === notifKey) {
+    return;
+  }
+  if (lastSentStr) {
+    const lastSentTime = parseInt(lastSentStr, 10);
+    if (!isNaN(lastSentTime) && (now - lastSentTime < 35 * 60 * 1000)) {
+      return;
+    }
+  }
+
   if (rawPlanet.arabic !== lastNotifiedPlanet) {
     lastNotifiedPlanet = rawPlanet.arabic;
+
+    // Record lastSent timestamp and key in localStorage before dispatching
+    try {
+      localStorage.setItem('asrar_planetary_notif_lastSent', now.toString());
+      localStorage.setItem('asrar_planetary_notif_lastKey', notifKey);
+    } catch (e) {
+      console.warn('LocalStorage save error for planetary notification:', e);
+    }
 
     const currentLang = (overrideLang || localStorage.getItem('language') || 'fr') as SupportedLanguage;
     const langKey: SupportedLanguage = ['fr', 'en', 'ha'].includes(currentLang) ? currentLang : 'fr';

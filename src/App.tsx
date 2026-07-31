@@ -962,11 +962,11 @@ export default function App() {
       <ContentProtectionManager />
       <NetworkStatus />
       <ErrorToastContainer />
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors flex flex-col font-sans mb-16 sm:mb-0 w-full overflow-x-hidden">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors flex flex-col font-sans mb-16 sm:mb-0 w-full max-w-full">
         <FloatingBackButton />
         <Header />
         <DailyRewardHandler />
-        <main className="flex flex-col min-h-screen w-full overflow-x-hidden flex-1 text-gray-900 dark:text-gray-100 pb-20 pt-20">
+        <main className="flex flex-col min-h-screen w-full max-w-full flex-1 text-gray-900 dark:text-gray-100 pb-20 pt-20">
           <React.Suspense fallback={
             <div className="flex items-center justify-center min-h-[60vh] w-full">
               <div className="w-10 h-10 border-4 border-emerald-500/10 border-t-emerald-600 rounded-full animate-spin" />
@@ -979,7 +979,7 @@ export default function App() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -12 }}
                 transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-                className="w-full max-w-full overflow-x-hidden flex flex-col flex-1"
+                className="w-full max-w-full flex flex-col flex-1 min-h-0"
               >
                 <Routes location={location}>
                 <Route path="/" element={<Navigate to="/user/dashboard" replace />} />

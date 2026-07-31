@@ -6,6 +6,7 @@ import { X, Mail, Lock, User as UserIcon, AlertCircle, Eye, EyeOff, KeyRound, Ch
 import { signInWithGoogle, signInWithEmail, signUpWithEmail, sendVerificationEmail, auth, db, signOut } from '../lib/firebase';
 import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
 import { useAuth, setLocalUserSession } from '../contexts/AuthContext';
+import { isDisposableEmail, normalizeEmail, normalizePhone, validateRegistrationDetails } from '../lib/validationUtils';
 import { useNavigate } from 'react-router-dom';
 import { sendPasswordResetEmail } from 'firebase/auth';
 
@@ -227,6 +228,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [verificationSent, setVerificationSent] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [resendStatus, setResendStatus] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
@@ -283,6 +286,31 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
     }
   }, [isOpen]);
 
+  const handleLocalFallback = async () => {
+    const targetEmail = email || 'utilisateur@asrarhub.com';
+    if (!isLogin) {
+      if (isDisposableEmail(targetEmail)) {
+        setError("Les adresses email temporaires ou jetables (temp mail) ne sont pas autorisées. Veuillez utiliser une adresse email permanente.");
+        return;
+      }
+      const val = await validateRegistrationDetails(targetEmail, phone, db);
+      if (!val.valid) {
+        setError(val.error || "Informations d'inscription invalides.");
+        return;
+      }
+    }
+
+    const userSession = setLocalUserSession(targetEmail, name, country, phone);
+    if (adminOnly && userSession.role !== 'admin') {
+      setError(t('auth.accessDenied', "Accès refusé. Vous n'êtes pas administrateur."));
+      return;
+    }
+    onClose();
+    if (adminOnly && userSession.role === 'admin') {
+      navigate('/admin');
+    }
+  };
+
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -304,27 +332,61 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
     }
   };
 
+  const handleResendEmail = async () => {
+    setResendLoading(true);
+    setResendStatus('');
+    try {
+      if (auth.currentUser) {
+        await sendVerificationEmail(auth.currentUser);
+        setResendStatus(t('auth.resendSuccess', "Un nouvel email de vérification a été envoyé ! N'oubliez surtout pas de vérifier votre dossier SPAM / Courriers indésirables."));
+      } else {
+        setResendStatus(t('auth.resendCheckSpam', "Un email vous a été envoyé lors de la création de compte. Vérifiez votre boîte mail ainsi que vos SPAMS."));
+      }
+    } catch (err: any) {
+      console.warn("Resend verification error:", err);
+      setResendStatus(t('auth.resendError', "Impossible de renvoyer l'email pour le moment. Pensez à vérifier vos SPAMS ou réessayez plus tard."));
+    } finally {
+      setResendLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setResendStatus('');
     setLoading(true);
 
     try {
       let result;
       if (isLogin) {
         result = await signInWithEmail(email, password);
+        if (result?.user && !result.user.emailVerified) {
+          try {
+            await sendVerificationEmail(result.user);
+          } catch (e) {}
+          setVerificationSent(true);
+          setLoading(false);
+          return;
+        }
       } else {
+        // Pre-validate registration details before attempting auth creation
+        const validation = await validateRegistrationDetails(email, phone, db);
+        if (!validation.valid) {
+          setError(validation.error || "Informations d'inscription invalides.");
+          setLoading(false);
+          return;
+        }
+
         result = await signUpWithEmail(email, password, name, country, phone);
         if (result?.user) {
           try {
             await sendVerificationEmail(result.user);
-            setVerificationSent(true);
-            setLoading(false);
-            return;
           } catch (verifyErr) {
             console.warn("Could not send verification email:", verifyErr);
-            // Ignore verification email failure and proceed with session setup
           }
+          setVerificationSent(true);
+          setLoading(false);
+          return;
         }
       }
 
@@ -379,7 +441,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
       if (err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
         setError(t('auth.invalidCredentials', 'Email ou mot de passe incorrect.'));
       } else if (err.code === 'auth/email-already-in-use') {
-        setError(t('auth.emailInUse', 'Cet email est déjà utilisé.'));
+        setError(t('auth.emailInUse', 'Cet email (ou un alias de cette adresse) est déjà utilisé par un autre compte.'));
       } else if (err.code === 'auth/network-request-failed' || err.message?.includes('network')) {
         setError(t('auth.networkError', "La connexion aux serveurs d'authentification a échoué. Cela peut être dû à un adblocker ou à des restrictions d'iframe. Essayez d'ouvrir l'application dans un nouvel onglet ou utilisez le mode secours."));
       } else {
@@ -634,36 +696,59 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
                   </div>
                 </form>
               ) : verificationSent ? (
-                <div className="text-center py-6">
-                  <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="text-center py-6 space-y-4">
+                  <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-2 shadow-inner">
                     <Mail size={32} />
                   </div>
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-2">{t('auth.verifyEmailTitle', 'Vérifiez votre email')}</h3>
-                  <p className="text-gray-600 dark:text-gray-400 mb-4 text-sm">
-                    {t('auth.verifyEmailDesc', 'Nous avons envoyé un lien de vérification à')} <span className="font-semibold">{email}</span>. {t('auth.verifyEmailAction', 'Veuillez cliquer sur ce lien pour activer votre compte.')}
+
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                    {t('auth.verifyEmailTitle', 'Vérification de votre email requise')}
+                  </h3>
+
+                  <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed max-w-sm mx-auto">
+                    {t('auth.verifyEmailDesc', 'Un email de vérification avec un lien d\'activation a été envoyé à')} <span className="font-bold text-emerald-600 dark:text-emerald-400">{email || 'votre adresse email'}</span>. {t('auth.verifyEmailAction', 'Vous devez impérativement cliquer sur ce lien pour activer votre compte.')}
                   </p>
 
-                  <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/30 rounded-xl flex items-start gap-2.5 text-left text-xs text-amber-800 dark:text-amber-300 shadow-sm animate-pulse">
-                    <AlertCircle size={16} className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
-                    <div>
-                      <p className="font-bold">
-                        {t('auth.spamWarningTitle', 'Vérifiez vos spams !')}
+                  <div className="p-4 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700/60 rounded-2xl flex items-start gap-3 text-left text-xs text-amber-900 dark:text-amber-200 shadow-sm">
+                    <AlertCircle size={20} className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
+                    <div className="space-y-1">
+                      <p className="font-extrabold text-amber-800 dark:text-amber-300 text-sm uppercase tracking-wide">
+                        ⚠️ {t('auth.spamWarningTitle', 'Pensez à vérifier vos SPAMS !')}
                       </p>
-                      <p className="mt-1 leading-relaxed">
-                        {t('auth.spamWarningDesc', "Si l'email n'apparaît pas d'ici quelques minutes, pensez à bien vérifier votre dossier de courriers indésirables (SPAM) pour trouver le lien de vérification.")}
+                      <p className="leading-relaxed">
+                        {t('auth.spamWarningDesc', "Si l'email n'apparaît pas dans votre boîte de réception d'ici 1 à 2 minutes, vérifiez impérativement votre dossier de courriers indésirables (SPAM / Junk).")}
                       </p>
                     </div>
                   </div>
 
-                  <button
-                    onClick={() => {
-                      setVerificationSent(false);
-                      setIsLogin(true);
-                    }}
-                    className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-medium transition-colors"
-                  >
-                    {t('auth.backToLogin', 'Retour à la connexion')}
-                  </button>
+                  {resendStatus && (
+                    <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-700 text-emerald-800 dark:text-emerald-200 text-xs rounded-xl font-medium">
+                      {resendStatus}
+                    </div>
+                  )}
+
+                  <div className="pt-2 space-y-2.5">
+                    <button
+                      type="button"
+                      onClick={handleResendEmail}
+                      disabled={resendLoading}
+                      className="w-full py-2.5 px-4 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                    >
+                      <Mail size={15} />
+                      {resendLoading ? t('auth.loading', 'Envoi en cours...') : 'Renvoyer l\'email de vérification (Vérifier SPAM)'}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setVerificationSent(false);
+                        setIsLogin(true);
+                      }}
+                      className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-sm transition-colors shadow-md cursor-pointer"
+                    >
+                      {t('auth.backToLogin', 'J\'ai vérifié mon email / Se connecter')}
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <>
@@ -687,18 +772,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
 
                           <button
                             type="button"
-                            onClick={() => {
-                              const targetEmail = email || 'utilisateur@asrarhub.com';
-                              const userSession = setLocalUserSession(targetEmail, name, country, phone);
-                              if (adminOnly && userSession.role !== 'admin') {
-                                setError(t('auth.accessDenied', "Accès refusé. Vous n'êtes pas administrateur."));
-                                return;
-                              }
-                              onClose();
-                              if (adminOnly && userSession.role === 'admin') {
-                                navigate('/admin');
-                              }
-                            }}
+                            onClick={handleLocalFallback}
                             className="flex-1 py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
                           >
                             <Sparkles size={14} />
@@ -872,18 +946,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
 
                         <button
                           type="button"
-                          onClick={() => {
-                            const targetEmail = email || 'utilisateur@asrarhub.com';
-                            const userSession = setLocalUserSession(targetEmail, name, country, phone);
-                            if (adminOnly && userSession.role !== 'admin') {
-                              setError(t('auth.accessDenied', "Accès refusé. Vous n'êtes pas administrateur."));
-                              return;
-                            }
-                            onClose();
-                            if (adminOnly && userSession.role === 'admin') {
-                              navigate('/admin');
-                            }
-                          }}
+                          onClick={handleLocalFallback}
                           className="text-xs text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 font-medium inline-flex items-center gap-1.5 cursor-pointer py-1.5 px-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-colors"
                         >
                           <ShieldAlert size={14} />

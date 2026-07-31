@@ -57,6 +57,85 @@ const toEasternArabicNumerals = (str: string | number): string => {
   return String(str).replace(/[0-9]/g, (w) => easternDigits[parseInt(w, 10)]);
 };
 
+// Helper component to render Recipe & Protocol cleanly with numbered steps & professional separation
+const FormattedRecipe: React.FC<{ recipeText: string; language?: string }> = ({ recipeText }) => {
+  if (!recipeText) return null;
+
+  // Regex to detect numbered steps like "1. ", "2. ", "1:", "2:"
+  const stepRegex = /(?:^|\s|\n)(\d+)[\.\:]\s+/g;
+  const matches = [...recipeText.matchAll(stepRegex)];
+
+  if (matches.length === 0) {
+    return (
+      <div className="text-xs sm:text-sm text-gray-800 dark:text-gray-200 leading-relaxed bg-gray-50 dark:bg-gray-800/80 p-3.5 rounded-xl border border-gray-200 dark:border-gray-700 font-sans">
+        {recipeText}
+      </div>
+    );
+  }
+
+  // Extract optional header title before step 1
+  const firstIndex = matches[0].index!;
+  const rawHeader = recipeText.slice(0, firstIndex).trim().replace(/[\:\-\s]+$/, '');
+
+  const steps: { num: string; title: string; desc: string }[] = [];
+
+  for (let i = 0; i < matches.length; i++) {
+    const num = matches[i][1];
+    const startIndex = matches[i].index! + matches[i][0].length;
+    const endIndex = i + 1 < matches.length ? matches[i + 1].index! : recipeText.length;
+    const fullStepText = recipeText.slice(startIndex, endIndex).trim();
+
+    const colonIndex = fullStepText.indexOf(':');
+    let title = '';
+    let desc = fullStepText;
+
+    if (colonIndex > 0 && colonIndex < 50) {
+      title = fullStepText.slice(0, colonIndex).trim();
+      desc = fullStepText.slice(colonIndex + 1).trim();
+    }
+
+    steps.push({ num, title, desc });
+  }
+
+  return (
+    <div className="space-y-3 pt-1 font-sans">
+      {rawHeader && (
+        <div className="px-3.5 py-2.5 bg-amber-500/10 dark:bg-amber-500/15 border-l-4 border-amber-500 rounded-r-xl text-xs sm:text-sm font-extrabold text-amber-900 dark:text-amber-200 flex items-center gap-2 shadow-xs">
+          <Sparkles size={15} className="text-amber-500 shrink-0" />
+          <span>{rawHeader}</span>
+        </div>
+      )}
+
+      <div className="space-y-2.5">
+        {steps.map((st, idx) => (
+          <div
+            key={idx}
+            className="p-3.5 sm:p-4 bg-gray-50/90 dark:bg-gray-800/80 hover:bg-amber-500/5 dark:hover:bg-amber-500/10 rounded-xl border border-gray-200 dark:border-gray-700/80 shadow-xs transition-all flex items-start gap-3 group"
+          >
+            {/* Step Number Badge */}
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-amber-500 to-amber-600 text-gray-950 font-black text-xs sm:text-sm flex items-center justify-center shrink-0 shadow-md border border-amber-300 dark:border-amber-400/50 mt-0.5 group-hover:scale-105 transition-transform">
+              {st.num.padStart(2, '0')}
+            </div>
+
+            {/* Step Content */}
+            <div className="flex-1 min-w-0 space-y-1">
+              {st.title && (
+                <h6 className="text-xs sm:text-sm font-bold text-amber-900 dark:text-amber-300 tracking-wide flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0" />
+                  {st.title}
+                </h6>
+              )}
+              <p className="text-xs sm:text-sm text-gray-800 dark:text-gray-200 leading-relaxed">
+                {st.desc}
+              </p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 export const SacredBooksLibrary: React.FC = () => {
   const { language, t } = useLanguage();
   const { textScale, increaseScale, decreaseScale, resetScale } = useTextScale();
@@ -94,12 +173,12 @@ export const SacredBooksLibrary: React.FC = () => {
 
     return (
       <div className={`p-4 rounded-2xl ${isParchmentMode ? 'bg-amber-100/80 border-2 border-amber-800/40' : 'bg-gradient-to-b from-gray-900 via-gray-950 to-black border border-amber-500/40'} shadow-xl my-3 text-center`}>
-        <div className="flex items-center justify-between mb-2 text-xs">
-          <span className={`font-bold flex items-center gap-1.5 ${isParchmentMode ? 'text-amber-950' : 'text-amber-400'}`}>
-            <Sparkles size={14} className={isParchmentMode ? 'text-amber-800' : 'text-amber-400'} />
+        <div className="flex items-center justify-between mb-2 text-[9.5px]">
+          <span className={`font-bold flex items-center gap-1 ${isParchmentMode ? 'text-amber-950' : 'text-amber-400'}`}>
+            <Sparkles size={11.5} className={isParchmentMode ? 'text-amber-800' : 'text-amber-400'} />
             {language === 'en' ? 'Khatim 3x3 (Wafq Ghazali)' : language === 'ha' ? 'Hatim 3x3 (Wafq Ghazali)' : 'Khatim 3x3 (Wafq Ghazali Sacré)'}
           </span>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             {!isParchmentMode && (
               <button
                 type="button"
@@ -107,12 +186,12 @@ export const SacredBooksLibrary: React.FC = () => {
                   e.stopPropagation();
                   setNumeralFormat(prev => prev === 'eastern' ? 'western' : 'eastern');
                 }}
-                className="px-2 py-0.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-[10px] font-mono font-bold rounded border border-amber-500/40 transition-all cursor-pointer"
+                className="px-1.5 py-0.5 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-[7.5px] font-mono font-bold rounded border border-amber-500/40 transition-all cursor-pointer"
               >
                 {numeralFormat === 'eastern' ? 'Chiffres: ٠١٢' : 'Chiffres: 123'}
               </button>
             )}
-            <span className={`font-mono text-[10px] px-2.5 py-0.5 rounded-full font-bold ${isParchmentMode ? 'bg-amber-200 text-amber-900 border border-amber-500' : 'bg-amber-500/10 text-amber-300 border border-amber-500/30'}`}>
+            <span className={`font-mono text-[7.5px] px-2 py-0.5 rounded-full font-bold ${isParchmentMode ? 'bg-amber-200 text-amber-900 border border-amber-500' : 'bg-amber-500/10 text-amber-300 border border-amber-500/30'}`}>
               Zimām / Somme: {magicConstant}
             </span>
           </div>
@@ -431,7 +510,7 @@ export const SacredBooksLibrary: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 pb-20 pt-6 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100 pb-20 pt-3 sm:pt-6 px-1 sm:px-6 lg:px-8">
       {/* Header Banner */}
       <div className="max-w-7xl mx-auto mb-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 bg-gradient-to-r from-amber-100/90 via-purple-100/80 to-amber-50 dark:from-amber-950/80 dark:via-purple-950/60 dark:to-gray-900 border border-amber-300 dark:border-amber-500/30 rounded-3xl shadow-2xl relative overflow-hidden">
@@ -623,7 +702,7 @@ export const SacredBooksLibrary: React.FC = () => {
 
               <div className="flex flex-wrap items-center gap-2">
                 {/* Text Zoom Pill Controller */}
-                {featureToggles['enableBookTextResizer'] !== false && (
+                {featureToggles['enableBookTextResizer'] !== false && (selectedBook ? featureToggles[`enableBookTextResizer_${selectedBook.id}`] !== false && selectedBook.enableTextResizer !== false : true) && (
                   <div className="flex items-center gap-1 bg-amber-500/10 dark:bg-gray-800 p-1.5 rounded-2xl border border-amber-500/30">
                     <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400 px-1 flex items-center gap-1 hidden sm:flex">
                       <Type size={13} />
@@ -838,7 +917,7 @@ export const SacredBooksLibrary: React.FC = () => {
                               <div className="border-b border-gray-800 pb-5 space-y-2">
                                 <div className="flex items-center justify-between">
                                   <span className="px-3 py-1 bg-amber-500/20 text-amber-700 dark:text-amber-400 text-xs font-bold rounded-full border border-amber-500/30">
-                                    Chapitre {currentChapter.chapterNumber} / {selectedBook.chapters!.length}
+                                    {language === 'en' ? 'Chapter' : language === 'ha' ? 'Babi' : 'Chapitre'} {currentChapter.chapterNumber} / {selectedBook.chapters!.length}
                                   </span>
                                   <span className="font-arabic text-amber-800 dark:text-amber-300 text-lg font-bold">
                                     {currentChapter.titleAr}
@@ -1158,11 +1237,11 @@ export const SacredBooksLibrary: React.FC = () => {
                                   </div>
 
                                   {/* Divine Attribute */}
-                                  <div className="text-sm bg-gray-50 dark:bg-gray-800/80 p-3 rounded-xl border border-gray-200 dark:border-gray-700/80 flex items-center justify-between">
-                                    <span className="text-gray-800 dark:text-gray-200 font-medium">
+                                  <div className="text-xs sm:text-sm bg-gray-50 dark:bg-gray-800/80 p-3 rounded-xl border border-gray-200 dark:border-gray-700/80 flex flex-col sm:flex-row sm:items-center justify-between gap-1 sm:gap-3">
+                                    <span className="text-gray-700 dark:text-gray-300 font-medium whitespace-nowrap shrink-0">
                                       {language === 'en' ? 'Divine Attribute:' : language === 'ha' ? 'Atsayawa Allah:' : 'Attribut Divin :'}
                                     </span>
-                                    <span className="text-amber-900 dark:text-amber-300 font-bold">
+                                    <span className="text-amber-900 dark:text-amber-300 font-bold leading-tight">
                                       {item.divineAttributeAr} — {language === 'en' ? item.divineAttributeEn : language === 'ha' ? item.divineAttributeHa : item.divineAttributeFr}
                                     </span>
                                   </div>
@@ -1179,14 +1258,15 @@ export const SacredBooksLibrary: React.FC = () => {
                                   </div>
 
                                   {/* Recipe & Protocol */}
-                                  <div className="space-y-1">
-                                    <h5 className="text-xs sm:text-sm font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1">
+                                  <div className="space-y-1.5">
+                                    <h5 className="text-xs sm:text-sm font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
                                       <Feather size={14} />
                                       {language === 'en' ? 'Recipe & Protocol:' : language === 'ha' ? 'Hanyar Aiki da Rubutu:' : 'Recette Pratique & Protocole :'}
                                     </h5>
-                                    <p className="text-sm sm:text-base text-gray-800 dark:text-gray-200 leading-relaxed bg-gray-50 dark:bg-gray-800/80 p-3.5 rounded-xl border border-gray-200 dark:border-gray-700">
-                                      {language === 'en' ? item.recipeEn : language === 'ha' ? item.recipeHa : item.recipeFr}
-                                    </p>
+                                    <FormattedRecipe
+                                      recipeText={language === 'en' ? item.recipeEn : language === 'ha' ? item.recipeHa : item.recipeFr}
+                                      language={language}
+                                    />
                                   </div>
 
                                   {/* Specific Invocation */}
@@ -1633,9 +1713,9 @@ export const SacredBooksLibrary: React.FC = () => {
         <ParchmentExporterModal
           isOpen={parchmentModalOpen}
           onClose={() => setParchmentModalOpen(false)}
-          title={selectedBook.titleFr}
-          subtitle={`${selectedBook.titleAr} • Poids: ${selectedBook.khatim.abjadWeight}`}
-          recipientName={user?.name || user?.email || 'Chercheur d\'Asrar'}
+          title={getLocalizedTitle(selectedBook)}
+          subtitle={`${selectedBook.titleAr} • ${language === 'en' ? 'Weight' : language === 'ha' ? 'Nauyi' : 'Poids'}: ${selectedBook.khatim.abjadWeight}`}
+          recipientName={user?.name || user?.email || (language === 'en' ? 'Asrar Seeker' : language === 'ha' ? 'Mai Neman Sirri' : "Chercheur d'Asrar")}
           abjadWeight={selectedBook.khatim.abjadWeight}
           content={
             <div className="space-y-4 text-center">
@@ -1646,7 +1726,7 @@ export const SacredBooksLibrary: React.FC = () => {
                 {getLocalizedTitle(selectedBook)}
               </p>
               <p className="text-xs italic text-amber-800">
-                Auteur : {getLocalizedAuthor(selectedBook)} ({selectedBook.century})
+                {language === 'en' ? 'Author' : language === 'ha' ? 'Marubuci' : 'Auteur'} : {getLocalizedAuthor(selectedBook)} ({getLocalizedCentury(selectedBook)})
               </p>
 
               <div className="my-4 p-4 border-2 border-amber-800/40 rounded-xl bg-amber-100/50">
@@ -1683,8 +1763,14 @@ export const SacredBooksLibrary: React.FC = () => {
           isOpen={!!selectedNameForParchment}
           onClose={() => setSelectedNameForParchment(null)}
           title={`كَيْدَهوُلَا — ${selectedNameForParchment.nameAr}`}
-          subtitle={`${selectedNameForParchment.nameTranslit} • Nom #${selectedNameForParchment.id} du Compendium de la Barhatiah`}
-          recipientName={user?.name || user?.email || 'Chercheur d\'Asrar'}
+          subtitle={`${selectedNameForParchment.nameTranslit} • ${
+            language === 'en'
+              ? `Name #${selectedNameForParchment.id} of Barhatiah Compendium`
+              : language === 'ha'
+              ? `Suna #${selectedNameForParchment.id} na Barhatiah`
+              : `Nom #${selectedNameForParchment.id} du Compendium de la Barhatiah`
+          }`}
+          recipientName={user?.name || user?.email || (language === 'en' ? 'Asrar Seeker' : language === 'ha' ? 'Mai Neman Sirri' : "Chercheur d'Asrar")}
           abjadWeight={selectedNameForParchment.abjadWeight}
           content={
             <div className="space-y-5 text-center font-serif text-amber-950">
@@ -1694,20 +1780,20 @@ export const SacredBooksLibrary: React.FC = () => {
                   {selectedNameForParchment.nameAr}
                 </h1>
                 <p className="text-sm font-bold text-amber-900 font-mono">
-                  {selectedNameForParchment.nameTranslit} — (Nom #{selectedNameForParchment.id})
+                  {selectedNameForParchment.nameTranslit} — ({language === 'en' ? 'Name' : language === 'ha' ? 'Suna' : 'Nom'} #{selectedNameForParchment.id})
                 </p>
                 <p className="text-xs text-amber-800 mt-1 font-sans">
-                  Attribut Divin : <strong>{selectedNameForParchment.divineAttributeAr}</strong> ({selectedNameForParchment.divineAttributeFr})
+                  {language === 'en' ? 'Divine Attribute:' : language === 'ha' ? 'Sifofin Allah:' : 'Attribut Divin :'} <strong>{selectedNameForParchment.divineAttributeAr}</strong> ({language === 'en' ? selectedNameForParchment.divineAttributeEn : language === 'ha' ? selectedNameForParchment.divineAttributeHa : selectedNameForParchment.divineAttributeFr})
                 </p>
               </div>
 
               {/* Badges Info */}
               <div className="flex flex-wrap items-center justify-center gap-2 text-xs font-sans">
                 <span className="px-3 py-1 bg-amber-200/80 border border-amber-600/40 rounded-full font-semibold">
-                  🌙 Demeure : {selectedNameForParchment.lunarMansion}
+                  🌙 {language === 'en' ? 'Mansion:' : language === 'ha' ? 'Manzili:' : 'Demeure :'} {selectedNameForParchment.lunarMansion}
                 </span>
                 <span className="px-3 py-1 bg-amber-200/80 border border-amber-600/40 rounded-full font-semibold capitalize">
-                  🔥 Élement : {selectedNameForParchment.element}
+                  🔥 {language === 'en' ? 'Element:' : language === 'ha' ? 'Sinadari:' : 'Élement :'} {selectedNameForParchment.element}
                 </span>
                 <span className="px-3 py-1 bg-amber-200/80 border border-amber-600/40 rounded-full font-semibold">
                   🔢 Zimām (Abjad) : {selectedNameForParchment.abjadWeight}
@@ -1718,7 +1804,7 @@ export const SacredBooksLibrary: React.FC = () => {
               {selectedNameForParchment.wafq3x3 && (
                 <div className="my-4">
                   <h4 className="text-xs font-bold text-amber-900 uppercase tracking-widest mb-1 font-sans">
-                    — Khatim Sacré 3x3 (Wafq Ghazali) —
+                    — {language === 'en' ? 'Sacred 3x3 Seal (Ghazali Wafq)' : language === 'ha' ? 'Khatim Mai Girma 3x3 (Wafq Ghazali)' : 'Khatim Sacré 3x3 (Wafq Ghazali)'} —
                   </h4>
                   {renderBarhatiahKhatimGrid(selectedNameForParchment.wafq3x3, true)}
                 </div>
@@ -1727,7 +1813,7 @@ export const SacredBooksLibrary: React.FC = () => {
               {/* Talsam Code */}
               <div className="p-3.5 bg-amber-200/60 rounded-xl border border-amber-700/50">
                 <p className="text-[10px] font-bold text-amber-900 uppercase tracking-wider mb-1.5 font-sans">
-                  Code Talsam Sacré & Sigles :
+                  {language === 'en' ? 'Sacred Talsam Code & Sigils:' : language === 'ha' ? 'Lambar Talsam da Alama:' : 'Code Talsam Sacré & Sigles :'}
                 </p>
                 <p className="font-mono text-lg font-bold text-amber-950 tracking-widest dir-rtl">
                   {selectedNameForParchment.talsamCode}
@@ -1737,7 +1823,7 @@ export const SacredBooksLibrary: React.FC = () => {
               {/* Sacred Invocation Box */}
               <div className="p-4 bg-amber-950 text-amber-50 rounded-xl border border-amber-800 shadow-md space-y-2">
                 <p className="text-xs font-bold text-amber-300 uppercase tracking-wider font-sans">
-                  Invocation Canonique du Nom :
+                  {language === 'en' ? 'Canonical Invocation of the Name:' : language === 'ha' ? 'Addu\'ar Suna Mai Tsarki:' : 'Invocation Canonique du Nom :'}
                 </p>
                 <p className="font-arabic text-lg sm:text-xl font-bold text-amber-200 dir-rtl">
                   {selectedNameForParchment.invocationAr}
@@ -1753,7 +1839,7 @@ export const SacredBooksLibrary: React.FC = () => {
               {/* Esoteric Secret */}
               <div className="text-left space-y-1 bg-amber-100/80 p-4 rounded-xl border border-amber-700/40">
                 <h5 className="text-xs font-bold text-amber-900 flex items-center gap-1 uppercase tracking-wide font-sans">
-                  ✨ Secret Ésotérique & Vertu Divine :
+                  ✨ {language === 'en' ? 'Esoteric Secret & Divine Virtue:' : language === 'ha' ? 'Sirrin Ruhani da Amfani:' : 'Secret Ésotérique & Vertu Divine :'}
                 </h5>
                 <p className="text-xs text-amber-950 leading-relaxed whitespace-pre-line font-serif">
                   {language === 'en' ? selectedNameForParchment.secretEn : language === 'ha' ? selectedNameForParchment.secretHa : selectedNameForParchment.secretFr}
@@ -1761,13 +1847,14 @@ export const SacredBooksLibrary: React.FC = () => {
               </div>
 
               {/* Recipe & Protocol */}
-              <div className="text-left space-y-1 bg-amber-100/80 p-4 rounded-xl border border-amber-700/40">
+              <div className="text-left space-y-1.5 bg-amber-100/90 p-4 rounded-xl border border-amber-700/40">
                 <h5 className="text-xs font-bold text-amber-900 flex items-center gap-1 uppercase tracking-wide font-sans">
-                  📜 Recette Pratique & Protocole Canonique :
+                  📜 {language === 'en' ? 'Practical Recipe & Canonical Protocol:' : language === 'ha' ? 'Hanyar Aiki da Sharruda:' : 'Recette Pratique & Protocole Canonique :'}
                 </h5>
-                <p className="text-xs text-amber-950 leading-relaxed whitespace-pre-line font-serif">
-                  {language === 'en' ? selectedNameForParchment.recipeEn : language === 'ha' ? selectedNameForParchment.recipeHa : selectedNameForParchment.recipeFr}
-                </p>
+                <FormattedRecipe
+                  recipeText={language === 'en' ? selectedNameForParchment.recipeEn : language === 'ha' ? selectedNameForParchment.recipeHa : selectedNameForParchment.recipeFr}
+                  language={language}
+                />
               </div>
             </div>
           }
@@ -1782,7 +1869,7 @@ export const SacredBooksLibrary: React.FC = () => {
       />
 
       {/* Floating Text Zoom & Resizer Icon - Displayed strictly when reading a book & admin enabled */}
-      {selectedBook !== null && featureToggles['enableBookTextResizer'] !== false && (
+      {selectedBook !== null && featureToggles['enableBookTextResizer'] !== false && featureToggles[`enableBookTextResizer_${selectedBook.id}`] !== false && selectedBook.enableTextResizer !== false && (
         <FloatingTextResizer />
       )}
     </div>

@@ -28,6 +28,8 @@ import { useLanguage } from '../../../contexts/LanguageContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { triggerProtectionModal } from '../../../components/ContentProtectionManager';
 import { ToolInfoTooltip } from '../../../components/ToolInfoTooltip';
+import { AsrarHubWatermark } from '../../../components/AsrarHubWatermark';
+import { KhatimUsageGuide } from '../../../components/KhatimUsageGuide';
 import { downloadCanvasImage } from '../../../utils/downloadHelper';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -603,7 +605,7 @@ export const Talsam: React.FC = () => {
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto p-3 sm:p-6 lg:p-8 safe-area-pt max-h-[85vh] overflow-hidden flex flex-col">
+    <div className="w-full max-w-7xl mx-auto p-3 sm:p-6 lg:p-8 safe-area-pt min-h-screen pb-24 flex flex-col">
       {/* Header */}
       <div className="flex items-center gap-4 mb-4 shrink-0">
         <Link 
@@ -672,6 +674,8 @@ export const Talsam: React.FC = () => {
           >
             {/* Medallion Display Box */}
             <div className={`relative overflow-hidden rounded-3xl p-8 border border-amber-500/20 bg-gradient-to-b ${themeColor} text-white shadow-2xl text-center`}>
+              {/* AsrarHub Engraved Watermark */}
+              <AsrarHubWatermark variant="gold" opacity={0.14} showCentralSeal={true} />
               {/* Background Esoteric Circles */}
               <div className="absolute inset-0 opacity-10 flex items-center justify-center pointer-events-none">
                 <div className="w-96 h-96 rounded-full border border-white animate-spin-slow flex items-center justify-center">
@@ -1151,6 +1155,9 @@ export const Talsam: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Complete Sacred Khatim & Talsam Usage Guide */}
+      <KhatimUsageGuide className="mt-8" defaultExpanded={false} />
       </div>
     </div>
   );

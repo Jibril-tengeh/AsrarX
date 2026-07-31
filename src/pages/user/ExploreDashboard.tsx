@@ -88,7 +88,18 @@ export const ExploreDashboard: React.FC = () => {
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
     } catch (e) {}
-    return [];
+    return mergeWithLocalArticles(INITIAL_DEFAULT_ARTICLES.map(art => ({
+      id: art.id,
+      title: art.title,
+      hook: art.hook,
+      category: art.category,
+      status: art.status || 'Published',
+      content: art.content,
+      benefits: art.benefits || [],
+      imageUrl: art.thumbnail,
+      isPremium: art.isPremium || false,
+      createdAt: art.createdAt
+    })));
   });
   const [isLoading, setIsLoading] = useState(false);
   const [visibleCount, setVisibleCount] = useState(3);
@@ -286,12 +297,17 @@ export const ExploreDashboard: React.FC = () => {
         .filter((art: any) => art !== null && (isAdmin || isPublishedStatus(art.status)));
 
       const merged = mergeWithLocalArticles(allArticles);
-      console.log(`[Articles onSnapshot - ExploreDashboard] ${merged.length} published articles ready to display.`);
-      setArticles(merged);
+      if (merged.length > 0) {
+        console.log(`[Articles onSnapshot - ExploreDashboard] ${merged.length} published articles ready to display.`);
+        setArticles(merged);
+        try {
+          localStorage.setItem('asrarhub_cached_explore_articles', JSON.stringify(merged));
+        } catch (e) {}
+      } else {
+        console.warn("[Articles onSnapshot - ExploreDashboard] Empty snapshot received, restoring cached/default articles.");
+        tryRestoreExploreCacheOrDefaults();
+      }
       setIsLoading(false);
-      try {
-        localStorage.setItem('asrarhub_cached_explore_articles', JSON.stringify(merged));
-      } catch (e) {}
     }, (error) => {
       console.error("[Articles onSnapshot - ExploreDashboard] Firestore permission or network error:", error.code, error.message, error);
       tryRestoreExploreCacheOrDefaults();

@@ -948,6 +948,8 @@ export default function RajmaCharms() {
         quality: 0.98,
         pixelRatio: 2,
         cacheBust: true,
+        skipFonts: true,
+        fontEmbedCSS: '',
         width: width,
         height: height,
         backgroundColor: '#030008',
@@ -1383,7 +1385,7 @@ export default function RajmaCharms() {
                 className={`p-2 sm:p-2.5 rounded-xl border transition-all text-xs font-semibold flex items-center gap-1.5 ${
                   isPlayingAudio
                     ? 'bg-amber-500 text-gray-950 border-amber-300 animate-pulse'
-                    : 'bg-purple-900/40 text-purple-900 dark:text-purple-200 border-purple-700/50 hover:bg-purple-800/60'
+                    : 'bg-purple-900/60 text-purple-100 border-purple-700/50 hover:bg-purple-800/80'
                 }`}
                 title="Écouter la fréquence sacrée de ce Sceau"
               >
@@ -1483,7 +1485,7 @@ export default function RajmaCharms() {
                   <button
                     type="button"
                     onClick={() => setShowSealInscriptions(!showSealInscriptions)}
-                    className="px-3 py-1 rounded-xl bg-purple-950/80 hover:bg-purple-900 border border-purple-700/60 text-[11px] font-bold text-purple-900 dark:text-purple-200 transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
+                    className="px-3 py-1 rounded-xl bg-purple-950/80 hover:bg-purple-900 border border-purple-700/60 text-[11px] font-bold text-purple-200 transition-all flex items-center gap-1.5 shadow-sm cursor-pointer"
                   >
                     {showSealInscriptions ? (
                       <>
@@ -1640,7 +1642,7 @@ export default function RajmaCharms() {
 
                 <button
                   onClick={() => setShowParchmentModal(true)}
-                  className="px-5 py-2.5 rounded-2xl bg-purple-900/60 hover:bg-purple-800 text-purple-900 dark:text-purple-200 border border-purple-700/60 font-bold text-xs flex items-center gap-2 transition-all"
+                  className="px-5 py-2.5 rounded-2xl bg-purple-900/80 hover:bg-purple-800 text-white border border-purple-700/60 font-bold text-xs flex items-center gap-2 transition-all cursor-pointer"
                 >
                   <Feather size={16} />
                   <span>{language === 'fr' ? 'Générer Parchemin de Rituel' : 'Generate Ritual Parchment'}</span>
@@ -2048,7 +2050,7 @@ export default function RajmaCharms() {
                               ? `Wannan Hatimi na Ranar #${selectedDay} yana tattara karfin ruhaniya na watan ${dailyData.monthNameHa}. Ana rubuta shi da tawadar zafaran a sa'a mai kyau.`
                               : `This Sacred Square (Khatim) for Day #${selectedDay} encapsulates the vibratory matrix of ${dailyData.monthNameEn}. It is designed to be traced in saffron ink during the auspicious hour.`}
                           </p>
-                          <div className="p-2.5 bg-purple-950/40 rounded-lg border border-purple-800/40 text-[11px] text-purple-900 dark:text-purple-200">
+                          <div className="p-2.5 bg-purple-950/60 rounded-lg border border-purple-800/40 text-[11px] text-purple-200">
                             <strong>{language === 'fr' ? 'Consécration :' : language === 'ha' ? 'Tsarkakewa :' : 'Consecration:'}</strong> {incense} • {bestHour}
                           </div>
                         </div>

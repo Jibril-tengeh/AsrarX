@@ -160,7 +160,7 @@ export const setLocalUserSession = (email: string, name?: string, country?: stri
   const role = isAdmin ? 'admin' : 'user';
   
   const now = new Date();
-  const trialExpiry = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+  const trialExpiry = new Date(now.getTime() + 12 * 60 * 60 * 1000);
 
   const userData: UserData = {
     uid: 'local_' + Math.random().toString(36).substring(2, 10),
@@ -173,7 +173,7 @@ export const setLocalUserSession = (email: string, name?: string, country?: stri
     isTrusted: true,
     emailVerified: true,
     spiritualPoints: 100,
-    subscriptionTier: isAdmin ? 'premium' : 'premium', // 24h free trial on account creation
+    subscriptionTier: isAdmin ? 'premium' : 'premium', // 12h free trial on account creation
     premiumUntil: trialExpiry.toISOString(),
     freeTrialActivated: true,
     freeTrialActivatedAt: now.toISOString(),
@@ -184,10 +184,22 @@ export const setLocalUserSession = (email: string, name?: string, country?: stri
     purchasedItems: [],
     country: country || '',
     phone: phone || '',
-    pushNotificationsEnabled: false
+    pushNotificationsEnabled: true
   };
   
   localStorage.setItem('asrarhub_local_user', JSON.stringify(userData));
+
+  // Maintain all local registered users list for validation
+  try {
+    const existingStr = localStorage.getItem('asrarhub_all_local_users');
+    const existingList = existingStr ? JSON.parse(existingStr) : [];
+    const updatedList = existingList.filter((u: any) => u.email !== normalizedEmail);
+    updatedList.push(userData);
+    localStorage.setItem('asrarhub_all_local_users', JSON.stringify(updatedList));
+  } catch (e) {
+    // Ignore storage errors
+  }
+
   window.dispatchEvent(new Event('asrarhub_local_user_changed'));
   return userData;
 };
@@ -342,11 +354,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               purchasedItems: data.purchasedItems || [],
               country: data.country || '',
               phone: data.phone || '',
-              pushNotificationsEnabled: data.pushNotificationsEnabled !== undefined ? data.pushNotificationsEnabled : false
+              pushNotificationsEnabled: data.pushNotificationsEnabled !== undefined ? data.pushNotificationsEnabled : true
             });
           } else {
             const now = new Date();
-            const trialExpiry = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+            const trialExpiry = new Date(now.getTime() + 12 * 60 * 60 * 1000);
 
             setUser({
               uid: firebaseUser.uid,
@@ -372,7 +384,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               purchasedItems: [],
               country: '',
               phone: '',
-              pushNotificationsEnabled: false
+              pushNotificationsEnabled: true
             });
           }
           setLoading(false);
@@ -415,7 +427,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const activate24hTrial = async () => {
     if (!user) return;
     const now = new Date();
-    const trialExpiry = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    const trialExpiry = new Date(now.getTime() + 12 * 60 * 60 * 1000);
 
     const updatedUser: UserData = {
       ...user,

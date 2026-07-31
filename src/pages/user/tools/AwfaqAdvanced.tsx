@@ -8,6 +8,8 @@ import { motion } from 'motion/react';
 import { useFeatures } from '../../../contexts/FeatureContext';
 import { downloadCanvasImage } from '../../../utils/downloadHelper';
 import { toCanvas } from 'html-to-image';
+import { AsrarHubWatermark } from '../../../components/AsrarHubWatermark';
+import { KhatimUsageGuide } from '../../../components/KhatimUsageGuide';
 
 const awfaqDict = {
   fr: {
@@ -384,7 +386,7 @@ export const AwfaqAdvanced: React.FC = () => {
   }
 
   return (
-    <div className="w-full max-w-7xl mx-auto p-3 sm:p-6 lg:p-8 safe-area-pt max-h-[85vh] overflow-hidden flex flex-col">
+    <div className="w-full max-w-7xl mx-auto p-3 sm:p-6 lg:p-8 safe-area-pt min-h-screen pb-24 flex flex-col">
       <div className="flex items-center gap-4 mb-4 shrink-0">
         <Link to="/tools" className="p-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
           <ArrowLeft className="text-gray-600 dark:text-gray-300" size={20} />
@@ -571,7 +573,8 @@ export const AwfaqAdvanced: React.FC = () => {
             )}
 
             <div ref={wafqRef} className="w-full overflow-x-auto pb-4 scrollbar-thin flex justify-start sm:justify-center p-2 bg-slate-900/10 dark:bg-slate-950/40 rounded-3xl">
-              <div className="p-3 bg-gray-100 dark:bg-gray-900/80 rounded-3xl border border-gray-200 dark:border-gray-700/60 shadow-inner">
+              <div className="p-3 bg-gray-100 dark:bg-gray-900/80 rounded-3xl border border-gray-200 dark:border-gray-700/60 shadow-inner relative overflow-hidden">
+                <AsrarHubWatermark variant="dark" opacity={0.12} showCentralSeal={true} />
                 <div className={`grid gap-1.5 sm:gap-2`} style={{ gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))` }}>
                   {grid.map((row, i) => (
                     row.map((cell, j) => {
@@ -736,6 +739,9 @@ export const AwfaqAdvanced: React.FC = () => {
           )}
         </motion.div>
       )}
+
+      {/* Ritual Usage & Consecration Guide */}
+      <KhatimUsageGuide className="mt-8" defaultExpanded={false} />
       </div>
     </div>
   );

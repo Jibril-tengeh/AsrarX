@@ -6,9 +6,9 @@ export const initialData: AsrarItem[] = [];
 
 export const getAsrarItems = (): AsrarItem[] => {
   try {
-    const stored = localStorage.getItem('asrar_items');
-    if (stored) {
-      const parsed = JSON.parse(stored);
+    const cached = localStorage.getItem('asrarhub_cached_articles_list') || localStorage.getItem('asrarhub_cached_explore_articles');
+    if (cached) {
+      const parsed = JSON.parse(cached);
       if (Array.isArray(parsed) && parsed.length > 0) {
         return parsed
           .filter(item => isPubliclyVisibleArticle(item.status))

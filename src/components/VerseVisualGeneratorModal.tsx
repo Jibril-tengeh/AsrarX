@@ -3,6 +3,7 @@ import { X, Download, Sparkles, Image as ImageIcon, Check, Moon, Star, Share2 } 
 import { motion, AnimatePresence } from 'motion/react';
 import { toCanvas } from 'html-to-image';
 import { downloadCanvasImage } from '../utils/downloadHelper';
+import { AsrarHubWatermark } from './AsrarHubWatermark';
 import { useAuth } from '../contexts/AuthContext';
 import { triggerProtectionModal } from './ContentProtectionManager';
 
@@ -245,13 +246,8 @@ export const VerseVisualGeneratorModal: React.FC<VerseVisualGeneratorModalProps>
                 <div className={`absolute -top-12 -right-12 w-48 h-48 ${currentStyle.glow} rounded-full blur-3xl pointer-events-none`} />
                 <div className={`absolute -bottom-12 -left-12 w-48 h-48 ${currentStyle.glow} rounded-full blur-3xl pointer-events-none`} />
 
-                {/* AsrarHub Corner Watermarks */}
-                <div className="absolute top-2 left-3 text-[10px] font-black tracking-widest text-amber-400/30 pointer-events-none select-none uppercase">
-                  AsrarHub
-                </div>
-                <div className="absolute top-2 right-3 text-[10px] font-black tracking-widest text-amber-400/30 pointer-events-none select-none uppercase">
-                  AsrarHub
-                </div>
+                {/* Engraved AsrarHub Watermark */}
+                {showWatermark && <AsrarHubWatermark variant="gold" opacity={0.14} showCentralSeal={true} />}
 
                 {/* Top Header & Verse Reference Divider */}
                 <div className="flex justify-between items-center text-xs text-amber-300/80 mb-2 font-mono">

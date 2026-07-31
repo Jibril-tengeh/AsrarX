@@ -55,7 +55,30 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
     } catch (e) {}
-    return [];
+    const defaults = INITIAL_DEFAULT_ARTICLES.map(art => ({
+      id: art.id,
+      title: art.title,
+      hook: art.hook,
+      category: art.category,
+      subCategory: art.subCategory || '',
+      status: art.status || 'Published',
+      content: art.content,
+      benefits: art.benefits || [],
+      imageUrl: art.thumbnail,
+      isPremium: art.isPremium || false,
+      createdAt: art.createdAt,
+      title_en: art.title_en,
+      content_en: art.content_en,
+      hook_en: art.hook_en,
+      title_ha: art.title_ha,
+      content_ha: art.content_ha,
+      hook_ha: art.hook_ha,
+      title_fr: art.title,
+      content_fr: art.content,
+      hook_fr: art.hook,
+      hasManualTranslation: false
+    } as AsrarItem));
+    return mergeWithLocalArticles(defaults);
   });
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -479,12 +502,17 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
         .filter((item): item is AsrarItem => item !== null);
 
       const merged = mergeWithLocalArticles(firestoreItems);
-      console.log(`[Articles onSnapshot - UserDashboard] ${merged.length} published articles ready to display.`);
-      setItems(merged);
-      try {
-        localStorage.setItem('asrarhub_cached_articles_list', JSON.stringify(merged));
-      } catch (e) {
-        console.error("Error writing articles list to cache", e);
+      if (merged.length > 0) {
+        console.log(`[Articles onSnapshot - UserDashboard] ${merged.length} published articles ready to display.`);
+        setItems(merged);
+        try {
+          localStorage.setItem('asrarhub_cached_articles_list', JSON.stringify(merged));
+        } catch (e) {
+          console.error("Error writing articles list to cache", e);
+        }
+      } else {
+        console.warn("[Articles onSnapshot - UserDashboard] Empty snapshot received (offline or 0 items), restoring cached/default articles.");
+        tryRestoreCachedOrDefaults();
       }
       setIsLoading(false);
     }, (error) => {
@@ -750,7 +778,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
   // console.log("UserDashboard loaded");
 
   return (
-    <div className="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8 safe-area-pt pb-24 relative">
+    <div className="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8 safe-area-pt pb-24 relative w-full max-w-full overflow-x-hidden min-w-0">
       {pullProgress > 0 && (
         <div 
           className="fixed top-16 left-1/2 -translate-x-1/2 z-50 flex items-center justify-center bg-white dark:bg-gray-800 rounded-full shadow-lg h-10 w-10 transition-all duration-200"
@@ -1631,7 +1659,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
         </div>
       )}
 
-      <div className={`grid gap-3 sm:gap-6 lg:gap-8 ${
+      <div className={`grid gap-3 sm:gap-6 lg:gap-8 w-full max-w-full min-w-0 ${
         layoutMode === 'grid2' ? 'grid-cols-2 lg:grid-cols-3' : 
         layoutMode === 'list' ? 'grid-cols-1 lg:grid-cols-2' : 
         'grid-cols-1'

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Sparkles, 
@@ -29,6 +30,7 @@ import { ExternalScreenWidgetModal } from './ExternalScreenWidgetModal';
 import { triggerSystemWidgetNotification, launchPictureInPictureWidget } from '../utils/externalWidgetSystem';
 
 export const CollapsibleFloatingWidget: React.FC = () => {
+  const navigate = useNavigate();
   const { language } = useLanguage();
   const { isPlaying, pause, resume, currentTrack } = useAudio();
   
@@ -82,41 +84,48 @@ export const CollapsibleFloatingWidget: React.FC = () => {
     setAbjadValue(val);
   }, [abjadInput]);
 
-  // Handle notification request
+  // Handle notification request & redirect directly to settings
   const handleEnableNotifications = async () => {
-    const granted = await requestNotificationPermission();
-    if ('Notification' in window) {
-      setNotifPermission(Notification.permission);
-    }
-    if (granted) {
-      setBgRemindersEnabled(true);
-      localStorage.setItem('asrar_bg_reminders', 'true');
-      
-      // Register service worker if available
-      if ('serviceWorker' in navigator) {
-        try {
-          const reg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-          const notifTitle = language === 'fr' 
-            ? 'AsrarHub — Notifications Activées' 
-            : language === 'ha'
-            ? 'AsrarHub — An Kunna Sanarwa'
-            : 'AsrarHub — Notifications Enabled';
-          const notifBody = language === 'fr'
-            ? 'Vous recevrez les rappels spirituels et heures planétaires en arrière-plan.'
-            : language === 'ha'
-            ? 'Za ku sami tunatarwar ruhi da na sa’o’in taurari a bango.'
-            : 'You will receive spiritual reminders and planetary hour alerts in the background.';
+    try {
+      const granted = await requestNotificationPermission();
+      if ('Notification' in window) {
+        setNotifPermission(Notification.permission);
+      }
+      if (granted) {
+        setBgRemindersEnabled(true);
+        localStorage.setItem('asrar_bg_reminders', 'true');
+        
+        // Register service worker if available
+        if ('serviceWorker' in navigator) {
+          try {
+            const reg = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+            const notifTitle = language === 'fr' 
+              ? 'AsrarHub — Notifications Activées' 
+              : language === 'ha'
+              ? 'AsrarHub — An Kunna Sanarwa'
+              : 'AsrarHub — Notifications Enabled';
+            const notifBody = language === 'fr'
+              ? 'Vous recevrez les rappels spirituels et heures planétaires en arrière-plan.'
+              : language === 'ha'
+              ? 'Za ku sami tunatarwar ruhi da na sa’o’in taurari a bango.'
+              : 'You will receive spiritual reminders and planetary hour alerts in the background.';
 
-          reg.active?.postMessage({
-            type: 'SHOW_NOTIFICATION',
-            title: notifTitle,
-            body: notifBody,
-          });
-        } catch (e) {
-          console.warn('Service worker registration notice:', e);
+            reg.active?.postMessage({
+              type: 'SHOW_NOTIFICATION',
+              title: notifTitle,
+              body: notifBody,
+            });
+          } catch (e) {
+            console.warn('Service worker registration notice:', e);
+          }
         }
       }
+    } catch (e) {
+      console.warn('Error requesting permissions:', e);
     }
+
+    // Redirect user directly to settings page (/user/profile) to accept/manage permissions
+    navigate('/user/profile', { state: { openPermissions: true } });
   };
 
   // Trigger test background notification (delays 3 seconds so user can switch tabs)
@@ -418,16 +427,23 @@ export const CollapsibleFloatingWidget: React.FC = () => {
                       <span className="text-xs font-bold text-slate-200">
                         {language === 'fr' ? 'Statut Autorisation :' : language === 'ha' ? 'Matsayin Izini :' : 'Authorization Status:'}
                       </span>
-                      <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${
-                        notifPermission === 'granted' 
-                          ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
-                          : 'bg-amber-500/20 text-amber-400 border border-amber-500/30'
-                      }`}>
-                        {notifPermission === 'granted' 
-                          ? (language === 'fr' ? 'Autorisé ✓' : language === 'ha' ? 'An amince ✓' : 'Granted ✓')
-                          : (language === 'fr' ? 'Permission Requise' : language === 'ha' ? 'Ana buƙatar izini' : 'Permission Required')
-                        }
-                      </span>
+                      <button
+                        type="button"
+                        onClick={handleEnableNotifications}
+                        className={`text-[11px] font-bold px-2.5 py-1 rounded-full transition-all flex items-center gap-1 cursor-pointer ${
+                          notifPermission === 'granted' 
+                            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
+                            : 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 shadow-sm active:scale-95 animate-pulse'
+                        }`}
+                        title={notifPermission !== 'granted' ? (language === 'fr' ? 'Cliquer pour aller aux paramètres et autoriser les notifications' : 'Click to go to settings and allow permissions') : ''}
+                      >
+                        <span>
+                          {notifPermission === 'granted' 
+                            ? (language === 'fr' ? 'Autorisé ✓' : language === 'ha' ? 'An amince ✓' : 'Granted ✓')
+                            : (language === 'fr' ? 'Permission Requise ↗' : language === 'ha' ? 'Ana buƙatar izini ↗' : 'Permission Required ↗')
+                          }
+                        </span>
+                      </button>
                     </div>
 
                     <p className="text-[11px] text-slate-400 leading-relaxed">

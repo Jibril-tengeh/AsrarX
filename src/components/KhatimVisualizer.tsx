@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Eye, Code, Sparkles, Shield, Star } from 'lucide-react';
+import { AsrarHubWatermark } from './AsrarHubWatermark';
 
 export interface KhatimGridData {
   version: number;
@@ -299,7 +300,9 @@ export const KhatimVisualizer: React.FC<KhatimVisualizerProps> = ({
           title={language === 'fr' ? 'Cliquer pour agrandir en plein écran' : 'Click to view full screen'}
         >
           {/* Inner Decorative Border */}
-          <div className="border border-purple-500/30 rounded-2xl p-3 sm:p-5 relative bg-black/40">
+          <div className="border border-purple-500/30 rounded-2xl p-3 sm:p-5 relative bg-black/40 overflow-hidden">
+            {/* AsrarHub Engraved Watermark */}
+            <AsrarHubWatermark variant="dark" opacity={0.14} showCentralSeal={true} />
             {/* Corner Stars */}
             <Star size={14} className="absolute top-2 left-2 text-amber-400" />
             <Star size={14} className="absolute top-2 right-2 text-amber-400" />

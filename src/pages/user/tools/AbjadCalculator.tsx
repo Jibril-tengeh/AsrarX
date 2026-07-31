@@ -35,32 +35,203 @@ const localDict = {
   fr: {
     cacheLocal: "Cache local (Mode Offline actif)",
     syncLocal: "Synchronisé localement (Offline-first)",
+    subtitle: "Valeur Abjad, répartition des 4 éléments du nom & analyse de compatibilité",
+    tabCalc: "Calculateur Abjad",
+    tabElements: "Thème des 4 Éléments",
+    tabCompatibility: "Compatibilité (2 Noms)",
     enterArabic: "Entrez le texte en Arabe",
     words: "Mots",
     letters: "Lettres",
-    numericValues: "Valeurs Numériques (Abjad)",
+    numericValues: "VALEURS NUMÉRIQUES (ABJAD)",
     howToInterpret: "Comment interpréter ces résultats ?",
-    interpret: "Interpréter"
+    interpret: "Interpréter",
+    mashriq: "Mashriq (Orientale)",
+    maghribi: "Maghribi (Occidentale)",
+    adadByWords: "Adad par Mots",
+    adadByLetters: "Adad par Lettres",
+    
+    // Tab 2
+    elementsHeading: "Saisissez le Nom Complet en Arabe pour calculer la Température Naturelle",
+    elementsPlaceholder: "Exemple: محمد بن عبد الله",
+    elementsEmpty: "Veuillez entrer un nom en alphabet arabe pour voir le thème des 4 éléments.",
+    fire: "Feu (النار)",
+    air: "Air (الهواء)",
+    water: "Eau (الماء)",
+    earth: "Terre (التراب)",
+    ofLetters: "des lettres",
+    mizajTitle: "Analyse du Tempérament Naturel (Mizaj al-Ism)",
+    fireDom: "Dominante de FEU (Bilieux / Chaud & Sec) : Tempérament passionné, meneur d'hommes, réaction rapide et forte volonté d'accomplissement. Affinité avec les Noms Divins de Puissance et de Victoire.",
+    airDom: "Dominante d'AIR (Sanguin / Chaud & Humide) : Esprit communicatif, vif, intellectuel et relationnel. Idéal pour l'enseignement, le commerce et l'éloquence.",
+    waterDom: "Dominante d'EAU (Lymphatique / Froid & Humide) : Sensibilité intuitive, bonté naturelle, préservation et profondeur d'âme. Grande affinité avec les Noms Divins de Miséricorde (Rahma).",
+    earthDom: "Dominante de TERRE (Mélancolique / Froid & Sec) : Esprit d'ancrage, de persévérance, de méthode et de travail de fond. Capacité à concrétiser les projets matériels durables.",
+
+    // Tab 3
+    compTitle: "Calcul d'Entente Spirituelle (Mariage, Partenariat)",
+    p1Label: "Premier Nom (ex. Mari / Partenaire 1)",
+    p1Placeholder: "Nom en Arabe (ex: احمد)",
+    p2Label: "Second Nom (ex. Épouse / Partenaire 2)",
+    p2Placeholder: "Nom en Arabe (ex: فاطمة)",
+    compEmpty: "Entrez les deux noms en caractères arabes pour afficher l'analyse d'entente onomastique.",
+    resScoreLabel: "Score de Résonance Spirituelle",
+    harmonyIndexLabel: "Indice d'Harmonie",
+    abjadP1: "Abjad Nom 1",
+    abjadP2: "Abjad Nom 2",
+    totalSum: "Somme Totale",
+    mod9Remainder: "Reste Modulo 9",
+
+    // Archetypes
+    highHarmonyTitle: "Lumière & Entente Spirituelle Parfaite (Feu/Lumière)",
+    highHarmonyDesc: "Affinité exceptionnelle et vision commune. Les projets entrepris ensemble sont bénis et lumineux.",
+    compBalanceTitle: "Alliance Stable & Communication Fluide (Air/Pensée)",
+    compBalanceDesc: "Excellente écoute, respect mutuel et entente intellectuelle très solide.",
+    dynamicTitle: "Union Émotionnelle Intime & Intuition Profonde (Eau/Cœur)",
+    dynamicDesc: "Grande complicité sentimentale et empathie naturelle. Préservation et loyauté.",
+    needsPatienceTitle: "Partenariat Ancré & Patience (Terre/Constance)",
+    needsPatienceDesc: "Relation basée sur la patience et le travail. Nécessite de maintenir une communication douce.",
+
+    // Modal
+    modalTitle: "Comment interpréter l'Abjad ?",
+    modalP1: "L'Abjad est un système d'écriture et de numérologie sacrée qui attribue une valeur numérique (adad) à chacune des 28 lettres de l'alphabet arabe.",
+    modalP2Header: "Pour vos invocations et zikrs :",
+    modalP2Body: "Le chiffre obtenu (par exemple, de votre prénom) représente votre résonance mystique. Vous pouvez utiliser ce chiffre comme nombre de répétitions quotidiennes pour un Nom Divin compatible (dont la valeur Abjad correspond à la vôtre).",
+    modalDiffTitle: "Différence entre les systèmes :",
+    modalMashriqi: "Mashriqi (Orientale) : Système standard traditionnel le plus répandu au Moyen-Orient.",
+    modalMaghribi: "Maghribi (Occidentale) : Système privilégié en Afrique du Nord et de l'Ouest (traditions de l'Asrar ouest-africain et marocain).",
+    modalGotIt: "J'ai compris"
   },
   en: {
     cacheLocal: "Local cache (Offline Mode active)",
     syncLocal: "Locally synchronized (Offline-first)",
+    subtitle: "Abjad value, distribution of the 4 name elements & compatibility analysis",
+    tabCalc: "Abjad Calculator",
+    tabElements: "4 Elements Theme",
+    tabCompatibility: "Compatibility (2 Names)",
     enterArabic: "Enter text in Arabic",
     words: "Words",
     letters: "Letters",
-    numericValues: "Numerical Values (Abjad)",
+    numericValues: "NUMERICAL VALUES (ABJAD)",
     howToInterpret: "How to interpret these results?",
-    interpret: "Interpret"
+    interpret: "Interpret",
+    mashriq: "Mashriq (Eastern)",
+    maghribi: "Maghribi (Western)",
+    adadByWords: "Adad by Words",
+    adadByLetters: "Adad by Letters",
+
+    // Tab 2
+    elementsHeading: "Enter Full Name in Arabic to calculate Natural Temperature",
+    elementsPlaceholder: "Example: محمد بن عبد الله",
+    elementsEmpty: "Please enter a name in Arabic alphabet to see the 4 elements breakdown.",
+    fire: "Fire (النار)",
+    air: "Air (الهواء)",
+    water: "Water (الماء)",
+    earth: "Earth (التراب)",
+    ofLetters: "of letters",
+    mizajTitle: "Natural Temperament Analysis (Mizaj al-Ism)",
+    fireDom: "FIRE Dominant (Bilious / Hot & Dry): Passionate temperament, natural leader, quick reactions and strong drive for achievement. Affinity with Divine Names of Power and Victory.",
+    airDom: "AIR Dominant (Sanguine / Hot & Wet): Communicative mind, quick-witted, intellectual and highly social. Ideal for teaching, business, and eloquence.",
+    waterDom: "WATER Dominant (Phlegmatic / Cold & Wet): Intuitive sensitivity, natural kindness, preservation and depth of soul. Strong affinity with Divine Names of Mercy (Rahma).",
+    earthDom: "EARTH Dominant (Melancholic / Cold & Dry): Grounded mind, perseverance, method and deep work ethic. High capacity to build lasting material projects.",
+
+    // Tab 3
+    compTitle: "Spiritual Compatibility Calculation (Marriage, Partnership)",
+    p1Label: "First Name (e.g. Husband / Partner 1)",
+    p1Placeholder: "Name in Arabic (e.g. احمد)",
+    p2Label: "Second Name (e.g. Wife / Partner 2)",
+    p2Placeholder: "Name in Arabic (e.g. فاطمة)",
+    compEmpty: "Enter both names in Arabic letters to display onomastic compatibility analysis.",
+    resScoreLabel: "Spiritual Resonance Score",
+    harmonyIndexLabel: "Harmony Index",
+    abjadP1: "Abjad Name 1",
+    abjadP2: "Abjad Name 2",
+    totalSum: "Total Sum",
+    mod9Remainder: "Remainder Modulo 9",
+
+    // Archetypes
+    highHarmonyTitle: "Light & Perfect Spiritual Harmony (Fire/Light)",
+    highHarmonyDesc: "Exceptional affinity and common vision. Projects undertaken together are blessed and full of light.",
+    compBalanceTitle: "Stable Alliance & Fluid Communication (Air/Thought)",
+    compBalanceDesc: "Excellent mutual listening, respect, and very strong intellectual agreement.",
+    dynamicTitle: "Intimate Emotional Union & Deep Intuition (Water/Heart)",
+    dynamicDesc: "Great emotional closeness and natural empathy. Preservation and loyalty.",
+    needsPatienceTitle: "Grounded Partnership & Patience (Earth/Constancy)",
+    needsPatienceDesc: "Relationship based on patience and effort. Requires maintaining gentle communication.",
+
+    // Modal
+    modalTitle: "How to interpret Abjad?",
+    modalP1: "Abjad is a sacred numerical writing system that assigns a numerical value (adad) to each of the 28 letters of the Arabic alphabet.",
+    modalP2Header: "For your invocations and zikrs:",
+    modalP2Body: "The obtained number (e.g., from your first name) represents your mystical resonance. You can use this number as a daily repetition count for a compatible Divine Name (whose Abjad value matches yours).",
+    modalDiffTitle: "Difference between systems:",
+    modalMashriqi: "Mashriqi (Eastern): Standard traditional system most common in the Middle East.",
+    modalMaghribi: "Maghribi (Western): Preferred system in North and West Africa (West African Asrar and Moroccan traditions).",
+    modalGotIt: "I understand"
   },
   ha: {
     cacheLocal: "Ma'ajiyar gida (Yanayin Offline yana aiki)",
     syncLocal: "An daidaita na gida (Offline-farko)",
-    enterArabic: "Shigar da rubutu cikin Harshen Larabci",
+    subtitle: "Ƙimar Abjad, rarrabuwar muhallai 4 na suna & binciken daidaito",
+    tabCalc: "Lissafin Abjad",
+    tabElements: "Mizanin Muhallai 4",
+    tabCompatibility: "Daidaituwa (Sunaye 2)",
+    enterArabic: "Shigar da rubutu a Larabci",
     words: "Kalmomi",
     letters: "Haruffa",
-    numericValues: "Darajojin Lambobi (Abjad)",
+    numericValues: "DARAJOJIN LAMBOBI (ABJAD)",
     howToInterpret: "Yadda za a fassara waɗannan sakamakon?",
-    interpret: "Fassara"
+    interpret: "Fassara",
+    mashriq: "Mashriq (Gabas)",
+    maghribi: "Maghribi (Yamma)",
+    adadByWords: "Adad ta Kalmomi",
+    adadByLetters: "Adad ta Haruffa",
+
+    // Tab 2
+    elementsHeading: "Shigar da Cikakken Suna da Larabci domin lissafa Yanayin Daftari",
+    elementsPlaceholder: "Misali: محمد بن عبد الله",
+    elementsEmpty: "Tuba shigar da suna da haruffan Larabci domin ganin mizanin muhallai 4.",
+    fire: "Wuta (النار)",
+    air: "Iska (الهواء)",
+    water: "Ruwa (الماء)",
+    earth: "Ƙasa (التراب)",
+    ofLetters: "na haruffa",
+    mizajTitle: "Binciken Halin Yanayi (Mizaj al-Ism)",
+    fireDom: "WUTA Ta Fi Yawa (Chaud & Sec): Halin gaba-gadi, shugabanci na ɗabi'a, saurin motsi da niyya mai ƙarfi. Yana dacewa da Sunayen Allah na Ƙarfi da Nasara.",
+    airDom: "ISKA Ta Fi Yawa (Chaud & Humide): Mai saurin gane abu, ilimi, mu'amala da magana mai daɗi. Mai kyau don karantarwa, kasuwanci da fasaha.",
+    waterDom: "RUWA Yafi Yawa (Cold & Wet): Hankali na sirri, tausayi, kariyar zuciya da zurfin ruhi. Yana dacewa da Sunayen Allah na Rahama.",
+    earthDom: "ƘASA Ta Fi Yawa (Cold & Dry): Juriyar zuciya, tsari da aiki mai zurfi. Yana taimakawa wajen gini da samun nasara mai ɗorewa.",
+
+    // Tab 3
+    compTitle: "Lissafin Zama lafiya & Daidaituwa (Aure, Kasuwanci)",
+    p1Label: "Suna na Farko (misali Miji / Abokin Tarayya 1)",
+    p1Placeholder: "Suna a Larabci (misali: احمد)",
+    p2Label: "Suna na Biyu (misali Mata / Abokin Tarayya 2)",
+    p2Placeholder: "Suna a Larabci (misali: فاطمة)",
+    compEmpty: "Shigar da sunayen biyu da haruffan Larabci domin ganin binciken daidaituwa.",
+    resScoreLabel: "Makin Haɗin Gwiwa na Ruhani",
+    harmonyIndexLabel: "Auna Sahalce",
+    abjadP1: "Abjad Suna 1",
+    abjadP2: "Abjad Suna 2",
+    totalSum: "Jimillar Nauyi",
+    mod9Remainder: "Ragowar Modulo 9",
+
+    // Archetypes
+    highHarmonyTitle: "Cikakkar Daidaituwa da Sadarwar Ruhi (Wuta/Haskaki)",
+    highHarmonyDesc: "Babban so da amincewa da ke tsakanin sunayen guda biyu. Ayyukan da kuka gudanar tare suna cike da albarka da haske.",
+    compBalanceTitle: "Kyakkyawar Fahimtar Juna da Magana (Iska/Tunanin)",
+    compBalanceDesc: "Kyakkyawar fahimtar juna, girmamawa da goyon bayan basira.",
+    dynamicTitle: "Zurfin Soyayya da Zama da Tausayi (Ruwa/Zuciya)",
+    dynamicDesc: "Kusanci mai zurfi a zuciya da tausayin juna. Aminci da kariya ta amintaka.",
+    needsPatienceTitle: "Haɗin Gwiwa na Juriyar Zuciya (Ƙasa/Dorewa)",
+    needsPatienceDesc: "Zaman da yake buƙatar haƙuri da aiki tukuru. Yana buƙatar biyu su riƙa magana ta gaskiya da tausasawa.",
+
+    // Modal
+    modalTitle: "Yadda za a fassara Abjad?",
+    modalP1: "Abjad tsarin lissafin lambobin sirri ne da ke bai wa kowace guda daga haruffa 28 na Larabci adadi na musamman.",
+    modalP2Header: "Don addu'o'inku da wuridai:",
+    modalP2Body: "Adadin da kuka samu (misali na sunanku) shi ne ma'aunin karfin ruhinku. Kuna iya amfani da wannan lambar wajen maimaita Sunan Allah mai dacewa (wanda adadinsa ya yi daidai da naku).",
+    modalDiffTitle: "Bambancin tsare-tsare:",
+    modalMashriqi: "Mashriqi (Gabas): Standard din da aka fi amfani da shi a Gabas Ta Tsakiya.",
+    modalMaghribi: "Maghribi (Yamma): Tsarin da aka fi amfani da shi a Arewacin da Yammacin Afirka (Asrar na Hausa/Mali/Marok).",
+    modalGotIt: "Na fahimta"
   }
 };
 
@@ -194,29 +365,29 @@ export const AbjadCalculator: React.FC = () => {
     const mod4 = sumTotal % 4 === 0 ? 4 : sumTotal % 4;
 
     let score = 85;
-    let archetype = "Entente Harmonieuse & Bénédiction";
-    let desc = "Les vibrations des deux noms forment un équilibre spirituel propice à la prospérité et au soutien mutuel.";
+    let archetype = dict.highHarmonyTitle;
+    let desc = dict.highHarmonyDesc;
     let elementalSynergy = "Synergie Fluide";
 
     if (mod9 === 1 || mod9 === 5 || mod9 === 9) {
       score = 95;
-      archetype = "Lumière & Entente Spirituelle Parfaite (Feu/Lumière)";
-      desc = "Affinité exceptionnelle et vision commune. Les projets entrepris ensemble sont bénis et lumineux.";
+      archetype = dict.highHarmonyTitle;
+      desc = dict.highHarmonyDesc;
       elementalSynergy = "Harmonie d'Élévation";
     } else if (mod9 === 2 || mod9 === 6) {
       score = 88;
-      archetype = "Alliance Stable & Communication Fluide (Air/Pensée)";
-      desc = "Excellente écoute, respect mutuel et entente intellectuelle très solide.";
+      archetype = dict.compBalanceTitle;
+      desc = dict.compBalanceDesc;
       elementalSynergy = "Harmonie d'Air";
     } else if (mod9 === 3 || mod9 === 7) {
       score = 90;
-      archetype = "Union Émotionnelle Intime & Intuition Profonde (Eau/Cœur)";
-      desc = "Grande complicité sentimentale et empathie naturelle. Préservation et loyauté.";
+      archetype = dict.dynamicTitle;
+      desc = dict.dynamicDesc;
       elementalSynergy = "Harmonie d'Eau";
     } else {
       score = 82;
-      archetype = "Partenariat Ancré & Patience (Terre/Constance)";
-      desc = "Relation basée sur la patience et le travail. Nécessite de maintenir une communication douce.";
+      archetype = dict.needsPatienceTitle;
+      desc = dict.needsPatienceDesc;
       elementalSynergy = "Stabilité Terrestre";
     }
 
@@ -238,7 +409,7 @@ export const AbjadCalculator: React.FC = () => {
   const compResult = getCompatibilityAnalysis();
 
   return (
-    <div className="w-full max-w-4xl mx-auto p-3 sm:p-6 lg:p-8 safe-area-pt max-h-[85vh] overflow-hidden flex flex-col">
+    <div className="w-full max-w-4xl mx-auto p-3 sm:p-6 lg:p-8 safe-area-pt min-h-screen pb-24 flex flex-col">
       {/* Header */}
       <div className="flex items-center justify-between mb-4 shrink-0">
         <div className="flex items-center gap-4">
@@ -254,7 +425,7 @@ export const AbjadCalculator: React.FC = () => {
               {t("tools.abjad.title", "Calculateur Abjad & Thème Onomastique")}
             </h1>
             <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-300 mt-0.5">
-              Valeur Abjad, répartition des 4 éléments du nom &amp; analyse de compatibilité
+              {dict.subtitle}
             </p>
           </div>
         </div>
@@ -271,7 +442,7 @@ export const AbjadCalculator: React.FC = () => {
           }`}
         >
           <Calculator size={16} />
-          <span>Calculateur Abjad</span>
+          <span>{dict.tabCalc}</span>
         </button>
         <button
           onClick={() => setActiveTab('elements')}
@@ -282,7 +453,7 @@ export const AbjadCalculator: React.FC = () => {
           }`}
         >
           <PieChart size={16} />
-          <span>Thème des 4 Éléments</span>
+          <span>{dict.tabElements}</span>
         </button>
         <button
           onClick={() => setActiveTab('compatibility')}
@@ -293,7 +464,7 @@ export const AbjadCalculator: React.FC = () => {
           }`}
         >
           <Heart size={16} />
-          <span>Compatibilité (2 Noms)</span>
+          <span>{dict.tabCompatibility}</span>
         </button>
       </div>
 
@@ -465,12 +636,12 @@ export const AbjadCalculator: React.FC = () => {
         <div className="space-y-6">
           <div className="bg-white dark:bg-gray-800 rounded-3xl p-4 sm:p-5 shadow-sm border border-gray-100 dark:border-gray-700 space-y-4">
             <label className="block text-sm font-bold text-gray-900 dark:text-white">
-              Saisissez le Nom Complet en Arabe pour calculer la Température Naturelle
+              {dict.elementsHeading}
             </label>
             <textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
-              placeholder="Exemple: محمد بن عبد الله"
+              placeholder={dict.elementsPlaceholder}
               dir="rtl"
               rows={2}
               className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl p-3 text-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
@@ -478,7 +649,7 @@ export const AbjadCalculator: React.FC = () => {
             />
 
             {letterCount === 0 ? (
-              <p className="text-xs text-gray-500 text-center py-4">Veuillez entrer un nom en alphabet arabe pour voir le thème des 4 éléments.</p>
+              <p className="text-xs text-gray-500 text-center py-4">{dict.elementsEmpty}</p>
             ) : (
               <div className="space-y-4 pt-2">
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -486,40 +657,40 @@ export const AbjadCalculator: React.FC = () => {
                   <div className="p-3 bg-red-50 dark:bg-red-950/30 rounded-2xl border border-red-200/60 dark:border-red-900/40 space-y-1">
                     <div className="flex items-center gap-1.5 text-red-600 dark:text-red-400 font-bold text-xs">
                       <Flame size={16} />
-                      <span>Feu (النار)</span>
+                      <span>{dict.fire}</span>
                     </div>
                     <p className="text-2xl font-bold text-gray-900 dark:text-white">{elemental.fire}</p>
-                    <p className="text-[10px] text-gray-500">{((elemental.fire / letterCount) * 100).toFixed(1)}% des lettres</p>
+                    <p className="text-[10px] text-gray-500">{((elemental.fire / letterCount) * 100).toFixed(1)}% {dict.ofLetters}</p>
                   </div>
 
                   {/* Air */}
                   <div className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-2xl border border-amber-200/60 dark:border-amber-900/40 space-y-1">
                     <div className="flex items-center gap-1.5 text-amber-600 dark:text-amber-400 font-bold text-xs">
                       <Wind size={16} />
-                      <span>Air (الهواء)</span>
+                      <span>{dict.air}</span>
                     </div>
                     <p className="text-2xl font-bold text-gray-900 dark:text-white">{elemental.air}</p>
-                    <p className="text-[10px] text-gray-500">{((elemental.air / letterCount) * 100).toFixed(1)}% des lettres</p>
+                    <p className="text-[10px] text-gray-500">{((elemental.air / letterCount) * 100).toFixed(1)}% {dict.ofLetters}</p>
                   </div>
 
                   {/* Water */}
                   <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-2xl border border-blue-200/60 dark:border-blue-900/40 space-y-1">
                     <div className="flex items-center gap-1.5 text-blue-600 dark:text-blue-400 font-bold text-xs">
                       <Droplets size={16} />
-                      <span>Eau (الماء)</span>
+                      <span>{dict.water}</span>
                     </div>
                     <p className="text-2xl font-bold text-gray-900 dark:text-white">{elemental.water}</p>
-                    <p className="text-[10px] text-gray-500">{((elemental.water / letterCount) * 100).toFixed(1)}% des lettres</p>
+                    <p className="text-[10px] text-gray-500">{((elemental.water / letterCount) * 100).toFixed(1)}% {dict.ofLetters}</p>
                   </div>
 
                   {/* Earth */}
                   <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 rounded-2xl border border-emerald-200/60 dark:border-emerald-900/40 space-y-1">
                     <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-bold text-xs">
                       <Mountain size={16} />
-                      <span>Terre (التراب)</span>
+                      <span>{dict.earth}</span>
                     </div>
                     <p className="text-2xl font-bold text-gray-900 dark:text-white">{elemental.earth}</p>
-                    <p className="text-[10px] text-gray-500">{((elemental.earth / letterCount) * 100).toFixed(1)}% des lettres</p>
+                    <p className="text-[10px] text-gray-500">{((elemental.earth / letterCount) * 100).toFixed(1)}% {dict.ofLetters}</p>
                   </div>
                 </div>
 
@@ -527,17 +698,13 @@ export const AbjadCalculator: React.FC = () => {
                 <div className="p-4 bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 rounded-2xl border border-blue-100 dark:border-blue-900/40 space-y-2">
                   <h4 className="font-bold text-sm text-blue-900 dark:text-blue-200 flex items-center gap-2">
                     <Sparkles size={16} className="text-blue-500" />
-                    Analyse du Tempérament Naturel (Mizaj al-Ism)
+                    {dict.mizajTitle}
                   </h4>
                   <p className="text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
-                    {elemental.fire >= elemental.air && elemental.fire >= elemental.water && elemental.fire >= elemental.earth &&
-                      "Dominante de FEU (Bilieux / Chaud & Sec) : Tempérament passionné, meneur d'hommes, réaction rapide et forte volonté d'accomplissement. Affinité avec les Noms Divins de Puissance et de Victoire."}
-                    {elemental.air > elemental.fire && elemental.air >= elemental.water && elemental.air >= elemental.earth &&
-                      "Dominante d'AIR (Sanguin / Chaud & Humide) : Esprit communicatif, vif, intellectuel et relationnel. Idéal pour l'enseignement, le commerce et l'éloquence."}
-                    {elemental.water > elemental.fire && elemental.water > elemental.air && elemental.water >= elemental.earth &&
-                      "Dominante d'EAU (Lymphatique / Froid & Humide) : Sensibilité intuitive, bonté naturelle, préservation et profondeur d'âme. Grande affinité avec les Noms Divins de Miséricorde (Rahma)."}
-                    {elemental.earth > elemental.fire && elemental.earth > elemental.air && elemental.earth > elemental.water &&
-                      "Dominante de TERRE (Mélancolique / Froid & Sec) : Esprit d'ancrage, de persévérance, de méthode et de travail de fond. Capacité à concrétiser les projets matériels durables."}
+                    {elemental.fire >= elemental.air && elemental.fire >= elemental.water && elemental.fire >= elemental.earth && dict.fireDom}
+                    {elemental.air > elemental.fire && elemental.air >= elemental.water && elemental.air >= elemental.earth && dict.airDom}
+                    {elemental.water > elemental.fire && elemental.water > elemental.air && elemental.water >= elemental.earth && dict.waterDom}
+                    {elemental.earth > elemental.fire && elemental.earth > elemental.air && elemental.earth > elemental.water && dict.earthDom}
                   </p>
                 </div>
               </div>
@@ -552,29 +719,29 @@ export const AbjadCalculator: React.FC = () => {
           <div className="bg-white dark:bg-gray-800 rounded-3xl p-4 sm:p-5 shadow-sm border border-gray-100 dark:border-gray-700 space-y-4">
             <h3 className="font-bold text-base text-gray-900 dark:text-white flex items-center gap-2">
               <Users size={18} className="text-blue-500" />
-              Calcul d'Entente Spirituelle (Mariage, Partenariat)
+              {dict.compTitle}
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Premier Nom (ex. Mari / Partenaire 1)</label>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">{dict.p1Label}</label>
                 <input
                   type="text"
                   value={name1}
                   onChange={(e) => setName1(e.target.value)}
-                  placeholder="Nom en Arabe (ex: احمد)"
+                  placeholder={dict.p1Placeholder}
                   dir="rtl"
                   className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   style={{ fontFamily: "'Amiri', 'Traditional Arabic', system-ui, sans-serif" }}
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">Second Nom (ex. Épouse / Partenaire 2)</label>
+                <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-1">{dict.p2Label}</label>
                 <input
                   type="text"
                   value={name2}
                   onChange={(e) => setName2(e.target.value)}
-                  placeholder="Nom en Arabe (ex: فاطمة)"
+                  placeholder={dict.p2Placeholder}
                   dir="rtl"
                   className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-lg text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                   style={{ fontFamily: "'Amiri', 'Traditional Arabic', system-ui, sans-serif" }}
@@ -583,36 +750,36 @@ export const AbjadCalculator: React.FC = () => {
             </div>
 
             {!compResult ? (
-              <p className="text-xs text-gray-500 text-center py-4">Entrez les deux noms en caractères arabes pour afficher l'analyse d'entente onomastique.</p>
+              <p className="text-xs text-gray-500 text-center py-4">{dict.compEmpty}</p>
             ) : (
               <div className="space-y-4 pt-2 border-t border-gray-100 dark:border-gray-700">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-gradient-to-r from-blue-600 to-indigo-600 p-4 rounded-2xl text-white gap-3">
                   <div>
-                    <span className="text-xs uppercase font-medium text-blue-100">Score de Résonance Spirituelle</span>
+                    <span className="text-xs uppercase font-medium text-blue-100">{dict.resScoreLabel}</span>
                     <h4 className="text-2xl font-bold">{compResult.archetype}</h4>
                     <p className="text-xs text-blue-100 mt-1">{compResult.desc}</p>
                   </div>
                   <div className="text-right shrink-0">
                     <span className="text-3xl font-extrabold">{compResult.score}%</span>
-                    <p className="text-[10px] text-blue-200">Indice d'Harmonie</p>
+                    <p className="text-[10px] text-blue-200">{dict.harmonyIndexLabel}</p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-xs">
                   <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700">
-                    <span className="text-gray-500 block">Abjad Nom 1</span>
+                    <span className="text-gray-500 block">{dict.abjadP1}</span>
                     <strong className="text-base text-gray-900 dark:text-white">{compResult.name1Val}</strong>
                   </div>
                   <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700">
-                    <span className="text-gray-500 block">Abjad Nom 2</span>
+                    <span className="text-gray-500 block">{dict.abjadP2}</span>
                     <strong className="text-base text-gray-900 dark:text-white">{compResult.name2Val}</strong>
                   </div>
                   <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700">
-                    <span className="text-gray-500 block">Somme Totale</span>
+                    <span className="text-gray-500 block">{dict.totalSum}</span>
                     <strong className="text-base text-blue-600 dark:text-blue-400">{compResult.sumTotal}</strong>
                   </div>
                   <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700">
-                    <span className="text-gray-500 block">Reste Modulo 9</span>
+                    <span className="text-gray-500 block">{dict.mod9Remainder}</span>
                     <strong className="text-base text-amber-600 dark:text-amber-400">{compResult.mod9} / 9</strong>
                   </div>
                 </div>
@@ -653,24 +820,24 @@ export const AbjadCalculator: React.FC = () => {
                   <Calculator size={22} />
                 </div>
                 <h3 className="text-lg font-bold text-gray-900 dark:text-white">
-                  Comment interpréter l'Abjad ?
+                  {dict.modalTitle}
                 </h3>
               </div>
               
               <div className="space-y-4 text-sm text-gray-600 dark:text-gray-300">
                 <p>
-                  L'Abjad est un système d'écriture et de numérologie sacrée qui attribue une valeur numérique (adad) à chacune des 28 lettres de l'alphabet arabe.
+                  {dict.modalP1}
                 </p>
                 <p>
-                  <strong>Pour vos invocations et zikrs :</strong>
+                  <strong>{dict.modalP2Header}</strong>
                   <br />
-                  Le chiffre obtenu (par exemple, de votre prénom) représente votre <strong>résonance mystique</strong>. Vous pouvez utiliser ce chiffre comme nombre de répétitions quotidiennes pour un Nom Divin compatible (dont la valeur Abjad correspond à la vôtre).
+                  {dict.modalP2Body}
                 </p>
                 <div className="bg-gray-50 dark:bg-gray-900 p-3 rounded-2xl border border-gray-100 dark:border-gray-700/50 space-y-2">
-                  <p className="text-xs font-semibold text-gray-800 dark:text-gray-200">Différence entre les systèmes :</p>
+                  <p className="text-xs font-semibold text-gray-800 dark:text-gray-200">{dict.modalDiffTitle}</p>
                   <ul className="list-disc list-inside space-y-1 text-xs text-gray-500 dark:text-gray-300">
-                    <li><strong>Mashriqi (Orientale) :</strong> Système standard traditionnel le plus répandu au Moyen-Orient.</li>
-                    <li><strong>Maghribi (Occidentale) :</strong> Système privilégié en Afrique du Nord et de l'Ouest (traditions de l'Asrar ouest-africain et marocain).</li>
+                    <li>{dict.modalMashriqi}</li>
+                    <li>{dict.modalMaghribi}</li>
                   </ul>
                 </div>
               </div>
@@ -679,7 +846,7 @@ export const AbjadCalculator: React.FC = () => {
                 onClick={() => setShowAbjadInfoModal(false)}
                 className="mt-6 w-full py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-xl text-sm font-semibold transition-colors shadow-sm cursor-pointer"
               >
-                J'ai compris
+                {dict.modalGotIt}
               </button>
             </motion.div>
           </div>

@@ -17,7 +17,7 @@ export const FreeTrial24hModal: React.FC<FreeTrial24hModalProps> = ({ isOpen, on
   const navigate = useNavigate();
 
   const [timeLeft, setTimeLeft] = useState<{ hours: number; minutes: number; seconds: number }>({
-    hours: 24,
+    hours: 12,
     minutes: 0,
     seconds: 0
   });
@@ -121,24 +121,24 @@ export const FreeTrial24hModal: React.FC<FreeTrial24hModalProps> = ({ isOpen, on
             {/* Badge */}
             <span className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 font-extrabold text-xs uppercase tracking-wider mb-2">
               <Zap size={13} className="text-amber-400 fill-amber-400" />
-              {isFr ? 'Offre de Bienvenue • 24h Premium' : isHa ? 'Kyauta • 24h Premium' : 'Welcome Gift • 24h Premium'}
+              {isFr ? 'Offre de Bienvenue • 12h Premium' : isHa ? 'Kyauta • 12h Premium' : 'Welcome Gift • 12h Premium'}
             </span>
 
             {/* Main Title */}
             <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-300 to-amber-400">
               {isFr 
-                ? '24 Heures de Premium Gratuit !' 
+                ? '12 Heures de Premium Gratuit !' 
                 : isHa 
-                ? 'Sa\'a 24 Na Premium Kyauta!' 
-                : '24 Hours Free Premium Access!'}
+                ? 'Sa\'a 12 Na Premium Kyauta!' 
+                : '12 Hours Free Premium Access!'}
             </h2>
 
             <p className="text-sm text-gray-300 mt-2 max-w-md leading-relaxed">
               {isFr 
-                ? 'Félicitations ! Votre compte bénéficie d\'un accès Premium VIP complet pendant 24 heures sans aucun engagement ni frais.'
+                ? 'Félicitations ! Votre compte bénéficie d\'un accès Premium VIP complet pendant 12 heures sans aucun engagement ni frais.'
                 : isHa
-                ? 'Barka da zuwa! Account ɗinku yana da damar amfani da Premium VIP kyauta na tsawon sa\'o\'i 24.'
-                : 'Congratulations! Your account enjoys full VIP Premium access for 24 hours with no commitment or fees.'}
+                ? 'Barka da zuwa! Account ɗinku yana da damar amfani da Premium VIP kyauta na tsawon sa\'o\'i 12.'
+                : 'Congratulations! Your account enjoys full VIP Premium access for 12 hours with no commitment or fees.'}
             </p>
 
             {/* Timer Banner */}
@@ -202,10 +202,10 @@ export const FreeTrial24hModal: React.FC<FreeTrial24hModalProps> = ({ isOpen, on
                 </div>
                 <div>
                   <h4 className="text-sm font-bold text-amber-200">
-                    {isFr ? 'Désactivation Automatique dans 24h' : isHa ? 'Aure na Sa\'o\'i 24 Ba Tare da Biyan Kuɗi Ba' : 'Auto-Deactivates After 24 Hours'}
+                    {isFr ? 'Désactivation Automatique dans 12h' : isHa ? 'Aure na Sa\'o\'i 12 Ba Tare da Biyan Kuɗi Ba' : 'Auto-Deactivates After 12 Hours'}
                   </h4>
                   <p className="text-xs text-gray-400">
-                    {isFr ? 'Aucune carte requise. À la fin des 24h, l\'accès repasse simplement en mode gratuit.' : 'No credit card required. Returns to standard free access automatically after 24 hours.'}
+                    {isFr ? 'Aucune carte requise. À la fin des 12h, l\'accès repasse simplement en mode gratuit.' : 'No credit card required. Returns to standard free access automatically after 12 hours.'}
                   </p>
                 </div>
               </div>
@@ -220,10 +220,10 @@ export const FreeTrial24hModal: React.FC<FreeTrial24hModalProps> = ({ isOpen, on
                 <Sparkles size={18} className="fill-black" />
                 <span>
                   {isFr 
-                    ? 'Profiter de mes 24h Premium Maintenent' 
+                    ? 'Profiter de mes 12h Premium Maintenant' 
                     : isHa 
                     ? 'Fara Amfani da Premium Yanzu' 
-                    : 'Start Using 24h Free Premium'}
+                    : 'Start Using 12h Free Premium'}
                 </span>
               </button>
 

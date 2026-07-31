@@ -73,10 +73,9 @@ export const runFirestoreDiagnostics = async (): Promise<DiagnosticResult> => {
   } catch (err: any) {
     result.restApiStatus = 'CORS_OR_NETWORK_ERROR';
     result.restApiErrorDetails = err?.message || String(err);
-    console.error(
-      `%c[REST/CORS Test] FAILED (Possible CORS restrictions, SSL error, or domain blocked in WebView)`,
-      'color: #ef4444; font-weight: bold;',
-      err
+    console.warn(
+      `[REST/CORS Test] Note: Direct fetch unavailable or restricted in current environment:`,
+      err?.message || err
     );
   }
 
@@ -99,10 +98,9 @@ export const runFirestoreDiagnostics = async (): Promise<DiagnosticResult> => {
     result.sdkStatus = 'FIRESTORE_SDK_ERROR';
     result.sdkLatencyMs = sdkDuration;
     result.sdkErrorDetails = `${err?.code || 'UNKNOWN_CODE'}: ${err?.message || String(err)}`;
-    console.error(
-      `%c[Firestore SDK Test] FAILED in ${sdkDuration}ms - Error Code: ${err?.code || 'NONE'}`,
-      'color: #ef4444; font-weight: bold;',
-      err
+    console.warn(
+      `[Firestore SDK Test] Note: SDK connectivity test encountered an issue (${err?.code || 'NONE'}):`,
+      err?.message || err
     );
   }
 

@@ -38,8 +38,6 @@
 
 html {
   font-size: calc(12px * var(--app-text-scale, 1)); /* Adaptatif avec contrôle de taille de texte */
-  touch-action: manipulation;
-  overscroll-behavior-y: contain;
 }
 
 @media (min-width: 768px) {
@@ -54,10 +52,20 @@ html {
   }
 }
 
+html, body {
+  max-width: 100vw;
+  overflow-x: clip;
+}
+
 body {
   font-family: var(--font-sans);
   width: 100%;
-  overscroll-behavior-y: contain;
+  min-height: 100vh;
+}
+
+/* Ensure flex child inputs and buttons don't blow out mobile layout bounds */
+input, textarea, select {
+  min-width: 0;
 }
 
 /* Prevent iOS Zoom on Inputs */

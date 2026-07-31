@@ -9,6 +9,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { triggerProtectionModal } from '../../../components/ContentProtectionManager';
 import { toCanvas } from 'html-to-image';
 import { downloadCanvasImage } from '../../../utils/downloadHelper';
+import { AsrarHubWatermark } from '../../../components/AsrarHubWatermark';
 
 interface MetalOption {
   id: string;
@@ -361,6 +362,8 @@ Adad Total : ${grandTotal}`;
             ref={svgContainerRef}
             className="w-full bg-slate-900 rounded-3xl p-8 border border-slate-800 shadow-2xl flex flex-col items-center justify-center relative overflow-hidden min-h-[420px]"
           >
+            {/* Automatic AsrarHub Watermark Overlay */}
+            <AsrarHubWatermark variant="gold" opacity={0.16} showCentralSeal={true} />
             {/* Background subtle star grid */}
             <div className="absolute inset-0 bg-[radial-gradient(#334155_1px,transparent_1px)] [background-size:16px_16px] opacity-30"></div>
 

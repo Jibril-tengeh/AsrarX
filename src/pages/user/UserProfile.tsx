@@ -11,7 +11,8 @@ import { PremiumWrapper } from '../../components/PremiumWrapper';
 import { signOut, db, auth } from '../../lib/firebase';
 import { doc, setDoc, collection, deleteDoc, onSnapshot, updateDoc, query, where } from 'firebase/firestore';
 import { isPubliclyVisibleArticle } from '../../lib/articleUtils';
-import { useNavigate, Link } from 'react-router-dom';
+import { getAsrarItems } from '../../data/store';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { getFCMToken, checkNotificationSupport, onMessageListener } from '../../lib/fcm';
 import { getApiUrl } from '../../lib/api';
 
@@ -30,11 +31,19 @@ const CollapsibleSection: React.FC<{
   icon: React.ReactNode;
   children: React.ReactNode;
   headerAction?: React.ReactNode;
-}> = ({ title, icon, children, headerAction }) => {
-  const [isOpen, setIsOpen] = useState(false);
+  defaultOpen?: boolean;
+  id?: string;
+}> = ({ title, icon, children, headerAction, defaultOpen = false, id }) => {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  useEffect(() => {
+    if (defaultOpen) {
+      setIsOpen(true);
+    }
+  }, [defaultOpen]);
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700 mb-6">
+    <div id={id} className="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700 mb-6">
       <div 
         className="flex items-center justify-between cursor-pointer group"
         onClick={() => setIsOpen(!isOpen)}
@@ -274,6 +283,24 @@ export const UserProfile: React.FC = () => {
     geolocation?: boolean;
     microphone?: boolean;
   }>({});
+
+  const location = useLocation();
+  const shouldOpenPermissions = Boolean(
+    location.state?.openPermissions || 
+    location.state?.highlightPermissions || 
+    (typeof location.search === 'string' && location.search.includes('permissions'))
+  );
+
+  useEffect(() => {
+    if (shouldOpenPermissions) {
+      setTimeout(() => {
+        const el = document.getElementById('system-permissions-section');
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }, 350);
+    }
+  }, [shouldOpenPermissions]);
   const [isRequestingPerms, setIsRequestingPerms] = useState(false);
 
   const handleRequestAllPermissions = async () => {
@@ -341,10 +368,14 @@ export const UserProfile: React.FC = () => {
       ? query(collection(db, 'articles'))
       : query(collection(db, 'articles'), where('status', 'in', ['Published', 'published']));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const allItems: any[] = snapshot.docs.map(doc => ({
+      let allItems: any[] = snapshot.docs.map(doc => ({
         id: doc.id,
         ...(doc.data() as any)
       }));
+
+      if (allItems.length === 0) {
+        allItems = getAsrarItems();
+      }
 
       // Get saved bookmarks
       try {
@@ -360,7 +391,19 @@ export const UserProfile: React.FC = () => {
       }
       setLoadingFavorites(false);
     }, (error) => {
-      console.error("Error loading favorites:", error);
+      console.error("Error loading favorites, using offline fallback:", error);
+      const allItems = getAsrarItems();
+      try {
+        const savedIds: string[] = JSON.parse(localStorage.getItem('asrar_bookmarks') || '[]');
+        if (Array.isArray(savedIds)) {
+          const bookmarkedItems = allItems.filter(item => savedIds.includes(item.id));
+          setFavorites(bookmarkedItems);
+        } else {
+          setFavorites([]);
+        }
+      } catch (err) {
+        setFavorites([]);
+      }
       setLoadingFavorites(false);
     });
 
@@ -1303,6 +1346,8 @@ export const UserProfile: React.FC = () => {
       </CollapsibleSection>
 
       <CollapsibleSection
+        id="system-permissions-section"
+        defaultOpen={shouldOpenPermissions}
         title={t('profile.permissions.title', "Autorisations Systèmes (Micro, GPS, Stockage, Notifications)")}
         icon={<Shield className="text-emerald-500" size={20} />}
       >

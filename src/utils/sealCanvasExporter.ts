@@ -36,6 +36,18 @@ export async function generateAndDownloadSealCard(params: ExportSealParams): Pro
   ctx.fillStyle = bgGradient;
   ctx.fillRect(0, 0, width, height);
 
+  // AsrarHub Engraved Watermark Pattern on Canvas
+  ctx.save();
+  ctx.rotate((-25 * Math.PI) / 180);
+  ctx.fillStyle = 'rgba(192, 132, 252, 0.08)'; // purple-400 watermark
+  ctx.font = 'bold 22px serif';
+  for (let wy = -height; wy < height * 2; wy += 140) {
+    for (let wx = -width; wx < width * 2; wx += 320) {
+      ctx.fillText('ASRARHUB ✦ ASRARHUB', wx, wy);
+    }
+  }
+  ctx.restore();
+
   // Outer Gold & Purple Decorative Border
   ctx.strokeStyle = '#d97706'; // Amber 600
   ctx.lineWidth = 12;
@@ -344,6 +356,10 @@ export function generateAndDownloadSealSVG(params: ExportSealParams): boolean {
       <stop offset="50%" stop-color="#0d0418" />
       <stop offset="100%" stop-color="#05010a" />
     </radialGradient>
+    <pattern id="asrarWatermarkPattern" width="300" height="120" patternUnits="userSpaceOnUse" patternTransform="rotate(-25)">
+      <text x="10" y="30" fill="#c084fc" opacity="0.1" font-size="16" font-weight="bold" font-family="serif">ASRARHUB</text>
+      <text x="160" y="90" fill="#c084fc" opacity="0.1" font-size="16" font-weight="bold" font-family="serif">✦ ASRARHUB</text>
+    </pattern>
     <filter id="goldGlow" x="-20%" y="-20%" width="140%" height="140%">
       <feGaussianBlur stdDeviation="8" result="blur" />
       <feComposite in="SourceGraphic" in2="blur" operator="over" />
@@ -352,6 +368,7 @@ export function generateAndDownloadSealSVG(params: ExportSealParams): boolean {
 
   <!-- Background -->
   <rect width="${width}" height="${height}" fill="url(#bgGrad)" />
+  <rect width="${width}" height="${height}" fill="url(#asrarWatermarkPattern)" />
 
   <!-- Borders -->
   <rect x="30" y="30" width="${width - 60}" height="${height - 60}" fill="none" stroke="#d97706" stroke-width="12" />

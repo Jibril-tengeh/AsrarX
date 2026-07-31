@@ -10,6 +10,7 @@ import { useLanguage } from '../../../contexts/LanguageContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { triggerProtectionModal } from '../../../components/ContentProtectionManager';
 import { ToolInfoTooltip } from '../../../components/ToolInfoTooltip';
+import { AsrarHubWatermark } from '../../../components/AsrarHubWatermark';
 import { 
   LUNAR_SEAL_VARIETIES, 
   getLocalizedLunarSealVarieties, 
@@ -38,6 +39,8 @@ export const SealsCatalogue: React.FC = () => {
   const [selectedSealId, setSelectedSealId] = useState<string>('seal_wafq_9x9');
   const [selectedVersion, setSelectedVersion] = useState<number>(1);
   const [searchQuery, setSearchQuery] = useState('');
+
+  const sealDetailsRef = React.useRef<HTMLDivElement>(null);
   
   const [copiedSymbol, setCopiedSymbol] = useState(false);
   const [isDownloadingPNG, setIsDownloadingPNG] = useState(false);
@@ -273,7 +276,7 @@ export const SealsCatalogue: React.FC = () => {
                     : 'Catalog of 17 Lunar Seals'}
                 </span>
               </span>
-              <span className="bg-purple-900/60 text-purple-900 dark:text-purple-200 border border-purple-500/30 text-xs font-medium px-3 py-1 rounded-full">
+              <span className="bg-purple-100 dark:bg-purple-900/60 text-purple-900 dark:text-purple-200 border border-purple-300 dark:border-purple-500/30 text-xs font-medium px-3 py-1 rounded-full">
                 {language === 'fr'
                   ? 'Science des Awfaq & Khawatim'
                   : language === 'ha'
@@ -290,7 +293,7 @@ export const SealsCatalogue: React.FC = () => {
                 : 'Catalog & Sacred Repository of Lunar Seals'}
             </h1>
 
-            <p className="text-sm sm:text-base text-purple-900/90 dark:text-purple-200/90 max-w-3xl leading-relaxed">
+            <p className="text-sm sm:text-base text-purple-950 dark:text-purple-200/90 max-w-3xl leading-relaxed">
               {language === 'fr'
                 ? 'Explorez les 17 matrices numériques et géométriques sacrées de la Lune. Chaque sceau est répertorié selon son origine scientifique, son utilité théurgique et son utilité rituelle. Visualisez, basculez entre les versions Wafq et Khatim, et téléchargez vos supports en Haute Définition (PNG & Vectoriel SVG).'
                 : language === 'ha'
@@ -412,7 +415,7 @@ export const SealsCatalogue: React.FC = () => {
         </AnimatePresence>
 
         {/* Filter Controls Bar */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-500/30  border border-purple-500/30 p-4 rounded-3xl">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-purple-50/80 dark:bg-purple-950/30 border-purple-200 dark:border-purple-500/30 border p-4 rounded-3xl shadow-sm">
           {/* Search Box */}
           <div className="relative flex-1">
             <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-purple-700 dark:text-purple-400" />
@@ -421,7 +424,7 @@ export const SealsCatalogue: React.FC = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={language === 'fr' ? 'Rechercher un sceau par nom, vertu, formule...' : 'Search seal...'}
-              className="w-full bg-white dark:bg-black/70 border-gray-200 dark:border-purple-500/30  border border-purple-500/30 rounded-2xl pl-10 pr-4 py-2.5 text-xs sm:text-sm text-gray-100 placeholder-purple-400 focus:outline-none focus:border-amber-400 transition-all"
+              className="w-full bg-white dark:bg-black/70 border-purple-200 dark:border-purple-500/30 border rounded-2xl pl-10 pr-4 py-2.5 text-xs sm:text-sm text-gray-900 dark:text-gray-100 placeholder-purple-400 focus:outline-none focus:border-amber-400 transition-all"
             />
           </div>
 
@@ -433,7 +436,7 @@ export const SealsCatalogue: React.FC = () => {
               className={`py-2 px-3.5 text-xs font-extrabold rounded-xl transition-all whitespace-nowrap cursor-pointer ${
                 selectedGroup === 'all'
                   ? 'bg-amber-500 text-black shadow-lg scale-[1.02]'
-                  : 'bg-black/60 text-purple-900 dark:text-purple-200 border border-purple-500/30 hover:bg-purple-900/40'
+                  : 'bg-white dark:bg-black/60 text-purple-900 dark:text-purple-200 border border-purple-200 dark:border-purple-500/30 hover:bg-purple-50 dark:hover:bg-purple-900/40 shadow-sm'
               }`}
             >
               Tous ({seals.length})
@@ -453,7 +456,7 @@ export const SealsCatalogue: React.FC = () => {
                   className={`py-2 px-3.5 text-xs font-extrabold rounded-xl transition-all whitespace-nowrap cursor-pointer ${
                     selectedGroup === gNum
                       ? 'bg-amber-500 text-black shadow-lg scale-[1.02]'
-                      : 'bg-black/60 text-purple-900 dark:text-purple-200 border border-purple-500/30 hover:bg-purple-900/40'
+                      : 'bg-white dark:bg-black/60 text-purple-900 dark:text-purple-200 border border-purple-200 dark:border-purple-500/30 hover:bg-purple-50 dark:hover:bg-purple-900/40 shadow-sm'
                   }`}
                 >
                   {groupLabel}
@@ -469,10 +472,10 @@ export const SealsCatalogue: React.FC = () => {
           {/* Left Column: Seal Cards Selector Grid */}
           <div className="lg:col-span-5 space-y-3">
             <div className="flex items-center justify-between px-1">
-              <h2 className="text-xs font-extrabold uppercase tracking-wider text-amber-800 dark:text-amber-300">
+              <h2 className="text-xs font-extrabold uppercase tracking-wider text-amber-900 dark:text-amber-300">
                 Sélectionnez un Sceau ({filteredSeals.length})
               </h2>
-              <span className="text-[10px] text-purple-800 dark:text-purple-300 font-mono">
+              <span className="text-[10px] text-purple-900 dark:text-purple-300 font-mono font-bold">
                 Sciences Sacrées
               </span>
             </div>
@@ -488,41 +491,52 @@ export const SealsCatalogue: React.FC = () => {
                     onClick={() => {
                       setSelectedSealId(seal.id);
                       setSelectedVersion(1);
+                      setTimeout(() => {
+                        sealDetailsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }, 50);
                     }}
                     className={`p-3.5 rounded-2xl border text-left transition-all duration-300 flex items-center justify-between gap-3 cursor-pointer relative overflow-hidden ${
                       isSelected
-                        ? 'bg-gradient-to-r from-purple-900/90 to-purple-950 border-amber-400 shadow-xl shadow-purple-950/50 ring-2 ring-amber-400/40 scale-[1.01]'
-                        : 'bg-black/70 border-purple-500/20 hover:border-purple-500/50 hover:bg-purple-950/40'
+                        ? 'bg-gradient-to-r from-purple-900 to-purple-950 border-amber-400 shadow-xl shadow-purple-950/50 ring-2 ring-amber-400/40 scale-[1.01] text-white'
+                        : 'bg-white dark:bg-black/70 border-purple-200 dark:border-purple-500/20 hover:border-purple-400 dark:hover:border-purple-500/50 hover:bg-purple-50/80 dark:hover:bg-purple-950/40 shadow-sm'
                     }`}
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-serif text-sm font-bold flex-shrink-0 border ${
                         isSelected 
                           ? 'bg-amber-500 text-black border-amber-400' 
-                          : 'bg-purple-950/80 text-amber-800 dark:text-amber-300 border-purple-500/30'
+                          : 'bg-purple-100 dark:bg-purple-950/80 text-purple-950 dark:text-amber-300 border-purple-200 dark:border-purple-500/30'
                       }`}>
                         {seal.groupId}
                       </div>
 
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5 mb-0.5">
-                          <span className="text-[10px] font-mono font-bold text-purple-800 dark:text-purple-300">
+                          <span className={`text-[10px] font-mono font-bold ${
+                            isSelected ? 'text-purple-200' : 'text-purple-700 dark:text-purple-300'
+                          }`}>
                             #{seal.id.replace('seal_', '')}
                           </span>
                           {getStatusBadge(seal.status)}
                         </div>
 
-                        <h4 className="text-xs font-bold text-gray-100 truncate">
+                        <h4 className={`text-xs font-bold truncate ${
+                          isSelected ? 'text-white' : 'text-gray-900 dark:text-gray-100'
+                        }`}>
                           {seal.title}
                         </h4>
 
-                        <span className="text-[11px] text-purple-900 dark:text-purple-200 truncate block">
+                        <span className={`text-[11px] truncate block ${
+                          isSelected ? 'text-purple-200' : 'text-purple-800 dark:text-purple-200'
+                        }`}>
                           {(seal as any).scienceOrigin || seal.subtitle}
                         </span>
                       </div>
                     </div>
 
-                    <span className="text-sm font-serif font-semibold text-amber-800 dark:text-amber-300 flex-shrink-0" dir="rtl">
+                    <span className={`text-sm font-serif font-semibold flex-shrink-0 ${
+                      isSelected ? 'text-amber-300' : 'text-amber-800 dark:text-amber-300'
+                    }`} dir="rtl">
                       {seal.arabicName}
                     </span>
                   </button>
@@ -530,7 +544,7 @@ export const SealsCatalogue: React.FC = () => {
               })}
 
               {filteredSeals.length === 0 && (
-                <div className="text-center py-12 bg-white dark:bg-black/40 border-gray-200 dark:border-purple-500/30  border border-purple-500/20 rounded-2xl p-6 text-purple-800 dark:text-purple-300 text-xs">
+                <div className="text-center py-12 bg-white dark:bg-black/40 border-purple-200 dark:border-purple-500/30 border rounded-2xl p-6 text-purple-900 dark:text-purple-300 text-xs">
                   Aucun sceau ne correspond à votre recherche.
                 </div>
               )}
@@ -538,40 +552,40 @@ export const SealsCatalogue: React.FC = () => {
           </div>
 
           {/* Right Column: Active Seal Detailed Viewer & Inspector */}
-          <div className="lg:col-span-7">
+          <div className="lg:col-span-7 scroll-mt-20" ref={sealDetailsRef} id="seal-details-inspector">
             {activeSeal && (
-              <div className="bg-gradient-to-b from-purple-950/50 via-[#100422] to-black border border-purple-500/40 rounded-3xl p-5 sm:p-7 shadow-2xl space-y-6">
+              <div className="bg-gradient-to-b from-purple-950/90 via-[#100422] to-black border border-purple-500/40 rounded-3xl p-5 sm:p-7 shadow-2xl space-y-6 text-white">
                 
                 {/* Active Seal Header */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-5 border-b border-purple-500/30">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className="bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/40 text-[10px] font-extrabold px-3 py-0.5 rounded-full uppercase tracking-wider">
+                      <span className="bg-amber-500/20 text-amber-300 border border-amber-500/40 text-[10px] font-extrabold px-3 py-0.5 rounded-full uppercase tracking-wider">
                         {activeSeal.groupTitle}
                       </span>
                       {getStatusBadge(activeSeal.status)}
                     </div>
 
-                    <h3 className="text-xl sm:text-2xl font-serif font-bold text-gray-900 dark:text-white tracking-wide">
+                    <h3 className="text-xl sm:text-2xl font-serif font-bold text-white tracking-wide">
                       {activeSeal.title}
                     </h3>
 
-                    <p className="text-xs sm:text-sm text-purple-900 dark:text-purple-200 font-medium">
+                    <p className="text-xs sm:text-sm text-purple-200 font-medium">
                       {activeSeal.subtitle}
                     </p>
 
                     {(activeSeal as any).scienceOrigin && (
-                      <span className="inline-block text-[11px] font-mono font-bold text-amber-700 dark:text-amber-400 bg-white dark:bg-black/60 border-gray-200 dark:border-purple-500/30  px-2.5 py-0.5 rounded-lg border border-amber-500/30">
+                      <span className="inline-block text-[11px] font-mono font-bold text-amber-300 bg-purple-900/60 px-2.5 py-0.5 rounded-lg border border-purple-500/40">
                         {(activeSeal as any).scienceOrigin}
                       </span>
                     )}
                   </div>
 
                   <div className="text-left sm:text-right flex-shrink-0">
-                    <span className="text-2xl sm:text-3xl font-serif font-bold text-amber-800 dark:text-amber-300 block select-all tracking-wider" dir="rtl">
+                    <span className="text-2xl sm:text-3xl font-serif font-bold text-amber-300 block select-all tracking-wider" dir="rtl">
                       {activeSeal.arabicName}
                     </span>
-                    <span className="text-[11px] font-mono text-purple-800 dark:text-purple-300 block">
+                    <span className="text-[11px] font-mono text-purple-300 block">
                       VALEUR ABJAD : {activeSeal.abjadValue}
                     </span>
                   </div>
@@ -592,12 +606,12 @@ export const SealsCatalogue: React.FC = () => {
 
                 {/* Premium Lock Banner */}
                 {activeSeal.status === 'premium' && !isPremium && !isAdmin && (
-                  <div className="bg-amber-950/50 border border-amber-500/50 rounded-2xl p-5 text-center text-amber-800 dark:text-amber-200 space-y-3 shadow-lg">
-                    <Lock size={32} className="mx-auto text-amber-700 dark:text-amber-400" />
-                    <h4 className="text-sm font-extrabold uppercase tracking-wider">
+                  <div className="bg-amber-950/60 border border-amber-500/50 rounded-2xl p-5 text-center text-amber-200 space-y-3 shadow-lg">
+                    <Lock size={32} className="mx-auto text-amber-400" />
+                    <h4 className="text-sm font-extrabold uppercase tracking-wider text-amber-300">
                       Contenu Réservé aux Membres Premium
                     </h4>
-                    <p className="text-xs text-amber-800 dark:text-amber-200 max-w-lg mx-auto leading-relaxed">
+                    <p className="text-xs text-amber-200 max-w-lg mx-auto leading-relaxed">
                       Ce sceau lunaire de haute théurgie nécessite un abonnement Premium AsrarHub pour débloquer la visualisation complète et l'exportation HD (PNG/SVG).
                     </p>
                     <button
@@ -615,10 +629,10 @@ export const SealsCatalogue: React.FC = () => {
                   <div className="space-y-4">
                     
                     {/* 12-Version Selector Grid & Power Level Badge */}
-                    <div className="bg-white dark:bg-black/90 border-gray-200 dark:border-purple-500/30  p-3 rounded-2xl border border-purple-500/30 space-y-2">
+                    <div className="bg-purple-950/60 border border-purple-500/30 p-3 rounded-2xl space-y-2">
                       <div className="flex items-center justify-between px-1">
-                        <span className="text-[11px] font-extrabold text-amber-700 dark:text-amber-400 uppercase tracking-widest flex items-center gap-1.5">
-                          <Sparkles size={12} className="text-amber-700 dark:text-amber-400 animate-spin" />
+                        <span className="text-[11px] font-extrabold text-amber-300 uppercase tracking-widest flex items-center gap-1.5">
+                          <Sparkles size={12} className="text-amber-400 animate-spin" />
                           {language === 'fr'
                             ? '12 Versions Théurgiques Suprêmes'
                             : language === 'ha'
@@ -626,7 +640,7 @@ export const SealsCatalogue: React.FC = () => {
                             : '12 Supreme Sacred Versions'}
                         </span>
                         {activeVersionDetails && (
-                          <span className="text-[10px] font-bold text-purple-800 dark:text-purple-300 bg-purple-50 dark:bg-purple-950/80 border-purple-200 dark:border-purple-500/30  px-2 py-0.5 rounded-full border border-purple-500/30">
+                          <span className="text-[10px] font-bold text-purple-200 bg-purple-900/80 px-2 py-0.5 rounded-full border border-purple-500/40">
                             {activeVersionDetails.powerLevel}% {language === 'fr' ? 'Puissance' : language === 'ha' ? 'Karfi' : 'Power'}
                           </span>
                         )}
@@ -644,7 +658,7 @@ export const SealsCatalogue: React.FC = () => {
                               className={`py-1.5 px-1 text-[10px] font-extrabold rounded-lg transition-all cursor-pointer flex flex-col items-center justify-center border ${
                                 isSel
                                   ? 'bg-amber-500 text-black border-amber-300 shadow-md scale-105'
-                                  : 'bg-purple-950/40 text-purple-800 dark:text-purple-300 border-purple-800/40 hover:bg-purple-900/60 hover:text-white'
+                                  : 'bg-purple-950/60 text-purple-200 border-purple-800/40 hover:bg-purple-900 hover:text-white'
                               }`}
                               title={v.title[language] || v.title.fr}
                             >
@@ -659,11 +673,11 @@ export const SealsCatalogue: React.FC = () => {
 
                       {/* Selected Version Meta */}
                       {activeVersionDetails && (
-                        <div className="bg-purple-50 dark:bg-purple-950/60 border-purple-200 dark:border-purple-500/30  p-2 rounded-xl border border-amber-500/20 text-center">
-                          <p className="text-xs font-bold text-amber-800 dark:text-amber-300">
+                        <div className="bg-purple-900/60 p-2 rounded-xl border border-amber-500/30 text-center">
+                          <p className="text-xs font-bold text-amber-300">
                             {activeVersionDetails.title}
                           </p>
-                          <p className="text-[10px] text-purple-800 dark:text-purple-300/80 mt-0.5 italic">
+                          <p className="text-[10px] text-purple-200 mt-0.5 italic">
                             {activeVersionDetails.subtitle}
                           </p>
                         </div>
@@ -705,9 +719,9 @@ export const SealsCatalogue: React.FC = () => {
                         type="button"
                         onClick={handleDownloadSVG}
                         disabled={isDownloadingSVG || activeSeal.status === 'maintenance'}
-                        className="flex items-center justify-center gap-2 bg-purple-900/80 hover:bg-purple-800 text-purple-900 dark:text-purple-200 border border-purple-500/40 font-extrabold py-3 px-4 rounded-2xl shadow-lg transition-all cursor-pointer disabled:opacity-50 text-xs"
+                        className="flex items-center justify-center gap-2 bg-purple-900 hover:bg-purple-800 text-white border border-purple-500/40 font-extrabold py-3 px-4 rounded-2xl shadow-lg transition-all cursor-pointer disabled:opacity-50 text-xs"
                       >
-                        <FileCode size={16} className="text-amber-700 dark:text-amber-400" />
+                        <FileCode size={16} className="text-amber-300" />
                         <span>{language === 'fr' ? 'Télécharger SVG' : language === 'ha' ? 'Sauke SVG' : 'Download SVG'}</span>
                       </button>
 
@@ -715,7 +729,7 @@ export const SealsCatalogue: React.FC = () => {
                         type="button"
                         onClick={handleCopySymbol}
                         disabled={activeSeal.status === 'maintenance'}
-                        className="flex items-center justify-center gap-2 bg-white dark:bg-black/80 border-gray-200 dark:border-purple-500/30  hover:bg-gray-900 text-gray-800 dark:text-gray-200 border border-gray-700 font-extrabold py-3 px-4 rounded-2xl shadow-lg transition-all cursor-pointer disabled:opacity-50 text-xs"
+                        className="flex items-center justify-center gap-2 bg-purple-950/80 hover:bg-purple-900 border border-purple-500/40 text-purple-100 font-extrabold py-3 px-4 rounded-2xl shadow-lg transition-all cursor-pointer disabled:opacity-50 text-xs"
                       >
                         {copiedSymbol ? (
                           <>
@@ -724,7 +738,7 @@ export const SealsCatalogue: React.FC = () => {
                           </>
                         ) : (
                           <>
-                            <Copy size={16} className="text-gray-600 dark:text-gray-300" />
+                            <Copy size={16} className="text-purple-300" />
                             <span>{language === 'fr' ? 'Copier le Symbole' : language === 'ha' ? 'Kwafi Hatimi' : 'Copy Symbol'}</span>
                           </>
                         )}
@@ -735,84 +749,84 @@ export const SealsCatalogue: React.FC = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-purple-500/30 text-xs">
                       
                       {/* Description */}
-                      <div className="bg-white dark:bg-black/60 border-gray-200 dark:border-purple-500/30  p-4 rounded-2xl border border-purple-500/20 space-y-1 sm:col-span-2">
-                        <span className="font-extrabold text-amber-800 dark:text-amber-300 uppercase tracking-wider block text-[10px]">
+                      <div className="bg-purple-950/60 p-4 rounded-2xl border border-purple-500/30 space-y-1 sm:col-span-2">
+                        <span className="font-extrabold text-amber-300 uppercase tracking-wider block text-[10px]">
                           {language === 'fr'
                             ? 'Description de la Matrice Sacrée'
                             : language === 'ha'
                             ? 'Bayanin Hatimin Mai Tsarki'
                             : 'Sacred Matrix Description'}
                         </span>
-                        <p className="text-gray-800 dark:text-gray-200 leading-relaxed">
+                        <p className="text-purple-100 leading-relaxed">
                           {activeSeal.description}
                         </p>
                       </div>
 
                       {/* Spiritual Utility */}
-                      <div className="bg-white dark:bg-black/60 border-gray-200 dark:border-purple-500/30  p-4 rounded-2xl border border-purple-500/20 space-y-1">
-                        <span className="font-extrabold text-amber-800 dark:text-amber-300 uppercase tracking-wider block text-[10px]">
+                      <div className="bg-purple-950/60 p-4 rounded-2xl border border-purple-500/30 space-y-1">
+                        <span className="font-extrabold text-amber-300 uppercase tracking-wider block text-[10px]">
                           {language === 'fr'
                             ? 'Vertus & Effets Spirituels'
                             : language === 'ha'
                             ? 'Amfani da Tasirin Ruhi'
                             : 'Virtues & Spiritual Effects'}
                         </span>
-                        <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                        <p className="text-purple-200 leading-relaxed">
                           {activeSeal.spiritualUtility}
                         </p>
                       </div>
 
                       {/* Ritual Usage */}
-                      <div className="bg-white dark:bg-black/60 border-gray-200 dark:border-purple-500/30  p-4 rounded-2xl border border-purple-500/20 space-y-1">
-                        <span className="font-extrabold text-amber-800 dark:text-amber-300 uppercase tracking-wider block text-[10px]">
+                      <div className="bg-purple-950/60 p-4 rounded-2xl border border-purple-500/30 space-y-1">
+                        <span className="font-extrabold text-amber-300 uppercase tracking-wider block text-[10px]">
                           {language === 'fr'
                             ? "Mode d'Utilisation Rituelle"
                             : language === 'ha'
                             ? 'Hanyar Amfani a Aiki'
                             : 'Ritual Usage Method'}
                         </span>
-                        <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                        <p className="text-purple-200 leading-relaxed">
                           {activeSeal.ritualUsage}
                         </p>
                       </div>
 
                       {/* Incense & Timing */}
-                      <div className="bg-white dark:bg-black/60 border-gray-200 dark:border-purple-500/30  p-4 rounded-2xl border border-purple-500/20 space-y-1">
-                        <span className="font-extrabold text-amber-800 dark:text-amber-300 uppercase tracking-wider block text-[10px]">
+                      <div className="bg-purple-950/60 p-4 rounded-2xl border border-purple-500/30 space-y-1">
+                        <span className="font-extrabold text-amber-300 uppercase tracking-wider block text-[10px]">
                           {language === 'fr'
                             ? "Encens d'Invocations (Bakhour)"
                             : language === 'ha'
                             ? "Turaren Addu'a (Bakhour)"
                             : 'Invocation Incense (Bakhour)'}
                         </span>
-                        <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                        <p className="text-purple-200 leading-relaxed">
                           {activeSeal.incense}
                         </p>
                       </div>
 
-                      <div className="bg-white dark:bg-black/60 border-gray-200 dark:border-purple-500/30  p-4 rounded-2xl border border-purple-500/20 space-y-1">
-                        <span className="font-extrabold text-amber-800 dark:text-amber-300 uppercase tracking-wider block text-[10px]">
+                      <div className="bg-purple-950/60 p-4 rounded-2xl border border-purple-500/30 space-y-1">
+                        <span className="font-extrabold text-amber-300 uppercase tracking-wider block text-[10px]">
                           {language === 'fr'
                             ? 'Propriété Élémentaire & Moment Optimal'
                             : language === 'ha'
                             ? 'Yanayin Shi da Lokaci Mai Kyau'
                             : 'Elemental Property & Optimal Time'}
                         </span>
-                        <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                        <p className="text-purple-200 leading-relaxed">
                           {activeSeal.elementalProperty} • {activeSeal.timing}
                         </p>
                       </div>
 
                       {/* Formula */}
-                      <div className="bg-white dark:bg-black/80 border-gray-200 dark:border-purple-500/30  p-4 rounded-2xl border border-amber-500/30 space-y-1 sm:col-span-2 text-center">
-                        <span className="font-extrabold text-amber-800 dark:text-amber-300 uppercase tracking-wider block text-[10px]">
+                      <div className="bg-purple-950/80 p-4 rounded-2xl border border-amber-500/40 space-y-1 sm:col-span-2 text-center">
+                        <span className="font-extrabold text-amber-300 uppercase tracking-wider block text-[10px]">
                           {language === 'fr'
                             ? 'Formule Invocatoire Sacrée'
                             : language === 'ha'
                             ? "Addu'ar Kira Mai Tsarki"
                             : 'Sacred Invocation Formula'}
                         </span>
-                        <p className="text-amber-800 dark:text-amber-200 font-serif font-bold text-sm tracking-wide" dir="rtl">
+                        <p className="text-amber-300 font-serif font-bold text-sm tracking-wide" dir="rtl">
                           {activeSeal.formula}
                         </p>
                       </div>
@@ -841,9 +855,11 @@ export const SealsCatalogue: React.FC = () => {
             onClick={() => setIsFullScreen(false)}
           >
             <div
-              className="bg-[#0b0317] border border-amber-500/50 rounded-3xl p-6 sm:p-10 max-w-4xl w-full max-h-[90vh] overflow-y-auto space-y-6 shadow-2xl relative"
+              className="bg-[#0b0317] border border-amber-500/50 rounded-3xl p-6 sm:p-10 max-w-4xl w-full max-h-[90vh] overflow-y-auto space-y-6 shadow-2xl relative overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
+              {/* AsrarHub Engraved Watermark */}
+              <AsrarHubWatermark variant="dark" opacity={0.14} showCentralSeal={true} />
               <button
                 type="button"
                 onClick={() => setIsFullScreen(false)}

@@ -35,6 +35,7 @@ export interface SacredBook {
   categoryHa: string;
   themeColor: string; // gradient classes or hex
   bgGlow: string;
+  enableTextResizer?: boolean;
   icon3dType: 'barhatiah' | 'picatrix' | 'lataif' | 'ajnas' | 'futuhat' | 'shumush' | 'jifr' | 'sirr' | 'kanz' | 'ufuk' | 'lumah' | 'diryak' | 'dalail' | 'sahifah' | 'ahzab_shadhili' | 'adhkar_nawawi' | 'hizb_azam' | 'awrad_fathiyyah' | 'jaljalutiyah' | 'mujarrabat_dirby' | 'dawah_harutiyyah' | 'durr_manthum' | 'ahzab_irfaniyyah';
   
   // Introductions in 3 languages

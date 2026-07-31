@@ -1,11 +1,17 @@
-import React, { useState } from 'react';
-import { Grid, Sparkles, Copy, Check, RefreshCw, Key, Shield, Flame, BookOpen, Layers } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Grid, Sparkles, Copy, Check, RefreshCw, Key, Shield, Flame, BookOpen, Layers, Download, FileDown, Image } from 'lucide-react';
 import { motion } from 'motion/react';
 import { FULL_28_LETTERS_DATA, LetterInfo } from '../pages/user/tools/ScienceOfLetters';
 import { useFeatures } from '../contexts/FeatureContext';
 import { useAuth } from '../contexts/AuthContext';
 import { triggerProtectionModal } from './ContentProtectionManager';
 import { useLanguage } from '../contexts/LanguageContext';
+import { KhatimUsageGuide } from './KhatimUsageGuide';
+import { toCanvas } from 'html-to-image';
+import { jsPDF } from 'jspdf';
+import { downloadCanvasImage } from '../utils/downloadHelper';
+import { notifyDownloadStart, notifyDownloadSuccess, notifyDownloadError } from '../utils/downloadNotification';
+import { AsrarHubWatermark } from './AsrarHubWatermark';
 
 const khatimDict = {
   fr: {
@@ -211,6 +217,55 @@ export const KhatimWafqGenerator: React.FC = () => {
   const [displayMode, setDisplayMode] = useState<'western' | 'eastern' | 'letters'>('eastern');
   const [customValue, setCustomValue] = useState<string>('');
   const [copied, setCopied] = useState<boolean>(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  const downloadWafqPNG = async () => {
+    if (!cardRef.current) return;
+    const fname = `wafq-${wafqSize}x${wafqSize}-${targetAbjad}.png`;
+    notifyDownloadStart(fname);
+    try {
+      const canvas = await toCanvas(cardRef.current, { backgroundColor: '#0f172a', skipFonts: true });
+      await downloadCanvasImage(canvas, fname);
+    } catch (e) {
+      console.error('Download Wafq error:', e);
+      notifyDownloadError(fname);
+    }
+  };
+
+  const downloadWafqPDF = async () => {
+    if (!cardRef.current) return;
+    const fname = `AsrarHub_Wafq_${wafqSize}x${wafqSize}_${targetAbjad}.pdf`;
+    notifyDownloadStart(fname);
+    try {
+      const canvas = await toCanvas(cardRef.current, { backgroundColor: '#0f172a', skipFonts: true });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      pdf.setFillColor(15, 23, 42);
+      pdf.rect(0, 0, 210, 297, 'F');
+      pdf.setTextColor(245, 158, 11);
+      pdf.setFont('helvetica', 'bold');
+      pdf.setFontSize(22);
+      pdf.text("AsrarHub - Khatim & Wafq Sacre", 105, 30, { align: 'center' });
+      pdf.setFontSize(14);
+      pdf.setTextColor(255, 255, 255);
+      pdf.text(`Wafq ${wafqSize}x${wafqSize} (Poids Abjad: ${targetAbjad})`, 105, 42, { align: 'center' });
+      
+      const imgWidth = 130;
+      const imgHeight = 130;
+      const x = (210 - imgWidth) / 2;
+      const y = 60;
+      pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
+      
+      pdf.setFontSize(10);
+      pdf.setTextColor(156, 163, 175);
+      pdf.text("À tracer avec de l'encre de safran et de l'eau de rose lors de l'heure favorable.", 105, 205, { align: 'center' });
+      pdf.save(fname);
+      notifyDownloadSuccess(fname);
+    } catch (e) {
+      console.error('PDF error:', e);
+      notifyDownloadError(fname);
+    }
+  };
 
   // Compute total target Abjad
   const getTargetAbjad = (): number => {
@@ -417,12 +472,15 @@ export const KhatimWafqGenerator: React.FC = () => {
       </div>
 
       {/* Main Khatim Wafq Render Card */}
-      <div className="p-4 sm:p-6 rounded-3xl bg-gradient-to-br from-amber-950/90 via-slate-900 to-amber-950/90 text-white shadow-2xl border border-amber-500/40 relative overflow-hidden space-y-6">
+      <div ref={cardRef} className="p-4 sm:p-6 rounded-3xl bg-gradient-to-br from-amber-950/90 via-slate-900 to-amber-950/90 text-white shadow-2xl border border-amber-500/40 relative overflow-hidden space-y-6">
+        {/* Automatic AsrarHub Watermark Overlay */}
+        <AsrarHubWatermark variant="gold" opacity={0.18} showCentralSeal={true} />
+
         {/* Top Header info */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-amber-500/20 pb-4">
           <div>
             <span className="text-[10px] font-bold uppercase tracking-widest text-amber-400 flex items-center gap-1">
-              <Sparkles size={12} /> {dict.sacredSeal.replace('{size}', String(wafqSize))}
+              <Sparkles size={12} /> {dict.sacredSeal.replaceAll('{size}', String(wafqSize))}
             </span>
             <h3 className="text-xl font-black text-amber-100 mt-1">
               {currentLetterInfo ? dict.letterSquare.replace('{name}', currentLetterInfo.name).replace('{char}', currentLetterInfo.char) : dict.customSquare}
@@ -498,9 +556,26 @@ export const KhatimWafqGenerator: React.FC = () => {
           </div>
         </div>
 
-        {/* Copy Button */}
-        {!disableDuaCopy && (
-          <div className="flex justify-end pt-2">
+        {/* Actions Bar (Copy & Download Buttons) */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-amber-500/20">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={downloadWafqPNG}
+              className="px-3.5 py-2 bg-amber-950/80 hover:bg-amber-900 border border-amber-500/40 text-amber-200 font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-md transition-all cursor-pointer"
+            >
+              <Image size={14} className="text-amber-400" />
+              <span>PNG HD</span>
+            </button>
+            <button
+              onClick={downloadWafqPDF}
+              className="px-3.5 py-2 bg-amber-950/80 hover:bg-amber-900 border border-amber-500/40 text-amber-200 font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-md transition-all cursor-pointer"
+            >
+              <FileDown size={14} className="text-red-400" />
+              <span>PDF Imprimable</span>
+            </button>
+          </div>
+
+          {!disableDuaCopy && (
             <button
               onClick={handleCopyGrid}
               className="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs rounded-xl flex items-center gap-1.5 shadow-lg transition-colors cursor-pointer"
@@ -508,9 +583,12 @@ export const KhatimWafqGenerator: React.FC = () => {
               {copied ? <Check size={14} /> : <Copy size={14} />}
               <span>{copied ? dict.gridCopied : dict.copyGrid}</span>
             </button>
-          </div>
-        )}
+          )}
+        </div>
       </div>
+
+      {/* Comprehensive Ritual & Practice Usage Guide */}
+      <KhatimUsageGuide className="mt-8" defaultExpanded={true} />
     </div>
   );
 };

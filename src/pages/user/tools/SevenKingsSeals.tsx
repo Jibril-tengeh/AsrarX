@@ -13,6 +13,8 @@ import { db } from '../../../lib/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { downloadCanvasImage } from '../../../utils/downloadHelper';
 import { ParchmentExporterModal } from '../../../components/ParchmentExporterModal';
+import { AsrarHubWatermark } from '../../../components/AsrarHubWatermark';
+import { KhatimUsageGuide } from '../../../components/KhatimUsageGuide';
 import { ToolInfoTooltip } from '../../../components/ToolInfoTooltip';
 
 interface SevenKingData {
@@ -1607,6 +1609,9 @@ export const SevenKingsSeals: React.FC = () => {
           >
             {/* Ambient Background Glow */}
             <div className="absolute inset-0 bg-radial from-amber-500/10 via-transparent to-transparent pointer-events-none" />
+            
+            {/* Engraved AsrarHub Watermark */}
+            <AsrarHubWatermark variant="gold" opacity={0.14} showCentralSeal={true} />
 
             {/* Auto-saved notification pill badge */}
             <AnimatePresence>
@@ -2026,6 +2031,11 @@ export const SevenKingsSeals: React.FC = () => {
           </div>
         }
       />
+
+      {/* Comprehensive Ritual & Consecration Usage Guide */}
+      <div className="max-w-5xl mx-auto mt-8">
+        <KhatimUsageGuide defaultExpanded={false} />
+      </div>
       </div>
     </div>
   );

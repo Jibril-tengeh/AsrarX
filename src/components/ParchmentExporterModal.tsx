@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { toCanvas } from 'html-to-image';
 import { downloadCanvasImage } from '../utils/downloadHelper';
 import { useLanguage } from '../contexts/LanguageContext';
+import { AsrarHubWatermark } from './AsrarHubWatermark';
 
 interface ParchmentExporterModalProps {
   isOpen: boolean;
@@ -42,6 +43,8 @@ export const ParchmentExporterModal: React.FC<ParchmentExporterModalProps> = ({
         quality: 0.98,
         pixelRatio: 2,
         cacheBust: true,
+        skipFonts: true,
+        fontEmbedCSS: '',
         width: width,
         height: height,
         style: {
@@ -126,6 +129,8 @@ export const ParchmentExporterModal: React.FC<ParchmentExporterModalProps> = ({
                 backgroundPosition: '0 0, 10px 10px',
               }}
             >
+              {/* AsrarHub Engraved Watermark */}
+              <AsrarHubWatermark variant="parchment" opacity={0.12} showCentralSeal={true} />
               {/* Corner Ornaments */}
               <div className="absolute top-2 left-2 text-amber-800/40 text-lg select-none">✦</div>
               <div className="absolute top-2 right-2 text-amber-800/40 text-lg select-none">✦</div>

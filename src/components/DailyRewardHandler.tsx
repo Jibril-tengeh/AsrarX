@@ -4,7 +4,7 @@ import { doc, updateDoc, increment } from 'firebase/firestore';
 import { db, isAutoSaveEnabled } from '../lib/firebase';
 import { useLanguage } from '../contexts/LanguageContext';
 import { motion, AnimatePresence } from 'motion/react';
-import { Sparkles, X } from 'lucide-react';
+import { Sparkles, X, BellOff } from 'lucide-react';
 
 export const DailyRewardHandler: React.FC = () => {
   const { user } = useAuth();
@@ -12,6 +12,16 @@ export const DailyRewardHandler: React.FC = () => {
   const [showReward, setShowReward] = useState(false);
   const [showDaily10, setShowDaily10] = useState(false);
   const [pointsEarned, setPointsEarned] = useState(0);
+  const [isMuted, setIsMuted] = useState<boolean>(() => {
+    return localStorage.getItem('asrar_mute_minute_points_toast') === 'true';
+  });
+
+  const handleMuteMinuteToasts = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    localStorage.setItem('asrar_mute_minute_points_toast', 'true');
+    setIsMuted(true);
+    setShowReward(false);
+  };
 
   useEffect(() => {
     if (!user) return;
@@ -48,7 +58,7 @@ export const DailyRewardHandler: React.FC = () => {
           setShowDaily10(true);
           setTimeout(() => {
             setShowDaily10(false);
-          }, 8000);
+          }, 4000);
         }
       } catch (error) {
         console.error("Error checking/awarding daily 10 points:", error);
@@ -79,7 +89,7 @@ export const DailyRewardHandler: React.FC = () => {
     }
 
     const intervalId = setInterval(async () => {
-      // Refresh time checks (in case computer wakes from sleep or 24h passes during session)
+      // Refresh time checks
       const currentNow = Date.now();
       const storedResetTime = parseInt(localStorage.getItem(resetKey) || '0', 10);
       if (storedResetTime !== 0 && currentNow - storedResetTime >= 24 * 60 * 60 * 1000) {
@@ -112,12 +122,16 @@ export const DailyRewardHandler: React.FC = () => {
           }
 
           setPointsEarned(pointsToday);
-          setShowReward(true);
 
-          // Auto-hide after 5 seconds
-          setTimeout(() => {
-            setShowReward(false);
-          }, 5000);
+          // Only show non-intrusive toast if not muted by user
+          const muted = localStorage.getItem('asrar_mute_minute_points_toast') === 'true';
+          if (!muted) {
+            setShowReward(true);
+            // Fast auto-dismiss after 2.5s
+            setTimeout(() => {
+              setShowReward(false);
+            }, 2500);
+          }
         } catch (error) {
           console.error("Error updating duration-based spiritual points:", error);
         }
@@ -129,56 +143,64 @@ export const DailyRewardHandler: React.FC = () => {
 
   return (
     <AnimatePresence>
-      {/* Active minute-based reward toast */}
-      {showReward && (
+      {/* Active minute-based reward toast - Subtle, compact pill at top right */}
+      {showReward && !isMuted && (
         <motion.div
-          initial={{ opacity: 0, y: -50, scale: 0.9 }}
+          initial={{ opacity: 0, y: -15, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.9, y: -20 }}
-          className="fixed top-24 left-1/2 -translate-x-1/2 z-50 px-6 py-4 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-2xl shadow-2xl flex items-center gap-4 text-white border border-emerald-400/30"
+          exit={{ opacity: 0, y: -10, scale: 0.95 }}
+          className="fixed top-16 right-4 z-[9999] bg-slate-900/95 dark:bg-slate-900/95 text-white border border-emerald-500/30 shadow-xl backdrop-blur-md rounded-full px-4 py-2 flex items-center gap-2.5 max-w-xs"
         >
-          <div className="bg-white/20 p-2 rounded-full">
-            <Sparkles className="text-yellow-300 animate-pulse" size={24} />
+          <div className="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+            <Sparkles size={13} className="text-amber-400 animate-pulse" />
           </div>
-          <div>
-            <h3 className="font-bold text-lg">{t('dailyReward.rewardTitle', 'Point Spirituel Gagné !')}</h3>
-            <p className="text-emerald-50 text-sm">
-              {t('dailyReward.rewardDesc', "Temps d'activité récompensé : {earned}/10 points aujourd'hui.").replace('{earned}', pointsEarned.toString())}
+          <div className="flex-1 min-w-0 pr-1">
+            <p className="text-xs font-semibold text-slate-100 truncate">
+              +1 Point Spirituel
+              <span className="text-[11px] text-emerald-400 font-bold ml-1.5">({pointsEarned}/10)</span>
             </p>
           </div>
+          <button
+            onClick={handleMuteMinuteToasts}
+            title="Muter ces alertes par minute"
+            className="p-1 text-slate-400 hover:text-amber-400 hover:bg-white/10 rounded-full transition-colors cursor-pointer"
+          >
+            <BellOff size={12} />
+          </button>
           <button 
             onClick={() => setShowReward(false)}
-            className="ml-4 p-1 hover:bg-white/20 rounded-full transition-colors"
+            className="p-1 text-slate-400 hover:text-white hover:bg-white/10 rounded-full transition-colors cursor-pointer"
           >
-            <X size={20} />
+            <X size={13} />
           </button>
         </motion.div>
       )}
 
-      {/* Daily check-in 10 points credit toast */}
+      {/* Daily check-in 10 points credit toast - Refined compact card */}
       {showDaily10 && (
         <motion.div
-          initial={{ opacity: 0, y: -80, scale: 0.8 }}
+          initial={{ opacity: 0, y: -20, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.8, y: -30 }}
-          className="fixed top-28 left-1/2 -translate-x-1/2 z-50 px-8 py-5 bg-gradient-to-r from-amber-500 via-orange-500 to-yellow-500 rounded-3xl shadow-[0_20px_50px_rgba(245,158,11,0.3)] flex items-center gap-5 text-white border border-amber-300/40"
+          exit={{ opacity: 0, y: -20, scale: 0.95 }}
+          className="fixed top-16 right-4 z-[9999] max-w-sm w-[calc(100vw-2rem)] bg-slate-900/95 dark:bg-slate-900/95 text-white border border-amber-500/30 shadow-2xl backdrop-blur-md rounded-2xl p-3.5 flex items-start gap-3"
         >
-          <div className="bg-white/20 p-3 rounded-2xl">
-            <Sparkles className="text-yellow-100 animate-bounce" size={28} />
+          <div className="w-9 h-9 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 mt-0.5">
+            <Sparkles size={18} />
           </div>
-          <div>
-            <h3 className="font-extrabold text-xl tracking-tight">
-              {t('dailyReward.daily10Title', 'Cadeau Quotidien de 10 Points ! 🌟')}
-            </h3>
-            <p className="text-amber-50 text-sm mt-0.5 leading-relaxed">
+          <div className="flex-1 min-w-0">
+            <h4 className="font-bold text-xs text-amber-300 flex items-center gap-1.5">
+              <span>+10 Points Spirituels</span>
+              <span className="text-[10px] font-medium bg-amber-500/20 text-amber-200 px-1.5 py-0.2 rounded-full">Quotidien</span>
+            </h4>
+            <p className="text-[11px] text-slate-300 mt-0.5 leading-snug">
               {t('dailyReward.daily10Desc', 'Vous avez reçu vos 10 points spirituels du jour automatiquement !')}
             </p>
           </div>
           <button 
             onClick={() => setShowDaily10(false)}
-            className="ml-4 p-1.5 hover:bg-white/20 rounded-full transition-colors"
+            className="p-1 text-slate-400 hover:text-white hover:bg-white/10 rounded-full transition-colors cursor-pointer shrink-0"
           >
-            <X size={20} />
+            <X size={15} />
           </button>
         </motion.div>
       )}

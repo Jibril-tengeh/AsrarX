@@ -7,6 +7,7 @@ import { EXTRA_MANSIONS_DATA } from '../../../data/lunarMansionDetails';
 import { toCanvas } from 'html-to-image';
 import { downloadCanvasImage } from '../../../utils/downloadHelper';
 import { ParchmentExporterModal } from '../../../components/ParchmentExporterModal';
+import { AsrarHubWatermark } from '../../../components/AsrarHubWatermark';
 
 interface Mansion {
   id: number;
@@ -393,6 +394,8 @@ export const LunarMansions: React.FC = () => {
         quality: 0.98,
         pixelRatio: 2,
         cacheBust: true,
+        skipFonts: true,
+        fontEmbedCSS: '',
         width: width,
         height: height,
         style: {
@@ -1071,6 +1074,8 @@ export const LunarMansions: React.FC = () => {
                 ref={parchmentRef}
                 className="relative bg-[#fbf6e9] dark:bg-[#1a1612] text-[#3d2f21] dark:text-[#e8d7c3] rounded-2xl sm:rounded-3xl p-4 sm:p-8 md:p-10 border-4 sm:border-8 border-[#d4af37]/40 shadow-2xl overflow-hidden font-serif max-w-full select-none"
               >
+                {/* AsrarHub Watermark Overlay */}
+                <AsrarHubWatermark variant="parchment" opacity={0.16} showCentralSeal={true} />
                 {/* Vintage Corner Ornaments */}
                 <div className="absolute top-2 left-2 text-[#d4af37] text-lg sm:text-2xl font-bold select-none">❖</div>
                 <div className="absolute top-2 right-2 text-[#d4af37] text-lg sm:text-2xl font-bold select-none">❖</div>

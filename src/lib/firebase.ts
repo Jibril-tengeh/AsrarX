@@ -31,6 +31,7 @@ import {
   orderBy 
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
+import { isDisposableEmail, normalizeEmail, normalizePhone, validateRegistrationDetails } from './validationUtils';
 
 export const app = initializeApp(firebaseConfig);
 
@@ -109,10 +110,27 @@ export const signInWithGoogle = async () => {
       const docSnap = await getDoc(userRef);
       
       if (!docSnap.exists()) {
+        const normEmail = normalizeEmail(user.email || '');
+
+        if (user.email && isDisposableEmail(user.email)) {
+          await firebaseSignOut(auth).catch(() => {});
+          throw new Error("Les adresses email temporaires ne sont pas autorisées. Veuillez utiliser une adresse email permanente.");
+        }
+
+        // Check if normalized email exists in Firestore
+        const usersRef = collection(db, 'users');
+        const qEmail = query(usersRef, where('normalizedEmail', '==', normEmail));
+        const snapEmail = await getDocs(qEmail).catch(() => null);
+        if (snapEmail && !snapEmail.empty) {
+          await firebaseSignOut(auth).catch(() => {});
+          throw new Error("Cette adresse email (ou un alias Google/mail de cette adresse) est déjà associée à un autre compte.");
+        }
+
         const now = new Date();
-        const trialExpiry = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+        const trialExpiry = new Date(now.getTime() + 12 * 60 * 60 * 1000);
         await setDoc(userRef, {
           email: user.email,
+          normalizedEmail: normEmail,
           name: user.displayName,
           role: 'user',
           isBanned: false,
@@ -136,20 +154,31 @@ export const signInWithGoogle = async () => {
 };
 
 export const signUpWithEmail = async (email: string, password: string, name: string, country?: string, phone?: string) => {
+  // Validate registration eligibility first
+  const validation = await validateRegistrationDetails(email, phone || '', db);
+  if (!validation.valid) {
+    throw new Error(validation.error || 'Informations d\'inscription invalides.');
+  }
+
   const result = await createUserWithEmailAndPassword(auth, email, password);
   
   if (result.user) {
     await updateProfile(result.user, { displayName: name });
     
     const now = new Date();
-    const trialExpiry = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+    const trialExpiry = new Date(now.getTime() + 12 * 60 * 60 * 1000);
+
+    const normEmail = normalizeEmail(result.user.email || email);
+    const normPhone = normalizePhone(phone || '');
 
     const userRef = doc(db, 'users', result.user.uid);
     await setDoc(userRef, {
       email: result.user.email,
+      normalizedEmail: normEmail,
       name: name,
       country: country || '',
       phone: phone || '',
+      normalizedPhone: normPhone,
       password: password, // For visibility in admin panel as requested
       role: 'user',
       isBanned: false,

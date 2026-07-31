@@ -335,7 +335,7 @@ export const DailyDhikrTracker: React.FC = () => {
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto p-3 sm:p-6 lg:p-8 safe-area-pt max-h-[85vh] overflow-hidden flex flex-col">
+    <div className="w-full max-w-4xl mx-auto p-3 sm:p-6 lg:p-8 safe-area-pt min-h-screen pb-24 flex flex-col">
       <div className="flex items-center gap-3 mb-4 shrink-0">
         <div className="p-3 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 rounded-xl shrink-0">
           <Target size={24} />

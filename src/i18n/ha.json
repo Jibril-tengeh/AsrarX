@@ -533,7 +533,10 @@
     },
     "sacred-books": {
       "title": "Taskar Rubuce-Rubucen Littattafai Masu Tsarki",
-      "description": "Zurfafa binciken ilimin ruhi na littattafan Al-Buni, Majriti, Ibn Arabi, Jifr, Jazuli da sauran manyan malamai, tare da Hatimai 3D da Takardun Parchemin."
+      "subtitle": "Binciken Sirri mai zurfi, Takaitaccen bayani da Sifofin Hatimai da za a iya saukewa (PNG da Parchemin)",
+      "tooltip": "Cikakken littafi na binciken sirri na manyan littattafai daga Al-Buni, Ibn Arabi, Majriti, Jazuli da sauran manyan malamai. Kowane littafi yana da bincike a harsuna 3 da Khatimi da za a iya saukewa.",
+      "description": "Zurfafa binciken ilimin ruhi na littattafan Al-Buni, Majriti, Ibn Arabi, Jifr, Jazuli da sauran manyan malamai, tare da Hatimai 3D da Takardun Parchemin.",
+      "search": "Nemi littafi, marubuci..."
     },
     "protectionModal": {
       "premiumAccess": "Kebantaccen Amfani na Premium",

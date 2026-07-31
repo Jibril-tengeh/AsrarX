@@ -1294,7 +1294,7 @@ export const Geomancy: React.FC = () => {
   const elemStats = getElementalStats();
 
   return (
-    <div className="w-full max-w-7xl mx-auto p-3 sm:p-6 lg:p-8 safe-area-pt max-h-[85vh] overflow-hidden flex flex-col">
+    <div className="w-full max-w-7xl mx-auto p-3 sm:p-6 lg:p-8 safe-area-pt min-h-screen pb-24 flex flex-col">
       {/* Top Banner */}
       <div className="mb-4 shrink-0">
         <Link to="/tools" className="inline-flex items-center text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 font-medium mb-2 transition-colors">

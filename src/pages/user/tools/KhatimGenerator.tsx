@@ -3,6 +3,8 @@ import { Star, ArrowLeft, RefreshCw, Calculator, Grid, Type, Download, Share2, F
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { ToolInfoTooltip } from '../../../components/ToolInfoTooltip';
+import { AsrarHubWatermark } from '../../../components/AsrarHubWatermark';
+import { KhatimUsageGuide } from '../../../components/KhatimUsageGuide';
 import { motion, AnimatePresence } from 'motion/react';
 import { calculateAbjadValue } from '../../../utils/abjad';
 import { toCanvas, toPng, toSvg } from 'html-to-image';
@@ -22,11 +24,14 @@ export const KhatimGenerator: React.FC = () => {
 
   const downloadImage = async () => {
     if (!resultRef.current) return;
+    const fname = `khatim-${gridSize}x${gridSize}.png`;
+    notifyDownloadStart(fname);
     try {
       const canvas = await toCanvas(resultRef.current, { backgroundColor: '#18181b', skipFonts: true });
-      await downloadCanvasImage(canvas, `khatim-${gridSize}x${gridSize}.png`);
+      await downloadCanvasImage(canvas, fname);
     } catch (e) {
-      console.error(e);
+      console.error('Error generating canvas image:', e);
+      notifyDownloadError(fname);
     }
   };
 
@@ -329,7 +334,7 @@ export const KhatimGenerator: React.FC = () => {
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto p-3 sm:p-6 lg:p-8 safe-area-pt max-h-[85vh] overflow-hidden flex flex-col">
+    <div className="w-full max-w-7xl mx-auto p-3 sm:p-6 lg:p-8 safe-area-pt min-h-screen pb-24 flex flex-col">
       {/* Header */}
       <div className="flex items-center gap-4 mb-4 shrink-0">
         <Link 
@@ -428,21 +433,10 @@ export const KhatimGenerator: React.FC = () => {
             className="relative flex flex-col items-center gap-6"
           >
             <div ref={resultRef} className="bg-zinc-900 rounded-3xl p-6 sm:p-8 shadow-2xl border-4 border-zinc-800 mx-auto max-w-md relative overflow-hidden w-full">
-               <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay"></div>
+               <div className="absolute inset-0 bg-gradient-to-br from-purple-900/20 via-transparent to-indigo-950/20 opacity-40 pointer-events-none"></div>
                
-               {/* AsrarHub Watermarks in 4 corners */}
-               <div className="absolute top-2 left-3 text-[10px] font-bold tracking-widest text-purple-400/30 pointer-events-none select-none uppercase">
-                 AsrarHub
-               </div>
-               <div className="absolute top-2 right-3 text-[10px] font-bold tracking-widest text-purple-400/30 pointer-events-none select-none uppercase">
-                 AsrarHub
-               </div>
-               <div className="absolute bottom-2 left-3 text-[10px] font-bold tracking-widest text-purple-400/30 pointer-events-none select-none uppercase">
-                 AsrarHub
-               </div>
-               <div className="absolute bottom-2 right-3 text-[10px] font-bold tracking-widest text-purple-400/30 pointer-events-none select-none uppercase">
-                 AsrarHub
-               </div>
+               {/* Professional Engraved AsrarHub Watermark */}
+               <AsrarHubWatermark variant="dark" opacity={0.16} showCentralSeal={true} />
 
                {/* AsrarHub Logo Header */}
                <div className="flex justify-center mb-4 relative z-10">
@@ -552,9 +546,17 @@ export const KhatimGenerator: React.FC = () => {
                 </button>
               </div>
             </div>
+
+            {/* Comprehensive Sacred Ritual & Usage Guide */}
+            <KhatimUsageGuide defaultExpanded={true} className="w-full mt-4" />
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Persistent Guide when no grid generated yet */}
+      {!grid && (
+        <KhatimUsageGuide defaultExpanded={false} className="w-full mt-6" />
+      )}
       </div>
     </div>
   );
