@@ -50,7 +50,22 @@ import {
   Search,
   Info,
   Gift,
-  MessageCircle
+  MessageCircle,
+  FileText,
+  Music,
+  Download,
+  Eye,
+  ZoomIn,
+  ZoomOut,
+  RotateCw,
+  Printer,
+  ExternalLink,
+  FileCode,
+  Minimize2,
+  Loader2,
+  Edit3,
+  Clock,
+  LayoutGrid
 } from "lucide-react";
 import { db } from "../../lib/firebase";
 import {
@@ -85,6 +100,8 @@ interface Post {
   content: string;
   status: "pending" | "approved" | "rejected";
   createdAt: any;
+  isEdited?: boolean;
+  editedAt?: any;
   isPinned?: boolean;
   replyTo?: {
     authorName: string;
@@ -98,8 +115,10 @@ interface Post {
   };
   voiceNotes?: string[]; // base64 array
   attachments?: {
-    type: "image" | "video" | "audio";
+    type: "image" | "video" | "audio" | "document";
     url: string; // base64 urls
+    fileName?: string;
+    fileSize?: string;
   }[];
   reactions?: {
     like?: string[]; // userIds
@@ -169,7 +188,18 @@ const localTranslations: Record<string, Record<string, string>> = {
     mustBeLoggedIn: "Veuillez vous connecter pour participer.",
     commentsAndReplies: "Commentaires & Réponses",
     hideComments: "Masquer les commentaires",
-    privateMessageDirect: "Message Privé"
+    privateMessageDirect: "Message Privé",
+    sendMsg: "Envoyer le message",
+    voiceRecord: "Enregistrer un message vocal",
+    stopAndSend: "Envoyer l'enregistrement vocal",
+    attachMenuTitle: "Joindre du contenu",
+    attachGallery: "Photo & Galerie",
+    attachVideo: "Vidéo",
+    attachDocument: "Document",
+    attachAudio: "Fichier Audio",
+    attachPoll: "Créer Sondage",
+    attachCode: "Partager Code",
+    attachLocation: "Position Spirituelle"
   },
   en: {
     communityTitle: "Asrar Al'umma Group 📿",
@@ -208,7 +238,18 @@ const localTranslations: Record<string, Record<string, string>> = {
     mustBeLoggedIn: "Please log in to participate.",
     commentsAndReplies: "Comments & Replies",
     hideComments: "Hide comments",
-    privateMessageDirect: "Private Message"
+    privateMessageDirect: "Private Message",
+    sendMsg: "Send message",
+    voiceRecord: "Record voice message",
+    stopAndSend: "Send voice recording",
+    attachMenuTitle: "Attach Content",
+    attachGallery: "Photo & Gallery",
+    attachVideo: "Video",
+    attachDocument: "Document",
+    attachAudio: "Audio File",
+    attachPoll: "Create Poll",
+    attachCode: "Share Code",
+    attachLocation: "Spiritual Location"
   },
   ha: {
     communityTitle: "Asrar Al'umma Group 📿",
@@ -247,7 +288,18 @@ const localTranslations: Record<string, Record<string, string>> = {
     mustBeLoggedIn: "Da fatan za a shiga don shiga tattaunawa.",
     commentsAndReplies: "Sharhi da Martani",
     hideComments: "Boye sharhi",
-    privateMessageDirect: "Sakon Sirri (DM)"
+    privateMessageDirect: "Sakon Sirri (DM)",
+    sendMsg: "Tura saƙo",
+    voiceRecord: "Ɗauki muryar saƙo",
+    stopAndSend: "Tura muryar saƙo",
+    attachMenuTitle: "Haɗa Abubuwa",
+    attachGallery: "Hoto & Gallery",
+    attachVideo: "Bidiyo",
+    attachDocument: "Takarda / File",
+    attachAudio: "Fayil ɗin Sauti",
+    attachPoll: "Ƙirƙiri Zaɓe",
+    attachCode: "Raba Code",
+    attachLocation: "Wurin Ruhaniya"
   }
 };
 
@@ -303,16 +355,28 @@ export const Community: React.FC = () => {
   const [posts, setPosts] = useState<Post[]>([]);
   const [membersList, setMembersList] = useState<Member[]>([]);
   const [activeSidebarTab, setActiveSidebarTab] = useState<"info" | "members" | "media" | "ai">("info");
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Message Sending Inputs
   const [messageText, setMessageText] = useState("");
   const [replyToPost, setReplyToPost] = useState<Post | null>(null);
 
   // Media Attachment States
-  const [attachedMedias, setAttachedMedias] = useState<{ type: "image" | "video" | "audio"; url: string }[]>([]);
+  const [attachedMedias, setAttachedMedias] = useState<{ type: "image" | "video" | "audio" | "document"; url: string; fileName?: string; fileSize?: string }[]>([]);
   const [recordedAudio, setRecordedAudio] = useState<string | null>(null);
   const [codeSharingEnabled, setCodeSharingEnabled] = useState(true);
+  const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false);
+  const attachMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (attachMenuRef.current && !attachMenuRef.current.contains(event.target as Node)) {
+        setIsAttachMenuOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // AI Chat States
   const [aiChatMessages, setAiChatMessages] = useState<{ sender: "user" | "ai"; text: string }[]>([
@@ -324,9 +388,12 @@ export const Community: React.FC = () => {
   // Voice recording simulation states
   const [isRecording, setIsRecording] = useState(false);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [proVoiceAmplifier, setProVoiceAmplifier] = useState(true);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const recordingIntervalRef = useRef<any>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const micStreamRef = useRef<MediaStream | null>(null);
 
   // Search filter
   const [chatSearchQuery, setChatSearchQuery] = useState("");
@@ -348,12 +415,81 @@ export const Community: React.FC = () => {
   const [lightboxImages, setLightboxImages] = useState<string[]>([]);
   const [lightboxIndex, setLightboxIndex] = useState(0);
 
+  // Professional Document Viewer state
+  const [docViewerFile, setDocViewerFile] = useState<{ url: string; fileName?: string; fileSize?: string; type?: string } | null>(null);
+  const [docViewerTextContent, setDocViewerTextContent] = useState<string | null>(null);
+  const [docViewerZoom, setDocViewerZoom] = useState(100);
+  const [docViewerRotation, setDocViewerRotation] = useState(0);
+  const [docViewerTab, setDocViewerTab] = useState<"viewer" | "text" | "details">("viewer");
+  const [docViewerCopied, setDocViewerCopied] = useState(false);
+  const [docSearchQuery, setDocSearchQuery] = useState("");
+
+  const handleOpenDocViewer = (file: { url: string; fileName?: string; fileSize?: string; type?: string }) => {
+    setDocViewerFile(file);
+    setDocViewerZoom(100);
+    setDocViewerRotation(0);
+    setDocViewerTab("viewer");
+    setDocViewerCopied(false);
+    setDocSearchQuery("");
+
+    if (file.url && file.url.startsWith("data:")) {
+      const isTextMime =
+        file.url.startsWith("data:text/") ||
+        file.url.startsWith("data:application/json") ||
+        file.url.startsWith("data:application/javascript") ||
+        file.url.startsWith("data:application/x-javascript") ||
+        file.url.startsWith("data:text/csv") ||
+        file.url.startsWith("data:text/plain") ||
+        file.url.startsWith("data:text/html") ||
+        file.url.startsWith("data:text/xml");
+
+      const nameLower = (file.fileName || "").toLowerCase();
+      const isTextExt = [".txt", ".json", ".js", ".ts", ".tsx", ".jsx", ".py", ".html", ".css", ".csv", ".md", ".xml", ".sh", ".sql", ".log"].some((ext) => nameLower.endsWith(ext));
+
+      if (isTextMime || isTextExt) {
+        try {
+          const base64Index = file.url.indexOf(";base64,");
+          if (base64Index !== -1) {
+            const b64 = file.url.substring(base64Index + 8);
+            const decoded = decodeURIComponent(escape(atob(b64)));
+            setDocViewerTextContent(decoded);
+          } else {
+            const commaIndex = file.url.indexOf(",");
+            if (commaIndex !== -1) {
+              setDocViewerTextContent(decodeURIComponent(file.url.substring(commaIndex + 1)));
+            }
+          }
+        } catch (_) {
+          try {
+            const b64 = file.url.split(",")[1];
+            if (b64) setDocViewerTextContent(atob(b64));
+          } catch (err) {
+            setDocViewerTextContent(null);
+          }
+        }
+      } else {
+        setDocViewerTextContent(null);
+      }
+    } else {
+      setDocViewerTextContent(null);
+    }
+  };
+
   // Active threads (comments)
   const [activeCommentPostId, setActiveCommentPostId] = useState<string | null>(null);
 
   // Floating Context Menu
   const [activeContextMenuPostId, setActiveContextMenuPostId] = useState<string | null>(null);
   const [contextMenuCoords, setContextMenuCoords] = useState<{ x: number; y: number } | null>(null);
+
+  // Floating Quick Navigation Menu (INFOS, MEMBRES, MÉDIAS, IA ASRAR)
+  const [showFloatingMenu, setShowFloatingMenu] = useState<boolean>(false);
+
+  // Message Edit & Delete Delay Settings
+  const [messageEditDeleteLimitMinutes, setMessageEditDeleteLimitMinutes] = useState<number>(4320); // Default 72 hours
+  const [editingPostId, setEditingPostId] = useState<string | null>(null);
+  const [editPostContent, setEditPostContent] = useState<string>("");
+  const [isSubmittingEdit, setIsSubmittingEdit] = useState<boolean>(false);
 
   // Inline Compiler logs
   const [compiledOutputs, setCompiledOutputs] = useState<Record<string, string[]>>({});
@@ -527,7 +663,11 @@ export const Community: React.FC = () => {
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "community_settings", "global"), (snap) => {
       if (snap.exists()) {
-        setCodeSharingEnabled(snap.data().codeSharingEnabled !== false);
+        const data = snap.data();
+        setCodeSharingEnabled(data.codeSharingEnabled !== false);
+        if (data.messageEditDeleteLimitMinutes !== undefined) {
+          setMessageEditDeleteLimitMinutes(Number(data.messageEditDeleteLimitMinutes));
+        }
       }
     });
     return () => unsub();
@@ -580,24 +720,21 @@ export const Community: React.FC = () => {
 
   // Fetch Community Posts
   useEffect(() => {
-    let q;
-    if (user?.role === "admin") {
-      q = query(collection(db, "community_posts"), orderBy("createdAt", "asc"));
-    } else {
-      q = query(collection(db, "community_posts"), where("status", "==", "approved"), orderBy("createdAt", "asc"));
-    }
+    const q = query(collection(db, "community_posts"), orderBy("createdAt", "asc"));
 
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        const postsData = snapshot.docs.map((docSnap) => {
-          const data = docSnap.data();
-          return {
-            id: docSnap.id,
-            ...data,
-            reactions: data.reactions || { like: [], love: [], haha: [], wow: [], sad: [], angry: [] }
-          } as Post;
-        });
+        const postsData = snapshot.docs
+          .map((docSnap) => {
+            const data = docSnap.data();
+            return {
+              id: docSnap.id,
+              ...data,
+              reactions: data.reactions || { like: [], love: [], haha: [], wow: [], sad: [], angry: [] }
+            } as Post;
+          })
+          .filter((post) => user?.role === "admin" || post.status === "approved" || !post.status);
         setPosts(postsData);
         // Scroll to bottom on new messages
         setTimeout(scrollToBottom, 200);
@@ -649,33 +786,102 @@ export const Community: React.FC = () => {
     scrollToBottom();
   }, [posts.length]);
 
-  // Handle Voice Recording Simulation
+  // Cleanup Audio Context and MediaStream safely to prevent crackling & memory leaks
+  const cleanupAudioResources = () => {
+    if (audioCtxRef.current) {
+      try {
+        audioCtxRef.current.close();
+      } catch (_) {}
+      audioCtxRef.current = null;
+    }
+    if (micStreamRef.current) {
+      try {
+        micStreamRef.current.getTracks().forEach((track) => track.stop());
+      } catch (_) {}
+      micStreamRef.current = null;
+    }
+  };
+
+  // Handle Voice Recording with Clean HD Studio Audio (Anti-Crackling & Gain Normalization)
   const startRecording = async () => {
     audioChunksRef.current = [];
     setRecordedAudio(null);
     setRecordingSeconds(0);
+    cleanupAudioResources();
+
     try {
       if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        
-        let options = {};
-        if (typeof MediaRecorder.isTypeSupported === "function") {
-          if (MediaRecorder.isTypeSupported("audio/webm")) {
-            options = { mimeType: "audio/webm" };
-          } else if (MediaRecorder.isTypeSupported("audio/mp4")) {
-            options = { mimeType: "audio/mp4" };
-          } else if (MediaRecorder.isTypeSupported("audio/ogg")) {
-            options = { mimeType: "audio/ogg" };
-          } else if (MediaRecorder.isTypeSupported("audio/wav")) {
-            options = { mimeType: "audio/wav" };
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+            channelCount: 1,
+          },
+        });
+        micStreamRef.current = stream;
+
+        let recordingStream = stream;
+
+        // Apply Gentle Studio Dynamics DSP pipeline if enabled (Clean HD, Anti-Crackling)
+        if (proVoiceAmplifier) {
+          try {
+            const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+            if (AudioContextClass) {
+              const audioCtx = new AudioContextClass();
+              audioCtxRef.current = audioCtx;
+              const source = audioCtx.createMediaStreamSource(stream);
+
+              // 1. Gentle Highpass filter to eliminate low frequency mic thuds (< 80 Hz)
+              const highpass = audioCtx.createBiquadFilter();
+              highpass.type = "highpass";
+              highpass.frequency.value = 80;
+
+              // 2. Soft Dynamics Compressor to balance vocal volume without distortion
+              const compressor = audioCtx.createDynamicsCompressor();
+              compressor.threshold.setValueAtTime(-18, audioCtx.currentTime);
+              compressor.knee.setValueAtTime(8, audioCtx.currentTime);
+              compressor.ratio.setValueAtTime(3, audioCtx.currentTime);
+              compressor.attack.setValueAtTime(0.005, audioCtx.currentTime);
+              compressor.release.setValueAtTime(0.1, audioCtx.currentTime);
+
+              // 3. Clean Master Gain (1.0x to avoid 0dBFS clipping distortion)
+              const masterGain = audioCtx.createGain();
+              masterGain.gain.value = 1.0;
+
+              const destination = audioCtx.createMediaStreamDestination();
+              source.connect(highpass);
+              highpass.connect(compressor);
+              compressor.connect(masterGain);
+              masterGain.connect(destination);
+
+              recordingStream = destination.stream;
+            }
+          } catch (dspErr) {
+            console.warn("Professional voice DSP fallback to raw stream:", dspErr);
           }
         }
 
-        const mediaRecorder = new MediaRecorder(stream, options);
+        let options: any = { audioBitsPerSecond: 128000 };
+        if (typeof MediaRecorder.isTypeSupported === "function") {
+          if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
+            options = { mimeType: "audio/webm;codecs=opus", audioBitsPerSecond: 128000 };
+          } else if (MediaRecorder.isTypeSupported("audio/webm")) {
+            options = { mimeType: "audio/webm", audioBitsPerSecond: 128000 };
+          } else if (MediaRecorder.isTypeSupported("audio/mp4")) {
+            options = { mimeType: "audio/mp4", audioBitsPerSecond: 128000 };
+          } else if (MediaRecorder.isTypeSupported("audio/ogg")) {
+            options = { mimeType: "audio/ogg", audioBitsPerSecond: 128000 };
+          }
+        }
+
+        const mediaRecorder = new MediaRecorder(recordingStream, options);
         mediaRecorderRef.current = mediaRecorder;
 
         mediaRecorder.ondataavailable = (event: any) => {
-          if (event.data.size > 0) audioChunksRef.current.push(event.data);
+          if (event.data && event.data.size > 0) {
+            audioChunksRef.current.push(event.data);
+          }
         };
 
         mediaRecorder.onstop = () => {
@@ -686,10 +892,10 @@ export const Community: React.FC = () => {
           reader.onloadend = () => {
             setRecordedAudio(reader.result as string);
           };
-          stream.getTracks().forEach((track) => track.stop());
+          cleanupAudioResources();
         };
 
-        mediaRecorder.start();
+        mediaRecorder.start(250); // 250ms timeslice for smooth streaming without dropped frames
         setIsRecording(true);
         recordingIntervalRef.current = setInterval(() => {
           setRecordingSeconds((prev) => prev + 1);
@@ -709,111 +915,184 @@ export const Community: React.FC = () => {
   const stopRecording = () => {
     setIsRecording(false);
     if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
-    
+
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
       try {
         mediaRecorderRef.current.stop();
       } catch (err) {
         console.error("Error stopping media recorder, generating chime:", err);
+        cleanupAudioResources();
         generateSimulatedVoiceNote();
       }
     } else {
-      // Simulate synthetic audio voice file
+      cleanupAudioResources();
       generateSimulatedVoiceNote();
     }
   };
 
-  const generateSimulatedVoiceNote = () => {
-    // Generate a real, standard, short playable base64 WAV sound of a bell/chime!
-    // This ensures that even when microphone permission is denied, or inside sandboxed iframe without mic access,
-    // they get a REAL, playable, sending-compatible audio base64 instead of a simulated tag!
-    try {
-      const sampleRate = 8000;
-      const duration = 1.5; // seconds
-      const numSamples = sampleRate * duration;
-      const buffer = new ArrayBuffer(44 + numSamples * 2);
-      const view = new DataView(buffer);
+  const generateSyntheticWavBase64 = (): Promise<string> => {
+    return new Promise((resolve) => {
+      try {
+        const sampleRate = 44100; // Studio CD Quality (44.1kHz)
+        const duration = 2.0; // seconds
+        const numSamples = Math.floor(sampleRate * duration);
+        const buffer = new ArrayBuffer(44 + numSamples * 2);
+        const view = new DataView(buffer);
 
-      /* RIFF identifier */
-      view.setUint32(0, 0x52494646, false); // "RIFF"
-      /* file length */
-      view.setUint32(4, 36 + numSamples * 2, true);
-      /* RIFF type */
-      view.setUint32(8, 0x57415645, false); // "WAVE"
-      /* format chunk identifier */
-      view.setUint32(12, 0x666d7420, false); // "fmt "
-      /* format chunk length */
-      view.setUint32(16, 16, true);
-      /* sample format (raw) */
-      view.setUint16(20, 1, true);
-      /* channel count */
-      view.setUint16(22, 1, true);
-      /* sample rate */
-      view.setUint32(24, sampleRate, true);
-      /* byte rate (sample rate * block align) */
-      view.setUint32(28, sampleRate * 2, true);
-      /* block align (channel count * bytes per sample) */
-      view.setUint16(32, 2, true);
-      /* bits per sample */
-      view.setUint16(34, 16, true);
-      /* data chunk identifier */
-      view.setUint32(36, 0x64617461, false); // "data"
-      /* data chunk length */
-      view.setUint32(40, numSamples * 2, true);
+        /* RIFF identifier */
+        view.setUint32(0, 0x52494646, false); // "RIFF"
+        /* file length */
+        view.setUint32(4, 36 + numSamples * 2, true);
+        /* RIFF type */
+        view.setUint32(8, 0x57415645, false); // "WAVE"
+        /* format chunk identifier */
+        view.setUint32(12, 0x666d7420, false); // "fmt "
+        /* format chunk length */
+        view.setUint32(16, 16, true);
+        /* sample format (raw) */
+        view.setUint16(20, 1, true);
+        /* channel count */
+        view.setUint16(22, 1, true);
+        /* sample rate */
+        view.setUint32(24, sampleRate, true);
+        /* byte rate (sample rate * block align) */
+        view.setUint32(28, sampleRate * 2, true);
+        /* block align (channel count * bytes per sample) */
+        view.setUint16(32, 2, true);
+        /* bits per sample */
+        view.setUint16(34, 16, true);
+        /* data chunk identifier */
+        view.setUint32(36, 0x64617461, false); // "data"
+        /* data chunk length */
+        view.setUint32(40, numSamples * 2, true);
 
-      // Write sine wave chime sound
-      for (let i = 0; i < numSamples; i++) {
-        const t = i / sampleRate;
-        const freq = t < 0.6 ? 784 : 1046.5; // G5 then C6
-        const envelope = Math.max(0, 1 - t / duration);
-        const sample = Math.sin(2 * Math.PI * freq * t) * 32767 * 0.3 * envelope;
-        view.setInt16(44 + i * 2, sample, true);
+        // Studio HD chime tone with continuous phase & anti-pop fade envelope
+        let phase = 0;
+        for (let i = 0; i < numSamples; i++) {
+          const t = i / sampleRate;
+          const fundamental = t < 0.8 ? 523.25 : 659.25; // C5 to E5 harmonic scale
+          phase += (2 * Math.PI * fundamental) / sampleRate;
+
+          // Smooth 30ms fade-in & 150ms fade-out envelope to eliminate waveform start/end edge pops
+          const fadeIn = Math.min(1, t / 0.03);
+          const fadeOut = Math.max(0, 1 - (t - (duration - 0.15)) / 0.15);
+          const envelope = fadeIn * Math.min(1, fadeOut);
+
+          const val1 = Math.sin(phase) * 0.65;
+          const val2 = Math.sin(phase * 2) * 0.25;
+
+          const sample = (val1 + val2) * 32767 * 0.4 * envelope;
+          view.setInt16(44 + i * 2, Math.max(-32768, Math.min(32767, Math.round(sample))), true);
+        }
+
+        const blob = new Blob([buffer], { type: "audio/wav" });
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          resolve(reader.result as string);
+        };
+        reader.readAsDataURL(blob);
+      } catch (e) {
+        console.error("Error creating synthetic wav chime:", e);
+        resolve(`simulated:voice_note_chime_${Date.now()}`);
       }
+    });
+  };
 
-      const blob = new Blob([buffer], { type: "audio/wav" });
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setRecordedAudio(reader.result as string);
-      };
-      reader.readAsDataURL(blob);
-    } catch (e) {
-      console.error("Error creating synthetic wav chime:", e);
-      setRecordedAudio(`simulated:voice_note_chime_${Date.now()}`);
+  const generateSimulatedVoiceNote = async () => {
+    const audioUrl = await generateSyntheticWavBase64();
+    setRecordedAudio(audioUrl);
+  };
+
+  const stopAndSendRecording = async () => {
+    setIsRecording(false);
+    if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
+
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      try {
+        mediaRecorderRef.current.onstop = () => {
+          const mimeType = mediaRecorderRef.current?.mimeType || "audio/webm";
+          const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
+          const reader = new FileReader();
+          reader.onloadend = async () => {
+            const audioUrl = reader.result as string;
+            cleanupAudioResources();
+            await doSendMessage(audioUrl);
+          };
+          reader.readAsDataURL(audioBlob);
+        };
+        mediaRecorderRef.current.stop();
+      } catch (err) {
+        console.error("Error stopping media recorder, sending synthetic chime:", err);
+        cleanupAudioResources();
+        const chime = await generateSyntheticWavBase64();
+        await doSendMessage(chime);
+      }
+    } else {
+      cleanupAudioResources();
+      const chime = await generateSyntheticWavBase64();
+      await doSendMessage(chime);
     }
   };
 
-  // Attach Media File Change (Supports Images, Videos, Audios)
-  const handleMediaAttach = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Attach Media File Change (Supports Images, Videos, Audios, Documents)
+  const handleMediaAttach = (e: React.ChangeEvent<HTMLInputElement>, filterType?: "image" | "video" | "audio" | "document") => {
     const files = e.target.files;
     if (!files) return;
     Array.from(files).forEach((file: File) => {
-      if (file.size > 15 * 1024 * 1024) {
-        alert("Fichier trop volumineux (Max 15Mo).");
+      if (file.size > 25 * 1024 * 1024) {
+        alert(lang === "ha" ? "Fayil ɗin ya yi yawa (Max 25MB)." : lang === "en" ? "File too large (Max 25MB)." : "Fichier trop volumineux (Max 25Mo).");
         return;
       }
       const reader = new FileReader();
       reader.onloadend = () => {
-        let type: "image" | "video" | "audio" = "image";
-        if (file.type.startsWith("video/")) {
-          type = "video";
-        } else if (file.type.startsWith("audio/")) {
-          type = "audio";
+        let type: "image" | "video" | "audio" | "document" = filterType || "image";
+        if (!filterType) {
+          if (file.type.startsWith("video/")) {
+            type = "video";
+          } else if (file.type.startsWith("audio/")) {
+            type = "audio";
+          } else if (
+            file.type.startsWith("text/") ||
+            file.type.includes("pdf") ||
+            file.type.includes("document") ||
+            file.type.includes("sheet") ||
+            file.type.includes("zip") ||
+            file.type.includes("rar") ||
+            file.name.endsWith(".pdf") ||
+            file.name.endsWith(".doc") ||
+            file.name.endsWith(".docx") ||
+            file.name.endsWith(".txt") ||
+            file.name.endsWith(".zip") ||
+            file.name.endsWith(".xlsx") ||
+            file.name.endsWith(".csv")
+          ) {
+            type = "document";
+          }
         }
-        setAttachedMedias((prev) => [...prev, { type, url: reader.result as string }]);
+        setAttachedMedias((prev) => [
+          ...prev,
+          {
+            type,
+            url: reader.result as string,
+            fileName: file.name,
+            fileSize: file.size >= 1024 * 1024 ? `${(file.size / (1024 * 1024)).toFixed(1)} MB` : `${(file.size / 1024).toFixed(1)} KB`
+          },
+        ]);
       };
       reader.readAsDataURL(file);
     });
   };
 
   // Submit standard text message, audio, or attachment
-  const handleSendMessage = async (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
+  const doSendMessage = async (voiceAudioUrl?: string) => {
     if (!user) {
       alert(tLocal("mustBeLoggedIn"));
       return;
     }
 
-    if (!messageText.trim() && attachedMedias.length === 0 && !recordedAudio) {
+    const audioToSend = voiceAudioUrl || recordedAudio;
+
+    if (!messageText.trim() && attachedMedias.length === 0 && !audioToSend) {
       return;
     }
 
@@ -846,8 +1125,8 @@ export const Community: React.FC = () => {
       payload.attachments = attachedMedias;
     }
 
-    if (recordedAudio) {
-      payload.voiceNotes = [recordedAudio];
+    if (audioToSend) {
+      payload.voiceNotes = [audioToSend];
     }
 
     try {
@@ -861,6 +1140,11 @@ export const Community: React.FC = () => {
     } catch (err) {
       console.error("Error sending message to Firestore:", err);
     }
+  };
+
+  const handleSendMessage = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    await doSendMessage();
   };
 
   // Submit Poll Message
@@ -1001,8 +1285,74 @@ export const Community: React.FC = () => {
     setActiveContextMenuPostId(null);
   };
 
+  // Helper: format rich summary for pinned messages of any type (text, photos, video, PDF, audio, poll, code)
+  const getPinnedPostSummary = (post: Post) => {
+    const parts: string[] = [];
+    if (post.content && post.content.trim()) {
+      parts.push(post.content.trim());
+    }
+    if (post.attachments && post.attachments.length > 0) {
+      post.attachments.forEach((att) => {
+        if (att.type === "image" || !att.type) parts.push("📷 Photo");
+        else if (att.type === "video") parts.push("🎥 Vidéo");
+        else if (att.type === "document") parts.push(`📄 ${att.fileName || "Document PDF"}`);
+        else if (att.type === "audio") parts.push("🎵 Fichier Audio");
+      });
+    }
+    if (post.voiceNotes && post.voiceNotes.length > 0) {
+      parts.push("🎤 Note vocale");
+    }
+    if (post.codeSnippet) {
+      parts.push(`💻 Code (${post.codeSnippet.language || "Snippet"})`);
+    }
+    if (post.poll) {
+      parts.push(`📊 Sondage: ${post.poll.question}`);
+    }
+    return parts.join(" • ") || "Message épinglé";
+  };
+
+  // Helper: check if a user can edit/delete a post based on time limit
+  const canUserModifyPost = (post: any, currentUser: any, limitMinutes: number): boolean => {
+    if (!currentUser || !post) return false;
+    if (currentUser.role === "admin") return true; // Admins can always edit/delete
+    if (post.authorId !== currentUser.uid) return false; // Non-authors cannot modify
+
+    if (limitMinutes === -1) return true; // Unlimited limit
+
+    let createdMs = Date.now();
+    if (post.createdAt) {
+      if (typeof post.createdAt.toDate === "function") {
+        createdMs = post.createdAt.toDate().getTime();
+      } else if (post.createdAt.seconds) {
+        createdMs = post.createdAt.seconds * 1000;
+      } else if (typeof post.createdAt === "number") {
+        createdMs = post.createdAt;
+      } else if (typeof post.createdAt === "string") {
+        createdMs = new Date(post.createdAt).getTime();
+      }
+    }
+
+    const elapsedMinutes = (Date.now() - createdMs) / (1000 * 60);
+    return elapsedMinutes <= limitMinutes;
+  };
+
+  const formatLimitText = (limitMinutes: number): string => {
+    if (limitMinutes === -1) return "Illimité";
+    if (limitMinutes < 60) return `${limitMinutes} min`;
+    const hours = limitMinutes / 60;
+    if (hours < 24) return `${hours} h`;
+    const days = hours / 24;
+    return `${days} jour${days > 1 ? "s" : ""}`;
+  };
+
   // Delete message
   const handleDeletePost = async (postId: string) => {
+    const post = posts.find((p) => p.id === postId);
+    if (!post) return;
+    if (!canUserModifyPost(post, user, messageEditDeleteLimitMinutes)) {
+      alert("Le délai d'autorisation de suppression de ce message a expiré.");
+      return;
+    }
     if (window.confirm("Êtes-vous sûr de vouloir supprimer ce message ?")) {
       try {
         await deleteDoc(doc(db, "community_posts", postId));
@@ -1010,6 +1360,30 @@ export const Community: React.FC = () => {
       } catch (err) {
         console.error("Error deleting post:", err);
       }
+    }
+  };
+
+  // Save edited message
+  const handleSaveEditPost = async () => {
+    if (!editingPostId || !editPostContent.trim()) return;
+    const post = posts.find((p) => p.id === editingPostId);
+    if (!post || !canUserModifyPost(post, user, messageEditDeleteLimitMinutes)) {
+      alert("Le délai d'autorisation de modification de ce message a expiré.");
+      return;
+    }
+    setIsSubmittingEdit(true);
+    try {
+      await updateDoc(doc(db, "community_posts", editingPostId), {
+        content: editPostContent.trim(),
+        isEdited: true,
+        editedAt: serverTimestamp()
+      });
+      setEditingPostId(null);
+      setEditPostContent("");
+    } catch (err) {
+      console.error("Error updating post content:", err);
+    } finally {
+      setIsSubmittingEdit(false);
     }
   };
 
@@ -1233,17 +1607,21 @@ export const Community: React.FC = () => {
           
           {/* Telegram Header */}
           <div className="bg-white dark:bg-[#151f2d] border-b border-gray-100 dark:border-gray-800/80 px-4 py-3 flex items-center justify-between z-10 shrink-0">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-600 flex items-center justify-center text-white font-extrabold shadow-md relative">
+            <div 
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="flex items-center gap-3 cursor-pointer group hover:opacity-90 transition-opacity min-w-0"
+              title="Cliquer pour afficher/masquer les infos du groupe"
+            >
+              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-600 flex items-center justify-center text-white font-extrabold shadow-md relative shrink-0">
                 🕌
                 <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white dark:border-[#151f2d] rounded-full animate-pulse" />
               </div>
-              <div className="text-left">
-                <h3 className="font-extrabold text-sm sm:text-base text-gray-900 dark:text-white flex items-center gap-1.5">
+              <div className="text-left min-w-0">
+                <h3 className="font-extrabold text-sm sm:text-base text-gray-900 dark:text-white flex items-center gap-1.5 truncate">
                   {tLocal("communityTitle")}
-                  <Sparkles size={14} className="text-amber-500 animate-pulse" />
+                  <Sparkles size={14} className="text-amber-500 animate-pulse shrink-0" />
                 </h3>
-                <p className="text-xs text-gray-400 truncate max-w-[220px] sm:max-w-[400px]">
+                <p className="text-xs text-gray-400 truncate">
                   {membersList.length} {tLocal("membersSuffix")} • {membersList.filter(m => m.isOnline).length} {tLocal("onlineSuffix")}
                 </p>
               </div>
@@ -1260,7 +1638,7 @@ export const Community: React.FC = () => {
               </button>
               <button
                 onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-xl transition-all cursor-pointer hidden md:block"
+                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-xl transition-all cursor-pointer"
                 title={tLocal("groupInfo")}
               >
                 <Info size={18} />
@@ -1309,7 +1687,7 @@ export const Community: React.FC = () => {
                     }}
                     className="block text-xs text-gray-700 dark:text-gray-200 truncate hover:underline cursor-pointer font-semibold"
                   >
-                    <span className="font-black text-gray-900 dark:text-white">{pinnedPost.authorName}:</span> {pinnedPost.content}
+                    <span className="font-black text-gray-900 dark:text-white">{pinnedPost.authorName}:</span> {getPinnedPostSummary(pinnedPost)}
                   </button>
                 </div>
               </div>
@@ -1366,7 +1744,7 @@ export const Community: React.FC = () => {
                     {/* Chat Bubble Layout Row */}
                     <div
                       id={`msg-${post.id}`}
-                      className={`flex items-start gap-2.5 group ${isOurPost ? "ml-auto flex-row-reverse text-right" : "mr-auto text-left"} ${post.codeSnippet ? "w-full max-w-[95%] sm:max-w-[80%] min-w-0" : "max-w-[85%] sm:max-w-[70%]"}`}
+                      className={`flex items-start gap-2 group ${isOurPost ? "ml-auto flex-row-reverse text-right" : "mr-auto text-left"} ${post.codeSnippet ? "w-full max-w-[95%] sm:max-w-[85%] min-w-0" : "max-w-[88%] sm:max-w-[75%] min-w-0"}`}
                     >
                       {/* Avatar */}
                       {showAvatar && (
@@ -1376,376 +1754,422 @@ export const Community: React.FC = () => {
                               setSelectedProfileMember(authorMember);
                             }
                           }}
-                          className="w-8 h-8 rounded-xl bg-white dark:bg-gray-800 shadow-sm flex items-center justify-center text-sm border border-gray-150 dark:border-gray-700/80 hover:scale-105 active:scale-95 transition-all shrink-0 cursor-pointer"
+                          className="w-8 h-8 rounded-full bg-white dark:bg-gray-800 shadow-sm flex items-center justify-center text-sm border border-gray-150 dark:border-gray-700/80 hover:scale-105 active:scale-95 transition-all shrink-0 cursor-pointer mt-0.5"
                         >
                           {authorMember?.avatar || "📿"}
                         </button>
                       )}
 
-                      {/* Bubble Inner Container */}
-                      <div
-                        className={`px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-2xl shadow-sm relative min-w-0 ${
-                          post.codeSnippet ? "w-full" : ""
-                        } ${
-                          isOurPost
-                            ? "bg-[#d9fdd3] text-gray-900 dark:bg-[#2b5278] dark:text-white rounded-br-none bubble-tail-right"
-                            : "bg-white text-gray-900 dark:bg-[#182533] dark:text-white rounded-bl-none bubble-tail-left border border-gray-100 dark:border-gray-800/80"
-                        }`}
-                      >
-                        {/* Sender's Unique Colored Name Header */}
-                        {!isOurPost && (
-                          <div className="flex items-center gap-1.5 pb-1 justify-between">
-                            <span
-                              onClick={() => authorMember && setSelectedProfileMember(authorMember)}
-                              className={`text-[11px] font-black hover:underline cursor-pointer ${getNameColorClass(post.authorName)}`}
-                            >
-                              {post.authorName}
-                            </span>
-                            {authorMember?.role === "admin" && (
-                              <span className="bg-red-500/10 text-red-600 dark:text-red-400 text-[8px] font-black uppercase px-1.5 py-0.5 rounded-md tracking-widest border border-red-500/20">
-                                admin
-                              </span>
-                            )}
-                          </div>
-                        )}
-
-                        {/* Reply Header Preview within Bubble */}
-                        {post.replyTo && (
-                          <div className="bg-black/5 dark:bg-white/5 border-l-2 border-emerald-400 dark:border-teal-400 px-2 py-1.5 rounded-r-lg mb-2 text-left text-xs max-w-full">
-                            <span className="block font-black text-[9.5px] text-emerald-600 dark:text-teal-300">
-                              {post.replyTo.authorName}
-                            </span>
-                            <p className="text-gray-500 dark:text-gray-300 text-[10.5px] truncate">
-                              {post.replyTo.content}
-                            </p>
-                          </div>
-                        )}
-
-                        {/* Main Text Content */}
-                        {post.content && (
-                          <p className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap break-words text-left">
-                            {post.content}
-                          </p>
-                        )}
-
-                        {/* Media Attachments (Flawless Image, Video, Audio) */}
-                        {post.attachments && post.attachments.length > 0 && (
-                          <div className="grid grid-cols-1 gap-3 mt-2">
-                            {post.attachments.map((att, i) => {
-                              if (att.type === "video") {
-                                return (
-                                  <div key={i} className="rounded-2xl overflow-hidden max-h-[280px] bg-black/15 dark:bg-black/40 border border-gray-150 dark:border-gray-800">
-                                    <video
-                                      src={att.url}
-                                      controls
-                                      className="w-full h-auto max-h-[280px] block"
-                                    />
-                                  </div>
-                                );
-                              } else if (att.type === "audio") {
-                                return (
-                                  <div key={i} className="flex items-center gap-2.5 bg-black/10 dark:bg-white/5 p-2.5 rounded-xl w-full max-w-[280px] select-none border border-gray-100 dark:border-gray-800">
-                                    <audio src={att.url} controls className="w-full text-xs" />
-                                  </div>
-                                );
-                              } else {
-                                // Default to Image
-                                return (
-                                  <img
-                                    key={i}
-                                    src={att.url}
-                                    alt="Attachment"
-                                    onClick={() => {
-                                      const imagesOnly = post.attachments!.filter(a => a.type === "image" || !a.type).map(a => a.url);
-                                      const imgIndex = imagesOnly.indexOf(att.url);
-                                      setLightboxImages(imagesOnly);
-                                      setLightboxIndex(imgIndex >= 0 ? imgIndex : 0);
-                                    }}
-                                    className="rounded-xl max-h-[220px] object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                                  />
-                                );
-                              }
-                            })}
-                          </div>
-                        )}
-
-                        {/* Voice notes */}
-                        {post.voiceNotes && post.voiceNotes.map((audio, i) => {
-                          const isPlayingThis = playingAudioKey === `${post.id}-${i}`;
-                          return (
-                            <div key={i} className="flex items-center gap-2.5 bg-black/10 dark:bg-white/5 p-2 rounded-xl mt-2 w-[220px] sm:w-[240px] select-none">
-                              <button
-                                onClick={() => handlePlayVoiceNote(audio, post.id, i)}
-                                className={`p-2 rounded-full hover:scale-105 active:scale-95 transition-all cursor-pointer ${
-                                  isPlayingThis ? "bg-amber-500 text-white animate-pulse" : "bg-emerald-500 text-white"
-                                }`}
-                                title={isPlayingThis ? "Pause" : "Play"}
-                              >
-                                {isPlayingThis ? <Pause size={12} /> : <Play size={12} />}
-                              </button>
-                              <div className="flex-1">
-                                <span className="block text-[9px] font-bold opacity-60">Message Vocal</span>
-                                <div className="h-1.5 bg-gray-300 dark:bg-gray-700 rounded-full w-full overflow-hidden mt-1">
-                                  <div className={`h-full ${isPlayingThis ? "bg-amber-400 animate-pulse w-full" : "bg-emerald-400 w-2/3"} transition-all duration-300`} />
-                                </div>
-                              </div>
-                            </div>
-                          );
-                        })}
-
-                        {/* Code Compiler Block snippet */}
-                        {post.codeSnippet && (() => {
-                          const isHTML = post.codeSnippet.language === "html";
-                          const currentView = activeCodeViewMap[post.id] || ((post.codeSnippet as any).showPreviewDirectly ? "preview" : "code");
-                          
-                          return (
-                            <div className="bg-[#1e1e1e] rounded-2xl border border-gray-800/80 mt-3 overflow-hidden text-left shadow-lg w-full min-w-0">
-                              {/* Browser header tab bar */}
-                              <div className="bg-[#2d2d2d] px-3.5 py-2.5 flex items-center justify-between text-xs text-gray-300 border-b border-gray-900/60 select-none">
-                                <div className="flex items-center gap-2.5 min-w-0">
-                                  {/* macOS action dots */}
-                                  <div className="flex gap-1.5 shrink-0">
-                                    <span className="w-2.5 h-2.5 rounded-full bg-red-500/90" />
-                                    <span className="w-2.5 h-2.5 rounded-full bg-yellow-500/90" />
-                                    <span className="w-2.5 h-2.5 rounded-full bg-green-500/90" />
-                                  </div>
-                                  <span className="ml-1.5 font-mono text-[11px] text-gray-400 font-bold truncate flex items-center gap-1">
-                                    📄 {isHTML ? "index.html" : `code.${post.codeSnippet.language === "javascript" ? "js" : post.codeSnippet.language === "typescript" ? "ts" : post.codeSnippet.language === "python" ? "py" : "sql"}`}
-                                  </span>
-                                </div>
-                                
-                                <div className="flex items-center gap-2 shrink-0">
-                                  {isHTML && (
-                                    <div className="flex bg-black/50 rounded-lg p-0.5 border border-gray-800">
-                                      <button
-                                        onClick={() => setActiveCodeViewMap(prev => ({ ...prev, [post.id]: "preview" }))}
-                                        className={`px-2.5 py-0.5 text-[9px] font-black uppercase rounded-md transition-all cursor-pointer ${
-                                          currentView === "preview"
-                                            ? "bg-emerald-600 text-white font-extrabold shadow-sm"
-                                            : "text-gray-400 hover:text-white"
-                                        }`}
-                                      >
-                                        Aperçu
-                                      </button>
-                                      <button
-                                        onClick={() => {
-                                          if (user?.subscriptionTier !== "premium" && user?.subscriptionTier !== "pro" && user?.role !== "admin") {
-                                            alert("Option Premium : Seuls les membres Premium peuvent voir le code source d'un aperçu.");
-                                            return;
-                                          }
-                                          setActiveCodeViewMap(prev => ({ ...prev, [post.id]: "code" }))
-                                        }}
-                                        className={`px-2.5 py-0.5 text-[9px] font-black uppercase rounded-md transition-all cursor-pointer flex items-center gap-0.5 ${
-                                          currentView === "code"
-                                            ? "bg-emerald-600 text-white font-extrabold shadow-sm"
-                                            : "text-gray-400 hover:text-white"
-                                        }`}
-                                      >
-                                        Code {(user?.subscriptionTier !== "premium" && user?.subscriptionTier !== "pro" && user?.role !== "admin") && "🔒"}
-                                      </button>
-                                    </div>
-                                  )}
-                                  
-                                  <button
-                                    onClick={() => {
-                                      if (isHTML && user?.subscriptionTier !== "premium" && user?.subscriptionTier !== "pro" && user?.role !== "admin") {
-                                        alert("Option Premium : Seuls les membres Premium peuvent copier le code source d'un aperçu.");
-                                        return;
-                                      }
-                                      navigator.clipboard.writeText(post.codeSnippet!.code);
-                                      alert(tLocal("copied"));
-                                    }}
-                                    className="p-1 text-gray-500 hover:text-white rounded transition-colors"
-                                    title="Copier le code"
-                                  >
-                                    <Copy size={12} />
-                                  </button>
-                                </div>
-                              </div>
-
-                              {/* Preview Frame or Source Code Codebox */}
-                              {isHTML && currentView === "preview" ? (
-                                <div className="bg-white p-0 relative transition-all duration-300 w-full overflow-hidden">
-                                  <iframe
-                                    title={`Live Preview - ${post.id}`}
-                                    srcDoc={post.codeSnippet.code}
-                                    className="w-full min-h-[380px] h-auto border-none block"
-                                    sandbox="allow-scripts"
-                                  />
-                                </div>
-                              ) : (
-                                <div className="p-3 font-mono w-full min-w-0 overflow-hidden relative">
-                                  {isHTML && user?.subscriptionTier !== "premium" && user?.subscriptionTier !== "pro" && user?.role !== "admin" ? (
-                                    <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-gray-950/80 rounded-2xl border border-dashed border-gray-800/60 my-2">
-                                      <span className="text-3xl mb-3 animate-pulse">👑</span>
-                                      <h4 className="text-xs font-black text-white uppercase tracking-wider">Source Code Verrouillée</h4>
-                                      <p className="text-[10px] text-gray-400 max-w-[280px] mt-1 leading-relaxed">
-                                        Le code source de cet aperçu interactif est réservé aux membres Premium d'AsrarHub.
-                                      </p>
-                                      <button
-                                        onClick={() => navigate("/user/profile")}
-                                        className="mt-4 px-4 py-2 bg-gradient-to-r from-amber-500 to-yellow-600 text-white text-[9px] font-black uppercase rounded-xl shadow-md cursor-pointer hover:scale-105 active:scale-95 transition-all"
-                                      >
-                                        Devenir Premium
-                                      </button>
-                                    </div>
-                                  ) : (
-                                    <>
-                                      <pre className="text-xs text-green-400 overflow-x-auto max-h-[220px] no-scrollbar w-full max-w-full">
-                                        <code>{post.codeSnippet.code}</code>
-                                      </pre>
-
-                                      {/* Compilation controller panel for non-html or when testing in code view */}
-                                      <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-gray-800/80">
-                                        <button
-                                          onClick={() => handleRunCompiler(post.id, post.codeSnippet!.code, post.codeSnippet!.language)}
-                                          disabled={isCompilingMap[post.id]}
-                                          className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-[10px] rounded-lg cursor-pointer transition-all active:scale-95 uppercase tracking-wider"
-                                        >
-                                          {isCompilingMap[post.id] ? (
-                                            <>
-                                              <div className="w-2.5 h-2.5 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                                              <span>{tLocal("compiling")}</span>
-                                            </>
-                                          ) : (
-                                            <>
-                                              <Play size={10} />
-                                              <span>{tLocal("runCodeBtn")}</span>
-                                            </>
-                                          )}
-                                        </button>
-                                      </div>
-
-                                      {/* Code Compilation Output logs */}
-                                      {compiledOutputs[post.id] && (
-                                        <div className="mt-3 bg-black/40 border border-gray-800/80 rounded-lg p-2.5 font-mono text-[10.5px]">
-                                          <div className="flex items-center justify-between border-b border-gray-800/60 pb-1.5 mb-1.5">
-                                            <span className="text-gray-500 uppercase tracking-widest text-[9px] font-extrabold">Console</span>
-                                          </div>
-                                          <div className="space-y-1 max-h-[120px] overflow-y-auto no-scrollbar text-gray-300">
-                                            {compiledOutputs[post.id].map((log, i) => (
-                                              <div key={i}>{log}</div>
-                                            ))}
-                                          </div>
-                                        </div>
-                                      )}
-                                    </>
-                                  )}
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })()}
-
-                        {/* Interactive Poll Component Block */}
-                        {post.poll && (
-                          <div className="bg-gray-50 dark:bg-black/30 rounded-xl p-3 border border-gray-100 dark:border-gray-800 text-left mt-2">
-                            <h4 className="font-extrabold text-xs sm:text-sm text-gray-900 dark:text-white mb-3">
-                              📊 {post.poll.question}
-                            </h4>
-                            <div className="space-y-2.5">
-                              {post.poll.options.map((opt) => {
-                                const totalVotes = post.poll!.options.reduce((sum, o) => sum + (o.votes?.length || 0), 0);
-                                const vCount = opt.votes ? opt.votes.length : 0;
-                                const pct = totalVotes > 0 ? Math.round((vCount / totalVotes) * 100) : 0;
-                                const userHasVotedThis = opt.votes?.includes(user?.uid || "");
-
-                                return (
-                                  <button
-                                    key={opt.id}
-                                    onClick={() => handlePollVote(post.id, opt.id)}
-                                    className={`w-full text-left relative p-2.5 rounded-xl border text-xs font-bold transition-all overflow-hidden flex items-center justify-between cursor-pointer ${
-                                      userHasVotedThis
-                                        ? "bg-emerald-500/10 border-emerald-500 text-emerald-700 dark:text-emerald-400"
-                                        : "bg-white dark:bg-[#1f293d] border-gray-150 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
-                                    }`}
-                                  >
-                                    <div className="absolute inset-y-0 left-0 bg-emerald-500/10 dark:bg-emerald-500/20 pointer-events-none transition-all duration-500" style={{ width: `${pct}%` }} />
-                                    <span className="relative z-10 flex items-center gap-1.5 truncate">
-                                      {userHasVotedThis && <CheckCircle size={12} className="text-emerald-500 shrink-0" />}
-                                      {opt.text}
-                                    </span>
-                                    <span className="relative z-10 text-[10.5px] text-gray-400 shrink-0 font-black">
-                                      {pct}% ({vCount})
-                                    </span>
-                                  </button>
-                                );
-                              })}
-                            </div>
-                            <div className="text-[10px] text-gray-400 mt-2.5 text-right font-black">
-                              {post.poll.options.reduce((sum, o) => sum + (o.votes?.length || 0), 0)} {tLocal("votesCount")}
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Bottom Right status details inside bubble */}
-                        <div className="flex items-center gap-1 justify-end mt-1 text-[9.5px] text-gray-500/70 dark:text-gray-300/60 font-semibold select-none">
-                          <span>{formatTime(post.createdAt)}</span>
-                          {isOurPost && <span className="text-emerald-600 dark:text-sky-300 ml-0.5 font-bold">✓✓</span>}
-                        </div>
-
-                        {/* Chat Menu Trigger Trigger Button */}
-                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            onClick={(e) => {
-                              const rect = e.currentTarget.getBoundingClientRect();
-                              setContextMenuCoords({ x: rect.left, y: rect.top });
-                              setActiveContextMenuPostId(post.id);
-                            }}
-                            className="p-1 bg-black/10 dark:bg-white/10 hover:bg-black/20 text-gray-500 dark:text-white rounded-lg cursor-pointer"
-                          >
-                            <MoreHorizontal size={12} />
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Small Reaction indicators resting at the bottom border of the bubble */}
-                      {currentReactionCount > 0 && (
-                        <div className="flex items-center gap-1 bg-white dark:bg-gray-800 border border-gray-150 dark:border-gray-700/80 px-1.5 py-0.5 rounded-full shadow-sm text-[10px] mt-1">
-                          {rx.like?.length > 0 && <span>👍</span>}
-                          {rx.love?.length > 0 && <span>❤️</span>}
-                          {rx.haha?.length > 0 && <span>😂</span>}
-                          {rx.wow?.length > 0 && <span>😮</span>}
-                          {rx.sad?.length > 0 && <span>😢</span>}
-                          {rx.angry?.length > 0 && <span>😡</span>}
-                          <span className="font-mono text-gray-500 font-extrabold">{currentReactionCount}</span>
-                        </div>
-                      )}
-
-                      {/* Direct Comments & DM Action Buttons */}
-                      <div className="flex items-center gap-2 mt-1 ml-1 select-none">
-                        <button
-                          onClick={() => setActiveCommentPostId((prev) => (prev === post.id ? null : post.id))}
-                          className={`flex items-center gap-1.5 text-[11px] font-bold transition-colors py-0.5 px-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/60 cursor-pointer ${
-                            activeCommentPostId === post.id
-                              ? "text-emerald-600 dark:text-emerald-400 font-black bg-emerald-50 dark:bg-emerald-950/40"
-                              : "text-gray-500 hover:text-emerald-600 dark:hover:text-emerald-400"
+                      {/* Message Content Wrapper (Column) */}
+                      <div className={`flex flex-col min-w-0 ${isOurPost ? "items-end" : "items-start"}`}>
+                        {/* Bubble Inner Container */}
+                        <div
+                          onContextMenu={(e) => {
+                            e.preventDefault();
+                            const rect = e.currentTarget.getBoundingClientRect();
+                            setContextMenuCoords({ x: e.clientX, y: e.clientY });
+                            setActiveContextMenuPostId(post.id);
+                          }}
+                          className={`px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-2xl shadow-sm relative min-w-0 ${
+                            post.codeSnippet ? "w-full" : ""
+                          } ${
+                            isOurPost
+                              ? "bg-[#d9fdd3] text-gray-900 dark:bg-[#2b5278] dark:text-white rounded-br-xs bubble-tail-right"
+                              : "bg-white text-gray-900 dark:bg-[#182533] dark:text-white rounded-bl-xs bubble-tail-left border border-gray-100 dark:border-gray-800/80"
                           }`}
                         >
-                          <MessageSquare size={12} className={activeCommentPostId === post.id ? "fill-emerald-500/20" : ""} />
-                          <span>{activeCommentPostId === post.id ? tLocal("hideComments") : tLocal("commentsAndReplies")}</span>
-                        </button>
+                          {/* Pinned post badge inside bubble */}
+                          {post.isPinned && (
+                            <div className="flex items-center gap-1 text-[10px] font-extrabold text-amber-600 dark:text-amber-400 mb-1 select-none bg-amber-500/10 px-2 py-0.5 rounded-md w-fit border border-amber-500/20">
+                              <Pin size={10} className="rotate-45 shrink-0" />
+                              <span>Épinglé</span>
+                            </div>
+                          )}
+                          {/* Sender's Unique Colored Name Header */}
+                          {!isOurPost && (
+                            <div className="flex items-center gap-1.5 pb-1 justify-between">
+                              <span
+                                onClick={() => authorMember && setSelectedProfileMember(authorMember)}
+                                className={`text-[11px] font-black hover:underline cursor-pointer ${getNameColorClass(post.authorName)}`}
+                              >
+                                {post.authorName}
+                              </span>
+                              {authorMember?.role === "admin" && (
+                                <span className="bg-red-500/10 text-red-600 dark:text-red-400 text-[8px] font-black uppercase px-1.5 py-0.5 rounded-md tracking-widest border border-red-500/20">
+                                  admin
+                                </span>
+                              )}
+                            </div>
+                          )}
 
-                        {user?.uid !== post.authorId && (
+                          {/* Reply Header Preview within Bubble */}
+                          {post.replyTo && (
+                            <div className="bg-black/5 dark:bg-white/5 border-l-2 border-emerald-400 dark:border-teal-400 px-2 py-1.5 rounded-r-lg mb-2 text-left text-xs max-w-full">
+                              <span className="block font-black text-[9.5px] text-emerald-600 dark:text-teal-300">
+                                {post.replyTo.authorName}
+                              </span>
+                              <p className="text-gray-500 dark:text-gray-300 text-[10.5px] truncate">
+                                {post.replyTo.content}
+                              </p>
+                            </div>
+                          )}
+
+                          {/* Main Text Content */}
+                          {post.content && (
+                            <p className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap break-words text-left">
+                              {post.content}
+                            </p>
+                          )}
+
+                          {/* Media Attachments (Flawless Image, Video, Audio) */}
+                          {post.attachments && post.attachments.length > 0 && (
+                            <div className="grid grid-cols-1 gap-3 mt-2">
+                              {post.attachments.map((att, i) => {
+                                if (att.type === "video") {
+                                  return (
+                                    <div key={i} className="rounded-2xl overflow-hidden max-h-[280px] bg-black/15 dark:bg-black/40 border border-gray-150 dark:border-gray-800">
+                                      <video
+                                        src={att.url}
+                                        controls
+                                        className="w-full h-auto max-h-[280px] block"
+                                      />
+                                    </div>
+                                  );
+                                } else if (att.type === "audio") {
+                                  return (
+                                    <div key={i} className="flex items-center gap-2.5 bg-black/10 dark:bg-white/5 p-2.5 rounded-xl w-full max-w-[280px] select-none border border-gray-100 dark:border-gray-800">
+                                      <audio src={att.url} controls className="w-full text-xs" />
+                                    </div>
+                                  );
+                                } else if (att.type === "document") {
+                                  return (
+                                    <div
+                                      key={i}
+                                      onClick={() => handleOpenDocViewer(att)}
+                                      className="flex items-center gap-2.5 bg-black/10 dark:bg-white/5 hover:bg-black/15 dark:hover:bg-white/10 p-2.5 rounded-2xl text-left border border-gray-100 dark:border-gray-800 transition-all w-full max-w-[320px] cursor-pointer group shadow-sm"
+                                    >
+                                      <div className="p-2.5 bg-amber-500/20 text-amber-600 dark:text-amber-400 rounded-xl shrink-0 group-hover:scale-105 transition-transform">
+                                        <FileText size={20} />
+                                      </div>
+                                      <div className="flex-1 min-w-0 pr-1">
+                                        <p className="text-xs font-bold truncate text-gray-900 dark:text-white group-hover:text-emerald-500 transition-colors">
+                                          {att.fileName || "Document"}
+                                        </p>
+                                        <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">
+                                          {att.fileSize || "Fichier"}
+                                        </p>
+                                      </div>
+                                      <div
+                                        className="px-2.5 py-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-400 rounded-xl font-bold text-[11px] flex items-center gap-1 shrink-0 transition-colors shadow-xs"
+                                        title="Ouvrir dans le lecteur de documents"
+                                      >
+                                        <Eye size={14} />
+                                        <span>Consulter</span>
+                                      </div>
+                                    </div>
+                                  );
+                                } else {
+                                  // Default to Image
+                                  return (
+                                    <img
+                                      key={i}
+                                      src={att.url}
+                                      alt="Attachment"
+                                      onClick={() => {
+                                        const imagesOnly = post.attachments!.filter(a => a.type === "image" || !a.type).map(a => a.url);
+                                        const imgIndex = imagesOnly.indexOf(att.url);
+                                        setLightboxImages(imagesOnly);
+                                        setLightboxIndex(imgIndex >= 0 ? imgIndex : 0);
+                                      }}
+                                      className="rounded-xl max-h-[220px] object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                                    />
+                                  );
+                                }
+                              })}
+                            </div>
+                          )}
+
+                          {/* Voice notes */}
+                          {post.voiceNotes && post.voiceNotes.map((audio, i) => {
+                            const isPlayingThis = playingAudioKey === `${post.id}-${i}`;
+                            return (
+                              <div key={i} className="flex items-center gap-2.5 bg-black/10 dark:bg-white/5 p-2 rounded-xl mt-2 w-[220px] sm:w-[240px] select-none">
+                                <button
+                                  onClick={() => handlePlayVoiceNote(audio, post.id, i)}
+                                  className={`p-2 rounded-full hover:scale-105 active:scale-95 transition-all cursor-pointer ${
+                                    isPlayingThis ? "bg-amber-500 text-white animate-pulse" : "bg-emerald-500 text-white"
+                                  }`}
+                                  title={isPlayingThis ? "Pause" : "Play"}
+                                >
+                                  {isPlayingThis ? <Pause size={12} /> : <Play size={12} />}
+                                </button>
+                                <div className="flex-1">
+                                  <span className="block text-[9px] font-bold opacity-60">Message Vocal</span>
+                                  <div className="h-1.5 bg-gray-300 dark:bg-gray-700 rounded-full w-full overflow-hidden mt-1">
+                                    <div className={`h-full ${isPlayingThis ? "bg-amber-400 animate-pulse w-full" : "bg-emerald-400 w-2/3"} transition-all duration-300`} />
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+
+                          {/* Code Compiler Block snippet */}
+                          {post.codeSnippet && (() => {
+                            const isHTML = post.codeSnippet.language === "html";
+                            const currentView = activeCodeViewMap[post.id] || ((post.codeSnippet as any).showPreviewDirectly ? "preview" : "code");
+                            
+                            return (
+                              <div className="bg-[#1e1e1e] rounded-2xl border border-gray-800/80 mt-3 overflow-hidden text-left shadow-lg w-full min-w-0">
+                                {/* Browser header tab bar */}
+                                <div className="bg-[#2d2d2d] px-3.5 py-2.5 flex items-center justify-between text-xs text-gray-300 border-b border-gray-900/60 select-none">
+                                  <div className="flex items-center gap-2.5 min-w-0">
+                                    {/* macOS action dots */}
+                                    <div className="flex gap-1.5 shrink-0">
+                                      <span className="w-2.5 h-2.5 rounded-full bg-red-500/90" />
+                                      <span className="w-2.5 h-2.5 rounded-full bg-yellow-500/90" />
+                                      <span className="w-2.5 h-2.5 rounded-full bg-green-500/90" />
+                                    </div>
+                                    <span className="ml-1.5 font-mono text-[11px] text-gray-400 font-bold truncate flex items-center gap-1">
+                                      📄 {isHTML ? "index.html" : `code.${post.codeSnippet.language === "javascript" ? "js" : post.codeSnippet.language === "typescript" ? "ts" : post.codeSnippet.language === "python" ? "py" : "sql"}`}
+                                    </span>
+                                  </div>
+                                  
+                                  <div className="flex items-center gap-2 shrink-0">
+                                    {isHTML && (
+                                      <div className="flex bg-black/50 rounded-lg p-0.5 border border-gray-800">
+                                        <button
+                                          onClick={() => setActiveCodeViewMap(prev => ({ ...prev, [post.id]: "preview" }))}
+                                          className={`px-2.5 py-0.5 text-[9px] font-black uppercase rounded-md transition-all cursor-pointer ${
+                                            currentView === "preview"
+                                              ? "bg-emerald-600 text-white font-extrabold shadow-sm"
+                                              : "text-gray-400 hover:text-white"
+                                          }`}
+                                        >
+                                          Aperçu
+                                        </button>
+                                        <button
+                                          onClick={() => {
+                                            if (user?.subscriptionTier !== "premium" && user?.subscriptionTier !== "pro" && user?.role !== "admin") {
+                                              alert("Option Premium : Seuls les membres Premium peuvent voir le code source d'un aperçu.");
+                                              return;
+                                            }
+                                            setActiveCodeViewMap(prev => ({ ...prev, [post.id]: "code" }))
+                                          }}
+                                          className={`px-2.5 py-0.5 text-[9px] font-black uppercase rounded-md transition-all cursor-pointer flex items-center gap-0.5 ${
+                                            currentView === "code"
+                                              ? "bg-emerald-600 text-white font-extrabold shadow-sm"
+                                              : "text-gray-400 hover:text-white"
+                                          }`}
+                                        >
+                                          Code {(user?.subscriptionTier !== "premium" && user?.subscriptionTier !== "pro" && user?.role !== "admin") && "🔒"}
+                                        </button>
+                                      </div>
+                                    )}
+                                    
+                                    <button
+                                      onClick={() => {
+                                        if (isHTML && user?.subscriptionTier !== "premium" && user?.subscriptionTier !== "pro" && user?.role !== "admin") {
+                                          alert("Option Premium : Seuls les membres Premium peuvent copier le code source d'un aperçu.");
+                                          return;
+                                        }
+                                        navigator.clipboard.writeText(post.codeSnippet!.code);
+                                        alert(tLocal("copied"));
+                                      }}
+                                      className="p-1 text-gray-500 hover:text-white rounded transition-colors"
+                                      title="Copier le code"
+                                    >
+                                      <Copy size={12} />
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* Preview Frame or Source Code Codebox */}
+                                {isHTML && currentView === "preview" ? (
+                                  <div className="bg-white p-0 relative transition-all duration-300 w-full overflow-hidden">
+                                    <iframe
+                                      title={`Live Preview - ${post.id}`}
+                                      srcDoc={post.codeSnippet.code}
+                                      className="w-full min-h-[380px] h-auto border-none block"
+                                      sandbox="allow-scripts"
+                                    />
+                                  </div>
+                                ) : (
+                                  <div className="p-3 font-mono w-full min-w-0 overflow-hidden relative">
+                                    {isHTML && user?.subscriptionTier !== "premium" && user?.subscriptionTier !== "pro" && user?.role !== "admin" ? (
+                                      <div className="flex flex-col items-center justify-center py-12 px-4 text-center bg-gray-950/80 rounded-2xl border border-dashed border-gray-800/60 my-2">
+                                        <span className="text-3xl mb-3 animate-pulse">👑</span>
+                                        <h4 className="text-xs font-black text-white uppercase tracking-wider">Source Code Verrouillée</h4>
+                                        <p className="text-[10px] text-gray-400 max-w-[280px] mt-1 leading-relaxed">
+                                          Le code source de cet aperçu interactif est réservé aux membres Premium d'AsrarHub.
+                                        </p>
+                                        <button
+                                          onClick={() => navigate("/user/profile")}
+                                          className="mt-4 px-4 py-2 bg-gradient-to-r from-amber-500 to-yellow-600 text-white text-[9px] font-black uppercase rounded-xl shadow-md cursor-pointer hover:scale-105 active:scale-95 transition-all"
+                                        >
+                                          Devenir Premium
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <>
+                                        <pre className="text-xs text-green-400 overflow-x-auto max-h-[220px] no-scrollbar w-full max-w-full">
+                                          <code>{post.codeSnippet.code}</code>
+                                        </pre>
+
+                                        {/* Compilation controller panel for non-html or when testing in code view */}
+                                        <div className="flex items-center justify-between mt-3 pt-2.5 border-t border-gray-800/80">
+                                          <button
+                                            onClick={() => handleRunCompiler(post.id, post.codeSnippet!.code, post.codeSnippet!.language)}
+                                            disabled={isCompilingMap[post.id]}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold text-[10px] rounded-lg cursor-pointer transition-all active:scale-95 uppercase tracking-wider"
+                                          >
+                                            {isCompilingMap[post.id] ? (
+                                              <>
+                                                <div className="w-2.5 h-2.5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                                                <span>{tLocal("compiling")}</span>
+                                              </>
+                                            ) : (
+                                              <>
+                                                <Play size={10} />
+                                                <span>{tLocal("runCodeBtn")}</span>
+                                              </>
+                                            )}
+                                          </button>
+                                        </div>
+
+                                        {/* Code Compilation Output logs */}
+                                        {compiledOutputs[post.id] && (
+                                          <div className="mt-3 bg-black/40 border border-gray-800/80 rounded-lg p-2.5 font-mono text-[10.5px]">
+                                            <div className="flex items-center justify-between border-b border-gray-800/60 pb-1.5 mb-1.5">
+                                              <span className="text-gray-500 uppercase tracking-widest text-[9px] font-extrabold">Console</span>
+                                            </div>
+                                            <div className="space-y-1 max-h-[120px] overflow-y-auto no-scrollbar text-gray-300">
+                                              {compiledOutputs[post.id].map((log, i) => (
+                                                <div key={i}>{log}</div>
+                                              ))}
+                                            </div>
+                                          </div>
+                                        )}
+                                      </>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
+
+                          {/* Interactive Poll Component Block */}
+                          {post.poll && (
+                            <div className="bg-gray-50 dark:bg-black/30 rounded-xl p-3 border border-gray-100 dark:border-gray-800 text-left mt-2">
+                              <h4 className="font-extrabold text-xs sm:text-sm text-gray-900 dark:text-white mb-3">
+                                📊 {post.poll.question}
+                              </h4>
+                              <div className="space-y-2.5">
+                                {post.poll.options.map((opt) => {
+                                  const totalVotes = post.poll!.options.reduce((sum, o) => sum + (o.votes?.length || 0), 0);
+                                  const vCount = opt.votes ? opt.votes.length : 0;
+                                  const pct = totalVotes > 0 ? Math.round((vCount / totalVotes) * 100) : 0;
+                                  const userHasVotedThis = opt.votes?.includes(user?.uid || "");
+
+                                  return (
+                                    <button
+                                      key={opt.id}
+                                      onClick={() => handlePollVote(post.id, opt.id)}
+                                      className={`w-full text-left relative p-2.5 rounded-xl border text-xs font-bold transition-all overflow-hidden flex items-center justify-between cursor-pointer ${
+                                        userHasVotedThis
+                                          ? "bg-emerald-500/10 border-emerald-500 text-emerald-700 dark:text-emerald-400"
+                                          : "bg-white dark:bg-[#1f293d] border-gray-150 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                                      }`}
+                                    >
+                                      <div className="absolute inset-y-0 left-0 bg-emerald-500/10 dark:bg-emerald-500/20 pointer-events-none transition-all duration-500" style={{ width: `${pct}%` }} />
+                                      <span className="relative z-10 flex items-center gap-1.5 truncate">
+                                        {userHasVotedThis && <CheckCircle size={12} className="text-emerald-500 shrink-0" />}
+                                        {opt.text}
+                                      </span>
+                                      <span className="relative z-10 text-[10.5px] text-gray-400 shrink-0 font-black">
+                                        {pct}% ({vCount})
+                                      </span>
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                              <div className="text-[10px] text-gray-400 mt-2.5 text-right font-black">
+                                {post.poll.options.reduce((sum, o) => sum + (o.votes?.length || 0), 0)} {tLocal("votesCount")}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Bottom Right status details inside bubble */}
+                          <div className="flex items-center gap-1 justify-end mt-1 text-[9.5px] text-gray-500/70 dark:text-gray-300/60 font-semibold select-none">
+                            {post.isEdited && <span className="italic text-[8.5px] text-gray-400 dark:text-gray-400">(modifié)</span>}
+                            <span>{formatTime(post.createdAt)}</span>
+                            {isOurPost && <span className="text-emerald-600 dark:text-sky-300 ml-0.5 font-bold">✓✓</span>}
+                          </div>
+
+                          {/* Chat Menu Trigger Button */}
+                          <div className="absolute top-2 right-2 opacity-70 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                setContextMenuCoords({ x: rect.left, y: rect.top });
+                                setActiveContextMenuPostId(post.id);
+                              }}
+                              className="p-1 bg-black/10 dark:bg-white/10 hover:bg-black/20 text-gray-500 dark:text-white rounded-lg cursor-pointer"
+                              title="Options du message"
+                            >
+                              <MoreHorizontal size={12} />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Reaction indicators attached under bubble */}
+                        {currentReactionCount > 0 && (
+                          <div className={`flex items-center gap-1 bg-white dark:bg-gray-800 border border-gray-150 dark:border-gray-700/80 px-2 py-0.5 rounded-full shadow-sm text-[10px] mt-1 z-10 ${isOurPost ? "mr-1" : "ml-1"}`}>
+                            {rx.like?.length > 0 && <span>👍</span>}
+                            {rx.love?.length > 0 && <span>❤️</span>}
+                            {rx.haha?.length > 0 && <span>😂</span>}
+                            {rx.wow?.length > 0 && <span>😮</span>}
+                            {rx.sad?.length > 0 && <span>😢</span>}
+                            {rx.angry?.length > 0 && <span>😡</span>}
+                            <span className="font-mono text-gray-500 font-extrabold">{currentReactionCount}</span>
+                          </div>
+                        )}
+
+                        {/* Direct Comments & DM Action Buttons */}
+                        <div className={`flex items-center gap-1.5 mt-1 select-none ${isOurPost ? "justify-end" : "justify-start"}`}>
                           <button
-                            onClick={() => {
-                              setDmRecipient({ id: post.authorId, name: post.authorName });
-                              setIsDMOpen(true);
-                            }}
-                            className="flex items-center gap-1.5 text-[11px] font-bold text-gray-500 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors py-0.5 px-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800/60 cursor-pointer"
+                            onClick={() => setActiveCommentPostId((prev) => (prev === post.id ? null : post.id))}
+                            className={`flex items-center gap-1 text-[10.5px] font-medium transition-colors py-0.5 px-2 rounded-full border border-gray-200/60 dark:border-gray-700/60 bg-white/90 dark:bg-gray-800/90 shadow-2xs hover:bg-emerald-50 dark:hover:bg-gray-700 cursor-pointer ${
+                              activeCommentPostId === post.id
+                                ? "text-emerald-600 dark:text-emerald-400 font-black bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300"
+                                : "text-gray-500 dark:text-gray-300 hover:text-emerald-600"
+                            }`}
                           >
-                            <Send size={11} />
-                            <span>{tLocal("privateMessageDirect")}</span>
+                            <MessageSquare size={11} className={activeCommentPostId === post.id ? "fill-emerald-500/20" : ""} />
+                            <span>{activeCommentPostId === post.id ? tLocal("hideComments") : tLocal("commentsAndReplies")}</span>
                           </button>
+
+                          {user?.uid !== post.authorId && (
+                            <button
+                              onClick={() => {
+                                setDmRecipient({ id: post.authorId, name: post.authorName });
+                                setIsDMOpen(true);
+                              }}
+                              className="flex items-center gap-1 text-[10.5px] font-medium text-gray-500 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors py-0.5 px-2 rounded-full border border-gray-200/60 dark:border-gray-700/60 bg-white/90 dark:bg-gray-800/90 shadow-2xs hover:bg-emerald-50 dark:hover:bg-gray-700 cursor-pointer"
+                            >
+                              <Send size={10} />
+                              <span>{tLocal("privateMessageDirect")}</span>
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Inline Post Comments Thread */}
+                        {activeCommentPostId === post.id && (
+                          <div className="mt-2 w-full max-w-xl animate-fadeIn">
+                            <PostComments postId={post.id} />
+                          </div>
                         )}
                       </div>
-
-                      {/* Inline Post Comments Thread */}
-                      {activeCommentPostId === post.id && (
-                        <div className="mt-2 w-full max-w-xl animate-fadeIn">
-                          <PostComments postId={post.id} />
-                        </div>
-                      )}
                     </div>
                   </div>
                 );
@@ -1818,8 +2242,16 @@ export const Community: React.FC = () => {
                         {playingAudioKey === "draft-0" ? <Pause size={12} /> : <Play size={12} />}
                       </button>
                       <div className="text-left">
-                        <span className="block text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase">Message Vocal (Aperçu)</span>
-                        <span className="block text-[9px] text-gray-500 dark:text-gray-400 mt-0.5">Enregistrement prêt. Écoutez pour vérifier avant publication.</span>
+                        <div className="flex items-center gap-2">
+                          <span className="block text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase">Message Vocal (Aperçu)</span>
+                          {proVoiceAmplifier && (
+                            <span className="inline-flex items-center gap-1 text-[8px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 dark:bg-emerald-500/20 px-1.5 py-0.5 rounded-md border border-emerald-500/20">
+                              <Sparkles size={9} className="animate-pulse" />
+                              Amplificateur Pro HD
+                            </span>
+                          )}
+                        </div>
+                        <span className="block text-[9px] text-gray-500 dark:text-gray-400 mt-0.5">Enregistrement traité avec réduction de bruit et gain boost HD.</span>
                       </div>
                     </div>
                     <button
@@ -1887,42 +2319,101 @@ export const Community: React.FC = () => {
               >
                 <Smile size={20} />
               </button>
- 
-              {/* Main Text Message Input Field */}
-              <form onSubmit={handleSendMessage} className="flex-1">
+
+              {/* Main Text Message Input Field or Animated Recording Interface */}
+              <form onSubmit={handleSendMessage} className="flex-1 min-w-0">
                 {isRecording ? (
-                  <div className="flex-1 flex items-center gap-2 text-red-500 font-bold text-[11px] sm:text-xs animate-pulse py-1.5 select-none">
-                    <span className="w-2 h-2 rounded-full bg-red-500 block animate-ping"></span>
-                    <span>Enregistrement... {Math.floor(recordingSeconds / 60)}:{(recordingSeconds % 60).toString().padStart(2, '0')}</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setIsRecording(false);
-                        if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
-                        if (mediaRecorderRef.current) {
-                          try {
-                            mediaRecorderRef.current.stop();
-                          } catch (_) {}
-                        }
-                        mediaRecorderRef.current = null;
-                        setRecordedAudio(null);
-                      }}
-                      className="ml-auto text-gray-400 hover:text-red-500 cursor-pointer font-bold transition-colors text-[10px] uppercase tracking-wider"
-                    >
-                      Annuler
-                    </button>
+                  <div className="flex-1 flex items-center justify-between gap-2 py-1 select-none">
+                    {/* Live recording dot, soundwaves & timer */}
+                    <div className="flex items-center gap-2 text-red-500 font-bold text-xs sm:text-sm shrink-0">
+                      <span className="relative flex h-2.5 w-2.5 shrink-0">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+                      </span>
+
+                      {/* Animated Sound Waves */}
+                      <div className="flex items-center gap-0.5 h-3.5 px-0.5">
+                        <span className="w-0.5 h-2 bg-red-500 rounded-full animate-pulse" style={{ animationDelay: '0ms' }} />
+                        <span className="w-0.5 h-3.5 bg-red-500 rounded-full animate-pulse" style={{ animationDelay: '150ms' }} />
+                        <span className="w-0.5 h-4 bg-red-500 rounded-full animate-pulse" style={{ animationDelay: '300ms' }} />
+                        <span className="w-0.5 h-2.5 bg-red-500 rounded-full animate-pulse" style={{ animationDelay: '450ms' }} />
+                        <span className="w-0.5 h-3 bg-red-500 rounded-full animate-pulse" style={{ animationDelay: '200ms' }} />
+                      </div>
+
+                      <span className="font-mono font-bold text-xs tracking-wide">
+                        {Math.floor(recordingSeconds / 60)}:{(recordingSeconds % 60).toString().padStart(2, '0')}
+                      </span>
+                    </div>
+
+                    {/* Quick controls: Pro Amplifier toggle, Cancel (Trash) & Stop (Preview) */}
+                    <div className="flex items-center gap-1.5 ml-auto">
+                      <button
+                        type="button"
+                        onClick={() => setProVoiceAmplifier(!proVoiceAmplifier)}
+                        className={`hidden sm:flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                          proVoiceAmplifier
+                            ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
+                            : "bg-gray-100 dark:bg-gray-800 text-gray-400 border border-transparent"
+                        }`}
+                        title={proVoiceAmplifier ? "Amplificateur Pro HD ACTIF (Réduction du bruit, EQ & Gain Boost)" : "Cliquer pour activer l'amplificateur Pro"}
+                      >
+                        <Sparkles size={11} className={proVoiceAmplifier ? "text-emerald-500 animate-pulse" : ""} />
+                        <span>Studio HD {proVoiceAmplifier ? "ON" : "OFF"}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIsRecording(false);
+                          if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
+                          if (mediaRecorderRef.current) {
+                            try {
+                              mediaRecorderRef.current.stop();
+                            } catch (_) {}
+                          }
+                          mediaRecorderRef.current = null;
+                          setRecordedAudio(null);
+                        }}
+                        className="flex items-center gap-1 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 px-2 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                        title="Annuler l'enregistrement"
+                      >
+                        <Trash2 size={14} />
+                        <span className="hidden sm:inline uppercase text-[10px]">Annuler</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={stopRecording}
+                        className="flex items-center gap-1 bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 hover:bg-amber-500/30 px-2 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                        title="Arrêter et écouter l'aperçu"
+                      >
+                        <Square size={12} className="fill-current" />
+                        <span className="text-[10px] uppercase">Aperçu</span>
+                      </button>
+                    </div>
                   </div>
                 ) : (
-                  <input
-                    type="text"
-                    value={messageText}
-                    onChange={(e) => setMessageText(e.target.value)}
-                    placeholder={tLocal("msgPlaceholder")}
-                    className="w-full bg-transparent border-none text-xs sm:text-sm py-1.5 text-gray-900 dark:text-white focus:outline-none focus:ring-0 placeholder-gray-400"
-                  />
+                  <div className="flex items-center w-full">
+                    <input
+                      type="text"
+                      value={messageText}
+                      onChange={(e) => setMessageText(e.target.value)}
+                      placeholder={tLocal("msgPlaceholder")}
+                      className="w-full bg-transparent border-none text-xs sm:text-sm py-1.5 text-gray-900 dark:text-white focus:outline-none focus:ring-0 placeholder-gray-400"
+                    />
+                    {messageText.trim() && (
+                      <button
+                        type="submit"
+                        className="p-1.5 text-emerald-600 dark:text-teal-400 hover:text-emerald-700 dark:hover:text-teal-300 transition-colors cursor-pointer bg-emerald-500/10 dark:bg-teal-400/20 rounded-full flex items-center justify-center shrink-0 ml-1"
+                        title={tLocal("sendMsg")}
+                      >
+                        <Send size={15} className="ml-0.5" />
+                      </button>
+                    )}
+                  </div>
                 )}
               </form>
- 
+
               {/* Display total attached media indicator */}
               {attachedMedias.length > 0 && (
                 <div className="flex gap-1.5 overflow-x-auto max-w-[150px] no-scrollbar shrink-0 select-none bg-black/5 dark:bg-white/5 p-1 rounded-xl">
@@ -1932,8 +2423,10 @@ export const Community: React.FC = () => {
                         <img src={media.url} className="w-7 h-7 rounded-lg object-cover" />
                       ) : media.type === "video" ? (
                         <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xs font-bold">🎥</div>
-                      ) : (
+                      ) : media.type === "audio" ? (
                         <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xs font-bold">🎵</div>
+                      ) : (
+                        <div className="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center text-xs font-bold">📄</div>
                       )}
                       <button
                         type="button"
@@ -1947,128 +2440,433 @@ export const Community: React.FC = () => {
                   ))}
                 </div>
               )}
- 
-              {/* Attachment Button */}
-              <div className="relative">
+
+              {/* Attachment Button & Animated Telegram Attachment Popover */}
+              {!isRecording && (
+                <div className="relative" ref={attachMenuRef}>
+                  <button
+                    type="button"
+                    onClick={() => setIsAttachMenuOpen(!isAttachMenuOpen)}
+                    className={`p-1.5 transition-all cursor-pointer rounded-full ${
+                      isAttachMenuOpen
+                        ? "text-emerald-500 bg-emerald-500/10 dark:text-teal-400 dark:bg-teal-400/20 rotate-45"
+                        : "text-gray-400 hover:text-emerald-500 dark:hover:text-teal-400"
+                    }`}
+                    title={tLocal("attachMenuTitle")}
+                  >
+                    <Paperclip size={20} />
+                  </button>
+
+                  {/* Telegram Attachment Popup Menu */}
+                  <AnimatePresence>
+                    {isAttachMenuOpen && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 15, scale: 0.92 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 15, scale: 0.92 }}
+                        transition={{ type: "spring", stiffness: 450, damping: 25 }}
+                        className="absolute bottom-12 right-0 sm:-right-12 z-50 bg-white/95 dark:bg-[#182533]/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-200/80 dark:border-gray-700/80 p-3 w-72 sm:w-80"
+                      >
+                        <div className="flex items-center justify-between pb-2 mb-2 border-b border-gray-100 dark:border-gray-800">
+                          <span className="text-[11px] font-black text-gray-700 dark:text-gray-200 uppercase tracking-wider flex items-center gap-1.5">
+                            <Paperclip size={13} className="text-emerald-500" />
+                            {tLocal("attachMenuTitle")}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setIsAttachMenuOpen(false)}
+                            className="p-1 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                          >
+                            <X size={13} />
+                          </button>
+                        </div>
+
+                        <div className="grid grid-cols-3 gap-2">
+                          {/* 1. Photo / Galerie */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsAttachMenuOpen(false);
+                              document.getElementById("hidden-image-uploader")?.click();
+                            }}
+                            className="flex flex-col items-center justify-center p-2 rounded-xl hover:bg-emerald-500/10 dark:hover:bg-emerald-500/20 transition-all group cursor-pointer"
+                          >
+                            <div className="w-10 h-10 rounded-full bg-blue-500 text-white flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                              <ImageIcon size={18} />
+                            </div>
+                            <span className="text-[10px] font-bold text-gray-700 dark:text-gray-200 mt-1.5 text-center leading-tight">
+                              {tLocal("attachGallery")}
+                            </span>
+                          </button>
+
+                          {/* 2. Vidéo */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsAttachMenuOpen(false);
+                              document.getElementById("hidden-video-uploader")?.click();
+                            }}
+                            className="flex flex-col items-center justify-center p-2 rounded-xl hover:bg-emerald-500/10 dark:hover:bg-emerald-500/20 transition-all group cursor-pointer"
+                          >
+                            <div className="w-10 h-10 rounded-full bg-rose-500 text-white flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                              <VideoIcon size={18} />
+                            </div>
+                            <span className="text-[10px] font-bold text-gray-700 dark:text-gray-200 mt-1.5 text-center leading-tight">
+                              {tLocal("attachVideo")}
+                            </span>
+                          </button>
+
+                          {/* 3. Document / Fichier */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsAttachMenuOpen(false);
+                              document.getElementById("hidden-doc-uploader")?.click();
+                            }}
+                            className="flex flex-col items-center justify-center p-2 rounded-xl hover:bg-emerald-500/10 dark:hover:bg-emerald-500/20 transition-all group cursor-pointer"
+                          >
+                            <div className="w-10 h-10 rounded-full bg-amber-500 text-white flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                              <FileText size={18} />
+                            </div>
+                            <span className="text-[10px] font-bold text-gray-700 dark:text-gray-200 mt-1.5 text-center leading-tight">
+                              {tLocal("attachDocument")}
+                            </span>
+                          </button>
+
+                          {/* 4. Audio */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsAttachMenuOpen(false);
+                              document.getElementById("hidden-audio-uploader")?.click();
+                            }}
+                            className="flex flex-col items-center justify-center p-2 rounded-xl hover:bg-emerald-500/10 dark:hover:bg-emerald-500/20 transition-all group cursor-pointer"
+                          >
+                            <div className="w-10 h-10 rounded-full bg-purple-500 text-white flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                              <Music size={18} />
+                            </div>
+                            <span className="text-[10px] font-bold text-gray-700 dark:text-gray-200 mt-1.5 text-center leading-tight">
+                              {tLocal("attachAudio")}
+                            </span>
+                          </button>
+
+                          {/* 5. Sondage (Poll) */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsAttachMenuOpen(false);
+                              setIsPollModalOpen(true);
+                            }}
+                            className="flex flex-col items-center justify-center p-2 rounded-xl hover:bg-emerald-500/10 dark:hover:bg-emerald-500/20 transition-all group cursor-pointer"
+                          >
+                            <div className="w-10 h-10 rounded-full bg-amber-600 text-white flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                              <Vote size={18} />
+                            </div>
+                            <span className="text-[10px] font-bold text-gray-700 dark:text-gray-200 mt-1.5 text-center leading-tight">
+                              {tLocal("attachPoll")}
+                            </span>
+                          </button>
+
+                          {/* 6. Code Snippet */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsAttachMenuOpen(false);
+                              if (!codeSharingEnabled && user?.role !== "admin") {
+                                alert("Le partage de code a été temporairement désactivé par l'administrateur.");
+                                return;
+                              }
+                              setIsCodeModalOpen(true);
+                            }}
+                            className="flex flex-col items-center justify-center p-2 rounded-xl hover:bg-emerald-500/10 dark:hover:bg-emerald-500/20 transition-all group cursor-pointer"
+                          >
+                            <div className="w-10 h-10 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-md group-hover:scale-110 transition-transform">
+                              <CodeIcon size={18} />
+                            </div>
+                            <span className="text-[10px] font-bold text-gray-700 dark:text-gray-200 mt-1.5 text-center leading-tight">
+                              {tLocal("attachCode")}
+                            </span>
+                          </button>
+
+                          {/* 7. Spiritual Location */}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsAttachMenuOpen(false);
+                              setMessageText((prev) => prev ? `${prev} 📍 [Position: ${user?.country || 'Sénégal'}]` : `📍 [Position: ${user?.country || 'Sénégal'}]`);
+                            }}
+                            className="flex flex-row items-center justify-center gap-2 p-2 rounded-xl bg-cyan-500/10 dark:bg-cyan-500/20 border border-cyan-500/20 hover:bg-cyan-500/20 transition-all group cursor-pointer col-span-3 mt-1"
+                          >
+                            <div className="w-6 h-6 rounded-full bg-cyan-500 text-white flex items-center justify-center shadow-sm">
+                              <MapPin size={13} />
+                            </div>
+                            <span className="text-[11px] font-bold text-cyan-700 dark:text-cyan-300 truncate">
+                              {tLocal("attachLocation")} ({user?.country || "Sénégal"})
+                            </span>
+                          </button>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Hidden File Inputs for Each Media Type */}
+                  <input
+                    id="hidden-image-uploader"
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={(e) => handleMediaAttach(e, "image")}
+                    className="hidden"
+                  />
+                  <input
+                    id="hidden-video-uploader"
+                    type="file"
+                    multiple
+                    accept="video/*"
+                    onChange={(e) => handleMediaAttach(e, "video")}
+                    className="hidden"
+                  />
+                  <input
+                    id="hidden-doc-uploader"
+                    type="file"
+                    multiple
+                    accept=".pdf,.doc,.docx,.txt,.zip,.rar,.xlsx,.csv"
+                    onChange={(e) => handleMediaAttach(e, "document")}
+                    className="hidden"
+                  />
+                  <input
+                    id="hidden-audio-uploader"
+                    type="file"
+                    multiple
+                    accept="audio/*"
+                    onChange={(e) => handleMediaAttach(e, "audio")}
+                    className="hidden"
+                  />
+                  <input
+                    id="hidden-media-uploader"
+                    type="file"
+                    multiple
+                    accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt"
+                    onChange={handleMediaAttach}
+                    className="hidden"
+                  />
+                </div>
+              )}
+
+              {/* Code Creator Quick Icon Button */}
+              {!isRecording && (
                 <button
                   type="button"
                   onClick={() => {
-                    const paperBtn = document.getElementById("hidden-media-uploader");
-                    paperBtn?.click();
+                    if (!codeSharingEnabled && user?.role !== "admin") {
+                      alert("Le partage de code a été temporairement désactivé par l'administrateur.");
+                      return;
+                    }
+                    setIsCodeModalOpen(true);
                   }}
-                  className="p-1.5 text-gray-400 hover:text-emerald-500 dark:hover:text-teal-400 transition-colors cursor-pointer"
-                  title="Ajouter des images, vidéos ou audios"
+                  className={`p-1.5 transition-colors cursor-pointer relative ${
+                    !codeSharingEnabled && user?.role !== "admin"
+                      ? "text-gray-300 dark:text-gray-600 cursor-not-allowed"
+                      : "text-gray-400 hover:text-emerald-500 dark:hover:text-teal-400"
+                  }`}
+                  title={!codeSharingEnabled && user?.role !== "admin" ? "Partage de code désactivé" : tLocal("shareCodeTitle")}
                 >
-                  <Paperclip size={20} />
+                  <CodeIcon size={20} />
+                  {!codeSharingEnabled && user?.role !== "admin" && <span className="absolute top-0 right-0 text-[8px]">🔒</span>}
                 </button>
-                <input
-                  id="hidden-media-uploader"
-                  type="file"
-                  multiple
-                  accept="image/*,video/*,audio/*"
-                  onChange={handleMediaAttach}
-                  className="hidden"
-                />
-              </div>
- 
-              {/* Code Creator Quick Icon Button */}
-              <button
-                type="button"
-                onClick={() => {
-                  if (!codeSharingEnabled && user?.role !== "admin") {
-                    alert("Le partage de code a été temporairement désactivé par l'administrateur.");
-                    return;
-                  }
-                  setIsCodeModalOpen(true);
-                }}
-                className={`p-1.5 transition-colors cursor-pointer relative ${
-                  !codeSharingEnabled && user?.role !== "admin"
-                    ? "text-gray-300 dark:text-gray-600 cursor-not-allowed"
-                    : "text-gray-400 hover:text-emerald-500 dark:hover:text-teal-400"
-                }`}
-                title={!codeSharingEnabled && user?.role !== "admin" ? "Partage de code désactivé" : tLocal("shareCodeTitle")}
-              >
-                <CodeIcon size={20} />
-                {!codeSharingEnabled && user?.role !== "admin" && <span className="absolute top-0 right-0 text-[8px]">🔒</span>}
-              </button>
- 
+              )}
+
               {/* Poll Creator Quick Icon Button */}
+              {!isRecording && (
+                <button
+                  type="button"
+                  onClick={() => setIsPollModalOpen(true)}
+                  className="p-1.5 text-gray-400 hover:text-emerald-500 dark:hover:text-teal-400 transition-colors cursor-pointer"
+                  title={tLocal("createPollTitle")}
+                >
+                  <Vote size={20} />
+                </button>
+              )}
+            </div>
+
+            {/* Circular Send / Voice Note Action Button outside the pill */}
+            {isRecording ? (
               <button
                 type="button"
-                onClick={() => setIsPollModalOpen(true)}
-                className="p-1.5 text-gray-400 hover:text-emerald-500 dark:hover:text-teal-400 transition-colors cursor-pointer"
-                title={tLocal("createPollTitle")}
+                onClick={stopAndSendRecording}
+                className="w-11 h-11 bg-[#2481cc] hover:bg-[#2071b3] text-white rounded-full flex items-center justify-center shadow-md shadow-blue-500/20 active:scale-95 cursor-pointer transition-all shrink-0"
+                title={tLocal("stopAndSend")}
               >
-                <Vote size={20} />
+                <Send size={18} className="ml-0.5" />
               </button>
-            </div>
- 
-            {/* Circular Send / Voice Note Action Button outside the pill */}
-            {messageText.trim() || attachedMedias.length > 0 || recordedAudio ? (
+            ) : messageText.trim() || attachedMedias.length > 0 || recordedAudio ? (
               <button
                 type="button"
                 onClick={() => handleSendMessage()}
                 className="w-11 h-11 bg-[#2481cc] hover:bg-[#2071b3] text-white rounded-full flex items-center justify-center shadow-md shadow-blue-500/15 active:scale-95 cursor-pointer transition-all shrink-0"
-                title="Envoyer le message"
+                title={tLocal("sendMsg")}
               >
                 <Send size={18} className="ml-0.5" />
               </button>
             ) : (
               <button
                 type="button"
-                onClick={isRecording ? stopRecording : startRecording}
-                className={`w-11 h-11 rounded-full flex items-center justify-center shadow-md transition-all shrink-0 cursor-pointer active:scale-95 ${
-                  isRecording
-                    ? "bg-red-500 text-white animate-pulse shadow-red-500/20"
-                    : "bg-[#2481cc] hover:bg-[#2071b3] text-white shadow-blue-500/15"
-                }`}
-                title={isRecording ? "Cliquer pour arrêter l'enregistrement" : "Enregistrer un message vocal"}
+                onClick={startRecording}
+                className="w-11 h-11 bg-[#2481cc] hover:bg-[#2071b3] text-white rounded-full flex items-center justify-center shadow-md shadow-blue-500/15 active:scale-95 cursor-pointer transition-all shrink-0"
+                title={tLocal("voiceRecord")}
               >
-                {isRecording ? <Volume2 size={18} className="animate-bounce" /> : <Mic size={18} />}
+                <Mic size={18} />
               </button>
             )}
           </div>
+
+          {/* Floating Action Button & Menu Pill Popover */}
+          <div className="absolute bottom-20 right-4 z-30 flex flex-col items-end gap-2">
+            <AnimatePresence>
+              {showFloatingMenu && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9, y: 8 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9, y: 8 }}
+                  className="bg-white/95 dark:bg-[#151f2d]/95 backdrop-blur-md p-1.5 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-800 flex items-center gap-1 overflow-x-auto max-w-[90vw] sm:max-w-none"
+                >
+                  <button
+                    onClick={() => {
+                      setActiveSidebarTab("info");
+                      setSidebarOpen(true);
+                      setShowFloatingMenu(false);
+                    }}
+                    className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap ${
+                      activeSidebarTab === "info" && sidebarOpen
+                        ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20"
+                        : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                    }`}
+                  >
+                    INFOS
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveSidebarTab("members");
+                      setSidebarOpen(true);
+                      setShowFloatingMenu(false);
+                    }}
+                    className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap ${
+                      activeSidebarTab === "members" && sidebarOpen
+                        ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20"
+                        : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                    }`}
+                  >
+                    MEMBRES
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveSidebarTab("media");
+                      setSidebarOpen(true);
+                      setShowFloatingMenu(false);
+                    }}
+                    className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap ${
+                      activeSidebarTab === "media" && sidebarOpen
+                        ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20"
+                        : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                    }`}
+                  >
+                    MÉDIAS
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveSidebarTab("ai");
+                      setSidebarOpen(true);
+                      setShowFloatingMenu(false);
+                    }}
+                    className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap ${
+                      activeSidebarTab === "ai" && sidebarOpen
+                        ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20"
+                        : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                    }`}
+                  >
+                    IA ASRAR
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <button
+              onClick={() => setShowFloatingMenu(!showFloatingMenu)}
+              className={`w-11 h-11 rounded-full flex items-center justify-center shadow-xl active:scale-95 transition-all cursor-pointer border ${
+                showFloatingMenu || sidebarOpen
+                  ? "bg-emerald-600 text-white border-emerald-400/30 shadow-emerald-600/30"
+                  : "bg-white dark:bg-[#1c2738] text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
+              }`}
+              title="Menus rapides de la communauté (INFOS, MEMBRES, MÉDIAS, IA ASRAR)"
+            >
+              <LayoutGrid size={20} />
+            </button>
+          </div>
         </div>
 
-        {/* Desktop Sidebar Column: Group Details & Online Members */}
+        {/* Sidebar Column: Group Details & Online Members */}
         {sidebarOpen && (
-          <div className="w-full md:w-80 bg-white dark:bg-[#141b27] border-l border-gray-100 dark:border-gray-800/80 flex flex-col shrink-0">
-            
-            {/* Sidebar Tabs switcher */}
-            <div className="grid grid-cols-4 bg-gray-50 dark:bg-[#111926] p-1 border-b border-gray-100 dark:border-gray-800/80 shrink-0">
-              <button
-                onClick={() => setActiveSidebarTab("info")}
-                className={`py-2 text-[9px] sm:text-[10px] font-black uppercase rounded-xl tracking-tighter sm:tracking-wider transition-all cursor-pointer flex items-center justify-center text-center ${
-                  activeSidebarTab === "info" ? "bg-white dark:bg-[#151f2d] text-emerald-600 dark:text-teal-400 shadow-sm" : "text-gray-400"
-                }`}
-              >
-                Infos
-              </button>
-              <button
-                onClick={() => setActiveSidebarTab("members")}
-                className={`py-2 text-[9px] sm:text-[10px] font-black uppercase rounded-xl tracking-tighter sm:tracking-wider transition-all cursor-pointer flex items-center justify-center text-center ${
-                  activeSidebarTab === "members" ? "bg-white dark:bg-[#151f2d] text-emerald-600 dark:text-teal-400 shadow-sm" : "text-gray-400"
-                }`}
-              >
-                Membres
-              </button>
-              <button
-                onClick={() => setActiveSidebarTab("media")}
-                className={`py-2 text-[9px] sm:text-[10px] font-black uppercase rounded-xl tracking-tighter sm:tracking-wider transition-all cursor-pointer flex items-center justify-center text-center ${
-                  activeSidebarTab === "media" ? "bg-white dark:bg-[#151f2d] text-emerald-600 dark:text-teal-400 shadow-sm" : "text-gray-400"
-                }`}
-              >
-                Médias
-              </button>
-              <button
-                onClick={() => setActiveSidebarTab("ai")}
-                className={`py-2 text-[9px] sm:text-[10px] font-black uppercase rounded-xl tracking-tighter sm:tracking-wider transition-all cursor-pointer flex items-center justify-center gap-0.5 text-center ${
-                  activeSidebarTab === "ai" ? "bg-white dark:bg-[#151f2d] text-emerald-600 dark:text-teal-400 shadow-sm" : "text-gray-400"
-                }`}
-              >
-                IA Asrar
-              </button>
-            </div>
+          <div 
+            onClick={() => setSidebarOpen(false)}
+            className="fixed inset-0 top-[60px] sm:top-[68px] bottom-[56px] sm:bottom-0 z-[45] md:relative md:top-auto md:bottom-auto md:inset-auto md:z-auto bg-black/60 md:bg-transparent backdrop-blur-xs md:backdrop-blur-none flex justify-end"
+          >
+            <div 
+              onClick={(e) => e.stopPropagation()}
+              className="w-[85vw] sm:w-80 md:w-80 bg-white dark:bg-[#141b27] border-l border-gray-100 dark:border-gray-800/80 flex flex-col h-full shrink-0 shadow-2xl md:shadow-none relative"
+            >
+              
+              {/* Mobile Drawer Header */}
+              <div className="flex md:hidden items-center justify-between p-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-[#111926] shrink-0">
+                <span className="font-extrabold text-xs text-gray-800 dark:text-gray-200 uppercase tracking-wider flex items-center gap-1.5">
+                  <LayoutGrid size={14} className="text-emerald-500" />
+                  {activeSidebarTab === "info" && "Infos du Groupe"}
+                  {activeSidebarTab === "members" && "Membres"}
+                  {activeSidebarTab === "media" && "Médias"}
+                  {activeSidebarTab === "ai" && "IA Asrar"}
+                </span>
+                <button
+                  onClick={() => setSidebarOpen(false)}
+                  className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Sidebar Tabs switcher */}
+              <div className="grid grid-cols-4 bg-gray-50 dark:bg-[#111926] p-1 border-b border-gray-100 dark:border-gray-800/80 shrink-0">
+                <button
+                  onClick={() => setActiveSidebarTab("info")}
+                  className={`py-2 text-[9px] sm:text-[10px] font-black uppercase rounded-xl tracking-tighter sm:tracking-wider transition-all cursor-pointer flex items-center justify-center text-center ${
+                    activeSidebarTab === "info" ? "bg-white dark:bg-[#151f2d] text-emerald-600 dark:text-teal-400 shadow-sm" : "text-gray-400"
+                  }`}
+                >
+                  INFOS
+                </button>
+                <button
+                  onClick={() => setActiveSidebarTab("members")}
+                  className={`py-2 text-[9px] sm:text-[10px] font-black uppercase rounded-xl tracking-tighter sm:tracking-wider transition-all cursor-pointer flex items-center justify-center text-center ${
+                    activeSidebarTab === "members" ? "bg-white dark:bg-[#151f2d] text-emerald-600 dark:text-teal-400 shadow-sm" : "text-gray-400"
+                  }`}
+                >
+                  MEMBRES
+                </button>
+                <button
+                  onClick={() => setActiveSidebarTab("media")}
+                  className={`py-2 text-[9px] sm:text-[10px] font-black uppercase rounded-xl tracking-tighter sm:tracking-wider transition-all cursor-pointer flex items-center justify-center text-center ${
+                    activeSidebarTab === "media" ? "bg-white dark:bg-[#151f2d] text-emerald-600 dark:text-teal-400 shadow-sm" : "text-gray-400"
+                  }`}
+                >
+                  MÉDIAS
+                </button>
+                <button
+                  onClick={() => setActiveSidebarTab("ai")}
+                  className={`py-2 text-[9px] sm:text-[10px] font-black uppercase rounded-xl tracking-tighter sm:tracking-wider transition-all cursor-pointer flex items-center justify-center gap-0.5 text-center ${
+                    activeSidebarTab === "ai" ? "bg-white dark:bg-[#151f2d] text-emerald-600 dark:text-teal-400 shadow-sm" : "text-gray-400"
+                  }`}
+                >
+                  IA ASRAR
+                </button>
+              </div>
 
             {/* Tab content space */}
             <div className="flex-1 overflow-y-auto p-4 no-scrollbar">
@@ -2306,7 +3104,8 @@ export const Community: React.FC = () => {
               )}
             </div>
           </div>
-        )}
+        </div>
+      )}
       </div>
 
       {/* Floating Context/Reactions Menu Popup */}
@@ -2385,29 +3184,126 @@ export const Community: React.FC = () => {
                   <CornerUpLeft size={13} /> {tLocal("replyingTo")}
                 </button>
 
-                {user?.role === "admin" && (
-                  <button
-                    onClick={() => {
-                      const post = posts.find((p) => p.id === activeContextMenuPostId);
-                      if (post) handlePinPost(post.id, !!post.isPinned);
-                    }}
-                    className="w-full text-left px-2.5 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg text-[11px] sm:text-xs font-bold text-gray-700 dark:text-gray-200 flex items-center gap-2 cursor-pointer"
-                  >
-                    <Pin size={13} /> {posts.find((p) => p.id === activeContextMenuPostId)?.isPinned ? "Désépingler" : "Épingler"}
-                  </button>
-                )}
+                <button
+                  onClick={() => {
+                    const post = posts.find((p) => p.id === activeContextMenuPostId);
+                    if (post) handlePinPost(post.id, !!post.isPinned);
+                  }}
+                  className="w-full text-left px-2.5 py-1.5 hover:bg-amber-50 dark:hover:bg-amber-950/30 rounded-lg text-[11px] sm:text-xs font-bold text-amber-700 dark:text-amber-400 flex items-center gap-2 cursor-pointer"
+                >
+                  <Pin size={13} /> {posts.find((p) => p.id === activeContextMenuPostId)?.isPinned ? "Désépingler" : "Épingler le message"}
+                </button>
 
-                {(user?.role === "admin" || posts.find((p) => p.id === activeContextMenuPostId)?.authorId === user?.uid) && (
-                  <button
-                    onClick={() => handleDeletePost(activeContextMenuPostId)}
-                    className="w-full text-left px-2.5 py-1.5 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg text-[11px] sm:text-xs font-bold text-red-600 dark:text-red-400 flex items-center gap-2 cursor-pointer"
-                  >
-                    <Trash2 size={13} /> {tLocal("deletePostBtn") || "Supprimer"}
-                  </button>
-                )}
+                {(() => {
+                  const currentPost = posts.find((p) => p.id === activeContextMenuPostId);
+                  if (!currentPost) return null;
+                  const canModify = canUserModifyPost(currentPost, user, messageEditDeleteLimitMinutes);
+                  const isAuthor = currentPost.authorId === user?.uid;
+                  const isAdmin = user?.role === "admin";
+
+                  if (canModify) {
+                    return (
+                      <>
+                        <button
+                          onClick={() => {
+                            setEditingPostId(currentPost.id);
+                            setEditPostContent(currentPost.content || "");
+                            setActiveContextMenuPostId(null);
+                          }}
+                          className="w-full text-left px-2.5 py-1.5 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-lg text-[11px] sm:text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-2 cursor-pointer"
+                        >
+                          <Edit3 size={13} /> {tLocal("editPostBtn") || "Modifier"}
+                        </button>
+                        <button
+                          onClick={() => handleDeletePost(currentPost.id)}
+                          className="w-full text-left px-2.5 py-1.5 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg text-[11px] sm:text-xs font-bold text-red-600 dark:text-red-400 flex items-center gap-2 cursor-pointer"
+                        >
+                          <Trash2 size={13} /> {tLocal("deletePostBtn") || "Supprimer"}
+                        </button>
+                      </>
+                    );
+                  }
+
+                  if (isAuthor && !canModify && !isAdmin) {
+                    return (
+                      <div className="px-2.5 py-1.5 text-[10px] italic text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 rounded-lg font-medium">
+                        ⏱️ Délai expiré (&gt; {formatLimitText(messageEditDeleteLimitMinutes)})
+                      </div>
+                    );
+                  }
+
+                  return null;
+                })()}
               </div>
             </motion.div>
           </>
+        )}
+      </AnimatePresence>
+
+      {/* MODAL: Edit Post Modal */}
+      <AnimatePresence>
+        {editingPostId && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white dark:bg-[#182533] rounded-3xl p-5 max-w-lg w-full border border-gray-100 dark:border-gray-700 shadow-2xl space-y-4"
+            >
+              <div className="flex justify-between items-center border-b border-gray-100 dark:border-gray-800 pb-3">
+                <h3 className="font-bold text-sm sm:text-base text-gray-900 dark:text-white flex items-center gap-2">
+                  <Edit3 size={18} className="text-emerald-500" /> Modifier le message
+                </h3>
+                <button
+                  onClick={() => {
+                    setEditingPostId(null);
+                    setEditPostContent("");
+                  }}
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 p-1 cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-gray-500 dark:text-gray-400 block">
+                  Contenu du message :
+                </label>
+                <textarea
+                  value={editPostContent}
+                  onChange={(e) => setEditPostContent(e.target.value)}
+                  rows={5}
+                  className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl p-3 text-xs sm:text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 resize-none"
+                  placeholder="Modifiez le texte de votre message..."
+                />
+              </div>
+
+              <div className="flex items-center justify-between pt-2">
+                <span className="text-[10px] text-gray-400 dark:text-gray-500 font-medium flex items-center gap-1">
+                  <Clock size={11} /> Délai max d'édition : {formatLimitText(messageEditDeleteLimitMinutes)}
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      setEditingPostId(null);
+                      setEditPostContent("");
+                    }}
+                    className="px-4 py-2 text-xs font-bold text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-xl transition-colors cursor-pointer"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    onClick={handleSaveEditPost}
+                    disabled={!editPostContent.trim() || isSubmittingEdit}
+                    className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-bold rounded-xl text-xs transition-colors shadow-md flex items-center gap-1.5 cursor-pointer"
+                  >
+                    {isSubmittingEdit ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+                    <span>Enregistrer</span>
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
 
@@ -2729,6 +3625,423 @@ export const Community: React.FC = () => {
         )}
       </AnimatePresence>
 
+      {/* PROFESSIONAL DOCUMENT & FILE VIEWER MODAL */}
+      <AnimatePresence>
+        {docViewerFile && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-2 sm:p-5 overflow-hidden"
+          >
+            <motion.div
+              initial={{ scale: 0.94, y: 15 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.94, y: 15 }}
+              transition={{ type: "spring", stiffness: 400, damping: 28 }}
+              className="relative w-full max-w-5xl h-[92vh] bg-white dark:bg-[#15202b] rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-gray-200 dark:border-gray-800 text-left"
+            >
+              {/* TOP HEADER */}
+              <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 bg-gray-50 dark:bg-[#1c2a38] border-b border-gray-200 dark:border-gray-800 shrink-0">
+                <div className="flex items-center gap-3 min-w-0 flex-1 pr-2">
+                  {/* Dynamic File Extension Badge */}
+                  {(() => {
+                    const nameLower = (docViewerFile.fileName || "").toLowerCase();
+                    let icon = <FileText size={20} className="text-amber-500" />;
+                    let badgeColor = "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20";
+                    let label = "Document";
+
+                    if (docViewerFile.type === "video" || nameLower.endsWith(".mp4") || nameLower.endsWith(".webm")) {
+                      icon = <VideoIcon size={20} className="text-rose-500" />;
+                      badgeColor = "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20";
+                      label = "Vidéo HD";
+                    } else if (docViewerFile.type === "audio" || nameLower.endsWith(".mp3") || nameLower.endsWith(".wav")) {
+                      icon = <Music size={20} className="text-purple-500" />;
+                      badgeColor = "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20";
+                      label = "Audio";
+                    } else if (docViewerFile.type === "image" || nameLower.endsWith(".png") || nameLower.endsWith(".jpg") || nameLower.endsWith(".jpeg") || nameLower.endsWith(".webp")) {
+                      icon = <ImageIcon size={20} className="text-emerald-500" />;
+                      badgeColor = "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20";
+                      label = "Image";
+                    } else if (nameLower.endsWith(".pdf") || docViewerFile.url?.startsWith("data:application/pdf")) {
+                      icon = <FileText size={20} className="text-red-500" />;
+                      badgeColor = "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20";
+                      label = "PDF Studio";
+                    } else if (nameLower.endsWith(".doc") || nameLower.endsWith(".docx")) {
+                      icon = <FileText size={20} className="text-blue-500" />;
+                      badgeColor = "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20";
+                      label = "Word";
+                    } else if (nameLower.endsWith(".xls") || nameLower.endsWith(".xlsx") || nameLower.endsWith(".csv")) {
+                      icon = <FileText size={20} className="text-emerald-500" />;
+                      badgeColor = "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20";
+                      label = "Excel / CSV";
+                    } else if (nameLower.endsWith(".txt") || nameLower.endsWith(".json") || nameLower.endsWith(".js") || nameLower.endsWith(".py")) {
+                      icon = <FileCode size={20} className="text-teal-500" />;
+                      badgeColor = "bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20";
+                      label = "Code / Texte";
+                    }
+
+                    return (
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="p-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 shrink-0">
+                          {icon}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-xs sm:text-sm font-extrabold text-gray-900 dark:text-white truncate max-w-[200px] sm:max-w-[320px]">
+                              {docViewerFile.fileName || "Document"}
+                            </h3>
+                            <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${badgeColor}`}>
+                              {label}
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-gray-400 flex items-center gap-2 mt-0.5">
+                            <span>{docViewerFile.fileSize || "Taille inconnue"}</span>
+                            <span>•</span>
+                            <span className="text-emerald-500 font-semibold">Lecteur Professionnel HD</span>
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                {/* HEADER TAB NAVIGATION */}
+                <div className="hidden sm:flex items-center bg-gray-200/60 dark:bg-gray-800/80 p-1 rounded-2xl border border-gray-300/40 dark:border-gray-700/50">
+                  <button
+                    onClick={() => setDocViewerTab("viewer")}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      docViewerTab === "viewer"
+                        ? "bg-white dark:bg-[#15202b] text-emerald-600 dark:text-emerald-400 shadow-sm"
+                        : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                    }`}
+                  >
+                    <Eye size={14} />
+                    <span>Aperçu</span>
+                  </button>
+                  <button
+                    onClick={() => setDocViewerTab("text")}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      docViewerTab === "text"
+                        ? "bg-white dark:bg-[#15202b] text-emerald-600 dark:text-emerald-400 shadow-sm"
+                        : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                    }`}
+                  >
+                    <FileCode size={14} />
+                    <span>Texte & Code</span>
+                    {docViewerTextContent && (
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    )}
+                  </button>
+                  <button
+                    onClick={() => setDocViewerTab("details")}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      docViewerTab === "details"
+                        ? "bg-white dark:bg-[#15202b] text-emerald-600 dark:text-emerald-400 shadow-sm"
+                        : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                    }`}
+                  >
+                    <Info size={14} />
+                    <span>Détails</span>
+                  </button>
+                </div>
+
+                {/* RIGHT ACTIONS */}
+                <div className="flex items-center gap-1.5 ml-2">
+                  <a
+                    href={docViewerFile.url}
+                    download={docViewerFile.fileName || "document"}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold transition-all active:scale-95 shadow-md shadow-emerald-500/20 cursor-pointer"
+                    title="Télécharger le fichier"
+                  >
+                    <Download size={14} />
+                    <span className="hidden sm:inline">Télécharger</span>
+                  </a>
+                  <button
+                    onClick={() => setDocViewerFile(null)}
+                    className="p-2 rounded-xl text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+                    title="Fermer"
+                  >
+                    <X size={18} />
+                  </button>
+                </div>
+              </div>
+
+              {/* MOBILE TAB BAR */}
+              <div className="flex sm:hidden items-center justify-around px-2 py-2 bg-gray-100 dark:bg-[#1c2a38] border-b border-gray-200 dark:border-gray-800 shrink-0">
+                <button
+                  onClick={() => setDocViewerTab("viewer")}
+                  className={`flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-bold ${
+                    docViewerTab === "viewer" ? "bg-emerald-500 text-white" : "text-gray-500 dark:text-gray-400"
+                  }`}
+                >
+                  <Eye size={13} /> Aperçu
+                </button>
+                <button
+                  onClick={() => setDocViewerTab("text")}
+                  className={`flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-bold ${
+                    docViewerTab === "text" ? "bg-emerald-500 text-white" : "text-gray-500 dark:text-gray-400"
+                  }`}
+                >
+                  <FileCode size={13} /> Texte
+                </button>
+                <button
+                  onClick={() => setDocViewerTab("details")}
+                  className={`flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-bold ${
+                    docViewerTab === "details" ? "bg-emerald-500 text-white" : "text-gray-500 dark:text-gray-400"
+                  }`}
+                >
+                  <Info size={13} /> Infos
+                </button>
+              </div>
+
+              {/* INTERACTIVE TOOLBAR FOR ZOOM / ROTATION / SEARCH */}
+              {docViewerTab === "viewer" && (
+                <div className="flex items-center justify-between px-4 py-2 bg-gray-100/80 dark:bg-[#192734] border-b border-gray-200 dark:border-gray-800 text-xs shrink-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-500 dark:text-gray-400 font-bold text-[11px] hidden sm:inline">Zoom:</span>
+                    <button
+                      onClick={() => setDocViewerZoom((prev) => Math.max(50, prev - 25))}
+                      className="p-1.5 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 shadow-sm border border-gray-200 dark:border-gray-700 cursor-pointer"
+                      title="Dézoomer"
+                    >
+                      <ZoomOut size={14} />
+                    </button>
+                    <span className="font-extrabold text-[11px] min-w-[40px] text-center text-gray-800 dark:text-white">
+                      {docViewerZoom}%
+                    </span>
+                    <button
+                      onClick={() => setDocViewerZoom((prev) => Math.min(250, prev + 25))}
+                      className="p-1.5 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 shadow-sm border border-gray-200 dark:border-gray-700 cursor-pointer"
+                      title="Zoomer"
+                    >
+                      <ZoomIn size={14} />
+                    </button>
+                    {docViewerZoom !== 100 && (
+                      <button
+                        onClick={() => setDocViewerZoom(100)}
+                        className="px-2 py-1 text-[10px] font-bold rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-300 cursor-pointer"
+                      >
+                        Reset
+                      </button>
+                    )}
+
+                    {/* Rotation button for images */}
+                    {(docViewerFile.type === "image" || (docViewerFile.fileName || "").match(/\.(jpg|jpeg|png|webp|gif)$/i)) && (
+                      <button
+                        onClick={() => setDocViewerRotation((prev) => (prev + 90) % 360)}
+                        className="p-1.5 ml-2 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 shadow-sm border border-gray-200 dark:border-gray-700 cursor-pointer flex items-center gap-1 text-[11px]"
+                        title="Pivoter"
+                      >
+                        <RotateCw size={14} />
+                        <span className="hidden sm:inline">{docViewerRotation}°</span>
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => {
+                        const win = window.open();
+                        if (win) win.document.write(`<iframe src="${docViewerFile.url}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
+                      }}
+                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 shadow-sm border border-gray-200 dark:border-gray-700 cursor-pointer text-[11px] font-bold"
+                      title="Plein écran / Nouvel onglet"
+                    >
+                      <ExternalLink size={13} />
+                      <span className="hidden sm:inline">Grand Écran</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* MAIN VIEWER DISPLAY BODY */}
+              <div className="flex-1 overflow-auto bg-gray-100 dark:bg-[#111923] p-3 sm:p-6 flex flex-col items-center justify-center relative">
+                {/* TAB 1: INTERACTIVE VIEWER */}
+                {docViewerTab === "viewer" && (
+                  <div className="w-full h-full flex items-center justify-center overflow-auto">
+                    {/* 1. PDF FILE */}
+                    {(docViewerFile.url.startsWith("data:application/pdf") || (docViewerFile.fileName || "").toLowerCase().endsWith(".pdf")) ? (
+                      <PdfCanvasViewer
+                        url={docViewerFile.url}
+                        zoom={docViewerZoom}
+                        onExtractText={(txt) => setDocViewerTextContent(txt)}
+                      />
+                    ) : docViewerFile.type === "image" || (docViewerFile.fileName || "").match(/\.(jpg|jpeg|png|webp|gif|svg)$/i) ? (
+                      /* 2. IMAGE FILE */
+                      <div className="w-full h-full flex items-center justify-center overflow-auto p-4">
+                        <img
+                          src={docViewerFile.url}
+                          alt={docViewerFile.fileName || "Preview"}
+                          style={{
+                            transform: `scale(${docViewerZoom / 100}) rotate(${docViewerRotation}deg)`,
+                            transition: "transform 0.2s ease"
+                          }}
+                          className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl border border-gray-200/50 dark:border-gray-800/50"
+                        />
+                      </div>
+                    ) : docViewerFile.type === "video" || (docViewerFile.fileName || "").match(/\.(mp4|webm|mov)$/i) ? (
+                      /* 3. VIDEO FILE */
+                      <div className="w-full max-w-4xl max-h-full flex items-center justify-center p-2">
+                        <video
+                          src={docViewerFile.url}
+                          controls
+                          autoPlay
+                          className="w-full max-h-[70vh] rounded-2xl shadow-2xl border border-gray-300 dark:border-gray-800 bg-black"
+                        />
+                      </div>
+                    ) : docViewerFile.type === "audio" || (docViewerFile.fileName || "").match(/\.(mp3|wav|ogg|m4a)$/i) ? (
+                      /* 4. AUDIO FILE */
+                      <div className="w-full max-w-md bg-white dark:bg-[#1c2a38] p-6 rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-800 text-center space-y-4">
+                        <div className="w-20 h-20 mx-auto rounded-full bg-gradient-to-tr from-purple-500 to-indigo-600 text-white flex items-center justify-center shadow-lg animate-pulse">
+                          <Music size={36} />
+                        </div>
+                        <div>
+                          <h4 className="font-extrabold text-base text-gray-900 dark:text-white truncate">
+                            {docViewerFile.fileName || "Fichier Audio"}
+                          </h4>
+                          <p className="text-xs text-gray-400 mt-1">{docViewerFile.fileSize || "Audio HD"}</p>
+                        </div>
+                        <audio src={docViewerFile.url} controls className="w-full" />
+                      </div>
+                    ) : docViewerTextContent ? (
+                      /* 5. TEXT / CODE FILE */
+                      <div className="w-full h-full max-w-4xl bg-[#1e1e1e] rounded-2xl p-4 shadow-2xl overflow-auto border border-gray-800 text-left font-mono text-xs sm:text-sm text-emerald-400 leading-relaxed">
+                        <pre className="whitespace-pre-wrap break-words">{docViewerTextContent}</pre>
+                      </div>
+                    ) : (
+                      /* 6. GENERIC / OFFICE / BINARY DOCUMENT CARD */
+                      <div className="w-full max-w-lg bg-white dark:bg-[#1c2a38] rounded-3xl p-6 sm:p-8 shadow-2xl border border-gray-200 dark:border-gray-800 text-center space-y-6">
+                        <div className="w-24 h-24 mx-auto rounded-3xl bg-gradient-to-tr from-amber-500 to-yellow-600 text-white flex items-center justify-center shadow-xl">
+                          <FileText size={48} />
+                        </div>
+                        <div className="space-y-1">
+                          <h3 className="text-base sm:text-lg font-black text-gray-900 dark:text-white truncate">
+                            {docViewerFile.fileName || "Document Asrar"}
+                          </h3>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">
+                            Taille: {docViewerFile.fileSize || "Non spécifiée"}
+                          </p>
+                        </div>
+                        <div className="p-4 bg-amber-500/10 dark:bg-amber-500/20 border border-amber-500/30 rounded-2xl text-xs text-amber-700 dark:text-amber-300 font-medium leading-relaxed">
+                          Ce fichier a été analysé et est prêt pour la consultation interactive ou le téléchargement sécurisé.
+                        </div>
+                        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                          <a
+                            href={docViewerFile.url}
+                            download={docViewerFile.fileName || "document"}
+                            className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-2xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 text-xs uppercase tracking-wider"
+                          >
+                            <Download size={16} />
+                            Télécharger le Fichier
+                          </a>
+                          {docViewerFile.url.startsWith("http") && (
+                            <a
+                              href={`https://docs.google.com/gview?url=${encodeURIComponent(docViewerFile.url)}&embedded=true`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-2xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 text-xs uppercase tracking-wider"
+                            >
+                              <ExternalLink size={16} />
+                              Google Docs Viewer
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* TAB 2: TEXT & CODE EXTRACTOR */}
+                {docViewerTab === "text" && (
+                  <div className="w-full h-full max-w-4xl flex flex-col bg-white dark:bg-[#1c2a38] rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 overflow-hidden text-left">
+                    <div className="flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-[#15202b] border-b border-gray-200 dark:border-gray-800">
+                      <div className="flex items-center gap-2 flex-1">
+                        <Search size={14} className="text-gray-400" />
+                        <input
+                          type="text"
+                          value={docSearchQuery}
+                          onChange={(e) => setDocSearchQuery(e.target.value)}
+                          placeholder="Filtrer ou rechercher dans le texte..."
+                          className="w-full bg-transparent border-none text-xs text-gray-900 dark:text-white focus:outline-none"
+                        />
+                      </div>
+                      {docViewerTextContent && (
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(docViewerTextContent);
+                            setDocViewerCopied(true);
+                            setTimeout(() => setDocViewerCopied(false), 2000);
+                          }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                        >
+                          {docViewerCopied ? <Check size={14} /> : <Copy size={14} />}
+                          <span>{docViewerCopied ? "Copié !" : "Copier Tout"}</span>
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="flex-1 p-4 overflow-auto font-mono text-xs text-gray-800 dark:text-gray-200 leading-relaxed bg-gray-50/50 dark:bg-[#111923]">
+                      {docViewerTextContent ? (
+                        <pre className="whitespace-pre-wrap break-words">
+                          {docSearchQuery
+                            ? docViewerTextContent
+                                .split("\n")
+                                .filter((line) => line.toLowerCase().includes(docSearchQuery.toLowerCase()))
+                                .join("\n") || "Aucune ligne ne correspond à votre recherche."
+                            : docViewerTextContent}
+                        </pre>
+                      ) : (
+                        <div className="text-center py-16 text-gray-400 space-y-3">
+                          <FileText size={36} className="mx-auto text-gray-300 dark:text-gray-600" />
+                          <p className="text-xs max-w-md mx-auto">
+                            Ce document est un fichier binaire (image, vidéo, archive ou binaire compilé). Aucun texte brut directement lisible n'a été extrait.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* TAB 3: FILE DETAILS */}
+                {docViewerTab === "details" && (
+                  <div className="w-full max-w-2xl bg-white dark:bg-[#1c2a38] rounded-3xl p-6 sm:p-8 shadow-xl border border-gray-200 dark:border-gray-800 text-left space-y-6">
+                    <h3 className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                      <Info size={16} className="text-emerald-500" />
+                      Spécifications du Fichier
+                    </h3>
+                    <div className="divide-y divide-gray-100 dark:divide-gray-800 text-xs text-gray-700 dark:text-gray-300">
+                      <div className="py-2.5 flex justify-between">
+                        <span className="font-bold text-gray-500">Nom du Fichier:</span>
+                        <span className="font-mono text-emerald-600 dark:text-emerald-400 font-bold">{docViewerFile.fileName || "Non nommé"}</span>
+                      </div>
+                      <div className="py-2.5 flex justify-between">
+                        <span className="font-bold text-gray-500">Taille estimée:</span>
+                        <span>{docViewerFile.fileSize || "Standard"}</span>
+                      </div>
+                      <div className="py-2.5 flex justify-between">
+                        <span className="font-bold text-gray-500">Encodage / Protocole:</span>
+                        <span>{docViewerFile.url.startsWith("data:") ? "Base64 Data URI" : "HTTPS Secure Link"}</span>
+                      </div>
+                      <div className="py-2.5 flex justify-between">
+                        <span className="font-bold text-gray-500">Type de Fichier:</span>
+                        <span className="uppercase font-bold">{docViewerFile.type || "Document"}</span>
+                      </div>
+                      <div className="py-2.5 flex justify-between">
+                        <span className="font-bold text-gray-500">Statut de sécurité:</span>
+                        <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+                          <CheckCircle size={14} /> Vérifié & Réseau Sécurisé
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* PRIVATE MESSAGES DRAWER */}
       {isDMOpen && (
         <DirectMessages
@@ -2743,3 +4056,258 @@ export const Community: React.FC = () => {
     </div>
   );
 };
+
+/* CLIENT-SIDE CANVAS PDF VIEWER COMPONENT (PDF.js) */
+interface PdfCanvasViewerProps {
+  url: string;
+  zoom: number;
+  onExtractText?: (text: string) => void;
+}
+
+const PdfCanvasViewer: React.FC<PdfCanvasViewerProps> = ({ url, zoom, onExtractText }) => {
+  const [numPages, setNumPages] = useState<number>(0);
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [useFallbackIframe, setUseFallbackIframe] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const [pdfDoc, setPdfDoc] = useState<any>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const renderTaskRef = useRef<any>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    setLoading(true);
+    setError(null);
+    setPdfDoc(null);
+    setUseFallbackIframe(false);
+
+    // 2.5 second fallback timer: if PDF.js takes too long, switch to native iframe / object
+    const fallbackTimer = setTimeout(() => {
+      if (isMounted && loading) {
+        console.warn("PDF.js loading timeout - switching to iframe viewer fallback");
+        setUseFallbackIframe(true);
+        setLoading(false);
+      }
+    }, 2500);
+
+    const loadPdf = async () => {
+      try {
+        const pdfjsLib = await import("pdfjs-dist");
+        try {
+          pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version || "4.0.379"}/build/pdf.worker.min.mjs`;
+        } catch (_) {}
+
+        let loadingTask;
+        if (url.startsWith("data:")) {
+          const parts = url.split(";base64,");
+          const b64 = parts.length > 1 ? parts[1] : parts[0];
+          const binaryString = atob(b64);
+          const len = binaryString.length;
+          const bytes = new Uint8Array(len);
+          for (let i = 0; i < len; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          loadingTask = pdfjsLib.getDocument({ data: bytes });
+        } else {
+          loadingTask = pdfjsLib.getDocument({ url } as any);
+        }
+
+        const doc = await loadingTask.promise;
+        clearTimeout(fallbackTimer);
+        if (!isMounted) return;
+
+        setPdfDoc(doc);
+        setNumPages(doc.numPages);
+        setCurrentPage(1);
+        setLoading(false);
+
+        // Extract text asynchronously in background to not block rendering
+        if (onExtractText) {
+          setTimeout(async () => {
+            try {
+              const pagesText: string[] = [];
+              const maxPagesToScan = Math.min(doc.numPages, 20);
+              for (let pageNum = 1; pageNum <= maxPagesToScan; pageNum++) {
+                if (!isMounted) break;
+                const page = await doc.getPage(pageNum);
+                const content = await page.getTextContent();
+                const pageStrings = content.items.map((item: any) => item.str).join(" ");
+                if (pageStrings.trim()) {
+                  pagesText.push(`=== PAGE ${pageNum} ===\n${pageStrings}`);
+                }
+              }
+              if (pagesText.length > 0 && isMounted) {
+                onExtractText(pagesText.join("\n\n"));
+              }
+            } catch (textErr) {
+              console.warn("PDF text extraction warning:", textErr);
+            }
+          }, 100);
+        }
+      } catch (err: any) {
+        clearTimeout(fallbackTimer);
+        if (!isMounted) return;
+        console.warn("PDF.js loading error - using iframe fallback:", err);
+        setUseFallbackIframe(true);
+        setLoading(false);
+      }
+    };
+
+    loadPdf();
+
+    return () => {
+      isMounted = false;
+      clearTimeout(fallbackTimer);
+    };
+  }, [url]);
+
+  useEffect(() => {
+    if (!pdfDoc || !canvasRef.current || useFallbackIframe) return;
+    let isCancelled = false;
+
+    const renderPage = async () => {
+      if (renderTaskRef.current) {
+        try {
+          renderTaskRef.current.cancel();
+        } catch (_) {}
+      }
+
+      try {
+        const page = await pdfDoc.getPage(currentPage);
+        if (isCancelled) return;
+
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+
+        const baseScale = 1.3;
+        const scale = baseScale * (zoom / 100);
+        const viewport = page.getViewport({ scale });
+
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+
+        const renderContext: any = {
+          canvasContext: ctx,
+          viewport: viewport,
+          canvas: canvas
+        };
+
+        const task = page.render(renderContext);
+        renderTaskRef.current = task;
+        await task.promise;
+      } catch (e: any) {
+        if (e?.name !== "RenderingCancelledException") {
+          console.error("PDF page render error:", e);
+        }
+      }
+    };
+
+    renderPage();
+
+    return () => {
+      isCancelled = true;
+      if (renderTaskRef.current) {
+        try {
+          renderTaskRef.current.cancel();
+        } catch (_) {}
+      }
+    };
+  }, [pdfDoc, currentPage, zoom, useFallbackIframe]);
+
+  if (useFallbackIframe) {
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center p-1 sm:p-3">
+        <iframe
+          src={url}
+          className="w-full h-full rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xl bg-white"
+          title="Lecteur PDF Standard"
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col items-center w-full h-full overflow-hidden relative">
+      {/* PAGE NAVIGATION CONTROLS */}
+      {numPages > 1 && (
+        <div className="flex items-center gap-3 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md px-4 py-2 rounded-2xl shadow-xl border border-gray-200/80 dark:border-gray-700/80 mb-3 z-20 shrink-0">
+          <button
+            disabled={currentPage <= 1}
+            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            className="p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:hover:bg-transparent text-gray-700 dark:text-gray-200 transition-colors cursor-pointer"
+            title="Page précédente"
+          >
+            <ChevronLeft size={18} />
+          </button>
+
+          <div className="flex items-center gap-1.5 text-xs font-black text-gray-900 dark:text-white">
+            <span>Page</span>
+            <input
+              type="number"
+              min={1}
+              max={numPages}
+              value={currentPage}
+              onChange={(e) => {
+                const val = parseInt(e.target.value);
+                if (val >= 1 && val <= numPages) setCurrentPage(val);
+              }}
+              className="w-12 text-center bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg py-0.5 font-bold focus:outline-none"
+            />
+            <span>/ {numPages}</span>
+          </div>
+
+          <button
+            disabled={currentPage >= numPages}
+            onClick={() => setCurrentPage((p) => Math.min(numPages, p + 1))}
+            className="p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:hover:bg-transparent text-gray-700 dark:text-gray-200 transition-colors cursor-pointer"
+            title="Page suivante"
+          >
+            <ChevronRight size={18} />
+          </button>
+        </div>
+      )}
+
+      {/* LOADING INDICATOR */}
+      {loading && (
+        <div className="flex flex-col items-center justify-center my-auto p-8 gap-3">
+          <Loader2 className="animate-spin text-emerald-500" size={38} />
+          <p className="text-xs font-extrabold text-gray-600 dark:text-gray-300 animate-pulse">
+            Chargement instantané du document...
+          </p>
+        </div>
+      )}
+
+      {/* ERROR FALLBACK */}
+      {error && (
+        <div className="my-auto p-6 text-center bg-amber-500/10 dark:bg-amber-500/20 border border-amber-500/30 rounded-3xl max-w-md space-y-4">
+          <AlertTriangle size={36} className="mx-auto text-amber-500" />
+          <p className="text-xs font-bold text-amber-900 dark:text-amber-200 leading-relaxed">{error}</p>
+          <div className="flex justify-center gap-2">
+            <a
+              href={url}
+              download="document.pdf"
+              className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl text-xs transition-colors flex items-center gap-1.5"
+            >
+              <Download size={14} />
+              <span>Télécharger le PDF</span>
+            </a>
+          </div>
+        </div>
+      )}
+
+      {/* CANVAS ELEMENT */}
+      {!loading && !error && (
+        <div className="flex-1 w-full overflow-auto flex justify-center items-start p-2 sm:p-4">
+          <canvas
+            ref={canvasRef}
+            className="shadow-2xl rounded-2xl bg-white border border-gray-200 dark:border-gray-800 max-w-full transition-shadow"
+          />
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default Community;

@@ -74,6 +74,10 @@ export const CollapsibleFloatingWidget: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
+  const rawPlanet = multilingualPlanets[currentPlanet.planetIndex] || multilingualPlanets[0];
+  const langKey = (['fr', 'en', 'ha'].includes(language) ? language : 'fr') as 'fr' | 'en' | 'ha';
+  const planetName = rawPlanet.name[langKey] || rawPlanet.name.fr;
+
   // Update Abjad calculation dynamically
   useEffect(() => {
     if (!abjadInput.trim()) {
@@ -222,7 +226,7 @@ export const CollapsibleFloatingWidget: React.FC = () => {
               <button
                 onClick={() => setIsExpanded(false)}
                 className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
-                title="Réduire le widget"
+                title={language === 'fr' ? 'Réduire le widget' : language === 'ha' ? 'Rage girman widget' : 'Collapse widget'}
               >
                 <ChevronDown className="w-4 h-4" />
               </button>
@@ -275,7 +279,7 @@ export const CollapsibleFloatingWidget: React.FC = () => {
                 }`}
               >
                 <Bell className="w-3.5 h-3.5" />
-                <span>Notifs</span>
+                <span>{language === 'fr' ? 'Notifs' : language === 'ha' ? 'Sanarwa' : 'Notifs'}</span>
                 {notifPermission !== 'granted' && (
                   <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping absolute top-1 right-1" />
                 )}
@@ -287,22 +291,21 @@ export const CollapsibleFloatingWidget: React.FC = () => {
               {/* TAB 1: Planetary Hours */}
               {activeTab === 'planetary' && (
                 <div className="space-y-3">
-                  <div className={`p-3 rounded-xl border flex items-center justify-between ${getPlanetColor(currentPlanet.planet.name)}`}>
+                  <div className={`p-3 rounded-xl border flex items-center justify-between ${getPlanetColor(rawPlanet.name.fr)}`}>
                     <div className="flex items-center gap-3">
-                      <span className="text-3xl font-bold font-serif">{currentPlanet.planet.symbol}</span>
+                      <span className="text-3xl font-bold font-serif">{rawPlanet.symbol}</span>
                       <div>
                         <div className="font-bold text-sm text-slate-100 flex items-center gap-1.5">
-                          {currentPlanet.planet.name}
-                          <span className="font-serif text-amber-300 text-xs">({currentPlanet.planet.arabic})</span>
+                          {planetName}
+                          <span className="font-serif text-amber-300 text-xs">({rawPlanet.arabic})</span>
                         </div>
-                        <p className="text-[11px] text-slate-300 opacity-90">{currentPlanet.planet.favorability}</p>
                       </div>
                     </div>
 
                     <button
                       onClick={playNotificationTone}
                       className="p-2 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/30 transition-colors"
-                      title="Tester la cloche 528Hz"
+                      title={language === 'fr' ? 'Tester la cloche 528Hz' : language === 'ha' ? 'Gwada karara 528Hz' : 'Test 528Hz bell'}
                     >
                       <Zap className="w-4 h-4" />
                     </button>
@@ -310,17 +313,27 @@ export const CollapsibleFloatingWidget: React.FC = () => {
 
                   <div className="grid grid-cols-2 gap-2 text-xs">
                     <div className="p-2.5 rounded-lg bg-slate-800/60 border border-slate-700/50">
-                      <span className="text-[10px] text-slate-400 uppercase font-semibold block">Heure Actuelle</span>
+                      <span className="text-[10px] text-slate-400 uppercase font-semibold block">
+                        {language === 'fr' ? 'Heure Actuelle' : language === 'ha' ? 'Lokacin Yanzu' : 'Current Time'}
+                      </span>
                       <span className="font-bold text-amber-400 text-sm">
-                        Heure #{currentPlanet.hourNumber} ({currentPlanet.isDaytime ? 'Journée ☀️' : 'Nuit 🌙'})
+                        {language === 'fr'
+                          ? `Heure #${currentPlanet.hourNumber} (${currentPlanet.isDaytime ? 'Journée ☀️' : 'Nuit 🌙'})`
+                          : language === 'ha'
+                          ? `Sa'a #${currentPlanet.hourNumber} (${currentPlanet.isDaytime ? 'Rana ☀️' : 'Dare 🌙'})`
+                          : `Hour #${currentPlanet.hourNumber} (${currentPlanet.isDaytime ? 'Day ☀️' : 'Night 🌙'})`}
                       </span>
                     </div>
 
                     <div className="p-2.5 rounded-lg bg-slate-800/60 border border-slate-700/50">
-                      <span className="text-[10px] text-slate-400 uppercase font-semibold block">Arrière-Plan</span>
+                      <span className="text-[10px] text-slate-400 uppercase font-semibold block">
+                        {language === 'fr' ? 'Arrière-Plan' : language === 'ha' ? 'Bango' : 'Background'}
+                      </span>
                       <span className="font-bold text-emerald-400 text-sm flex items-center gap-1">
                         <Radio className="w-3 h-3 text-emerald-400 animate-pulse" />
-                        {bgRemindersEnabled ? 'Surveillance Active' : 'Inactif'}
+                        {bgRemindersEnabled
+                          ? (language === 'fr' ? 'Surveillance Active' : language === 'ha' ? 'Aiki Yana Tafiya' : 'Active Monitoring')
+                          : (language === 'fr' ? 'Inactif' : language === 'ha' ? 'Mara Aiki' : 'Inactive')}
                       </span>
                     </div>
                   </div>
@@ -330,7 +343,7 @@ export const CollapsibleFloatingWidget: React.FC = () => {
                     <div className="flex items-center gap-2 overflow-hidden pr-2">
                       <Volume2 className="w-4 h-4 text-emerald-400 shrink-0" />
                       <span className="text-xs text-slate-300 truncate">
-                        {currentTrack ? currentTrack.title : 'Ambiance 432Hz & Ruqyah'}
+                        {currentTrack ? currentTrack.title : (language === 'fr' ? 'Ambiance 432Hz & Ruqyah' : language === 'ha' ? 'Nishadi 432Hz da Rukiyya' : 'Ambiance 432Hz & Ruqyah')}
                       </span>
                     </div>
                     <button
@@ -347,7 +360,9 @@ export const CollapsibleFloatingWidget: React.FC = () => {
                     className="w-full py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-xs shadow-lg shadow-emerald-950/50 border border-emerald-400/30 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98"
                   >
                     <Monitor className="w-4 h-4 text-amber-300" />
-                    <span>Activer Widget Flottant / Écran (PIP)</span>
+                    <span>
+                      {language === 'fr' ? 'Activer Widget Flottant / Écran (PIP)' : language === 'ha' ? 'Kunna Widget Flottant / Allon (PIP)' : 'Enable Floating / PIP Screen Widget'}
+                    </span>
                   </button>
                 </div>
               )}
@@ -383,13 +398,13 @@ export const CollapsibleFloatingWidget: React.FC = () => {
                         className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-sm shadow-lg shadow-emerald-900/50 transition-all flex items-center justify-center gap-1.5"
                       >
                         <Sparkles className="w-4 h-4" />
-                        <span>Compter (+1)</span>
+                        <span>{language === 'fr' ? 'Compter (+1)' : language === 'ha' ? 'Ƙirga (+1)' : 'Count (+1)'}</span>
                       </button>
 
                       <button
                         onClick={() => setTasbihCount(0)}
                         className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors"
-                        title="Réinitialiser"
+                        title={language === 'fr' ? 'Réinitialiser' : language === 'ha' ? 'Sake saiti' : 'Reset'}
                       >
                         <RotateCcw className="w-4 h-4" />
                       </button>
@@ -402,18 +417,20 @@ export const CollapsibleFloatingWidget: React.FC = () => {
               {activeTab === 'abjad' && (
                 <div className="space-y-3">
                   <label className="block text-xs font-semibold text-slate-300">
-                    Calculateur Abjad Instantané (Poids Numérique) :
+                    {language === 'fr' ? 'Calculateur Abjad Instantané (Poids Numérique) :' : language === 'ha' ? 'Kwamfuta Abjad ta Haruffa (Nauyi) :' : 'Instant Abjad Calculator (Numerical Weight):'}
                   </label>
                   <input
                     type="text"
                     value={abjadInput}
                     onChange={(e) => setAbjadInput(e.target.value)}
-                    placeholder="Tapez un mot ou prénom..."
+                    placeholder={language === 'fr' ? 'Tapez un mot ou prénom...' : language === 'ha' ? 'Rubuta kalma ko suna...' : 'Type a word or name...'}
                     className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-700 text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 text-xs"
                   />
 
                   <div className="p-3 rounded-xl bg-slate-950 border border-emerald-500/30 flex items-center justify-between">
-                    <span className="text-xs text-slate-400">Total Abjad :</span>
+                    <span className="text-xs text-slate-400">
+                      {language === 'fr' ? 'Total Abjad :' : language === 'ha' ? 'Jimillar Abjad :' : 'Total Abjad:'}
+                    </span>
                     <span className="text-2xl font-bold text-amber-400">{abjadValue}</span>
                   </div>
                 </div>
@@ -518,10 +535,10 @@ export const CollapsibleFloatingWidget: React.FC = () => {
 
         <div className="text-left hidden sm:block">
           <div className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider leading-none">
-            {currentPlanet.planet.name}
+            {planetName}
           </div>
           <div className="text-[9px] text-slate-300 opacity-80 leading-tight">
-            Heure #{currentPlanet.hourNumber}
+            {language === 'fr' ? `Heure #${currentPlanet.hourNumber}` : language === 'ha' ? `Sa'a #${currentPlanet.hourNumber}` : `Hour #${currentPlanet.hourNumber}`}
           </div>
         </div>
 

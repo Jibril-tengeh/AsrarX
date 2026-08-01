@@ -27,6 +27,7 @@ import {
 } from '../../../data/lunarSealVarieties';
 import { generateAndDownloadSealCard, generateAndDownloadSealSVG } from '../../../utils/sealCanvasExporter';
 import { KhatimVisualizer } from '../../../components/KhatimVisualizer';
+import { ShareToCommunityModal } from '../../../components/ShareToCommunityModal';
 
 export const SealsCatalogue: React.FC = () => {
   const { language, t } = useLanguage();
@@ -39,6 +40,7 @@ export const SealsCatalogue: React.FC = () => {
   const [selectedSealId, setSelectedSealId] = useState<string>('seal_wafq_9x9');
   const [selectedVersion, setSelectedVersion] = useState<number>(1);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isCommunityModalOpen, setIsCommunityModalOpen] = useState(false);
 
   const sealDetailsRef = React.useRef<HTMLDivElement>(null);
   
@@ -744,6 +746,28 @@ export const SealsCatalogue: React.FC = () => {
                         )}
                       </button>
                     </div>
+
+                    {/* Community Share Button */}
+                    <div className="pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setIsCommunityModalOpen(true)}
+                        className="w-full flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold py-3 px-4 rounded-2xl shadow-xl shadow-emerald-600/20 transition-all cursor-pointer text-xs"
+                      >
+                        <Sparkles size={16} />
+                        <span>Envoyer ce Sceau dans la Communauté</span>
+                      </button>
+                    </div>
+
+                    {/* Share to Community Modal */}
+                    <ShareToCommunityModal
+                      isOpen={isCommunityModalOpen}
+                      onClose={() => setIsCommunityModalOpen(false)}
+                      title="Publier le Sceau Spirituel dans la Communauté"
+                      category="sceau"
+                      itemTitle={`${activeSeal.title} (${activeSeal.arabicName}) - Version ${selectedVersion}`}
+                      detailsText={`Sceau : ${activeSeal.title} (${activeSeal.arabicName})\nGroupe : ${activeSeal.groupTitle}\nSymbole Graphique : ${activeVersionDetails?.symbol || activeSeal.graphicSymbol}\nDescription : ${activeSeal.description}\nVertus Spirituelles : ${activeSeal.spiritualUtility}`}
+                    />
 
                     {/* Seal Details Grid */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-purple-500/30 text-xs">

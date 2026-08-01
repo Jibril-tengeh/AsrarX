@@ -33,42 +33,59 @@ function lazyWithRetry<T extends React.ComponentType<any> = React.ComponentType<
   componentImport: () => Promise<any>
 ) {
   return React.lazy(async () => {
-    try {
-      const module = await componentImport();
-      let component = module.default;
-      if (!component) {
-        const keys = Object.keys(module || {});
-        for (const key of keys) {
-          const val = module[key];
-          if (typeof val === 'function' || (typeof val === 'object' && val !== null && (val.$$typeof || val.render))) {
-            component = val;
-            break;
+    let attempts = 0;
+    while (attempts < 3) {
+      try {
+        const module = await componentImport();
+        let component = module.default;
+        if (!component) {
+          const keys = Object.keys(module || {});
+          for (const key of keys) {
+            const val = module[key];
+            if (typeof val === 'function' || (typeof val === 'object' && val !== null && (val.$$typeof || val.render))) {
+              component = val;
+              break;
+            }
+          }
+          if (!component && keys.length > 0) {
+            component = module[keys[0]];
           }
         }
-        if (!component && keys.length > 0) {
-          component = module[keys[0]];
+        if (component) {
+          return { default: component };
         }
-      }
-      if (!component) {
-        component = () => <div className="p-4 text-center text-amber-500 font-sans">Composant en cours de chargement...</div>;
-      }
-      return { default: component };
-    } catch (error) {
-      console.warn('Dynamic import chunk load error, retrying page reload...', error);
-      try {
-        const storageKey = 'lazy_retry_' + (window.location.hash || window.location.pathname);
-        const hasRetried = sessionStorage.getItem(storageKey);
-        if (!hasRetried) {
-          sessionStorage.setItem(storageKey, 'true');
-          window.location.reload();
-          return new Promise(() => {});
+      } catch (err) {
+        attempts++;
+        if (attempts >= 3) {
+          console.error("Dynamic import failed after 3 attempts:", err);
+          break;
         }
-        sessionStorage.removeItem(storageKey);
-      } catch (e) {
-        // sessionStorage restricted in WebView
+        await new Promise((r) => setTimeout(r, 400 * attempts));
       }
-      return { default: () => <div className="p-4 text-center text-red-500 font-sans">Échec du chargement de la page.</div> };
     }
+
+    const FallbackErrorPage: React.FC = () => (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] p-6 text-center space-y-4">
+        <div className="w-14 h-14 rounded-2xl bg-amber-500/10 dark:bg-amber-500/20 flex items-center justify-center text-amber-500">
+          <RefreshCw className="w-7 h-7" />
+        </div>
+        <div className="space-y-1 max-w-sm">
+          <h3 className="text-base font-bold text-gray-900 dark:text-white">Chargement de la page</h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            Une mise à jour ou interruption réseau temporaire s'est produite.
+          </p>
+        </div>
+        <button
+          onClick={() => window.location.reload()}
+          className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold rounded-xl text-xs transition-all shadow-lg shadow-emerald-600/20 flex items-center gap-2 cursor-pointer"
+        >
+          <RefreshCw className="w-4 h-4" />
+          <span>Réessayer l'accès</span>
+        </button>
+      </div>
+    );
+
+    return { default: FallbackErrorPage };
   });
 }
 

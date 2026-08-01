@@ -21,32 +21,42 @@ export const FeatureProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     if (data.textSizeBody && Number(data.textSizeBody) >= 10 && Number(data.textSizeBody) <= 50) {
       root.style.setProperty('--app-body-font-size', `${data.textSizeBody}px`);
+      root.classList.add('has-custom-body-size');
     } else {
       root.style.removeProperty('--app-body-font-size');
+      root.classList.remove('has-custom-body-size');
     }
 
     if (data.textSizeArticleTitle && Number(data.textSizeArticleTitle) >= 10 && Number(data.textSizeArticleTitle) <= 50) {
       root.style.setProperty('--app-article-title-font-size', `${data.textSizeArticleTitle}px`);
+      root.classList.add('has-custom-article-title-size');
     } else {
       root.style.removeProperty('--app-article-title-font-size');
+      root.classList.remove('has-custom-article-title-size');
     }
 
     if (data.textSizeToolTitle && Number(data.textSizeToolTitle) >= 10 && Number(data.textSizeToolTitle) <= 50) {
       root.style.setProperty('--app-tool-title-font-size', `${data.textSizeToolTitle}px`);
+      root.classList.add('has-custom-tool-title-size');
     } else {
       root.style.removeProperty('--app-tool-title-font-size');
+      root.classList.remove('has-custom-tool-title-size');
     }
 
     if (data.textSizeCardTitle && Number(data.textSizeCardTitle) >= 10 && Number(data.textSizeCardTitle) <= 50) {
       root.style.setProperty('--app-card-title-font-size', `${data.textSizeCardTitle}px`);
+      root.classList.add('has-custom-card-title-size');
     } else {
       root.style.removeProperty('--app-card-title-font-size');
+      root.classList.remove('has-custom-card-title-size');
     }
 
     if (data.cardPadding && Number(data.cardPadding) >= 10 && Number(data.cardPadding) <= 50) {
       root.style.setProperty('--app-card-padding', `${data.cardPadding}px`);
+      root.classList.add('has-custom-card-padding');
     } else {
       root.style.removeProperty('--app-card-padding');
+      root.classList.remove('has-custom-card-padding');
     }
   };
 

@@ -2,6 +2,8 @@ import { initializeApp } from 'firebase/app';
 import { getStorage } from 'firebase/storage';
 import { 
   getAuth, 
+  setPersistence,
+  browserLocalPersistence,
   GoogleAuthProvider, 
   signInWithPopup, 
   signOut as firebaseSignOut, 
@@ -32,10 +34,16 @@ import {
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 import { isDisposableEmail, normalizeEmail, normalizePhone, validateRegistrationDetails } from './validationUtils';
+import { getTrialDurationHours } from '../utils/trialConfig';
 
 export const app = initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
+if (typeof window !== 'undefined') {
+  setPersistence(auth, browserLocalPersistence).catch((err) => {
+    console.warn('[Auth Persistence] Failed to set browserLocalPersistence:', err);
+  });
+}
 export const storage = getStorage(app);
 
 // Initialize Firestore safely with offline persistence:
@@ -127,7 +135,8 @@ export const signInWithGoogle = async () => {
         }
 
         const now = new Date();
-        const trialExpiry = new Date(now.getTime() + 12 * 60 * 60 * 1000);
+        const trialHours = getTrialDurationHours();
+        const trialExpiry = new Date(now.getTime() + trialHours * 60 * 60 * 1000);
         await setDoc(userRef, {
           email: user.email,
           normalizedEmail: normEmail,
@@ -163,10 +172,14 @@ export const signUpWithEmail = async (email: string, password: string, name: str
   const result = await createUserWithEmailAndPassword(auth, email, password);
   
   if (result.user) {
-    await updateProfile(result.user, { displayName: name });
-    
+    // ⚡ Trigger verification email INSTANTLY without blocking UI or doc creation
+    sendVerificationEmail(result.user).catch((e) => {
+      console.warn("Instant email verification trigger notification:", e);
+    });
+
     const now = new Date();
-    const trialExpiry = new Date(now.getTime() + 12 * 60 * 60 * 1000);
+    const trialHours = getTrialDurationHours();
+    const trialExpiry = new Date(now.getTime() + trialHours * 60 * 60 * 1000);
 
     const normEmail = normalizeEmail(result.user.email || email);
     const normPhone = normalizePhone(phone || '');
@@ -192,6 +205,8 @@ export const signUpWithEmail = async (email: string, password: string, name: str
       premiumUntil: trialExpiry.toISOString(),
       hasSeenTrialPopup: false
     });
+
+    updateProfile(result.user, { displayName: name }).catch(() => {});
   }
   
   return result;

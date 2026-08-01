@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth, handleFirestoreError, OperationType } from '../../contexts/AuthContext';
 import { PremiumBadge } from '../../components/PremiumBadge';
+import { Premium12hCountdownWidget } from '../../components/Premium12hCountdownWidget';
 import { AuthModal } from '../../components/AuthModal';
 import { PremiumWrapper } from '../../components/PremiumWrapper';
 import { signOut, db, auth } from '../../lib/firebase';
@@ -742,7 +743,7 @@ export const UserProfile: React.FC = () => {
     } finally {
       localStorage.removeItem('asrarhub_local_user');
       localStorage.removeItem('asrarhub_session_id');
-      window.location.href = '/';
+      navigate('/', { replace: true });
     }
   };
 
@@ -939,6 +940,8 @@ export const UserProfile: React.FC = () => {
         accept="image/*" 
         className="hidden" 
       />
+
+      <Premium12hCountdownWidget className="mb-6" />
 
       <GamificationBadges />
 
@@ -1519,6 +1522,10 @@ export const UserProfile: React.FC = () => {
         title="Abonnement & Achats"
         icon={<Shield className="text-emerald-500" size={20} />}
       >
+        <div className="mb-6">
+          <Premium12hCountdownWidget compact={false} />
+        </div>
+
         {user?.subscriptionTier === 'premium' || user?.subscriptionTier === 'pro' ? (
           <div className="mb-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between border border-gray-100 dark:border-gray-700 rounded-2xl p-4 bg-gray-50 dark:bg-gray-800/50 gap-4 mb-4">

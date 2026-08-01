@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLanguage } from '../contexts/LanguageContext';
-import { X, Mail, Lock, User as UserIcon, AlertCircle, Eye, EyeOff, KeyRound, CheckCircle, Globe, Phone, Search, ExternalLink, Sparkles, ShieldAlert } from 'lucide-react';
+import { X, Mail, Lock, User as UserIcon, AlertCircle, Eye, EyeOff, KeyRound, CheckCircle, Globe, Phone, Search, ExternalLink, Sparkles, ShieldAlert, Zap } from 'lucide-react';
 import { signInWithGoogle, signInWithEmail, signUpWithEmail, sendVerificationEmail, auth, db, signOut } from '../lib/firebase';
 import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
 import { useAuth, setLocalUserSession } from '../contexts/AuthContext';
@@ -225,6 +225,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
   const [name, setName] = useState('');
   const [country, setCountry] = useState('');
   const [phone, setPhone] = useState('');
+  const [emailFieldError, setEmailFieldError] = useState('');
+  const [phoneFieldError, setPhoneFieldError] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [verificationSent, setVerificationSent] = useState(false);
@@ -285,6 +287,47 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
       };
     }
   }, [isOpen]);
+
+  // Real-time verification when typing email or phone in registration mode
+  React.useEffect(() => {
+    if (isLogin) {
+      setEmailFieldError('');
+      setPhoneFieldError('');
+      return;
+    }
+
+    // 1. Instant check for disposable / temporary email
+    if (email && isDisposableEmail(email)) {
+      setEmailFieldError(t('auth.disposableEmailError', 'Les adresses email temporaires ou jetables (temp mail) ne sont pas autorisées.'));
+    }
+
+    // 2. Debounced check against existing phone and email aliases in DB and local sessions
+    const timer = setTimeout(async () => {
+      let currentEmailErr = '';
+      let currentPhoneErr = '';
+
+      if (email && isDisposableEmail(email)) {
+        currentEmailErr = t('auth.disposableEmailError', 'Les adresses email temporaires ou jetables (temp mail) ne sont pas autorisées.');
+      }
+
+      if ((email && !currentEmailErr) || phone) {
+        const val = await validateRegistrationDetails(email || '', phone || '', db);
+        if (!val.valid && val.error) {
+          if (val.error.includes('email') || val.error.includes('mail') || val.error.includes('alias')) {
+            currentEmailErr = val.error;
+          }
+          if (val.error.includes('téléphone') || val.error.includes('numéro') || val.error.includes('Phone')) {
+            currentPhoneErr = val.error;
+          }
+        }
+      }
+
+      setEmailFieldError(currentEmailErr);
+      setPhoneFieldError(currentPhoneErr);
+    }, 450);
+
+    return () => clearTimeout(timer);
+  }, [email, phone, isLogin, t]);
 
   const handleLocalFallback = async () => {
     const targetEmail = email || 'utilisateur@asrarhub.com';
@@ -379,11 +422,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
 
         result = await signUpWithEmail(email, password, name, country, phone);
         if (result?.user) {
-          try {
-            await sendVerificationEmail(result.user);
-          } catch (verifyErr) {
-            console.warn("Could not send verification email:", verifyErr);
-          }
+          // sendVerificationEmail is already dispatched instantly inside signUpWithEmail
           setVerificationSent(true);
           setLoading(false);
           return;
@@ -598,7 +637,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
                       ))
                     ) : (
                       <div className="text-center py-8 text-gray-400 text-sm">
-                        Aucun pays trouvé
+                        {t('auth.noCountryFound', 'Aucun pays trouvé')}
                       </div>
                     )}
                   </div>
@@ -669,7 +708,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
                         onChange={(e) => setEmail(e.target.value)}
                         required
                         className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all text-gray-900 dark:text-white"
-                        placeholder="votre@email.com"
+                        placeholder={t('auth.emailPlaceholder', 'votre@email.com')}
                       />
                     </div>
                   </div>
@@ -701,12 +740,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
                     <Mail size={32} />
                   </div>
 
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-500/15 border border-emerald-500/30 rounded-full text-emerald-700 dark:text-emerald-300 text-xs font-bold">
+                    <Zap size={13} className="text-emerald-500 animate-pulse" />
+                    <span>⚡ Email d'activation envoyé instantanément</span>
+                  </div>
+
                   <h3 className="text-xl font-bold text-gray-900 dark:text-white">
                     {t('auth.verifyEmailTitle', 'Vérification de votre email requise')}
                   </h3>
 
                   <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed max-w-sm mx-auto">
-                    {t('auth.verifyEmailDesc', 'Un email de vérification avec un lien d\'activation a été envoyé à')} <span className="font-bold text-emerald-600 dark:text-emerald-400">{email || 'votre adresse email'}</span>. {t('auth.verifyEmailAction', 'Vous devez impérativement cliquer sur ce lien pour activer votre compte.')}
+                    {t('auth.verifyEmailDesc', 'Un email de vérification avec un lien d\'activation instantané a été transmis à')} <span className="font-bold text-emerald-600 dark:text-emerald-400">{email || t('auth.yourEmailAddress', 'votre adresse email')}</span>. {t('auth.verifyEmailAction', 'Vous devez impérativement cliquer sur ce lien pour activer votre compte.')}
                   </p>
 
                   <div className="p-4 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700/60 rounded-2xl flex items-start gap-3 text-left text-xs text-amber-900 dark:text-amber-200 shadow-sm">
@@ -735,7 +779,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
                       className="w-full py-2.5 px-4 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/30 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                     >
                       <Mail size={15} />
-                      {resendLoading ? t('auth.loading', 'Envoi en cours...') : 'Renvoyer l\'email de vérification (Vérifier SPAM)'}
+                      {resendLoading ? t('auth.sending', 'Envoi en cours...') : t('auth.resendVerificationEmail', "Renvoyer l'email de vérification (Vérifier SPAM)")}
                     </button>
 
                     <button
@@ -746,7 +790,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
                       }}
                       className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-sm transition-colors shadow-md cursor-pointer"
                     >
-                      {t('auth.backToLogin', 'J\'ai vérifié mon email / Se connecter')}
+                      {t('auth.verifiedBackToLogin', "J'ai vérifié mon email / Se connecter")}
                     </button>
                   </div>
                 </div>
@@ -834,17 +878,30 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
                           </label>
                           <div className="relative">
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                              <Phone size={18} />
+                              <Phone size={18} className={phoneFieldError ? 'text-red-500' : ''} />
                             </div>
                             <input
                               type="text"
                               value={phone}
-                              onChange={(e) => setPhone(e.target.value)}
+                              onChange={(e) => {
+                                setPhone(e.target.value);
+                                if (phoneFieldError) setPhoneFieldError('');
+                              }}
                               required
-                              className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all text-gray-900 dark:text-white"
+                              className={`w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-800 border ${
+                                phoneFieldError
+                                  ? 'border-red-500 ring-2 ring-red-500/30 text-red-600 dark:text-red-400 bg-red-50/50 dark:bg-red-950/20'
+                                  : 'border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-white'
+                              } rounded-xl focus:border-transparent outline-none transition-all`}
                               placeholder={t('auth.phonePlaceholder', 'Ex: +221 77 123 45 67')}
                             />
                           </div>
+                          {phoneFieldError && (
+                            <p className="text-xs text-red-500 dark:text-red-400 mt-1.5 flex items-start gap-1 font-medium leading-tight">
+                              <AlertCircle size={14} className="shrink-0 mt-0.5" />
+                              <span>{phoneFieldError}</span>
+                            </p>
+                          )}
                         </div>
                       </>
                     )}
@@ -855,17 +912,30 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
                       </label>
                       <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                          <Mail size={18} />
+                          <Mail size={18} className={emailFieldError ? 'text-red-500' : ''} />
                         </div>
                         <input
                           type="email"
                           value={email}
-                          onChange={(e) => setEmail(e.target.value)}
+                          onChange={(e) => {
+                            setEmail(e.target.value);
+                            if (emailFieldError) setEmailFieldError('');
+                          }}
                           required
-                          className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all text-gray-900 dark:text-white"
-                          placeholder="votre@email.com"
+                          className={`w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-800 border ${
+                            emailFieldError
+                              ? 'border-red-500 ring-2 ring-red-500/30 text-red-600 dark:text-red-400 bg-red-50/50 dark:bg-red-950/20'
+                              : 'border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-white'
+                          } rounded-xl focus:border-transparent outline-none transition-all`}
+                          placeholder={t('auth.emailPlaceholder', 'votre@email.com')}
                         />
                       </div>
+                      {emailFieldError && (
+                        <p className="text-xs text-red-500 dark:text-red-400 mt-1.5 flex items-start gap-1 font-medium leading-tight">
+                          <AlertCircle size={14} className="shrink-0 mt-0.5" />
+                          <span>{emailFieldError}</span>
+                        </p>
+                      )}
                     </div>
 
                     <div>

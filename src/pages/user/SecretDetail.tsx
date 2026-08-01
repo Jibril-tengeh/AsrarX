@@ -1329,7 +1329,8 @@ export const SecretDetail: React.FC = () => {
               </div>
             )}
             <h1
-              className={`font-extrabold leading-tight transition-colors text-center sm:text-left w-full ${
+              data-article-title="true"
+              className={`font-extrabold leading-tight transition-colors text-center sm:text-left w-full article-title-custom article-detail-title ${
                 readingMode
                   ? "text-2xl sm:text-3xl md:text-4xl text-[#4a3f35] dark:text-[#d4c39c] font-arabic"
                   : "text-xl sm:text-2xl md:text-3xl text-gray-900 dark:text-white"

@@ -6,7 +6,7 @@ import {
   Settings, Users, BarChart3, Database, Shield, LayoutDashboard, 
   Book, BookOpen, ToggleLeft, Volume2, Headphones, Save, Search, Plus, Trash2, Edit2, FileText,
   Eye, Image as ImageIcon, Crop as CropIcon, X, Upload, ShoppingBag, CreditCard,
-  Clock, CheckCircle, XCircle, Globe, Grid, List, Mail, Phone, Lock, Bell, BellOff, Sparkles, Star, Share, ShieldAlert, Download, DownloadCloud, Crown,
+  Clock, CheckCircle, XCircle, Globe, Grid, List, Mail, Phone, Lock, Unlock, Bell, BellOff, Sparkles, Star, Share, ShieldAlert, Download, DownloadCloud, Crown,
   FolderOpen, Copy, Radio, Type, Sliders, Maximize2, Activity, Terminal, RefreshCw, Moon, ChevronDown, ChevronUp
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
@@ -437,6 +437,7 @@ export const AdminDashboard: React.FC = () => {
   // Community State
   const [communityPosts, setCommunityPosts] = useState<CommunityPost[]>([]);
   const [codeSharingEnabled, setCodeSharingEnabled] = useState(true);
+  const [messageEditDeleteLimitMinutes, setMessageEditDeleteLimitMinutes] = useState<number>(4320);
 
   // Features State
   const [featureToggles, setFeatureToggles] = useState<any>({});
@@ -598,57 +599,14 @@ export const AdminDashboard: React.FC = () => {
     };
     seedOathsIfNeeded();
     
-    const DEFAULT_MEMBERS: User[] = [
-      {
-        id: 'user_admin_owner',
-        name: 'El-Hadj Jibril (Admin)',
-        email: 'jibriltengeh57@gmail.com',
-        photoURL: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-        country: 'Sénégal 🇸🇳',
-        phone: '+221 77 123 45 67',
-        password: '•••••••• (Sécurisé Hash)',
-        pushNotificationsEnabled: true,
-        isBanned: false,
-        mysteryToolsDisabled: false,
-        isTrusted: true,
-        blockedTools: []
-      },
-      {
-        id: 'user_sbireino',
-        name: 'S. Bireino',
-        email: 'sbireino@gmail.com',
-        photoURL: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-        country: 'Côte d\'Ivoire 🇨🇮',
-        phone: '+225 07 89 12 34',
-        password: '•••••••• (Sécurisé Hash)',
-        pushNotificationsEnabled: true,
-        isBanned: false,
-        mysteryToolsDisabled: false,
-        isTrusted: true,
-        blockedTools: []
-      },
-      {
-        id: 'user_ibrahima',
-        name: 'Ibrahima Sow',
-        email: 'ibrahima.sow@asrarhub.com',
-        photoURL: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
-        country: 'Mali 🇲🇱',
-        phone: '+223 66 54 32 10',
-        password: '•••••••• (Sécurisé Hash)',
-        pushNotificationsEnabled: true,
-        isBanned: false,
-        mysteryToolsDisabled: false,
-        isTrusted: true,
-        blockedTools: []
-      }
-    ];
+    const DEFAULT_MEMBERS: User[] = [];
 
     const normalizeUser = (u: any): User => {
       const email = u.email || 'utilisateur@asrarhub.com';
       const name = (u.name && u.name !== 'Sans Nom') ? u.name : (email ? email.split('@')[0] : 'Membre AsrarHub');
       const photoURL = u.photoURL || u.avatar || u.picture || u.profileImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name || email)}`;
-      const country = (u.country || u.location || u.region) && u.country !== 'Non renseigné' ? (u.country || u.location || u.region) : (email === 'sbireino@gmail.com' ? 'Côte d\'Ivoire 🇨🇮' : 'Sénégal 🇸🇳');
-      const phone = (u.phone || u.phoneNumber || u.tel) && u.phone !== 'Non renseigné' && u.phoneNumber !== 'Non renseigné' ? (u.phone || u.phoneNumber || u.tel) : '+221 77 890 12 34';
+      const country = (u.country || u.location || u.region) ? (u.country || u.location || u.region) : 'Non renseigné';
+      const phone = (u.phone || u.phoneNumber || u.tel) ? (u.phone || u.phoneNumber || u.tel) : 'Non renseigné';
       const password_hash_indicator = u.password_hash_indicator || u.passwordHash || (u.password && u.password !== 'Non enregistré / Google' ? u.password : '•••••••• (Sécurisé Hash)');
       const password = password_hash_indicator;
       const pushNotificationsEnabled = u.pushNotificationsEnabled !== undefined ? u.pushNotificationsEnabled : (u.pushNotificationStatus === 'disabled' || u.pushNotificationStatus === false ? false : true);
@@ -876,7 +834,11 @@ export const AdminDashboard: React.FC = () => {
 
     const unsubscribeCommunitySettings = onSnapshot(doc(db, "community_settings", "global"), (snap) => {
       if (snap.exists()) {
-        setCodeSharingEnabled(snap.data().codeSharingEnabled !== false);
+        const data = snap.data();
+        setCodeSharingEnabled(data.codeSharingEnabled !== false);
+        if (data.messageEditDeleteLimitMinutes !== undefined) {
+          setMessageEditDeleteLimitMinutes(Number(data.messageEditDeleteLimitMinutes));
+        }
       }
     }, (error) => console.warn("Admin Community Settings listener note:", error));
 
@@ -912,6 +874,18 @@ export const AdminDashboard: React.FC = () => {
       showToast("Paramètre de partage de code mis à jour !");
     } catch (err) {
       console.error("Error setting code sharing settings:", err);
+      showToast("Erreur lors de la mise à jour.");
+    }
+  };
+
+  const handleChangeMessageEditDeleteLimit = async (minutes: number) => {
+    try {
+      await setDoc(doc(db, "community_settings", "global"), {
+        messageEditDeleteLimitMinutes: minutes
+      }, { merge: true });
+      showToast("Délais de modification/suppression des messages mis à jour !");
+    } catch (err) {
+      console.error("Error setting message edit/delete limit:", err);
       showToast("Erreur lors de la mise à jour.");
     }
   };
@@ -1861,12 +1835,12 @@ export const AdminDashboard: React.FC = () => {
                       
                       <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 min-w-0">
                         <Globe size={14} className="shrink-0 text-emerald-500" />
-                        <span className="truncate"><strong>Pays :</strong> <span className="font-semibold text-gray-900 dark:text-gray-100">{user.country || 'Sénégal 🇸🇳'}</span></span>
+                        <span className="truncate"><strong>Pays :</strong> <span className="font-semibold text-gray-900 dark:text-gray-100">{user.country || 'Non renseigné'}</span></span>
                       </div>
 
                       <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 min-w-0">
                         <Phone size={14} className="shrink-0 text-emerald-500" />
-                        <span className="truncate"><strong>Téléphone :</strong> <span className="font-semibold text-gray-900 dark:text-gray-100">{user.phone || '+221 77 000 00 00'}</span></span>
+                        <span className="truncate"><strong>Téléphone :</strong> <span className="font-semibold text-gray-900 dark:text-gray-100">{user.phone || 'Non renseigné'}</span></span>
                       </div>
 
                       <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 min-w-0">
@@ -3938,6 +3912,36 @@ export const AdminDashboard: React.FC = () => {
         </div>
       </div>
 
+      {/* Message Edit & Delete Delay Setting */}
+      <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 text-sm">
+            ⏱️ Délais d'édition et de suppression des messages (Auteurs)
+          </h4>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            Définir la durée durant laquelle un utilisateur peut modifier ou supprimer ses propres messages (de 20 min à 7 jours ou illimité). Les administrateurs gardent un accès permanent.
+          </p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <select
+            value={messageEditDeleteLimitMinutes}
+            onChange={(e) => handleChangeMessageEditDeleteLimit(Number(e.target.value))}
+            className="text-xs font-bold px-3 py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer text-gray-900 dark:text-white"
+          >
+            <option value={20}>20 minutes</option>
+            <option value={60}>1 heure</option>
+            <option value={120}>2 heures</option>
+            <option value={360}>6 heures</option>
+            <option value={720}>12 heures</option>
+            <option value={1440}>24 heures (1 jour)</option>
+            <option value={2880}>48 heures (2 jours)</option>
+            <option value={4320}>72 heures (3 jours - Par défaut)</option>
+            <option value={10080}>7 jours</option>
+            <option value={-1}>♾️ Illimité (Aucune limite)</option>
+          </select>
+        </div>
+      </div>
+
       <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
         <h3 className="font-bold text-gray-900 dark:text-white mb-6">Modération de la Communauté</h3>
         <div className="space-y-4">
@@ -4531,6 +4535,71 @@ export const AdminDashboard: React.FC = () => {
         <h3 className="font-bold text-gray-900 dark:text-white mb-6">Paramètres Globaux</h3>
         
         <div className="space-y-4 mb-8">
+          {/* Admin Configurable Premium Free Trial Duration */}
+          <CollapsibleAdminCard
+            id="set_trial_duration"
+            title="Durée de l'Essai Premium Temporaire (en Heures)"
+            description="Définissez le nombre d'heures d'essai Premium offert automatiquement aux utilisateurs (affiché avec le compte à rebours sur leur profil)."
+            icon={<Clock size={18} className="text-amber-500 shrink-0" />}
+          >
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <span className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                  Durée actuelle configurée :
+                </span>
+                <span className="text-sm font-extrabold text-amber-900 dark:text-amber-200 bg-amber-500/10 border border-amber-500/20 px-3.5 py-1.5 rounded-xl flex items-center gap-1.5">
+                  <Sparkles size={14} className="text-amber-500" />
+                  <span>{featureToggles['trial_duration_hours'] !== undefined ? featureToggles['trial_duration_hours'] : 12} Heures d'essai</span>
+                </span>
+              </div>
+              
+              <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-amber-500/15">
+                <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 w-full sm:w-auto">
+                  Préréglages rapides :
+                </label>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {[6, 12, 24, 48, 72, 168].map(h => {
+                    const active = (featureToggles['trial_duration_hours'] !== undefined ? Number(featureToggles['trial_duration_hours']) : 12) === h;
+                    return (
+                      <button
+                        key={h}
+                        type="button"
+                        onClick={() => handleToggleFeature('trial_duration_hours', h)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          active
+                            ? 'bg-amber-500 text-white shadow-sm shadow-amber-500/30'
+                            : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                        }`}
+                      >
+                        {h >= 24 ? `${h / 24}j (${h}h)` : `${h}h`}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 pt-2">
+                <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 shrink-0">
+                  Personnalisé (Heures) :
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="8760"
+                  value={featureToggles['trial_duration_hours'] !== undefined ? featureToggles['trial_duration_hours'] : 12}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value, 10);
+                    if (!isNaN(val) && val > 0) {
+                      handleToggleFeature('trial_duration_hours', val);
+                    }
+                  }}
+                  className="w-24 px-3 py-1.5 bg-white dark:bg-gray-800 border border-amber-500/30 rounded-xl text-xs font-bold text-center text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                />
+                <span className="text-xs text-gray-500 dark:text-gray-400">heures (ex: 12 = 12h, 24 = 1 jour, 48 = 2 jours)</span>
+              </div>
+            </div>
+          </CollapsibleAdminCard>
+
           {/* Hijri Calendar Date Adjustment */}
           <CollapsibleAdminCard
             id="set_hijri"
@@ -5473,7 +5542,9 @@ export const AdminDashboard: React.FC = () => {
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
+                  disabled={!!featureToggles['lockFontSettings']}
                   onClick={() => {
+                    if (featureToggles['lockFontSettings']) return;
                     handleToggleFeature('textSizeBody', 12);
                     handleToggleFeature('textSizeArticleTitle', 20);
                     handleToggleFeature('textSizeToolTitle', 18);
@@ -5481,13 +5552,19 @@ export const AdminDashboard: React.FC = () => {
                     handleToggleFeature('cardPadding', 12);
                     showToast("Preset Compact appliqué !");
                   }}
-                  className="px-2.5 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-emerald-50 text-xs font-bold text-gray-700 dark:text-gray-200 rounded-xl transition-all cursor-pointer shadow-xs"
+                  className={`px-2.5 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-700 dark:text-gray-200 rounded-xl transition-all shadow-xs ${
+                    featureToggles['lockFontSettings']
+                      ? "opacity-50 cursor-not-allowed"
+                      : "hover:bg-emerald-50 cursor-pointer"
+                  }`}
                 >
                   🔍 Compact
                 </button>
                 <button
                   type="button"
+                  disabled={!!featureToggles['lockFontSettings']}
                   onClick={() => {
+                    if (featureToggles['lockFontSettings']) return;
                     handleToggleFeature('textSizeBody', 15);
                     handleToggleFeature('textSizeArticleTitle', 24);
                     handleToggleFeature('textSizeToolTitle', 22);
@@ -5495,13 +5572,19 @@ export const AdminDashboard: React.FC = () => {
                     handleToggleFeature('cardPadding', 16);
                     showToast("Preset Standard appliqué !");
                   }}
-                  className="px-2.5 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-emerald-50 text-xs font-bold text-gray-700 dark:text-gray-200 rounded-xl transition-all cursor-pointer shadow-xs"
+                  className={`px-2.5 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-700 dark:text-gray-200 rounded-xl transition-all shadow-xs ${
+                    featureToggles['lockFontSettings']
+                      ? "opacity-50 cursor-not-allowed"
+                      : "hover:bg-emerald-50 cursor-pointer"
+                  }`}
                 >
                   📱 Standard
                 </button>
                 <button
                   type="button"
+                  disabled={!!featureToggles['lockFontSettings']}
                   onClick={() => {
+                    if (featureToggles['lockFontSettings']) return;
                     handleToggleFeature('textSizeBody', 18);
                     handleToggleFeature('textSizeArticleTitle', 28);
                     handleToggleFeature('textSizeToolTitle', 26);
@@ -5509,13 +5592,19 @@ export const AdminDashboard: React.FC = () => {
                     handleToggleFeature('cardPadding', 20);
                     showToast("Preset Grand appliqué !");
                   }}
-                  className="px-2.5 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-emerald-50 text-xs font-bold text-gray-700 dark:text-gray-200 rounded-xl transition-all cursor-pointer shadow-xs"
+                  className={`px-2.5 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-700 dark:text-gray-200 rounded-xl transition-all shadow-xs ${
+                    featureToggles['lockFontSettings']
+                      ? "opacity-50 cursor-not-allowed"
+                      : "hover:bg-emerald-50 cursor-pointer"
+                  }`}
                 >
                   🖥️ Grand
                 </button>
                 <button
                   type="button"
+                  disabled={!!featureToggles['lockFontSettings']}
                   onClick={() => {
+                    if (featureToggles['lockFontSettings']) return;
                     handleToggleFeature('textSizeBody', 22);
                     handleToggleFeature('textSizeArticleTitle', 36);
                     handleToggleFeature('textSizeToolTitle', 32);
@@ -5523,15 +5612,72 @@ export const AdminDashboard: React.FC = () => {
                     handleToggleFeature('cardPadding', 24);
                     showToast("Preset XL Accessibilité appliqué !");
                   }}
-                  className="px-2.5 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:bg-emerald-50 text-xs font-bold text-gray-700 dark:text-gray-200 rounded-xl transition-all cursor-pointer shadow-xs"
+                  className={`px-2.5 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-700 dark:text-gray-200 rounded-xl transition-all shadow-xs ${
+                    featureToggles['lockFontSettings']
+                      ? "opacity-50 cursor-not-allowed"
+                      : "hover:bg-emerald-50 cursor-pointer"
+                  }`}
                 >
                   🚀 XL
                 </button>
               </div>
             </div>
 
+            {/* Lock Security Switch Bar */}
+            <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-2xl border transition-all ${
+              featureToggles['lockFontSettings']
+                ? "bg-amber-500/10 dark:bg-amber-500/20 border-amber-300/80 dark:border-amber-700/60"
+                : "bg-emerald-500/10 dark:bg-emerald-500/20 border-emerald-300/80 dark:border-emerald-700/60"
+            }`}>
+              <div className="flex items-center gap-3">
+                <div className={`p-2.5 rounded-xl text-white shadow-xs ${
+                  featureToggles['lockFontSettings'] ? "bg-amber-600" : "bg-emerald-600"
+                }`}>
+                  {featureToggles['lockFontSettings'] ? <Lock size={20} /> : <Unlock size={20} />}
+                </div>
+                <div>
+                  <h5 className="text-xs font-black text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                    Verrouillage des Réglages de Taille ✋
+                    {featureToggles['lockFontSettings'] ? (
+                      <span className="bg-amber-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full uppercase shadow-xs">
+                        🔒 Verrouillé
+                      </span>
+                    ) : (
+                      <span className="bg-emerald-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full uppercase shadow-xs">
+                        🔓 Modifiable
+                      </span>
+                    )}
+                  </h5>
+                  <p className="text-[11px] text-gray-600 dark:text-gray-300 mt-0.5">
+                    {featureToggles['lockFontSettings']
+                      ? "Les curseurs et presets sont bloqués pour éviter tout changement accidentel."
+                      : "Activez le verrou pour sécuriser ces paramètres contre les fausses manœuvres."}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  const newState = !featureToggles['lockFontSettings'];
+                  handleToggleFeature('lockFontSettings', newState);
+                  showToast(newState ? "Réglages de polices VERROUILLÉS 🔒" : "Réglages de polices DÉVERROUILLÉS 🔓");
+                }}
+                className={`px-4 py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm ${
+                  featureToggles['lockFontSettings']
+                    ? "bg-amber-600 hover:bg-amber-700 text-white"
+                    : "bg-emerald-600 hover:bg-emerald-700 text-white"
+                }`}
+              >
+                {featureToggles['lockFontSettings'] ? <Unlock size={15} /> : <Lock size={15} />}
+                <span>{featureToggles['lockFontSettings'] ? "Déverrouiller" : "Verrouiller 🔒"}</span>
+              </button>
+            </div>
+
             {/* Sliders Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className={`grid grid-cols-1 md:grid-cols-2 gap-6 transition-all ${
+              featureToggles['lockFontSettings'] ? "opacity-60 pointer-events-none select-none" : ""
+            }`}>
               {/* 1. Body Text Size */}
               <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 space-y-2">
                 <div className="flex justify-between items-center">
@@ -5549,9 +5695,10 @@ export const AdminDashboard: React.FC = () => {
                   min={10}
                   max={50}
                   step={1}
+                  disabled={!!featureToggles['lockFontSettings']}
                   value={featureToggles['textSizeBody'] ?? 15}
                   onChange={(e) => handleToggleFeature('textSizeBody', Number(e.target.value))}
-                  className="w-full accent-emerald-600 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg"
+                  className="w-full accent-emerald-600 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg disabled:cursor-not-allowed"
                 />
                 <div className="flex justify-between text-[10px] text-gray-400 font-bold">
                   <span>10px</span>
@@ -5577,9 +5724,10 @@ export const AdminDashboard: React.FC = () => {
                   min={10}
                   max={50}
                   step={1}
+                  disabled={!!featureToggles['lockFontSettings']}
                   value={featureToggles['textSizeArticleTitle'] ?? 24}
                   onChange={(e) => handleToggleFeature('textSizeArticleTitle', Number(e.target.value))}
-                  className="w-full accent-blue-600 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg"
+                  className="w-full accent-blue-600 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg disabled:cursor-not-allowed"
                 />
                 <div className="flex justify-between text-[10px] text-gray-400 font-bold">
                   <span>10px</span>
@@ -5605,9 +5753,10 @@ export const AdminDashboard: React.FC = () => {
                   min={10}
                   max={50}
                   step={1}
+                  disabled={!!featureToggles['lockFontSettings']}
                   value={featureToggles['textSizeToolTitle'] ?? 22}
                   onChange={(e) => handleToggleFeature('textSizeToolTitle', Number(e.target.value))}
-                  className="w-full accent-amber-500 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg"
+                  className="w-full accent-amber-500 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg disabled:cursor-not-allowed"
                 />
                 <div className="flex justify-between text-[10px] text-gray-400 font-bold">
                   <span>10px</span>
@@ -5633,9 +5782,10 @@ export const AdminDashboard: React.FC = () => {
                   min={10}
                   max={50}
                   step={1}
+                  disabled={!!featureToggles['lockFontSettings']}
                   value={featureToggles['textSizeCardTitle'] ?? 18}
                   onChange={(e) => handleToggleFeature('textSizeCardTitle', Number(e.target.value))}
-                  className="w-full accent-purple-600 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg"
+                  className="w-full accent-purple-600 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg disabled:cursor-not-allowed"
                 />
                 <div className="flex justify-between text-[10px] text-gray-400 font-bold">
                   <span>10px</span>
@@ -5661,9 +5811,10 @@ export const AdminDashboard: React.FC = () => {
                   min={10}
                   max={50}
                   step={1}
+                  disabled={!!featureToggles['lockFontSettings']}
                   value={featureToggles['cardPadding'] ?? 16}
                   onChange={(e) => handleToggleFeature('cardPadding', Number(e.target.value))}
-                  className="w-full accent-teal-600 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg"
+                  className="w-full accent-teal-600 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg disabled:cursor-not-allowed"
                 />
                 <div className="flex justify-between text-[10px] text-gray-400 font-bold">
                   <span>10px</span>
@@ -5685,7 +5836,7 @@ export const AdminDashboard: React.FC = () => {
                   <span className="text-[10px] text-gray-400 block mb-0.5">Titre d'Article ({featureToggles['textSizeArticleTitle'] ?? 24}px) :</span>
                   <h2 
                     style={{ fontSize: `${featureToggles['textSizeArticleTitle'] ?? 24}px` }} 
-                    className="font-extrabold text-gray-900 dark:text-white transition-all leading-tight"
+                    className="font-extrabold text-gray-900 dark:text-white transition-all leading-tight article-title-custom"
                   >
                     📖 Les Secrets Spirituels du Zikr & de la Sagesse
                   </h2>
@@ -5696,7 +5847,7 @@ export const AdminDashboard: React.FC = () => {
                   <span className="text-[10px] text-gray-400 block mb-0.5">Titre d'Outil ({featureToggles['textSizeToolTitle'] ?? 22}px) :</span>
                   <h1 
                     style={{ fontSize: `${featureToggles['textSizeToolTitle'] ?? 22}px` }} 
-                    className="font-black text-emerald-700 dark:text-emerald-400 transition-all leading-tight"
+                    className="font-black text-emerald-700 dark:text-emerald-400 transition-all leading-tight tool-title-custom"
                   >
                     📿 Calculateur Abjad & Générateur de Khatim
                   </h1>
@@ -5705,20 +5856,20 @@ export const AdminDashboard: React.FC = () => {
                 {/* Card Container Preview */}
                 <div 
                   style={{ padding: `${featureToggles['cardPadding'] ?? 16}px` }}
-                  className="bg-emerald-50/50 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60 rounded-xl transition-all"
+                  className="bg-emerald-50/50 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60 rounded-xl transition-all custom-card-container"
                 >
                   <span className="text-[10px] text-gray-400 block mb-1">
                     Carte d'Outil (Padding: {featureToggles['cardPadding'] ?? 16}px) :
                   </span>
                   <h3 
                     style={{ fontSize: `${featureToggles['textSizeCardTitle'] ?? 18}px` }}
-                    className="font-extrabold text-gray-900 dark:text-white mb-1 transition-all"
+                    className="font-extrabold text-gray-900 dark:text-white mb-1 transition-all card-title-custom"
                   >
                     ⚡ Formule Sacrée #108
                   </h3>
                   <p 
                     style={{ fontSize: `${featureToggles['textSizeBody'] ?? 15}px` }}
-                    className="text-gray-600 dark:text-gray-300 transition-all"
+                    className="text-gray-600 dark:text-gray-300 transition-all custom-app-body"
                   >
                     Ceci est une illustration de la taille du texte du corps ({featureToggles['textSizeBody'] ?? 15}px) à l'intérieur de la carte.
                   </p>

@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { ToolInfoTooltip } from '../../../components/ToolInfoTooltip';
 import { motion, AnimatePresence } from 'motion/react';
+import { ShareToCommunityModal } from '../../../components/ShareToCommunityModal';
 
 // Simplified Abjad table mapping (Standard/Eastern)
 const abjadMashriqi: Record<string, number> = {
@@ -251,6 +252,7 @@ export const AbjadCalculator: React.FC = () => {
   const [history, setHistory] = useState<{ id: string; text: string; mashriqi: number; maghribi: number; timestamp: number }[]>([]);
   const [showHistory, setShowHistory] = useState(false);
   const [showAbjadInfoModal, setShowAbjadInfoModal] = useState(false);
+  const [isCommunityModalOpen, setIsCommunityModalOpen] = useState(false);
   const [isUsingCache, setIsUsingCache] = useState(true);
 
   // Load abjad state and history on mount
@@ -569,6 +571,28 @@ export const AbjadCalculator: React.FC = () => {
               </div>
             </div>
           </motion.div>
+
+          {totalMashriqi > 0 && (
+            <div className="flex justify-end pt-1">
+              <button
+                onClick={() => setIsCommunityModalOpen(true)}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs transition-all shadow-md shadow-emerald-600/20 cursor-pointer"
+              >
+                <Sparkles size={16} />
+                <span>Envoyer le Calcul dans la Communauté</span>
+              </button>
+            </div>
+          )}
+
+          {/* Share to Community Modal */}
+          <ShareToCommunityModal
+            isOpen={isCommunityModalOpen}
+            onClose={() => setIsCommunityModalOpen(false)}
+            title="Publier le Calcul Abjad dans la Communauté"
+            category="calcul"
+            itemTitle={`Calcul Abjad : "${text.slice(0, 40)}${text.length > 40 ? '...' : ''}"`}
+            detailsText={`Texte calculé : "${text}"\nTotal Abjad Orientale (Mashriqi) : ${totalMashriqi}\nTotal Abjad Occidentale (Maghribi) : ${totalMaghribi}\nNombre de mots : ${words} | Nombre de lettres : ${letterCount}\nÉléments : Feu ${elemental.fire}, Air ${elemental.air}, Eau ${elemental.water}, Terre ${elemental.earth}`}
+          />
 
           {/* Breakdown */}
           {details.length > 0 && (

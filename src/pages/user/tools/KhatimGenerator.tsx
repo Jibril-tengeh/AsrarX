@@ -12,6 +12,7 @@ import { jsPDF } from 'jspdf';
 
 import { downloadCanvasImage } from '../../../utils/downloadHelper';
 import { notifyDownloadStart, notifyDownloadSuccess, notifyDownloadError } from '../../../utils/downloadNotification';
+import { ShareToCommunityModal } from '../../../components/ShareToCommunityModal';
 
 export const KhatimGenerator: React.FC = () => {
   const { t } = useLanguage();
@@ -20,6 +21,7 @@ export const KhatimGenerator: React.FC = () => {
   const [grid, setGrid] = useState<number[][] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [calculatedTotal, setCalculatedTotal] = useState<number>(0);
+  const [isCommunityModalOpen, setIsCommunityModalOpen] = useState(false);
   const resultRef = useRef<HTMLDivElement>(null);
 
   const downloadImage = async () => {
@@ -536,16 +538,35 @@ export const KhatimGenerator: React.FC = () => {
                   <span className="text-[10px] text-zinc-400">Prêt pour l'impression A4</span>
                 </button>
               </div>
-              <div className="flex justify-end gap-3 mt-4 pt-4 border-t border-zinc-800/80">
+              <div className="flex flex-wrap items-center justify-end gap-3 mt-4 pt-4 border-t border-zinc-800/80">
                 <button 
                   onClick={shareResult}
-                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-purple-600 text-white hover:bg-purple-500 text-xs font-bold transition-all shadow-md cursor-pointer ml-auto"
+                  className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-purple-600/80 text-white hover:bg-purple-600 text-xs font-bold transition-all cursor-pointer"
                 >
                   <Share2 size={14} />
-                  <span>Partager le Khatim</span>
+                  <span>Partager (Lien)</span>
+                </button>
+                <button 
+                  onClick={() => setIsCommunityModalOpen(true)}
+                  className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black transition-all shadow-lg shadow-emerald-600/20 cursor-pointer"
+                >
+                  <Sparkles size={14} />
+                  <span>Envoyer dans la Communauté</span>
                 </button>
               </div>
             </div>
+
+            {/* Share to Community Modal */}
+            <ShareToCommunityModal
+              isOpen={isCommunityModalOpen}
+              onClose={() => setIsCommunityModalOpen(false)}
+              title="Publier le Khatim dans la Communauté"
+              category="khatim"
+              itemTitle={`Khatim ${gridSize}x${gridSize} - "${inputText || 'Poids ' + calculatedTotal}"`}
+              detailsText={`Poids Total (Somme Wafq) : ${calculatedTotal}\nGrille ${gridSize}x${gridSize} :\n${
+                grid ? grid.map((r) => r.join("\t|\t")).join("\n") : ""
+              }`}
+            />
 
             {/* Comprehensive Sacred Ritual & Usage Guide */}
             <KhatimUsageGuide defaultExpanded={true} className="w-full mt-4" />

@@ -225,13 +225,23 @@ export const Header: React.FC = () => {
           <div className="flex items-center gap-0.5 min-[375px]:gap-1.5 sm:gap-3">
             
             {featureToggles['tool_community'] !== 'inactive' && (
-              <div className="relative hidden sm:block" ref={communityMenuRef} id="tour-community">
+              <div
+                className="relative hidden sm:block"
+                ref={communityMenuRef}
+                id="tour-community"
+                onMouseEnter={() => setCommunityMenuOpen(true)}
+                onMouseLeave={() => setCommunityMenuOpen(false)}
+              >
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => setCommunityMenuOpen(!communityMenuOpen)}
+                  onClick={() => {
+                    setCommunityMenuOpen(false);
+                    navigate('/community?view=messages');
+                  }}
                   className="p-1 min-[375px]:p-1.5 sm:p-2 rounded-full hover:bg-emerald-700 dark:hover:bg-emerald-900 text-white transition-colors flex cursor-pointer relative"
                   aria-label="Community"
+                  title="Ouvrir la communauté (Discussions & Posts)"
                 >
                   <Users size={18} />
                 </motion.button>
@@ -457,9 +467,13 @@ export const Header: React.FC = () => {
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => setCommunityMenuOpen(!communityMenuOpen)}
+                  onClick={() => {
+                    setCommunityMenuOpen(false);
+                    navigate('/community?view=messages');
+                  }}
                   className="p-1 min-[375px]:p-1.5 sm:p-2 rounded-full hover:bg-emerald-700 dark:hover:bg-emerald-900 text-white transition-colors flex cursor-pointer relative"
                   aria-label="Community"
+                  title="Ouvrir la communauté (Discussions & Posts)"
                 >
                   <Users size={18} />
                 </motion.button>

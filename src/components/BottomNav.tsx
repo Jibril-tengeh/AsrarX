@@ -1,5 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
+import { motion } from 'motion/react';
 import { Home, Wrench, Compass, Bookmark, Book } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useFeatures } from '../contexts/FeatureContext';
@@ -25,7 +26,7 @@ export const BottomNav: React.FC = () => {
             to={item.to}
             id={item.id}
             className={({ isActive }) =>
-              `flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors ${
+              `flex flex-col items-center justify-center w-full h-full space-y-1 transition-colors group ${
                 isActive
                   ? 'text-white'
                   : 'text-emerald-100 hover:text-white dark:text-emerald-200 dark:hover:text-white'
@@ -34,8 +35,23 @@ export const BottomNav: React.FC = () => {
           >
             {({ isActive }) => (
               <>
-                <item.icon size={22} strokeWidth={isActive ? 2.5 : 2} />
-                <span className={`text-[9px] font-medium ${isActive ? 'font-semibold' : ''}`}>
+                <motion.div
+                  whileHover={{ scale: 1.2, rotate: isActive ? 0 : -8 }}
+                  whileTap={{ scale: 0.82, rotate: 15 }}
+                  animate={isActive ? { scale: 1.15, rotate: 0 } : { scale: 1, rotate: 0 }}
+                  transition={{ type: 'spring', stiffness: 450, damping: 18 }}
+                  className="relative flex items-center justify-center"
+                >
+                  <item.icon size={22} strokeWidth={isActive ? 2.5 : 2} />
+                  {isActive && (
+                    <motion.span
+                      layoutId="bottomNavActiveDot"
+                      className="absolute -bottom-1 w-1.5 h-1.5 rounded-full bg-white shadow-sm"
+                      transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                    />
+                  )}
+                </motion.div>
+                <span className={`text-[9px] font-medium transition-all duration-200 ${isActive ? 'font-bold scale-105' : 'group-hover:scale-105'}`}>
                   {item.label}
                 </span>
               </>

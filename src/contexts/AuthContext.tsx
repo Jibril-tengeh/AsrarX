@@ -3,6 +3,7 @@ import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { doc, getDoc, onSnapshot, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { auth, db, signOut } from '../lib/firebase';
 import { AsrarHubLoader } from '../components/AsrarHubLoader';
+import { getTrialDurationHours } from '../utils/trialConfig';
 
 const parseUserAgent = (ua: string) => {
   let os = 'Inconnu';
@@ -160,7 +161,8 @@ export const setLocalUserSession = (email: string, name?: string, country?: stri
   const role = isAdmin ? 'admin' : 'user';
   
   const now = new Date();
-  const trialExpiry = new Date(now.getTime() + 12 * 60 * 60 * 1000);
+  const trialHours = getTrialDurationHours();
+  const trialExpiry = new Date(now.getTime() + trialHours * 60 * 60 * 1000);
 
   const userData: UserData = {
     uid: 'local_' + Math.random().toString(36).substring(2, 10),
@@ -271,11 +273,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           lastActive: new Date().toISOString(),
           ip: 'Client Direct'
         }, { merge: true }).then(() => {
+          // Listen to session doc optional updates without triggering automatic forced signouts
           unsubscribeSession = onSnapshot(sessionRef, (sessSnap) => {
             if (!sessSnap.exists()) {
-              signOut().then(() => {
-                localStorage.removeItem('asrarhub_session_id');
-              });
+              // Session doc missing or removed, clean up local key without killing active Firebase auth state
+              localStorage.removeItem('asrarhub_session_id');
             }
           }, (err) => {
             console.warn("AuthContext sessions onSnapshot error (operating offline):", err);
@@ -358,7 +360,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             });
           } else {
             const now = new Date();
-            const trialExpiry = new Date(now.getTime() + 12 * 60 * 60 * 1000);
+            const trialHours = getTrialDurationHours();
+            const trialExpiry = new Date(now.getTime() + trialHours * 60 * 60 * 1000);
 
             setUser({
               uid: firebaseUser.uid,
@@ -402,10 +405,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
 
     const handleLocalUserChange = () => {
-      if (!auth.currentUser) {
-        const local = getLocalUser();
-        setUser(local);
-      }
+      const local = getLocalUser();
+      setUser(local);
+      setLoading(false);
     };
 
     window.addEventListener('storage', handleLocalUserChange);
@@ -427,7 +429,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const activate24hTrial = async () => {
     if (!user) return;
     const now = new Date();
-    const trialExpiry = new Date(now.getTime() + 12 * 60 * 60 * 1000);
+    const trialHours = getTrialDurationHours();
+    const trialExpiry = new Date(now.getTime() + trialHours * 60 * 60 * 1000);
 
     const updatedUser: UserData = {
       ...user,

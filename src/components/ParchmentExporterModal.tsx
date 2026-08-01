@@ -1,10 +1,11 @@
-import React, { useRef } from 'react';
-import { X, Printer, Download, Sparkles, Feather } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { X, Printer, Download, Sparkles, Feather, Users } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { toCanvas } from 'html-to-image';
 import { downloadCanvasImage } from '../utils/downloadHelper';
 import { useLanguage } from '../contexts/LanguageContext';
 import { AsrarHubWatermark } from './AsrarHubWatermark';
+import { ShareToCommunityModal } from './ShareToCommunityModal';
 
 interface ParchmentExporterModalProps {
   isOpen: boolean;
@@ -28,6 +29,7 @@ export const ParchmentExporterModal: React.FC<ParchmentExporterModalProps> = ({
   const { t } = useLanguage();
   const parchmentRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = React.useState(false);
+  const [isCommunityModalOpen, setIsCommunityModalOpen] = useState(false);
 
   if (!isOpen) return null;
 
@@ -90,6 +92,14 @@ export const ParchmentExporterModal: React.FC<ParchmentExporterModalProps> = ({
             </div>
             <div className="flex items-center gap-2">
               <button
+                onClick={() => setIsCommunityModalOpen(true)}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs transition-all shadow-md cursor-pointer"
+                title="Envoyer ce Parchemin directement dans la Communauté"
+              >
+                <Users className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Communauté</span>
+              </button>
+              <button
                 onClick={handlePrint}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-100 dark:bg-zinc-800 text-amber-900 dark:text-amber-200 hover:bg-amber-200 dark:hover:bg-zinc-700 text-xs font-medium transition-colors cursor-pointer"
               >
@@ -113,6 +123,18 @@ export const ParchmentExporterModal: React.FC<ParchmentExporterModalProps> = ({
                 <X className="w-5 h-5" />
               </button>
             </div>
+
+            {/* Share to Community Modal */}
+            <ShareToCommunityModal
+              isOpen={isCommunityModalOpen}
+              onClose={() => setIsCommunityModalOpen(false)}
+              title="Publier le Parchemin Sacré dans la Communauté"
+              category="parchemin"
+              itemTitle={title}
+              detailsText={`Titre du Parchemin : ${title}\n${subtitle ? 'Sous-titre : ' + subtitle + '\n' : ''}${
+                recipientName ? 'Destinataire : ' + recipientName + '\n' : ''
+              }${abjadWeight ? 'Poids Abjad (Zimām) : ' + abjadWeight + '\n' : ''}`}
+            />
           </div>
 
           {/* Renderable Parchment Canvas Container */}
