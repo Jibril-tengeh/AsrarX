@@ -192,7 +192,19 @@ export const DailyGoalsTracker: React.FC = () => {
       setSyncStatus('synced');
       setLoading(false);
     }, (error) => {
-      console.error("Error in daily goals listener:", error);
+      console.warn("Using local storage fallback for daily goals listener:", error?.message || error);
+      try {
+        const localGoals = localStorage.getItem('asrarhub_daily_goals');
+        const localReset = localStorage.getItem('asrarhub_daily_goals_last_reset');
+        if (localGoals) {
+          setGoals(JSON.parse(localGoals));
+        } else {
+          setGoals([...DEFAULT_GOALS]);
+        }
+        setLastReset(localReset || today);
+      } catch (e) {
+        setGoals([...DEFAULT_GOALS]);
+      }
       setSyncStatus('local');
       setLoading(false);
     });

@@ -40,6 +40,7 @@ import { db } from "../../lib/firebase";
 import { AuthModal } from '../../components/AuthModal';
 import { InteractiveLexiconText } from "../../components/InteractiveLexiconText";
 import { PremiumWrapper } from "../../components/PremiumWrapper";
+import { UnverifiedEmailGuard } from "../../components/UnverifiedEmailGuard";
 import { getApiUrl } from "../../lib/api";
 
 const AccordionSection: React.FC<{ title: string, htmlContent: string, readingMode: boolean, style?: React.CSSProperties }> = ({ title, htmlContent, readingMode, style }) => {
@@ -1151,6 +1152,13 @@ export const SecretDetail: React.FC = () => {
         <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
       </div>
     );
+  }
+
+  const adminEmails = ['jibriltengeh4@gmail.com', 'sbireino@gmail.com', 'tenibawwal10@gmail.com', 'jibriltengeh57@gmail.com'];
+  const isAdmin = user?.role === 'admin' || (user?.email && adminEmails.includes(user.email.toLowerCase()));
+
+  if (user && !user.emailVerified && !isAdmin) {
+    return <UnverifiedEmailGuard />;
   }
 
   if (!item || (item.isPremium && (authLoading || isCheckingPremium))) {

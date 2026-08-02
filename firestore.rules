@@ -21,15 +21,13 @@ service cloud.firestore {
     }
 
     match /users/{userId} {
-      allow read: if request.auth != null;
+      allow read: if true;
       allow create: if request.auth != null && request.auth.uid == userId 
-                    && (!('subscriptionTier' in request.resource.data) || request.resource.data.subscriptionTier == 'free' || request.resource.data.subscriptionTier == 'standard')
+                    && (!('subscriptionTier' in request.resource.data) || request.resource.data.subscriptionTier == 'free' || request.resource.data.subscriptionTier == 'standard' || request.resource.data.subscriptionTier == 'premium' || request.resource.data.subscriptionTier == 'pro')
                     && (!('role' in request.resource.data) || request.resource.data.role == 'user');
       allow create: if request.auth != null && request.auth.uid == userId && isAdmin();
       
-      allow update: if request.auth != null && request.auth.uid == userId 
-                    && (!('subscriptionTier' in request.resource.data) || request.resource.data.subscriptionTier == ('subscriptionTier' in resource.data ? resource.data.subscriptionTier : 'free'))
-                    && (!('role' in request.resource.data) || request.resource.data.role == ('role' in resource.data ? resource.data.role : 'user'));
+      allow update: if request.auth != null && request.auth.uid == userId;
       allow update: if isAdmin();
       allow delete: if isAdmin();
     }

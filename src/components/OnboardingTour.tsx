@@ -235,36 +235,39 @@ export const OnboardingTour: React.FC = () => {
   };
 
   const renderContent = () => (
-    <div className="p-5">
-      <div className="flex justify-between items-start mb-3">
+    <div className="p-5 relative overflow-hidden" style={{ transformStyle: 'preserve-3d' }}>
+      {/* 3D background lighting effect */}
+      <div className="absolute -top-12 -right-12 w-32 h-32 bg-emerald-500/10 dark:bg-emerald-500/20 rounded-full blur-2xl pointer-events-none" />
+
+      <div className="flex justify-between items-start mb-3 relative z-10" style={{ transform: 'translateZ(10px)' }}>
         <div className="flex items-center space-x-2">
-          <span className="flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 text-xs font-bold">
+          <span className="flex items-center justify-center w-7 h-7 rounded-xl bg-gradient-to-tr from-emerald-500 to-teal-400 text-white text-xs font-black shadow-md shadow-emerald-500/30 border border-white/20">
             {currentStepIndex + 1}
           </span>
-          <h3 className="text-sm font-bold text-gray-900 dark:text-white uppercase tracking-wider">
+          <h3 className="text-xs font-black text-emerald-600 dark:text-emerald-400 tracking-wider uppercase">
             GUIDE ASRARHUB
           </h3>
         </div>
         {!step.hideCloseButton && (
           <button
             onClick={handleEnd}
-            className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+            className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700/80 rounded-full transition-all cursor-pointer"
           >
             <X size={16} />
           </button>
         )}
       </div>
       
-      <div className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed mb-6 font-medium">
+      <div className="text-gray-700 dark:text-gray-200 text-sm leading-relaxed mb-6 font-medium relative z-10" style={{ transform: 'translateZ(15px)' }}>
         {step.content}
       </div>
 
-      <div className="flex items-center justify-between mt-2 pt-4 border-t border-gray-100 dark:border-gray-700">
+      <div className="flex items-center justify-between mt-2 pt-4 border-t border-gray-100 dark:border-gray-700/80 relative z-10" style={{ transform: 'translateZ(10px)' }}>
         <div>
           {currentStepIndex > 0 && (
             <button
               onClick={handleBack}
-              className="flex items-center text-sm font-semibold text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors"
+              className="flex items-center text-sm font-bold text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors cursor-pointer"
             >
               <ChevronLeft size={16} className="mr-1" />
               {t('onboardingTour.prev', 'Précédent')}
@@ -275,21 +278,21 @@ export const OnboardingTour: React.FC = () => {
         <div className="flex items-center gap-2">
           <button
             onClick={handleEnd}
-            className="text-xs font-bold text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 px-2 py-1 transition-colors"
+            className="text-xs font-bold text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 px-2 py-1 transition-colors cursor-pointer"
           >
             {t('onboardingTour.skip', 'Passer')}
           </button>
           <button
             onClick={handleNext}
-            className="flex items-center px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl transition-colors shadow-sm"
+            className="flex items-center px-4 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-sm font-extrabold rounded-xl transition-all shadow-lg shadow-emerald-600/25 hover:shadow-emerald-600/40 active:scale-95 cursor-pointer border border-emerald-400/30"
           >
             {isLastStep ? (
               <>
-                {t('onboardingTour.finish', 'Terminer')} <Check size={16} className="ml-1.5" />
+                {t('onboardingTour.finish', 'Terminer')} <Check size={16} className="ml-1.5 stroke-[3]" />
               </>
             ) : (
               <>
-                {t('onboardingTour.next', 'Suivant')} <ChevronRight size={16} className="ml-1.5" />
+                {t('onboardingTour.next', 'Suivant')} <ChevronRight size={16} className="ml-1.5 stroke-[3]" />
               </>
             )}
           </button>
@@ -309,7 +312,7 @@ export const OnboardingTour: React.FC = () => {
       {/* Target Highlight */}
       {coords && (
         <div 
-          className="fixed border-2 border-emerald-500 rounded-xl animate-pulse z-[9999] pointer-events-none shadow-[0_0_15px_rgba(16,185,129,0.5)]"
+          className="fixed border-2 border-emerald-500 rounded-xl animate-pulse z-[9999] pointer-events-none shadow-[0_0_20px_rgba(16,185,129,0.6)]"
           style={{
             top: coords.top - 4,
             left: coords.left - 4,
@@ -319,14 +322,14 @@ export const OnboardingTour: React.FC = () => {
         />
       )}
 
-      {/* Animated Popover */}
+      {/* Animated Popover with 3D Card Depth */}
       <AnimatePresence mode="wait">
         {coords ? (
           <motion.div
             key={currentStepIndex}
             initial={{ 
               opacity: 0, 
-              scale: 0.95, 
+              scale: 0.92, 
               y: step.placement?.startsWith('top') ? "-100%" : 5 
             }}
             animate={{ 
@@ -336,12 +339,12 @@ export const OnboardingTour: React.FC = () => {
             }}
             exit={{ 
               opacity: 0, 
-              scale: 0.95, 
+              scale: 0.92, 
               y: step.placement?.startsWith('top') ? "-100%" : -5 
             }}
-            transition={{ duration: 0.2, ease: 'easeOut' }}
+            transition={{ duration: 0.25, ease: 'easeOut' }}
             style={getTooltipStyle()}
-            className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden border border-gray-100 dark:border-gray-700 pointer-events-auto z-[10000]"
+            className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl rounded-2xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.3),0_0_25px_rgba(16,185,129,0.25)] overflow-hidden border-2 border-emerald-500/30 dark:border-emerald-500/20 pointer-events-auto z-[10000] transform-gpu hover:scale-[1.01] transition-transform"
           >
             {renderContent()}
           </motion.div>
@@ -355,11 +358,11 @@ export const OnboardingTour: React.FC = () => {
             className="fixed inset-0 flex items-center justify-center p-4 pointer-events-none z-[10000]"
           >
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
+              initial={{ opacity: 0, scale: 0.92 }}
               animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ duration: 0.2, ease: 'easeOut' }}
-              className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl overflow-hidden max-w-sm w-[310px] sm:w-[340px] border border-gray-100 dark:border-gray-700 pointer-events-auto"
+              exit={{ opacity: 0, scale: 0.92 }}
+              transition={{ duration: 0.25, ease: 'easeOut' }}
+              className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl rounded-2xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.3),0_0_25px_rgba(16,185,129,0.25)] overflow-hidden max-w-sm w-[310px] sm:w-[340px] border-2 border-emerald-500/30 dark:border-emerald-500/20 pointer-events-auto transform-gpu hover:scale-[1.01] transition-transform"
             >
               {renderContent()}
             </motion.div>

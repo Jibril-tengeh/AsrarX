@@ -39,7 +39,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
   const { featureToggles } = useFeatures();
   const navigate = useNavigate();
 
-  const [isSealExpanded, setIsSealExpanded] = useState<boolean>(false);
+  const [isSealExpanded, setIsSealExpanded] = useState<boolean>(true);
   const [selectedSealVersion, setSelectedSealVersion] = useState<1 | 2>(1);
   const [copiedTalsam, setCopiedTalsam] = useState<boolean>(false);
   const [copiedSeal, setCopiedSeal] = useState<boolean>(false);
@@ -163,22 +163,22 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
   const [isReadingMode, setIsReadingMode] = useState<boolean>(false);
   const [isMuraqabahModalOpen, setIsMuraqabahModalOpen] = useState<boolean>(false);
 
-  // Accordion Sections (All collapsed/closed by default per requirement)
-  const [isEventExpanded, setIsEventExpanded] = useState<boolean>(false);
-  const [isQuoteExpanded, setIsQuoteExpanded] = useState<boolean>(false);
-  const [isAstrolabeExpanded, setIsAstrolabeExpanded] = useState<boolean>(false);
+  // Accordion Sections (All expanded by default so all sections display completely)
+  const [isEventExpanded, setIsEventExpanded] = useState<boolean>(true);
+  const [isQuoteExpanded, setIsQuoteExpanded] = useState<boolean>(true);
+  const [isAstrolabeExpanded, setIsAstrolabeExpanded] = useState<boolean>(true);
   
   // Feature 1: AI Personalized Guidance (L'Asrar Génératif)
   const [aiTask, setAiTask] = useState<string>('');
   const [aiCounsel, setAiCounsel] = useState<{ guidance: string; focusKeyword: string; spiritualPractice: string } | null>(null);
   const [isAiLoading, setIsAiLoading] = useState<boolean>(false);
-  const [isAiExpanded, setIsAiExpanded] = useState<boolean>(false);
+  const [isAiExpanded, setIsAiExpanded] = useState<boolean>(true);
 
   // Feature 2: Biometric Synchronicity
   const [isBiometricsConnected, setIsBiometricsConnected] = useState<boolean>(false);
   const [isBiometricsLoading, setIsBiometricsLoading] = useState<boolean>(false);
   const [biometricData, setBiometricData] = useState<{ sleep: number; hrv: number; stress: number; energy: number } | null>(null);
-  const [isBiometricsExpanded, setIsBiometricsExpanded] = useState<boolean>(false);
+  const [isBiometricsExpanded, setIsBiometricsExpanded] = useState<boolean>(true);
 
   // Feature 3: Personal Transits
   const [birthDate, setBirthDate] = useState<string>(() => localStorage.getItem('asrar_birth_date') || '');
@@ -186,23 +186,23 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
   const [birthPlace, setBirthPlace] = useState<string>(() => localStorage.getItem('asrar_birth_place') || '');
   const [isTransitsCalculated, setIsTransitsCalculated] = useState<boolean>(() => !!localStorage.getItem('asrar_birth_date'));
   const [transitDays, setTransitDays] = useState<Record<number, { type: 'power' | 'creative' | 'vigilance'; description: string }>>({});
-  const [isTransitsExpanded, setIsTransitsExpanded] = useState<boolean>(false);
+  const [isTransitsExpanded, setIsTransitsExpanded] = useState<boolean>(true);
 
   // Feature 4: Sacred Focus Mode (Pomodoro)
   const [isFocusModeActive, setIsFocusModeActive] = useState<boolean>(false);
   const [focusDuration, setFocusDuration] = useState<number>(25 * 60); // Default 25 min
-  const [isFocusExpanded, setIsFocusExpanded] = useState<boolean>(false);
+  const [isFocusExpanded, setIsFocusExpanded] = useState<boolean>(true);
   const [isMuted, setIsMuted] = useState<boolean>(false);
 
   // Feature 6: Cosmic Alignment
-  const [isCosmicExpanded, setIsCosmicExpanded] = useState<boolean>(false);
+  const [isCosmicExpanded, setIsCosmicExpanded] = useState<boolean>(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('analytical');
 
   // Feature 7: Intention Journal & Synchronicities
-  const [isJournalExpanded, setIsJournalExpanded] = useState<boolean>(false);
-  const [isSolarClocksExpanded, setIsSolarClocksExpanded] = useState<boolean>(false);
-  const [isSacredWavesExpanded, setIsSacredWavesExpanded] = useState<boolean>(false);
-  const [isLunarSealsExpanded, setIsLunarSealsExpanded] = useState<boolean>(false);
+  const [isJournalExpanded, setIsJournalExpanded] = useState<boolean>(true);
+  const [isSolarClocksExpanded, setIsSolarClocksExpanded] = useState<boolean>(true);
+  const [isSacredWavesExpanded, setIsSacredWavesExpanded] = useState<boolean>(true);
+  const [isLunarSealsExpanded, setIsLunarSealsExpanded] = useState<boolean>(true);
   const [morningIntention, setMorningIntention] = useState<string>('');
   const [eveningGratitude, setEveningGratitude] = useState<string>('');
   const [journalMood, setJournalMood] = useState<string>('peaceful');
@@ -248,12 +248,14 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
 
   const [globalCardScale, setGlobalCardScale] = useState<number>(() => {
     const saved = localStorage.getItem('asrarhub_admin_calendar_global_scale');
-    return saved ? parseFloat(saved) : 1.0;
+    const parsed = saved ? parseFloat(saved) : 1.0;
+    return isNaN(parsed) || parsed < 0.85 ? 1.0 : parsed;
   });
 
   const [subCardScale, setSubCardScale] = useState<number>(() => {
     const saved = localStorage.getItem('asrarhub_admin_calendar_subcards_scale');
-    return saved ? parseFloat(saved) : 1.0;
+    const parsed = saved ? parseFloat(saved) : 1.0;
+    return isNaN(parsed) || parsed < 0.85 ? 1.0 : parsed;
   });
 
   const [showAdminScaleControls, setShowAdminScaleControls] = useState<boolean>(false);
@@ -1271,7 +1273,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
         ref={isPage ? undefined : backdropRef} 
         data-modal-overlay={!isPage ? "true" : undefined}
         className={isPage 
-          ? "w-full max-w-4xl mx-auto px-4 py-6 sm:px-6 lg:px-8 safe-area-pt pb-28 sm:pb-32"
+          ? "w-full max-w-4xl mx-auto px-4 pt-2 sm:pt-4 pb-28 sm:pb-32 safe-area-pt"
           : "fixed inset-0 z-[120] overflow-hidden bg-black/70 backdrop-blur-md p-3 sm:p-4 flex justify-center items-center"
         }
       >
@@ -1289,7 +1291,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
 
         {/* Page Back Button (Only in Page Mode) */}
         {isPage && (
-          <div className="mb-6 flex items-center justify-between w-full">
+          <div className="mb-4 sm:mb-6 flex items-center justify-between w-full pt-1">
             <button
               onClick={() => window.history.back()}
               className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors cursor-pointer font-bold"
@@ -1307,10 +1309,10 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
           animate={isPage ? undefined : { scale: 1, opacity: 1, y: 0 }}
           exit={isPage ? undefined : { scale: 0.95, opacity: 0, y: 15 }}
           transition={isPage ? undefined : { type: "spring", stiffness: 300, damping: 26 }}
-          style={{
-            transform: globalCardScale !== 1 ? `scale(${globalCardScale})` : undefined,
+          style={!isPage && globalCardScale !== 1 ? {
+            transform: `scale(${globalCardScale})`,
             transformOrigin: 'top center',
-          }}
+          } : undefined}
           className={`relative border rounded-3xl p-4 sm:p-6 shadow-2xl w-full z-10 flex flex-col transition-all duration-300 ${
             isPage ? "pb-28 sm:pb-32" : "max-w-xl max-h-[90vh] sm:max-h-[85vh] overflow-y-auto overscroll-contain my-4 sm:my-8 scrollbar-thin scrollbar-track-transparent"
           } ${
@@ -3262,32 +3264,36 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                         </p>
                       </div>
 
-                      <div className="bg-white/5 border border-white/10 rounded-xl p-3">
-                        <span className="text-[9px] font-bold uppercase tracking-wider text-sky-400 block mb-1">
-                          {t('mysticCalendar.astronomyCosmic')}
-                        </span>
-                        <p 
-                          className={`leading-relaxed font-light transition-all ${
-                            isReadingMode ? 'font-serif leading-[1.8] text-amber-100 text-sm' : 'text-xs text-sky-100'
-                          }`}
-                          style={{ fontFamily: isReadingMode ? "'Amiri', serif" : undefined }}
-                        >
-                          {activeMoonMystery.astronomicalInfo}
-                        </p>
-                      </div>
-
-                      <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3">
-                        <span className="text-[9px] font-bold uppercase tracking-wider text-amber-400 block mb-1">
-                          {t('mysticCalendar.recommendedNames')}
-                        </span>
-                        <div className="flex flex-wrap gap-1.5 mt-1">
-                          {activeMoonMystery.recommendedAsma.map((name, idx) => (
-                            <span key={idx} className="bg-amber-950/40 text-amber-200 border border-amber-500/30 text-xs px-2.5 py-0.5 rounded-lg font-serif font-bold">
-                              {name}
-                            </span>
-                          ))}
+                      {activeMoonMystery.astronomicalInfo && (
+                        <div className="bg-white/5 border border-white/10 rounded-xl p-3">
+                          <span className="text-[9px] font-bold uppercase tracking-wider text-sky-400 block mb-1">
+                            {t('mysticCalendar.astronomyCosmic')}
+                          </span>
+                          <p 
+                            className={`leading-relaxed font-light transition-all ${
+                              isReadingMode ? 'font-serif leading-[1.8] text-amber-100 text-sm' : 'text-xs text-sky-100'
+                            }`}
+                            style={{ fontFamily: isReadingMode ? "'Amiri', serif" : undefined }}
+                          >
+                            {activeMoonMystery.astronomicalInfo}
+                          </p>
                         </div>
-                      </div>
+                      )}
+
+                      {activeMoonMystery.recommendedAsma && activeMoonMystery.recommendedAsma.length > 0 && (
+                        <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3">
+                          <span className="text-[9px] font-bold uppercase tracking-wider text-amber-400 block mb-1">
+                            {t('mysticCalendar.recommendedNames')}
+                          </span>
+                          <div className="flex flex-wrap gap-1.5 mt-1">
+                            {activeMoonMystery.recommendedAsma.map((name, idx) => (
+                              <span key={idx} className="bg-amber-950/40 text-amber-200 border border-amber-500/30 text-xs px-2.5 py-0.5 rounded-lg font-serif font-bold">
+                                {name}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
                       <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-3">
                         <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-400 block mb-0.5 flex items-center gap-1">
@@ -3301,9 +3307,11 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                         >
                           {activeMoonMystery.recommendedPractice}
                         </p>
-                        <div className="mt-2 pt-2 border-t border-emerald-500/10 text-[10px] text-emerald-300 italic">
-                          <strong>{t('mysticCalendar.soulKey')}</strong> {activeMoonMystery.spiritualKey}
-                        </div>
+                        {activeMoonMystery.spiritualKey && (
+                          <div className="mt-2 pt-2 border-t border-emerald-500/10 text-[10px] text-emerald-300 italic">
+                            <strong>{t('mysticCalendar.soulKey')}</strong> {activeMoonMystery.spiritualKey}
+                          </div>
+                        )}
                       </div>
 
                       {activeMoonMystery.wirdDetails && (

@@ -12,6 +12,8 @@ import { getAsrarItems } from '../../data/store';
 import { BannerAd } from '../../components/BannerAd';
 import { PremiumWrapper } from '../../components/PremiumWrapper';
 import { AsrarQuickWidget } from '../../components/AsrarQuickWidget';
+import { UnverifiedEmailGuard } from '../../components/UnverifiedEmailGuard';
+import { AuthModal } from '../../components/AuthModal';
 import { INITIAL_DEFAULT_ARTICLES } from '../../data/defaultArticles';
 import { fetchArticlesFromRest } from '../../lib/firestoreRest';
 import { isPubliclyVisibleArticle } from '../../lib/articleUtils';
@@ -105,6 +107,7 @@ export const ExploreDashboard: React.FC = () => {
   const [visibleCount, setVisibleCount] = useState(3);
   const [bookmarks, setBookmarks] = useState<string[]>([]);
   const [selectedArticle, setSelectedArticle] = useState<any | null>(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   useEffect(() => {
     // Randomize daily wisdom based on current day (pseudo-random)
@@ -773,34 +776,107 @@ export const ExploreDashboard: React.FC = () => {
       {/* Article Modal */}
       {selectedArticle && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white dark:bg-gray-900 rounded-3xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
+          <div className="bg-white dark:bg-gray-900 rounded-3xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl relative">
             <div className="p-4 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center bg-gray-50 dark:bg-gray-800">
               <h3 className="font-bold text-lg text-gray-900 dark:text-white flex items-center gap-2">
                 <FileText size={20} /> Lecture
               </h3>
               <div className="flex items-center gap-2">
-                <button 
-                  onClick={() => toggleBookmarkArticle(selectedArticle.id)} 
-                  className={`p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors ${isArticleBookmarked(selectedArticle.id) ? 'text-amber-500' : 'text-gray-400 hover:text-amber-500'}`} 
-                  title={isArticleBookmarked(selectedArticle.id) ? "Retirer des favoris" : "Ajouter aux favoris"}
-                >
-                  <Star size={20} fill={isArticleBookmarked(selectedArticle.id) ? "currentColor" : "none"} />
-                </button>
-                <button onClick={() => handleShareArticle(selectedArticle)} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors text-emerald-500" title="Partager">
-                  <Share2 size={20} />
-                </button>
+                {user && (
+                  <>
+                    <button 
+                      onClick={() => toggleBookmarkArticle(selectedArticle.id)} 
+                      className={`p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors ${isArticleBookmarked(selectedArticle.id) ? 'text-amber-500' : 'text-gray-400 hover:text-amber-500'}`} 
+                      title={isArticleBookmarked(selectedArticle.id) ? "Retirer des favoris" : "Ajouter aux favoris"}
+                    >
+                      <Star size={20} fill={isArticleBookmarked(selectedArticle.id) ? "currentColor" : "none"} />
+                    </button>
+                    <button onClick={() => handleShareArticle(selectedArticle)} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors text-emerald-500" title="Partager">
+                      <Share2 size={20} />
+                    </button>
+                  </>
+                )}
                 <button onClick={() => setSelectedArticle(null)} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors text-gray-500" title="Fermer">
                   <X size={20} />
                 </button>
               </div>
             </div>
-            <div className="flex-1 overflow-y-auto p-6 lg:p-10 hide-scrollbar bg-gray-50 dark:bg-gray-900">
-              <div className="max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-3xl overflow-hidden shadow-sm border border-gray-100 dark:border-gray-700">
-                {selectedArticle.isPremium ? (
-                  <PremiumWrapper 
-                    fallbackTitle={selectedArticle.title} 
-                    fallbackMessage="Cet article est exclusif aux membres Premium. Débloquez-le pour lire la suite."
-                    previewContent={
+            <div className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-10 hide-scrollbar bg-gray-50 dark:bg-gray-900">
+              {(() => {
+                const adminEmails = ['jibriltengeh4@gmail.com', 'sbireino@gmail.com', 'tenibawwal10@gmail.com', 'jibriltengeh57@gmail.com'];
+                const isAdmin = user?.role === 'admin' || (user?.email && adminEmails.includes(user.email.toLowerCase()));
+
+                if (!user) {
+                  return (
+                    <div className="p-8 text-center max-w-md mx-auto my-auto">
+                      <Shield size={40} className="mx-auto mb-4 text-emerald-500" />
+                      <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Connexion requise</h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-400 mb-6 leading-relaxed">
+                        Pour lire cet article, vous devez être connecté à votre compte.
+                      </p>
+                      <button onClick={() => setShowAuthModal(true)} className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-bold text-sm shadow-md transition-colors cursor-pointer">
+                        Se connecter / S'inscrire
+                      </button>
+                      <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
+                    </div>
+                  );
+                }
+
+                if (!user.emailVerified && !isAdmin) {
+                  return (
+                    <div className="py-2">
+                      <UnverifiedEmailGuard />
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-3xl overflow-hidden shadow-sm border border-gray-100 dark:border-gray-700">
+                    {selectedArticle.isPremium ? (
+                      <PremiumWrapper 
+                        fallbackTitle={selectedArticle.title} 
+                        fallbackMessage="Cet article est exclusif aux membres Premium. Débloquez-le pour lire la suite."
+                        previewContent={
+                          <>
+                            {selectedArticle.thumbnail && (
+                              <div className="w-full h-64 md:h-80 overflow-hidden relative">
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-10" />
+                                <img src={selectedArticle.thumbnail} alt={selectedArticle.title} className="w-full h-full object-cover" />
+                                <div className="absolute bottom-0 left-0 p-6 z-20">
+                                  <h1 className="text-2xl md:text-3xl font-black text-white">{selectedArticle.title}</h1>
+                                </div>
+                              </div>
+                            )}
+                            {!selectedArticle.thumbnail && (
+                              <div className="p-6 md:p-10 border-b border-gray-100 dark:border-gray-700">
+                                <h1 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white">{selectedArticle.title}</h1>
+                              </div>
+                            )}
+                            <div className="p-6 md:p-10 prose prose-emerald dark:prose-invert max-w-none article-content">
+                              <div dangerouslySetInnerHTML={{ __html: (selectedArticle.content || '').substring(0, 300) + '...' }} />
+                            </div>
+                          </>
+                        }
+                      >
+                        {selectedArticle.thumbnail && (
+                          <div className="w-full h-64 md:h-80 overflow-hidden relative">
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-10" />
+                            <img src={selectedArticle.thumbnail} alt={selectedArticle.title} className="w-full h-full object-cover" />
+                            <div className="absolute bottom-0 left-0 p-6 z-20">
+                              <h1 className="text-2xl md:text-3xl font-black text-white">{selectedArticle.title}</h1>
+                            </div>
+                          </div>
+                        )}
+                        {!selectedArticle.thumbnail && (
+                          <div className="p-6 md:p-10 border-b border-gray-100 dark:border-gray-700">
+                            <h1 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white">{selectedArticle.title}</h1>
+                          </div>
+                        )}
+                        <div className="p-6 md:p-10 prose prose-emerald dark:prose-invert max-w-none article-content">
+                          <div dangerouslySetInnerHTML={{ __html: selectedArticle.content || '' }} />
+                        </div>
+                      </PremiumWrapper>
+                    ) : (
                       <>
                         {selectedArticle.thumbnail && (
                           <div className="w-full h-64 md:h-80 overflow-hidden relative">
@@ -817,51 +893,13 @@ export const ExploreDashboard: React.FC = () => {
                           </div>
                         )}
                         <div className="p-6 md:p-10 prose prose-emerald dark:prose-invert max-w-none article-content">
-                          <div dangerouslySetInnerHTML={{ __html: (selectedArticle.content || '').substring(0, 300) + '...' }} />
+                          <div dangerouslySetInnerHTML={{ __html: selectedArticle.content || '' }} />
                         </div>
                       </>
-                    }
-                  >
-                    {selectedArticle.thumbnail && (
-                      <div className="w-full h-64 md:h-80 overflow-hidden relative">
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-10" />
-                        <img src={selectedArticle.thumbnail} alt={selectedArticle.title} className="w-full h-full object-cover" />
-                        <div className="absolute bottom-0 left-0 p-6 z-20">
-                          <h1 className="text-2xl md:text-3xl font-black text-white">{selectedArticle.title}</h1>
-                        </div>
-                      </div>
                     )}
-                    {!selectedArticle.thumbnail && (
-                      <div className="p-6 md:p-10 border-b border-gray-100 dark:border-gray-700">
-                        <h1 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white">{selectedArticle.title}</h1>
-                      </div>
-                    )}
-                    <div className="p-6 md:p-10 prose prose-emerald dark:prose-invert max-w-none article-content">
-                      <div dangerouslySetInnerHTML={{ __html: selectedArticle.content || '' }} />
-                    </div>
-                  </PremiumWrapper>
-                ) : (
-                  <>
-                    {selectedArticle.thumbnail && (
-                      <div className="w-full h-64 md:h-80 overflow-hidden relative">
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-10" />
-                        <img src={selectedArticle.thumbnail} alt={selectedArticle.title} className="w-full h-full object-cover" />
-                        <div className="absolute bottom-0 left-0 p-6 z-20">
-                          <h1 className="text-2xl md:text-3xl font-black text-white">{selectedArticle.title}</h1>
-                        </div>
-                      </div>
-                    )}
-                    {!selectedArticle.thumbnail && (
-                      <div className="p-6 md:p-10 border-b border-gray-100 dark:border-gray-700">
-                        <h1 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white">{selectedArticle.title}</h1>
-                      </div>
-                    )}
-                    <div className="p-6 md:p-10 prose prose-emerald dark:prose-invert max-w-none article-content">
-                      <div dangerouslySetInnerHTML={{ __html: selectedArticle.content || '' }} />
-                    </div>
-                  </>
-                )}
-              </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>

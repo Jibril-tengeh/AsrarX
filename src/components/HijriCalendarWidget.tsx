@@ -58,12 +58,14 @@ export const HijriCalendarWidget: React.FC = () => {
 
   const [globalCardScale, setGlobalCardScale] = useState<number>(() => {
     const saved = localStorage.getItem('asrarhub_admin_calendar_global_scale');
-    return saved ? parseFloat(saved) : 1.0;
+    const parsed = saved ? parseFloat(saved) : 1.0;
+    return isNaN(parsed) || parsed < 0.85 ? 1.0 : parsed;
   });
 
   const [subCardScale, setSubCardScale] = useState<number>(() => {
     const saved = localStorage.getItem('asrarhub_admin_calendar_subcards_scale');
-    return saved ? parseFloat(saved) : 1.0;
+    const parsed = saved ? parseFloat(saved) : 1.0;
+    return isNaN(parsed) || parsed < 0.85 ? 1.0 : parsed;
   });
 
   const [showAdminControls, setShowAdminControls] = useState<boolean>(false);

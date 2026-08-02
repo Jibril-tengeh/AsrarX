@@ -586,7 +586,7 @@ export const SacredBooksLibrary: React.FC = () => {
             </div>
 
             {/* 12 Books Grid with 3D Animated Video Icons */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
               {filteredBooks.map((book) => {
                 const status = featureToggles[book.id] || 'active';
                 const isLocked = status === 'premium' && !isPremium && user?.role !== 'admin';
@@ -596,67 +596,67 @@ export const SacredBooksLibrary: React.FC = () => {
                 return (
                   <motion.div
                     key={book.id}
-                    whileHover={{ scale: 1.02 }}
+                    whileHover={{ scale: 1.015 }}
                     onHoverStart={() => setHoveredBookId(book.id)}
                     onHoverEnd={() => setHoveredBookId(null)}
                     onClick={() => handleSelectBook(book)}
-                    className={`relative p-5 bg-gradient-to-b from-white to-gray-50 dark:from-gray-800/90 dark:to-gray-850/90 border rounded-3xl cursor-pointer transition-all duration-300 flex flex-col justify-between overflow-hidden group ${
+                    className={`relative p-4 sm:p-4.5 bg-gradient-to-b from-white to-gray-50 dark:from-gray-800/90 dark:to-gray-850/90 border rounded-2xl sm:rounded-3xl cursor-pointer transition-all duration-300 flex flex-col justify-between overflow-hidden group ${
                       isDisabled
                         ? 'border-red-900/50 opacity-60'
                         : isMaintenance
                         ? 'border-amber-900/50'
                         : isLocked
                         ? 'border-purple-900/50'
-                        : 'border-gray-750 hover:border-amber-500/60 shadow-xl hover:shadow-2xl hover:shadow-amber-500/10'
+                        : 'border-gray-200 dark:border-gray-750 hover:border-amber-500/60 shadow-lg hover:shadow-xl hover:shadow-amber-500/10'
                     }`}
                   >
                     {/* Status Badge */}
-                    <div className="absolute top-4 right-4 z-20 flex items-center gap-1.5">
+                    <div className="absolute top-3 right-3 z-20 flex items-center gap-1.5">
                       {status === 'premium' && (
-                        <span className="px-2.5 py-1 bg-purple-900/80 border border-purple-500/40 text-purple-300 text-[10px] font-bold rounded-full flex items-center gap-1">
-                          <Crown size={12} />
+                        <span className="px-2 py-0.5 bg-purple-900/80 border border-purple-500/40 text-purple-300 text-[10px] font-bold rounded-full flex items-center gap-1">
+                          <Crown size={11} />
                           Premium
                         </span>
                       )}
                       {status === 'maintenance' && (
-                        <span className="px-2.5 py-1 bg-amber-900/80 border border-amber-500/40 text-amber-800 dark:text-amber-300 text-[10px] font-bold rounded-full flex items-center gap-1">
-                          <Wrench size={12} />
+                        <span className="px-2 py-0.5 bg-amber-900/80 border border-amber-500/40 text-amber-800 dark:text-amber-300 text-[10px] font-bold rounded-full flex items-center gap-1">
+                          <Wrench size={11} />
                           Maintenance
                         </span>
                       )}
                       {isDisabled && (
-                        <span className="px-2.5 py-1 bg-red-900/80 border border-red-500/40 text-red-300 text-[10px] font-bold rounded-full flex items-center gap-1">
-                          <Lock size={12} />
+                        <span className="px-2 py-0.5 bg-red-900/80 border border-red-500/40 text-red-300 text-[10px] font-bold rounded-full flex items-center gap-1">
+                          <Lock size={11} />
                           {language === 'en' ? 'Blocked' : language === 'ha' ? 'Kange' : 'Bloqué'}
                         </span>
                       )}
                     </div>
 
                     {/* Book 3D Icon Presentation */}
-                    <div className="pt-2 pb-4 flex items-center justify-center">
+                    <div className="pt-1 pb-2 flex items-center justify-center">
                       <Animated3DBookIcon
                         type={book.icon3dType}
                         titleAr={book.titleAr}
                         titleFr={getLocalizedTitle(book)}
                         themeColor={book.themeColor}
                         bgGlow={book.bgGlow}
-                        size="md"
+                        size="sm"
                         isHovered={hoveredBookId === book.id}
                       />
                     </div>
 
                     {/* Info */}
-                    <div className="space-y-2 mt-2 z-10">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider">
+                    <div className="space-y-1.5 mt-1 z-10">
+                      <div className="flex items-center justify-between gap-1">
+                        <span className="text-[10px] sm:text-[11px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider truncate">
                           {getLocalizedCategory(book)}
                         </span>
-                        <span className="text-[11px] text-gray-700 dark:text-gray-200 font-mono">
+                        <span className="text-[10px] sm:text-[11px] text-gray-700 dark:text-gray-200 font-mono shrink-0">
                           {getLocalizedCentury(book)}
                         </span>
                       </div>
 
-                      <h3 className="font-bold text-lg text-gray-900 dark:text-white group-hover:text-amber-800 dark:group-hover:text-amber-300 transition-colors line-clamp-1">
+                      <h3 className="font-bold text-base sm:text-lg text-gray-900 dark:text-white group-hover:text-amber-800 dark:group-hover:text-amber-300 transition-colors line-clamp-1">
                         {getLocalizedTitle(book)}
                       </h3>
 
@@ -664,16 +664,16 @@ export const SacredBooksLibrary: React.FC = () => {
                         {book.titleAr}
                       </p>
 
-                      <p className="text-xs text-gray-700 dark:text-gray-200 line-clamp-2 pt-1">
+                      <p className="text-xs text-gray-700 dark:text-gray-200 line-clamp-2 pt-0.5 leading-relaxed">
                         {getLocalizedIntro(book).summary}
                       </p>
 
-                      <div className="pt-3 border-t border-gray-200 dark:border-gray-700/50 flex items-center justify-between text-xs font-semibold text-amber-700 dark:text-amber-400">
-                        <span className="flex items-center gap-1">
-                          <Feather size={14} />
-                          {getLocalizedAuthor(book)}
+                      <div className="pt-2.5 border-t border-gray-200 dark:border-gray-700/50 flex items-center justify-between text-xs font-semibold text-amber-700 dark:text-amber-400">
+                        <span className="flex items-center gap-1 truncate max-w-[70%]">
+                          <Feather size={13} className="shrink-0" />
+                          <span className="truncate">{getLocalizedAuthor(book)}</span>
                         </span>
-                        <span className="text-amber-700 dark:text-amber-300 group-hover:translate-x-1 transition-transform flex items-center gap-1">
+                        <span className="text-amber-700 dark:text-amber-300 group-hover:translate-x-1 transition-transform flex items-center gap-1 shrink-0">
                           {language === 'en' ? 'Explore' : language === 'ha' ? 'Bincika' : 'Explorer'} →
                         </span>
                       </div>

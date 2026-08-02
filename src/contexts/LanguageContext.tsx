@@ -8,7 +8,7 @@ type Language = 'fr' | 'en' | 'ha';
 interface LanguageContextType {
   language: Language;
   setLanguage: (lang: Language) => void;
-  t: (key: string, defaultValue?: string) => string;
+  t: (key: string, defaultValue?: string, params?: Record<string, string | number>) => string;
 }
 
 const translations: Record<Language, any> = {
@@ -39,9 +39,11 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     localStorage.setItem('language', lang);
   };
 
-  const t = (key: string, defaultValue?: string): string => {
+  const t = (key: string, defaultValue?: string, params?: Record<string, string | number>): string => {
     const keys = key.split('.');
     let value = translations[language];
+    let result = '';
+
     for (const k of keys) {
       if (!value || value[k] === undefined) {
         // Fallback to English if key doesn't exist
@@ -50,14 +52,29 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
           if (fallbackValue && fallbackValue[fbK] !== undefined) {
             fallbackValue = fallbackValue[fbK];
           } else {
-            return defaultValue || key; // return defaultValue or key if not found
+            result = defaultValue || key;
+            break;
           }
         }
-        return (fallbackValue as unknown as string) || defaultValue || key;
+        if (!result) {
+          result = (fallbackValue as unknown as string) || defaultValue || key;
+        }
+        break;
       }
       value = value[k];
     }
-    return (value as unknown as string) || defaultValue || key;
+
+    if (!result) {
+      result = (value as unknown as string) || defaultValue || key;
+    }
+
+    if (params && typeof result === 'string') {
+      Object.entries(params).forEach(([paramKey, paramVal]) => {
+        result = result.replace(new RegExp(`\\{${paramKey}\\}`, 'g'), String(paramVal));
+      });
+    }
+
+    return result;
   };
 
   useEffect(() => {

@@ -64,10 +64,10 @@ export const Animated3DBookIcon: React.FC<Animated3DBookIconProps> = ({
   }, []);
 
   const dimensions = {
-    sm: { width: 'w-24', height: 'h-32', perspective: '800px', fontSize: 'text-xs' },
-    md: { width: 'w-36 sm:w-40', height: 'h-48 sm:h-52', perspective: '1000px', fontSize: 'text-sm' },
-    lg: { width: 'w-48 sm:w-56', height: 'h-64 sm:h-72', perspective: '1200px', fontSize: 'text-base' },
-    xl: { width: 'w-60 sm:w-72', height: 'h-80 sm:h-96', perspective: '1400px', fontSize: 'text-lg' }
+    sm: { width: 'w-28 sm:w-32', height: 'h-36 sm:h-42', perspective: '800px', fontSize: 'text-xs' },
+    md: { width: 'w-32 sm:w-36', height: 'h-42 sm:h-48', perspective: '1000px', fontSize: 'text-sm' },
+    lg: { width: 'w-44 sm:w-52', height: 'h-58 sm:h-66', perspective: '1200px', fontSize: 'text-base' },
+    xl: { width: 'w-56 sm:w-64', height: 'h-72 sm:h-84', perspective: '1400px', fontSize: 'text-lg' }
   }[size];
 
   // Pick cover icon symbol based on book type

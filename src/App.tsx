@@ -28,6 +28,7 @@ import { FloatingTextResizer } from './components/FloatingTextResizer';
 import { FeatureProvider, useFeatures } from './contexts/FeatureContext';
 import UserDashboard from './pages/user/UserDashboard';
 import { FreeTrial24hModal } from './components/FreeTrial24hModal';
+import { UnverifiedEmailGuard } from './components/UnverifiedEmailGuard';
 
 function lazyWithRetry<T extends React.ComponentType<any> = React.ComponentType<any>>(
   componentImport: () => Promise<any>
@@ -434,6 +435,13 @@ const ProtectedToolsLayout: React.FC = () => {
         <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
       </div>
     );
+  }
+
+  const adminEmails = ['jibriltengeh4@gmail.com', 'sbireino@gmail.com', 'tenibawwal10@gmail.com', 'jibriltengeh57@gmail.com'];
+  const isAdmin = user.role === 'admin' || (user.email && adminEmails.includes(user.email.toLowerCase()));
+
+  if (!user.emailVerified && !isAdmin) {
+    return <UnverifiedEmailGuard />;
   }
 
   if (isSubTool) {
@@ -983,7 +991,7 @@ export default function App() {
         <FloatingBackButton />
         <Header />
         <DailyRewardHandler />
-        <main className="flex flex-col min-h-screen w-full max-w-full flex-1 text-gray-900 dark:text-gray-100 pb-20 pt-20">
+        <main className="flex flex-col min-h-screen w-full max-w-full flex-1 text-gray-900 dark:text-gray-100 pb-20 pt-24 sm:pt-28">
           <React.Suspense fallback={
             <div className="flex items-center justify-center min-h-[60vh] w-full">
               <div className="w-10 h-10 border-4 border-emerald-500/10 border-t-emerald-600 rounded-full animate-spin" />

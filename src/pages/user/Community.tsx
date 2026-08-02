@@ -511,7 +511,10 @@ export const Community: React.FC = () => {
     // If clicking on already playing audio, stop it
     if (playingAudioKey === key) {
       if (currentlyPlayingAudioRef.current) {
-        currentlyPlayingAudioRef.current.pause();
+        try {
+          currentlyPlayingAudioRef.current.pause();
+          currentlyPlayingAudioRef.current.currentTime = 0;
+        } catch (_) {}
         currentlyPlayingAudioRef.current = null;
       }
       setPlayingAudioKey(null);
@@ -520,7 +523,10 @@ export const Community: React.FC = () => {
 
     // Stop any previously playing audio first
     if (currentlyPlayingAudioRef.current) {
-      currentlyPlayingAudioRef.current.pause();
+      try {
+        currentlyPlayingAudioRef.current.pause();
+        currentlyPlayingAudioRef.current.currentTime = 0;
+      } catch (_) {}
       currentlyPlayingAudioRef.current = null;
     }
 
@@ -577,6 +583,7 @@ export const Community: React.FC = () => {
     // Standard HTML5 Audio elements
     try {
       const snd = new Audio(audioSrc);
+      snd.preload = "auto";
       currentlyPlayingAudioRef.current = snd;
       
       snd.addEventListener("ended", () => {
@@ -620,39 +627,43 @@ export const Community: React.FC = () => {
         }
       });
 
-      snd.play().catch((playErr) => {
-        console.warn("Audio play promise rejected, using synthesizer chime:", playErr);
-        try {
-          const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-          if (AudioCtx) {
-            const ctx = new AudioCtx();
-            const playTone = (freq: number, start: number, duration: number) => {
-              const osc = ctx.createOscillator();
-              const gainNode = ctx.createGain();
-              osc.type = "sine";
-              osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
-              gainNode.gain.setValueAtTime(0, ctx.currentTime + start);
-              gainNode.gain.linearRampToValueAtTime(0.15, ctx.currentTime + start + 0.05);
-              gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + duration);
-              osc.connect(gainNode);
-              gainNode.connect(ctx.destination);
-              osc.start(ctx.currentTime + start);
-              osc.stop(ctx.currentTime + start + duration);
-            };
-            playTone(392, 0, 0.35);
-            playTone(523.25, 0.15, 0.35);
-            playTone(659.25, 0.3, 0.6);
-            setTimeout(() => {
+      snd.currentTime = 0;
+      const playPromise = snd.play();
+      if (playPromise !== undefined) {
+        playPromise.catch((playErr) => {
+          console.warn("Audio play promise rejected, using synthesizer chime:", playErr);
+          try {
+            const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+            if (AudioCtx) {
+              const ctx = new AudioCtx();
+              const playTone = (freq: number, start: number, duration: number) => {
+                const osc = ctx.createOscillator();
+                const gainNode = ctx.createGain();
+                osc.type = "sine";
+                osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
+                gainNode.gain.setValueAtTime(0, ctx.currentTime + start);
+                gainNode.gain.linearRampToValueAtTime(0.15, ctx.currentTime + start + 0.05);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + duration);
+                osc.connect(gainNode);
+                gainNode.connect(ctx.destination);
+                osc.start(ctx.currentTime + start);
+                osc.stop(ctx.currentTime + start + duration);
+              };
+              playTone(392, 0, 0.35);
+              playTone(523.25, 0.15, 0.35);
+              playTone(659.25, 0.3, 0.6);
+              setTimeout(() => {
+                setPlayingAudioKey((prev) => (prev === key ? null : prev));
+                ctx.close();
+              }, 1200);
+            } else {
               setPlayingAudioKey((prev) => (prev === key ? null : prev));
-              ctx.close();
-            }, 1200);
-          } else {
+            }
+          } catch (synthErr) {
             setPlayingAudioKey((prev) => (prev === key ? null : prev));
           }
-        } catch (synthErr) {
-          setPlayingAudioKey((prev) => (prev === key ? null : prev));
-        }
-      });
+        });
+      }
     } catch (createErr) {
       console.warn("Could not instantiate Audio helper:", createErr);
       setPlayingAudioKey((prev) => (prev === key ? null : prev));
@@ -817,6 +828,7 @@ export const Community: React.FC = () => {
             noiseSuppression: true,
             autoGainControl: true,
             channelCount: 1,
+            sampleRate: { ideal: 48000 },
           },
         });
         micStreamRef.current = stream;
@@ -830,6 +842,11 @@ export const Community: React.FC = () => {
             if (AudioContextClass) {
               const audioCtx = new AudioContextClass();
               audioCtxRef.current = audioCtx;
+
+              if (audioCtx.state === "suspended") {
+                await audioCtx.resume();
+              }
+
               const source = audioCtx.createMediaStreamSource(stream);
 
               // 1. Gentle Highpass filter to eliminate low frequency mic thuds (< 80 Hz)
@@ -839,15 +856,15 @@ export const Community: React.FC = () => {
 
               // 2. Soft Dynamics Compressor to balance vocal volume without distortion
               const compressor = audioCtx.createDynamicsCompressor();
-              compressor.threshold.setValueAtTime(-18, audioCtx.currentTime);
-              compressor.knee.setValueAtTime(8, audioCtx.currentTime);
-              compressor.ratio.setValueAtTime(3, audioCtx.currentTime);
-              compressor.attack.setValueAtTime(0.005, audioCtx.currentTime);
-              compressor.release.setValueAtTime(0.1, audioCtx.currentTime);
+              compressor.threshold.setValueAtTime(-16, audioCtx.currentTime);
+              compressor.knee.setValueAtTime(10, audioCtx.currentTime);
+              compressor.ratio.setValueAtTime(2.5, audioCtx.currentTime);
+              compressor.attack.setValueAtTime(0.003, audioCtx.currentTime);
+              compressor.release.setValueAtTime(0.12, audioCtx.currentTime);
 
-              // 3. Clean Master Gain (1.0x to avoid 0dBFS clipping distortion)
+              // 3. Clean Master Gain (0.90x to avoid 0dBFS clipping distortion & crackling)
               const masterGain = audioCtx.createGain();
-              masterGain.gain.value = 1.0;
+              masterGain.gain.value = 0.90;
 
               const destination = audioCtx.createMediaStreamDestination();
               source.connect(highpass);
@@ -895,7 +912,11 @@ export const Community: React.FC = () => {
           cleanupAudioResources();
         };
 
-        mediaRecorder.start(250); // 250ms timeslice for smooth streaming without dropped frames
+        // 100ms hardware stabilization buffer so mic & WebAudio stream start smoothly without losing first syllable
+        await new Promise((r) => setTimeout(r, 100));
+
+        // Start without timeslice parameter to produce one continuous, seam-free audio file (eliminates slice pops/crackles)
+        mediaRecorder.start();
         setIsRecording(true);
         recordingIntervalRef.current = setInterval(() => {
           setRecordingSeconds((prev) => prev + 1);

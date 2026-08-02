@@ -138,13 +138,15 @@ export const Premium12hCountdownWidget: React.FC<Premium12hCountdownWidgetProps>
 
   const progressPercent = Math.min(100, Math.max(0, (timeLeft.totalMs / totalTrialMs) * 100));
 
+  const unitStr = trialDurationHours > 1 ? 'heures' : 'heure';
+
   if (compact) {
     return (
       <div className={`bg-amber-500/10 dark:bg-amber-950/40 border border-amber-500/30 rounded-2xl p-3 flex items-center justify-between gap-3 ${className}`}>
         <div className="flex items-center gap-2 min-w-0">
           <Clock size={16} className="text-amber-600 dark:text-amber-400 shrink-0 animate-pulse" />
           <span className="text-xs font-bold text-gray-800 dark:text-gray-200 truncate">
-            {t('profile.countdown.label', `Essai Premium (${trialDurationHours}h)`)} :
+            {t('profile.countdown.label', `Essai Premium (${trialDurationHours}h)`, { hours: trialDurationHours, unit: unitStr })} :
           </span>
         </div>
         {timeLeft.isExpired ? (
@@ -179,17 +181,17 @@ export const Premium12hCountdownWidget: React.FC<Premium12hCountdownWidgetProps>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <h3 className="font-extrabold text-gray-900 dark:text-white text-base sm:text-lg tracking-tight">
-                {t('profile.countdown.title', `Compte à Rebours Premium (${trialDurationHours}h)`)}
+                {t('profile.countdown.title', `Compte à Rebours Premium (${trialDurationHours}h)`, { hours: trialDurationHours, unit: unitStr })}
               </h3>
               <span className="bg-amber-500/20 text-amber-700 dark:text-amber-300 text-[10px] font-black uppercase px-2 py-0.5 rounded-full border border-amber-500/30 flex items-center gap-1">
                 <Sparkles size={10} />
-                <span>{trialDurationHours} Heures</span>
+                <span>{trialDurationHours} {trialDurationHours > 1 ? 'Heures' : 'Heure'}</span>
               </span>
             </div>
             <p className="text-xs text-gray-600 dark:text-gray-300 mt-0.5">
               {timeLeft.isExpired
-                ? t('profile.countdown.expiredSub', `Votre période d'essai gratuit de ${trialDurationHours} heures est terminée.`)
-                : t('profile.countdown.activeSub', `Accès complet débloqué pendant votre période d'essai de ${trialDurationHours} heures.`)}
+                ? t('profile.countdown.expiredSub', `Votre période d'essai gratuit de ${trialDurationHours} ${unitStr} est terminée.`, { hours: trialDurationHours, unit: unitStr })
+                : t('profile.countdown.activeSub', `Accès complet débloqué pendant votre période d'essai de ${trialDurationHours} ${unitStr}.`, { hours: trialDurationHours, unit: unitStr })}
             </p>
           </div>
         </div>

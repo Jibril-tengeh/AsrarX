@@ -421,58 +421,80 @@ export const ToolsDashboard: React.FC = () => {
 
       <AnimatePresence>
         {showGuide && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm overflow-y-auto">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md overflow-y-auto">
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]"
+              initial={{ opacity: 0, scale: 0.9, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ type: "spring", damping: 25, stiffness: 250 }}
+              style={{ transformStyle: "preserve-3d", perspective: 1000 }}
+              className="bg-white/95 dark:bg-gray-800/95 backdrop-blur-xl rounded-3xl shadow-[0_25px_60px_-15px_rgba(16,185,129,0.3),0_0_30px_rgba(0,0,0,0.2)] w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] border-2 border-emerald-500/30 dark:border-emerald-500/20 transform-gpu hover:scale-[1.01] transition-transform duration-300"
             >
-              <div className="flex justify-between items-center p-4 border-b border-gray-100 dark:border-gray-700 shrink-0">
-                <h3 className="font-bold text-gray-900 dark:text-white">
-                  Guide de Démarrage
-                </h3>
+              <div className="flex justify-between items-center p-5 border-b border-gray-100 dark:border-gray-700/80 shrink-0 bg-gradient-to-r from-emerald-500/10 via-transparent to-teal-500/10" style={{ transform: "translateZ(10px)" }}>
+                <div className="flex items-center gap-2">
+                  <span className="p-1.5 rounded-lg bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold">
+                    <Compass size={18} />
+                  </span>
+                  <h3 className="font-extrabold text-base text-gray-900 dark:text-white">
+                    Guide de Démarrage
+                  </h3>
+                </div>
                 <button
                   onClick={closeGuide}
-                  className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700/80 transition-all cursor-pointer"
                 >
                   <X size={20} />
                 </button>
               </div>
 
-              <div className="p-6 sm:p-8 flex-1 overflow-y-auto min-h-[200px] sm:min-h-[250px] flex flex-col items-center justify-center text-center">
+              <div className="p-6 sm:p-8 flex-1 overflow-y-auto min-h-[220px] sm:min-h-[260px] flex flex-col items-center justify-center text-center relative">
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={guideStep}
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.2 }}
+                    initial={{ opacity: 0, scale: 0.9, y: 10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.95, y: -10 }}
+                    transition={{ type: "spring", stiffness: 300, damping: 22 }}
                     className="flex flex-col items-center"
+                    style={{ transformStyle: "preserve-3d" }}
                   >
-                    <div
-                      className={`w-20 h-20 rounded-2xl ${guideSteps[guideStep].bg} ${guideSteps[guideStep].color} flex items-center justify-center mb-6 shadow-sm`}
+                    <motion.div
+                      animate={{ y: [-3, 3, -3] }}
+                      transition={{ repeat: Infinity, duration: 3.5, ease: "easeInOut" }}
+                      style={{ transform: "translateZ(30px)" }}
+                      className={`w-24 h-24 rounded-3xl ${guideSteps[guideStep].bg} ${guideSteps[guideStep].color} flex items-center justify-center mb-6 shadow-xl border-2 border-white/40 dark:border-white/10`}
                     >
                       {React.createElement(guideSteps[guideStep].icon, {
-                        size: 40,
+                        size: 44,
+                        className: "drop-shadow-md stroke-[2.2]"
                       })}
-                    </div>
-                    <h4 className="text-xl font-bold text-gray-900 dark:text-white mb-3">
+                    </motion.div>
+                    <h4
+                      style={{ transform: "translateZ(15px)" }}
+                      className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white mb-3 tracking-tight"
+                    >
                       {guideSteps[guideStep].title}
                     </h4>
-                    <p className="text-gray-600 dark:text-gray-300 leading-relaxed">
+                    <p
+                      style={{ transform: "translateZ(10px)" }}
+                      className="text-gray-600 dark:text-gray-300 leading-relaxed text-sm sm:text-base font-medium max-w-sm"
+                    >
                       {guideSteps[guideStep].description}
                     </p>
                   </motion.div>
                 </AnimatePresence>
               </div>
 
-              <div className="p-4 bg-gray-50 dark:bg-gray-900/50 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between">
-                <div className="flex gap-1.5">
+              <div className="p-4 bg-gray-50/80 dark:bg-gray-900/80 backdrop-blur-md border-t border-gray-100 dark:border-gray-700/80 flex items-center justify-between" style={{ transform: "translateZ(10px)" }}>
+                <div className="flex gap-2 items-center">
                   {guideSteps.map((_, i) => (
-                    <div
+                    <motion.div
                       key={i}
-                      className={`w-2 h-2 rounded-full transition-all ${i === guideStep ? "bg-emerald-500 w-4" : "bg-gray-300 dark:bg-gray-600"}`}
+                      animate={{
+                        width: i === guideStep ? 24 : 8,
+                        backgroundColor: i === guideStep ? "#10B981" : "#D1D5DB"
+                      }}
+                      className="h-2 rounded-full shadow-xs dark:bg-gray-700"
                     />
                   ))}
                 </div>
@@ -481,22 +503,22 @@ export const ToolsDashboard: React.FC = () => {
                   <button
                     onClick={() => setGuideStep(Math.max(0, guideStep - 1))}
                     disabled={guideStep === 0}
-                    className="p-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 disabled:opacity-30 transition-colors"
+                    className="p-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 disabled:opacity-30 transition-colors cursor-pointer"
                   >
                     <ChevronLeft size={20} />
                   </button>
                   {guideStep < guideSteps.length - 1 ? (
                     <button
                       onClick={() => setGuideStep(guideStep + 1)}
-                      className="flex items-center gap-1 bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-4 py-2 rounded-lg font-medium hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors"
+                      className="flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white px-5 py-2.5 rounded-xl font-extrabold text-sm transition-all shadow-md shadow-emerald-600/25 active:scale-95 cursor-pointer border border-emerald-400/30"
                     >
                       Suivant
-                      <ChevronRight size={16} />
+                      <ChevronRight size={16} className="stroke-[3]" />
                     </button>
                   ) : (
                     <button
                       onClick={closeGuide}
-                      className="flex items-center gap-1 bg-emerald-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-emerald-700 transition-colors"
+                      className="flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:to-teal-600 text-white px-5 py-2.5 rounded-xl font-extrabold text-sm transition-all shadow-lg shadow-emerald-600/30 active:scale-95 cursor-pointer border border-emerald-400/30"
                     >
                       Commencer
                     </button>

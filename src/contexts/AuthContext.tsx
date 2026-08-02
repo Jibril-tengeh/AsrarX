@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { doc, getDoc, onSnapshot, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
-import { auth, db, signOut } from '../lib/firebase';
+import { auth, db, signOut, sendVerificationEmail } from '../lib/firebase';
 import { AsrarHubLoader } from '../components/AsrarHubLoader';
 import { getTrialDurationHours } from '../utils/trialConfig';
 
@@ -84,6 +84,8 @@ interface AuthContextType {
   markTrialPopupSeen: () => void;
   showTrialPopup: boolean;
   setShowTrialPopup: (show: boolean) => void;
+  checkEmailVerification: () => Promise<boolean>;
+  resendVerificationEmail: () => Promise<void>;
 }
 
 export const checkIsPremium = (user: UserData | null): boolean => {
@@ -215,7 +217,9 @@ const AuthContext = createContext<AuthContextType>({
   activate24hTrial: async () => {},
   markTrialPopupSeen: () => {},
   showTrialPopup: false,
-  setShowTrialPopup: () => {}
+  setShowTrialPopup: () => {},
+  checkEmailVerification: async () => false,
+  resendVerificationEmail: async () => {}
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -392,7 +396,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
           setLoading(false);
         }, (error) => {
-          console.error("AuthContext userRef onSnapshot error:", error);
+          console.warn("AuthContext userRef onSnapshot error:", error);
           const local = getLocalUser();
           if (local) setUser(local);
           setLoading(false);
@@ -506,6 +510,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       : new Date(user.premiumUntil);
   };
 
+  const checkEmailVerification = async (): Promise<boolean> => {
+    const adminEmails = ['jibriltengeh4@gmail.com', 'sbireino@gmail.com', 'tenibawwal10@gmail.com', 'jibriltengeh57@gmail.com'];
+    if (user && (user.role === 'admin' || (user.email && adminEmails.includes(user.email.toLowerCase())))) {
+      setUser((prev) => prev ? { ...prev, emailVerified: true } : prev);
+      return true;
+    }
+    if (auth.currentUser) {
+      await auth.currentUser.reload();
+      const isVerified = auth.currentUser.emailVerified;
+      if (isVerified) {
+        setUser((prev) => prev ? { ...prev, emailVerified: true } : prev);
+      }
+      return isVerified;
+    }
+    return false;
+  };
+
+  const resendVerificationEmail = async (): Promise<void> => {
+    if (auth.currentUser) {
+      await sendVerificationEmail(auth.currentUser);
+    } else {
+      throw new Error("Aucun utilisateur connecté.");
+    }
+  };
+
   const trialExpiryDate = getTrialExpiryDate();
   const nowMs = Date.now();
   const trialTimeLeftMs = trialExpiryDate ? Math.max(0, trialExpiryDate.getTime() - nowMs) : 0;
@@ -522,7 +551,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       activate24hTrial, 
       markTrialPopupSeen, 
       showTrialPopup, 
-      setShowTrialPopup 
+      setShowTrialPopup,
+      checkEmailVerification,
+      resendVerificationEmail
     }}>
       {loading ? <AsrarHubLoader size="fullscreen" /> : children}
     </AuthContext.Provider>

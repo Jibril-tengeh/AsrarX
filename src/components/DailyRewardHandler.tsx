@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { doc, updateDoc, increment } from 'firebase/firestore';
-import { db, isAutoSaveEnabled } from '../lib/firebase';
+import { doc, setDoc, increment } from 'firebase/firestore';
+import { db, auth, isAutoSaveEnabled } from '../lib/firebase';
 import { useLanguage } from '../contexts/LanguageContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, X, BellOff } from 'lucide-react';
@@ -48,12 +48,16 @@ export const DailyRewardHandler: React.FC = () => {
 
         // If never claimed, or more than 24h ago
         if (lastRewardTime === 0 || (now - lastRewardTime) >= twentyFourHours) {
-          const userRef = doc(db, 'users', uid);
-          if (isAutoSaveEnabled()) {
-            await updateDoc(userRef, {
-              spiritualPoints: increment(10),
-              lastDailyRewardDate: now
-            });
+          if (isAutoSaveEnabled() && auth.currentUser && !uid.startsWith('local_')) {
+            const userRef = doc(db, 'users', uid);
+            try {
+              await setDoc(userRef, {
+                spiritualPoints: increment(10),
+                lastDailyRewardDate: now
+              }, { merge: true });
+            } catch (fsErr) {
+              console.warn("Daily 10 points sync to Firestore skipped:", fsErr);
+            }
           }
           setShowDaily10(true);
           setTimeout(() => {
@@ -61,7 +65,7 @@ export const DailyRewardHandler: React.FC = () => {
           }, 4000);
         }
       } catch (error) {
-        console.error("Error checking/awarding daily 10 points:", error);
+        console.warn("Error checking/awarding daily 10 points:", error);
       }
     };
 
@@ -114,10 +118,12 @@ export const DailyRewardHandler: React.FC = () => {
         localStorage.setItem(earnedKey, pointsToday.toString());
 
         try {
-          const userRef = doc(db, 'users', uid);
-          if (isAutoSaveEnabled()) {
-            await updateDoc(userRef, {
+          if (isAutoSaveEnabled() && auth.currentUser && !uid.startsWith('local_')) {
+            const userRef = doc(db, 'users', uid);
+            await setDoc(userRef, {
               spiritualPoints: increment(1)
+            }, { merge: true }).catch((fsErr) => {
+              console.warn("Duration points sync to Firestore skipped:", fsErr);
             });
           }
 
@@ -133,7 +139,7 @@ export const DailyRewardHandler: React.FC = () => {
             }, 2500);
           }
         } catch (error) {
-          console.error("Error updating duration-based spiritual points:", error);
+          console.warn("Error updating duration-based spiritual points:", error);
         }
       }
     }, 1000);

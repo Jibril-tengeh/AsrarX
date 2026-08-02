@@ -415,7 +415,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
         // Pre-validate registration details before attempting auth creation
         const validation = await validateRegistrationDetails(email, phone, db);
         if (!validation.valid) {
-          setError(validation.error || "Informations d'inscription invalides.");
+          const errMsg = validation.error || "Informations d'inscription invalides.";
+          setError(errMsg);
+          if (errMsg.includes('email') || errMsg.includes('mail') || errMsg.includes('alias')) {
+            setEmailFieldError(errMsg);
+          }
+          if (errMsg.includes('téléphone') || errMsg.includes('numéro') || errMsg.includes('Phone')) {
+            setPhoneFieldError(errMsg);
+          }
           setLoading(false);
           return;
         }
@@ -477,14 +484,27 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
       }
     } catch (err: any) {
       console.error("Auth error:", err);
-      if (err.code === 'auth/wrong-password' || err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+      const errCode = err.code || '';
+      const errMessage = err.message || '';
+
+      if (errCode === 'auth/wrong-password' || errCode === 'auth/user-not-found' || errCode === 'auth/invalid-credential') {
         setError(t('auth.invalidCredentials', 'Email ou mot de passe incorrect.'));
-      } else if (err.code === 'auth/email-already-in-use') {
-        setError(t('auth.emailInUse', 'Cet email (ou un alias de cette adresse) est déjà utilisé par un autre compte.'));
-      } else if (err.code === 'auth/network-request-failed' || err.message?.includes('network')) {
+      } else if (errCode === 'auth/email-already-in-use' || errMessage.includes('email-already-in-use')) {
+        const msg = t('auth.emailInUse', 'Cette adresse email est déjà utilisée par un autre compte. Veuillez vous connecter.');
+        setError(msg);
+        setEmailFieldError(msg);
+      } else if (errCode === 'auth/invalid-email') {
+        const msg = t('auth.invalidEmail', 'Adresse email invalide.');
+        setError(msg);
+        setEmailFieldError(msg);
+      } else if (errCode === 'auth/weak-password') {
+        setError(t('auth.weakPassword', 'Le mot de passe doit contenir au moins 6 caractères.'));
+      } else if (errCode === 'auth/too-many-requests') {
+        setError(t('auth.tooManyRequests', 'Trop de tentatives d\'accès. Veuillez patienter un moment avant de reessayer.'));
+      } else if (errCode === 'auth/network-request-failed' || errMessage.includes('network')) {
         setError(t('auth.networkError', "La connexion aux serveurs d'authentification a échoué. Cela peut être dû à un adblocker ou à des restrictions d'iframe. Essayez d'ouvrir l'application dans un nouvel onglet ou utilisez le mode secours."));
       } else {
-        setError(err.message || t('auth.errorOccurred', 'Une erreur est survenue.'));
+        setError(errMessage || t('auth.errorOccurred', 'Une erreur est survenue.'));
       }
       setLoading(false);
     }
@@ -784,13 +804,41 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
 
                     <button
                       type="button"
+                      onClick={async () => {
+                        setResendLoading(true);
+                        setResendStatus('');
+                        try {
+                          if (auth.currentUser) {
+                            await auth.currentUser.reload();
+                            if (auth.currentUser.emailVerified) {
+                              setVerificationSent(false);
+                              onClose();
+                              return;
+                            }
+                          }
+                          setResendStatus("Email non encore vérifié. Veuillez cliquer sur le lien reçu dans votre boîte de réception.");
+                        } catch (e) {
+                          setVerificationSent(false);
+                          setIsLogin(true);
+                        } finally {
+                          setResendLoading(false);
+                        }
+                      }}
+                      disabled={resendLoading}
+                      className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl font-bold text-sm transition-colors shadow-md cursor-pointer flex items-center justify-center gap-2"
+                    >
+                      {resendLoading ? "Vérification..." : t('auth.verifiedBackToLogin', "J'ai vérifié mon email / Activer mon compte")}
+                    </button>
+
+                    <button
+                      type="button"
                       onClick={() => {
                         setVerificationSent(false);
                         setIsLogin(true);
                       }}
-                      className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-sm transition-colors shadow-md cursor-pointer"
+                      className="w-full py-2 text-xs font-semibold text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
                     >
-                      {t('auth.verifiedBackToLogin', "J'ai vérifié mon email / Se connecter")}
+                      Retour à la connexion
                     </button>
                   </div>
                 </div>

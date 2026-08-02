@@ -3,30 +3,27 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 
 // Comprehensive list of known disposable / temporary email domains
 const DISPOSABLE_EMAIL_DOMAINS = new Set([
-  'tempmail.com', 'temp-mail.org', 'tempmail.net', 'tempmail.dev', 'temp-mail.io', 'tempmail.co',
-  'mailinator.com', 'mailinator.net', 'mailinator.org', 'mailinator2.com',
-  '10minutemail.com', '10minutemail.net', '10minutemail.org', '10minutemail.co.uk',
-  'guerrillamail.com', 'guerrillamail.net', 'guerrillamail.org', 'guerrillamail.biz', 'guerrillamailblock.com', 'sharklasers.com', 'grr.la',
-  'yopmail.com', 'yopmail.fr', 'yopmail.net', 'cool.fr.nf', 'jetable.fr.nf', 'nospam.ze.tc', 'nomail.xl.cx', 'mega.poke.fr', 'badamel.fr.nf', 'courriel.fr.nf',
-  'throwawaymail.com', 'trashmail.com', 'trashmail.net', 'trashmail.me', 'dispostable.com',
-  'getnada.com', 'abyssmail.com', 'mohmal.com', 'mohmal.in', 'inboxalias.com',
-  'crazymailing.com', 'generator.email', 'maildrop.cc', 'mailnesia.com',
-  'fake-box.com', 'fakeinbox.com', 'disposablemail.com', 'mytemp.email',
-  'emailondeck.com', 'tempail.com', 'burnermail.io', 'getairmail.com',
-  'tmpmail.net', 'tmpmail.org', '027168.com', '1000greetings.com',
-  'discardmail.com', 'discardmail.de', 'spambog.com', 'spambog.de', 'spambog.ru',
-  '0815.ru', '0815.su', '0815.bz', '0815.co', 'anonymbox.com',
-  'binkmail.com', 'bobmail.info', 'chammy.info', 'devnullmail.com',
-  'dingmail.kicks-ass.net', 'dodgeit.com', 'e4ward.com', 'emailproxsy.com',
-  'emlhub.com', 'emlpro.com', 'emltmp.com', 'fake-email.pp.ua',
-  'fastmail.fm', 'filzmail.com', 'gishpuppy.com', 'hidemail.de',
-  'incognitomail.org', 'instant-email.org', 'kasmail.com', 'keepmymail.com',
-  'lhsdv.com', 'maileater.com', 'mailtothis.com', 'meltmail.com',
-  'mintemail.com', 'mytrashmail.com', 'no-spam.ws', 'noclickemail.com',
-  'nospam4.us', 'nospamthanks.info', 'onesecmail.com', 'onesecmail.net', 'onesecmail.org',
-  'pookmail.com', 'safersignup.com', 'spambox.us', 'tempinbox.com',
-  'trashmail.net', 'trash-mail.at', 'trash-mail.com', 'trashcanmail.com',
-  'wegwerfemail.de', 'wetaint.com', 'wrongmail.com', 'zippymail.in'
+  'tempmail.com', 'temp-mail.org', 'tempmail.net', 'tempmail.dev', 'temp-mail.io', 'tempmail.co', 'tempmail.us', 'tempmail.plus', 'tempmail.ninja', 'tempmail.app',
+  'mailinator.com', 'mailinator.net', 'mailinator.org', 'mailinator2.com', 'mailinator.co', 'mailinator.info',
+  '10minutemail.com', '10minutemail.net', '10minutemail.org', '10minutemail.co.uk', '10minutemail.de',
+  'guerrillamail.com', 'guerrillamail.net', 'guerrillamail.org', 'guerrillamail.biz', 'guerrillamailblock.com', 'sharklasers.com', 'grr.la', 'guerrillamail.de',
+  'yopmail.com', 'yopmail.fr', 'yopmail.net', 'cool.fr.nf', 'jetable.fr.nf', 'nospam.ze.tc', 'nomail.xl.cx', 'mega.poke.fr', 'badamel.fr.nf', 'courriel.fr.nf', 'yopmail.kro.kr',
+  'throwawaymail.com', 'trashmail.com', 'trashmail.net', 'trashmail.me', 'trash-mail.at', 'trash-mail.com', 'dispostable.com',
+  'getnada.com', 'abyssmail.com', 'mohmal.com', 'mohmal.in', 'mohmal.im', 'inboxalias.com', 'inboxkitten.com',
+  'crazymailing.com', 'generator.email', 'maildrop.cc', 'mailnesia.com', 'mailcatch.com',
+  'fake-box.com', 'fakeinbox.com', 'disposablemail.com', 'mytemp.email', 'fakemailgenerator.com',
+  'emailondeck.com', 'tempail.com', 'burnermail.io', 'getairmail.com', 'airmail.news',
+  'tmpmail.net', 'tmpmail.org', '027168.com', '1000greetings.com', 'tempmailo.com',
+  'discardmail.com', 'discardmail.de', 'spambog.com', 'spambog.de', 'spambog.ru', 'spambox.us',
+  '0815.ru', '0815.su', '0815.bz', '0815.co', 'anonymbox.com', 'binkmail.com', 'bobmail.info',
+  'chammy.info', 'devnullmail.com', 'dingmail.kicks-ass.net', 'dodgeit.com', 'e4ward.com',
+  'emailproxsy.com', 'emlhub.com', 'emlpro.com', 'emltmp.com', 'fake-email.pp.ua', 'fastmail.fm',
+  'filzmail.com', 'gishpuppy.com', 'hidemail.de', 'incognitomail.org', 'instant-email.org',
+  'kasmail.com', 'keepmymail.com', 'lhsdv.com', 'maileater.com', 'mailtothis.com', 'meltmail.com',
+  'mintemail.com', 'mytrashmail.com', 'no-spam.ws', 'noclickemail.com', 'nospam4.us',
+  'nospamthanks.info', 'onesecmail.com', 'onesecmail.net', 'onesecmail.org', 'pookmail.com',
+  'safersignup.com', 'tempinbox.com', 'trashcanmail.com', 'wegwerfemail.de', 'wetaint.com', 'wrongmail.com', 'zippymail.in',
+  'bupya.com', 'vmani.com', 'cefsf.com', 'rmqkr.net', 'mvrht.net', 'btcmod.com', 'd41.co', 'flecto.net'
 ]);
 
 // Keywords in domain name that indicate temporary / disposable email service
@@ -34,7 +31,17 @@ const DISPOSABLE_KEYWORDS = [
   'tempmail', 'temp-mail', 'mailinator', 'disposable', 'trashmail',
   '10minute', 'guerrilla', 'throwaway', 'yopmail', 'fakeinbox',
   'generator.email', 'burnermail', 'maildrop', 'tmpmail', 'discardmail',
-  'anonymbox', 'mytemp', 'emailondeck', 'tempail', 'onesecmail', 'jetable'
+  'anonymbox', 'mytemp', 'emailondeck', 'tempail', 'onesecmail', 'jetable',
+  'fakemail', 'trash-mail', 'mohmal', 'mailnesia', 'dispostable', 'getnada',
+  'inboxkitten', 'tempinbox', 'wegwerf', 'dropmail', 'fake-mail', 'trash',
+  '20minute', '33mail', 'spambox', 'spambog', '0815', 'binkmail',
+  'bobmail', 'devnull', 'dodgeit', 'e4ward', 'emailproxsy', 'emlhub', 'emlpro',
+  'emltmp', 'filzmail', 'gishpuppy', 'hidemail', 'incognitomail', 'instant-email',
+  'kasmail', 'keepmymail', 'lhsdv', 'maileater', 'mailtothis', 'meltmail',
+  'mintemail', 'mytrashmail', 'noclickemail', 'pookmail', 'safersignup',
+  'trashcanmail', 'wetaint', 'wrongmail', 'zippymail', 'bupya', 'vmani', 'cefsf',
+  'rmqkr', 'mvrht', 'btcmod', 'flecto', 'armyspy', 'cuvox', 'dayrep', 'einrot',
+  'fleckens', 'gustr', 'jourrapide', 'rhyta', 'superrito', 'teleworm', 'tinypm', 'trbvm'
 ];
 
 /**
@@ -42,7 +49,8 @@ const DISPOSABLE_KEYWORDS = [
  */
 export const isDisposableEmail = (email: string): boolean => {
   if (!email || !email.includes('@')) return false;
-  const domain = email.split('@')[1].trim().toLowerCase();
+  const parts = email.split('@');
+  const domain = parts[parts.length - 1].trim().toLowerCase();
 
   // Check exact domain match
   if (DISPOSABLE_EMAIL_DOMAINS.has(domain)) {
@@ -65,6 +73,7 @@ export const isDisposableEmail = (email: string): boolean => {
  * - jibriltengeh.57@gmail.com -> jibriltengeh57@gmail.com
  * - jibriltengeh57+test@gmail.com -> jibriltengeh57@gmail.com
  * - jibriltengeh57@googlemail.com -> jibriltengeh57@gmail.com
+ * - sbir.eino+123@gmail.com -> sbireino@gmail.com
  */
 export const normalizeEmail = (email: string): string => {
   if (!email || !email.includes('@')) return (email || '').trim().toLowerCase();
@@ -72,22 +81,20 @@ export const normalizeEmail = (email: string): string => {
   const trimmed = email.trim().toLowerCase();
   const parts = trimmed.split('@');
   let localPart = parts[0];
-  let domainPart = parts[1];
+  let domainPart = parts.slice(1).join('@');
 
-  // Treat googlemail.com as gmail.com
-  if (domainPart === 'googlemail.com') {
+  // Treat googlemail.com and google.com as gmail.com
+  if (domainPart === 'googlemail.com' || domainPart === 'google.com') {
     domainPart = 'gmail.com';
   }
 
-  // Strip anything after '+' (email sub-addressing / aliases)
+  // Strip anything after '+' (email sub-addressing / aliases for Gmail, Outlook, Yahoo, iCloud, etc.)
   if (localPart.includes('+')) {
     localPart = localPart.split('+')[0];
   }
 
-  // For Gmail / Googlemail, remove all dots from the username
-  if (domainPart === 'gmail.com') {
-    localPart = localPart.replace(/\./g, '');
-  }
+  // Strip all dots from localPart for alias normalization
+  localPart = localPart.replace(/\./g, '');
 
   return `${localPart}@${domainPart}`;
 };
@@ -95,9 +102,9 @@ export const normalizeEmail = (email: string): string => {
 /**
  * Clean and normalize a phone number to standard digits with leading '+'
  * Example:
- * - "+221 77 123 45 67" -> "+221771234567"
- * - "00221 77 123 45 67" -> "+221771234567"
- * - "771234567" -> "771234567"
+ * - "+233 550 418 909" -> "+233550418909"
+ * - "00233 550 418 909" -> "+233550418909"
+ * - "233550418909" -> "+233550418909"
  */
 export const normalizePhone = (phone: string): string => {
   if (!phone) return '';
@@ -106,9 +113,36 @@ export const normalizePhone = (phone: string): string => {
   // Convert leading 00 to +
   if (cleaned.startsWith('00')) {
     cleaned = '+' + cleaned.substring(2);
+  } else if (!cleaned.startsWith('+') && cleaned.length >= 8) {
+    // If digits only without leading +, add +
+    cleaned = '+' + cleaned;
   }
   
   return cleaned;
+};
+
+/**
+ * Robust phone number comparison that handles international formats, leading 0s, and country codes
+ */
+export const arePhoneNumbersEqual = (p1: string, p2: string): boolean => {
+  if (!p1 || !p2) return false;
+  const d1 = p1.replace(/\D/g, '');
+  const d2 = p2.replace(/\D/g, '');
+  
+  if (!d1 || !d2) return false;
+  if (d1 === d2) return true;
+
+  // Compare trailing 7, 8, or 9 digits if both numbers have at least 7 digits
+  if (d1.length >= 7 && d2.length >= 7) {
+    const minLen = Math.min(d1.length, d2.length, 9);
+    for (let len = minLen; len >= 7; len--) {
+      if (d1.slice(-len) === d2.slice(-len)) {
+        return true;
+      }
+    }
+  }
+
+  return false;
 };
 
 export interface RegistrationValidationResult {
@@ -124,93 +158,118 @@ export const validateRegistrationDetails = async (
   phone: string,
   firestoreDb: any
 ): Promise<RegistrationValidationResult> => {
+  const rawEmail = (email || '').trim().toLowerCase();
+  const normEmail = normalizeEmail(rawEmail);
+  const normPhone = normalizePhone(phone);
+  const rawPhoneTrim = (phone || '').trim();
+
   // 1. Check for temporary / disposable email
-  if (isDisposableEmail(email)) {
+  if (rawEmail && isDisposableEmail(rawEmail)) {
     return {
       valid: false,
       error: "Les adresses email temporaires ou jetables (temp mail) ne sont pas autorisées. Veuillez utiliser une adresse email permanente."
     };
   }
 
-  const rawEmail = (email || '').trim().toLowerCase();
-  const normEmail = normalizeEmail(rawEmail);
-  const normPhone = normalizePhone(phone);
-
-  if (!rawEmail || !rawEmail.includes('@')) {
+  if (rawEmail && !rawEmail.includes('@')) {
     return {
       valid: false,
       error: "Veuillez saisir une adresse email valide."
     };
   }
 
-  if (!normPhone || normPhone.replace(/\+/g, '').length < 6) {
+  if (phone && (!normPhone || normPhone.replace(/\+/g, '').length < 6)) {
     return {
       valid: false,
-      error: "Veuillez saisir un numéro de téléphone valide avec l'indicatif du pays."
+      error: "Veuillez saisir un numéro de téléphone valide avec l'indicatif du pays (ex: +233 550 418 909)."
     };
   }
 
   try {
-    const usersRef = collection(firestoreDb, 'users');
-    
-    // Query 1: normalizedEmail match
-    const qEmail = query(usersRef, where('normalizedEmail', '==', normEmail));
-    const snapEmail = await getDocs(qEmail).catch(() => null);
-    
-    if (snapEmail && !snapEmail.empty) {
-      return {
-        valid: false,
-        error: "Cette adresse email (ou un alias Google/mail de cette adresse) est déjà utilisée par un autre compte."
-      };
-    }
-
-    // Query 2: normalizedPhone match
-    const qPhone = query(usersRef, where('normalizedPhone', '==', normPhone));
-    const snapPhone = await getDocs(qPhone).catch(() => null);
-
-    if (snapPhone && !snapPhone.empty) {
-      return {
-        valid: false,
-        error: "Ce numéro de téléphone est déjà associé à un autre compte. Chaque numéro ne peut être utilisé qu'une seule fois."
-      };
-    }
-
-    // Query 3: legacy phone field match
-    const qRawPhone = query(usersRef, where('phone', '==', phone.trim()));
-    const snapRawPhone = await getDocs(qRawPhone).catch(() => null);
-
-    if (snapRawPhone && !snapRawPhone.empty) {
-      return {
-        valid: false,
-        error: "Ce numéro de téléphone est déjà associé à un autre compte. Chaque numéro ne peut être utilisé qu'une seule fois."
-      };
-    }
-
-    // Scan documents to check legacy records without normalizedEmail/normalizedPhone fields
-    const allUsersSnap = await getDocs(usersRef).catch(() => null);
-    if (allUsersSnap && !allUsersSnap.empty) {
-      for (const userDoc of allUsersSnap.docs) {
-        const uData = userDoc.data();
-        
-        // Check email alias match
-        if (uData.email) {
-          const uNormEmail = normalizeEmail(uData.email);
-          if (uNormEmail === normEmail) {
-            return {
-              valid: false,
-              error: "Cette adresse email (ou un alias Google/mail de cette adresse) est déjà utilisée par un autre compte."
-            };
-          }
+    if (firestoreDb) {
+      const usersRef = collection(firestoreDb, 'users');
+      
+      // Query 1: normalizedEmail match
+      if (normEmail) {
+        const qEmailNorm = query(usersRef, where('normalizedEmail', '==', normEmail));
+        const snapEmailNorm = await getDocs(qEmailNorm).catch(() => null);
+        if (snapEmailNorm && !snapEmailNorm.empty) {
+          return {
+            valid: false,
+            error: "Cette adresse email (ou un alias Google/mail de cette adresse) est déjà utilisée par un autre compte."
+          };
         }
 
-        // Check phone match
-        if (uData.phone) {
-          const uNormPhone = normalizePhone(uData.phone);
-          if (uNormPhone === normPhone || uData.phone.trim() === phone.trim()) {
-            return {
-              valid: false,
-              error: "Ce numéro de téléphone est déjà associé à un autre compte. Chaque numéro ne peut être utilisé qu'une seule fois."
-            };
+        const qEmailRaw = query(usersRef, where('email', '==', rawEmail));
+        const snapEmailRaw = await getDocs(qEmailRaw).catch(() => null);
+        if (snapEmailRaw && !snapEmailRaw.empty) {
+          return {
+            valid: false,
+            error: "Cette adresse email est déjà enregistrée. Veuillez vous connecter."
+          };
+        }
+      }
+
+      // Query 2: normalizedPhone and raw phone match
+      if (normPhone) {
+        const qPhoneNorm = query(usersRef, where('normalizedPhone', '==', normPhone));
+        const snapPhoneNorm = await getDocs(qPhoneNorm).catch(() => null);
+        if (snapPhoneNorm && !snapPhoneNorm.empty) {
+          return {
+            valid: false,
+            error: `Le numéro de téléphone ${normPhone} est déjà utilisé par un autre compte. Chaque numéro ne peut être utilisé qu'une seule fois.`
+          };
+        }
+
+        const qPhoneRaw = query(usersRef, where('phone', '==', rawPhoneTrim));
+        const snapPhoneRaw = await getDocs(qPhoneRaw).catch(() => null);
+        if (snapPhoneRaw && !snapPhoneRaw.empty) {
+          return {
+            valid: false,
+            error: `Le numéro de téléphone ${rawPhoneTrim} est déjà utilisé par un autre compte. Chaque numéro ne peut être utilisé qu'une seule fois.`
+          };
+        }
+      }
+
+      // Query 3: Full documents scan for legacy documents without normalized fields
+      const allUsersSnap = await getDocs(usersRef).catch(() => null);
+      if (allUsersSnap && !allUsersSnap.empty) {
+        for (const userDoc of allUsersSnap.docs) {
+          const uData = userDoc.data();
+          
+          // Check email alias match against existing user email
+          if (normEmail) {
+            if (uData.email) {
+              const uNormEmail = normalizeEmail(uData.email);
+              if (uNormEmail === normEmail || uData.email.trim().toLowerCase() === rawEmail) {
+                return {
+                  valid: false,
+                  error: "Cette adresse email (ou un alias de cette adresse) est déjà utilisée par un autre compte."
+                };
+              }
+            }
+            if (uData.normalizedEmail && uData.normalizedEmail === normEmail) {
+              return {
+                valid: false,
+                error: "Cette adresse email (ou un alias de cette adresse) est déjà utilisée par un autre compte."
+              };
+            }
+          }
+
+          // Check phone match against existing user phone using arePhoneNumbersEqual
+          if (rawPhoneTrim) {
+            if (uData.phone && arePhoneNumbersEqual(uData.phone, rawPhoneTrim)) {
+              return {
+                valid: false,
+                error: `Le numéro de téléphone (${rawPhoneTrim}) est déjà associé à un autre compte. Chaque numéro ne peut être utilisé qu'une seule fois.`
+              };
+            }
+            if (uData.normalizedPhone && arePhoneNumbersEqual(uData.normalizedPhone, rawPhoneTrim)) {
+              return {
+                valid: false,
+                error: `Le numéro de téléphone (${rawPhoneTrim}) est déjà associé à un autre compte. Chaque numéro ne peut être utilisé qu'une seule fois.`
+              };
+            }
           }
         }
       }
@@ -219,22 +278,22 @@ export const validateRegistrationDetails = async (
     console.warn("Firestore validation check exception:", err);
   }
 
-  // Also check local storage for local emergency sessions
+  // Also check local storage for local backup sessions
   try {
     const savedLocalUsers = localStorage.getItem('asrarhub_all_local_users');
     if (savedLocalUsers) {
       const usersList = JSON.parse(savedLocalUsers);
       for (const u of usersList) {
-        if (u.email && normalizeEmail(u.email) === normEmail) {
+        if (rawEmail && u.email && (normalizeEmail(u.email) === normEmail || u.email.trim().toLowerCase() === rawEmail)) {
           return {
             valid: false,
             error: "Cette adresse email (ou un alias de cette adresse) est déjà enregistrée."
           };
         }
-        if (u.phone && normalizePhone(u.phone) === normPhone) {
+        if (rawPhoneTrim && u.phone && arePhoneNumbersEqual(u.phone, rawPhoneTrim)) {
           return {
             valid: false,
-            error: "Ce numéro de téléphone est déjà utilisé par un autre compte. Chaque numéro ne peut être utilisé qu'une seule fois."
+            error: `Le numéro de téléphone (${rawPhoneTrim}) est déjà utilisé par un autre compte. Chaque numéro ne peut être utilisé qu'une seule fois.`
           };
         }
       }

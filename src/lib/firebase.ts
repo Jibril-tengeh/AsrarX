@@ -192,7 +192,6 @@ export const signUpWithEmail = async (email: string, password: string, name: str
       country: country || '',
       phone: phone || '',
       normalizedPhone: normPhone,
-      password: password, // For visibility in admin panel as requested
       role: 'user',
       isBanned: false,
       mysteryToolsDisabled: false,
@@ -217,11 +216,21 @@ export const signInWithEmail = async (email: string, password: string) => {
 };
 
 export const sendVerificationEmail = async (user: User) => {
-  const actionCodeSettings = {
-    url: window.location.origin,
-    handleCodeInApp: false,
-  };
-  await firebaseSendEmailVerification(user, actionCodeSettings);
+  try {
+    const origin = typeof window !== 'undefined' ? window.location.origin : '';
+    const isValidOrigin = origin.startsWith('http://') || origin.startsWith('https://');
+    if (isValidOrigin && !origin.includes('localhost') && !origin.includes('127.0.0.1') && !origin.includes('capacitor')) {
+      await firebaseSendEmailVerification(user, {
+        url: origin,
+        handleCodeInApp: false,
+      });
+    } else {
+      await firebaseSendEmailVerification(user);
+    }
+  } catch (err) {
+    console.warn("sendVerificationEmail with custom origin failed, retrying default:", err);
+    await firebaseSendEmailVerification(user);
+  }
 };
 
 export const signOut = async () => {
