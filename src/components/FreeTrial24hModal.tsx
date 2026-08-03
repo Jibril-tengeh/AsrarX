@@ -61,7 +61,7 @@ export const FreeTrial24hModal: React.FC<FreeTrial24hModalProps> = ({ isOpen, on
   const handleExplore = () => {
     markTrialPopupSeen();
     onClose();
-    navigate('/tools/sacred-books');
+    navigate('/user/dashboard');
   };
 
   const isFr = language === 'fr';

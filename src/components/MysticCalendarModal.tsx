@@ -13,6 +13,8 @@ import { ContemplativeAudioPlayer } from './ContemplativeAudioPlayer';
 import { RitualIncenseTimer } from './RitualIncenseTimer';
 import { MuraqabahLogModal } from './MuraqabahLogModal';
 import { LunarSealVarietiesSection } from './LunarSealVarietiesSection';
+import { SacredKhatim3DDisplay } from './SacredKhatim3DDisplay';
+import { getSealVersionInfo } from '../utils/lunarSealVersions';
 import { calculateSolarTimes } from '../utils/solarCalculator';
 import {
   getLocalizedHijriMonths,
@@ -40,7 +42,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
   const navigate = useNavigate();
 
   const [isSealExpanded, setIsSealExpanded] = useState<boolean>(true);
-  const [selectedSealVersion, setSelectedSealVersion] = useState<1 | 2>(1);
+  const [selectedSealVersion, setSelectedSealVersion] = useState<number>(1);
   const [copiedTalsam, setCopiedTalsam] = useState<boolean>(false);
   const [copiedSeal, setCopiedSeal] = useState<boolean>(false);
 
@@ -1139,9 +1141,8 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
       triggerProtectionModal('download');
       return;
     }
-    const text = selectedSealVersion === 2 && activeMoonMystery.talsamDetails.graphicSymbolV2
-      ? activeMoonMystery.talsamDetails.graphicSymbolV2
-      : activeMoonMystery.talsamDetails.graphicSymbol;
+    const sealInfo = getSealVersionInfo(selectedHijriDay, selectedSealVersion, language);
+    const text = sealInfo.symbol;
 
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -1236,9 +1237,8 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
       triggerProtectionModal('copy');
       return;
     }
-    const text = selectedSealVersion === 2 && activeMoonMystery.talsamDetails.graphicSymbolV2
-      ? activeMoonMystery.talsamDetails.graphicSymbolV2
-      : activeMoonMystery.talsamDetails.graphicSymbol;
+    const sealInfo = getSealVersionInfo(selectedHijriDay, selectedSealVersion, language);
+    const text = sealInfo.symbol;
     navigator.clipboard.writeText(text);
     setCopiedSeal(true);
     setTimeout(() => setCopiedSeal(false), 2000);
@@ -1273,7 +1273,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
         ref={isPage ? undefined : backdropRef} 
         data-modal-overlay={!isPage ? "true" : undefined}
         className={isPage 
-          ? "w-full max-w-4xl mx-auto px-4 pt-2 sm:pt-4 pb-28 sm:pb-32 safe-area-pt"
+          ? "w-full max-w-4xl mx-auto px-3 sm:px-4 mt-[5px] pt-3 pb-28 sm:pb-32 safe-area-pt"
           : "fixed inset-0 z-[120] overflow-hidden bg-black/70 backdrop-blur-md p-3 sm:p-4 flex justify-center items-center"
         }
       >
@@ -1291,10 +1291,10 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
 
         {/* Page Back Button (Only in Page Mode) */}
         {isPage && (
-          <div className="mb-4 sm:mb-6 flex items-center justify-between w-full pt-1">
+          <div className="mb-3 flex items-center justify-between w-full">
             <button
               onClick={() => window.history.back()}
-              className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors cursor-pointer font-bold"
+              className="flex items-center gap-2 text-sm text-gray-700 hover:text-gray-900 dark:text-gray-200 dark:hover:text-white transition-colors cursor-pointer font-bold bg-white/80 dark:bg-gray-800/80 px-3 py-1.5 rounded-xl border border-gray-200 dark:border-gray-700/60 shadow-sm"
             >
               <ChevronLeft size={16} />
               {t('mysticCalendar.backBtn', "Retour à l'exploration")}
@@ -3367,88 +3367,48 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                           
                           <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center mt-2">
                             <div className="md:col-span-5 flex flex-col items-center justify-center gap-2">
-                              {/* Version Switcher Tabs */}
-                              <div className="flex items-center justify-between gap-1 w-full bg-black/70 p-1 rounded-xl border border-purple-500/30">
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSelectedSealVersion(1);
-                                  }}
-                                  className={`flex-1 py-1 px-1.5 text-[9px] font-extrabold rounded-lg transition-all cursor-pointer ${
-                                    selectedSealVersion === 1 
-                                      ? "bg-amber-500 text-black shadow-md" 
-                                      : "text-purple-300 hover:text-white hover:bg-purple-900/40"
-                                  }`}
-                                >
-                                  {activeMoonMystery.talsamDetails.version1Title || (language === 'fr' ? "V1 : Wafq Abjad" : "V1: Wafq Seal")}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSelectedSealVersion(2);
-                                  }}
-                                  className={`flex-1 py-1 px-1.5 text-[9px] font-extrabold rounded-lg transition-all cursor-pointer ${
-                                    selectedSealVersion === 2 
-                                      ? "bg-amber-500 text-black shadow-md" 
-                                      : "text-purple-300 hover:text-white hover:bg-purple-900/40"
-                                  }`}
-                                >
-                                  {activeMoonMystery.talsamDetails.version2Title || (language === 'fr' ? "V2 : Khatim An-Nur" : "V2: Khatim Seal")}
-                                </button>
-                              </div>
-
-                              <div 
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setIsSealExpanded(true);
-                                }}
-                                className="group relative cursor-pointer w-full flex flex-col items-center justify-center bg-black/80 border border-purple-500/40 hover:border-amber-400/60 p-3 rounded-xl transition-all duration-300 shadow-inner hover:shadow-purple-500/20 select-none min-h-[140px]"
-                                title={language === 'fr' ? "Cliquez pour agrandir en plein écran et télécharger le Sceau" : language === 'ha' ? "Danna don faɗaɗawa da saukar da Hatimi" : "Click to enlarge in full screen and download Seal"}
-                              >
-                                <pre className="text-purple-300 text-[10px] sm:text-[11px] font-mono leading-relaxed py-1.5 tracking-tight text-center whitespace-pre max-w-full overflow-x-auto">
-                                  {selectedSealVersion === 2 && activeMoonMystery.talsamDetails.graphicSymbolV2
-                                    ? activeMoonMystery.talsamDetails.graphicSymbolV2
-                                    : activeMoonMystery.talsamDetails.graphicSymbol}
-                                </pre>
-                                
-                                <div className="absolute inset-0 bg-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl flex items-center justify-center backdrop-blur-[2px]">
-                                  <span className="bg-purple-950/90 text-amber-300 text-[10px] font-extrabold px-2 py-1 rounded-lg border border-amber-500/40 shadow-xl flex items-center gap-1.5 uppercase tracking-wider">
-                                    <Eye size={12} className="animate-pulse" />
-                                    {language === 'fr' ? "Voir en Plein Écran" : language === 'ha' ? "Buɗe Bayana" : "Full Screen"}
-                                  </span>
+                              {/* Version Switcher Tabs V1..V12 */}
+                              <div className="w-full bg-black/80 p-1.5 rounded-xl border border-purple-500/30 shadow-md">
+                                <div className="flex items-center gap-1 overflow-x-auto pb-1.5 max-w-full no-scrollbar">
+                                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((vNum) => (
+                                    <button
+                                      key={vNum}
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setSelectedSealVersion(vNum);
+                                      }}
+                                      className={`px-2 py-1 text-[9px] sm:text-[10px] font-extrabold rounded-lg whitespace-nowrap transition-all cursor-pointer ${
+                                        selectedSealVersion === vNum
+                                          ? "bg-amber-500 text-black shadow-lg scale-105"
+                                          : "text-purple-300 hover:text-white bg-purple-950/40 hover:bg-purple-900/60 border border-purple-500/20"
+                                      }`}
+                                    >
+                                      V{vNum}
+                                    </button>
+                                  ))}
+                                </div>
+                                <div className="mt-1 px-1.5 py-1 bg-purple-950/40 rounded-lg border border-amber-500/20 text-center">
+                                  <div className="text-[10px] font-bold text-amber-300 truncate">
+                                    {getSealVersionInfo(selectedHijriDay, selectedSealVersion, language).title}
+                                  </div>
                                 </div>
                               </div>
 
-                              {/* Direct Seal Control Buttons */}
-                              <div className="flex items-center gap-1.5 w-full">
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setIsSealExpanded(true);
-                                  }}
-                                  className="flex-1 flex items-center justify-center gap-1 bg-purple-950/60 hover:bg-purple-900/80 border border-purple-500/30 text-purple-200 text-[10px] font-bold py-1.5 px-2 rounded-lg transition-colors cursor-pointer"
-                                  title={language === 'fr' ? "Afficher le sceau en grand" : "View seal full screen"}
-                                >
-                                  <Eye size={12} className="text-purple-300" />
-                                  <span>{language === 'fr' ? "Plein Écran" : language === 'ha' ? "Buɗe" : "Full Screen"}</span>
-                                </button>
-
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    downloadSealAsImage();
-                                  }}
-                                  className="flex-1 flex items-center justify-center gap-1 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 text-amber-300 text-[10px] font-bold py-1.5 px-2 rounded-lg transition-colors cursor-pointer"
-                                  title={language === 'fr' ? "Télécharger le Sceau sous forme d'image PNG" : "Download Seal as PNG image"}
-                                >
-                                  <Download size={12} className="text-amber-400" />
-                                  <span>{language === 'fr' ? "Télécharger" : language === 'ha' ? "Sauke" : "Download"}</span>
-                                </button>
-                              </div>
+                              <SacredKhatim3DDisplay
+                                symbolText={getSealVersionInfo(selectedHijriDay, selectedSealVersion, language).symbol}
+                                title={activeMoonMystery.name}
+                                versionTitle={getSealVersionInfo(selectedHijriDay, selectedSealVersion, language).title}
+                                formula={activeMoonMystery.talsamDetails.formula}
+                                abjadValue={activeMoonMystery.talsamDetails.advancedDetails?.abjadBasis}
+                                angelName={activeMoonMystery.talsamDetails.advancedDetails?.khuddamInfo}
+                                divineName={activeMoonMystery.talsamDetails.formula}
+                                vibration={activeMoonMystery.vibration}
+                                isExpanded={false}
+                                onExpand={() => setIsSealExpanded(true)}
+                                isUserPremium={isUserPremium}
+                                onRequestPremium={() => triggerProtectionModal('download')}
+                              />
                             </div>
                             <div className="md:col-span-7 space-y-1.5">
                               <div>
@@ -3671,50 +3631,49 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                       </p>
                     </div>
 
-                    {/* Version Switcher Bar in Lightbox */}
-                    <div className="flex items-center justify-center gap-2 w-full max-w-md bg-black/80 p-1.5 rounded-2xl border border-purple-500/30 mb-6 shadow-inner">
-                      <button
-                        type="button"
-                        onClick={() => setSelectedSealVersion(1)}
-                        className={`flex-1 py-2 px-3 text-xs font-extrabold rounded-xl transition-all cursor-pointer ${
-                          selectedSealVersion === 1 
-                            ? "bg-amber-500 text-black shadow-lg scale-[1.02]" 
-                            : "text-purple-300 hover:text-white hover:bg-purple-900/40"
-                        }`}
-                      >
-                        {activeMoonMystery.talsamDetails.version1Title || (language === 'fr' ? "Version 1 : Wafq Abjad" : "Version 1: Wafq Seal")}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setSelectedSealVersion(2)}
-                        className={`flex-1 py-2 px-3 text-xs font-extrabold rounded-xl transition-all cursor-pointer ${
-                          selectedSealVersion === 2 
-                            ? "bg-amber-500 text-black shadow-lg scale-[1.02]" 
-                            : "text-purple-300 hover:text-white hover:bg-purple-900/40"
-                        }`}
-                      >
-                        {activeMoonMystery.talsamDetails.version2Title || (language === 'fr' ? "Version 2 : Khatim An-Nur" : "Version 2: Khatim Seal")}
-                      </button>
+                    {/* Version Switcher Bar in Lightbox (V1..V12) */}
+                    <div className="w-full max-w-xl bg-black/80 p-2 rounded-2xl border border-purple-500/30 mb-6 shadow-inner">
+                      <div className="flex items-center gap-1.5 overflow-x-auto pb-2 max-w-full no-scrollbar">
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((vNum) => (
+                          <button
+                            key={vNum}
+                            type="button"
+                            onClick={() => setSelectedSealVersion(vNum)}
+                            className={`px-3 py-1.5 text-xs font-extrabold rounded-xl whitespace-nowrap transition-all cursor-pointer ${
+                              selectedSealVersion === vNum
+                                ? "bg-amber-500 text-black shadow-lg scale-105"
+                                : "text-purple-300 hover:text-white bg-purple-950/40 hover:bg-purple-900/60 border border-purple-500/20"
+                            }`}
+                          >
+                            V{vNum}
+                          </button>
+                        ))}
+                      </div>
+                      <div className="mt-1 px-3 py-1.5 bg-purple-950/40 rounded-xl border border-amber-500/20 text-center">
+                        <div className="text-xs font-extrabold text-amber-300">
+                          {getSealVersionInfo(selectedHijriDay, selectedSealVersion, language).title}
+                        </div>
+                        <div className="text-[10px] text-gray-300 italic">
+                          {getSealVersionInfo(selectedHijriDay, selectedSealVersion, language).description}
+                        </div>
+                      </div>
                     </div>
 
-                    {/* Big Sceau view */}
-                    <div className="w-full flex flex-col items-center justify-center gap-4 py-6 bg-black/95 border border-purple-500/40 rounded-2xl p-4 sm:p-8 shadow-2xl relative overflow-hidden select-all mb-6">
-                      <pre className="text-purple-300 font-mono text-xl sm:text-2xl md:text-3xl leading-relaxed py-3 tracking-normal text-center whitespace-pre select-all overflow-x-auto max-w-full">
-                        {selectedSealVersion === 2 && activeMoonMystery.talsamDetails.graphicSymbolV2
-                          ? activeMoonMystery.talsamDetails.graphicSymbolV2
-                          : activeMoonMystery.talsamDetails.graphicSymbol}
-                      </pre>
-                      
-                      {activeMoonMystery.talsamDetails.formula && (
-                        <div className="w-full pt-4 border-t border-purple-500/30 text-center">
-                          <span className="text-[10px] uppercase tracking-widest text-amber-400/90 block mb-1.5 font-bold">
-                            {language === 'fr' ? "Formule Talsamique Vocalisée (Tashkeel)" : language === 'ha' ? "Formular Talsam (Tashkeel)" : "Talismanic Formula (Tashkeel)"}
-                          </span>
-                          <code className="text-2xl sm:text-3xl md:text-4xl font-serif font-bold text-amber-300 select-all tracking-wide leading-relaxed block my-1" dir="rtl">
-                            {activeMoonMystery.talsamDetails.formula}
-                          </code>
-                        </div>
-                      )}
+                    {/* 3D Printable Sacred Seal view */}
+                    <div className="w-full flex flex-col items-center justify-center mb-6">
+                      <SacredKhatim3DDisplay
+                        symbolText={getSealVersionInfo(selectedHijriDay, selectedSealVersion, language).symbol}
+                        title={activeMoonMystery.name}
+                        versionTitle={getSealVersionInfo(selectedHijriDay, selectedSealVersion, language).title}
+                        formula={activeMoonMystery.talsamDetails.formula}
+                        abjadValue={activeMoonMystery.talsamDetails.advancedDetails?.abjadBasis}
+                        angelName={activeMoonMystery.talsamDetails.advancedDetails?.khuddamInfo}
+                        divineName={activeMoonMystery.talsamDetails.formula}
+                        vibration={activeMoonMystery.vibration}
+                        isExpanded={true}
+                        isUserPremium={isUserPremium}
+                        onRequestPremium={() => triggerProtectionModal('download')}
+                      />
                     </div>
 
                     {/* Mode d'Emploi Rituel Section */}

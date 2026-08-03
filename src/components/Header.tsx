@@ -210,10 +210,10 @@ export const Header: React.FC = () => {
         initial={{ y: -100 }}
         animate={{ y: 0 }}
         transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
+        className={`sticky top-0 left-0 right-0 z-50 transition-all duration-300 ${
           scrolled 
-            ? 'py-3 bg-emerald-600 dark:bg-emerald-800 shadow-lg' 
-            : 'py-4 bg-emerald-600 dark:bg-emerald-800'
+            ? 'py-2.5 bg-emerald-600 dark:bg-emerald-800 shadow-md' 
+            : 'py-3 bg-emerald-600 dark:bg-emerald-800 shadow-sm'
         } px-1.5 min-[375px]:px-3 sm:px-6`}
         onClick={handleSecretClick}
       >
