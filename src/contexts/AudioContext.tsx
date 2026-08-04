@@ -256,6 +256,11 @@ export const AudioProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           audioRef.current.pause();
           audioRef.current.currentTime = 0;
         }
+        if (currTrack?.isQuranVerse) {
+          window.dispatchEvent(new CustomEvent('asrarhub_quran_verse_playlist_ended', {
+            detail: { track: currTrack }
+          }));
+        }
       }
     };
 
@@ -514,6 +519,11 @@ export const AudioProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current.currentTime = 0;
+      }
+      if (currentTrack?.isQuranVerse) {
+        window.dispatchEvent(new CustomEvent('asrarhub_quran_verse_playlist_ended', {
+          detail: { track: currentTrack }
+        }));
       }
     }
   };

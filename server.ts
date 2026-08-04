@@ -37,6 +37,61 @@ async function startServer() {
   app.use(express.json());
   app.use(cors());
 
+  // Proxy for Quran audio files to avoid browser CORS restrictions during Web Audio decoding
+  app.get("/api/quran-audio-proxy", async (req, res) => {
+    try {
+      const { url } = req.query;
+      if (!url || typeof url !== "string") {
+        return res.status(400).json({ error: "Missing url parameter" });
+      }
+
+      const allowedHosts = [
+        "cdn.islamic.network",
+        "everyayah.com",
+        "download.quranicaudio.com",
+        "audio.qurancdn.com",
+        "translate.google.com",
+        "gstatic.com",
+        "google.com",
+        "server8.mp3quran.net",
+        "server11.mp3quran.net",
+        "server6.mp3quran.net",
+        "server7.mp3quran.net",
+        "server10.mp3quran.net",
+        "server12.mp3quran.net",
+        "server13.mp3quran.net",
+        "server14.mp3quran.net"
+      ];
+
+      const targetUrl = new URL(url);
+      const hostAllowed = allowedHosts.some(h => targetUrl.hostname.includes(h));
+      if (!hostAllowed) {
+        return res.status(403).json({ error: "Host not allowed for proxy" });
+      }
+
+      const audioRes = await fetch(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+      });
+
+      if (!audioRes.ok) {
+        return res.status(audioRes.status).send("Failed to fetch audio from source");
+      }
+
+      const arrayBuffer = await audioRes.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+
+      res.setHeader("Content-Type", audioRes.headers.get("content-type") || "audio/mpeg");
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      res.setHeader("Cache-Control", "public, max-age=604800");
+      res.send(buffer);
+    } catch (error: any) {
+      console.error("Quran audio proxy error:", error);
+      res.status(500).send("Error proxying audio");
+    }
+  });
+
   // Helper for retrying Gemini API calls
   const generateWithRetry = async (ai: GoogleGenAI, params: any, retries = 3) => {
     for (let i = 0; i < retries; i++) {

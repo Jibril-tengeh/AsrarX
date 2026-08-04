@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Play, Pause, Volume2, VolumeX, Radio, Sparkles, Volume1, Repeat, Image as ImageIcon, Mic, BookOpen, Type } from 'lucide-react';
+import { Play, Pause, Volume2, VolumeX, Radio, Sparkles, Volume1, Repeat, Image as ImageIcon, Mic, Bookmark } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useFeatures } from '../contexts/FeatureContext';
 import { getEffectiveSacredReciters } from '../utils/reciterManager';
+import { VerseSaveExportModal } from './VerseSaveExportModal';
 
 export interface ReciterOption {
   id: string;
@@ -27,6 +28,7 @@ interface ContemplativeAudioPlayerProps {
   phoneticText: string;
   translationText: string;
   language: string;
+  verseNumber?: string;
   onOpenVisualGenerator?: () => void;
 }
 
@@ -36,6 +38,7 @@ export const ContemplativeAudioPlayer: React.FC<ContemplativeAudioPlayerProps> =
   phoneticText,
   translationText,
   language,
+  verseNumber,
   onOpenVisualGenerator
 }) => {
   const { featureToggles } = useFeatures();
@@ -44,6 +47,7 @@ export const ContemplativeAudioPlayer: React.FC<ContemplativeAudioPlayerProps> =
 
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [isMuted, setIsMuted] = useState<boolean>(false);
+  const [showSaveExportModal, setShowSaveExportModal] = useState<boolean>(false);
   const [toneMode, setToneMode] = useState<'contemplative' | 'deep_mystic' | 'peaceful_drone'>('contemplative');
   const [repeatMode, setRepeatMode] = useState<'1x' | '3x' | '7x' | '11x' | '33x' | '111x' | 'infinite'>('1x');
   const [selectedReciter, setSelectedReciter] = useState<string>(defaultSacredReciterId);
@@ -59,9 +63,7 @@ export const ContemplativeAudioPlayer: React.FC<ContemplativeAudioPlayerProps> =
   }, [defaultSacredReciterId, sacredRecitersList]);
   const [audioProgress, setAudioProgress] = useState<number>(0);
   const [audioDuration, setAudioDuration] = useState<number>(30);
-  const [highlightMode, setHighlightMode] = useState<'verse' | 'word'>('verse');
   const [activeVerseIndex, setActiveVerseIndex] = useState<number>(0);
-  const [activeWordIndex, setActiveWordIndex] = useState<number>(-1);
   const [recitationStatus, setRecitationStatus] = useState<string>('');
 
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -77,9 +79,9 @@ export const ContemplativeAudioPlayer: React.FC<ContemplativeAudioPlayerProps> =
   const repeatModeRef = useRef<'1x' | '3x' | '7x' | '11x' | '33x' | '111x' | 'infinite'>('1x');
   const reciterRef = useRef<string>('Alafasy_128kbps');
 
-  // Parse Arabic text into Verses (by *, ۝, newline, |, etc.)
+  // Parse Arabic text into Verses (by *, ۝, ۞, newline, |, etc.)
   const arabicVerses = arabicText
-    ? arabicText.split(/[*۝\n\r|•]+/).map(v => v.trim()).filter(Boolean)
+    ? arabicText.split(/[*۝۞\n\r|•]+/).map(v => v.trim()).filter(Boolean)
     : [];
 
   const phoneticVerses = phoneticText
@@ -152,10 +154,6 @@ export const ContemplativeAudioPlayer: React.FC<ContemplativeAudioPlayerProps> =
           if (arabicVerses.length > 1) {
             const verseIdx = Math.min(arabicVerses.length - 1, Math.floor(ratio * arabicVerses.length));
             setActiveVerseIndex(verseIdx);
-          }
-          if (arabicWords.length > 0) {
-            const wordIdx = Math.min(arabicWords.length - 1, Math.floor(ratio * arabicWords.length));
-            setActiveWordIndex(wordIdx);
           }
           if (nextVal >= estimatedDuration) {
             clearInterval(speechIntervalRef.current);
@@ -269,12 +267,6 @@ export const ContemplativeAudioPlayer: React.FC<ContemplativeAudioPlayerProps> =
         const verseIdx = Math.min(arabicVerses.length - 1, Math.floor(ratio * arabicVerses.length));
         setActiveVerseIndex(verseIdx);
       }
-
-      if (arabicWords.length > 0) {
-        const ratio = currentTime / duration;
-        const wordIdx = Math.min(arabicWords.length - 1, Math.floor(ratio * arabicWords.length));
-        setActiveWordIndex(wordIdx);
-      }
     };
 
     audio.onended = () => {
@@ -315,7 +307,7 @@ export const ContemplativeAudioPlayer: React.FC<ContemplativeAudioPlayerProps> =
     }
   };
 
-  const startAudio = () => {
+  const startAudio = (startIndex: number = 0) => {
     try {
       stopAudio();
 
@@ -367,17 +359,20 @@ export const ContemplativeAudioPlayer: React.FC<ContemplativeAudioPlayerProps> =
       // 2. Play Verse Recitation
       const urls = getVerseUrls();
       verseUrlsRef.current = urls;
-      currentVerseIndexRef.current = 0;
+      currentVerseIndexRef.current = startIndex;
 
-      if (urls.length > 0) {
-        playVerseAudioIndex(0);
+      if (urls.length > 0 && startIndex < urls.length) {
+        playVerseAudioIndex(startIndex);
+      } else if (arabicVerses.length > 0 && startIndex < arabicVerses.length) {
+        speakArabicSpeechSynthesis(arabicVerses[startIndex]);
       } else {
         speakArabicSpeechSynthesis(arabicText);
       }
 
     } catch (err) {
       console.error("Failed to start audio:", err);
-      speakArabicSpeechSynthesis(arabicText);
+      const targetText = arabicVerses[startIndex] || arabicText;
+      speakArabicSpeechSynthesis(targetText);
     }
   };
 
@@ -397,14 +392,17 @@ export const ContemplativeAudioPlayer: React.FC<ContemplativeAudioPlayerProps> =
     }
 
     try {
-      if (gainNodeRef.current && audioCtxRef.current) {
-        gainNodeRef.current.gain.linearRampToValueAtTime(0, audioCtxRef.current.currentTime + 0.3);
-        setTimeout(() => {
-          if (oscRef.current) oscRef.current.stop();
-          if (oscDroneRef.current) oscDroneRef.current.stop();
-          if (audioCtxRef.current) audioCtxRef.current.close();
-          audioCtxRef.current = null;
-        }, 300);
+      if (oscRef.current) {
+        oscRef.current.stop();
+        oscRef.current = null;
+      }
+      if (oscDroneRef.current) {
+        oscDroneRef.current.stop();
+        oscDroneRef.current = null;
+      }
+      if (audioCtxRef.current) {
+        audioCtxRef.current.close();
+        audioCtxRef.current = null;
       }
     } catch (e) {
       // ignore
@@ -412,8 +410,6 @@ export const ContemplativeAudioPlayer: React.FC<ContemplativeAudioPlayerProps> =
 
     setIsPlaying(false);
     setAudioProgress(0);
-    setActiveWordIndex(-1);
-    setActiveVerseIndex(0);
     setRecitationStatus('');
   };
 
@@ -550,6 +546,15 @@ export const ContemplativeAudioPlayer: React.FC<ContemplativeAudioPlayerProps> =
             </button>
           </div>
 
+          <button
+            onClick={() => setShowSaveExportModal(true)}
+            className="p-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 cursor-pointer transition-colors flex items-center gap-1 text-[10px] font-bold shadow-md shrink-0 whitespace-nowrap"
+            title={language === 'fr' ? "Sauvegarder en Image ou Vidéo (avec Audio)" : "Save as Image or Video"}
+          >
+            <Bookmark size={13} className="text-amber-400 fill-amber-400/20" />
+            <span>{language === 'fr' ? "Sauvegarder" : "Save"}</span>
+          </button>
+
           {onOpenVisualGenerator && (
             <button
               onClick={onOpenVisualGenerator}
@@ -570,134 +575,64 @@ export const ContemplativeAudioPlayer: React.FC<ContemplativeAudioPlayerProps> =
         </div>
       </div>
 
-      {/* Reading Display Header with Mode Selector (Verset par verset / Mot par mot) */}
-      <div className="bg-black/40 border border-emerald-500/20 rounded-xl p-3 sm:p-4 relative space-y-3">
-        <div className="flex items-center justify-between pb-2 border-b border-emerald-500/15" dir="ltr">
-          <div className="flex items-center gap-1.5 text-xs text-amber-300 font-bold">
-            <Sparkles size={13} className="text-amber-400 shrink-0" />
-            <span>
-              {language === 'fr' ? "Mode de surlignage" : "Highlighting mode"}
-            </span>
-          </div>
-
-          <div className="flex bg-black/60 p-0.5 rounded-lg border border-emerald-500/30 text-[10px] font-bold">
-            <button
-              onClick={() => setHighlightMode('verse')}
-              className={`px-2.5 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1 ${
-                highlightMode === 'verse' ? 'bg-amber-500 text-black font-extrabold shadow-sm' : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              <BookOpen size={11} />
-              <span>{language === 'fr' ? "Verset par verset" : "Verse by verse"}</span>
-            </button>
-            <button
-              onClick={() => setHighlightMode('word')}
-              className={`px-2.5 py-1 rounded-md transition-all cursor-pointer flex items-center gap-1 ${
-                highlightMode === 'word' ? 'bg-amber-500 text-black font-extrabold shadow-sm' : 'text-gray-400 hover:text-white'
-              }`}
-            >
-              <Type size={11} />
-              <span>{language === 'fr' ? "Mot par mot" : "Word by word"}</span>
-            </button>
-          </div>
-        </div>
-
-        {/* VERSET PAR VERSET DISPLAY MODE */}
-        {highlightMode === 'verse' ? (
-          <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
-            {arabicVerses.map((verseText, idx) => {
-              const isCurrentVerse = isPlaying && idx === activeVerseIndex;
-              return (
-                <motion.div
-                  key={idx}
-                  animate={isCurrentVerse ? { scale: [1, 1.01, 1] } : { scale: 1 }}
-                  transition={{ duration: 0.3 }}
-                  onClick={() => {
-                    setActiveVerseIndex(idx);
-                    if (verseUrlsRef.current.length > idx) {
-                      playVerseAudioIndex(idx);
-                    }
-                  }}
-                  className={`p-3.5 sm:p-4 rounded-xl border transition-all duration-300 cursor-pointer text-right relative ${
+      {/* VERSET PAR VERSET DISPLAY CONTAINER */}
+      <div className="bg-black/40 border border-emerald-500/20 rounded-xl p-3 sm:p-4 relative">
+        <div className="space-y-2.5 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
+          {arabicVerses.map((verseText, idx) => {
+            const isCurrentVerse = isPlaying && idx === activeVerseIndex;
+            return (
+              <motion.div
+                key={idx}
+                animate={isCurrentVerse ? { scale: [1, 1.01, 1] } : { scale: 1 }}
+                transition={{ duration: 0.3 }}
+                onClick={() => {
+                  setActiveVerseIndex(idx);
+                  startAudio(idx);
+                }}
+                className={`p-3.5 sm:p-4 rounded-xl border transition-all duration-300 cursor-pointer text-right relative ${
+                  isCurrentVerse
+                    ? 'bg-gradient-to-r from-amber-500/20 via-amber-950/50 to-amber-500/20 border-amber-400/90 shadow-lg shadow-amber-500/20 ring-1 ring-amber-400/50'
+                    : 'bg-black/30 border-emerald-500/20 hover:border-emerald-500/40 hover:bg-black/50'
+                }`}
+                dir="rtl"
+                style={{ direction: 'rtl' }}
+              >
+                <div className="flex items-center justify-between mb-1.5" dir="ltr">
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full font-mono flex items-center gap-1 ${
                     isCurrentVerse
-                      ? 'bg-gradient-to-r from-amber-500/20 via-amber-950/50 to-amber-500/20 border-amber-400/90 shadow-lg shadow-amber-500/20 ring-1 ring-amber-400/50'
-                      : 'bg-black/30 border-emerald-500/20 hover:border-emerald-500/40 hover:bg-black/50'
-                  }`}
-                  dir="rtl"
-                  style={{ direction: 'rtl' }}
-                >
-                  <div className="flex items-center justify-between mb-1.5" dir="ltr">
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full font-mono flex items-center gap-1 ${
-                      isCurrentVerse
-                        ? 'bg-amber-400 text-black font-black animate-pulse'
-                        : 'bg-emerald-950/60 text-emerald-300 border border-emerald-800/50'
-                    }`}>
-                      {isCurrentVerse && <Sparkles size={10} />}
-                      {language === 'fr' ? 'Verset' : 'Verse'} {idx + 1}
+                      ? 'bg-amber-400 text-black font-black animate-pulse'
+                      : 'bg-emerald-950/60 text-emerald-300 border border-emerald-800/50'
+                  }`}>
+                    {isCurrentVerse && <Sparkles size={10} />}
+                    {language === 'fr' ? 'Verset' : language === 'ha' ? 'Aya' : 'Verse'} {idx + 1}
+                  </span>
+                  {isCurrentVerse && (
+                    <span className="text-[10px] text-amber-300 font-medium animate-pulse">
+                      {language === 'fr' ? 'Récitation en cours...' : language === 'ha' ? 'Ana karatun aya...' : 'Reciting now...'}
                     </span>
-                    {isCurrentVerse && (
-                      <span className="text-[10px] text-amber-300 font-medium animate-pulse">
-                        {language === 'fr' ? 'Récitation en cours...' : 'Reciting now...'}
-                      </span>
-                    )}
-                  </div>
-
-                  <p
-                    className={`font-quran text-2xl sm:text-3xl leading-[2.2] ${
-                      isCurrentVerse ? 'text-amber-100 font-extrabold drop-shadow-[0_0_8px_rgba(251,191,36,0.3)]' : 'text-amber-100/80'
-                    }`}
-                    style={{ fontFamily: '"Amiri Quran", "Uthmani", "Scheherazade New", "Amiri", serif', direction: 'rtl' }}
-                  >
-                    {verseText}
-                  </p>
-
-                  {translationVerses[idx] && (
-                    <p className={`text-xs mt-2 text-left font-sans italic border-t border-emerald-500/10 pt-1.5 ${
-                      isCurrentVerse ? 'text-amber-200/90 font-medium' : 'text-gray-400'
-                    }`} dir="ltr">
-                      « {translationVerses[idx]} »
-                    </p>
                   )}
-                </motion.div>
-              );
-            })}
-          </div>
-        ) : (
-          /* MOT PAR MOT DISPLAY MODE */
-          <div className="text-center">
-            <div
-              className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 font-quran text-2xl sm:text-3xl leading-[2.4] font-bold text-amber-100/95"
-              dir="rtl"
-              style={{ fontFamily: '"Amiri Quran", "Uthmani", "Scheherazade New", "Amiri", serif', direction: 'rtl' }}
-            >
-              {arabicWords.map((word, idx) => {
-                const isCurrentWord = isPlaying && idx === activeWordIndex;
-                return (
-                  <motion.span
-                    key={idx}
-                    animate={isCurrentWord ? { scale: [1, 1.15, 1.1] } : { scale: 1 }}
-                    transition={{ duration: 0.3 }}
-                    className={`px-1.5 py-0.5 rounded-lg transition-all duration-300 cursor-pointer inline-block ${
-                      isCurrentWord
-                        ? 'bg-amber-400 text-black shadow-lg shadow-amber-400/40 border border-amber-300 font-extrabold ring-2 ring-amber-300/60 scale-110 z-10'
-                        : 'text-amber-100 hover:text-amber-300 hover:bg-white/5'
-                    }`}
-                    onClick={() => {
-                      setActiveWordIndex(idx);
-                    }}
-                  >
-                    {word}
-                  </motion.span>
-                );
-              })}
-            </div>
-            {isPlaying && activeWordIndex >= 0 && (
-              <p className="text-[10px] text-amber-300/80 font-mono mt-2" dir="ltr" style={{ direction: 'ltr' }}>
-                ✨ {language === 'fr' ? `Surlignage Tajweed mot ${activeWordIndex + 1}/${arabicWords.length}` : `Tajweed highlight word ${activeWordIndex + 1}/${arabicWords.length}`}
-              </p>
-            )}
-          </div>
-        )}
+                </div>
+
+                <p
+                  className={`font-quran text-2xl sm:text-3xl leading-[2.2] ${
+                    isCurrentVerse ? 'text-amber-100 font-extrabold drop-shadow-[0_0_8px_rgba(251,191,36,0.3)]' : 'text-amber-100/80'
+                  }`}
+                  style={{ fontFamily: '"Amiri Quran", "Uthmani", "Scheherazade New", "Amiri", serif', direction: 'rtl' }}
+                >
+                  {verseText}
+                </p>
+
+                {translationVerses[idx] && (
+                  <p className={`text-xs mt-2 text-left font-sans italic border-t border-emerald-500/10 pt-1.5 ${
+                    isCurrentVerse ? 'text-amber-200/90 font-medium' : 'text-gray-400'
+                  }`} dir="ltr">
+                    « {translationVerses[idx]} »
+                  </p>
+                )}
+              </motion.div>
+            );
+          })}
+        </div>
       </div>
 
       {/* Audio Wave Visualizer & Progress Bar */}
@@ -736,6 +671,18 @@ export const ContemplativeAudioPlayer: React.FC<ContemplativeAudioPlayerProps> =
           </div>
         )}
       </div>
+
+      {/* Verse Save / Export Modal */}
+      <VerseSaveExportModal
+        isOpen={showSaveExportModal}
+        onClose={() => setShowSaveExportModal(false)}
+        verseTitle={verseTitle}
+        arabicText={arabicText}
+        phoneticText={phoneticText}
+        translationText={translationText}
+        verseNumber={verseNumber || verseTitle}
+        language={language}
+      />
     </div>
   );
 };

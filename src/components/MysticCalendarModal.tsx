@@ -1273,7 +1273,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
         ref={isPage ? undefined : backdropRef} 
         data-modal-overlay={!isPage ? "true" : undefined}
         className={isPage 
-          ? "w-full max-w-4xl mx-auto px-3 sm:px-4 mt-[5px] pt-3 pb-28 sm:pb-32 safe-area-pt"
+          ? "w-full max-w-4xl mx-auto px-3 sm:px-4 mt-[15px] pt-2 pb-28 sm:pb-32 safe-area-pt"
           : "fixed inset-0 z-[120] overflow-hidden bg-black/70 backdrop-blur-md p-3 sm:p-4 flex justify-center items-center"
         }
       >
@@ -1288,6 +1288,27 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
             className="fixed inset-0 cursor-default z-0"
           />
         )}
+
+        {/* Floating Back Button on Calendar */}
+        <motion.button
+          initial={{ opacity: 0, scale: 0.8, x: -20 }}
+          animate={{ opacity: 1, scale: 1, x: 0 }}
+          exit={{ opacity: 0, scale: 0.8, x: -20 }}
+          whileHover={{ scale: 1.1, x: 3 }}
+          whileTap={{ scale: 0.9 }}
+          onClick={() => {
+            if (onClose) {
+              onClose();
+            } else {
+              window.history.back();
+            }
+          }}
+          className="fixed left-4 bottom-20 sm:bottom-24 z-[250] flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-amber-500 to-amber-600 text-black border-2 border-amber-300 rounded-full shadow-[0_8px_25px_rgba(217,119,6,0.6)] hover:shadow-[0_12px_30px_rgba(251,191,36,0.8)] transition-all cursor-pointer group"
+          aria-label={t('mysticCalendar.backBtn', "Retour")}
+          title={t('mysticCalendar.backBtn', "Retour")}
+        >
+          <ChevronLeft size={28} className="text-black group-hover:-translate-x-1 transition-transform stroke-[3]" />
+        </motion.button>
 
         {/* Page Back Button (Only in Page Mode) */}
         {isPage && (
@@ -3163,7 +3184,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                 transition={{ duration: 0.28, ease: "easeOut" }}
                 data-modal-overlay="true"
                 className={isPage 
-                  ? "fixed inset-0 z-[10005] bg-gray-950 text-white p-5 pt-8 pb-36 sm:p-8 sm:pb-40 flex flex-col justify-between overflow-y-auto overscroll-contain w-full max-w-4xl mx-auto md:rounded-3xl md:my-8 md:h-[calc(100vh-4rem)] md:inset-auto md:left-1/2 md:-translate-x-1/2"
+                  ? "fixed inset-0 z-[10005] bg-gray-950 text-white p-5 pt-[70px] sm:pt-20 pb-36 sm:pb-40 flex flex-col justify-between overflow-y-auto overscroll-contain w-full max-w-4xl mx-auto md:rounded-3xl md:my-8 md:h-[calc(100vh-4rem)] md:inset-auto md:left-1/2 md:-translate-x-1/2"
                   : "absolute inset-0 z-[130] bg-gray-950 text-white rounded-3xl p-5 sm:p-6 pb-28 sm:pb-32 flex flex-col justify-between overflow-y-auto overscroll-contain"
                 }
               >
@@ -3175,7 +3196,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                 <div className="relative z-10 flex flex-col min-h-full justify-between">
                   <div>
                     {/* Header of overlay */}
-                    <div className="flex justify-between items-center mb-3">
+                    <div className="flex justify-between items-center pb-3 border-b border-amber-500/20 mb-[15px]">
                       <div className="flex items-center gap-1.5 text-amber-400">
                         <Moon size={13} className="fill-amber-400/20" />
                         <span className="text-[10px] font-extrabold uppercase tracking-widest">
@@ -3404,6 +3425,14 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                                 angelName={activeMoonMystery.talsamDetails.advancedDetails?.khuddamInfo}
                                 divineName={activeMoonMystery.talsamDetails.formula}
                                 vibration={activeMoonMystery.vibration}
+                                elementalNature={activeMoonMystery.talsamDetails.advancedDetails?.elementalNature}
+                                incense={activeMoonMystery.talsamDetails.advancedDetails?.recommendedIncense}
+                                timingRule={activeMoonMystery.talsamDetails.advancedDetails?.timingRule}
+                                spiritualUtility={
+                                  typeof activeMoonMystery.talsamDetails.spiritualUtility === 'string'
+                                    ? activeMoonMystery.talsamDetails.spiritualUtility
+                                    : (activeMoonMystery.talsamDetails.spiritualUtility?.[language] || activeMoonMystery.talsamDetails.spiritualUtility?.fr)
+                                }
                                 isExpanded={false}
                                 onExpand={() => setIsSealExpanded(true)}
                                 isUserPremium={isUserPremium}
@@ -3670,6 +3699,14 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                         angelName={activeMoonMystery.talsamDetails.advancedDetails?.khuddamInfo}
                         divineName={activeMoonMystery.talsamDetails.formula}
                         vibration={activeMoonMystery.vibration}
+                        elementalNature={activeMoonMystery.talsamDetails.advancedDetails?.elementalNature}
+                        incense={activeMoonMystery.talsamDetails.advancedDetails?.recommendedIncense}
+                        timingRule={activeMoonMystery.talsamDetails.advancedDetails?.timingRule}
+                        spiritualUtility={
+                          typeof activeMoonMystery.talsamDetails.spiritualUtility === 'string'
+                            ? activeMoonMystery.talsamDetails.spiritualUtility
+                            : (activeMoonMystery.talsamDetails.spiritualUtility?.[language] || activeMoonMystery.talsamDetails.spiritualUtility?.fr)
+                        }
                         isExpanded={true}
                         isUserPremium={isUserPremium}
                         onRequestPremium={() => triggerProtectionModal('download')}

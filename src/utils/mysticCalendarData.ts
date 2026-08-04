@@ -694,8 +694,8 @@ export const getLocalizedMoonDayMystery = (hDay: number, lang: 'fr' | 'en' | 'ha
         surahName: lang === 'fr' ? "Sourate Al-An'am (6:101)" : lang === 'ha' ? "Suratul An'am (6:101)" : "Surah Al-An'am (6:101)",
         verseNumber: "6:101",
         arabicText: "بَدِيعُ السَّمَاوَاتِ وَالْأَرْضِ ۖ أَنَّىٰ يَكُونُ لَهُ وَلَدٌ وَلَمْ تَكُن لَّهُ صَاحِبَةٌ ۖ وَخَلَقَ كُلَّ شَيْءٍ ۖ وَهُوَ بِكُلِّ شَيْءٍ عَلِيمٌ",
-        phonetic: "Badi'u as-samawati wal-ard...",
-        translation: lang === 'fr' ? "Créateur des cieux et de la terre à partir du néant ! Comment aurait-Il un enfant alors qu'Il n'a pas de compagne ? C'est Lui qui a tout créé et Il est Omniscient." : lang === 'ha' ? "Shi ne Mai ƙira da ƙirƙirar sammai da ƙasa ba tare da wani misali ba! Ta yaya zai kasance yana da ɗa alhali ba shi da mata? Shi ne Ya halitta kowane abu..." : "Originator of the heavens and the earth! How could He have a son when He has no companion? He created all things, and He is Knowing of all things.",
+        phonetic: "Badi'u as-samawati wal-ard, anna yakunu lahu waladun wa lam takun lahu sahibatun wa khalaqa kulla shay'in wa Huwa bikulli shay'in 'Alim.",
+        translation: lang === 'fr' ? "Créateur des cieux et de la terre à partir du néant ! Comment aurait-Il un enfant alors qu'Il n'a pas de compagne ? C'est Lui qui a tout créé et Il est Omniscient sur toute chose." : lang === 'ha' ? "Shi ne Mai ƙira da ƙirƙirar sammai da ƙasa ba tare da wani misali ba! Ta yaya zai kasance yana da ɗa alhali ba shi da mata? Shi ne Ya halitta kowane abu, kuma Shi Masani ne ga kowane abu." : "Originator of the heavens and the earth! How could He have a son when He has no companion? He created all things, and He is Knowing of all things.",
         spiritualBenefit: lang === 'fr' ? "Réciter ce verset 7 fois à la Nouvelle Lune purifie l'esprit de toute idolâtrie matérielle et consacre la pureté des intentions créatrices." : lang === 'ha' ? "Maimaita wannan aya kafa 7 yana tsarkake zuciya daga damuwar duniya da buɗe hanyoyin sabuwar niyya." : "Reciting this verse 7 times at New Moon purifies the heart of worldly attachments and consecrates pure creative intentions."
       },
       sacredPlantsDetails: {
@@ -760,7 +760,7 @@ export const getLocalizedMoonDayMystery = (hDay: number, lang: 'fr' | 'en' | 'ha
         surahName: lang === 'fr' ? "Sourate Al-Baqarah (2:189)" : lang === 'ha' ? "Suratul Baqarah (2:189)" : "Surah Al-Baqarah (2:189)",
         verseNumber: "2:189",
         arabicText: "يَسْأَلُونَكَ عَنِ الْأَهِلَّةِ ۖ قُلْ هِيَ مَوَاقِيتُ لِلنَّاسِ وَالْحَجِّ",
-        phonetic: "Yas'alunaka 'anil-ahillati qul hiya mawaqitu lin-nasi wal-hajj...",
+        phonetic: "Yas'alunaka 'anil-ahillati qul hiya mawaqitu lin-nasi wal-hajj.",
         translation: lang === 'fr' ? "Ils t'interrogent sur les croissants de lune. Dis : 'Ce sont des repères temporels pour les hommes et pour le pèlerinage.'" : lang === 'ha' ? "Suna tambayarka game da jinjirin wata. Ka ce: 'Su abubuwan auna lokaci ne ga mutane da aikin Hajj.'" : "They ask you about the crescent moons. Say, 'They are measurements of time for the people and for Hajj.'",
         spiritualBenefit: lang === 'fr' ? "Accorde la bénédiction du temps, l'organisation spirituelle de la vie et la clarté dans la prise de décision." : lang === 'ha' ? "Yana kawo albarkar lokaci, tsara al'amuran yau da kullum da hasken hankali." : "Grants time blessing, spiritual life organization, and clarity in decision making."
       },
@@ -826,8 +826,8 @@ export const getLocalizedMoonDayMystery = (hDay: number, lang: 'fr' | 'en' | 'ha
         surahName: lang === 'fr' ? "Sourate Ar-Rahman (55:7-9)" : lang === 'ha' ? "Suratul Rahman (55:7-9)" : "Surah Ar-Rahman (55:7-9)",
         verseNumber: "55:7-9",
         arabicText: "وَالسَّمَاءَ رَفَعَهَا وَوَضَعَ الْمِيزَانَ ۞ أَلَّا تَطْغَوْا فِي الْمِيزَانِ ۞ وَأَقِيمُوا الْوَزْنَ بِالْقِسْطِ وَلَا تُخْسِرُوا الْمِيزَانَ",
-        phonetic: "Was-sama'a rafa'aha wa wada'al-mizan...",
-        translation: lang === 'fr' ? "Et quant au ciel, Il l'a élevé et Il a établi la Balance, afin que vous ne transgressiez pas dans la pesée. Et observez l'équité sans fausser la balance." : lang === 'ha' ? "Kuma samaniya Ya ɗaukaka ta kuma Ya ajiye Sikelin Adalci (Mizan)..." : "And the heaven He raised and imposed the balance, that you not transgress within the balance.",
+        phonetic: "Was-sama'a rafa'aha wa wada'al-mizan. Alla tatghaw fil-mizan. Wa aqimul-wazna bil-qisti wa la tukhsirul-mizan.",
+        translation: lang === 'fr' ? "Et quant au ciel, Il l'a élevé et Il a établi la Balance, afin que vous ne transgressiez pas dans la pesée. Et observez l'équité sans fausser la balance." : lang === 'ha' ? "Kuma samaniya Ya ɗaukaka ta kuma Ya ajiye Sikelin Adalci (Mizan). Domin kada ku keta haddi a cikin awo. Kuma ku tsara awo da adalci kuma kada ku rage sikelin." : "And the heaven He raised and imposed the balance, that you not transgress within the balance. And establish weight in justice and do not make deficient the balance.",
         spiritualBenefit: lang === 'fr' ? "Harmonise les pôles énergétiques du corps et de l'esprit, protège contre les excès émotionnels et apporte la justice dans les affaires." : lang === 'ha' ? "Daidaita makamashin jiki da rai, kare mutum daga gaggawa da keta adalci." : "Harmonizes physical and subtle energy poles, protects against emotional extremes, and establishes equity."
       },
       sacredPlantsDetails: {
@@ -892,7 +892,7 @@ export const getLocalizedMoonDayMystery = (hDay: number, lang: 'fr' | 'en' | 'ha
         surahName: lang === 'fr' ? "Sourate Al-Hajj (22:63)" : lang === 'ha' ? "Suratul Hajj (22:63)" : "Surah Al-Hajj (22:63)",
         verseNumber: "22:63",
         arabicText: "أَلَمْ تَرَ أَنَّ اللَّهَ أَنزَلَ مِنَ السَّمَاءِ مَاءً فَتُصْبِحُ الْأَرْضُ مُخْضَرَّةً ۗ إِنَّ اللَّهَ لَطِيفٌ خَبِيرٌ",
-        phonetic: "Alam tara annallaha anzala minas-sama'i ma'an fatusbihul-ardu mukhdarratan innallaha latifun khabir...",
+        phonetic: "Alam tara annallaha anzala minas-sama'i ma'an fatusbihul-ardu mukhdarratan innallaha latifun khabir.",
         translation: lang === 'fr' ? "Ne vois-tu pas qu'Allah fait descendre du ciel une eau, et la terre devient alors verte ? Certes, Allah est Doux, Subtil et Parfaitement Connaisseur." : lang === 'ha' ? "Shin ba ka gani ba cewa Allah yana saukar da ruwa daga sama sai ƙasa ta zama koraye? Lalle Allah Mai tausayi ne kuma Masani." : "Do you not see that Allah has sent down rain from the sky and the earth becomes green? Indeed, Allah is Subtle and Acquainted.",
         spiritualBenefit: lang === 'fr' ? "Invoque la prospérité vivifiante, débloque la subsistance financière et adoucit les cœurs endurcis." : lang === 'ha' ? "Neman albarkar arzikin halal, buɗe hanyoyin kasuwanci da tausasa zuciya." : "Invokes revitalizing prosperity, opens financial livelihoods, and softens hardened hearts."
       },
@@ -957,9 +957,9 @@ export const getLocalizedMoonDayMystery = (hDay: number, lang: 'fr' | 'en' | 'ha
       quranicVerseDetails: {
         surahName: lang === 'fr' ? "Sourate An-Nur (24:35)" : lang === 'ha' ? "Suratul Nur (24:35)" : "Surah An-Nur (24:35)",
         verseNumber: "24:35",
-        arabicText: "اللَّهُ نُورُ السَّمَاوَاتِ وَالْأَرْضِ ۚ مَثَلُ نُورِهِ كَمِشْكَاةٍ فِيهَا مِصْبَاحٌ ۖ الْمِصْبَاحُ فِي زُجَاجَةٍ ۖ الزُّجَاجَةُ كَأَنَّهَا كَوْكَبٌ دُرِّيٌّ",
-        phonetic: "Allahu nurus-samawati wal-ard. Mathalu nurihi kamishkatin fiha misbah...",
-        translation: lang === 'fr' ? "Allah est la Lumière des cieux et de la terre ! Sa lumière est semblable à une niche où se trouve une lampe..." : lang === 'ha' ? "Allah Shi ne Hasken sammai da ƙasa! Misalin Haskensa kamar wata ƙabila ce da ke da fitila..." : "Allah is the Light of the heavens and the earth. The example of His light is like a niche within which is a lamp...",
+        arabicText: "اللَّهُ نُورُ السَّمَاوَاتِ وَالْأَرْضِ ۚ مَثَلُ نُورِهِ كَمِشْكَاةٍ فِيهَا مِصْبَاحٌ ۖ الْمِصْبَاحُ فِي زُجَاجَةٍ ۖ الزُّجَاجَةُ كَأَنَّهَا كَوْكَبٌ دُرِّيٌّ يُوقَدُ مِن شَجَرَةٍ مُّبَارَكَةٍ زَيْتُونَةٍ لَّا شَرْقِيَّةٍ وَلَا غَرْبِيَّةٍ يَكَادُ زَيْتُهَا يُضِيءُ وَلَوْ لَمْ تَمْسَسْهُ نَارٌ ۚ نُّورٌ عَلَىٰ نُورٍ ۗ يَهْدِي اللَّهُ لِنُورِهِ مَن يَشَاءُ",
+        phonetic: "Allahu nurus-samawati wal-ard. Mathalu nurihi kamishkatin fiha misbah, al-misbahu fi zujajah, az-zujajatu ka'annaha kawkabun durriyyun yuqadu min shajaratin mubarakatin zaytunatin la sharqiyyatin wa la gharbiyyatin yakadu zaytuha yudi'u wa law lam tamsashu nar, Nurun 'ala Nur, yahdillahu linurihi man yasha'.",
+        translation: lang === 'fr' ? "Allah est la Lumière des cieux et de la terre ! Sa lumière est semblable à une niche où se trouve une lampe ; la lampe est dans un verre, et le verre est comme un astre grandissant illuminé d'un arbre béni, l'olivier, ni oriental ni occidental, dont l'huile éclairerait presque sans même que le feu ne la touche. Lumière sur lumière ! Allah guide vers Sa lumière qui Il veut." : lang === 'ha' ? "Allah Shi ne Hasken sammai da ƙasa! Misalin Haskensa kamar wata ƙabila ce da ke da fitila; fitilar tana cikin ƙwabin gilashi, gilashin kamar wani tauraro ne mai walkiya da ake hurawa daga wata bishiya mai albarka, itacen zaitu, ba na gabas ba kuma ba na yamma ba, man itacen ya kusa yin haske ko da wuta ba ta taɓa shi ba. Haske ne a kan Haske! Allah yana shiryar da wanda Yake so zuwa ga Haskensa." : "Allah is the Light of the heavens and the earth. The example of His light is like a niche within which is a lamp, the lamp is within glass, the glass as if it were a pearly star lit from the oil of a blessed olive tree, neither of the east nor of the west, whose oil would almost glow even if untouched by fire. Light upon light. Allah guides to His light whom He wills.",
         spiritualBenefit: lang === 'fr' ? "Dévoilement des secrets mystiques (Kashf), illumination de l'âme et protection intégrale contre les ténèbres." : lang === 'ha' ? "Buɗe asirin gaibu, illumination na ruhaniyya da kare dukan jiki daga duhu." : "Unveiling of mystical secrets (Kashf), illumination of the soul, and total protection against darkness."
       },
       sacredPlantsDetails: {
@@ -1119,12 +1119,12 @@ export const getLocalizedMoonDayMystery = (hDay: number, lang: 'fr' | 'en' | 'ha
         description: lang === 'fr' ? "Ce talsam utilise la fréquence du Nom Ghaffar (1286). Il dissout les taches sombres sur l'âme et ouvre la voie à la lumière de la Nouvelle Lune." : "This talisman uses the 1286 frequency of Ghaffar to cleanse the soul."
       },
       quranicVerseDetails: {
-        surahName: lang === 'fr' ? "Sourate Nuh (71:10-12)" : "Surah Nuh (71:10-12)",
+        surahName: lang === 'fr' ? "Sourate Nuh (71:10-12)" : lang === 'ha' ? "Suratul Nuh (71:10-12)" : "Surah Nuh (71:10-12)",
         verseNumber: "71:10-12",
-        arabicText: "فَقُلْتُ اسْتَغْفِرُوا رَبَّكُمْ إِنَّهُ كَانَ غَفَّارًا ۞ يُرْسِلِ السَّمَاءَ عَلَيْكُم مِّدْرَارًا",
-        phonetic: "Faqultustaghfiru rabbakum innahu kana ghaffara...",
-        translation: lang === 'fr' ? "J'ai donc dit : 'Demandez pardon à votre Seigneur, car Il est grand Pardonneur...'" : "I said, 'Ask forgiveness of your Lord; indeed, He is ever a Perpetual Forgiver...'",
-        spiritualBenefit: lang === 'fr' ? "Déclenche les pluies de miséricorde, accorde l'abondance et purifie l'esprit." : "Triggers rains of mercy, grants abundance, and cleanses the spirit."
+        arabicText: "فَقُلْتُ اسْتَغْفِرُوا رَبَّكُمْ إِنَّهُ كَانَ غَفَّارًا ۞ يُرْسِلِ السَّمَاءَ عَلَيْكُم مِّدْرَارًا ۞ وَيُمْدِدْكُم بِأَمْوَالٍ وَبَنِينَ وَيَجْعَل لَّكُمْ جَنَّاتٍ وَيَجْعَل لَّكُمْ أَنْهَارًا",
+        phonetic: "Faqultustaghfiru rabbakum innahu kana ghaffara. Yursilis-sama'a 'alaykum midrara. Wa yumdidkum bi-amwaliw-wa banina wa yaj'al lakum jannatin wa yaj'al lakum anhara.",
+        translation: lang === 'fr' ? "J'ai donc dit : 'Demandez pardon à votre Seigneur, car Il est Grand Pardonneur. Il vous enverra du ciel des pluies abondantes, vous accordera des biens et des enfants, et mettra à votre disposition des jardins et des rivières.'" : lang === 'ha' ? "Sai na ce: 'Ku nemi gafara wajen Ubangijinku, lallai Shi Yana kasancewa Mai Yawan Gafara. Zai saukar muku da ruwan sama mai yawa, Kuma Zai ƙara muku dukiya da ɗiya, Kuma Zai sanya muku lambuna, Kuma Zai sanya muku ƙoramu.'" : "And I said, 'Ask forgiveness of your Lord. Indeed, He is ever a Perpetual Forgiver. He will send [rain from] the sky upon you in showers and give you increase in wealth and children and provide for you gardens and provide for you rivers.'",
+        spiritualBenefit: lang === 'fr' ? "Déclenche les pluies de miséricorde, accorde l'abondance et purifie l'esprit au seuil du renouveau." : lang === 'ha' ? "Kore dukkan zunubai, samun ruwan albarka da sake gina sabuwar dukiya da lafiya." : "Triggers rains of mercy, grants abundance, and cleanses the spirit before the new moon."
       },
       sacredPlantsDetails: {
         plantName: lang === 'fr' ? "Myrrhe Sacrée & Encens Mâle (Oliban)" : "Sacred Myrrh & Frankincense",
@@ -1170,7 +1170,7 @@ export const generateGraphicSymbolV2 = (dayNum: number): string => {
     5: `    🌟  Portes de Wahhab An-Nur  🌟\n\n         ☆   هَادٍ وَهَّابٌ   ☆\n\n    ┌─────────────────┐\n    │ 15 ────★──── 14 │\n    └─────────────────┘\n\n         ☆   هـ   هـ   ☆\n\n   ✦ KHATIM WAHHAB AN-NUR - INSPIRATION DIVINE ✦`,
     6: `    🌟  Sceau Wadud An-Nur  🌟\n\n         💖   وَ دُ و دٌ   💖\n\n    ┌─────────────────┐\n    │  و   د   و   د  │\n    └─────────────────┘\n\n         💖  ٢٠  ٢٥٦  💖\n\n   ✦ KHATIM WADUD AN-NUR - ATTRACTION D'AMOUR ✦`,
     7: `    🌟  Alliance Zay An-Nur  🌟\n\n         ⚡   زَكِيٌّ قَوِيٌّ   ⚡\n\n    ┌─────────────────┐\n    │  37   117   117 │\n    └─────────────────┘\n\n         ⚡   ز   ق   ك   ⚡\n\n   ✦ KHATIM ZAY AN-NUR - FORCE DIVINE ✦`,
-    8: `    🌟  Bouclier Hah An-Nur  🌟\n\n         🛡️   حَكِيمٌ حَفِيظٌ   🛡️\n\n    ┌─────────────────┐\n    │ 998   78    998 │\n    └─────────────────┘\n\n         🛡️   ح   ظ   ح   🛡️\n\n   ✦ KHATIM HAH AN-NUR - PROTECTION ABSOLUE ✦`,
+    8: `    🌟  Bouclier Hah An-Nur  🌟\n\n         ������️   حَكِيمٌ حَفِيظٌ   🛡️\n\n    ┌─────────────────┐\n    │ 998   78    998 │\n    └─────────────────┘\n\n         🛡️   ح   ظ   ح   🛡️\n\n   ✦ KHATIM HAH AN-NUR - PROTECTION ABSOLUE ✦`,
     9: `    🌟  Vision Tah An-Nur  🌟\n\n         👁️   طَاهِرٌ بَاطِنٌ   👁️\n\n    ┌─────────────────┐\n    │ 215   62    215 │\n    └─────────────────┘\n\n         👁️   ط   ط   👁️\n\n   ✦ KHATIM TAH AN-NUR - VISION CLAIRVOYANTE ✦`,
     10: `    🌟  Sceau Clé de Ya An-Nur  🌟\n\n         🗝️   يَسِيرٌ مُبِينٌ   🗝️\n\n    ┌──────────────────┐\n    │  102 ──── 214    │\n    └──────────────────┘\n\n         🗝️   ي (10)  س (60)  🗝️\n\n   ✦ KHATIM YA AN-NUR - DÉBLOCAGE IMMÉDIAT ✦`,
     11: `    🌟  Couronne de Kaf An-Nur  🌟\n\n         👑   كٰفِي كَرِيمٌ   👑\n\n    ┌──────────────────┐\n    │  20   80   111   │\n    └──────────────────┘\n\n         👑   ك (20)  ف (80)  👑\n\n   ✦ KHATIM KAF AN-NUR - ABONDANCE ROYALE ✦`,

@@ -181,7 +181,7 @@ pre, code, table, .overflow-x-auto-mobile {
 
 /* Force standard Quranic Arabic cursive ligatures to bind perfectly and prevent letter separation */
 .font-arabic, .font-quran, .font-uthmani {
-  font-family: "Amiri Quran", "Uthmani", "Scheherazade New", "Amiri", "Traditional Arabic", serif !important;
+  font-family: "Amiri Quran", "Uthmani", "Scheherazade New", "Amiri", "Traditional Arabic", serif;
   letter-spacing: 0px !important;
   font-feature-settings: "rlig" on, "calt" on, "liga" on, "clig" on, "mkmk" on !important;
   font-variant-ligatures: common-ligatures !important;

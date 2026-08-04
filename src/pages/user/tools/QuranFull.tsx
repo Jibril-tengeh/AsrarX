@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { BookOpen, Shield, ArrowLeft, ArrowRight, Search, Play, Pause, ChevronDown, AlignJustify, Settings, Type, Volume2, FastForward, Headphones, X, Download, Check, Bookmark, BookmarkCheck, Share2, RefreshCw, Moon, Sun, Activity, Clock, TrendingUp, Copy, Image as ImageIcon, Maximize, Minimize2, ListPlus, ListMusic, GripVertical, Database, CloudOff, Sliders } from 'lucide-react';
+import { BookOpen, Shield, ArrowLeft, ArrowRight, Search, Play, Pause, ChevronDown, AlignJustify, Settings, Type, Volume2, FastForward, Headphones, X, Download, Check, Bookmark, BookmarkCheck, Share2, RefreshCw, Moon, Sun, Activity, Clock, TrendingUp, Copy, Image as ImageIcon, Maximize, Minimize2, ListPlus, ListMusic, GripVertical, Database, CloudOff, Sliders, Video, Feather } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -22,6 +22,7 @@ import { getApiUrl } from '../../../lib/api';
 import { QURAN_RECITERS } from '../../../data/reciters';
 import { getEffectiveQuranReciters } from '../../../utils/reciterManager';
 import { LunarDailyInspirationCard } from '../../../components/LunarDailyInspirationCard';
+import { VerseSaveExportModal } from '../../../components/VerseSaveExportModal';
 
 const MUSHAF_OPTIONS = [
   { id: 'Amiri Quran', name: 'Uthmani (Amiri)', desc: 'Standard Uthmani script', preview: 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ\n\nأَرَءَيْتَ ٱلَّذِى يُكَذِّبُ بِٱلدِّينِ ﴿١﴾', style: {fontFamily: '"Amiri Quran", "Amiri", serif'} },
@@ -30,7 +31,7 @@ const MUSHAF_OPTIONS = [
   { id: 'Lateef', name: 'Lateef', desc: 'Clear and readable', preview: 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ\n\nأَرَءَيْتَ ٱلَّذِى يُكَذِّبُ بِٱلدِّينِ ﴿١﴾', style: {fontFamily: '"Lateef", serif', fontSize: '1.2em'} },
   { id: 'Scheherazade New', name: 'IndoPak', desc: 'Popular in South Asia', preview: 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ\n\nأَرَءَيْتَ ٱلَّذِى يُكَذِّبُ بِٱلدِّينِ ﴿١﴾', style: {fontFamily: '"Scheherazade New", serif'} },
   { id: 'Noto Naskh Arabic', name: 'Naskh', desc: 'Alternative modern script', preview: 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ\n\nأَرَءَيْتَ ٱلَّذِى يُكَذِّبُ بِٱلدِّينِ ﴿١﴾', style: {fontFamily: '"Noto Naskh Arabic", serif'} },
-  { id: 'KFGQPC Uthman Taha Naskh', name: 'Adwa (Uthman Taha)', desc: 'Standard printed script', preview: 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ\n\nأَرَءَيْتَ ٱلَّذِى يُكَذِّبُ بِٱلدِّينِ ﴿١﴾', style: {fontFamily: '"KFGQPC Uthman Taha Naskh", "Amiri", serif'} }
+  { id: 'KFGQPC Uthman Taha Naskh', name: 'Adwa (Uthman Taha)', desc: 'Standard printed script', preview: 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ\n\nأَرَءَيْتَ ٱلَّذِى يُكَذِّبُ بِٱلدِّينِ ﴿١﴾', style: {fontFamily: '"Uthmani", "KFGQPC Uthman Taha Naskh", "Amiri", serif'} }
 ];
 
 const normalizeAr = (text: string): string => {
@@ -621,6 +622,13 @@ export const QuranFull: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [mainVerseResults, setMainVerseResults] = useState<any[]>([]);
   const [isMainSearching, setIsMainSearching] = useState(false);
+  const [saveExportAyah, setSaveExportAyah] = useState<{
+    verseTitle: string;
+    arabicText: string;
+    phoneticText?: string;
+    translationText: string;
+    verseNumber?: string;
+  } | null>(null);
 
   const normalizeArabic = (text: string): string => {
     return text
@@ -1345,10 +1353,18 @@ export const QuranFull: React.FC = () => {
       if (closeBtn) closeBtn.style.display = 'block';
       if (imageFooter) imageFooter.style.display = 'none';
       
-      const audioUrl = `https://cdn.islamic.network/quran/audio/128/ar.alafasy/${zoomedAyah.ayahNumber}.mp3`;
+      const currentReciterId = (activeQuranReciters.find(r => r.id === selectedReciterId) || QURAN_RECITERS.find(r => r.id === selectedReciterId))?.apiId || 'ar.alafasy';
+      const audioUrl = `https://cdn.islamic.network/quran/audio/128/${currentReciterId}/${zoomedAyah.ayahNumber}.mp3`;
+      const proxiedAudioUrl = getApiUrl(`/api/quran-audio-proxy?url=${encodeURIComponent(audioUrl)}`);
       const fileName = `verset-${zoomedAyah.surahName || 'quran'}-${zoomedAyah.numberInSurah}`;
       
-      const audioBlob = await fetch(audioUrl).then(r => r.blob());
+      let audioBlob: Blob;
+      try {
+        const res = await fetch(proxiedAudioUrl);
+        audioBlob = res.ok ? await res.blob() : await fetch(audioUrl).then(r => r.blob());
+      } catch (_) {
+        audioBlob = await fetch(audioUrl).then(r => r.blob());
+      }
       const audioObjectUrl = URL.createObjectURL(audioBlob);
       
       const translationText = zoomedAyahTranslationLang === 'fr' 
@@ -1362,11 +1378,18 @@ export const QuranFull: React.FC = () => {
       let translationObjectUrl = '';
       if (zoomedAyahTranslationLang !== 'none' && translationText) {
         try {
-          const transUrl = `https://translate.google.com/translate_tts?ie=UTF-8&tl=${zoomedAyahTranslationLang}&client=tw-ob&q=${encodeURIComponent(translationText)}`;
-          const transBlob = await fetch(transUrl).then(r => r.blob());
-          translationObjectUrl = URL.createObjectURL(transBlob);
+          const transEdition = zoomedAyahTranslationLang === 'en' ? 'en.walk' : 'fr.leclerc';
+          const transUrl = `https://cdn.islamic.network/quran/audio/128/${transEdition}/${zoomedAyah.ayahNumber}.mp3`;
+          const proxiedTransUrl = getApiUrl(`/api/quran-audio-proxy?url=${encodeURIComponent(transUrl)}`);
+          const transRes = await fetch(proxiedTransUrl);
+          if (transRes.ok) {
+            const transBlob = await transRes.blob();
+            if (transBlob.size > 1000) {
+              translationObjectUrl = URL.createObjectURL(transBlob);
+            }
+          }
         } catch (e) {
-          console.warn("Could not load translation TTS blob:", e);
+          console.warn("Could not load translation recitation audio blob:", e);
         }
       }
 
@@ -1548,6 +1571,13 @@ export const QuranFull: React.FC = () => {
 
   const [zoomedAyahTranslationLang, setZoomedAyahTranslationLang] = useState<'none' | 'fr' | 'en' | 'ha'>('none');
   const [zoomedAyahAspectRatio, setZoomedAyahAspectRatio] = useState<'auto' | '1:1' | '9:16' | '16:9'>('auto');
+
+  const getAutoAspectRatio = (arabicText: string, translationText?: string): '16:9' | '1:1' | '9:16' => {
+    const totalLen = (arabicText || '').length + (translationText || '').length;
+    if (totalLen < 80) return '16:9';
+    if (totalLen < 220) return '1:1';
+    return '9:16';
+  };
   const [zoomedArabicSize, setZoomedArabicSize] = useState<number>(36);
   const [zoomedArabicBold, setZoomedArabicBold] = useState<boolean>(false);
   const [zoomedTranslationSize, setZoomedTranslationSize] = useState<number>(18);
@@ -1556,17 +1586,33 @@ export const QuranFull: React.FC = () => {
 
   useEffect(() => {
     if (zoomedAyah) {
-      if (zoomedAyah.text.length > 300) {
-        setZoomedArabicSize(22);
-      } else if (zoomedAyah.text.length > 200) {
-        setZoomedArabicSize(26);
-      } else if (zoomedAyah.text.length > 100) {
-        setZoomedArabicSize(32);
-      } else {
+      const transText = zoomedAyahTranslationLang === 'fr' 
+        ? surahFrench?.ayahs.find(a => a.numberInSurah === zoomedAyah.numberInSurah)?.text 
+        : zoomedAyahTranslationLang === 'en' 
+          ? surahEnglish?.ayahs.find(a => a.numberInSurah === zoomedAyah.numberInSurah)?.text 
+          : zoomedAyahTranslationLang === 'ha' 
+            ? surahHausa?.ayahs.find(a => a.numberInSurah === zoomedAyah.numberInSurah)?.text 
+            : '';
+      const totalLen = zoomedAyah.text.length + (transText ? transText.length : 0);
+
+      if (totalLen > 500) {
+        setZoomedArabicSize(24);
+        setZoomedTranslationSize(15);
+      } else if (totalLen > 300) {
+        setZoomedArabicSize(30);
+        setZoomedTranslationSize(17);
+      } else if (totalLen > 150) {
         setZoomedArabicSize(36);
+        setZoomedTranslationSize(19);
+      } else if (totalLen > 80) {
+        setZoomedArabicSize(42);
+        setZoomedTranslationSize(21);
+      } else {
+        setZoomedArabicSize(50);
+        setZoomedTranslationSize(24);
       }
     }
-  }, [zoomedAyah]);
+  }, [zoomedAyah, zoomedAyahTranslationLang, surahFrench, surahEnglish, surahHausa]);
 
   const ZOOM_BACKGROUNDS = [
     { id: 'default', class: 'bg-white dark:bg-gray-900', iconClass: 'bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700' },
@@ -1664,7 +1710,7 @@ export const QuranFull: React.FC = () => {
   };
 
   useEffect(() => {
-    if (surahArabic && surahArabic.ayahs && surahArabic.ayahs.length > 0) {
+    if (surahArabic && surahArabic.ayahs && (surahArabic?.ayahs?.length || 0) > 0) {
       setRangeStartVerse(1);
       setRangeEndVerse(surahArabic.ayahs.length);
     }
@@ -2134,10 +2180,13 @@ export const QuranFull: React.FC = () => {
       else if (arabicColor === 'amber') colorStyle = { color: '#fbbf24' };
       else if (arabicColor === 'indigo') colorStyle = { color: '#818cf8' };
     }
+    const selectedMushaf = MUSHAF_OPTIONS.find(m => m.id === fontFamily);
+    const resolvedFontFamily = selectedMushaf?.style?.fontFamily || `"${fontFamily}", "Amiri", serif`;
+
     return { 
       fontSize: `${15 + fontSize}px`, 
       lineHeight: lineHeight.toString(), 
-      fontFamily: `"${fontFamily}", serif`,
+      fontFamily: resolvedFontFamily,
       ...colorStyle
     };
   };
@@ -2312,10 +2361,11 @@ export const QuranFull: React.FC = () => {
       if (surahArabic && surahArabic.ayahs) {
         const startIndex = surahArabic.ayahs.findIndex(a => a.number === ayah.number);
         if (startIndex !== -1) {
+          const reciterApiId = (activeQuranReciters.find(r => r.id === selectedReciterId) || QURAN_RECITERS.find(r => r.id === selectedReciterId))?.apiId || 'ar.alafasy';
           const playlistTracks = surahArabic.ayahs.map(a => ({
             id: `quran-${activeSurah}-${a.numberInSurah}`,
             title: `Verset ${a.numberInSurah} - Sourate ${surahArabic.name}`,
-            url: a.audio || '',
+            url: a.audio || `https://cdn.islamic.network/quran/audio/128/${reciterApiId}/${a.number}.mp3`,
             artist: (activeQuranReciters.find(r => r.id === selectedReciterId) || QURAN_RECITERS.find(r => r.id === selectedReciterId))?.name || 'Qari',
             coverImage: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=500',
             isQuranVerse: true,
@@ -2328,10 +2378,37 @@ export const QuranFull: React.FC = () => {
     }
   };
 
+  const [viewMode, setViewMode] = useState<'surah' | 'juz' | 'hizb' | 'rub' | 'page'>('surah');
+  const [activeViewMode, setActiveViewMode] = useState<'surah' | 'juz' | 'hizb' | 'rub' | 'page'>('surah');
+
+  useEffect(() => {
+    const handlePlaylistEnded = (e: any) => {
+      if (!autoPlayNext) return;
+      const track = e.detail?.track;
+      
+      let maxUnits = 114;
+      if (activeViewMode === 'page') maxUnits = 604;
+      else if (activeViewMode === 'juz') maxUnits = 30;
+      else if (activeViewMode === 'hizb') maxUnits = 60;
+      else if (activeViewMode === 'rub') maxUnits = 240;
+
+      const currentUnit = activeViewMode === 'surah' ? (track?.surahNumber || activeSurah) : activeSurah;
+
+      if (currentUnit && currentUnit < maxUnits) {
+        const nextUnitNumber = currentUnit + 1;
+        loadContent(activeViewMode, nextUnitNumber);
+        setAutoPlayFirstAyah(true);
+      }
+    };
+
+    window.addEventListener('asrarhub_quran_verse_playlist_ended', handlePlaylistEnded);
+    return () => window.removeEventListener('asrarhub_quran_verse_playlist_ended', handlePlaylistEnded);
+  }, [autoPlayNext, activeViewMode, activeSurah]);
+
   useEffect(() => {
     if (surahArabic && autoPlayFirstAyah) {
       setAutoPlayFirstAyah(false);
-      if (surahArabic.ayahs.length > 0) {
+      if (surahArabic?.ayahs && (surahArabic?.ayahs?.length || 0) > 0) {
         // slight delay to ensure UI mounts
         setTimeout(() => {
           playAudio(surahArabic.ayahs[0]);
@@ -2351,9 +2428,6 @@ export const QuranFull: React.FC = () => {
       }
     }
   }, [currentTrack]);
-
-  const [viewMode, setViewMode] = useState<'surah' | 'juz' | 'hizb' | 'rub' | 'page'>('surah');
-  const [activeViewMode, setActiveViewMode] = useState<'surah' | 'juz' | 'hizb' | 'rub' | 'page'>('surah');
 
   useEffect(() => {
     if (!reminderTime) return;
@@ -2453,22 +2527,28 @@ export const QuranFull: React.FC = () => {
   useEffect(() => {
     if (playingPlaylist) {
       const reciterApiId = (activeQuranReciters.find(r => r.id === selectedReciterId) || QURAN_RECITERS.find(r => r.id === selectedReciterId))?.apiId || 'ar.alafasy';
-      const pseudoAyahs = playingPlaylist.ayahs.map(a => ({
-        number: a.number,
-        numberInSurah: a.ayahNumberInSurah,
-        text: a.text || "",
-        audio: `https://cdn.islamic.network/quran/audio/128/${reciterApiId}/${a.number}.mp3`,
-        audioSecondary: [],
-        juz: 1, manzil: 1, page: 1, ruku: 1, hizbQuarter: 1,
-        surah: {
-          number: a.surahNumber,
-          name: `Sourate ${a.surahNumber}`,
-          englishName: `Surah ${a.surahNumber}`,
-          englishNameTranslation: "",
-          revelationType: "",
-          numberOfAyahs: 1
-        }
-      }));
+      const items = playingPlaylist.ayahs || playingPlaylist.tracks || [];
+      const pseudoAyahs = items.map((a: any, idx: number) => {
+        const surahNum = a.surahNumber || a.surah?.number || activeSurah;
+        const ayahNum = a.ayahNumberInSurah || a.ayahNumber || a.numberInSurah || (idx + 1);
+        const globalNum = a.number || (surahNum * 1000 + ayahNum);
+        return {
+          number: globalNum,
+          numberInSurah: ayahNum,
+          text: a.text || a.content || a.title || "",
+          audio: a.url || `https://cdn.islamic.network/quran/audio/128/${reciterApiId}/${globalNum}.mp3`,
+          audioSecondary: [],
+          juz: 1, manzil: 1, page: 1, ruku: 1, hizbQuarter: 1,
+          surah: {
+            number: surahNum,
+            name: `Sourate ${surahNum}`,
+            englishName: `Surah ${surahNum}`,
+            englishNameTranslation: "",
+            revelationType: "",
+            numberOfAyahs: 1
+          }
+        };
+      });
       
       const pseudoSurah = {
         number: 999,
@@ -2780,8 +2860,6 @@ export const QuranFull: React.FC = () => {
               {Math.floor((readSurahs.length / 114) * 100)}% du Coran lu
             </p>
           </div>
-
-          <LunarDailyInspirationCard language={language} className="mb-6" />
 
           <div className="flex overflow-x-auto hide-scrollbar bg-gray-100 dark:bg-gray-800 rounded-xl p-1 mb-6">
             {(['surah', 'page', 'juz', 'hizb', 'rub'] as const).map(mode => (
@@ -3188,7 +3266,7 @@ export const QuranFull: React.FC = () => {
                              if (audioRef.current) audioRef.current.pause();
                              setIsPlaying(false);
                              setPlayingAyah(null);
-                           } else if (surahArabic.ayahs.length > 0) {
+                           } else if ((surahArabic?.ayahs?.length || 0) > 0) {
                               contentRepeatLeftRef.current = contentRepeatCount > 0 ? contentRepeatCount - 1 : 0;
                               playAudio(surahArabic.ayahs[0]);
                             }
@@ -3250,10 +3328,6 @@ export const QuranFull: React.FC = () => {
                      title="Voir mes signets"
                    >
                      <Bookmark size={20} />
-                   </button>
-
-                   <button onClick={() => setShowPlaylistsModal(true)} className="p-3 rounded-xl transition-all flex flex-col items-center justify-center gap-1 bg-gray-50 dark:bg-gray-800/50 text-gray-700 dark:text-gray-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 hover:text-emerald-600 dark:hover:text-emerald-400" title="Mes Playlists">
-                     <ListMusic size={20} />
                    </button>
 
                    <button 
@@ -3653,7 +3727,7 @@ export const QuranFull: React.FC = () => {
                            <div className="flex flex-wrap gap-2">
                              {ROQYA_REPEAT_COUNTS.map(count => (
                                <button
-                                 key={count}
+                                 key={`rep-${count}`}
                                  onClick={() => setRepeatCount(count)}
                                  className={`px-3 py-1.5 rounded-lg text-sm font-bold border transition-colors ${repeatCount === count ? 'bg-emerald-500 border-emerald-500 text-white shadow-sm' : 'bg-white border-gray-200 text-gray-600 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 hover:border-emerald-300'}`}
                                >
@@ -3689,28 +3763,6 @@ export const QuranFull: React.FC = () => {
 
                       <div>
                         <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
-                          <Volume2 size={18} className="text-emerald-500" /> Répétition Globale (Section courante)
-                        </label>
-                        <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 border border-gray-100 dark:border-gray-800">
-                          <div className="flex flex-col gap-3">
-                            <p className="text-sm text-gray-600 dark:text-gray-300">Répéter la page, le ruku, ou le juz courant :</p>
-                            <div className="flex flex-wrap gap-2">
-                              {ROQYA_REPEAT_COUNTS.map(count => (
-                                <button
-                                  key={`content-${count}`}
-                                  onClick={() => setContentRepeatCount(count)}
-                                  className={`px-3 py-1.5 rounded-lg text-sm font-bold border transition-colors ${contentRepeatCount === count ? 'bg-emerald-500 border-emerald-500 text-white shadow-sm' : 'bg-white border-gray-200 text-gray-600 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 hover:border-emerald-300'}`}
-                                >
-                                  {count === 0 ? 'Aucune' : `${count}x`}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
                           <Sliders size={18} className="text-emerald-500" /> Répétition d'une Sélection de Versets (Plage)
                         </label>
                         <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-5 border border-gray-100 dark:border-gray-800 space-y-4">
@@ -3727,7 +3779,7 @@ export const QuranFull: React.FC = () => {
                                 className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-semibold"
                               >
                                 {surahArabic?.ayahs?.map(a => (
-                                  <option key={`start-${a.numberInSurah}`} value={a.numberInSurah}>
+                                  <option key={`start-${a.numberInSurah || a.number}`} value={a.numberInSurah}>
                                     Verset {a.numberInSurah}
                                   </option>
                                 ))}
@@ -3742,7 +3794,7 @@ export const QuranFull: React.FC = () => {
                                 className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-semibold"
                               >
                                 {surahArabic?.ayahs?.map(a => (
-                                  <option key={`end-${a.numberInSurah}`} value={a.numberInSurah}>
+                                  <option key={`end-${a.numberInSurah || a.number}`} value={a.numberInSurah}>
                                     Verset {a.numberInSurah}
                                   </option>
                                 ))}
@@ -3881,7 +3933,17 @@ export const QuranFull: React.FC = () => {
                </div>
              )}
 
-             {zoomedAyah && (
+             {zoomedAyah && (() => {
+    const currentTransText = zoomedAyahTranslationLang === 'fr' 
+      ? surahFrench?.ayahs.find(a => a.numberInSurah === zoomedAyah.numberInSurah)?.text 
+      : zoomedAyahTranslationLang === 'en' 
+        ? surahEnglish?.ayahs.find(a => a.numberInSurah === zoomedAyah.numberInSurah)?.text 
+        : zoomedAyahTranslationLang === 'ha' 
+          ? surahHausa?.ayahs.find(a => a.numberInSurah === zoomedAyah.numberInSurah)?.text 
+          : '';
+    const autoRatio = getAutoAspectRatio(zoomedAyah.text, currentTransText);
+    const effectiveAspectRatio = zoomedAyahAspectRatio === 'auto' ? autoRatio : zoomedAyahAspectRatio;
+    return (
                <div 
                  className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
                  onClick={() => setZoomedAyah(null)}
@@ -3891,7 +3953,7 @@ export const QuranFull: React.FC = () => {
                    animate={{ opacity: 1, scale: 1 }}
                    exit={{ opacity: 0, scale: 0.8 }}
                    id="zoomed-ayah-capture"
-                   className={`w-full max-w-5xl ${ZOOM_BACKGROUNDS[zoomedAyahBg].class} ${ZOOM_TEXT_COLORS[zoomedAyahColor].class} rounded-3xl p-6 sm:p-12 shadow-2xl overflow-hidden relative transition-colors duration-300 ${zoomedAyahAspectRatio !== "auto" ? "aspect-[" + zoomedAyahAspectRatio.replace(":", "/") + "] flex flex-col justify-center items-center" : ""}`}
+                   className={`w-full ${ZOOM_BACKGROUNDS[zoomedAyahBg].class} ${ZOOM_TEXT_COLORS[zoomedAyahColor].class} rounded-3xl p-6 sm:p-10 shadow-2xl overflow-hidden relative transition-all duration-300 flex flex-col justify-between items-center ${effectiveAspectRatio === "16:9" ? "max-w-3xl aspect-[16/9]" : effectiveAspectRatio === "1:1" ? "max-w-lg aspect-[1/1]" : effectiveAspectRatio === "9:16" ? "max-w-xs sm:max-w-sm aspect-[9/16]" : "max-w-4xl"}`}
                    onClick={e => e.stopPropagation()}
                  >
                    <button 
@@ -3982,7 +4044,7 @@ export const QuranFull: React.FC = () => {
                                   value={zoomedAyahAspectRatio}
                                   onChange={e => setZoomedAyahAspectRatio(e.target.value as any)}
                                 >
-                                  <option value="auto">Auto</option>
+                                  <option value="auto">Auto (Adapté : ${autoRatio === '16:9' ? 'Paysage 16:9' : autoRatio === '1:1' ? 'Carré 1:1' : 'Story 9:16'})</option>
                                   <option value="1:1">Carré (1:1)</option>
                                   <option value="9:16">Story (9:16)</option>
                                   <option value="16:9">Paysage (16:9)</option>
@@ -4150,6 +4212,21 @@ export const QuranFull: React.FC = () => {
                        >
                          <ImageIcon size={20} />
                        </button>
+                       <button
+                         onClick={(e) => {
+                           e.stopPropagation();
+                           setSaveExportAyah({
+                             verseTitle: `${zoomedAyah.surahName || 'Sourate'} (${zoomedAyah.surahNumber || ''}:${zoomedAyah.numberInSurah})`,
+                             arabicText: zoomedAyah.text,
+                             translationText: (zoomedAyah as any).translation || (zoomedAyah as any).frenchTranslation || '',
+                             verseNumber: zoomedAyah.surahNumber ? `${zoomedAyah.surahNumber}:${zoomedAyah.numberInSurah}` : undefined
+                           });
+                         }}
+                         className="p-3 bg-amber-500/20 text-amber-600 dark:text-amber-300 rounded-full shadow-sm border border-amber-500/30 hover:bg-amber-500/30 transition-colors"
+                         title="Sauvegarder / Exporter (Vidéo / Image / Parchemin)"
+                       >
+                         <Bookmark size={20} className="fill-amber-400/20" />
+                       </button>
                        {zoomedAyah.ayahNumber && zoomedAyah.surahNumber && zoomedAyah.surahName && (
                          <>
                            <button
@@ -4245,7 +4322,7 @@ export const QuranFull: React.FC = () => {
                    </div>
                  </motion.div>
                </div>
-             )}
+             ); })()}
 
              {showDownloadModal && (
                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
@@ -4358,8 +4435,8 @@ export const QuranFull: React.FC = () => {
                          Aucun signet enregistré pour le moment.
                        </div>
                      ) : (
-                       bookmarks.sort((a, b) => b.timestamp - a.timestamp).map(bookmark => (
-                         <div key={bookmark.ayahNumber} className="p-4 border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 rounded-2xl flex flex-col gap-3">
+                       bookmarks.sort((a, b) => b.timestamp - a.timestamp).map((bookmark: any) => (
+                         <div key={bookmark.id || `${bookmark.surahNumber || "s"}-${bookmark.ayahNumberInSurah || bookmark.ayahNumber || "v"}-${bookmark.timestamp}`} className="p-4 border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 rounded-2xl flex flex-col gap-3">
                            <div className="flex justify-between items-start">
                              <div className="flex flex-col">
                                <span className="font-bold text-emerald-600 dark:text-emerald-400">
@@ -4800,7 +4877,7 @@ export const QuranFull: React.FC = () => {
                             const isNewPage = !prevAyah || ayah.page !== prevAyah.page;
 
                             return (
-                              <React.Fragment key={ayah.number}>
+                              <React.Fragment key={ayah.number || `mushaf-ayah-${i}`}>
                                 {isNewPage && i > 0 && (
                                   <div className="w-full flex items-center justify-center my-8 opacity-60 select-none block-separator" dir="ltr">
                                     <div className="h-px bg-emerald-500/30 flex-grow"></div>
@@ -4889,7 +4966,7 @@ export const QuranFull: React.FC = () => {
                         const isNewPage = !prevAyah || ayah.page !== prevAyah.page;
 
                         return (
-                        <div key={ayah.number} className="flex flex-col gap-4">
+                        <div key={ayah.number || `ayah-card-${ayah.numberInSurah || i}`} className="flex flex-col gap-4">
                           {isNewPage && i > 0 && (
                             <div className="w-full flex items-center justify-center my-6 opacity-60 select-none">
                               <div className="h-px bg-emerald-500/30 flex-grow"></div>
@@ -5052,6 +5129,28 @@ export const QuranFull: React.FC = () => {
                            >
                              <Sparkles size={18} />
                             </button>
+
+                           {/* Media Exporter Button (Vidéo MP4 / Image PNG / Parchemin Sacré) */}
+                           <button
+                             onClick={() => {
+                               const sName = surahArabic?.name || `Sourate ${activeSurah}`;
+                               const sNumber = surahArabic?.number || activeSurah;
+                               const frText = (surahFrench?.ayahs as any[])?.find((a: any) => a.numberInSurah === ayah.numberInSurah)?.text || (ayah as any).frenchText || '';
+                               const transText = (surahEnglish?.ayahs as any[])?.find((a: any) => a.numberInSurah === ayah.numberInSurah)?.text || '';
+                               
+                               setSaveExportAyah({
+                                 verseTitle: `${sName} (${sNumber}:${ayah.numberInSurah})`,
+                                 arabicText: ayah.text,
+                                 phoneticText: transText,
+                                 translationText: frText,
+                                 verseNumber: `${sNumber}:${ayah.numberInSurah}`
+                               });
+                             }}
+                             className="w-10 h-10 rounded-full flex items-center justify-center transition-colors bg-indigo-50 hover:bg-indigo-100 text-indigo-600 dark:bg-indigo-950/40 dark:text-indigo-300 dark:hover:bg-indigo-900/40 border border-indigo-200/30"
+                             title="Créer Média (Vidéo MP4 / Image PNG / Parchemin Sacré)"
+                           >
+                             <Video size={18} />
+                           </button>
                            <button
                              onClick={() => {
                                setLastReadPosition({
@@ -5097,10 +5196,10 @@ export const QuranFull: React.FC = () => {
                                 <h4 className="font-semibold text-gray-700 dark:text-gray-300 mb-2">Playlists existantes</h4>
                                 {roqyaPlaylists.length > 0 ? (
                                   <div className="space-y-2 max-h-32 overflow-y-auto pr-2 custom-scrollbar">
-                                    {roqyaPlaylists.map(p => (
+                                    {roqyaPlaylists.map((p, idx) => (
                                       <button 
-                                        key={p.id} 
-                                        onClick={async () => {
+                                        key={p.id || `pl-opt-${p.name || idx}`}
+ onClick={async () => {
                                           const ayahsToAdd = selectionMode && selectedAyahs.length > 0 ? selectedAyahs : [playlistModalAyah];
                                           const newTracks = ayahsToAdd.map(ayah => {
                                             const surahId = ayah.surah?.number || activeSurah;
@@ -5151,10 +5250,10 @@ export const QuranFull: React.FC = () => {
                                 <h4 className="font-semibold text-gray-700 dark:text-gray-300 mb-2">Collections existantes</h4>
                                 {ruqyahCollections.length > 0 ? (
                                   <div className="space-y-2 max-h-32 overflow-y-auto pr-2 custom-scrollbar">
-                                    {ruqyahCollections.map(c => (
+                                    {ruqyahCollections.map((c, idx) => (
                                       <button 
-                                        key={c.id} 
-                                        onClick={async () => {
+                                        key={c.id || `col-opt-${c.name || idx}`}
+ onClick={async () => {
                                           const ayahsToAdd = selectionMode && selectedAyahs.length > 0 ? selectedAyahs : [playlistModalAyah];
                                           const newTracks = ayahsToAdd.map(ayah => {
                                             const surahId = ayah.surah?.number || activeSurah;
@@ -5225,8 +5324,8 @@ export const QuranFull: React.FC = () => {
                    <p className="text-gray-500">Aucune playlist créée. Ajoutez des versets pour commencer.</p>
                  ) : (
                    <div className="space-y-4">
-                     {roqyaPlaylists.map(p => (
-                       <div key={p.id} className="p-4 bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-700">
+                     {roqyaPlaylists.map((p, idx) => (
+                       <div key={p.id || `pl-card-${idx}`} className="p-4 bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-700">
                          <div className="flex justify-between items-center mb-2">
                            <h4 className="font-bold text-gray-900 dark:text-white">{p.name}</h4>
                            <div className="flex gap-2">
@@ -5258,13 +5357,13 @@ export const QuranFull: React.FC = () => {
                              </button>
                            </div>
                          </div>
-                         <p className="text-sm text-gray-500 mb-3">{p.ayahs.length} verset(s)</p>
+                         <p className="text-sm text-gray-500 mb-3">{(p.ayahs || p.tracks || []).length} verset(s)</p>
                          
-                         {p.ayahs.length > 0 && (
+                         {(p.ayahs || p.tracks || []).length > 0 && (
                            <div className="space-y-2 mb-4">
-                             {p.ayahs.map((a, idx) => (
+                             {(p.ayahs || p.tracks || []).map((a, idx) => (
                                <div 
-                                 key={`${a.surahNumber}-${a.ayahNumberInSurah}`}
+                                 key={a.id || `${a.surahNumber || a.surah || 1}-${a.ayahNumberInSurah || a.ayahNumber || idx}-${idx}`}
                                  draggable
                                  onDragStart={(e) => {
                                    e.dataTransfer.setData('text/plain', JSON.stringify({ playlistId: p.id, index: idx }));
@@ -5295,12 +5394,12 @@ export const QuranFull: React.FC = () => {
                                >
                                  <GripVertical size={16} className="text-gray-400 group-hover:text-emerald-500 transition-colors" />
                                  <div className="flex-1">
-                                   <div className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold mb-1">Sourate {a.surahNumber}, Verset {a.ayahNumberInSurah}</div>
-                                   <div className="text-sm text-gray-700 dark:text-gray-300 line-clamp-1" dir="rtl font-arabic">{a.text}</div>
+                                   <div className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold mb-1">Sourate {a.surahNumber || a.surah || ""}, Verset {a.ayahNumberInSurah || a.ayahNumber || ""}</div>
+                                   <div className="text-sm text-gray-700 dark:text-gray-300 line-clamp-1" dir="rtl font-arabic">{a.text || a.content || a.title || ""}</div>
                                  </div>
                                  <button 
                                    onClick={() => {
-                                     setRoqyaPlaylists(prev => prev.map(pl => pl.id === p.id ? { ...pl, ayahs: pl.ayahs.filter((_, i) => i !== idx) } : pl));
+                                     setRoqyaPlaylists(prev => prev.map(pl => pl.id === p.id ? { ...pl, ayahs: (pl.ayahs || pl.tracks || []).filter((_, i) => i !== idx) } : pl));
                                    }}
                                    className="p-1.5 text-gray-400 hover:text-red-500 transition-colors"
                                  >
@@ -5311,7 +5410,7 @@ export const QuranFull: React.FC = () => {
                            </div>
                          )}
 
-                         {p.ayahs.length > 0 && (
+                         {(p.ayahs || p.tracks || []).length > 0 && (
                            <button onClick={() => { setPlayingPlaylist(p); setShowPlaylistsModal(false); }} className="w-full bg-emerald-500 text-white p-2 rounded-lg flex items-center justify-center gap-2 font-semibold hover:bg-emerald-600 transition-colors">
                              <Play size={18} /> Lire la playlist
                            </button>
@@ -5371,7 +5470,25 @@ export const QuranFull: React.FC = () => {
       </AnimatePresence>
 
       <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
+
+      {saveExportAyah && (
+        <VerseSaveExportModal
+          isOpen={!!saveExportAyah}
+          onClose={() => setSaveExportAyah(null)}
+          verseTitle={saveExportAyah.verseTitle}
+          arabicText={saveExportAyah.arabicText}
+          phoneticText={saveExportAyah.phoneticText}
+          translationText={saveExportAyah.translationText}
+          verseNumber={saveExportAyah.verseNumber}
+          language={language}
+          reciterApiId={(activeQuranReciters.find(r => r.id === selectedReciterId) || QURAN_RECITERS.find(r => r.id === selectedReciterId))?.apiId || 'ar.alafasy'}
+          reciterName={(activeQuranReciters.find(r => r.id === selectedReciterId) || QURAN_RECITERS.find(r => r.id === selectedReciterId))?.name || 'Mishary Rashid Alafasy'}
+        />
+      )}
     </div>
     </div>
   );
 };
+
+export default QuranFull;
+

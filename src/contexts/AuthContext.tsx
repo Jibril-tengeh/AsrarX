@@ -225,23 +225,24 @@ const AuthContext = createContext<AuthContextType>({
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<UserData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const getLocalUser = (): UserData | null => {
+    try {
+      const stored = localStorage.getItem('asrarhub_local_user');
+      if (stored) {
+        return JSON.parse(stored) as UserData;
+      }
+    } catch (e) {
+      console.warn("Failed to parse local user session", e);
+    }
+    return null;
+  };
+
+  const initialLocalUser = getLocalUser();
+  const [user, setUser] = useState<UserData | null>(initialLocalUser);
+  const [loading, setLoading] = useState(!initialLocalUser);
   const [showTrialPopup, setShowTrialPopup] = useState(false);
 
   useEffect(() => {
-    const getLocalUser = (): UserData | null => {
-      try {
-        const stored = localStorage.getItem('asrarhub_local_user');
-        if (stored) {
-          return JSON.parse(stored) as UserData;
-        }
-      } catch (e) {
-        console.warn("Failed to parse local user session", e);
-      }
-      return null;
-    };
-
     let unsubscribeDoc: (() => void) | null = null;
     let unsubscribeSession: (() => void) | null = null;
 
@@ -321,6 +322,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (firebaseUser.email && adminEmailsList.includes(firebaseUser.email.toLowerCase())) {
              currentRole = 'admin';
           }
+          let resolvedUser: UserData;
           if (docSnap.exists()) {
             const data = docSnap.data();
             let subTier = data.subscriptionTier || 'free';
@@ -335,7 +337,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               }
             }
 
-             setUser({
+            resolvedUser = {
               uid: firebaseUser.uid,
               email: firebaseUser.email,
               name: data.name || firebaseUser.displayName || null,
@@ -361,13 +363,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               country: data.country || '',
               phone: data.phone || '',
               pushNotificationsEnabled: data.pushNotificationsEnabled !== undefined ? data.pushNotificationsEnabled : true
-            });
+            };
           } else {
             const now = new Date();
             const trialHours = getTrialDurationHours();
             const trialExpiry = new Date(now.getTime() + trialHours * 60 * 60 * 1000);
 
-            setUser({
+            resolvedUser = {
               uid: firebaseUser.uid,
               email: firebaseUser.email,
               name: firebaseUser.displayName,
@@ -392,8 +394,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               country: '',
               phone: '',
               pushNotificationsEnabled: true
-            });
+            };
           }
+
+          setUser(resolvedUser);
+          try {
+            localStorage.setItem('asrarhub_local_user', JSON.stringify(resolvedUser));
+          } catch (e) {}
           setLoading(false);
         }, (error) => {
           console.warn("AuthContext userRef onSnapshot error:", error);

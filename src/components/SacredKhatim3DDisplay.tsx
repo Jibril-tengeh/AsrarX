@@ -121,6 +121,10 @@ export const SacredKhatim3DDisplay: React.FC<SacredKhatim3DDisplayProps> = ({
   divineName,
   vibration,
   versionTitle,
+  elementalNature,
+  incense,
+  timingRule,
+  spiritualUtility,
   isExpanded = false,
   onExpand,
   isUserPremium = true,
@@ -146,7 +150,7 @@ export const SacredKhatim3DDisplay: React.FC<SacredKhatim3DDisplayProps> = ({
     if (!ctx) return;
 
     const w = 1200;
-    const h = 1200;
+    const h = 1600;
     canvas.width = w;
     canvas.height = h;
 
@@ -215,7 +219,7 @@ export const SacredKhatim3DDisplay: React.FC<SacredKhatim3DDisplayProps> = ({
     if (divineName || angelName) {
       ctx.fillStyle = '#fef08a';
       ctx.font = 'bold 28px serif';
-      ctx.fillText(`${divineName || ''} ${angelName ? `• ${angelName}` : ''}`, w / 2, 205);
+      ctx.fillText(`${divineName || ''} ${angelName ? `• Khuddam: ${angelName}` : ''}`, w / 2, 205);
     }
 
     // Render Grid Box if available
@@ -224,9 +228,9 @@ export const SacredKhatim3DDisplay: React.FC<SacredKhatim3DDisplayProps> = ({
     const numCols = numRows > 0 ? gridRows[0].length : 0;
 
     const boxX = 200;
-    const boxY = 260;
+    const boxY = 250;
     const boxW = w - 400;
-    const boxH = 580;
+    const boxH = 540;
 
     // Draw Grid Container Background
     ctx.fillStyle = '#0a0314';
@@ -298,28 +302,101 @@ export const SacredKhatim3DDisplay: React.FC<SacredKhatim3DDisplayProps> = ({
       });
     }
 
-    // Formula & Footer Details
+    // Formula & Details Panel
     ctx.textBaseline = 'alphabetic';
-    const footerY = boxY + boxH + 80;
+    let detailY = boxY + boxH + 65;
 
     if (formula) {
       ctx.fillStyle = '#fbbf24';
-      ctx.font = 'bold 38px serif';
+      ctx.font = 'bold 36px serif';
       ctx.textAlign = 'center';
-      ctx.fillText(formula, w / 2, footerY);
+      ctx.fillText(formula, w / 2, detailY);
+      detailY += 45;
     }
 
     if (abjadValue) {
       ctx.fillStyle = '#c084fc';
-      ctx.font = 'bold 26px sans-serif';
+      ctx.font = 'bold 24px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillText(`VALEUR ABJAD TOTAL : ${abjadValue}`, w / 2, footerY + 50);
+      ctx.fillText(`VALEUR ABJAD TOTAL : ${abjadValue}`, w / 2, detailY);
+      detailY += 45;
     }
+
+    // Detailed Info Box Background calculation
+    const infoBoxX = 100;
+    const infoBoxW = w - 200;
+    const infoBoxY = detailY;
+
+    ctx.textAlign = 'left';
+    let lineY = infoBoxY + 40;
+    const boxStartY = infoBoxY;
+
+    // Helper to render label + multi-line wrapped value
+    const renderField = (label: string, value: string | undefined, labelColor: string, valueColor: string) => {
+      if (!value) return;
+      ctx.fillStyle = labelColor;
+      ctx.font = 'bold 22px sans-serif';
+      const labelText = `• ${label} : `;
+      const labelW = ctx.measureText(labelText).width;
+      
+      ctx.fillText(labelText, infoBoxX + 25, lineY);
+
+      ctx.fillStyle = valueColor;
+      ctx.font = '22px sans-serif';
+
+      const maxLineW = infoBoxW - 50;
+      const firstLineMaxW = maxLineW - labelW;
+
+      const words = value.split(' ');
+      let currentLine = '';
+      let isFirstLine = true;
+      let startX = infoBoxX + 25 + labelW;
+
+      for (let i = 0; i < words.length; i++) {
+        const testLine = currentLine + words[i] + ' ';
+        const metrics = ctx.measureText(testLine);
+        const availWidth = isFirstLine ? firstLineMaxW : maxLineW;
+
+        if (metrics.width > availWidth && i > 0) {
+          ctx.fillText(currentLine.trim(), startX, lineY);
+          currentLine = words[i] + ' ';
+          lineY += 30;
+          isFirstLine = false;
+          startX = infoBoxX + 25;
+        } else {
+          currentLine = testLine;
+        }
+      }
+      if (currentLine.trim()) {
+        ctx.fillText(currentLine.trim(), startX, lineY);
+        lineY += 38;
+      }
+    };
+
+    renderField('Élément', elementalNature, '#fbbf24', '#e9d5ff');
+    renderField('Encens', incense, '#fbbf24', '#fde047');
+    renderField('Heure / Temps', timingRule, '#fbbf24', '#a7f3d0');
+    renderField('Vertu Spirituelle', spiritualUtility, '#fbbf24', '#93c5fd');
+    renderField('Fréquence Vibratoire', vibration, '#fbbf24', '#f472b6');
+    renderField('Khuddam / Ange', angelName, '#fbbf24', '#c084fc');
+    renderField('Nom Divin', divineName, '#fbbf24', '#67e8f9');
+
+    const infoBoxH = Math.max(160, lineY - boxStartY + 10);
+
+    // Render Box background behind text
+    ctx.save();
+    ctx.globalCompositeOperation = 'destination-over';
+    ctx.fillStyle = 'rgba(10, 3, 20, 0.9)';
+    ctx.fillRect(infoBoxX, boxStartY, infoBoxW, infoBoxH);
+    ctx.strokeStyle = 'rgba(245, 158, 11, 0.6)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(infoBoxX, boxStartY, infoBoxW, infoBoxH);
+    ctx.restore();
 
     ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
     ctx.font = '14px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('AsrarHub © High-Resolution Printable Sacred Seal • Ready to Print 🖨️', w / 2, h - 50);
+    ctx.fillText('AsrarHub © High-Resolution Sacred Khatim • Ready to Print 🖨️', w / 2, h - 35);
 
     const fileName = `AsrarHub_Khatim_${title.toLowerCase().replace(/\s+/g, '_')}.png`;
     await downloadCanvasImage(canvas, fileName);
@@ -367,7 +444,10 @@ export const SacredKhatim3DDisplay: React.FC<SacredKhatim3DDisplayProps> = ({
             .corners { display: flex; justify-content: space-between; font-size: 28px; font-weight: bold; color: #78350f; margin: 0 40px; }
             .formula { font-size: 32px; font-weight: bold; margin: 20px 0 10px; color: #000; direction: rtl; }
             .abjad { font-size: 16px; font-weight: bold; color: #92400e; }
-            .watermark { font-size: 11px; color: #78350f; margin-top: 30px; border-t: 1px solid #fde68a; pt: 10px; text-transform: uppercase; letter-spacing: 2px; }
+            .details-box { margin-top: 20px; border-top: 2px dashed #b45309; padding-top: 15px; text-align: left; font-size: 14px; color: #451a03; }
+            .details-row { margin-bottom: 6px; }
+            .details-label { font-weight: bold; color: #78350f; }
+            .watermark { font-size: 11px; color: #78350f; margin-top: 30px; border-top: 1px solid #fde68a; padding-top: 10px; text-transform: uppercase; letter-spacing: 2px; }
           </style>
         </head>
         <body>
@@ -383,6 +463,16 @@ export const SacredKhatim3DDisplay: React.FC<SacredKhatim3DDisplayProps> = ({
 
             ${formula ? `<div class="formula" dir="rtl">${formula}</div>` : ''}
             ${abjadValue ? `<div class="abjad">VALEUR ABJAD : ${abjadValue}</div>` : ''}
+
+            <div class="details-box">
+              ${elementalNature ? `<div class="details-row"><span class="details-label">• Élément :</span> ${elementalNature}</div>` : ''}
+              ${incense ? `<div class="details-row"><span class="details-label">• Encens recommandé :</span> ${incense}</div>` : ''}
+              ${timingRule ? `<div class="details-row"><span class="details-label">• Heure / Temps :</span> ${timingRule}</div>` : ''}
+              ${spiritualUtility ? `<div class="details-row"><span class="details-label">• Vertu Spirituelle :</span> ${spiritualUtility}</div>` : ''}
+              ${vibration ? `<div class="details-row"><span class="details-label">• Fréquence Vibratoire :</span> ${vibration}</div>` : ''}
+              ${angelName ? `<div class="details-row"><span class="details-label">• Khuddam / Ange :</span> ${angelName}</div>` : ''}
+              ${divineName ? `<div class="details-row"><span class="details-label">• Nom Divin :</span> ${divineName}</div>` : ''}
+            </div>
             
             <div class="watermark">Sceau Officiel Prêt à l'Emploi Rituel • AsrarHub</div>
           </div>

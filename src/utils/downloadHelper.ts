@@ -99,6 +99,74 @@ export async function downloadCanvasImage(
 }
 
 /**
+ * Downloads or saves a Video File (.webm or .mp4) on both Web and Native (Capacitor).
+ */
+export async function downloadVideoFile(
+  videoBlob: Blob,
+  fileName: string = 'verset_contemplatif.webm'
+): Promise<boolean> {
+  notifyDownloadStart(fileName);
+
+  try {
+    if (Capacitor.isNativePlatform()) {
+      const reader = new FileReader();
+      reader.readAsDataURL(videoBlob);
+      return new Promise<boolean>((resolve) => {
+        reader.onloadend = async () => {
+          const base64Data = (reader.result as string).split(',')[1];
+          const path = `AsrarHub/${fileName}`;
+
+          try {
+            await Filesystem.requestPermissions();
+          } catch (_) {}
+
+          try {
+            await Filesystem.writeFile({
+              path,
+              data: base64Data,
+              directory: Directory.Documents,
+              recursive: true
+            });
+            notifyDownloadSuccess(fileName);
+            resolve(true);
+          } catch (err) {
+            console.warn('Native video save failed, retrying in Cache:', err);
+            try {
+              await Filesystem.writeFile({
+                path: fileName,
+                data: base64Data,
+                directory: Directory.Cache,
+                recursive: true
+              });
+              notifyDownloadSuccess(fileName);
+              resolve(true);
+            } catch (cacheErr) {
+              notifyDownloadError(fileName);
+              resolve(false);
+            }
+          }
+        };
+      });
+    } else {
+      const url = URL.createObjectURL(videoBlob);
+      const link = document.createElement('a');
+      link.download = fileName;
+      link.href = url;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+      notifyDownloadSuccess(fileName);
+      return true;
+    }
+  } catch (err) {
+    console.error('Error in downloadVideoFile:', err);
+    notifyDownloadError(fileName);
+    return false;
+  }
+}
+
+/**
  * Custom React hook for storage permissions and file exports
  */
 export function useStorageAccess() {
