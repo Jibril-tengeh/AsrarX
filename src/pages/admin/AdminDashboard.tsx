@@ -6,8 +6,9 @@ import {
   Settings, Users, BarChart3, Database, Shield, LayoutDashboard, 
   Book, BookOpen, ToggleLeft, Volume2, Headphones, Save, Search, Plus, Trash2, Edit2, FileText,
   Eye, Image as ImageIcon, Crop as CropIcon, X, Upload, ShoppingBag, CreditCard,
-  Clock, CheckCircle, XCircle, Globe, Grid, List, Mail, Phone, Lock, Unlock, Bell, BellOff, Sparkles, Star, Share, ShieldAlert, Download, DownloadCloud, Crown,
-  FolderOpen, Copy, Radio, Type, Sliders, Maximize2, Activity, Terminal, RefreshCw, Moon, ChevronDown, ChevronUp
+  Clock, CheckCircle, XCircle, Globe, Grid, List, Mail, Phone, Lock, Unlock, Bell, BellOff, Sparkles, Star, Share, ShieldAlert, Download, DownloadCloud, Crown, UserPlus, UserCheck,
+  FolderOpen, Copy, Radio, Type, Sliders, Maximize2, Activity, Terminal, RefreshCw, Moon, ChevronDown, ChevronUp, Layout,
+  AlignLeft, AlignCenter, AlignRight, AlignJustify
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 
@@ -20,6 +21,7 @@ const LucideIcon = ({ name, className, size }: { name: string; className?: strin
 };
 import { db } from '../../lib/firebase';
 import { collection, getDocs, doc, getDoc, updateDoc, deleteDoc, addDoc, onSnapshot, query, orderBy, setDoc, writeBatch } from 'firebase/firestore';
+import { set } from 'idb-keyval';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { TipTapEditor } from '../../components/TipTapEditor';
@@ -350,7 +352,23 @@ export const AdminDashboard: React.FC = () => {
   // Users State
   const [users, setUsers] = useState<User[]>([]);
   const [userSearch, setUserSearch] = useState('');
-  const [usersLimit, setUsersLimit] = useState(15);
+  const [usersLimit, setUsersLimit] = useState(50);
+  const [rawDbUsers, setRawDbUsers] = useState<any[]>([]);
+
+  // User Management Modals & Sync State
+  const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
+  const [addUserMode, setAddUserMode] = useState<'single' | 'batch'>('single');
+  const [newUserData, setNewUserData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    country: '',
+    role: 'user',
+    subscriptionTier: 'premium'
+  });
+  const [batchEmailsText, setBatchEmailsText] = useState('');
+  const [isAddingUsers, setIsAddingUsers] = useState(false);
+  const [isScanningUsers, setIsScanningUsers] = useState(false);
 
   // Content/Lexique pagination and search
   const [lexiqueSearch, setLexiqueSearch] = useState('');
@@ -631,44 +649,100 @@ export const AdminDashboard: React.FC = () => {
       };
     };
 
-    const unsubscribeUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
-      let dbUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      
-      let localUser: any = null;
+    const aggregateAllUsers = (dbList: any[] = [], payList: any[] = [], postList: any[] = []) => {
+      const usersMap = new Map<string, User>();
+
+      const addOrMerge = (uObj: any) => {
+        if (!uObj) return;
+        const norm = normalizeUser(uObj);
+        const key = (norm.email || norm.id).toLowerCase().trim();
+        if (!key) return;
+
+        if (!usersMap.has(key)) {
+          usersMap.set(key, norm);
+        } else {
+          const existing = usersMap.get(key)!;
+          usersMap.set(key, {
+            ...norm,
+            ...existing,
+            name: (existing.name && existing.name !== 'Sans Nom' && existing.name !== 'Membre AsrarHub') ? existing.name : norm.name,
+            photoURL: existing.photoURL || norm.photoURL,
+            country: (existing.country && existing.country !== 'Non renseigné') ? existing.country : norm.country,
+            phone: (existing.phone && existing.phone !== 'Non renseigné') ? existing.phone : norm.phone,
+            password_hash_indicator: (existing.password_hash_indicator && !existing.password_hash_indicator.includes('••••')) ? existing.password_hash_indicator : norm.password_hash_indicator,
+            isBanned: existing.isBanned || norm.isBanned,
+            isTrusted: existing.isTrusted !== undefined ? existing.isTrusted : norm.isTrusted,
+            blockedTools: (existing.blockedTools && existing.blockedTools.length > 0) ? existing.blockedTools : norm.blockedTools
+          });
+        }
+      };
+
+      // 1. DB users first
+      (dbList || []).forEach(u => addOrMerge(u));
+
+      // 2. All registered local users from localStorage ('asrarhub_all_local_users')
       try {
-        const stored = localStorage.getItem('asrarhub_local_user');
-        if (stored) localUser = JSON.parse(stored);
+        const storedAll = localStorage.getItem('asrarhub_all_local_users');
+        if (storedAll) {
+          const parsedAll = JSON.parse(storedAll);
+          if (Array.isArray(parsedAll)) {
+            parsedAll.forEach(u => addOrMerge(u));
+          }
+        }
       } catch (e) {}
 
-      let merged = dbUsers.map(u => normalizeUser(u));
-
-      if (localUser && localUser.email) {
-        if (!merged.some(u => u.email.toLowerCase() === localUser.email.toLowerCase())) {
-          merged.unshift(normalizeUser(localUser));
+      // 3. Current active local user from localStorage ('asrarhub_local_user')
+      try {
+        const storedSingle = localStorage.getItem('asrarhub_local_user');
+        if (storedSingle) {
+          const parsedSingle = JSON.parse(storedSingle);
+          if (parsedSingle) addOrMerge(parsedSingle);
         }
-      }
+      } catch (e) {}
 
-      DEFAULT_MEMBERS.forEach(defUser => {
-        if (!merged.some(u => u.email.toLowerCase() === defUser.email.toLowerCase())) {
-          merged.push(defUser);
+      // 4. Extract users from manual payments
+      (payList || []).forEach((p: any) => {
+        const email = p.userEmail || p.email;
+        if (email && typeof email === 'string') {
+          addOrMerge({
+            id: p.userId || p.uid || `usr_${email.replace(/[^a-zA-Z0-9]/g, '_')}`,
+            name: p.userName || p.name || email.split('@')[0],
+            email: email,
+            phone: p.userPhone || p.phone || '',
+            isPremium: p.status === 'approved' || p.status === 'validated',
+            subscriptionPlan: p.plan || 'premium',
+            createdAt: p.createdAt || p.date || new Date().toISOString()
+          });
         }
       });
 
-      setUsers(merged);
+      // 5. Extract users from community posts
+      (postList || []).forEach((post: any) => {
+        const email = post.authorEmail || post.email;
+        if (email && typeof email === 'string') {
+          addOrMerge({
+            id: post.authorId || post.userId || `usr_${email.replace(/[^a-zA-Z0-9]/g, '_')}`,
+            name: post.authorName || post.name || email.split('@')[0],
+            email: email,
+            photoURL: post.authorAvatar || post.photoURL,
+            createdAt: post.createdAt || new Date().toISOString()
+          });
+        }
+      });
+
+      // 6. DEFAULT_MEMBERS
+      DEFAULT_MEMBERS.forEach(defUser => addOrMerge(defUser));
+
+      setUsers(Array.from(usersMap.values()));
+    };
+
+    const unsubscribeUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
+      let dbUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setRawDbUsers(dbUsers);
+      aggregateAllUsers(dbUsers, manualPayments, communityPosts);
     }, (error) => {
       console.warn("Admin Users listener note:", error);
-      let localUser: any = null;
-      try {
-        const stored = localStorage.getItem('asrarhub_local_user');
-        if (stored) localUser = JSON.parse(stored);
-      } catch (e) {}
-      let fallback = DEFAULT_MEMBERS;
-      if (localUser && localUser.email) {
-        if (!fallback.some(u => u.email.toLowerCase() === localUser.email.toLowerCase())) {
-          fallback = [normalizeUser(localUser), ...fallback];
-        }
-      }
-      setUsers(fallback);
+      aggregateAllUsers([], manualPayments, communityPosts);
     });
 
     const unsubscribeLexique = onSnapshot(collection(db, 'lexique_terms'), (snapshot) => {
@@ -680,7 +754,9 @@ export const AdminDashboard: React.FC = () => {
     }, (error) => console.warn("Admin Audios listener note:", error));
 
     const unsubscribePosts = onSnapshot(query(collection(db, 'community_posts'), orderBy('createdAt', 'desc')), (snapshot) => {
-      setCommunityPosts(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CommunityPost)));
+      const postsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CommunityPost));
+      setCommunityPosts(postsList);
+      aggregateAllUsers(rawDbUsers, manualPayments, postsList);
     }, (error) => console.warn("Admin Posts listener note:", error));
 
     const unsubscribeNotifs = onSnapshot(query(collection(db, 'notifications'), orderBy('createdAt', 'desc')), (snapshot) => {
@@ -799,13 +875,21 @@ export const AdminDashboard: React.FC = () => {
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       list.sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
       setManualPayments(list);
+      aggregateAllUsers(rawDbUsers, list, communityPosts);
     }, (error) => console.warn("Admin Manual Payments listener note:", error));
 
     const unsubscribeFeatures = onSnapshot(doc(db, 'settings', 'features'), (docSnap) => {
+      let localData = {};
+      try {
+        const stored = localStorage.getItem('asrar_font_toggles');
+        if (stored) localData = JSON.parse(stored);
+      } catch (_) {}
+
       if (docSnap.exists()) {
-        setFeatureToggles(docSnap.data());
-      } else {
-        setFeatureToggles({});
+        const merged = { ...docSnap.data(), ...localData };
+        setFeatureToggles(merged);
+      } else if (Object.keys(localData).length > 0) {
+        setFeatureToggles(localData);
       }
     }, (error) => console.warn("Admin Features listener note:", error));
 
@@ -1015,6 +1099,188 @@ export const AdminDashboard: React.FC = () => {
       await updateDoc(doc(db, 'users', id), { isBanned: !user.isBanned });
     } catch (error) {
       console.error("Error updating user", error);
+    }
+  };
+
+  const handleDeepScanAndSyncUsers = async () => {
+    setIsScanningUsers(true);
+    showToast("Analyse globale des collections et comptes en cours...");
+    try {
+      const discoveredMap = new Map<string, any>();
+
+      const processDoc = (data: any, defaultSource: string) => {
+        if (!data) return;
+        const email = data.email || data.userEmail || data.authorEmail || data.senderEmail || data.recipientEmail;
+        const uid = data.id || data.userId || data.uid || data.authorId || (email ? `usr_${email.replace(/[^a-zA-Z0-9]/g, '_')}` : null);
+        if (!email && !uid) return;
+        
+        const key = (email || uid).toLowerCase().trim();
+        if (!discoveredMap.has(key)) {
+          discoveredMap.set(key, {
+            id: uid || `usr_${Math.random().toString(36).substr(2, 9)}`,
+            email: email || '',
+            name: data.name || data.userName || data.authorName || (email ? email.split('@')[0] : 'Membre AsrarHub'),
+            phone: data.phone || data.userPhone || data.phoneNumber || '',
+            country: data.country || data.location || '',
+            role: data.role || 'user',
+            photoURL: data.photoURL || data.authorAvatar || data.avatar || '',
+            createdAt: data.createdAt || data.date || new Date().toISOString(),
+            isBanned: !!data.isBanned,
+            isTrusted: data.isTrusted !== undefined ? data.isTrusted : true,
+            subscriptionTier: data.subscriptionTier || data.plan || 'premium',
+            source: defaultSource
+          });
+        }
+      };
+
+      // 1. Scan Firestore users collection
+      const usersSnap = await getDocs(collection(db, 'users')).catch(() => null);
+      if (usersSnap) {
+        usersSnap.docs.forEach(docSnap => processDoc({ id: docSnap.id, ...docSnap.data() }, 'Firestore'));
+      }
+
+      // 2. Scan manual payments
+      const paySnap = await getDocs(collection(db, 'manual_payments')).catch(() => null);
+      if (paySnap) {
+        paySnap.docs.forEach(docSnap => processDoc({ id: docSnap.id, ...docSnap.data() }, 'Paiement'));
+      }
+
+      // 3. Scan community posts
+      const postsSnap = await getDocs(collection(db, 'community_posts')).catch(() => null);
+      if (postsSnap) {
+        postsSnap.docs.forEach(docSnap => processDoc({ id: docSnap.id, ...docSnap.data() }, 'Communauté'));
+      }
+
+      // 4. Scan direct messages
+      const dmSnap = await getDocs(collection(db, 'direct_messages')).catch(() => null);
+      if (dmSnap) {
+        dmSnap.docs.forEach(docSnap => processDoc({ id: docSnap.id, ...docSnap.data() }, 'Message Direct'));
+      }
+
+      // 5. Scan notifications
+      const notifSnap = await getDocs(collection(db, 'notifications')).catch(() => null);
+      if (notifSnap) {
+        notifSnap.docs.forEach(docSnap => processDoc({ id: docSnap.id, ...docSnap.data() }, 'Notification'));
+      }
+
+      // 6. Scan chat sessions / Faq
+      const chatSnap = await getDocs(collection(db, 'chat_sessions')).catch(() => null);
+      if (chatSnap) {
+        chatSnap.docs.forEach(docSnap => processDoc({ id: docSnap.id, ...docSnap.data() }, 'Session Assistant'));
+      }
+
+      // 7. Scan localStorage asrarhub_all_local_users & asrarhub_local_user
+      try {
+        const storedAll = localStorage.getItem('asrarhub_all_local_users');
+        if (storedAll) {
+          const parsed = JSON.parse(storedAll);
+          if (Array.isArray(parsed)) parsed.forEach(u => processDoc(u, 'Local Storage'));
+        }
+        const storedSingle = localStorage.getItem('asrarhub_local_user');
+        if (storedSingle) {
+          const parsed = JSON.parse(storedSingle);
+          if (parsed) processDoc(parsed, 'Local Storage');
+        }
+      } catch (e) {}
+
+      // Save/sync missing user documents back to Firestore users collection
+      let syncedCount = 0;
+      const allDiscovered = Array.from(discoveredMap.values());
+      for (const u of allDiscovered) {
+        if (u.id && (u.email || u.name)) {
+          const userRef = doc(db, 'users', u.id);
+          const docSnap = await getDoc(userRef).catch(() => null);
+          if (!docSnap || !docSnap.exists()) {
+            await setDoc(userRef, {
+              email: u.email || '',
+              name: u.name || 'Membre AsrarHub',
+              phone: u.phone || '',
+              country: u.country || '',
+              role: u.role || 'user',
+              photoURL: u.photoURL || '',
+              createdAt: u.createdAt || new Date().toISOString(),
+              isBanned: u.isBanned || false,
+              isTrusted: u.isTrusted !== undefined ? u.isTrusted : true,
+              subscriptionTier: u.subscriptionTier || 'premium',
+              requiresValidation: false
+            }).catch(() => {});
+            syncedCount++;
+          }
+        }
+      }
+
+      showToast(`Scan global terminé ! ${allDiscovered.length} comptes/emails identifiés (${syncedCount} nouveaux synchronisés dans Firestore).`);
+    } catch (error) {
+      console.error("Erreur lors du scan global des utilisateurs:", error);
+      showToast("Erreur lors du scan global des comptes.", "error");
+    } finally {
+      setIsScanningUsers(false);
+    }
+  };
+
+  const handleAddUsersSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsAddingUsers(true);
+    try {
+      let addedCount = 0;
+      if (addUserMode === 'single') {
+        if (!newUserData.email) {
+          showToast("Veuillez saisir au moins une adresse email.", "error");
+          setIsAddingUsers(false);
+          return;
+        }
+        const cleanEmail = newUserData.email.trim().toLowerCase();
+        const uid = `usr_${cleanEmail.replace(/[^a-zA-Z0-9]/g, '_')}`;
+        const userRef = doc(db, 'users', uid);
+        await setDoc(userRef, {
+          email: cleanEmail,
+          name: newUserData.name.trim() || cleanEmail.split('@')[0],
+          phone: newUserData.phone.trim() || '',
+          country: newUserData.country.trim() || '',
+          role: newUserData.role || 'user',
+          subscriptionTier: newUserData.subscriptionTier || 'premium',
+          isBanned: false,
+          isTrusted: true,
+          createdAt: new Date().toISOString(),
+          requiresValidation: false
+        }, { merge: true });
+        addedCount = 1;
+      } else {
+        const rawLines = batchEmailsText.split(/[\n,;]/).map(s => s.trim().toLowerCase()).filter(Boolean);
+        const uniqueEmails = Array.from(new Set(rawLines));
+        if (uniqueEmails.length === 0) {
+          showToast("Aucune adresse email valide trouvée dans le texte.", "error");
+          setIsAddingUsers(false);
+          return;
+        }
+
+        for (const email of uniqueEmails) {
+          const uid = `usr_${email.replace(/[^a-zA-Z0-9]/g, '_')}`;
+          const userRef = doc(db, 'users', uid);
+          await setDoc(userRef, {
+            email: email,
+            name: email.split('@')[0],
+            role: 'user',
+            subscriptionTier: 'premium',
+            isBanned: false,
+            isTrusted: true,
+            createdAt: new Date().toISOString(),
+            requiresValidation: false
+          }, { merge: true });
+          addedCount++;
+        }
+      }
+
+      showToast(`${addedCount} utilisateur(s) inscrit(s) et enregistré(s) avec succès !`);
+      setIsAddUserModalOpen(false);
+      setNewUserData({ name: '', email: '', phone: '', country: '', role: 'user', subscriptionTier: 'premium' });
+      setBatchEmailsText('');
+      handleDeepScanAndSyncUsers();
+    } catch (error) {
+      console.error("Error adding user(s)", error);
+      showToast("Erreur lors de l'enregistrement.", "error");
+    } finally {
+      setIsAddingUsers(false);
     }
   };
 
@@ -1735,12 +2001,18 @@ export const AdminDashboard: React.FC = () => {
   };
 
   const renderUsers = () => {
+    const query = userSearch.toLowerCase().trim();
     const filteredUsers = users.filter(user => 
-      (user.name || '').toLowerCase().includes(userSearch.toLowerCase()) || 
-      (user.email || '').toLowerCase().includes(userSearch.toLowerCase())
+      !query ||
+      (user.name || '').toLowerCase().includes(query) || 
+      (user.email || '').toLowerCase().includes(query) ||
+      (user.phone || '').toLowerCase().includes(query) ||
+      (user.country || '').toLowerCase().includes(query) ||
+      (user.id || '').toLowerCase().includes(query)
     );
 
-    const paginatedUsers = filteredUsers.slice(0, usersLimit);
+    // When searching, display all matching search results. Otherwise slice by usersLimit.
+    const paginatedUsers = query ? filteredUsers : filteredUsers.slice(0, usersLimit);
 
     return (
       <div className="space-y-6">
@@ -1774,33 +2046,77 @@ export const AdminDashboard: React.FC = () => {
         </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 mb-6 pb-4 border-b border-gray-100 dark:border-gray-750">
             <div>
-              <h3 className="font-bold text-gray-900 dark:text-white text-lg">Gestion des Utilisateurs</h3>
-              <p className="text-xs text-gray-500 mt-1">Total: {filteredUsers.length} utilisateurs trouvés</p>
+              <h3 className="font-bold text-gray-900 dark:text-white text-lg flex items-center gap-2">
+                <Users className="text-emerald-500" size={22} />
+                <span>Gestion des Utilisateurs & Comptes</span>
+              </h3>
+              <p className="text-xs text-gray-500 mt-1">Total: {filteredUsers.length} utilisateur{filteredUsers.length > 1 ? 's' : ''} affiché{filteredUsers.length > 1 ? 's' : ''} sur {users.length} compte(s) agrégé(s) dans l'application</p>
             </div>
-            
-            <div className="relative w-full sm:w-64">
+
+            <div className="flex flex-wrap items-center gap-2.5">
+              <button
+                onClick={handleDeepScanAndSyncUsers}
+                disabled={isScanningUsers}
+                className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-2 disabled:opacity-50"
+                title="Analyser toutes les collections Firestore, messages, paiements et stockage local pour découvrir et enregistrer tous les comptes"
+              >
+                <RefreshCw size={14} className={isScanningUsers ? 'animate-spin' : ''} />
+                <span>{isScanningUsers ? 'Analyse en cours...' : '⚡ Scan Global & Sync Database'}</span>
+              </button>
+
+              <button
+                onClick={() => setIsAddUserModalOpen(true)}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-2"
+              >
+                <UserPlus size={15} />
+                <span>➕ Inscrire / Ajouter Utilisateur</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
+            <div className="relative flex-1">
               <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
                 <Search size={16} />
               </span>
               <input
                 type="text"
                 value={userSearch}
-                onChange={(e) => {
-                  setUserSearch(e.target.value);
-                  setUsersLimit(15);
-                }}
-                placeholder="Rechercher par nom ou email..."
+                onChange={(e) => setUserSearch(e.target.value)}
+                placeholder="Rechercher par nom, email, téléphone, ID ou pays..."
                 className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl text-xs text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
               />
             </div>
+
+            <button
+              onClick={() => setUsersLimit(users.length)}
+              className="px-3.5 py-2 bg-gray-100 dark:bg-gray-750 text-gray-700 dark:text-gray-300 rounded-xl text-xs font-semibold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors shrink-0"
+              title="Afficher tous les utilisateurs sans limite de pagination"
+            >
+              Tout afficher ({users.length})
+            </button>
           </div>
 
           {filteredUsers.length === 0 ? (
-            <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+            <div className="text-center py-12 text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
               <Users className="mx-auto mb-3 opacity-30" size={40} />
-              <p className="font-medium text-sm">Aucun utilisateur ne correspond à votre recherche.</p>
+              <p className="font-semibold text-sm">Aucun utilisateur ne correspond à votre recherche.</p>
+              <div className="mt-3 flex justify-center gap-3">
+                <button
+                  onClick={handleDeepScanAndSyncUsers}
+                  className="px-4 py-1.5 bg-blue-50 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300 rounded-lg text-xs font-bold border border-blue-200 dark:border-blue-800"
+                >
+                  Lancer le scan global
+                </button>
+                <button
+                  onClick={() => setIsAddUserModalOpen(true)}
+                  className="px-4 py-1.5 bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300 rounded-lg text-xs font-bold border border-emerald-200 dark:border-emerald-800"
+                >
+                  Inscrire un utilisateur
+                </button>
+              </div>
             </div>
           ) : (
             <div className="space-y-4">
@@ -1822,6 +2138,9 @@ export const AdminDashboard: React.FC = () => {
                           <span className="truncate text-base">{user.name || 'Membre AsrarHub'}</span>
                           {user.isBanned && <span className="bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400 text-[10px] uppercase font-bold px-2 py-0.5 rounded-full shrink-0">Banni</span>}
                           {user.isTrusted && <span className="bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400 text-[10px] uppercase font-bold px-2 py-0.5 rounded-full shrink-0">De Confiance</span>}
+                          <span className="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0">
+                            {(user as any).source ? `Source: ${(user as any).source}` : 'Base Firestore'}
+                          </span>
                         </h4>
                         <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">ID: {user.id}</span>
                       </div>
@@ -1896,13 +2215,19 @@ export const AdminDashboard: React.FC = () => {
                 </div>
               ))}
 
-              {filteredUsers.length > usersLimit && (
-                <div className="pt-4 flex justify-center">
+              {!query && filteredUsers.length > usersLimit && (
+                <div className="pt-4 flex flex-wrap justify-center gap-3">
                   <button
-                    onClick={() => setUsersLimit(prev => prev + 15)}
+                    onClick={() => setUsersLimit(prev => prev + 25)}
                     className="px-6 py-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 rounded-xl text-xs font-bold hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-all border border-emerald-200 dark:border-emerald-900/50"
                   >
-                    Voir plus d'utilisateurs ({filteredUsers.length - usersLimit} restants)
+                    Voir 25 de plus ({filteredUsers.length - usersLimit} restants)
+                  </button>
+                  <button
+                    onClick={() => setUsersLimit(filteredUsers.length)}
+                    className="px-6 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold hover:bg-emerald-700 transition-all shadow-sm"
+                  >
+                    Tout afficher ({filteredUsers.length} utilisateurs)
                   </button>
                 </div>
               )}
@@ -2430,17 +2755,40 @@ export const AdminDashboard: React.FC = () => {
     </div>
   );
 
-  const handleToggleFeature = async (featureId: string, currentValue: boolean | string | number) => {
+  const handleBatchToggleFeatures = async (batch: Record<string, any>) => {
+    const updated = { ...featureToggles, ...batch };
+    setFeatureToggles(updated);
+
     try {
-      // If it's a boolean (from toggle switch), invert it. If it's a string or number, use it directly.
-      const newValue = typeof currentValue === 'boolean' ? !currentValue : currentValue;
+      localStorage.setItem('asrar_font_toggles', JSON.stringify(updated));
+      await set('asrar_feature_toggles', updated);
+      window.dispatchEvent(new Event('asrar_font_updated'));
+    } catch (_) {}
+
+    try {
+      await setDoc(doc(db, 'settings', 'features'), batch, { merge: true });
+    } catch (error) {
+      console.warn("Firestore sync note (applied locally):", error);
+    }
+  };
+
+  const handleToggleFeature = async (featureId: string, currentValue: boolean | string | number) => {
+    const newValue = typeof currentValue === 'boolean' ? !currentValue : currentValue;
+    const updated = { ...featureToggles, [featureId]: newValue };
+    setFeatureToggles(updated);
+
+    try {
+      localStorage.setItem('asrar_font_toggles', JSON.stringify(updated));
+      await set('asrar_feature_toggles', updated);
+      window.dispatchEvent(new Event('asrar_font_updated'));
+    } catch (_) {}
+
+    try {
       await setDoc(doc(db, 'settings', 'features'), {
         [featureId]: newValue
       }, { merge: true });
-      showToast(`Fonctionnalité mise à jour : ${newValue}`);
     } catch (error) {
-      console.error("Error toggling feature", error);
-      showToast("Erreur lors de la mise à jour.", "error");
+      console.warn("Firestore sync note (applied locally):", error);
     }
   };
 
@@ -2542,6 +2890,7 @@ export const AdminDashboard: React.FC = () => {
     { id: 'calendar', label: 'Calendrier Mystique (Hégirien)', desc: 'Contrôler l\'accès global : Actif, Premium, Maintenance, Inactif (Désactiver/Bloquer)' },
     { id: 'ruqyah', label: 'Module Ruqyah', desc: 'Accès aux versets de protection et guérison' },
     { id: 'abjad', label: 'Calculateur Abjad', desc: 'Outil de numérologie arabe' },
+    { id: 'custom-dua', label: 'Générateur de Du\'a Custom', desc: 'Invocations sur-mesure personnalisées selon l\'intention et le poids Abjad' },
     { id: 'dreams', label: 'Journal des Rêves', desc: 'Fonctionnalité de suivi et interprétation' },
     { id: 'zakat', label: 'Calculateur Zakat', desc: 'Module de calcul des aumônes' },
     { id: 'asma', label: 'Noms Divins Personnels', desc: 'Découvrez vos noms divins correspondants au poids mystique' },
@@ -5545,11 +5894,16 @@ export const AdminDashboard: React.FC = () => {
                   disabled={!!featureToggles['lockFontSettings']}
                   onClick={() => {
                     if (featureToggles['lockFontSettings']) return;
-                    handleToggleFeature('textSizeBody', 12);
-                    handleToggleFeature('textSizeArticleTitle', 20);
-                    handleToggleFeature('textSizeToolTitle', 18);
-                    handleToggleFeature('textSizeCardTitle', 15);
-                    handleToggleFeature('cardPadding', 12);
+                    handleBatchToggleFeatures({
+                      textSizeBody: 12,
+                      textSizeArticleTitle: 20,
+                      textSizeToolTitle: 18,
+                      textSizeCardTitle: 15,
+                      textSizePageTitle: 22,
+                      textSizeArabic: 20,
+                      cardPadding: 12,
+                      cardGlobalScale: 90
+                    });
                     showToast("Preset Compact appliqué !");
                   }}
                   className={`px-2.5 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-700 dark:text-gray-200 rounded-xl transition-all shadow-xs ${
@@ -5565,11 +5919,16 @@ export const AdminDashboard: React.FC = () => {
                   disabled={!!featureToggles['lockFontSettings']}
                   onClick={() => {
                     if (featureToggles['lockFontSettings']) return;
-                    handleToggleFeature('textSizeBody', 15);
-                    handleToggleFeature('textSizeArticleTitle', 24);
-                    handleToggleFeature('textSizeToolTitle', 22);
-                    handleToggleFeature('textSizeCardTitle', 18);
-                    handleToggleFeature('cardPadding', 16);
+                    handleBatchToggleFeatures({
+                      textSizeBody: 15,
+                      textSizeArticleTitle: 24,
+                      textSizeToolTitle: 22,
+                      textSizeCardTitle: 18,
+                      textSizePageTitle: 28,
+                      textSizeArabic: 26,
+                      cardPadding: 16,
+                      cardGlobalScale: 100
+                    });
                     showToast("Preset Standard appliqué !");
                   }}
                   className={`px-2.5 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-700 dark:text-gray-200 rounded-xl transition-all shadow-xs ${
@@ -5585,11 +5944,16 @@ export const AdminDashboard: React.FC = () => {
                   disabled={!!featureToggles['lockFontSettings']}
                   onClick={() => {
                     if (featureToggles['lockFontSettings']) return;
-                    handleToggleFeature('textSizeBody', 18);
-                    handleToggleFeature('textSizeArticleTitle', 28);
-                    handleToggleFeature('textSizeToolTitle', 26);
-                    handleToggleFeature('textSizeCardTitle', 22);
-                    handleToggleFeature('cardPadding', 20);
+                    handleBatchToggleFeatures({
+                      textSizeBody: 18,
+                      textSizeArticleTitle: 28,
+                      textSizeToolTitle: 26,
+                      textSizeCardTitle: 22,
+                      textSizePageTitle: 32,
+                      textSizeArabic: 30,
+                      cardPadding: 20,
+                      cardGlobalScale: 110
+                    });
                     showToast("Preset Grand appliqué !");
                   }}
                   className={`px-2.5 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-700 dark:text-gray-200 rounded-xl transition-all shadow-xs ${
@@ -5605,11 +5969,16 @@ export const AdminDashboard: React.FC = () => {
                   disabled={!!featureToggles['lockFontSettings']}
                   onClick={() => {
                     if (featureToggles['lockFontSettings']) return;
-                    handleToggleFeature('textSizeBody', 22);
-                    handleToggleFeature('textSizeArticleTitle', 36);
-                    handleToggleFeature('textSizeToolTitle', 32);
-                    handleToggleFeature('textSizeCardTitle', 26);
-                    handleToggleFeature('cardPadding', 24);
+                    handleBatchToggleFeatures({
+                      textSizeBody: 22,
+                      textSizeArticleTitle: 36,
+                      textSizeToolTitle: 32,
+                      textSizeCardTitle: 26,
+                      textSizePageTitle: 40,
+                      textSizeArabic: 38,
+                      cardPadding: 24,
+                      cardGlobalScale: 120
+                    });
                     showToast("Preset XL Accessibilité appliqué !");
                   }}
                   className={`px-2.5 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-700 dark:text-gray-200 rounded-xl transition-all shadow-xs ${
@@ -5794,12 +6163,70 @@ export const AdminDashboard: React.FC = () => {
                 </div>
               </div>
 
-              {/* 5. Card Padding Size */}
-              <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 space-y-2 md:col-span-2">
+              {/* 5. Grands Titres de Page */}
+              <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-black uppercase text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                    <Layout size={14} className="text-indigo-500" />
+                    Taille des grands titres de page
+                  </label>
+                  <span className="px-2.5 py-0.5 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-800 dark:text-indigo-300 font-extrabold text-xs rounded-lg">
+                    {featureToggles['textSizePageTitle'] ?? 28} px
+                  </span>
+                </div>
+                <p className="text-[11px] text-gray-500">En-têtes H1 principaux des pages et modules majeurs.</p>
+                <input
+                  type="range"
+                  min={12}
+                  max={60}
+                  step={1}
+                  disabled={!!featureToggles['lockFontSettings']}
+                  value={featureToggles['textSizePageTitle'] ?? 28}
+                  onChange={(e) => handleToggleFeature('textSizePageTitle', Number(e.target.value))}
+                  className="w-full accent-indigo-600 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg disabled:cursor-not-allowed"
+                />
+                <div className="flex justify-between text-[10px] text-gray-400 font-bold">
+                  <span>12px</span>
+                  <span>35px</span>
+                  <span>60px</span>
+                </div>
+              </div>
+
+              {/* 6. Texte Arabe & Versets */}
+              <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-black uppercase text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                    <BookOpen size={14} className="text-emerald-500" />
+                    Taille du texte arabe & versets
+                  </label>
+                  <span className="px-2.5 py-0.5 bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300 font-extrabold text-xs rounded-lg">
+                    {featureToggles['textSizeArabic'] ?? 26} px
+                  </span>
+                </div>
+                <p className="text-[11px] text-gray-500">Invocations arabes, Versets du Coran, Khatims et Zikrs.</p>
+                <input
+                  type="range"
+                  min={12}
+                  max={60}
+                  step={1}
+                  disabled={!!featureToggles['lockFontSettings']}
+                  value={featureToggles['textSizeArabic'] ?? 26}
+                  onChange={(e) => handleToggleFeature('textSizeArabic', Number(e.target.value))}
+                  className="w-full accent-emerald-600 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg disabled:cursor-not-allowed"
+                />
+                <div className="flex justify-between text-[10px] text-gray-400 font-bold">
+                  <span>12px</span>
+                  <span>35px</span>
+                  <span>60px</span>
+                </div>
+              </div>
+
+              {/* 7. Card Padding Size */}
+              <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 space-y-2">
                 <div className="flex justify-between items-center">
                   <label className="text-xs font-black uppercase text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
                     <Maximize2 size={14} className="text-teal-500" />
-                    Rembourrage / Taille des cartes (Card Padding)
+                    Rembourrage des cartes (Padding)
                   </label>
                   <span className="px-2.5 py-0.5 bg-teal-100 dark:bg-teal-900/50 text-teal-800 dark:text-teal-300 font-extrabold text-xs rounded-lg">
                     {featureToggles['cardPadding'] ?? 16} px
@@ -5822,6 +6249,76 @@ export const AdminDashboard: React.FC = () => {
                   <span>50px</span>
                 </div>
               </div>
+
+              {/* 8. Card Global Scale */}
+              <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-black uppercase text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                    <Sliders size={14} className="text-rose-500" />
+                    Échelle globale des cartes (% Zoom)
+                  </label>
+                  <span className="px-2.5 py-0.5 bg-rose-100 dark:bg-rose-900/50 text-rose-800 dark:text-rose-300 font-extrabold text-xs rounded-lg">
+                    {featureToggles['cardGlobalScale'] ?? 100} %
+                  </span>
+                </div>
+                <p className="text-[11px] text-gray-500">Agrandit ou réduit la proportion générale de toutes les cartes d'outils.</p>
+                <input
+                  type="range"
+                  min={50}
+                  max={150}
+                  step={5}
+                  disabled={!!featureToggles['lockFontSettings']}
+                  value={featureToggles['cardGlobalScale'] ?? 100}
+                  onChange={(e) => handleToggleFeature('cardGlobalScale', Number(e.target.value))}
+                  className="w-full accent-rose-600 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg disabled:cursor-not-allowed"
+                />
+                <div className="flex justify-between text-[10px] text-gray-400 font-bold">
+                  <span>50%</span>
+                  <span>100%</span>
+                  <span>150%</span>
+                </div>
+              </div>
+
+              {/* 9. Alignement du texte des livres */}
+              <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 space-y-2 md:col-span-2">
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-black uppercase text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                    <AlignLeft size={14} className="text-amber-500" />
+                    Alignement du texte des livres
+                  </label>
+                  <span className="px-2.5 py-0.5 bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300 font-extrabold text-xs rounded-lg uppercase">
+                    {featureToggles['bookTextAlign'] || 'left'}
+                  </span>
+                </div>
+                <p className="text-[11px] text-gray-500">Règle l'alignement des paragraphes et contenus de lecture dans la Bibliothèque des Manuscrits Sacrés.</p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+                  {[
+                    { id: 'left', label: 'Gauche', icon: AlignLeft },
+                    { id: 'center', label: 'Centré', icon: AlignCenter },
+                    { id: 'right', label: 'Droite', icon: AlignRight },
+                    { id: 'justify', label: 'Justifié', icon: AlignJustify },
+                  ].map((align) => {
+                    const IconComp = align.icon;
+                    const isActive = (featureToggles['bookTextAlign'] || 'left') === align.id;
+                    return (
+                      <button
+                        key={align.id}
+                        type="button"
+                        disabled={!!featureToggles['lockFontSettings']}
+                        onClick={() => handleToggleFeature('bookTextAlign', align.id)}
+                        className={`flex items-center justify-center gap-2 py-2 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
+                          isActive
+                            ? 'bg-amber-500 text-gray-950 border-amber-500 shadow-md font-extrabold'
+                            : 'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-650'
+                        } ${featureToggles['lockFontSettings'] ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      >
+                        <IconComp size={14} />
+                        {align.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
 
             {/* Interactive Live Preview Box */}
@@ -5831,6 +6328,29 @@ export const AdminDashboard: React.FC = () => {
               </span>
 
               <div className="space-y-3">
+                {/* Book Reading Alignment Preview */}
+                <div>
+                  <span className="text-[10px] text-gray-400 block mb-0.5">
+                    Alignement du texte des livres ({featureToggles['bookTextAlign'] || 'left'}) :
+                  </span>
+                  <div 
+                    style={{ textAlign: (featureToggles['bookTextAlign'] as any) || 'left' }}
+                    className="p-3 bg-amber-50/70 dark:bg-amber-950/40 rounded-xl border border-amber-200/80 dark:border-amber-800/50 text-xs text-amber-950 dark:text-amber-100 leading-relaxed font-serif book-text-content"
+                  >
+                    Le Sharh al-Barhatiah dévoile la puissance des 28 Noms de Pouvoir syriaques et hébraïques qui régissent les entités spirituelles et les sphères célestes.
+                  </div>
+                </div>
+                {/* Page Title Preview */}
+                <div>
+                  <span className="text-[10px] text-gray-400 block mb-0.5">Grand Titre de Page ({featureToggles['textSizePageTitle'] ?? 28}px) :</span>
+                  <h1 
+                    style={{ fontSize: `${featureToggles['textSizePageTitle'] ?? 28}px` }} 
+                    className="font-black text-gray-900 dark:text-white transition-all leading-tight page-title-custom"
+                  >
+                    ✨ Portail des Sciences Sacrées & Outils Mystiques
+                  </h1>
+                </div>
+
                 {/* Article Title Preview */}
                 <div>
                   <span className="text-[10px] text-gray-400 block mb-0.5">Titre d'Article ({featureToggles['textSizeArticleTitle'] ?? 24}px) :</span>
@@ -5845,21 +6365,36 @@ export const AdminDashboard: React.FC = () => {
                 {/* Tool Title Preview */}
                 <div>
                   <span className="text-[10px] text-gray-400 block mb-0.5">Titre d'Outil ({featureToggles['textSizeToolTitle'] ?? 22}px) :</span>
-                  <h1 
+                  <h2 
                     style={{ fontSize: `${featureToggles['textSizeToolTitle'] ?? 22}px` }} 
                     className="font-black text-emerald-700 dark:text-emerald-400 transition-all leading-tight tool-title-custom"
                   >
                     📿 Calculateur Abjad & Générateur de Khatim
-                  </h1>
+                  </h2>
+                </div>
+
+                {/* Arabic Text Preview */}
+                <div>
+                  <span className="text-[10px] text-gray-400 block mb-0.5">Texte Arabe ({featureToggles['textSizeArabic'] ?? 26}px) :</span>
+                  <p 
+                    style={{ fontSize: `${featureToggles['textSizeArabic'] ?? 26}px` }} 
+                    className="font-arabic text-amber-600 dark:text-amber-400 transition-all leading-relaxed dir-rtl"
+                  >
+                    بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
+                  </p>
                 </div>
 
                 {/* Card Container Preview */}
                 <div 
-                  style={{ padding: `${featureToggles['cardPadding'] ?? 16}px` }}
+                  style={{ 
+                    padding: `${featureToggles['cardPadding'] ?? 16}px`,
+                    transform: `scale(${(featureToggles['cardGlobalScale'] ?? 100) / 100})`,
+                    transformOrigin: 'left top'
+                  }}
                   className="bg-emerald-50/50 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60 rounded-xl transition-all custom-card-container"
                 >
                   <span className="text-[10px] text-gray-400 block mb-1">
-                    Carte d'Outil (Padding: {featureToggles['cardPadding'] ?? 16}px) :
+                    Carte d'Outil (Padding: {featureToggles['cardPadding'] ?? 16}px, Échelle: {featureToggles['cardGlobalScale'] ?? 100}%) :
                   </span>
                   <h3 
                     style={{ fontSize: `${featureToggles['textSizeCardTitle'] ?? 18}px` }}
@@ -6973,6 +7508,198 @@ export const AdminDashboard: React.FC = () => {
         {activeTab === 'settings' && renderSettings()}
       </motion.div>
       
+      {/* Modal d'inscription et d'ajout d'utilisateurs */}
+      <AnimatePresence>
+        {isAddUserModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white dark:bg-gray-800 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl border border-gray-100 dark:border-gray-700 max-h-[90vh] overflow-y-auto"
+            >
+              <div className="flex justify-between items-center mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 rounded-2xl">
+                    <UserPlus size={22} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 dark:text-white text-lg">Inscrire un Utilisateur</h3>
+                    <p className="text-xs text-gray-500">Ajouter directement dans la base Firestore</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsAddUserModalOpen(false)}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-750 text-gray-400 rounded-xl transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Selector mode: Single vs Batch */}
+              <div className="flex bg-gray-100 dark:bg-gray-750 p-1 rounded-2xl mb-6">
+                <button
+                  type="button"
+                  onClick={() => setAddUserMode('single')}
+                  className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
+                    addUserMode === 'single'
+                      ? 'bg-white dark:bg-gray-800 text-emerald-600 dark:text-emerald-400 shadow-sm'
+                      : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
+                  }`}
+                >
+                  Individuel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAddUserMode('batch')}
+                  className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
+                    addUserMode === 'batch'
+                      ? 'bg-white dark:bg-gray-800 text-emerald-600 dark:text-emerald-400 shadow-sm'
+                      : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
+                  }`}
+                >
+                  Import en Lot (Plusieurs Emails)
+                </button>
+              </div>
+
+              <form onSubmit={handleAddUsersSubmit} className="space-y-4">
+                {addUserMode === 'single' ? (
+                  <>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1.5">
+                        Adresse Email <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="email"
+                        required
+                        value={newUserData.email}
+                        onChange={(e) => setNewUserData({ ...newUserData, email: e.target.value })}
+                        placeholder="ex: utilisateur@exemple.com"
+                        className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl text-xs font-medium text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1.5">
+                        Nom Complet
+                      </label>
+                      <input
+                        type="text"
+                        value={newUserData.name}
+                        onChange={(e) => setNewUserData({ ...newUserData, name: e.target.value })}
+                        placeholder="ex: Mamadou Diallo"
+                        className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl text-xs font-medium text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1.5">
+                          Téléphone
+                        </label>
+                        <input
+                          type="text"
+                          value={newUserData.phone}
+                          onChange={(e) => setNewUserData({ ...newUserData, phone: e.target.value })}
+                          placeholder="+221..."
+                          className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl text-xs font-medium text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1.5">
+                          Pays
+                        </label>
+                        <input
+                          type="text"
+                          value={newUserData.country}
+                          onChange={(e) => setNewUserData({ ...newUserData, country: e.target.value })}
+                          placeholder="Sénégal, Niger..."
+                          className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl text-xs font-medium text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1.5">
+                          Rôle
+                        </label>
+                        <select
+                          value={newUserData.role}
+                          onChange={(e) => setNewUserData({ ...newUserData, role: e.target.value })}
+                          className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl text-xs font-medium text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
+                        >
+                          <option value="user">Utilisateur Standard</option>
+                          <option value="admin">Administrateur</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1.5">
+                          Abonnement
+                        </label>
+                        <select
+                          value={newUserData.subscriptionTier}
+                          onChange={(e) => setNewUserData({ ...newUserData, subscriptionTier: e.target.value })}
+                          className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl text-xs font-medium text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
+                        >
+                          <option value="free">Gratuit</option>
+                          <option value="pro">Pro</option>
+                          <option value="premium">Premium</option>
+                        </select>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1.5">
+                      Adresses Email à inscrire (1 par ligne ou séparées par des virgules)
+                    </label>
+                    <textarea
+                      rows={6}
+                      required
+                      value={batchEmailsText}
+                      onChange={(e) => setBatchEmailsText(e.target.value)}
+                      placeholder={`jibriltengeh4@gmail.com\nsbireino@gmail.com\ntenibawwal10@gmail.com\njibriltengeh57@gmail.com`}
+                      className="w-full p-4 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl text-xs font-mono text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
+                    />
+                    <p className="text-[11px] text-gray-500 mt-1.5">
+                      Chaque email sera automatiquement converti en compte membre enregistré dans Firestore.
+                    </p>
+                  </div>
+                )}
+
+                <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-750">
+                  <button
+                    type="button"
+                    onClick={() => setIsAddUserModalOpen(false)}
+                    className="px-4 py-2 bg-gray-100 dark:bg-gray-750 text-gray-700 dark:text-gray-300 rounded-xl text-xs font-bold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isAddingUsers}
+                    className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-2 disabled:opacity-50"
+                  >
+                    {isAddingUsers ? (
+                      <>
+                        <RefreshCw size={14} className="animate-spin" />
+                        <span>Enregistrement...</span>
+                      </>
+                    ) : (
+                      <>
+                        <UserCheck size={16} />
+                        <span>Inscrire & Enregistrer</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {toast && (
         <div className="fixed bottom-6 right-6 z-[100] animate-in fade-in slide-in-from-bottom-5">
           <div className={`flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg border ${

@@ -143,20 +143,31 @@ export function applyTashkeel(text: string): string {
   let result = text;
   Object.keys(TASHKEEL_DICTIONARY).forEach(key => {
     const escapedKey = key.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-    const regex = new RegExp(escapedKey, 'g');
-    result = result.replace(regex, TASHKEEL_DICTIONARY[key]);
+    const regex = new RegExp(`\\b${escapedKey}\\b`, 'g');
+    if (TASHKEEL_DICTIONARY[key]) {
+      result = result.replace(regex, TASHKEEL_DICTIONARY[key]);
+    }
   });
 
-  // 2. Dynamic phonetic Tashkeel logic for untreated Arabic words
-  const words = result.split(' ');
+  // 2. Split words cleanly while keeping whitespace delimiters
+  const words = result.split(/(\s+)/);
   const processedWords = words.map(word => {
-    // If the word already contains Tashkeel diacritics, skip dynamic application to avoid duplicates
-    const hasExistingTashkeel = word.split('').some(isTashkeel);
-    if (hasExistingTashkeel) {
-      return word;
+    const trimmed = word.trim();
+    if (!trimmed) return word;
+
+    // Normalize vocative particle "يا" / "يَا"
+    if (trimmed === 'يا' || trimmed === 'يَا' || trimmed === 'يَـا' || trimmed === 'يَـَـا') {
+      return 'يَا';
     }
 
-    const chars = word.split('');
+    // If word already contains Tashkeel diacritics, preserve it to avoid duplicate/mangled marks
+    const hasExistingTashkeel = /[\u064B-\u0653\u0670]/.test(trimmed);
+    if (hasExistingTashkeel) {
+      // Remove initial Shadda if left over after stripping "ال" (e.g., رَّ -> رَ)
+      return trimmed.replace(/^([^\u064B-\u0653])\u0651/, '$1');
+    }
+
+    const chars = trimmed.split('');
     const newChars: string[] = [];
 
     for (let i = 0; i < chars.length; i++) {
@@ -181,15 +192,13 @@ export function applyTashkeel(text: string): string {
         } else if (nextChar === 'ّ') {
           // Shadda is handled explicitly, do nothing
         } else if (nextChar && isArabicLetter(nextChar)) {
-          // Alternating Fatha and Sukun for consonants
           if (i % 2 === 0) {
             newChars.push('َ'); // Fatha
           } else {
             newChars.push('ْ'); // Sukun
           }
         } else {
-          // Last letter gets a default Damma
-          newChars.push('ُ'); 
+          newChars.push('ُ'); // Last letter gets default Damma
         }
       }
     }
@@ -197,5 +206,5 @@ export function applyTashkeel(text: string): string {
     return newChars.join('');
   });
 
-  return processedWords.join(' ');
+  return processedWords.join('');
 }

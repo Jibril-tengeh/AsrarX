@@ -412,9 +412,16 @@ export function drawVerseCardOnCanvas(
   }
 
   // --- 9. FOOTER & WATERMARK ---
+  const lang = options.language || 'fr';
+  const footerText = lang === 'en'
+    ? '✦ ASRARHUB • WISDOM & CONTEMPLATION ✦'
+    : lang === 'ha'
+    ? '✦ ASRARHUB • HIKIMA DA TUNANI ✦'
+    : '✦ ASRARHUB • SAGESSE & CONTEMPLATION ✦';
+
   ctx.font = 'bold 16px sans-serif';
   ctx.fillStyle = isParchment ? 'rgba(120, 53, 15, 0.8)' : 'rgba(251, 191, 36, 0.9)';
-  ctx.fillText('✦ ASRARHUB • SAGESSE & CONTEMPLATION ✦', w / 2, h - 65);
+  ctx.fillText(footerText, w / 2, h - 65);
 
   ctx.font = '13px sans-serif';
   ctx.fillStyle = isParchment ? 'rgba(120, 53, 15, 0.6)' : 'rgba(255, 255, 255, 0.5)';

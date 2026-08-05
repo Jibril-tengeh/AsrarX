@@ -156,38 +156,70 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   throw new Error(JSON.stringify(errInfo));
 }
 
-export const setLocalUserSession = (email: string, name?: string, country?: string, phone?: string): UserData => {
+export const setLocalUserSession = (email: string, name?: string, country?: string, phone?: string, isSignUp: boolean = false): UserData => {
   const adminEmails = ['jibriltengeh4@gmail.com', 'sbireino@gmail.com', 'tenibawwal10@gmail.com', 'jibriltengeh57@gmail.com'];
   const normalizedEmail = (email || 'user@asrarhub.com').trim().toLowerCase();
   const isAdmin = adminEmails.includes(normalizedEmail);
   const role = isAdmin ? 'admin' : 'user';
-  
+
+  let existingUser: UserData | null = null;
+  try {
+    const existingStr = localStorage.getItem('asrarhub_all_local_users');
+    if (existingStr) {
+      const list = JSON.parse(existingStr);
+      existingUser = list.find((u: any) => u.email === normalizedEmail) || null;
+    }
+  } catch (e) {}
+
   const now = new Date();
   const trialHours = getTrialDurationHours();
   const trialExpiry = new Date(now.getTime() + trialHours * 60 * 60 * 1000);
 
+  let subTier: 'free' | 'premium' = isAdmin ? 'premium' : 'free';
+  let trialActivated = false;
+  let trialActivatedAt: string | null = null;
+  let trialExpiresAt: string | null = null;
+  let premUntil: string | null = null;
+
+  if (isAdmin) {
+    subTier = 'premium';
+  } else if (isSignUp) {
+    // Only NEW users receive temporary free trial premium access on sign up
+    subTier = 'premium';
+    trialActivated = true;
+    trialActivatedAt = now.toISOString();
+    trialExpiresAt = trialExpiry.toISOString();
+    premUntil = trialExpiry.toISOString();
+  } else if (existingUser) {
+    subTier = (existingUser.subscriptionTier as 'free' | 'premium') || 'free';
+    trialActivated = existingUser.freeTrialActivated || false;
+    trialActivatedAt = existingUser.freeTrialActivatedAt || null;
+    trialExpiresAt = existingUser.freeTrialExpiresAt || null;
+    premUntil = existingUser.premiumUntil || null;
+  }
+
   const userData: UserData = {
-    uid: 'local_' + Math.random().toString(36).substring(2, 10),
+    uid: existingUser?.uid || ('local_' + Math.random().toString(36).substring(2, 10)),
     email: normalizedEmail,
-    name: name || normalizedEmail.split('@')[0],
+    name: name || existingUser?.name || normalizedEmail.split('@')[0],
     role: role,
     isBanned: false,
     mysteryToolsDisabled: false,
     blockedTools: [],
     isTrusted: true,
     emailVerified: true,
-    spiritualPoints: 100,
-    subscriptionTier: isAdmin ? 'premium' : 'premium', // 12h free trial on account creation
-    premiumUntil: trialExpiry.toISOString(),
-    freeTrialActivated: true,
-    freeTrialActivatedAt: now.toISOString(),
-    freeTrialExpiresAt: trialExpiry.toISOString(),
-    hasSeenTrialPopup: false,
+    spiritualPoints: existingUser?.spiritualPoints || 100,
+    subscriptionTier: subTier,
+    premiumUntil: premUntil,
+    freeTrialActivated: trialActivated,
+    freeTrialActivatedAt: trialActivatedAt,
+    freeTrialExpiresAt: trialExpiresAt,
+    hasSeenTrialPopup: existingUser?.hasSeenTrialPopup || false,
     hideAds: false,
-    streakDays: 1,
-    purchasedItems: [],
-    country: country || '',
-    phone: phone || '',
+    streakDays: existingUser?.streakDays || 1,
+    purchasedItems: existingUser?.purchasedItems || [],
+    country: country || existingUser?.country || '',
+    phone: phone || existingUser?.phone || '',
     pushNotificationsEnabled: true
   };
   
@@ -337,6 +369,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               }
             }
 
+            const isPendingNewAccountValidation = data.requiresValidation === true && !firebaseUser.emailVerified && !data.emailVerified;
+            const isUserVerified = !isPendingNewAccountValidation;
+
             resolvedUser = {
               uid: firebaseUser.uid,
               email: firebaseUser.email,
@@ -346,7 +381,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               mysteryToolsDisabled: data.mysteryToolsDisabled || false,
               blockedTools: data.blockedTools || [],
               isTrusted: data.isTrusted || false,
-              emailVerified: firebaseUser.emailVerified,
+              emailVerified: isUserVerified,
               photoURL: data.photoURL || firebaseUser.photoURL || null,
               coverPhotoURL: data.coverPhotoURL || null,
               spiritualPoints: data.spiritualPoints || 0,
@@ -365,10 +400,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               pushNotificationsEnabled: data.pushNotificationsEnabled !== undefined ? data.pushNotificationsEnabled : true
             };
           } else {
-            const now = new Date();
-            const trialHours = getTrialDurationHours();
-            const trialExpiry = new Date(now.getTime() + trialHours * 60 * 60 * 1000);
-
             resolvedUser = {
               uid: firebaseUser.uid,
               email: firebaseUser.email,
@@ -378,15 +409,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               mysteryToolsDisabled: false,
               blockedTools: [],
               isTrusted: false,
-              emailVerified: firebaseUser.emailVerified,
+              emailVerified: true,
               photoURL: firebaseUser.photoURL || null,
               coverPhotoURL: null,
               spiritualPoints: 0,
-              subscriptionTier: 'premium',
-              premiumUntil: trialExpiry.toISOString(),
-              freeTrialActivated: true,
-              freeTrialActivatedAt: now.toISOString(),
-              freeTrialExpiresAt: trialExpiry.toISOString(),
+              subscriptionTier: currentRole === 'admin' ? 'premium' : 'free',
+              premiumUntil: null,
+              freeTrialActivated: false,
+              freeTrialActivatedAt: null,
+              freeTrialExpiresAt: null,
               hasSeenTrialPopup: false,
               hideAds: false,
               streakDays: 0,
@@ -491,7 +522,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Auto-activate trial or show popup for eligible users
+  // Show trial popup for newly registered users who haven't seen it yet
   useEffect(() => {
     if (!user) {
       setShowTrialPopup(false);
@@ -500,9 +531,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (user.role === 'admin') return;
 
-    if (!user.freeTrialActivated) {
-      activate24hTrial();
-    } else if (!user.hasSeenTrialPopup) {
+    if (user.freeTrialActivated && !user.hasSeenTrialPopup) {
       const seenLocally = localStorage.getItem(`asrarhub_trial_popup_seen_${user.uid}`);
       if (!seenLocally) {
         setShowTrialPopup(true);

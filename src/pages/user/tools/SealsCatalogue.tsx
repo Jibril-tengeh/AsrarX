@@ -158,7 +158,8 @@ export const SealsCatalogue: React.FC = () => {
         groupTitle: activeSeal.groupTitle,
         lang: language,
         versionTitle: `${activeVersionDetails.title} • Puissance: ${activeVersionDetails.powerLevel}%`,
-        version: selectedVersion
+        version: selectedVersion,
+        sealId: activeSeal.id
       });
     } catch (e) {
       console.error('Download PNG error:', e);
@@ -185,7 +186,8 @@ export const SealsCatalogue: React.FC = () => {
         groupTitle: activeSeal.groupTitle,
         lang: language,
         versionTitle: `${activeVersionDetails.title} • Puissance: ${activeVersionDetails.powerLevel}%`,
-        version: selectedVersion
+        version: selectedVersion,
+        sealId: activeSeal.id
       });
     } catch (e) {
       console.error('Download SVG error:', e);
@@ -238,7 +240,7 @@ export const SealsCatalogue: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-[#070210] text-gray-900 dark:text-gray-100 pb-16 pt-6 px-3 sm:px-6">
+    <div className="min-h-screen bg-gray-50 dark:bg-[#070210] text-gray-900 dark:text-gray-100 pb-32 sm:pb-40 pt-6 px-3 sm:px-6">
       <div className="max-w-7xl mx-auto space-y-8">
         
         {/* Navigation Breadcrumb */}
@@ -693,6 +695,7 @@ export const SealsCatalogue: React.FC = () => {
                         sealTitle={activeSeal.title}
                         arabicName={activeSeal.arabicName}
                         asciiSymbol={activeVersionDetails ? activeVersionDetails.symbol : activeSeal.graphicSymbol}
+                        sealId={activeSeal.id}
                         language={language}
                         onExpandFullScreen={() => {
                           if (checkProtection()) return;

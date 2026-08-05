@@ -105,6 +105,8 @@
     "advancedTools": "Advanced Tools",
     "abjadTitle": "Abjad Calculator",
     "abjadDesc": "Calculate the mystical numerical value of your names and wirds.",
+    "customDuaTitle": "Custom Du'a Generator",
+    "customDuaDesc": "Personalized supplications aligned with your name, intention, and Abjad score.",
     "asmaTitle": "Personal Divine Names",
     "asmaDesc": "Discover your corresponding divine names based on the mystical weight of your name.",
     "names99Title": "The 99 Names of Allah"
@@ -688,6 +690,9 @@
     "verifiedBackToLogin": "I verified my email / Log In",
     "email": "Email",
     "emailPlaceholder": "your@email.com",
+    "gmailOnlyError": "Only Gmail addresses (@gmail.com) are allowed for account creation.",
+    "gmailAliasError": "Gmail sub-addressing and aliases (e.g. name+alias@gmail.com with '+' symbol) are not allowed.",
+    "gmailHint": "Only standard @gmail.com addresses (without + aliases) are accepted.",
     "yourEmailAddress": "your email address",
     "password": "Password",
     "forgotPassword": "Forgot password?",

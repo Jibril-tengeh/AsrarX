@@ -190,7 +190,7 @@ export const SecretDetail: React.FC = () => {
     }
   };
 
-  const isUserPremium = user?.subscriptionTier === 'premium' || user?.subscriptionTier === 'pro';
+  const isUserPremium = isPremium || user?.role === 'admin' || user?.subscriptionTier === 'premium' || user?.subscriptionTier === 'pro';
   const isShowingTeaserOnly = !!item?.isPremium && !isUserPremium;
   const displayContent = (item && isShowingTeaserOnly) ? getTeaserContent(item.content).html : (item?.content || '');
 

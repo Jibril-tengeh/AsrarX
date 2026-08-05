@@ -68,6 +68,25 @@ export const isDisposableEmail = (email: string): boolean => {
 };
 
 /**
+ * Checks if an email address belongs to Gmail (@gmail.com or @googlemail.com)
+ */
+export const isGmailAddress = (email: string): boolean => {
+  if (!email || !email.includes('@')) return false;
+  const parts = email.trim().toLowerCase().split('@');
+  const domain = parts[parts.length - 1];
+  return domain === 'gmail.com' || domain === 'googlemail.com';
+};
+
+/**
+ * Checks if an email address uses a Gmail plus alias (e.g. user+alias@gmail.com)
+ */
+export const hasGmailPlusAlias = (email: string): boolean => {
+  if (!email || !email.includes('@')) return false;
+  const localPart = email.trim().toLowerCase().split('@')[0];
+  return localPart.includes('+');
+};
+
+/**
  * Normalizes an email address to detect aliases (Gmail dots, plus signs, googlemail domain)
  * Example:
  * - jibriltengeh.57@gmail.com -> jibriltengeh57@gmail.com
@@ -163,7 +182,23 @@ export const validateRegistrationDetails = async (
   const normPhone = normalizePhone(phone);
   const rawPhoneTrim = (phone || '').trim();
 
-  // 1. Check for temporary / disposable email
+  // 1. Check for Gmail domain requirement (@gmail.com or @googlemail.com)
+  if (rawEmail && !isGmailAddress(rawEmail)) {
+    return {
+      valid: false,
+      error: "Seules les adresses Gmail (@gmail.com) sont autorisées pour la création de compte."
+    };
+  }
+
+  // 2. Check for Gmail plus aliases (e.g. user+alias@gmail.com)
+  if (rawEmail && hasGmailPlusAlias(rawEmail)) {
+    return {
+      valid: false,
+      error: "Les extensions et alias Gmail (ex: nom+alias@gmail.com avec le symbole '+') ne sont pas autorisés. Veuillez utiliser votre adresse Gmail principale."
+    };
+  }
+
+  // 3. Check for temporary / disposable email
   if (rawEmail && isDisposableEmail(rawEmail)) {
     return {
       valid: false,

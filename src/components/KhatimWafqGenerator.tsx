@@ -500,7 +500,7 @@ export const KhatimWafqGenerator: React.FC = () => {
         </div>
 
         {/* WAFQ GRID VISUAL DISPLAY */}
-        <div className="w-full overflow-x-auto pb-2 scrollbar-thin flex justify-center my-4">
+        <div className="w-full overflow-x-auto pb-2 custom-scrollbar touch-pan-x overscroll-x-contain flex justify-start sm:justify-center my-4">
           <div 
             className={`p-3 sm:p-5 bg-slate-950/90 border-2 border-amber-500/60 rounded-2xl shadow-2xl relative min-w-fit ${
               disableDuaCopy ? 'select-none' : ''

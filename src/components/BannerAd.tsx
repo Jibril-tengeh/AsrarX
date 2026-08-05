@@ -5,17 +5,13 @@ import { X, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export const BannerAd: React.FC = () => {
-  const { user } = useAuth();
+  const { user, isPremium: isAuthPremium } = useAuth();
   const { t } = useLanguage();
   const [isVisible, setIsVisible] = useState(true);
 
-  const isPremiumOrPro = user?.subscriptionTier === 'premium' || user?.subscriptionTier === 'pro';
+  const isPremiumOrPro = user?.subscriptionTier === 'premium' || user?.subscriptionTier === 'pro' || user?.role === 'admin' || isAuthPremium;
 
-  // Do not show ads if the user dismissed it, or if they are premium and have hidden ads.
-  // We'll let premium users see ads unless they toggle it off, or maybe by default we hide it if they toggle it off?
-  // Let's hide if isPremiumOrPro && user.hideAds !== false, meaning default hidden for premium, but if they want them... wait. 
-  // Let's just say if (user?.hideAds) return null;
-  if (!isVisible || user?.hideAds) {
+  if (!isVisible || user?.hideAds || isPremiumOrPro) {
     return null;
   }
 

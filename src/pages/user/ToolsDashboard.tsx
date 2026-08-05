@@ -43,7 +43,7 @@ import { BannerAd } from "../../components/BannerAd";
 
 export const ToolsDashboard: React.FC = () => {
   const { t, language } = useLanguage();
-  const { user } = useAuth();
+  const { user, isPremium: isAuthPremium } = useAuth();
   const navigate = useNavigate();
   const [showGuide, setShowGuide] = useState(false);
   const [guideStep, setGuideStep] = useState(0);
@@ -669,6 +669,8 @@ export const ToolsDashboard: React.FC = () => {
                           });
                         } else if (
                           isPremium &&
+                          !isAuthPremium &&
+                          user?.role !== "admin" &&
                           user?.subscriptionTier !== "premium" &&
                           user?.subscriptionTier !== "pro"
                         ) {

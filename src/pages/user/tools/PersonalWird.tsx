@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { User, Shield, Key, Search, ArrowLeft, RefreshCw, Sparkles, BookOpen, Folder as FolderIcon, Trash2, Save, Heart, Clock, Sun, Moon, Calendar, CheckCircle2, Copy, Check, Eye, Compass, Plus, ShieldCheck } from 'lucide-react';
+import { User, Shield, Key, Search, ArrowLeft, RefreshCw, Sparkles, BookOpen, Folder as FolderIcon, Trash2, Save, Heart, Clock, Sun, Moon, Calendar, CheckCircle2, Copy, Check, Eye, Compass, Plus, ShieldCheck, Download, Feather } from 'lucide-react';
 import { db } from '../../../lib/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
+import { exportWirdToImage } from '../../../utils/wirdExporter';
 
 interface SavedWird {
   id: string;
@@ -371,12 +372,18 @@ const getAsmaDetails = (plainName: string) => {
 };
 
 const getVocativeArabic = (arName: string) => {
-  if (arName === "الله" || arName === "اللَّهُ") return "يَا ٱللَّهُ";
-  let base = arName.replace(/^الْ/, "").replace(/^ال/, "");
-  if (base.length > 1 && base[1] === "\u0651") {
-    base = base[0] + base.substring(2);
+  if (!arName) return '';
+  const clean = arName.trim();
+  if (clean === "الله" || clean === "اللَّهُ" || clean === "اللّه") {
+    return "يَا ٱللَّهُ";
   }
-  return applyTashkeel(`يَا ${base}`);
+  let base = clean.replace(/^ال[\u064B-\u0653\u0670]?/, '');
+  if (base.length > 0) {
+    const firstChar = base[0];
+    const rest = base.slice(1).replace(/^\u0651/, '');
+    base = firstChar + rest;
+  }
+  return `يَا ${base}`;
 };
 
 const getVocativeTransliteration = (tr: string) => {
@@ -935,13 +942,67 @@ export const PersonalWird: React.FC = () => {
                         {dict.valueZikr(result.totalAbjad)} • {result.diff === 0 ? dict.perfectMatch : `${dict.minorGap(result.diff)}`}
                       </div>
 
-                      <button
-                        onClick={saveWird}
-                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2 text-sm cursor-pointer shadow-sm active:scale-98 min-w-0"
-                      >
-                        <Save size={18} className="shrink-0" />
-                        {dict.saveSuccess} (Save)
-                      </button>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 w-full mt-4">
+                        <button
+                          onClick={saveWird}
+                          className="py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 text-xs cursor-pointer shadow-sm active:scale-98 min-w-0"
+                        >
+                          <Save size={16} className="shrink-0" />
+                          <span>Enregistrer</span>
+                        </button>
+                        <button
+                          onClick={() => exportWirdToImage({
+                            name,
+                            motherName,
+                            arabicZikr: arabicVocativeStr,
+                            transliteration: translitVocativeStr,
+                            abjadWeight: result.totalAbjad,
+                            meaningFr: language === 'en'
+                              ? "Supreme Wird calculated by Istikhraj of Divine Names"
+                              : language === 'ha'
+                              ? "Zikirin kahan abjad daga Saye na Sunayen Allah"
+                              : "Wird Suprême calculé par Istikhraj des Noms Divins",
+                            title: language === 'en'
+                              ? "SUPREME WIRD & ISTIKHRAJ"
+                              : language === 'ha'
+                              ? "WIRDIL KAHAN & ISTIKHRAJ"
+                              : "WIRD SUPRÊME & ISTIKHRAJ",
+                            isParchment: false,
+                            lang: language,
+                          })}
+                          className="py-2.5 px-3 bg-zinc-800 hover:bg-zinc-700 dark:bg-zinc-700 dark:hover:bg-zinc-600 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 text-xs cursor-pointer shadow-sm active:scale-98 min-w-0"
+                          title="Télécharger l'image PNG haute résolution"
+                        >
+                          <Download size={16} className="shrink-0 text-emerald-400" />
+                          <span>PNG Deluxe</span>
+                        </button>
+                        <button
+                          onClick={() => exportWirdToImage({
+                            name,
+                            motherName,
+                            arabicZikr: arabicVocativeStr,
+                            transliteration: translitVocativeStr,
+                            abjadWeight: result.totalAbjad,
+                            meaningFr: language === 'en'
+                              ? "Mystique Parchment engraved with AsrarHub Watermark"
+                              : language === 'ha'
+                              ? "Takardar Asiri wadda aka hatimta da AsrarHub"
+                              : "Parchemin Mystique gravé avec Watermark AsrarHub",
+                            title: language === 'en'
+                              ? "SUPREME PARCHMENT WIRD"
+                              : language === 'ha'
+                              ? "TAKARDAR PARCHEMIN WIRDIL"
+                              : "PARCHEMIN WIRD SUPRÊME",
+                            isParchment: true,
+                            lang: language,
+                          })}
+                          className="py-2.5 px-3 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 text-xs cursor-pointer shadow-sm active:scale-98 min-w-0"
+                          title="Télécharger sur Parchemin Mystique"
+                        >
+                          <Feather size={16} className="shrink-0" />
+                          <span>Parchemin</span>
+                        </button>
+                      </div>
                     </div>
                   );
                 })()}
@@ -1196,13 +1257,47 @@ export const PersonalWird: React.FC = () => {
                       </div>
                     </div>
 
-                    <button
-                      onClick={() => saveGhazaliWirdToFolder(w.arabic, `${dayName} (${w.transliteration})`, w.count)}
-                      className="w-full mt-2 py-2 px-3 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-sm min-w-0"
-                    >
-                      <Plus size={14} className="shrink-0" />
-                      {dict.ghazaliAddWird}
-                    </button>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-2 w-full">
+                      <button
+                        onClick={() => saveGhazaliWirdToFolder(w.arabic, `${dayName} (${w.transliteration})`, w.count)}
+                        className="py-2 px-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1 transition-colors cursor-pointer shadow-sm min-w-0"
+                      >
+                        <Plus size={14} className="shrink-0" />
+                        <span>{dict.ghazaliAddWird}</span>
+                      </button>
+                      <button
+                        onClick={() => exportWirdToImage({
+                          arabicZikr: w.arabic,
+                          transliteration: w.transliteration,
+                          abjadWeight: w.count,
+                          meaningFr: translation,
+                          title: `WIRD GHAZALI • ${dayName.toUpperCase()}`,
+                          isParchment: false,
+                          lang: language,
+                        })}
+                        className="py-2 px-2.5 bg-zinc-800 hover:bg-zinc-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1 transition-colors cursor-pointer shadow-sm min-w-0"
+                        title="Télécharger PNG"
+                      >
+                        <Download size={14} className="shrink-0 text-amber-400" />
+                        <span>PNG</span>
+                      </button>
+                      <button
+                        onClick={() => exportWirdToImage({
+                          arabicZikr: w.arabic,
+                          transliteration: w.transliteration,
+                          abjadWeight: w.count,
+                          meaningFr: translation,
+                          title: `PARCHEMIN • ${dayName.toUpperCase()}`,
+                          isParchment: true,
+                          lang: language,
+                        })}
+                        className="py-2 px-2.5 bg-amber-800 hover:bg-amber-900 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1 transition-colors cursor-pointer shadow-sm min-w-0"
+                        title="Télécharger Parchemin"
+                      >
+                        <Feather size={14} className="shrink-0" />
+                        <span>Parchemin</span>
+                      </button>
+                    </div>
                   </div>
                 );
               })}
@@ -1489,13 +1584,43 @@ export const PersonalWird: React.FC = () => {
                         }}
                         className="bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700 rounded-xl p-3 shadow-sm hover:shadow-md transition-all cursor-grab active:cursor-grabbing group relative"
                       >
-                        <button
-                          onClick={() => deleteWird(wird.id)}
-                          className="absolute top-2 right-2 text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity p-0.5 rounded cursor-pointer"
-                          title={dict.deleteWird}
-                        >
-                          <Trash2 size={13} />
-                        </button>
+                        <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => exportWirdToImage({
+                              arabicZikr: wird.arabic,
+                              transliteration: wird.name,
+                              abjadWeight: wird.weight,
+                              title: language === 'en' ? "SAVED WIRD" : language === 'ha' ? "WIRDIL DA AKA ADANA" : "WIRD ENREGISTRÉ",
+                              isParchment: false,
+                              lang: language,
+                            })}
+                            className="text-gray-400 hover:text-emerald-500 p-1 rounded cursor-pointer"
+                            title="Télécharger PNG Deluxe"
+                          >
+                            <Download size={13} />
+                          </button>
+                          <button
+                            onClick={() => exportWirdToImage({
+                              arabicZikr: wird.arabic,
+                              transliteration: wird.name,
+                              abjadWeight: wird.weight,
+                              title: language === 'en' ? "SAVED WIRD PARCHMENT" : language === 'ha' ? "TAKARDAR WIRDIL DA AKA ADANA" : "PARCHEMIN WIRD ENREGISTRÉ",
+                              isParchment: true,
+                              lang: language,
+                            })}
+                            className="text-gray-400 hover:text-amber-500 p-1 rounded cursor-pointer"
+                            title="Télécharger Parchemin"
+                          >
+                            <Feather size={13} />
+                          </button>
+                          <button
+                            onClick={() => deleteWird(wird.id)}
+                            className="text-gray-400 hover:text-red-500 p-1 rounded cursor-pointer"
+                            title={dict.deleteWird}
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
                         <div 
                           className="text-right text-emerald-700 dark:text-emerald-400 font-bold text-sm mb-1" 
                           style={{ fontFamily: "'Amiri', 'Traditional Arabic', system-ui, sans-serif" }}

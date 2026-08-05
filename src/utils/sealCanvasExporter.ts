@@ -12,6 +12,7 @@ interface ExportSealParams {
   lang: 'fr' | 'en' | 'ha';
   versionTitle?: string;
   version?: number;
+  sealId?: string;
 }
 
 /**
@@ -71,31 +72,84 @@ export async function generateAndDownloadSealCard(params: ExportSealParams): Pro
   drawCorner(45, height - 45);
   drawCorner(width - 45, height - 45);
 
+  const lang = params.lang || 'fr';
+  const i18n = {
+    fr: {
+      header: 'ASRARHUB • SCEAUX ET KHAWATIM DE LA LUNE',
+      formula: (f: string) => `FORMULE : ${f}`,
+      abjadValue: (v: string) => `VALEUR ABJAD : ${v}`,
+      footerNote: 'Propriété Spirituelle Explicative - AsrarHub Sacred Seal Collection',
+    },
+    en: {
+      header: 'ASRARHUB • LUNAR SEALS AND KHAWATIM',
+      formula: (f: string) => `FORMULA: ${f}`,
+      abjadValue: (v: string) => `ABJAD VALUE: ${v}`,
+      footerNote: 'Esoteric Spiritual Property - AsrarHub Sacred Seal Collection',
+    },
+    ha: {
+      header: 'ASRARHUB • KHATIM DA HATIMIN WATA',
+      formula: (f: string) => `KALMA: ${f}`,
+      abjadValue: (v: string) => `LISSAFIN ABJAD: ${v}`,
+      footerNote: 'Malamta da Asirin Ruhi - AsrarHub Sacred Seal Collection',
+    }
+  };
+  const t = i18n[lang] || i18n.fr;
+
+  // Max text width allowed inside the inner card borders (1200 - 160 = 1040px)
+  const maxTextWidth = width - 160;
+
   // Header Title - AsrarHub
   ctx.fillStyle = '#f59e0b';
-  ctx.font = 'bold 32px serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'alphabetic';
-  ctx.fillText('ASRARHUB • SCEAUX ET KHAWATIM DE LA LUNE', width / 2, 100);
+  let headerFontSize = 32;
+  const mainHeaderStr = t.header;
+  ctx.font = `bold ${headerFontSize}px serif`;
+  while (ctx.measureText(mainHeaderStr).width > maxTextWidth && headerFontSize > 16) {
+    headerFontSize -= 1;
+    ctx.font = `bold ${headerFontSize}px serif`;
+  }
+  ctx.fillText(mainHeaderStr, width / 2, 100);
 
   // Group Badge
   ctx.fillStyle = '#c084fc';
-  ctx.font = '22px sans-serif';
-  ctx.fillText(params.groupTitle.toUpperCase(), width / 2, 140);
+  let groupFontSize = 22;
+  const groupStr = params.groupTitle.toUpperCase();
+  ctx.font = `${groupFontSize}px sans-serif`;
+  while (ctx.measureText(groupStr).width > maxTextWidth && groupFontSize > 12) {
+    groupFontSize -= 1;
+    ctx.font = `${groupFontSize}px sans-serif`;
+  }
+  ctx.fillText(groupStr, width / 2, 140);
 
-  // Main Seal Title
+  // Main Seal Title - Dynamic font scaling to ensure it never overflows borders
   ctx.fillStyle = '#ffffff';
-  ctx.font = 'bold 42px serif';
+  let titleFontSize = 38;
+  ctx.font = `bold ${titleFontSize}px serif`;
+  while (ctx.measureText(params.title).width > maxTextWidth && titleFontSize > 14) {
+    titleFontSize -= 1;
+    ctx.font = `bold ${titleFontSize}px serif`;
+  }
   ctx.fillText(params.title, width / 2, 200);
 
   // Subtitle
   ctx.fillStyle = '#fef08a';
-  ctx.font = '24px sans-serif';
+  let subFontSize = 24;
+  ctx.font = `${subFontSize}px sans-serif`;
+  while (ctx.measureText(params.subtitle).width > maxTextWidth && subFontSize > 12) {
+    subFontSize -= 1;
+    ctx.font = `${subFontSize}px sans-serif`;
+  }
   ctx.fillText(params.subtitle, width / 2, 240);
 
   // Arabic Name Calligraphy
   ctx.fillStyle = '#fbbf24';
-  ctx.font = 'bold 44px serif';
+  let arabicFontSize = 42;
+  ctx.font = `bold ${arabicFontSize}px serif`;
+  while (ctx.measureText(params.arabicName).width > maxTextWidth && arabicFontSize > 16) {
+    arabicFontSize -= 1;
+    ctx.font = `bold ${arabicFontSize}px serif`;
+  }
   ctx.fillText(params.arabicName, width / 2, 300);
 
   // Decorative Line
@@ -109,7 +163,12 @@ export async function generateAndDownloadSealCard(params: ExportSealParams): Pro
   // Version Badge if provided
   if (params.versionTitle) {
     ctx.fillStyle = '#e9d5ff';
-    ctx.font = 'italic 22px sans-serif';
+    let verFontSize = 22;
+    ctx.font = `italic ${verFontSize}px sans-serif`;
+    while (ctx.measureText(params.versionTitle).width > maxTextWidth && verFontSize > 12) {
+      verFontSize -= 1;
+      ctx.font = `italic ${verFontSize}px sans-serif`;
+    }
     ctx.fillText(params.versionTitle, width / 2, 365);
   }
 
@@ -127,7 +186,7 @@ export async function generateAndDownloadSealCard(params: ExportSealParams): Pro
 
   // Check if we can build visual Khatim Grid
   const gridData: KhatimGridData | null = params.version
-    ? getKhatimGridData(params.version, params.title, params.arabicName, params.formula)
+    ? getKhatimGridData(params.version, params.title, params.arabicName, params.formula, params.sealId)
     : null;
 
   if (gridData) {
@@ -227,13 +286,26 @@ export async function generateAndDownloadSealCard(params: ExportSealParams): Pro
   // Footer Section - Formula and Abjad Value
   const footerY = boxY + boxH + 60;
   ctx.fillStyle = '#fef08a';
-  ctx.font = 'bold 26px serif';
   ctx.textAlign = 'center';
-  ctx.fillText(`FORMULE : ${params.formula}`, width / 2, footerY);
+
+  let formulaFontSize = 26;
+  const formulaStr = t.formula(params.formula);
+  ctx.font = `bold ${formulaFontSize}px serif`;
+  while (ctx.measureText(formulaStr).width > maxTextWidth && formulaFontSize > 12) {
+    formulaFontSize -= 1;
+    ctx.font = `bold ${formulaFontSize}px serif`;
+  }
+  ctx.fillText(formulaStr, width / 2, footerY);
 
   ctx.fillStyle = '#c084fc';
-  ctx.font = '22px sans-serif';
-  ctx.fillText(`VALEUR ABJAD : ${params.abjadValue}`, width / 2, footerY + 36);
+  let abjadFontSize = 22;
+  const abjadStr = t.abjadValue(params.abjadValue);
+  ctx.font = `${abjadFontSize}px sans-serif`;
+  while (ctx.measureText(abjadStr).width > maxTextWidth && abjadFontSize > 12) {
+    abjadFontSize -= 1;
+    ctx.font = `${abjadFontSize}px sans-serif`;
+  }
+  ctx.fillText(abjadStr, width / 2, footerY + 36);
 
   // File Name formatting
   const sanitizedTitle = params.title.toLowerCase().replace(/[^a-z0-9]/g, '_').slice(0, 30);
@@ -248,6 +320,29 @@ export async function generateAndDownloadSealCard(params: ExportSealParams): Pro
 export function generateAndDownloadSealSVG(params: ExportSealParams): boolean {
   const width = 1200;
   const height = 1500;
+  const lang = params.lang || 'fr';
+
+  const i18n = {
+    fr: {
+      header: 'ASRARHUB • SCEAUX ET KHAWATIM DE LA LUNE',
+      formula: (f: string) => `FORMULE : ${f}`,
+      abjadValue: (v: string) => `VALEUR ABJAD : ${v}`,
+      footerNote: 'Propriété Spirituelle Explicative - AsrarHub Sacred Seal Collection',
+    },
+    en: {
+      header: 'ASRARHUB • LUNAR SEALS AND KHAWATIM',
+      formula: (f: string) => `FORMULA: ${f}`,
+      abjadValue: (v: string) => `ABJAD VALUE: ${v}`,
+      footerNote: 'Esoteric Spiritual Property - AsrarHub Sacred Seal Collection',
+    },
+    ha: {
+      header: 'ASRARHUB • KHATIM DA HATIMIN WATA',
+      formula: (f: string) => `KALMA: ${f}`,
+      abjadValue: (v: string) => `LISSAFIN ABJAD: ${v}`,
+      footerNote: 'Malamta da Asirin Ruhi - AsrarHub Sacred Seal Collection',
+    }
+  };
+  const t = i18n[lang] || i18n.fr;
 
   const escapeXml = (unsafe: string) => {
     return unsafe
@@ -264,7 +359,7 @@ export function generateAndDownloadSealSVG(params: ExportSealParams): boolean {
   const boxH = 760;
 
   const gridData: KhatimGridData | null = params.version
-    ? getKhatimGridData(params.version, params.title, params.arabicName, params.formula)
+    ? getKhatimGridData(params.version, params.title, params.arabicName, params.formula, params.sealId)
     : null;
 
   let symbolBoxContentSvg = '';
@@ -348,6 +443,24 @@ export function generateAndDownloadSealSVG(params: ExportSealParams): boolean {
       .join('\n    ');
   }
 
+  const getSvgFontSize = (text: string, baseSize: number, charWidthMultiplier: number = 0.55) => {
+    const maxAllowedWidth = 1000;
+    const estimatedWidth = text.length * baseSize * charWidthMultiplier;
+    if (estimatedWidth <= maxAllowedWidth) {
+      return baseSize;
+    }
+    const scaled = Math.floor(baseSize * (maxAllowedWidth / estimatedWidth));
+    return Math.max(14, scaled);
+  };
+
+  const svgGroupFontSize = getSvgFontSize(params.groupTitle.toUpperCase(), 22, 0.5);
+  const svgTitleFontSize = getSvgFontSize(params.title, 38, 0.55);
+  const svgSubTitleFontSize = getSvgFontSize(params.subtitle, 24, 0.5);
+  const svgArabicFontSize = getSvgFontSize(params.arabicName, 42, 0.6);
+  const svgVersionFontSize = params.versionTitle ? getSvgFontSize(params.versionTitle, 22, 0.5) : 22;
+  const svgFormulaFontSize = getSvgFontSize(t.formula(params.formula), 26, 0.55);
+  const svgAbjadFontSize = getSvgFontSize(t.abjadValue(params.abjadValue), 22, 0.5);
+
   const svgString = `<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">
   <defs>
@@ -381,16 +494,16 @@ export function generateAndDownloadSealSVG(params: ExportSealParams): boolean {
   <circle cx="${width - 45}" cy="${height - 45}" r="16" fill="#f59e0b" />
 
   <!-- Header -->
-  <text x="${width / 2}" y="100" fill="#f59e0b" font-family="serif" font-size="32" font-weight="bold" text-anchor="middle">ASRARHUB • SCEAUX ET KHAWATIM DE LA LUNE</text>
-  <text x="${width / 2}" y="140" fill="#c084fc" font-family="sans-serif" font-size="22" text-anchor="middle">${escapeXml(params.groupTitle.toUpperCase())}</text>
-  <text x="${width / 2}" y="200" fill="#ffffff" font-family="serif" font-size="42" font-weight="bold" text-anchor="middle">${escapeXml(params.title)}</text>
-  <text x="${width / 2}" y="240" fill="#fef08a" font-family="sans-serif" font-size="24" text-anchor="middle">${escapeXml(params.subtitle)}</text>
-  <text x="${width / 2}" y="300" fill="#fbbf24" font-family="serif" font-size="44" font-weight="bold" text-anchor="middle">${escapeXml(params.arabicName)}</text>
+  <text x="${width / 2}" y="100" fill="#f59e0b" font-family="serif" font-size="32" font-weight="bold" text-anchor="middle">${escapeXml(t.header)}</text>
+  <text x="${width / 2}" y="140" fill="#c084fc" font-family="sans-serif" font-size="${svgGroupFontSize}" text-anchor="middle">${escapeXml(params.groupTitle.toUpperCase())}</text>
+  <text x="${width / 2}" y="200" fill="#ffffff" font-family="serif" font-size="${svgTitleFontSize}" font-weight="bold" text-anchor="middle">${escapeXml(params.title)}</text>
+  <text x="${width / 2}" y="240" fill="#fef08a" font-family="sans-serif" font-size="${svgSubTitleFontSize}" text-anchor="middle">${escapeXml(params.subtitle)}</text>
+  <text x="${width / 2}" y="300" fill="#fbbf24" font-family="serif" font-size="${svgArabicFontSize}" font-weight="bold" text-anchor="middle">${escapeXml(params.arabicName)}</text>
 
   <!-- Decorative Line -->
   <line x1="100" y1="330" x2="${width - 100}" y2="330" stroke="#d97706" stroke-width="2" opacity="0.6" />
 
-  ${params.versionTitle ? `<text x="${width / 2}" y="365" fill="#e9d5ff" font-family="sans-serif" font-size="22" font-style="italic" text-anchor="middle">${escapeXml(params.versionTitle)}</text>` : ''}
+  ${params.versionTitle ? `<text x="${width / 2}" y="365" fill="#e9d5ff" font-family="sans-serif" font-size="${svgVersionFontSize}" font-style="italic" text-anchor="middle">${escapeXml(params.versionTitle)}</text>` : ''}
 
   <!-- Symbol Box Container -->
   <rect x="${boxX}" y="${boxY}" width="${boxW}" height="${boxH}" fill="#030008" stroke="#9333ea" stroke-width="3" rx="16" />
@@ -399,9 +512,9 @@ export function generateAndDownloadSealSVG(params: ExportSealParams): boolean {
   ${symbolBoxContentSvg}
 
   <!-- Footer Info -->
-  <text x="${width / 2}" y="1220" fill="#fef08a" font-family="serif" font-size="26" font-weight="bold" text-anchor="middle">FORMULE : ${escapeXml(params.formula)}</text>
-  <text x="${width / 2}" y="1260" fill="#c084fc" font-family="sans-serif" font-size="22" text-anchor="middle">VALEUR ABJAD : ${escapeXml(params.abjadValue)}</text>
-  <text x="${width / 2}" y="1320" fill="#a855f7" font-family="sans-serif" font-size="18" text-anchor="middle">Propriété Spirituelle Explicative - AsrarHub Sacred Seal Collection</text>
+  <text x="${width / 2}" y="1220" fill="#fef08a" font-family="serif" font-size="${svgFormulaFontSize}" font-weight="bold" text-anchor="middle">${escapeXml(t.formula(params.formula))}</text>
+  <text x="${width / 2}" y="1260" fill="#c084fc" font-family="sans-serif" font-size="${svgAbjadFontSize}" text-anchor="middle">${escapeXml(t.abjadValue(params.abjadValue))}</text>
+  <text x="${width / 2}" y="1320" fill="#a855f7" font-family="sans-serif" font-size="18" text-anchor="middle">${escapeXml(t.footerNote)}</text>
 </svg>`;
 
   try {

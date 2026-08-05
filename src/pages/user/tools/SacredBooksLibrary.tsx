@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   BookOpen, 
@@ -26,14 +26,9 @@ import {
   Play,
   Moon,
   Copy,
-  Check,
-  Type,
-  ZoomIn,
-  ZoomOut,
-  RotateCcw
+  Check
 } from 'lucide-react';
 import { useLanguage } from '../../../contexts/LanguageContext';
-import { useTextScale } from '../../../contexts/TextScaleContext';
 import { useFeatures } from '../../../contexts/FeatureContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { checkFeatureAccess } from '../../../utils/featureAccess';
@@ -43,7 +38,6 @@ import { Animated3DBookIcon } from '../../../components/3d/Animated3DBookIcon';
 import { ParchmentExporterModal } from '../../../components/ParchmentExporterModal';
 import { downloadCanvasImage } from '../../../utils/downloadHelper';
 import { ToolInfoTooltip } from '../../../components/ToolInfoTooltip';
-import { FloatingTextResizer } from '../../../components/FloatingTextResizer';
 import { BARHATIAH_28_NAMES, BARHATIAH_GRAND_RECIPES, BARHATIAH_INVOCATIONS, BarhatiahNameSecret } from '../../../data/barhatiahSecrets';
 import { AbjadCalculatorWidget } from '../../../components/barhatiah/AbjadCalculatorWidget';
 import { SpiritualClockWidget } from '../../../components/barhatiah/SpiritualClockWidget';
@@ -138,7 +132,6 @@ const FormattedRecipe: React.FC<{ recipeText: string; language?: string }> = ({ 
 
 export const SacredBooksLibrary: React.FC = () => {
   const { language, t } = useLanguage();
-  const { textScale, increaseScale, decreaseScale, resetScale } = useTextScale();
   const { featureToggles } = useFeatures();
   const { user, isPremium } = useAuth();
 
@@ -192,7 +185,7 @@ export const SacredBooksLibrary: React.FC = () => {
               </button>
             )}
             <span className={`font-mono text-[7.5px] px-2 py-0.5 rounded-full font-bold ${isParchmentMode ? 'bg-amber-200 text-amber-900 border border-amber-500' : 'bg-amber-500/10 text-amber-300 border border-amber-500/30'}`}>
-              Zimām / Somme: {magicConstant}
+              {language === 'en' ? 'Zimām / Sum' : language === 'ha' ? 'Zimām / Jumla' : 'Zimām / Somme'}: {magicConstant}
             </span>
           </div>
         </div>
@@ -267,17 +260,62 @@ export const SacredBooksLibrary: React.FC = () => {
   // Parchment Exporter Modal state
   const [parchmentModalOpen, setParchmentModalOpen] = useState(false);
 
+  // Listen for step-by-step back navigation from FloatingBackButton
+  useEffect(() => {
+    const handleAsrarBack = (e: Event) => {
+      if (parchmentModalOpen) {
+        e.preventDefault();
+        setParchmentModalOpen(false);
+      } else if (tasbihModalOpen) {
+        e.preventDefault();
+        setTasbihModalOpen(false);
+      } else if (restrictionModal.isOpen) {
+        e.preventDefault();
+        setRestrictionModal((prev) => ({ ...prev, isOpen: false }));
+      } else if (selectedBook) {
+        e.preventDefault();
+        setSelectedBook(null);
+      }
+    };
+    window.addEventListener('asrar_back', handleAsrarBack);
+    return () => window.removeEventListener('asrar_back', handleAsrarBack);
+  }, [parchmentModalOpen, tasbihModalOpen, restrictionModal.isOpen, selectedBook]);
+
   // Filter books based on search & category
   const filteredBooks = SACRED_BOOKS.filter((book) => {
-    const title = language === 'en' ? book.titleEn : language === 'ha' ? book.titleHa : book.titleFr;
-    const author = language === 'en' ? book.authorEn : language === 'ha' ? book.authorHa : book.authorFr;
+    const title = (language === 'en' ? book.titleEn : language === 'ha' ? book.titleHa : book.titleFr) || book.titleFr;
+    const author = (language === 'en' ? book.authorEn : language === 'ha' ? book.authorHa : book.authorFr) || book.authorFr;
+    const category = (language === 'en' ? book.categoryEn : language === 'ha' ? book.categoryHa : book.categoryFr) || book.categoryFr;
+
     const searchMatch = 
       title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       book.titleAr.includes(searchQuery) ||
-      author.toLowerCase().includes(searchQuery.toLowerCase());
+      author.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      category.toLowerCase().includes(searchQuery.toLowerCase());
     
     if (selectedCategory === 'all') return searchMatch;
-    return searchMatch && book.categoryFr.toLowerCase().includes(selectedCategory.toLowerCase());
+
+    const catSearch = selectedCategory.toLowerCase();
+    const catFr = (book.categoryFr || '').toLowerCase();
+    const catEn = (book.categoryEn || '').toLowerCase();
+    const catHa = (book.categoryHa || '').toLowerCase();
+
+    let categoryMatch = false;
+    if (catSearch === 'théurgie') {
+      categoryMatch = catFr.includes('théurg') || catEn.includes('theurg') || catHa.includes('sirri') || catFr.includes('serment');
+    } else if (catSearch === 'astrologie') {
+      categoryMatch = catFr.includes('astrolog') || catEn.includes('astrolog') || catHa.includes('taurari');
+    } else if (catSearch === 'lettres') {
+      categoryMatch = catFr.includes('lettre') || catEn.includes('letter') || catHa.includes('haruffa') || catFr.includes('huruf');
+    } else if (catSearch === 'sufie') {
+      categoryMatch = catFr.includes('sufi') || catEn.includes('sufi') || catHa.includes('tassawuf') || catFr.includes('gnose');
+    } else if (catSearch === 'awfaq') {
+      categoryMatch = catFr.includes('awfaq') || catEn.includes('awfaq') || catHa.includes('awfaq') || catFr.includes('carré') || catEn.includes('square') || catHa.includes('khatim');
+    } else {
+      categoryMatch = catFr.includes(catSearch) || catEn.includes(catSearch) || catHa.includes(catSearch);
+    }
+
+    return searchMatch && categoryMatch;
   });
 
   // Handle book click with strict feature access check
@@ -294,7 +332,13 @@ export const SacredBooksLibrary: React.FC = () => {
     }
 
     setSelectedBook(book);
-    setActiveTab(book.id === 'book_barhatiah' ? 'secrets' : 'intro');
+    if (book.id === 'book_barhatiah') {
+      setActiveTab('secrets');
+      setSecretsSubTab('names');
+    } else {
+      setActiveTab('intro');
+      setSecretsSubTab('abjad');
+    }
     setActiveChapterNumber(null);
   };
 
@@ -494,9 +538,10 @@ export const SacredBooksLibrary: React.FC = () => {
 
     // Footer Info
     const footerY = startY + gridWidth + 80;
+    const abjadLabel = language === 'en' ? 'Mystic Weight (Abjad)' : language === 'ha' ? 'Lissafin Abjad (Sirri)' : 'Poids Mystique (Abjad)';
     ctx.fillStyle = '#fbbf24';
     ctx.font = 'bold 20px Arial';
-    ctx.fillText(`${t('shams.card.weight', 'Poids Mystique (Abjad)')}: ${book.khatim.abjadWeight}`, 500, footerY);
+    ctx.fillText(`${abjadLabel}: ${book.khatim.abjadWeight}`, 500, footerY);
 
     ctx.fillStyle = '#d1d5db';
     ctx.font = '16px Arial';
@@ -504,7 +549,15 @@ export const SacredBooksLibrary: React.FC = () => {
 
     ctx.fillStyle = '#6b7280';
     ctx.font = '14px Arial';
-    ctx.fillText('AsrarHub Sacred Manuscripts Archive • Sceau Officiel Authentifié', 500, footerY + 90);
+    ctx.fillText(
+      language === 'en'
+        ? 'AsrarHub Sacred Manuscripts Archive • Authenticated Official Seal'
+        : language === 'ha'
+        ? 'Taskar Rubuce-Rubucen AsrarHub • Hatimi na Kintse'
+        : 'AsrarHub Sacred Manuscripts Archive • Sceau Officiel Authentifié',
+      500,
+      footerY + 90
+    );
 
     await downloadCanvasImage(canvas, `khatim_${book.id}.png`);
   };
@@ -523,18 +576,18 @@ export const SacredBooksLibrary: React.FC = () => {
               </span>
               <div className="flex-1 min-w-0">
                 <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-gray-900 dark:text-white leading-tight">
-                  {t('sacred-books.title', 'Bibliothèque des Manuscrits Sacrés')}
+                  {t('tools.sacred-books.title', 'Bibliothèque des Manuscrits Sacrés')}
                 </h1>
                 <p className="text-xs sm:text-sm text-amber-800 dark:text-amber-200 mt-1 leading-relaxed">
-                  {t('sacred-books.subtitle', 'Analyses théurgiques approfondies, introductions trilingues & Sceaux téléchargeables (PNG & Parchemin)')}
+                  {t('tools.sacred-books.subtitle', 'Analyses théurgiques approfondies, introductions trilingues & Sceaux téléchargeables (PNG & Parchemin)')}
                 </p>
               </div>
             </div>
 
             <div className="mt-4 w-full">
               <ToolInfoTooltip
-                title={t('sacred-books.title', 'Bibliothèque des Manuscrits Sacrés')}
-                content={t('sacred-books.tooltip', 'Compendium d\'études approfondies des livres ésotériques majeurs d\'Al-Buni, Ibn Arabi, Majriti, Jazuli et des sages anciens. Chaque manuscrit comprend une analyse en 3 langues et son Khatim sacrée téléchargeable.')}
+                title={t('tools.sacred-books.title', 'Bibliothèque des Manuscrits Sacrés')}
+                content={t('tools.sacred-books.tooltip', 'Compendium d\'études approfondies des livres ésotériques majeurs d\'Al-Buni, Ibn Arabi, Majriti, Jazuli et des sages anciens. Chaque manuscrit comprend une analyse en 3 langues et son Khatim sacrée téléchargeable.')}
               />
             </div>
           </div>
@@ -555,7 +608,7 @@ export const SacredBooksLibrary: React.FC = () => {
                   type="text"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder={t('sacred-books.search', 'Rechercher un livre, un auteur...')}
+                  placeholder={t('tools.sacred-books.search', 'Rechercher un livre, un auteur...')}
                   className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700/80 rounded-2xl text-sm text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-amber-500 transition-colors"
                 />
               </div>
@@ -701,47 +754,6 @@ export const SacredBooksLibrary: React.FC = () => {
               </button>
 
               <div className="flex flex-wrap items-center gap-2">
-                {/* Text Zoom Pill Controller */}
-                {featureToggles['enableBookTextResizer'] !== false && (selectedBook ? featureToggles[`enableBookTextResizer_${selectedBook.id}`] !== false && selectedBook.enableTextResizer !== false : true) && (
-                  <div className="flex items-center gap-1 bg-amber-500/10 dark:bg-gray-800 p-1.5 rounded-2xl border border-amber-500/30">
-                    <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400 px-1 flex items-center gap-1 hidden sm:flex">
-                      <Type size={13} />
-                      {language === 'ha' ? 'Rubutu' : language === 'en' ? 'Text' : 'Taille'}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={decreaseScale}
-                      disabled={textScale <= 0.85}
-                      className="p-1.5 rounded-xl bg-gray-200 dark:bg-gray-700 hover:bg-amber-500/20 disabled:opacity-40 text-amber-900 dark:text-amber-300 transition-all cursor-pointer"
-                      title={language === 'ha' ? 'Rage girma' : language === 'en' ? 'Zoom out' : 'Diminuer texte'}
-                    >
-                      <ZoomOut size={14} />
-                    </button>
-                    <span className="font-mono text-xs font-extrabold px-1.5 text-amber-800 dark:text-amber-300 min-w-[42px] text-center">
-                      {Math.round(textScale * 100)}%
-                    </span>
-                    <button
-                      type="button"
-                      onClick={increaseScale}
-                      disabled={textScale >= 1.75}
-                      className="p-1.5 rounded-xl bg-gray-200 dark:bg-gray-700 hover:bg-amber-500/20 disabled:opacity-40 text-amber-900 dark:text-amber-300 transition-all cursor-pointer"
-                      title={language === 'ha' ? 'Kara girma' : language === 'en' ? 'Zoom in' : 'Augmenter texte'}
-                    >
-                      <ZoomIn size={14} />
-                    </button>
-                    {textScale !== 1.0 && (
-                      <button
-                        type="button"
-                        onClick={resetScale}
-                        className="p-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-800 dark:text-amber-300 transition-all cursor-pointer"
-                        title="100% Reset"
-                      >
-                        <RotateCcw size={12} />
-                      </button>
-                    )}
-                  </div>
-                )}
-
                 <button
                   onClick={() => handleDownloadPNG(selectedBook)}
                   className="flex items-center gap-2 text-xs font-bold bg-amber-500 hover:bg-amber-400 text-gray-950 px-3.5 py-2 rounded-2xl shadow-lg transition-all"
@@ -820,7 +832,7 @@ export const SacredBooksLibrary: React.FC = () => {
             </div>
 
             {/* Tab Contents */}
-            <div className="pt-2 text-gray-800 dark:text-gray-200 leading-relaxed text-sm sm:text-base space-y-6">
+            <div className="pt-2 text-gray-800 dark:text-gray-200 leading-relaxed text-sm sm:text-base space-y-6 book-text-content book-reading-content">
               {activeTab === 'intro' && (
                 <div className="space-y-4 bg-white dark:bg-gray-900/60 p-6 rounded-2xl border border-gray-750">
                   <h3 className="text-lg font-bold text-amber-700 dark:text-amber-400 flex items-center gap-2">
@@ -1098,7 +1110,7 @@ export const SacredBooksLibrary: React.FC = () => {
 
                     <div className="flex flex-wrap items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
                       {[
-                        { id: 'names', label: language === 'en' ? '28 Names' : language === 'ha' ? 'Sunaye 28' : 'Compendium 28 Noms' },
+                        ...(selectedBook?.id === 'book_barhatiah' ? [{ id: 'names', label: language === 'en' ? '28 Names' : language === 'ha' ? 'Sunaye 28' : 'Compendium 28 Noms' }] : []),
                         { id: 'abjad', label: language === 'en' ? 'Abjad & Wafq' : language === 'ha' ? 'Hisab & Wafq' : 'Calculateur Abjad' },
                         { id: 'clock', label: language === 'en' ? 'Spiritual Clock' : language === 'ha' ? 'Agogon Sawaya' : 'Horloge Spirituelle' },
                         { id: 'ruhaniyat', label: language === 'en' ? 'Ruhaniyat' : language === 'ha' ? 'Mala\'iku & Ruhaniyat' : 'Anges & Ruhaniyat' },
@@ -1122,8 +1134,8 @@ export const SacredBooksLibrary: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* SUB-TAB 1: 28 NAMES COMPENDIUM */}
-                  {secretsSubTab === 'names' && (
+                  {/* SUB-TAB 1: 28 NAMES COMPENDIUM (Sharh al-Barhatiah Only) */}
+                  {secretsSubTab === 'names' && selectedBook?.id === 'book_barhatiah' && (
                     <div className="space-y-4">
                       {/* Search inside 28 names & Expand/Collapse Controls */}
                       <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
@@ -1793,10 +1805,33 @@ export const SacredBooksLibrary: React.FC = () => {
                   🌙 {language === 'en' ? 'Mansion:' : language === 'ha' ? 'Manzili:' : 'Demeure :'} {selectedNameForParchment.lunarMansion}
                 </span>
                 <span className="px-3 py-1 bg-amber-200/80 border border-amber-600/40 rounded-full font-semibold capitalize">
-                  🔥 {language === 'en' ? 'Element:' : language === 'ha' ? 'Sinadari:' : 'Élement :'} {selectedNameForParchment.element}
+                  🔥 {language === 'en' ? 'Element:' : language === 'ha' ? 'Sinadari:' : 'Élément :'} {
+                    (() => {
+                      const el = String(selectedNameForParchment.element).toLowerCase();
+                      if (language === 'en') {
+                        if (el.includes('fire') || el.includes('feu')) return 'Fire';
+                        if (el.includes('air')) return 'Air';
+                        if (el.includes('water') || el.includes('eau')) return 'Water';
+                        if (el.includes('earth') || el.includes('terre')) return 'Earth';
+                        return selectedNameForParchment.element;
+                      }
+                      if (language === 'ha') {
+                        if (el.includes('fire') || el.includes('feu')) return 'Wuta (Nar)';
+                        if (el.includes('air')) return 'Iska (Hawa)';
+                        if (el.includes('water') || el.includes('eau')) return 'Ruwa (Ma)';
+                        if (el.includes('earth') || el.includes('terre')) return 'Kasa (Turab)';
+                        return selectedNameForParchment.element;
+                      }
+                      if (el.includes('fire') || el.includes('feu')) return 'Feu (Nar)';
+                      if (el.includes('air')) return 'Air (Hawa)';
+                      if (el.includes('water') || el.includes('eau')) return 'Eau (Ma)';
+                      if (el.includes('earth') || el.includes('terre')) return 'Terre (Turab)';
+                      return selectedNameForParchment.element;
+                    })()
+                  }
                 </span>
                 <span className="px-3 py-1 bg-amber-200/80 border border-amber-600/40 rounded-full font-semibold">
-                  🔢 Zimām (Abjad) : {selectedNameForParchment.abjadWeight}
+                  🔢 {language === 'en' ? 'Zimām (Abjad Weight):' : language === 'ha' ? 'Zimām (Abjad):' : 'Zimām (Poids Abjad) :'} {selectedNameForParchment.abjadWeight}
                 </span>
               </div>
 
@@ -1868,10 +1903,6 @@ export const SacredBooksLibrary: React.FC = () => {
         targetName={activeTasbihName}
       />
 
-      {/* Floating Text Zoom & Resizer Icon - Displayed strictly when reading a book & admin enabled */}
-      {selectedBook !== null && featureToggles['enableBookTextResizer'] !== false && featureToggles[`enableBookTextResizer_${selectedBook.id}`] !== false && selectedBook.enableTextResizer !== false && (
-        <FloatingTextResizer />
-      )}
     </div>
   );
 };

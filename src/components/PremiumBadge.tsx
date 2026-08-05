@@ -3,9 +3,20 @@ import { useAuth } from '../contexts/AuthContext';
 import { Sparkles, Shield } from 'lucide-react';
 
 export const PremiumBadge: React.FC = () => {
-  const { user } = useAuth();
+  const { user, isPremium } = useAuth();
 
-  if (!user || (!user.subscriptionTier || user.subscriptionTier === 'free')) {
+  if (!user) return null;
+
+  if (user.role === 'admin') {
+    return (
+      <span className="inline-flex items-center gap-1 text-xs bg-gradient-to-r from-amber-500 to-emerald-600 text-white px-2.5 py-1 rounded-full font-semibold shadow-sm">
+        <Sparkles size={12} />
+        Admin
+      </span>
+    );
+  }
+
+  if (!isPremium && (!user.subscriptionTier || user.subscriptionTier === 'free')) {
     return null;
   }
 

@@ -33,7 +33,7 @@ import {
   orderBy 
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
-import { isDisposableEmail, normalizeEmail, normalizePhone, validateRegistrationDetails } from './validationUtils';
+import { isDisposableEmail, isGmailAddress, hasGmailPlusAlias, normalizeEmail, normalizePhone, validateRegistrationDetails } from './validationUtils';
 import { getTrialDurationHours } from '../utils/trialConfig';
 
 export const app = initializeApp(firebaseConfig);
@@ -120,6 +120,16 @@ export const signInWithGoogle = async () => {
       if (!docSnap.exists()) {
         const normEmail = normalizeEmail(user.email || '');
 
+        if (user.email && !isGmailAddress(user.email)) {
+          await firebaseSignOut(auth).catch(() => {});
+          throw new Error("Seules les adresses Gmail (@gmail.com) sont autorisées pour la création de compte.");
+        }
+
+        if (user.email && hasGmailPlusAlias(user.email)) {
+          await firebaseSignOut(auth).catch(() => {});
+          throw new Error("Les alias Gmail (avec symbole '+') ne sont pas autorisés pour la création de compte.");
+        }
+
         if (user.email && isDisposableEmail(user.email)) {
           await firebaseSignOut(auth).catch(() => {});
           throw new Error("Les adresses email temporaires ne sont pas autorisées. Veuillez utiliser une adresse email permanente.");
@@ -202,7 +212,8 @@ export const signUpWithEmail = async (email: string, password: string, name: str
       freeTrialActivatedAt: now.toISOString(),
       freeTrialExpiresAt: trialExpiry.toISOString(),
       premiumUntil: trialExpiry.toISOString(),
-      hasSeenTrialPopup: false
+      hasSeenTrialPopup: false,
+      requiresValidation: true
     });
 
     updateProfile(result.user, { displayName: name }).catch(() => {});

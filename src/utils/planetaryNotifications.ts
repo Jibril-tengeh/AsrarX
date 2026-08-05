@@ -400,14 +400,15 @@ export function checkAndTriggerPlanetaryNotification(overrideLang?: SupportedLan
             {
               title,
               body,
-              id: Math.floor(Math.random() * 10000),
+              id: Math.floor(Math.random() * 10000) + 1,
               schedule: { at: new Date(Date.now() + 100) },
-              sound: 'res://raw/notification_sound',
               actionTypeId: '',
               channelId: 'asrarhub_alerts',
               extra: null,
             },
           ],
+        }).catch((err) => {
+          console.warn('Capacitor LocalNotification schedule promise rejection:', err);
         });
         return;
       } catch (e) {

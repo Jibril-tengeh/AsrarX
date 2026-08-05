@@ -41,7 +41,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
   const { featureToggles } = useFeatures();
   const navigate = useNavigate();
 
-  const [isSealExpanded, setIsSealExpanded] = useState<boolean>(true);
+  const [isSealExpanded, setIsSealExpanded] = useState<boolean>(false);
   const [selectedSealVersion, setSelectedSealVersion] = useState<number>(1);
   const [copiedTalsam, setCopiedTalsam] = useState<boolean>(false);
   const [copiedSeal, setCopiedSeal] = useState<boolean>(false);
@@ -165,22 +165,22 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
   const [isReadingMode, setIsReadingMode] = useState<boolean>(false);
   const [isMuraqabahModalOpen, setIsMuraqabahModalOpen] = useState<boolean>(false);
 
-  // Accordion Sections (All expanded by default so all sections display completely)
-  const [isEventExpanded, setIsEventExpanded] = useState<boolean>(true);
-  const [isQuoteExpanded, setIsQuoteExpanded] = useState<boolean>(true);
-  const [isAstrolabeExpanded, setIsAstrolabeExpanded] = useState<boolean>(true);
+  // Accordion Sections (All collapsed by default as requested)
+  const [isEventExpanded, setIsEventExpanded] = useState<boolean>(false);
+  const [isQuoteExpanded, setIsQuoteExpanded] = useState<boolean>(false);
+  const [isAstrolabeExpanded, setIsAstrolabeExpanded] = useState<boolean>(false);
   
   // Feature 1: AI Personalized Guidance (L'Asrar Génératif)
   const [aiTask, setAiTask] = useState<string>('');
   const [aiCounsel, setAiCounsel] = useState<{ guidance: string; focusKeyword: string; spiritualPractice: string } | null>(null);
   const [isAiLoading, setIsAiLoading] = useState<boolean>(false);
-  const [isAiExpanded, setIsAiExpanded] = useState<boolean>(true);
+  const [isAiExpanded, setIsAiExpanded] = useState<boolean>(false);
 
   // Feature 2: Biometric Synchronicity
   const [isBiometricsConnected, setIsBiometricsConnected] = useState<boolean>(false);
   const [isBiometricsLoading, setIsBiometricsLoading] = useState<boolean>(false);
   const [biometricData, setBiometricData] = useState<{ sleep: number; hrv: number; stress: number; energy: number } | null>(null);
-  const [isBiometricsExpanded, setIsBiometricsExpanded] = useState<boolean>(true);
+  const [isBiometricsExpanded, setIsBiometricsExpanded] = useState<boolean>(false);
 
   // Feature 3: Personal Transits
   const [birthDate, setBirthDate] = useState<string>(() => localStorage.getItem('asrar_birth_date') || '');
@@ -188,23 +188,23 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
   const [birthPlace, setBirthPlace] = useState<string>(() => localStorage.getItem('asrar_birth_place') || '');
   const [isTransitsCalculated, setIsTransitsCalculated] = useState<boolean>(() => !!localStorage.getItem('asrar_birth_date'));
   const [transitDays, setTransitDays] = useState<Record<number, { type: 'power' | 'creative' | 'vigilance'; description: string }>>({});
-  const [isTransitsExpanded, setIsTransitsExpanded] = useState<boolean>(true);
+  const [isTransitsExpanded, setIsTransitsExpanded] = useState<boolean>(false);
 
   // Feature 4: Sacred Focus Mode (Pomodoro)
   const [isFocusModeActive, setIsFocusModeActive] = useState<boolean>(false);
   const [focusDuration, setFocusDuration] = useState<number>(25 * 60); // Default 25 min
-  const [isFocusExpanded, setIsFocusExpanded] = useState<boolean>(true);
+  const [isFocusExpanded, setIsFocusExpanded] = useState<boolean>(false);
   const [isMuted, setIsMuted] = useState<boolean>(false);
 
   // Feature 6: Cosmic Alignment
-  const [isCosmicExpanded, setIsCosmicExpanded] = useState<boolean>(true);
+  const [isCosmicExpanded, setIsCosmicExpanded] = useState<boolean>(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('analytical');
 
   // Feature 7: Intention Journal & Synchronicities
-  const [isJournalExpanded, setIsJournalExpanded] = useState<boolean>(true);
-  const [isSolarClocksExpanded, setIsSolarClocksExpanded] = useState<boolean>(true);
-  const [isSacredWavesExpanded, setIsSacredWavesExpanded] = useState<boolean>(true);
-  const [isLunarSealsExpanded, setIsLunarSealsExpanded] = useState<boolean>(true);
+  const [isJournalExpanded, setIsJournalExpanded] = useState<boolean>(false);
+  const [isSolarClocksExpanded, setIsSolarClocksExpanded] = useState<boolean>(false);
+  const [isSacredWavesExpanded, setIsSacredWavesExpanded] = useState<boolean>(false);
+  const [isLunarSealsExpanded, setIsLunarSealsExpanded] = useState<boolean>(false);
   const [morningIntention, setMorningIntention] = useState<string>('');
   const [eveningGratitude, setEveningGratitude] = useState<string>('');
   const [journalMood, setJournalMood] = useState<string>('peaceful');
@@ -635,17 +635,29 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
       if (pseudoRandom < 0.08) {
         record[d] = {
           type: 'power',
-          description: "Transit Solaire de Pouvoir Personnel : Le transit du Soleil amplifie votre clarté intérieure et votre puissance de rayonnement spirituel. Journée idéale pour les initiatives."
+          description: language === 'ha'
+            ? "Wucewar Rana ta Ikonsa na Kanka: Hasken Rana yana kara fito da haskenka na ciki da karfin ruhi. Rana ce mai kyau don fara ayyuka."
+            : language === 'en'
+            ? "Solar Transit of Personal Power: The Sun transit amplifies your inner clarity and spiritual radiance. Ideal day for major initiatives."
+            : "Transit Solaire de Pouvoir Personnel : Le transit du Soleil amplifie votre clarté intérieure et votre puissance de rayonnement spirituel. Journée idéale pour les initiatives."
         };
       } else if (pseudoRandom >= 0.08 && pseudoRandom < 0.16) {
         record[d] = {
           type: 'creative',
-          description: "Transit Lunaire de Créativité Inspirée : Alignement de Mercure et de la Lune avec votre thème de naissance. Votre intuition artistique et spirituelle est décuplée."
+          description: language === 'ha'
+            ? "Wucewar Wata na Basira: Daidaito tsakanin Makuradi da Wata da haihuwarka. Basirarka da tunaninka na ruhi zai karu sosai."
+            : language === 'en'
+            ? "Lunar Transit of Inspired Creativity: Alignment of Mercury and the Moon with your birth coordinates. Your artistic and spiritual intuition is heightened."
+            : "Transit Lunaire de Créativité Inspirée : Alignement de Mercure et de la Lune avec votre thème de naissance. Votre intuition artistique et spirituelle est décuplée."
         };
       } else if (pseudoRandom >= 0.16 && pseudoRandom < 0.22) {
         record[d] = {
           type: 'vigilance',
-          description: "Transit de Vigilance Spécifique : Alignement de Saturne et Mars avec votre axe de naissance. Restez calme, privilégiez le silence et le non-agir aujourd'hui."
+          description: language === 'ha'
+            ? "Wucewar Kulawa ta Musamman: Daidaito tsakanin Zuhalu da Marrihi. Kasance mai natsuwa, ka zabi yin shiru da rashin gaggawa a yau."
+            : language === 'en'
+            ? "Transit of Specific Vigilance: Alignment of Saturn and Mars with your birth axis. Stay calm, prioritize silence and restraint today."
+            : "Transit de Vigilance Spécifique : Alignement de Saturne et Mars avec votre axe de naissance. Restez calme, privilégiez le silence et le non-agir aujourd'hui."
         };
       }
     }
@@ -791,9 +803,17 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
       console.error(err);
       // Fallback in case of network offline or missing key
       setAiCounsel({
-        focusKeyword: "Alignement",
-        guidance: "Abordez votre défi de ce jour par une respiration lente et un calme intérieur. Les transits du jour vous conseillent d'allier patience stratégique et action mesurée, sans hâter les fruits du destin.",
-        spiritualPractice: "Prenez 5 minutes de respiration consciente silencieuse avant d'agir."
+        focusKeyword: language === 'ha' ? "Daidaito" : language === 'en' ? "Alignment" : "Alignement",
+        guidance: language === 'ha'
+          ? "Fuskanci kalubalenka na yau da numfashi a hankali da natsuwar ciki. Wucewar ranar tana ba ka shawara ka hada hakuri mai ma'ana da aiki a hankali."
+          : language === 'en'
+          ? "Approach your challenge today with slow breathing and inner calm. Today's transits advise combining strategic patience with measured action."
+          : "Abordez votre défi de ce jour par une respiration lente et un calme intérieur. Les transits du jour vous conseillent d'allier patience stratégique et action mesurée, sans hâter les fruits du destin.",
+        spiritualPractice: language === 'ha'
+          ? "Dauki minti 5 ka yi numfashi mai natsuwa kafin ka fara aiki."
+          : language === 'en'
+          ? "Take 5 minutes of quiet conscious breathing before taking action."
+          : "Prenez 5 minutes de respiration consciente silencieuse avant d'agir."
       });
     } finally {
       setIsAiLoading(false);
@@ -1106,7 +1126,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
               setSelectedMoonPhaseDay(d);
             }}
             className="flex items-center justify-center h-6 w-full cursor-pointer hover:scale-125 active:scale-95 transition-transform duration-150 relative z-10"
-            title="Découvrir le secret spirituel de cette phase lunaire"
+            title={t('mysticCalendar.discoverMoonSecret', 'Découvrir le secret spirituel de cette phase lunaire')}
           >
             {getMoonPhaseSvg(d)}
           </div>
@@ -1335,7 +1355,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
             transformOrigin: 'top center',
           } : undefined}
           className={`relative border rounded-3xl p-4 sm:p-6 shadow-2xl w-full z-10 flex flex-col transition-all duration-300 ${
-            isPage ? "pb-28 sm:pb-32" : "max-w-xl max-h-[90vh] sm:max-h-[85vh] overflow-y-auto overscroll-contain my-4 sm:my-8 scrollbar-thin scrollbar-track-transparent"
+            isPage ? "pb-32 sm:pb-36" : "max-w-xl max-h-[calc(100dvh-4rem)] sm:max-h-[85vh] overflow-y-auto overscroll-contain my-auto pb-24 sm:pb-28 scrollbar-thin scrollbar-track-transparent"
           } ${
             isReadingMode
               ? 'bg-[#0f0d0b] border-amber-950/40 text-amber-100/90 shadow-amber-950/20'
@@ -1800,7 +1820,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                           <h4 className={`text-[10px] font-black uppercase tracking-wider mb-1 flex items-center gap-1 transition-colors ${
                             isReadingMode ? 'text-amber-400' : 'text-emerald-700 dark:text-emerald-400'
                           }`}>
-                            <BookOpen size={10} /> Recommandation du jour
+                            <BookOpen size={10} /> {t('mysticCalendar.recommendationTitle', 'Recommandation du jour')}
                           </h4>
                           <p 
                             className={`font-medium transition-all ${
@@ -1823,7 +1843,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                           }`}
                         >
                           <Moon size={10} className="fill-amber-500/10" />
-                          Découvrir le secret ésotérique de la Lune →
+                          {t('mysticCalendar.esotericSecretLink', 'Découvrir le secret ésotérique de la Lune →')}
                         </button>
                       </div>
                     </motion.div>
@@ -2753,7 +2773,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                             className="px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-black shadow-sm"
                           >
                             <BookOpen size={12} />
-                            {language === 'fr' ? "Journal Muraqabah" : "Muraqabah Log"}
+                            {language === 'fr' ? "Journal Muraqabah" : language === 'ha' ? "Kundin Muraqabah" : "Muraqabah Log"}
                           </button>
                         </div>
 
@@ -3763,14 +3783,14 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
 
                         <div className="bg-purple-950/30 border border-purple-500/20 rounded-xl p-3">
                           <span className="text-[10px] text-purple-300 uppercase font-bold block mb-1">
-                            {language === 'fr' ? "Alignement des Khuddam & Anges" : "Angelic & Khuddam Alignment"}
+                            {language === 'fr' ? "Alignement des Khuddam & Anges" : language === 'ha' ? "Daidaiton Khuddam da Mala'iku" : "Angelic & Khuddam Alignment"}
                           </span>
                           <p className="text-gray-200 font-medium">{proto.advancedDetails.khuddamInfo}</p>
                         </div>
 
                         <div className="bg-purple-950/30 border border-purple-500/20 rounded-xl p-3">
                           <span className="text-[10px] text-purple-300 uppercase font-bold block mb-1">
-                            {language === 'fr' ? "Encens Recommandé (Bukhoor)" : "Recommended Incense"}
+                            {language === 'fr' ? "Encens Recommandé (Bukhoor)" : language === 'ha' ? "Turaren da Aka Shagabarta (Laban)" : "Recommended Incense"}
                           </span>
                           <p className="text-emerald-300 font-semibold">{proto.advancedDetails.recommendedIncense}</p>
                         </div>

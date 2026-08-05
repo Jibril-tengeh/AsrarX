@@ -6,7 +6,7 @@ import { X, Mail, Lock, User as UserIcon, AlertCircle, Eye, EyeOff, KeyRound, Ch
 import { signInWithGoogle, signInWithEmail, signUpWithEmail, sendVerificationEmail, auth, db, signOut } from '../lib/firebase';
 import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
 import { useAuth, setLocalUserSession } from '../contexts/AuthContext';
-import { isDisposableEmail, normalizeEmail, normalizePhone, validateRegistrationDetails } from '../lib/validationUtils';
+import { isDisposableEmail, isGmailAddress, hasGmailPlusAlias, normalizeEmail, normalizePhone, validateRegistrationDetails } from '../lib/validationUtils';
 import { useNavigate } from 'react-router-dom';
 import { sendPasswordResetEmail } from 'firebase/auth';
 
@@ -296,8 +296,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
       return;
     }
 
-    // 1. Instant check for disposable / temporary email
-    if (email && isDisposableEmail(email)) {
+    // 1. Instant check for Gmail requirement, plus aliases, and disposable email
+    if (email && !isGmailAddress(email)) {
+      setEmailFieldError(t('auth.gmailOnlyError', 'Seules les adresses Gmail (@gmail.com) sont autorisées pour la création de compte.'));
+    } else if (email && hasGmailPlusAlias(email)) {
+      setEmailFieldError(t('auth.gmailAliasError', 'Les extensions et alias Gmail (ex: avec le symbole "+") ne sont pas autorisés.'));
+    } else if (email && isDisposableEmail(email)) {
       setEmailFieldError(t('auth.disposableEmailError', 'Les adresses email temporaires ou jetables (temp mail) ne sont pas autorisées.'));
     }
 
@@ -306,7 +310,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
       let currentEmailErr = '';
       let currentPhoneErr = '';
 
-      if (email && isDisposableEmail(email)) {
+      if (email && !isGmailAddress(email)) {
+        currentEmailErr = t('auth.gmailOnlyError', 'Seules les adresses Gmail (@gmail.com) sont autorisées pour la création de compte.');
+      } else if (email && hasGmailPlusAlias(email)) {
+        currentEmailErr = t('auth.gmailAliasError', 'Les extensions et alias Gmail (ex: avec le symbole "+") ne sont pas autorisés.');
+      } else if (email && isDisposableEmail(email)) {
         currentEmailErr = t('auth.disposableEmailError', 'Les adresses email temporaires ou jetables (temp mail) ne sont pas autorisées.');
       }
 
@@ -343,7 +351,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
       }
     }
 
-    const userSession = setLocalUserSession(targetEmail, name, country, phone);
+    const userSession = setLocalUserSession(targetEmail, name, country, phone, !isLogin);
     if (adminOnly && userSession.role !== 'admin') {
       setError(t('auth.accessDenied', "Accès refusé. Vous n'êtes pas administrateur."));
       return;
@@ -403,13 +411,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
       let result;
       if (isLogin) {
         result = await signInWithEmail(email, password);
-        if (result?.user && !result.user.emailVerified) {
+        if (result?.user) {
+          // Existing users logging in do not require account validation
           try {
-            await sendVerificationEmail(result.user);
+            const userRef = doc(db, 'users', result.user.uid);
+            await updateDoc(userRef, { requiresValidation: false, emailVerified: true }).catch(() => {});
           } catch (e) {}
-          setVerificationSent(true);
-          setLoading(false);
-          return;
         }
       } else {
         // Pre-validate registration details before attempting auth creation
@@ -957,6 +964,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         {t('auth.email', 'Email')} <span className="text-red-500 font-bold">*</span>
+                        {!isLogin && (
+                          <span className="ml-1.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                            (Gmail uniquement)
+                          </span>
+                        )}
                       </label>
                       <div className="relative">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
@@ -975,9 +987,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
                               ? 'border-red-500 ring-2 ring-red-500/30 text-red-600 dark:text-red-400 bg-red-50/50 dark:bg-red-950/20'
                               : 'border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-white'
                           } rounded-xl focus:border-transparent outline-none transition-all`}
-                          placeholder={t('auth.emailPlaceholder', 'votre@email.com')}
+                          placeholder={!isLogin ? 'exemple@gmail.com' : t('auth.emailPlaceholder', 'votre@email.com')}
                         />
                       </div>
+                      {!isLogin && !emailFieldError && (
+                        <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">
+                          {t('auth.gmailHint', 'Seules les adresses @gmail.com sont acceptées pour créer un compte.')}
+                        </p>
+                      )}
                       {emailFieldError && (
                         <p className="text-xs text-red-500 dark:text-red-400 mt-1.5 flex items-start gap-1 font-medium leading-tight">
                           <AlertCircle size={14} className="shrink-0 mt-0.5" />

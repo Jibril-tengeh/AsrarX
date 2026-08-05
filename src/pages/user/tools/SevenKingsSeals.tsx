@@ -834,7 +834,12 @@ export const SevenKingsSeals: React.FC = () => {
     const headerTitleText = `${t('seven-kings.sealHeader', 'Sceau Théurgique du {day}').replace('{day}', dayTranslatedName)} (${selectedDay.planetSymbol}) — ${selectedDay.celestialAngel}`;
 
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 22px serif';
+    let headerFontSize = 22;
+    ctx.font = `bold ${headerFontSize}px serif`;
+    while (ctx.measureText(headerTitleText).width > 900 && headerFontSize > 12) {
+      headerFontSize -= 1;
+      ctx.font = `bold ${headerFontSize}px serif`;
+    }
     ctx.fillText(headerTitleText, 500, 70);
 
     // Header Divider Line

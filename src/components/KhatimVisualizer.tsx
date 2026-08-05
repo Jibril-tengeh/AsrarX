@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Eye, Code, Sparkles, Shield, Star } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Eye, Code, Sparkles, Shield, Star, ChevronLeft, ChevronRight, MoveHorizontal } from 'lucide-react';
 import { AsrarHubWatermark } from './AsrarHubWatermark';
 
 export interface KhatimGridData {
@@ -13,7 +13,9 @@ export interface KhatimGridData {
   cornerText?: { topLeft?: string; topRight?: string; bottomLeft?: string; bottomRight?: string };
 }
 
-export function getKhatimGridData(version: number, sealTitle?: string, arabicName?: string, formula?: string): KhatimGridData {
+export function getKhatimGridData(version: number, sealTitle?: string, arabicName?: string, formula?: string, sealId?: string): KhatimGridData {
+  const isWafq9x9 = sealId === 'seal_wafq_9x9' || sealTitle?.toLowerCase().includes('9x9') || sealTitle?.toLowerCase().includes('9×9');
+
   switch (version) {
     case 4:
       return {
@@ -32,6 +34,27 @@ export function getKhatimGridData(version: number, sealTitle?: string, arabicNam
       };
 
     case 1:
+      if (isWafq9x9) {
+        return {
+          version: 1,
+          title: "Wafq Qamar Mutassa' 9×9 (81 Cases - Carré Magique Lunaire)",
+          header: "خَاتَمُ القَمَرِ المُتَّسِعُ (وفق ٩×٩) • Somme = 369",
+          footer: "يَا قَمَرُ يَا زَكِيُّ • الجُمْلَةُ الكُلِّيَّةُ = 3321",
+          gridSize: 9,
+          magicSum: 369,
+          cells: [
+            ["47", "58", "69", "80", "01", "12", "23", "34", "45"],
+            ["57", "68", "79", "09", "11", "22", "33", "44", "46"],
+            ["67", "78", "08", "10", "21", "32", "43", "54", "56"],
+            ["77", "07", "18", "20", "31", "42", "53", "55", "66"],
+            ["06", "17", "19", "30", "41", "52", "63", "65", "76"],
+            ["16", "27", "29", "40", "51", "62", "64", "75", "05"],
+            ["26", "28", "39", "50", "61", "72", "74", "04", "15"],
+            ["36", "38", "49", "60", "71", "73", "03", "14", "25"],
+            ["37", "48", "59", "70", "81", "02", "13", "24", "35"]
+          ]
+        };
+      }
       return {
         version: 1,
         title: "Wafq Abjad 4×4 Classique",
@@ -238,6 +261,7 @@ interface KhatimVisualizerProps {
   sealTitle: string;
   arabicName: string;
   asciiSymbol: string;
+  sealId?: string;
   language?: 'fr' | 'en' | 'ha';
   onExpandFullScreen?: () => void;
 }
@@ -247,11 +271,13 @@ export const KhatimVisualizer: React.FC<KhatimVisualizerProps> = ({
   sealTitle,
   arabicName,
   asciiSymbol,
+  sealId,
   language = 'fr',
   onExpandFullScreen
 }) => {
   const [viewMode, setViewMode] = useState<'graphic' | 'ascii'>('graphic');
-  const gridData = getKhatimGridData(version, sealTitle, arabicName);
+  const gridScrollRef = useRef<HTMLDivElement>(null);
+  const gridData = getKhatimGridData(version, sealTitle, arabicName, undefined, sealId);
 
   return (
     <div className="space-y-3">
@@ -296,11 +322,11 @@ export const KhatimVisualizer: React.FC<KhatimVisualizerProps> = ({
       {viewMode === 'graphic' ? (
         <div
           onClick={onExpandFullScreen}
-          className="group relative cursor-pointer bg-gradient-to-b from-[#180a2b] via-[#0e041d] to-black border-2 border-amber-500/50 hover:border-amber-400 p-4 sm:p-6 rounded-3xl shadow-2xl transition-all duration-300 select-none overflow-x-auto"
+          className="group relative cursor-pointer bg-gradient-to-b from-[#180a2b] via-[#0e041d] to-black border-2 border-amber-500/50 hover:border-amber-400 p-3 sm:p-6 rounded-3xl shadow-2xl transition-all duration-300 select-none overflow-hidden"
           title={language === 'fr' ? 'Cliquer pour agrandir en plein écran' : 'Click to view full screen'}
         >
           {/* Inner Decorative Border */}
-          <div className="border border-purple-500/30 rounded-2xl p-3 sm:p-5 relative bg-black/40 overflow-hidden">
+          <div className="border border-purple-500/30 rounded-2xl p-3 sm:p-5 relative bg-black/40">
             {/* AsrarHub Engraved Watermark */}
             <AsrarHubWatermark variant="dark" opacity={0.14} showCentralSeal={true} />
             {/* Corner Stars */}
@@ -328,25 +354,62 @@ export const KhatimVisualizer: React.FC<KhatimVisualizerProps> = ({
             )}
 
             {/* Header Title & Calligraphy */}
-            <div className="text-center space-y-1 mb-4">
+            <div className="text-center space-y-1 mb-3">
               <span className="text-[10px] font-extrabold uppercase tracking-widest text-amber-400 block">
                 ۞ {gridData.title} ۞
               </span>
+              <div className="flex items-center justify-center gap-2">
+                <span className="text-[10px] font-mono font-extrabold text-amber-300 bg-amber-500/20 border border-amber-500/40 px-2.5 py-0.5 rounded-full shadow-sm">
+                  Matrice {gridData.gridSize}×{gridData.gridSize} ({gridData.gridSize * gridData.gridSize} Cases)
+                </span>
+              </div>
               <h3 className="text-sm sm:text-base font-serif font-bold text-amber-200 tracking-wide" dir="rtl">
                 {gridData.header}
               </h3>
             </div>
 
-            {/* GRID TABLE / KHATIM SQUARE */}
-            <div className="my-3 w-full overflow-x-auto pb-2 custom-scrollbar">
-              {gridData.gridSize >= 7 && (
-                <div className="text-center mb-1 sm:hidden">
-                  <span className="text-[9px] font-mono text-purple-300/70 bg-purple-950/50 px-2 py-0.5 rounded-full border border-purple-500/20">
-                    ↔ {language === 'fr' ? 'Glisser horizontalement pour tout voir' : 'Scroll horizontally to view all'}
-                  </span>
-                </div>
-              )}
-              <div className="flex justify-center min-w-max mx-auto">
+            {/* GRID NAVIGATION & TABLE / KHATIM SQUARE */}
+            {gridData.gridSize >= 7 && (
+              <div className="flex items-center justify-between gap-2 mb-2 px-1">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    gridScrollRef.current?.scrollBy({ left: -140, behavior: 'smooth' });
+                  }}
+                  className="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/40 border border-amber-500/40 text-amber-300 transition-all flex items-center gap-1 text-[11px] font-mono font-bold active:scale-95 cursor-pointer shadow-sm shrink-0"
+                  title="Défiler vers la gauche"
+                >
+                  <ChevronLeft size={15} />
+                  <span>{language === 'fr' ? 'Gauche' : 'Left'}</span>
+                </button>
+
+                <span className="text-[10px] font-mono font-bold text-amber-300/90 bg-purple-950/90 px-3 py-1 rounded-full border border-purple-500/40 flex items-center gap-1.5 shadow-md truncate">
+                  <MoveHorizontal size={13} className="text-amber-400 animate-pulse shrink-0" />
+                  <span>{language === 'fr' ? 'Défiler 9×9 (81 cases)' : language === 'ha' ? 'Jan ku za 9×9' : 'Scroll 9×9 matrix'}</span>
+                </span>
+
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    gridScrollRef.current?.scrollBy({ left: 140, behavior: 'smooth' });
+                  }}
+                  className="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/40 border border-amber-500/40 text-amber-300 transition-all flex items-center gap-1 text-[11px] font-mono font-bold active:scale-95 cursor-pointer shadow-sm shrink-0"
+                  title="Défiler vers la droite"
+                >
+                  <span>{language === 'fr' ? 'Droite' : 'Right'}</span>
+                  <ChevronRight size={15} />
+                </button>
+              </div>
+            )}
+
+            <div 
+              ref={gridScrollRef}
+              onClick={(e) => e.stopPropagation()}
+              className="my-3 w-full overflow-x-auto pb-2 custom-scrollbar touch-pan-x overscroll-x-contain"
+            >
+              <div className="flex justify-start sm:justify-center min-w-max w-max p-1">
                 <div
                   className="grid gap-1 sm:gap-1.5 p-2 bg-purple-950/60 rounded-xl border border-amber-500/40 shadow-inner"
                   style={{
@@ -370,7 +433,7 @@ export const KhatimVisualizer: React.FC<KhatimVisualizerProps> = ({
                             ? 'min-w-[32px] min-h-[32px] p-0.5 text-[10px] sm:text-xs'
                             : gridData.gridSize === 12
                             ? 'min-w-[32px] min-h-[28px] p-0.5 text-[9px] sm:text-[10px]'
-                            : 'min-w-[64px] min-h-[36px] p-1 text-[11px] sm:text-xs' /* Default 9x9 Divine Names */
+                            : 'min-w-[48px] sm:min-w-[60px] min-h-[34px] sm:min-h-[38px] p-0.5 sm:p-1 text-[10px] sm:text-xs' /* Default 9x9 Divine Names */
                         } ${
                           (rIdx + cIdx) % 2 === 0
                             ? 'border-amber-500/40 bg-purple-950/40'

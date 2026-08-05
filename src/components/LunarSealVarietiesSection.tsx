@@ -128,7 +128,8 @@ export const LunarSealVarietiesSection: React.FC<LunarSealVarietiesSectionProps>
         groupTitle: activeSeal.groupTitle,
         lang: language,
         versionTitle: `${activeVersionDetails.title} • Puissance: ${activeVersionDetails.powerLevel}%`,
-        version: selectedVersion
+        version: selectedVersion,
+        sealId: activeSeal.id
       });
     } catch (e) {
       console.error('Download error:', e);
@@ -443,7 +444,7 @@ export const LunarSealVarietiesSection: React.FC<LunarSealVarietiesSectionProps>
 
       {/* Active Seal Detailed Inspector Card */}
       {activeSeal && (
-        <div ref={sealDetailsRef} className="scroll-mt-20 bg-gradient-to-b from-purple-950/90 via-[#100422] to-black border border-purple-500/40 rounded-3xl p-4 sm:p-6 shadow-2xl space-y-6 text-white">
+        <div ref={sealDetailsRef} className="scroll-mt-20 bg-gradient-to-b from-purple-950/90 via-[#100422] to-black border border-purple-500/40 rounded-3xl p-4 sm:p-6 pb-8 sm:pb-12 mb-8 shadow-2xl space-y-6 text-white">
           {/* Header of Active Seal */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-purple-500/30">
             <div>
@@ -579,6 +580,7 @@ export const LunarSealVarietiesSection: React.FC<LunarSealVarietiesSectionProps>
                   sealTitle={activeSeal.title}
                   arabicName={activeSeal.arabicName}
                   asciiSymbol={activeVersionDetails ? activeVersionDetails.symbol : activeSeal.graphicSymbol}
+                  sealId={activeSeal.id}
                   language={language}
                   onExpandFullScreen={() => setIsFullScreen(true)}
                 />

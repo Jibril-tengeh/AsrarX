@@ -46,6 +46,15 @@ export const tools: ToolItem[] = [
     level: "simple",
   },
   {
+    id: "custom-dua",
+    title: "Générateur de Du'a Custom",
+    description: "Invocations personnalisées alignées sur votre nom, votre intention et le poids Abjad.",
+    icon: Sparkles,
+    color: "from-emerald-600 to-indigo-700",
+    path: "/tools/custom-dua",
+    level: "simple",
+  },
+  {
     id: "seals-catalogue",
     title: "Catalogue des Sceaux",
     description: "Explorez, basculez et téléchargez les 17 Sceaux et Khawatim de la Lune.",

@@ -42,7 +42,7 @@ interface Props {
 
 export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
   const { t, language } = useLanguage();
-  const { user } = useAuth();
+  const { user, isPremium: isAuthPremium } = useAuth();
   const { featureToggles } = useFeatures();
   const location = useLocation();
   const navigate = useNavigate();
@@ -1284,7 +1284,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
         )}
 
         {/* Annonce d'incitation Premium */}
-        {!(user?.subscriptionTier === 'premium' || user?.subscriptionTier === 'pro') && featureToggles?.premiumPromoActive && !isPremiumPromoDismissed && (
+        {!(user?.subscriptionTier === 'premium' || user?.subscriptionTier === 'pro' || user?.role === 'admin' || isAuthPremium) && featureToggles?.premiumPromoActive && !isPremiumPromoDismissed && (
           <div className={`rounded-3xl p-5 sm:p-6 shadow-xl relative overflow-hidden text-white flex flex-col justify-between ${
             featureToggles.premiumPromoTheme === 'gold' 
               ? 'bg-gradient-to-br from-amber-600 via-amber-500 to-yellow-500 border border-amber-400/30' 

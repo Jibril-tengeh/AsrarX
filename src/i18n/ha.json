@@ -105,6 +105,8 @@
     "advancedTools": "Nagartattun Kayan Aiki",
     "abjadTitle": "Lissafin Abjad",
     "abjadDesc": "Lissafa ƙimar lamba ta sirri na sunayenku da wuridai.",
+    "customDuaTitle": "Manhajin Kirkire Addu'a",
+    "customDuaDesc": "Addu'o'i da zikiri na musamman da aka daidaita da niyyarka da lambar Abjad.",
     "asmaTitle": "Sunayen Allah na Keɓaɓɓu",
     "asmaDesc": "Gano sunayen Allah masu dacewa da nauyin asirin sunanku.",
     "names99Title": "Sunayen Allah 99"
@@ -688,6 +690,9 @@
     "verifiedBackToLogin": "Na tabbatar da imel ɗina / Shiga",
     "email": "Imel",
     "emailPlaceholder": "imel@sadafurci.com",
+    "gmailOnlyError": "Adreshin Gmail kawai (@gmail.com) aka amince da shi don kirkirar asusu.",
+    "gmailAliasError": "Ba a amince da alias na Gmail da alamar '+' ba (misali: suna+alias@gmail.com).",
+    "gmailHint": "Adreshin @gmail.com na asali kawai aka amince da shi.",
     "yourEmailAddress": "adireshin imel ɗinka",
     "password": "Kalmar sirri",
     "forgotPassword": "Ka manta kalmar sirri?",

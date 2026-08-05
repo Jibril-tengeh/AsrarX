@@ -93,6 +93,7 @@ function lazyWithRetry<T extends React.ComponentType<any> = React.ComponentType<
 const SecretDetail = lazyWithRetry(() => import('./pages/user/SecretDetail'));
 const ToolsDashboard = lazyWithRetry(() => import('./pages/user/ToolsDashboard'));
 const AbjadCalculator = lazyWithRetry(() => import('./pages/user/tools/AbjadCalculator'));
+const CustomDuaGenerator = lazyWithRetry(() => import('./pages/user/tools/CustomDuaGenerator'));
 const PlanetaryHours = lazyWithRetry(() => import('./pages/user/tools/PlanetaryHours'));
 const Tasbih = lazyWithRetry(() => import('./pages/user/tools/Tasbih'));
 const KhatimGenerator = lazyWithRetry(() => import('./pages/user/tools/KhatimGenerator'));
@@ -173,6 +174,8 @@ const FaqButton = () => {
 };
 
 import { App as CapacitorApp } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
+import { LocalNotifications } from '@capacitor/local-notifications';
 import { pingFirestore, addNetworkLog } from './utils/networkLogger';
 
 const NetworkStatus = () => {
@@ -749,10 +752,27 @@ export default function App() {
       }
     };
 
-    CapacitorApp.addListener('backButton', handleBackButton);
+    let listenerHandle: any = null;
+    try {
+      CapacitorApp.addListener('backButton', handleBackButton).then((handle) => {
+        listenerHandle = handle;
+      }).catch((e) => {
+        console.warn('Capacitor backButton listener attach error:', e);
+      });
+    } catch (e) {
+      console.warn('CapacitorApp backButton addListener error:', e);
+    }
 
     return () => {
-      CapacitorApp.removeAllListeners();
+      try {
+        if (listenerHandle && typeof listenerHandle.remove === 'function') {
+          listenerHandle.remove();
+        } else {
+          CapacitorApp.removeAllListeners().catch(() => {});
+        }
+      } catch (e) {
+        // ignore
+      }
     };
   }, [navigate]);
 
@@ -785,9 +805,26 @@ export default function App() {
       const currentMinute = now.getMinutes();
       const todayDateStr = now.toDateString();
 
-      // Trigger standard notifications using the service worker if available, falling back to window.Notification
+      // Trigger standard notifications using Capacitor LocalNotifications on native mobile, or ServiceWorker/Notification API on web
       const dispatchNotification = (title: string, body: string) => {
         try {
+          if (Capacitor.isNativePlatform()) {
+            LocalNotifications.schedule({
+              notifications: [
+                {
+                  title,
+                  body,
+                  id: Math.floor(Math.random() * 10000) + 1,
+                  schedule: { at: new Date(Date.now() + 100) },
+                  channelId: 'asrarhub_alerts',
+                },
+              ],
+            }).catch((err) => {
+              console.warn("Capacitor notification dispatch failed:", err);
+            });
+            return;
+          }
+
           if ('Notification' in window && window.Notification && window.Notification.permission === 'granted') {
             if ('serviceWorker' in navigator) {
               navigator.serviceWorker.ready.then((registration) => {
@@ -795,12 +832,14 @@ export default function App() {
                   body,
                   icon: '/icon-192.png',
                   badge: '/icon-192.png'
+                }).catch(() => {
+                  try { new Notification(title, { body }); } catch {}
                 });
               }).catch(() => {
-                new Notification(title, { body });
+                try { new Notification(title, { body }); } catch {}
               });
             } else {
-              new Notification(title, { body });
+              try { new Notification(title, { body }); } catch {}
             }
           }
         } catch (e) {
@@ -1014,6 +1053,7 @@ export default function App() {
                 <Route element={<ProtectedToolsLayout />}>
                   <Route path="/tools" element={<ToolsDashboard />} />
                   <Route path="/tools/abjad" element={<AbjadCalculator />} />
+                  <Route path="/tools/custom-dua" element={<CustomDuaGenerator />} />
                   <Route path="/tools/planetary" element={<PlanetaryHours />} />
                   <Route path="/tools/tasbih" element={<Tasbih />} />
                   <Route path="/tools/khatim" element={<KhatimGenerator />} />

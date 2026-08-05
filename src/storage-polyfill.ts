@@ -30,7 +30,11 @@ console.error = function (...args) {
     const msg = args.map(arg => {
       if (!arg) return '';
       if (typeof arg === 'object') {
-        return arg.message || arg.stack || JSON.stringify(arg);
+        try {
+          return arg.message || arg.stack || String(arg);
+        } catch {
+          return '[Object]';
+        }
       }
       return String(arg);
     }).join(' ');
@@ -49,6 +53,21 @@ console.error = function (...args) {
   }
   originalError.apply(console, args);
 };
+
+// Global Unhandled Rejection & Error Trap to prevent Webview/App crashes
+if (typeof window !== 'undefined') {
+  window.addEventListener('unhandledrejection', (event) => {
+    console.warn('[Global Unhandled Rejection Caught Safely]', event.reason);
+    // Prevent default browser/webview crash behavior
+    if (event.preventDefault) {
+      event.preventDefault();
+    }
+  });
+
+  window.addEventListener('error', (event) => {
+    console.warn('[Global Window Error Caught Safely]', event.message || event.error);
+  });
+}
 
 // Global Fetch Interceptor for Deep CORS/SSL/Offline Diagnostics
 try {
