@@ -175,8 +175,8 @@ export const ToolsDashboard: React.FC = () => {
     localStorage.setItem("hasSeenMysticToolsGuide", "true");
     sessionStorage.setItem("hasSeenMysticToolsGuide", "true");
     if (user && isAutoSaveEnabled()) {
-      import('firebase/firestore').then(({ updateDoc, doc }) => {
-        updateDoc(doc(db, 'users', user.uid), { hasSeenMysticToolsGuide: true }).catch(console.error);
+      import('firebase/firestore').then(({ setDoc, doc }) => {
+        setDoc(doc(db, 'users', user.uid), { hasSeenMysticToolsGuide: true }, { merge: true }).catch(console.error);
       });
     }
   };

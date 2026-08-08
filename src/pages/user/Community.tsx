@@ -67,6 +67,7 @@ import {
   Clock,
   LayoutGrid
 } from "lucide-react";
+import { CommunityPostContent } from "../../components/CommunityPostContent";
 import { db } from "../../lib/firebase";
 import {
   collection,
@@ -733,10 +734,19 @@ export const Community: React.FC = () => {
   useEffect(() => {
     const q = query(collection(db, "community_posts"), orderBy("createdAt", "asc"));
 
+    const getLocalPosts = (): Post[] => {
+      try {
+        const raw = localStorage.getItem("asrarhub_local_posts");
+        return raw ? JSON.parse(raw) : [];
+      } catch {
+        return [];
+      }
+    };
+
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        const postsData = snapshot.docs
+        const remotePosts = snapshot.docs
           .map((docSnap) => {
             const data = docSnap.data();
             return {
@@ -746,16 +756,35 @@ export const Community: React.FC = () => {
             } as Post;
           })
           .filter((post) => user?.role === "admin" || post.status === "approved" || !post.status);
-        setPosts(postsData);
-        // Scroll to bottom on new messages
+
+        const localPosts = getLocalPosts();
+        const existingIds = new Set(remotePosts.map(p => p.id));
+        const uniqueLocal = localPosts.filter(p => !existingIds.has(p.id));
+
+        setPosts([...remotePosts, ...uniqueLocal]);
         setTimeout(scrollToBottom, 200);
       },
       (error) => {
-        console.error("Community posts onSnapshot error:", error);
+        console.warn("Community posts onSnapshot error (using local storage fallback):", error);
+        setPosts(getLocalPosts());
       }
     );
 
-    return () => unsubscribe();
+    const handleLocalPostsChanged = () => {
+      const localPosts = getLocalPosts();
+      setPosts((prev) => {
+        const existingIds = new Set(prev.map(p => p.id));
+        const uniqueLocal = localPosts.filter(p => !existingIds.has(p.id));
+        return [...prev, ...uniqueLocal];
+      });
+    };
+
+    window.addEventListener("asrarhub_local_posts_changed", handleLocalPostsChanged);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener("asrarhub_local_posts_changed", handleLocalPostsChanged);
+    };
   }, [user]);
 
   // Fetch Users
@@ -1765,7 +1794,11 @@ export const Community: React.FC = () => {
                     {/* Chat Bubble Layout Row */}
                     <div
                       id={`msg-${post.id}`}
-                      className={`flex items-start gap-2 group ${isOurPost ? "ml-auto flex-row-reverse text-right" : "mr-auto text-left"} ${post.codeSnippet ? "w-full max-w-[95%] sm:max-w-[85%] min-w-0" : "max-w-[88%] sm:max-w-[75%] min-w-0"}`}
+                      className={`flex items-start gap-2 group ${isOurPost ? "ml-auto flex-row-reverse text-right" : "mr-auto text-left"} ${
+                        post.codeSnippet || (post.content && (post.content.includes("[Partage de la Communauté") || post.content.includes("|") || post.content.includes("DÉTAILS DU CALCUL")))
+                          ? "w-full max-w-[96%] sm:max-w-[85%] min-w-0"
+                          : "max-w-[88%] sm:max-w-[78%] min-w-0"
+                      }`}
                     >
                       {/* Avatar */}
                       {showAvatar && (
@@ -1782,7 +1815,7 @@ export const Community: React.FC = () => {
                       )}
 
                       {/* Message Content Wrapper (Column) */}
-                      <div className={`flex flex-col min-w-0 ${isOurPost ? "items-end" : "items-start"}`}>
+                      <div className={`flex flex-col min-w-0 max-w-full ${isOurPost ? "items-end" : "items-start"}`}>
                         {/* Bubble Inner Container */}
                         <div
                           onContextMenu={(e) => {
@@ -1791,8 +1824,10 @@ export const Community: React.FC = () => {
                             setContextMenuCoords({ x: e.clientX, y: e.clientY });
                             setActiveContextMenuPostId(post.id);
                           }}
-                          className={`px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-2xl shadow-sm relative min-w-0 ${
-                            post.codeSnippet ? "w-full" : ""
+                          className={`px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl shadow-sm relative min-w-0 max-w-full overflow-hidden ${
+                            post.codeSnippet || (post.content && (post.content.includes("[Partage de la Communauté") || post.content.includes("|") || post.content.includes("DÉTAILS DU CALCUL")))
+                              ? "w-full"
+                              : ""
                           } ${
                             isOurPost
                               ? "bg-[#d9fdd3] text-gray-900 dark:bg-[#2b5278] dark:text-white rounded-br-xs bubble-tail-right"
@@ -1837,9 +1872,11 @@ export const Community: React.FC = () => {
 
                           {/* Main Text Content */}
                           {post.content && (
-                            <p className="text-xs sm:text-sm leading-relaxed whitespace-pre-wrap break-words text-left">
-                              {post.content}
-                            </p>
+                            <CommunityPostContent
+                              content={post.content}
+                              khatimGrid={(post as any).khatimGrid || (post as any).khatimGridRows || (post as any).khatimGridJson || (post as any).gridData}
+                              isOurPost={isOurPost}
+                            />
                           )}
 
                           {/* Media Attachments (Flawless Image, Video, Audio) */}

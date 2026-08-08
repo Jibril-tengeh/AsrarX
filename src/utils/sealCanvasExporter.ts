@@ -202,7 +202,10 @@ export async function generateAndDownloadSealCard(params: ExportSealParams): Pro
       ctx.font = 'bold 24px serif';
       if (gridData.cornerText.topLeft) {
         ctx.textAlign = 'left';
-        ctx.fillText(gridData.cornerText.topLeft, boxX + 30, boxY + 50);
+        const textTL = (gridData.cornerText.topLeft.includes('بسم') || gridData.cornerText.topLeft.includes('بِسْمِ')) && !gridData.cornerText.topLeft.includes('﷽') 
+          ? '﷽' 
+          : gridData.cornerText.topLeft;
+        ctx.fillText(textTL, boxX + 30, boxY + 50);
       }
       if (gridData.cornerText.topRight) {
         ctx.textAlign = 'right';
@@ -408,7 +411,10 @@ export function generateAndDownloadSealSVG(params: ExportSealParams): boolean {
     let cornerSvg = '';
     if (gridData.cornerText) {
       if (gridData.cornerText.topLeft) {
-        cornerSvg += `<text x="${boxX + 30}" y="${boxY + 50}" fill="#fef08a" font-family="serif" font-size="24" font-weight="bold" text-anchor="start">${escapeXml(gridData.cornerText.topLeft)}</text>`;
+        const textTL = (gridData.cornerText.topLeft.includes(' hism') || gridData.cornerText.topLeft.includes('بسم') || gridData.cornerText.topLeft.includes('بِسْمِ')) && !gridData.cornerText.topLeft.includes('﷽') 
+          ? '﷽' 
+          : gridData.cornerText.topLeft;
+        cornerSvg += `<text x="${boxX + 30}" y="${boxY + 50}" fill="#fef08a" font-family="serif" font-size="24" font-weight="bold" text-anchor="start">${escapeXml(textTL)}</text>`;
       }
       if (gridData.cornerText.topRight) {
         cornerSvg += `<text x="${boxX + boxW - 30}" y="${boxY + 50}" fill="#fef08a" font-family="serif" font-size="24" font-weight="bold" text-anchor="end">${escapeXml(gridData.cornerText.topRight)}</text>`;

@@ -126,8 +126,8 @@ export const OnboardingTour: React.FC = () => {
         localStorage.setItem('asrarhub_tour_completed', 'true');
         sessionStorage.setItem('asrarhub_tour_completed', 'true');
         if (user && isAutoSaveEnabled()) {
-          import('firebase/firestore').then(({ updateDoc, doc }) => {
-            updateDoc(doc(db, 'users', user.uid), { hasSeenTour: true }).catch(console.error);
+          import('firebase/firestore').then(({ setDoc, doc }) => {
+            setDoc(doc(db, 'users', user.uid), { hasSeenTour: true }, { merge: true }).catch(console.error);
           });
         }
       }, 1500);
@@ -189,8 +189,8 @@ export const OnboardingTour: React.FC = () => {
     localStorage.setItem('asrarhub_tour_completed', 'true');
     sessionStorage.setItem('asrarhub_tour_completed', 'true');
     if (user && isAutoSaveEnabled()) {
-      import('firebase/firestore').then(({ updateDoc, doc }) => {
-        updateDoc(doc(db, 'users', user.uid), { hasSeenTour: true }).catch(console.error);
+      import('firebase/firestore').then(({ setDoc, doc }) => {
+        setDoc(doc(db, 'users', user.uid), { hasSeenTour: true }, { merge: true }).catch(console.error);
       });
     }
   };

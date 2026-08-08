@@ -8,6 +8,7 @@ import { useLanguage } from '../../../contexts/LanguageContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { db } from '../../../lib/firebase';
 import { collection, addDoc } from 'firebase/firestore';
+import { exportWirdToImage } from '../../../utils/wirdExporter';
 
 // Abjad calculation map
 const ABJAD_MAP: Record<string, number> = {
@@ -396,6 +397,46 @@ export const CustomDuaGenerator: React.FC = () => {
                 <p className="text-xs sm:text-sm text-gray-800 dark:text-gray-200 bg-gray-50 dark:bg-gray-900/50 p-3.5 rounded-2xl border border-gray-100 dark:border-gray-800 leading-relaxed">
                   {getMeaning(selectedPreset)}
                 </p>
+              </div>
+
+              {/* Download PNG & Parchemin Buttons */}
+              <div className="grid grid-cols-2 gap-3 pt-2">
+                <button
+                  onClick={() => exportWirdToImage({
+                    name: userName || undefined,
+                    motherName: motherName || undefined,
+                    arabicZikr: selectedPreset.baseDuaArabic,
+                    transliteration: getTransliteration(selectedPreset),
+                    abjadWeight: abjadValue > 0 ? abjadValue : targetCount,
+                    meaningFr: getMeaning(selectedPreset),
+                    title: selectedPreset.titleFr.toUpperCase(),
+                    isParchment: false,
+                    lang: language,
+                  })}
+                  className="py-3 px-4 bg-zinc-800 hover:bg-zinc-700 text-white font-bold rounded-2xl text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm active:scale-98"
+                  title="Télécharger la Fiche en PNG Deluxe"
+                >
+                  <Download size={16} className="text-emerald-400" />
+                  <span>Télécharger PNG</span>
+                </button>
+                <button
+                  onClick={() => exportWirdToImage({
+                    name: userName || undefined,
+                    motherName: motherName || undefined,
+                    arabicZikr: selectedPreset.baseDuaArabic,
+                    transliteration: getTransliteration(selectedPreset),
+                    abjadWeight: abjadValue > 0 ? abjadValue : targetCount,
+                    meaningFr: getMeaning(selectedPreset),
+                    title: `PARCHEMIN • ${selectedPreset.titleFr.toUpperCase()}`,
+                    isParchment: true,
+                    lang: language,
+                  })}
+                  className="py-3 px-4 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white font-bold rounded-2xl text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm active:scale-98"
+                  title="Télécharger sous forme de Parchemin Sacré"
+                >
+                  <Feather size={16} />
+                  <span>Télécharger Parchemin</span>
+                </button>
               </div>
             </div>
 

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
 import { db, isAutoSaveEnabled } from '../lib/firebase';
-import { doc, onSnapshot, updateDoc, collection } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, collection } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { 
@@ -175,19 +175,33 @@ export const DailyGoalsTracker: React.FC = () => {
           
           // Save back to DB if auto save is enabled
           if (isAutoSaveEnabled()) {
-            updateDoc(userRef, {
+            setDoc(userRef, {
               dailyRoutines: resetGoals,
               dailyRoutinesLastReset: today
-            }).catch(err => console.error("Error resetting daily routines in DB:", err));
+            }, { merge: true }).catch(err => {
+              console.warn("Using local storage fallback for daily routines reset:", err?.message || err);
+              localStorage.setItem('asrarhub_daily_goals', JSON.stringify(resetGoals));
+              localStorage.setItem('asrarhub_daily_goals_last_reset', today);
+            });
           }
         } else {
           setGoals(dbGoals);
           setLastReset(dbLastReset || today);
         }
       } else {
-        // If user doc doesn't exist yet, fallback to default
+        // If user doc doesn't exist yet, initialize or fallback
         setGoals([...DEFAULT_GOALS]);
         setLastReset(today);
+        if (isAutoSaveEnabled()) {
+          setDoc(userRef, {
+            dailyRoutines: DEFAULT_GOALS,
+            dailyRoutinesLastReset: today
+          }, { merge: true }).catch(err => {
+            console.warn("Using local storage fallback for initial daily routines creation:", err?.message || err);
+            localStorage.setItem('asrarhub_daily_goals', JSON.stringify(DEFAULT_GOALS));
+            localStorage.setItem('asrarhub_daily_goals_last_reset', today);
+          });
+        }
       }
       setSyncStatus('synced');
       setLoading(false);
@@ -222,10 +236,10 @@ export const DailyGoalsTracker: React.FC = () => {
       const userRef = doc(db, 'users', user.uid);
       try {
         if (isAutoSaveEnabled()) {
-          await updateDoc(userRef, {
+          await setDoc(userRef, {
             dailyRoutines: updatedGoals,
             dailyRoutinesLastReset: today
-          });
+          }, { merge: true });
           setSyncStatus('synced');
         } else {
           // Keep local backup even for logged in user if autosave is disabled

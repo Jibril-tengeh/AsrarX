@@ -26,7 +26,7 @@ import {
   SealTargetUser 
 } from '../../../data/lunarSealVarieties';
 import { generateAndDownloadSealCard, generateAndDownloadSealSVG } from '../../../utils/sealCanvasExporter';
-import { KhatimVisualizer } from '../../../components/KhatimVisualizer';
+import { KhatimVisualizer, getKhatimGridData } from '../../../components/KhatimVisualizer';
 import { ShareToCommunityModal } from '../../../components/ShareToCommunityModal';
 
 export const SealsCatalogue: React.FC = () => {
@@ -769,6 +769,7 @@ export const SealsCatalogue: React.FC = () => {
                       title="Publier le Sceau Spirituel dans la Communauté"
                       category="sceau"
                       itemTitle={`${activeSeal.title} (${activeSeal.arabicName}) - Version ${selectedVersion}`}
+                      gridData={activeSeal ? getKhatimGridData(selectedVersion, activeSeal.title, activeSeal.arabicName, String(activeSeal.id), activeSeal.id).cells : undefined}
                       detailsText={`Sceau : ${activeSeal.title} (${activeSeal.arabicName})\nGroupe : ${activeSeal.groupTitle}\nSymbole Graphique : ${activeVersionDetails?.symbol || activeSeal.graphicSymbol}\nDescription : ${activeSeal.description}\nVertus Spirituelles : ${activeSeal.spiritualUtility}`}
                     />
 

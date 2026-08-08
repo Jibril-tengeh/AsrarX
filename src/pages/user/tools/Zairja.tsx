@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Hexagon, ArrowLeft, Send, Download, Share2, HelpCircle, X, Sparkles, BookOpen, Check, Copy, Volume2, VolumeX, Compass, Music, Disc } from 'lucide-react';
+import { Hexagon, ArrowLeft, Send, Download, Share2, HelpCircle, X, Sparkles, BookOpen, Check, Copy, Volume2, VolumeX, Compass, Music, Disc, Feather } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -185,6 +185,25 @@ export const Zairja: React.FC = () => {
     try {
       const canvas = await toCanvas(resultRef.current, { backgroundColor: '#18181b', skipFonts: true });
       await downloadCanvasImage(canvas, 'zairja-oracle-result.png');
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const downloadParchmentImage = async () => {
+    if (!resultRef.current) return;
+    try {
+      const canvas = await toCanvas(resultRef.current, { 
+        backgroundColor: '#fef3c7', 
+        skipFonts: true,
+        style: {
+          backgroundColor: '#fef3c7',
+          color: '#451a03',
+          border: '4px solid #b45309',
+          borderRadius: '16px',
+        }
+      });
+      await downloadCanvasImage(canvas, 'zairja-oracle-parchemin.png');
     } catch (e) {
       console.error(e);
     }
@@ -444,8 +463,12 @@ Dhikr Recommandé : ${answer.recommendedDhikr}`;
             
             <div className="flex flex-wrap gap-3">
               <button onClick={downloadImage} className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-zinc-800 text-white hover:bg-zinc-700 text-xs font-semibold transition-colors shadow-lg cursor-pointer">
-                <Download size={16} />
-                {txt.saveImage}
+                <Download size={16} className="text-emerald-400" />
+                <span>Télécharger PNG</span>
+              </button>
+              <button onClick={downloadParchmentImage} className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white text-xs font-semibold transition-colors shadow-lg cursor-pointer">
+                <Feather size={16} />
+                <span>Télécharger Parchemin</span>
               </button>
               {!disableDuaCopy && (
                 <button onClick={copyResultText} className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-purple-600 text-white hover:bg-purple-500 text-xs font-semibold transition-colors shadow-lg cursor-pointer">

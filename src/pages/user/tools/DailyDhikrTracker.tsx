@@ -103,11 +103,11 @@ export const DailyDhikrTracker: React.FC = () => {
           localStorage.setItem('asrar_fcm_token', token);
 
           if (auth.currentUser) {
-            const { doc, updateDoc } = await import('firebase/firestore');
-            await updateDoc(doc(db, 'users', auth.currentUser.uid), {
+            const { doc, setDoc } = await import('firebase/firestore');
+            await setDoc(doc(db, 'users', auth.currentUser.uid), {
               fcmToken: token,
               fcmTokenUpdatedAt: new Date()
-            }).catch(console.error);
+            }, { merge: true }).catch(console.error);
           }
         } else {
           setTestError("Aucun jeton d'enregistrement FCM reçu.");

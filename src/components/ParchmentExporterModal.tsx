@@ -28,7 +28,7 @@ export const ParchmentExporterModal: React.FC<ParchmentExporterModalProps> = ({
 }) => {
   const { t } = useLanguage();
   const parchmentRef = useRef<HTMLDivElement>(null);
-  const [isExporting, setIsExporting] = React.useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [isCommunityModalOpen, setIsCommunityModalOpen] = useState(false);
 
   if (!isOpen) return null;
@@ -161,7 +161,7 @@ export const ParchmentExporterModal: React.FC<ParchmentExporterModalProps> = ({
 
               {/* Bismillah Header */}
               <div className="text-center mb-6">
-                <p className="font-serif text-xl sm:text-2xl text-amber-900 font-bold tracking-widest mb-1">
+                <p className="font-uthmani text-xs sm:text-sm text-[#5c2406] font-bold tracking-wider mb-1 bg-[#fde68a]/90 border border-[#b45309]/50 px-4 py-1 rounded-xl inline-block shadow-sm">
                   بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ
                 </p>
                 <p className="text-xs text-amber-800/80 font-mono tracking-widest uppercase">

@@ -92,14 +92,24 @@ export const DirectMessages: React.FC<DirectMessagesProps> = ({
         where("receiverId", "==", user.uid),
       ),
     );
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const msgs = snapshot.docs.map(
-        (doc) => ({ id: doc.id, ...doc.data() }) as Message,
-      ).sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
 
-      // Extract unique conversations
+    const getLocalDms = (): Message[] => {
+      try {
+        const raw = localStorage.getItem("asrarhub_local_dms");
+        return raw ? JSON.parse(raw) : [];
+      } catch {
+        return [];
+      }
+    };
+
+    const updateCombinedMessages = (remoteMsgs: Message[]) => {
+      const localMsgs = getLocalDms();
+      const existingIds = new Set(remoteMsgs.map(m => m.id));
+      const uniqueLocal = localMsgs.filter(m => !existingIds.has(m.id));
+      const combined = [...remoteMsgs, ...uniqueLocal];
+
       const convosMap = new Map<string, string>();
-      msgs.forEach((m) => {
+      combined.forEach((m) => {
         if (m.senderId === user.uid) {
           convosMap.set(m.receiverId, m.receiverId);
         } else {
@@ -116,11 +126,30 @@ export const DirectMessages: React.FC<DirectMessagesProps> = ({
       setConversations(
         Array.from(convosMap.entries()).map(([id, name]) => ({ id, name })),
       );
-      setMessages(msgs);
+      setMessages(combined);
+    };
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const msgs = snapshot.docs.map(
+        (doc) => ({ id: doc.id, ...doc.data() }) as Message,
+      ).sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+
+      updateCombinedMessages(msgs);
     }, (error) => {
       console.warn("DirectMessages onSnapshot error (operating offline):", error);
+      updateCombinedMessages([]);
     });
-    return () => unsubscribe();
+
+    const handleLocalDmsChanged = () => {
+      updateCombinedMessages(messages);
+    };
+
+    window.addEventListener("asrarhub_local_dms_changed", handleLocalDmsChanged);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener("asrarhub_local_dms_changed", handleLocalDmsChanged);
+    };
   }, [user, initialRecipientId, initialRecipientName, lang]);
 
   const handleSend = async (e: React.FormEvent) => {

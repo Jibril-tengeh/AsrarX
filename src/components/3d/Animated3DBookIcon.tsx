@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { motion } from 'motion/react';
 import { 
   Sparkles, 
   BookOpen, 
@@ -21,7 +22,7 @@ import {
   Wand2,
   Scroll,
   Gem,
-  Infinity
+  Infinity as InfinityIcon
 } from 'lucide-react';
 
 interface Animated3DBookIconProps {
@@ -43,26 +44,6 @@ export const Animated3DBookIcon: React.FC<Animated3DBookIconProps> = ({
   size = 'md',
   isHovered = false,
 }) => {
-  const [rotationY, setRotationY] = useState(0);
-
-  // Video-like continuous subtle floating & 3D rotation animation
-  useEffect(() => {
-    let animationFrameId: number;
-    let startTime = Date.now();
-
-    const animate = () => {
-      const now = Date.now();
-      const elapsed = (now - startTime) / 1000;
-      // Oscillate Y rotation between -12 and +12 degrees over time (video-like loop)
-      const rot = Math.sin(elapsed * 1.5) * 14;
-      setRotationY(rot);
-      animationFrameId = requestAnimationFrame(animate);
-    };
-
-    animationFrameId = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(animationFrameId);
-  }, []);
-
   const dimensions = {
     sm: { width: 'w-28 sm:w-32', height: 'h-36 sm:h-42', perspective: '800px', fontSize: 'text-xs' },
     md: { width: 'w-32 sm:w-36', height: 'h-42 sm:h-48', perspective: '1000px', fontSize: 'text-sm' },
@@ -118,7 +99,7 @@ export const Animated3DBookIcon: React.FC<Animated3DBookIconProps> = ({
       case 'durr_manthum':
         return <Gem className="w-8 h-8 sm:w-10 sm:h-10 text-teal-300 animate-pulse drop-shadow-[0_0_10px_rgba(153,246,228,0.8)]" />;
       case 'ahzab_irfaniyyah':
-        return <Infinity className="w-8 h-8 sm:w-10 sm:h-10 text-blue-300 animate-pulse drop-shadow-[0_0_10px_rgba(147,197,253,0.8)]" />;
+        return <InfinityIcon className="w-8 h-8 sm:w-10 sm:h-10 text-blue-300 animate-pulse drop-shadow-[0_0_10px_rgba(147,197,253,0.8)]" />;
       default:
         return <BookOpen className="w-8 h-8 sm:w-10 sm:h-10 text-amber-300 animate-pulse" />;
     }
@@ -141,11 +122,18 @@ export const Animated3DBookIcon: React.FC<Animated3DBookIconProps> = ({
       </div>
 
       {/* 3D Container with rotation */}
-      <div
-        className="relative w-full h-full transition-transform duration-300 ease-out transform-gpu"
+      <motion.div
+        animate={{
+          rotateY: isHovered ? [15, 25, 5, 15] : [-12, 12, -12],
+          rotateX: isHovered ? -5 : 0,
+        }}
+        transition={{
+          rotateY: { repeat: Infinity, duration: isHovered ? 2 : 4, ease: "easeInOut" },
+          rotateX: { duration: 0.3 }
+        }}
+        className="relative w-full h-full transform-gpu"
         style={{
           transformStyle: 'preserve-3d',
-          transform: `rotateY(${isHovered ? rotationY + 15 : rotationY}deg) rotateX(${isHovered ? -5 : 0}deg) translateZ(10px)`,
         }}
       >
         {/* Book Spine (Left side 3D depth) */}
@@ -207,7 +195,7 @@ export const Animated3DBookIcon: React.FC<Animated3DBookIconProps> = ({
             </p>
           </div>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 };

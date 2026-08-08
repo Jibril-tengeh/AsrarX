@@ -363,9 +363,11 @@ export const KhatimVisualizer: React.FC<KhatimVisualizerProps> = ({
                   Matrice {gridData.gridSize}×{gridData.gridSize} ({gridData.gridSize * gridData.gridSize} Cases)
                 </span>
               </div>
-              <h3 className="text-sm sm:text-base font-serif font-bold text-amber-200 tracking-wide" dir="rtl">
-                {gridData.header}
-              </h3>
+              <div className="flex justify-center pt-1">
+                <h3 className="text-xs sm:text-sm font-uthmani font-bold text-amber-300 tracking-wider text-center py-1 px-3.5 rounded-xl bg-amber-950/80 border border-amber-500/40 shadow-md inline-block" dir="rtl">
+                  {gridData.header}
+                </h3>
+              </div>
             </div>
 
             {/* GRID NAVIGATION & TABLE / KHATIM SQUARE */}
@@ -438,10 +440,10 @@ export const KhatimVisualizer: React.FC<KhatimVisualizerProps> = ({
                           (rIdx + cIdx) % 2 === 0
                             ? 'border-amber-500/40 bg-purple-950/40'
                             : 'border-purple-500/30 bg-black/90'
-                        }`}
+                        } overflow-hidden`}
                       >
-                        <span className="whitespace-nowrap text-center font-bold px-0.5" dir="rtl">
-                          {cell}
+                        <span className="whitespace-pre-line text-center font-bold px-0.5 max-w-full max-h-full overflow-hidden leading-tight text-[8px] sm:text-[10px]" dir="rtl">
+                          {typeof cell === 'string' && cell.includes(' ') ? cell.split(/\s+/).join('\n') : cell}
                         </span>
                       </div>
                     ))

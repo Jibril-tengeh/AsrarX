@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Calculator, ArrowLeft, RefreshCw, Copy, Check, ChevronDown, ChevronUp, History, Save, Trash2, X, Database, Wifi, HelpCircle, Flame, Wind, Droplets, Mountain, Heart, Users, Sparkles, PieChart } from 'lucide-react';
+import { Calculator, ArrowLeft, RefreshCw, Copy, Check, ChevronDown, ChevronUp, History, Save, Trash2, X, Database, Wifi, HelpCircle, Flame, Wind, Droplets, Mountain, Heart, Users, Sparkles, PieChart, Download, Feather } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { ToolInfoTooltip } from '../../../components/ToolInfoTooltip';
 import { motion, AnimatePresence } from 'motion/react';
 import { ShareToCommunityModal } from '../../../components/ShareToCommunityModal';
+import { exportWirdToImage } from '../../../utils/wirdExporter';
 
 // Simplified Abjad table mapping (Standard/Eastern)
 const abjadMashriqi: Record<string, number> = {
@@ -573,13 +574,43 @@ export const AbjadCalculator: React.FC = () => {
           </motion.div>
 
           {totalMashriqi > 0 && (
-            <div className="flex justify-end pt-1">
+            <div className="flex flex-wrap items-center justify-end gap-2.5 pt-1">
+              <button
+                onClick={() => exportWirdToImage({
+                  arabicZikr: text,
+                  transliteration: `Mashriqi: ${totalMashriqi} | Maghribi: ${totalMaghribi}`,
+                  abjadWeight: totalMashriqi,
+                  title: `CALCUL ABJAD (${words} Mots, ${letterCount} Lettres)`,
+                  meaningFr: `Éléments : Feu ${elemental.fire}, Air ${elemental.air}, Eau ${elemental.water}, Terre ${elemental.earth}`,
+                  isParchment: false,
+                })}
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-xs transition-all shadow-sm cursor-pointer"
+                title="Télécharger la fiche de calcul en PNG Deluxe"
+              >
+                <Download size={15} className="text-emerald-400" />
+                <span>PNG Deluxe</span>
+              </button>
+              <button
+                onClick={() => exportWirdToImage({
+                  arabicZikr: text,
+                  transliteration: `Mashriqi: ${totalMashriqi} | Maghribi: ${totalMaghribi}`,
+                  abjadWeight: totalMashriqi,
+                  title: `PARCHEMIN CALCUL ABJAD`,
+                  meaningFr: `Éléments : Feu ${elemental.fire}, Air ${elemental.air}, Eau ${elemental.water}, Terre ${elemental.earth}`,
+                  isParchment: true,
+                })}
+                className="flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white font-bold text-xs transition-all shadow-sm cursor-pointer"
+                title="Télécharger la fiche sous forme de Parchemin Sacré"
+              >
+                <Feather size={15} />
+                <span>Parchemin</span>
+              </button>
               <button
                 onClick={() => setIsCommunityModalOpen(true)}
                 className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs transition-all shadow-md shadow-emerald-600/20 cursor-pointer"
               >
                 <Sparkles size={16} />
-                <span>Envoyer le Calcul dans la Communauté</span>
+                <span>Communauté</span>
               </button>
             </div>
           )}

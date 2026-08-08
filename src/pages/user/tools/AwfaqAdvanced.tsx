@@ -10,6 +10,15 @@ import { downloadCanvasImage } from '../../../utils/downloadHelper';
 import { toCanvas } from 'html-to-image';
 import { AsrarHubWatermark } from '../../../components/AsrarHubWatermark';
 import { KhatimUsageGuide } from '../../../components/KhatimUsageGuide';
+import { 
+  KhatimMethod, 
+  KhatimDoor, 
+  DAHMOUCH_DOORS, 
+  KOUNTIYOU_DOORS, 
+  VERSETS_BESOINS_PRESETS, 
+  VersetNeedPreset, 
+  generateAdvancedKhatim 
+} from '../../../utils/khatimEngine';
 
 const awfaqDict = {
   fr: {
@@ -176,8 +185,12 @@ export const AwfaqAdvanced: React.FC = () => {
 
   const [targetValue, setTargetValue] = useState<string>('129');
   const [gridSize, setGridSize] = useState<number>(3); // 3x3 to 10x10
+  const [method, setMethod] = useState<KhatimMethod>('ghazali');
+  const [selectedDoor, setSelectedDoor] = useState<number>(1);
+  const [activeDoorInfo, setActiveDoorInfo] = useState<KhatimDoor | null>(null);
+
   const [viewMode, setViewMode] = useState<'values' | 'houses' | 'animation'>('values');
-  const [grid, setGrid] = useState<number[][]>([]);
+  const [grid, setGrid] = useState<(number | string)[][]>([]);
   const [baseHousesGrid, setBaseHousesGrid] = useState<number[][]>([]);
   const [kasrInfo, setKasrInfo] = useState<{ base: number; rem: number; kasrCellIndex: number; minRequired: number } | null>(null);
   const [copiedGrid, setCopiedGrid] = useState(false);
@@ -263,7 +276,12 @@ export const AwfaqAdvanced: React.FC = () => {
   const handleDownloadWafqImage = async () => {
     if (!wafqRef.current) return;
     try {
-      const canvas = await toCanvas(wafqRef.current, { backgroundColor: '#0f172a', skipFonts: true });
+      const canvas = await toCanvas(wafqRef.current, { 
+        backgroundColor: '#0f172a',
+        pixelRatio: 2,
+        quality: 0.98,
+        cacheBust: true,
+      });
       await downloadCanvasImage(canvas, `wafq-${gridSize}x${gridSize}-${targetValue}.png`);
     } catch (err) {
       console.error('Error exporting Wafq image:', err);
@@ -277,6 +295,25 @@ export const AwfaqAdvanced: React.FC = () => {
       return;
     }
     setError('');
+
+    if (method !== 'ghazali') {
+      try {
+        const res = generateAdvancedKhatim(method, selectedDoor, gridSize, val);
+        setGrid(res.grid);
+        setBaseHousesGrid(res.housesGrid);
+        setActiveDoorInfo(res.doorInfo || null);
+        setKasrInfo({
+          base: res.step,
+          rem: res.remainder,
+          kasrCellIndex: res.kasrHouse,
+          minRequired: res.minRequired
+        });
+        return;
+      } catch (e: any) {
+        setError(e.message);
+        return;
+      }
+    }
 
     // Sum of sequence 0 to n^2 - 1 = n * (n^2 - 1) / 2
     const cn = (gridSize * (gridSize * gridSize - 1)) / 2;
@@ -317,6 +354,7 @@ export const AwfaqAdvanced: React.FC = () => {
 
     setGrid(newGrid);
     setBaseHousesGrid(baseSq);
+    setActiveDoorInfo(null);
     setKasrInfo({
       base,
       rem,
@@ -345,12 +383,12 @@ export const AwfaqAdvanced: React.FC = () => {
 
     grid.forEach((row, r) => {
       row.forEach((val, c) => {
-        // Element distribution by position and cell value
-        const elemIndex = (r + c + val) % 4;
-        if (elemIndex === 0) fireSum += val;
-        else if (elemIndex === 1) airSum += val;
-        else if (elemIndex === 2) waterSum += val;
-        else earthSum += val;
+        const numVal = typeof val === 'number' ? val : (parseInt(val, 10) || 0);
+        const elemIndex = (r + c + numVal) % 4;
+        if (elemIndex === 0) fireSum += numVal;
+        else if (elemIndex === 1) airSum += numVal;
+        else if (elemIndex === 2) waterSum += numVal;
+        else earthSum += numVal;
       });
     });
 
@@ -402,8 +440,65 @@ export const AwfaqAdvanced: React.FC = () => {
 
       <div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pr-0.5">
 
-      <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 sm:p-8 border border-gray-100 dark:border-gray-700 shadow-sm mb-8">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+      <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 sm:p-8 border border-gray-100 dark:border-gray-700 shadow-sm mb-8 space-y-6">
+        {/* Method Selector */}
+        <div>
+          <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+            Méthode de Génération du Wafq :
+          </label>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 bg-gray-100 dark:bg-gray-900 rounded-2xl p-1.5">
+            {[
+              { id: 'ghazali', label: 'Ghazali Standard (الغزالي)' },
+              { id: 'dahmouch', label: 'Dahmouch (دهموش) - 9 Portes' },
+              { id: 'kountiyou', label: 'Kountiyou (الكنتي) - 9 Portes' },
+            ].map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                onClick={() => setMethod(m.id as KhatimMethod)}
+                className={`py-2 px-3 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
+                  method === m.id
+                    ? 'bg-fuchsia-600 text-white shadow-md'
+                    : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+                }`}
+              >
+                {m.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Door Selector for Dahmouch / Kountiyou */}
+        {(method === 'dahmouch' || method === 'kountiyou') && (
+          <div className="bg-slate-900 border border-fuchsia-500/30 p-4 rounded-2xl text-fuchsia-100 space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-bold text-fuchsia-300">
+                Choix de la Porte ({method === 'dahmouch' ? 'Dahmouch' : 'Cheikh Al-Kounti'}) :
+              </label>
+              <span className="text-[10px] font-mono text-fuchsia-400 bg-fuchsia-500/10 px-2 py-0.5 rounded-full border border-fuchsia-500/30">
+                Porte {selectedDoor} sur 9
+              </span>
+            </div>
+            <div className="grid grid-cols-3 sm:grid-cols-9 gap-1.5">
+              {(method === 'dahmouch' ? DAHMOUCH_DOORS : KOUNTIYOU_DOORS).map((door) => (
+                <button
+                  key={door.id}
+                  type="button"
+                  onClick={() => setSelectedDoor(door.id)}
+                  className={`py-1.5 px-1 text-center rounded-lg border text-xs font-bold transition-all cursor-pointer ${
+                    selectedDoor === door.id
+                      ? 'bg-fuchsia-600 text-white border-fuchsia-400 scale-105 shadow'
+                      : 'bg-black/40 text-fuchsia-200/80 border-fuchsia-500/20 hover:bg-black/70'
+                  }`}
+                >
+                  Porte {door.id}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
               {dict.targetLabel}
@@ -604,11 +699,17 @@ export const AwfaqAdvanced: React.FC = () => {
                               : 'bg-gray-100 dark:bg-gray-900/40 border-gray-200/50 dark:border-gray-800 text-gray-400 dark:text-gray-600 opacity-60'
                           } border flex flex-col items-center justify-center font-bold text-gray-900 dark:text-white transition-all shadow-sm group`}
                         >
-                          <span className={isCurrentAnimHighlight ? 'text-white text-xl sm:text-2xl font-extrabold animate-pulse' : ''}>
+                          <span 
+                            className={`whitespace-nowrap text-center leading-none px-0.5 max-w-full overflow-hidden ${
+                              isCurrentAnimHighlight ? 'text-white text-xl sm:text-2xl font-extrabold animate-pulse' : ''
+                            }`}
+                            style={{ whiteSpace: 'nowrap', wordBreak: 'keep-all' }}
+                            dir="rtl"
+                          >
                             {displayVal}
                           </span>
 
-                          {viewMode === 'values' && (
+                          {viewMode === 'values' && gridSize <= 6 && (
                             <span className="text-[9px] text-gray-400 dark:text-gray-300 absolute bottom-1 right-1 font-mono">
                               #{houseNum}
                             </span>

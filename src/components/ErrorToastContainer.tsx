@@ -106,11 +106,13 @@ export const ErrorToastContainer: React.FC = () => {
         timestamp: new Date(),
         details: event.error ? String(event.error.stack || event.error) : `Fichier: ${event.filename}:${event.lineno}:${event.colno}`,
       };
-      setErrors(prev => {
-        // Prevent duplicate firebase connection warning blocks to keep UI clean
-        if (fbType && prev.some(e => e.type === fbType)) return prev;
-        return [newErr, ...prev].slice(0, 5);
-      });
+      setTimeout(() => {
+        setErrors(prev => {
+          // Prevent duplicate firebase connection warning blocks to keep UI clean
+          if (fbType && prev.some(e => e.type === fbType)) return prev;
+          return [newErr, ...prev].slice(0, 5);
+        });
+      }, 0);
     };
 
     // Intercept unhandled promise rejections (very common in failed fetches)
@@ -160,10 +162,12 @@ export const ErrorToastContainer: React.FC = () => {
         timestamp: new Date(),
         details: details || "Rejet de promesse asynchrone (ex: fetch échoué)",
       };
-      setErrors(prev => {
-        if (fbType && prev.some(e => e.type === fbType)) return prev;
-        return [newErr, ...prev].slice(0, 5);
-      });
+      setTimeout(() => {
+        setErrors(prev => {
+          if (fbType && prev.some(e => e.type === fbType)) return prev;
+          return [newErr, ...prev].slice(0, 5);
+        });
+      }, 0);
     };
 
     // Override console.error
@@ -187,7 +191,7 @@ export const ErrorToastContainer: React.FC = () => {
         .join(' ');
 
       const lowerMessage = message.toLowerCase();
-      // Suppress noisy third party or development warnings
+      // Suppress noisy third party or development warnings and React rendering errors from triggering state updates
       if (
         lowerMessage.includes('mismatched anonymous define') || 
         lowerMessage.includes('websocket') || 
@@ -195,7 +199,10 @@ export const ErrorToastContainer: React.FC = () => {
         lowerMessage.includes('lucide') ||
         lowerMessage.includes('google maps') ||
         lowerMessage.includes('vite') ||
-        lowerMessage.includes('networkdiag')
+        lowerMessage.includes('networkdiag') ||
+        lowerMessage.includes('cannot update a component') ||
+        lowerMessage.includes('invalid hook call') ||
+        lowerMessage.includes('react will try to recreate this component tree')
       ) {
         return;
       }
@@ -223,10 +230,12 @@ export const ErrorToastContainer: React.FC = () => {
         details: args.map(a => (a instanceof Error ? a.stack : String(a))).join('\n'),
       };
       
-      setErrors(prev => {
-        if (fbType && prev.some(e => e.type === fbType)) return prev;
-        return [newErr, ...prev].slice(0, 5);
-      });
+      setTimeout(() => {
+        setErrors(prev => {
+          if (fbType && prev.some(e => e.type === fbType)) return prev;
+          return [newErr, ...prev].slice(0, 5);
+        });
+      }, 0);
     };
 
     window.addEventListener('error', handleErrorEvent);

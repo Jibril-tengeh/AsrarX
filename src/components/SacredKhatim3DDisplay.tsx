@@ -551,12 +551,16 @@ export const SacredKhatim3DDisplay: React.FC<SacredKhatim3DDisplayProps> = ({
                       key={`${rIdx}-${cIdx}`}
                       className={`relative flex items-center justify-center bg-gradient-to-br from-purple-950/80 via-[#130722] to-black border border-amber-500/40 rounded-lg ${numCols >= 5 ? 'p-0.5' : 'p-1'} shadow-inner hover:border-amber-400 transition-colors overflow-hidden`}
                     >
-                      <span className={`text-amber-300 font-serif font-extrabold ${
-                        numCols <= 3 ? 'text-xs sm:text-base md:text-lg' :
-                        numCols === 4 ? 'text-[10px] sm:text-sm md:text-base' :
-                        numCols === 5 ? 'text-[9px] sm:text-xs md:text-sm' :
-                        'text-[7px] sm:text-[9px] md:text-[11px]'
-                      } tracking-tight text-center truncate drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]`}>
+                      <span 
+                        className={`text-amber-300 font-serif font-extrabold whitespace-nowrap leading-none px-0.5 max-w-full overflow-hidden ${
+                          numCols <= 3 ? 'text-xs sm:text-base md:text-lg' :
+                          numCols === 4 ? 'text-[10px] sm:text-sm md:text-base' :
+                          numCols === 5 ? 'text-[9px] sm:text-xs md:text-sm' :
+                          'text-[7px] sm:text-[9px] md:text-[11px]'
+                        } tracking-tight text-center drop-shadow-[0_1px_3px_rgba(0,0,0,0.9)]`}
+                        style={{ whiteSpace: 'nowrap', wordBreak: 'keep-all' }}
+                        dir="rtl"
+                      >
                         {cellVal}
                       </span>
                     </div>

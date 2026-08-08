@@ -125,14 +125,14 @@ const khatimNamesMap: Record<number, string> = {
 };
 
 const gridColsClassMap: Record<number, string> = {
-  3: 'grid-cols-3 w-48 sm:w-64',
-  4: 'grid-cols-4 w-60 sm:w-72',
-  5: 'grid-cols-5 w-64 sm:w-80',
-  6: 'grid-cols-6 w-72 sm:w-96',
-  7: 'grid-cols-7 w-80 sm:w-[400px]',
-  8: 'grid-cols-8 w-80 sm:w-[440px]',
-  9: 'grid-cols-9 w-80 sm:w-[460px]',
-  10: 'grid-cols-10 w-[340px] sm:w-[480px]',
+  3: 'grid-cols-3 w-48 sm:w-64 max-w-full',
+  4: 'grid-cols-4 w-60 sm:w-72 max-w-full',
+  5: 'grid-cols-5 w-64 sm:w-80 max-w-full',
+  6: 'grid-cols-6 w-72 sm:w-96 max-w-full',
+  7: 'grid-cols-7 w-80 sm:w-[400px] max-w-full',
+  8: 'grid-cols-8 w-[310px] sm:w-[440px] max-w-full',
+  9: 'grid-cols-9 w-full sm:w-[460px] max-w-full',
+  10: 'grid-cols-10 w-full max-w-full',
 };
 
 const textPercentSizeMap: Record<number, string> = {
@@ -142,8 +142,8 @@ const textPercentSizeMap: Record<number, string> = {
   6: 'text-[11px] sm:text-xs',
   7: 'text-[10px] sm:text-[11px]',
   8: 'text-[9px] sm:text-[10px]',
-  9: 'text-[8px] sm:text-[9px]',
-  10: 'text-[8px] sm:text-[9px]',
+  9: 'text-[7px] sm:text-[8.5px]',
+  10: 'text-[6px] sm:text-[7.5px]',
 };
 
 const gridCellPaddingMap: Record<number, string> = {
@@ -153,8 +153,8 @@ const gridCellPaddingMap: Record<number, string> = {
   6: 'p-0.5 sm:p-1',
   7: 'p-0.5',
   8: 'p-0.5',
-  9: 'p-0.5',
-  10: 'p-0.5',
+  9: 'p-[1px] sm:p-0.5',
+  10: 'p-0 sm:p-[1px]',
 };
 
 import { applyTashkeel } from '../../../utils/tashkeel';
@@ -1200,7 +1200,9 @@ export const NamesOfAllah: React.FC = () => {
                                   row.map((cell, j) => (
                                     <div
                                       key={`${i}-${j}`}
-                                      className={`aspect-square bg-white dark:bg-gray-800 rounded-xl flex items-center justify-center font-mono font-bold text-gray-900 dark:text-white shadow-sm ${gridCellPaddingMap[khatimSize]} ${textPercentSizeMap[khatimSize]}`}
+                                      className={`aspect-square bg-white dark:bg-gray-800 ${
+                                        khatimSize >= 8 ? 'rounded-sm' : khatimSize >= 6 ? 'rounded-md' : 'rounded-xl'
+                                      } flex items-center justify-center font-mono font-bold text-gray-900 dark:text-white shadow-sm ${gridCellPaddingMap[khatimSize]} ${textPercentSizeMap[khatimSize]}`}
                                     >
                                       {cell}
                                     </div>

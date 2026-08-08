@@ -525,7 +525,11 @@ export const KhatimWafqGenerator: React.FC = () => {
                     whileHover={{ scale: 1.03 }}
                     className={`${getCellSizeClass(wafqSize)} bg-gradient-to-br from-amber-950/40 to-slate-900 border border-amber-500/40 flex items-center justify-center text-center shadow-inner group hover:border-amber-300 transition-colors cursor-pointer shrink-0`}
                   >
-                    <span className="font-arabic text-amber-200 group-hover:text-white transition-colors" dir="rtl">
+                    <span 
+                      className="font-arabic text-amber-200 group-hover:text-white transition-colors whitespace-nowrap text-center leading-none px-0.5 max-w-full overflow-hidden" 
+                      style={{ whiteSpace: 'nowrap', wordBreak: 'keep-all' }}
+                      dir="rtl"
+                    >
                       {formatCellValue(cellVal)}
                     </span>
                   </motion.div>

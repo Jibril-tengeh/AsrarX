@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Layers, ArrowLeft, Info, Wand2 } from 'lucide-react';
+import { Layers, ArrowLeft, Info, Wand2, Download, Feather } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { ToolInfoTooltip } from '../../../components/ToolInfoTooltip';
 import { motion, AnimatePresence } from 'motion/react';
+import { exportWirdToImage } from '../../../utils/wirdExporter';
 
 export const RouhaniyyaExtractor: React.FC = () => {
   const { t } = useLanguage();
@@ -140,6 +141,42 @@ export const RouhaniyyaExtractor: React.FC = () => {
                    {result.letters} + طيش
                  </div>
                </div>
+            </div>
+            <div className="bg-white dark:bg-gray-800 rounded-3xl p-5 border border-gray-100 dark:border-gray-700 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4 md:col-span-2">
+              <div>
+                <h4 className="text-sm font-bold text-gray-900 dark:text-white">Exporter l'Extraction Rouhaniyya</h4>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Téléchargez les noms sacrés sous forme de fiche PNG ou Parchemin</p>
+              </div>
+              <div className="flex items-center gap-3 w-full sm:w-auto">
+                <button
+                  onClick={() => exportWirdToImage({
+                    arabicZikr: `${result.celestial} • ${result.terrestrial}`,
+                    transliteration: `Malaikah: ${result.celestial} | Ardi: ${result.terrestrial}`,
+                    abjadWeight: parseInt(number, 10) || 0,
+                    title: `EXTRACTION ROUHANIYYA (ZIMAM ${number})`,
+                    meaningFr: `Entité Angélique: ${result.celestial} — Entité Terrestre: ${result.terrestrial}`,
+                    isParchment: false,
+                  })}
+                  className="flex-1 sm:flex-none py-2.5 px-4 bg-zinc-800 hover:bg-zinc-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm active:scale-98"
+                >
+                  <Download size={15} className="text-emerald-400" />
+                  <span>PNG Deluxe</span>
+                </button>
+                <button
+                  onClick={() => exportWirdToImage({
+                    arabicZikr: `${result.celestial} • ${result.terrestrial}`,
+                    transliteration: `Malaikah: ${result.celestial} | Ardi: ${result.terrestrial}`,
+                    abjadWeight: parseInt(number, 10) || 0,
+                    title: `PARCHEMIN ROUHANIYYA (${number})`,
+                    meaningFr: `Entité Angélique: ${result.celestial} — Entité Terrestre: ${result.terrestrial}`,
+                    isParchment: true,
+                  })}
+                  className="flex-1 sm:flex-none py-2.5 px-4 bg-gradient-to-r from-amber-600 to-amber-700 hover:from-amber-500 hover:to-amber-600 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm active:scale-98"
+                >
+                  <Feather size={15} />
+                  <span>Parchemin</span>
+                </button>
+              </div>
             </div>
           </motion.div>
         )}

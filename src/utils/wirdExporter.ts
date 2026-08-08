@@ -251,72 +251,72 @@ export async function exportWirdToImage(params: ExportWirdParams): Promise<boole
   ctx.textBaseline = 'alphabetic';
 
   ctx.fillStyle = isParchment ? '#78350f' : '#f59e0b';
-  let topTitleSize = 30;
+  let topTitleSize = 44;
   const topTitleStr = t.header;
   ctx.font = `bold ${topTitleSize}px serif`;
-  ctx.fillText(topTitleStr, width / 2, 105);
+  ctx.fillText(topTitleStr, width / 2, 100);
 
   // Subtitle / Section Title
   const categoryTitle = (params.title || t.defaultTitle).toUpperCase();
   ctx.fillStyle = isParchment ? '#b45309' : '#34d399';
-  let catFontSize = 24;
+  let catFontSize = 36;
   ctx.font = `bold ${catFontSize}px sans-serif`;
-  while (ctx.measureText(categoryTitle).width > maxAllowedWidth && catFontSize > 14) {
+  while (ctx.measureText(categoryTitle).width > maxAllowedWidth && catFontSize > 22) {
     catFontSize -= 1;
     ctx.font = `bold ${catFontSize}px sans-serif`;
   }
-  ctx.fillText(categoryTitle, width / 2, 145);
+  ctx.fillText(categoryTitle, width / 2, 155);
 
   // Decorative Line under header
   ctx.strokeStyle = isParchment ? '#d97706' : '#10b981';
-  ctx.lineWidth = 2;
+  ctx.lineWidth = 2.5;
   ctx.beginPath();
-  ctx.moveTo(150, 168);
-  ctx.lineTo(width - 150, 168);
+  ctx.moveTo(140, 180);
+  ctx.lineTo(width - 140, 180);
   ctx.stroke();
 
   // 3. User & Mother Name Info Box (if available)
-  let nextY = 220;
+  let nextY = 230;
   if (params.name || params.motherName) {
     const nameStr = t.imprint(params.name || '---', params.motherName || '---');
     ctx.fillStyle = isParchment ? '#92400e' : '#a7f3d0';
-    let nameFontSize = 20;
+    let nameFontSize = 28;
     ctx.font = `bold ${nameFontSize}px sans-serif`;
-    while (ctx.measureText(nameStr).width > maxAllowedWidth && nameFontSize > 12) {
+    while (ctx.measureText(nameStr).width > maxAllowedWidth && nameFontSize > 18) {
       nameFontSize -= 1;
       ctx.font = `bold ${nameFontSize}px sans-serif`;
     }
     ctx.fillText(nameStr, width / 2, nextY);
-    nextY += 40;
+    nextY += 48;
   }
 
   // 4. Mystical Weight Badge
   const weightStr = t.abjadWeight(params.abjadWeight);
   ctx.fillStyle = isParchment ? '#78350f' : '#fbbf24';
-  let weightFontSize = 25;
+  let weightFontSize = 34;
   ctx.font = `bold ${weightFontSize}px serif`;
-  while (ctx.measureText(weightStr).width > maxAllowedWidth && weightFontSize > 14) {
+  while (ctx.measureText(weightStr).width > maxAllowedWidth && weightFontSize > 20) {
     weightFontSize -= 1;
     ctx.font = `bold ${weightFontSize}px serif`;
   }
   ctx.fillText(weightStr, width / 2, nextY);
 
   // 5. Central Sacred Geometry Calligraphy Box
-  const boxX = 100;
-  const boxY = nextY + 35;
-  const boxW = width - 200;
+  const boxX = 90;
+  const boxY = nextY + 38;
+  const boxW = width - 180;
   const boxH = 370;
 
   // Box Background
-  ctx.fillStyle = isParchment ? 'rgba(254, 243, 199, 0.75)' : 'rgba(6, 78, 59, 0.4)';
+  ctx.fillStyle = isParchment ? 'rgba(254, 243, 199, 0.85)' : 'rgba(6, 78, 59, 0.5)';
   ctx.fillRect(boxX, boxY, boxW, boxH);
 
   ctx.strokeStyle = isParchment ? '#b45309' : '#059669';
-  ctx.lineWidth = 3;
+  ctx.lineWidth = 3.5;
   ctx.strokeRect(boxX, boxY, boxW, boxH);
 
   ctx.strokeStyle = isParchment ? '#d97706' : '#34d399';
-  ctx.lineWidth = 1;
+  ctx.lineWidth = 1.5;
   ctx.strokeRect(boxX + 10, boxY + 10, boxW - 20, boxH - 20);
 
   // Central Octagram Circle Overlay in Box background
@@ -324,57 +324,57 @@ export async function exportWirdToImage(params: ExportWirdParams): Promise<boole
   const centerY = boxY + boxH / 2;
 
   ctx.save();
-  ctx.strokeStyle = isParchment ? 'rgba(180, 83, 9, 0.25)' : 'rgba(16, 185, 129, 0.25)';
-  ctx.lineWidth = 2;
+  ctx.strokeStyle = isParchment ? 'rgba(180, 83, 9, 0.28)' : 'rgba(16, 185, 129, 0.28)';
+  ctx.lineWidth = 2.5;
   ctx.beginPath();
-  ctx.arc(centerX, centerY, 140, 0, Math.PI * 2);
+  ctx.arc(centerX, centerY, 145, 0, Math.PI * 2);
   ctx.stroke();
 
   ctx.beginPath();
-  ctx.arc(centerX, centerY, 120, 0, Math.PI * 2);
+  ctx.arc(centerX, centerY, 125, 0, Math.PI * 2);
   ctx.stroke();
   ctx.restore();
 
   // Main Arabic Zikr Calligraphy in Box
   ctx.fillStyle = isParchment ? '#451a03' : '#ffffff';
   
-  let zikrFontSize = 52;
+  let zikrFontSize = 72;
   ctx.font = `bold ${zikrFontSize}px "Amiri", "Traditional Arabic", serif`;
   
   // Measure width and dynamically shrink font if needed
-  while (ctx.measureText(formattedArabic).width > boxW - 60 && zikrFontSize > 20) {
+  while (ctx.measureText(formattedArabic).width > boxW - 60 && zikrFontSize > 28) {
     zikrFontSize -= 2;
     ctx.font = `bold ${zikrFontSize}px "Amiri", "Traditional Arabic", serif`;
   }
 
   // Draw Main Arabic Zikr centered inside the box
-  ctx.fillText(formattedArabic, centerX, centerY + 15);
+  ctx.fillText(formattedArabic, centerX, centerY + 22);
 
   // 6. Transliteration Section below Box
-  let footerY = boxY + boxH + 50;
+  let footerY = boxY + boxH + 52;
 
   ctx.fillStyle = isParchment ? '#92400e' : '#34d399';
-  let translitFontSize = 24;
+  let translitFontSize = 34;
   ctx.font = `bold ${translitFontSize}px sans-serif`;
-  while (ctx.measureText(params.transliteration).width > maxAllowedWidth && translitFontSize > 14) {
+  while (ctx.measureText(params.transliteration).width > maxAllowedWidth && translitFontSize > 20) {
     translitFontSize -= 1;
     ctx.font = `bold ${translitFontSize}px sans-serif`;
   }
   ctx.fillText(params.transliteration, width / 2, footerY);
 
   // Recitation instruction count
-  footerY += 40;
+  footerY += 46;
   const countInstruction = t.recitationCount(params.abjadWeight);
   ctx.fillStyle = isParchment ? '#78350f' : '#fbbf24';
-  let countFontSize = 21;
+  let countFontSize = 30;
   ctx.font = `bold ${countFontSize}px serif`;
   ctx.fillText(countInstruction, width / 2, footerY);
 
   // Meaning / Context if provided
   if (params.meaningFr) {
-    footerY += 38;
+    footerY += 44;
     ctx.fillStyle = isParchment ? '#451a03' : '#e2e8f0';
-    let meaningFontSize = 17;
+    let meaningFontSize = 24;
     ctx.font = `italic ${meaningFontSize}px sans-serif`;
     
     // Wrap long meaning into max 2 lines
@@ -393,62 +393,62 @@ export async function exportWirdToImage(params: ExportWirdParams): Promise<boole
 
     ctx.fillText(line1, width / 2, footerY);
     if (line2) {
-      footerY += 25;
+      footerY += 32;
       ctx.fillText(line2, width / 2, footerY);
     }
   }
 
   // 7. Zikr Accomplishment Guide (Protocol Section)
   if (includeGuide) {
-    const guideBoxX = 70;
+    const guideBoxX = 60;
     const guideBoxY = footerY + 45;
-    const guideBoxW = width - 140;
-    const guideBoxH = 740;
+    const guideBoxW = width - 120;
+    const guideBoxH = 770;
 
     // Outer Protocol Container Box
-    ctx.fillStyle = isParchment ? 'rgba(120, 53, 15, 0.05)' : 'rgba(16, 185, 129, 0.08)';
+    ctx.fillStyle = isParchment ? 'rgba(120, 53, 15, 0.06)' : 'rgba(16, 185, 129, 0.09)';
     ctx.fillRect(guideBoxX, guideBoxY, guideBoxW, guideBoxH);
 
     ctx.strokeStyle = isParchment ? '#b45309' : '#10b981';
-    ctx.lineWidth = 2;
+    ctx.lineWidth = 2.5;
     ctx.strokeRect(guideBoxX, guideBoxY, guideBoxW, guideBoxH);
 
-    ctx.strokeStyle = isParchment ? 'rgba(180, 83, 9, 0.3)' : 'rgba(16, 185, 129, 0.3)';
+    ctx.strokeStyle = isParchment ? 'rgba(180, 83, 9, 0.35)' : 'rgba(16, 185, 129, 0.35)';
     ctx.lineWidth = 1;
     ctx.strokeRect(guideBoxX + 6, guideBoxY + 6, guideBoxW - 12, guideBoxH - 12);
 
     // Header Title for Protocol Box
     ctx.fillStyle = isParchment ? '#78350f' : '#f59e0b';
-    ctx.font = 'bold 22px serif';
+    ctx.font = 'bold 32px serif';
     ctx.textAlign = 'center';
-    ctx.fillText(t.protocolTitle, width / 2, guideBoxY + 42);
+    ctx.fillText(t.protocolTitle, width / 2, guideBoxY + 48);
 
     // Decorative Separator Line
     ctx.strokeStyle = isParchment ? '#d97706' : '#10b981';
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = 2;
     ctx.beginPath();
-    ctx.moveTo(guideBoxX + 100, guideBoxY + 60);
-    ctx.lineTo(guideBoxX + guideBoxW - 100, guideBoxY + 60);
+    ctx.moveTo(guideBoxX + 80, guideBoxY + 68);
+    ctx.lineTo(guideBoxX + guideBoxW - 80, guideBoxY + 68);
     ctx.stroke();
 
     // 5 Protocol Steps
     const steps = t.steps;
 
-    let currentStepY = guideBoxY + 110;
+    let currentStepY = guideBoxY + 120;
 
     steps.forEach((step) => {
       // Circle Badge Number
-      const badgeX = guideBoxX + 45;
-      const badgeY = currentStepY - 7;
+      const badgeX = guideBoxX + 48;
+      const badgeY = currentStepY - 6;
 
       ctx.save();
       ctx.fillStyle = isParchment ? '#b45309' : '#059669';
       ctx.beginPath();
-      ctx.arc(badgeX, badgeY, 15, 0, Math.PI * 2);
+      ctx.arc(badgeX, badgeY, 18, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 14px sans-serif';
+      ctx.font = 'bold 20px sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText(step.num, badgeX, badgeY);
@@ -458,42 +458,42 @@ export async function exportWirdToImage(params: ExportWirdParams): Promise<boole
       ctx.textAlign = 'left';
       ctx.textBaseline = 'alphabetic';
       ctx.fillStyle = isParchment ? '#78350f' : '#fbbf24';
-      ctx.font = 'bold 17px sans-serif';
-      ctx.fillText(step.title, guideBoxX + 75, currentStepY - 12);
+      ctx.font = 'bold 25px sans-serif';
+      ctx.fillText(step.title, guideBoxX + 82, currentStepY - 12);
 
       // Step Description
       ctx.fillStyle = isParchment ? '#451a03' : '#e2e8f0';
-      ctx.font = '15px sans-serif';
-      ctx.fillText(step.desc, guideBoxX + 75, currentStepY + 12);
+      ctx.font = '21px sans-serif';
+      ctx.fillText(step.desc, guideBoxX + 82, currentStepY + 16);
 
-      currentStepY += 82;
+      currentStepY += 88;
     });
 
     // Optimal Times Banner inside Protocol Box
-    const timesBoxY = currentStepY + 20;
-    const timesBoxX = guideBoxX + 35;
-    const timesBoxW = guideBoxW - 70;
-    const timesBoxH = 140;
+    const timesBoxY = currentStepY + 15;
+    const timesBoxX = guideBoxX + 30;
+    const timesBoxW = guideBoxW - 60;
+    const timesBoxH = 145;
 
-    ctx.fillStyle = isParchment ? 'rgba(217, 119, 6, 0.12)' : 'rgba(6, 78, 59, 0.45)';
+    ctx.fillStyle = isParchment ? 'rgba(217, 119, 6, 0.15)' : 'rgba(6, 78, 59, 0.55)';
     ctx.fillRect(timesBoxX, timesBoxY, timesBoxW, timesBoxH);
 
     ctx.strokeStyle = isParchment ? '#d97706' : '#10b981';
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = 2;
     ctx.strokeRect(timesBoxX, timesBoxY, timesBoxW, timesBoxH);
 
     ctx.textAlign = 'center';
     ctx.fillStyle = isParchment ? '#78350f' : '#34d399';
-    ctx.font = 'bold 17px sans-serif';
-    ctx.fillText(t.timesTitle, width / 2, timesBoxY + 35);
+    ctx.font = 'bold 25px sans-serif';
+    ctx.fillText(t.timesTitle, width / 2, timesBoxY + 38);
 
     ctx.fillStyle = isParchment ? '#92400e' : '#cbd5e1';
-    ctx.font = 'italic 15px sans-serif';
-    ctx.fillText(t.timesLine1, width / 2, timesBoxY + 68);
+    ctx.font = 'italic 21px sans-serif';
+    ctx.fillText(t.timesLine1, width / 2, timesBoxY + 75);
 
-    ctx.font = '14px sans-serif';
+    ctx.font = '20px sans-serif';
     ctx.fillStyle = isParchment ? '#b45309' : '#a7f3d0';
-    ctx.fillText(t.timesLine2, width / 2, timesBoxY + 98);
+    ctx.fillText(t.timesLine2, width / 2, timesBoxY + 108);
   }
 
   // File Name formatting

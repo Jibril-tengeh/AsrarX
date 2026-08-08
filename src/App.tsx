@@ -1013,8 +1013,8 @@ export default function App() {
       sessionStorage.setItem('hasCompletedOnboarding', 'true');
       setHasCompletedOnboarding(true);
       if (user && isAutoSaveEnabled()) {
-        import('firebase/firestore').then(({ updateDoc, doc }) => {
-          updateDoc(doc(db, 'users', user.uid), { hasCompletedOnboarding: true }).catch(console.error);
+        import('firebase/firestore').then(({ setDoc, doc }) => {
+          setDoc(doc(db, 'users', user.uid), { hasCompletedOnboarding: true }, { merge: true }).catch(console.error);
         });
       }
     }} />;
