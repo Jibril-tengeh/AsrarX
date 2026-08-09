@@ -58,33 +58,29 @@ const isCapacitor = typeof window !== 'undefined' && (
   navigator.userAgent.includes('wv')
 );
 
+// Safely clean up any stale or bloated firestore localStorage keys that cause QuotaExceededError
+if (typeof window !== 'undefined' && window.localStorage) {
+  try {
+    Object.keys(localStorage).forEach((key) => {
+      if (key.startsWith('firestore_') || key.startsWith('firebase:')) {
+        localStorage.removeItem(key);
+      }
+    });
+  } catch (e) {
+    // Ignore storage access issues
+  }
+}
+
 const initFirestore = () => {
   try {
-    console.log('[Firestore Init] Setting up Firestore with persistentLocalCache for offline support & autoDetectLongPolling.');
+    console.log('[Firestore Init] Setting up Firestore with memoryLocalCache to prevent QuotaExceededError.');
     return initializeFirestore(app, {
       experimentalAutoDetectLongPolling: true,
-      localCache: persistentLocalCache({
-        tabManager: persistentMultipleTabManager()
-      })
+      localCache: memoryLocalCache()
     });
   } catch (err1) {
-    console.warn('[Firestore Init] Multi-tab persistent cache failed, trying single-tab persistentLocalCache:', err1);
-    try {
-      return initializeFirestore(app, {
-        experimentalAutoDetectLongPolling: true,
-        localCache: persistentLocalCache({})
-      });
-    } catch (err2) {
-      console.warn('[Firestore Init] Persistent cache failed, falling back to memoryLocalCache:', err2);
-      try {
-        return initializeFirestore(app, {
-          experimentalAutoDetectLongPolling: true,
-          localCache: memoryLocalCache()
-        });
-      } catch (fallbackErr) {
-        return getFirestore(app);
-      }
-    }
+    console.warn('[Firestore Init] Memory cache init failed, falling back to default getFirestore:', err1);
+    return getFirestore(app);
   }
 };
 
@@ -118,32 +114,13 @@ export const signInWithGoogle = async () => {
       const docSnap = await getDoc(userRef);
       
       if (!docSnap.exists()) {
+        const validation = await validateRegistrationDetails(user.email || '', '', db);
+        if (!validation.valid) {
+          await firebaseSignOut(auth).catch(() => {});
+          throw new Error(validation.error || "Création de compte refusée par les règles d'email et d'alias.");
+        }
+
         const normEmail = normalizeEmail(user.email || '');
-
-        if (user.email && !isGmailAddress(user.email)) {
-          await firebaseSignOut(auth).catch(() => {});
-          throw new Error("Seules les adresses Gmail (@gmail.com) sont autorisées pour la création de compte.");
-        }
-
-        if (user.email && hasGmailPlusAlias(user.email)) {
-          await firebaseSignOut(auth).catch(() => {});
-          throw new Error("Les alias Gmail (avec symbole '+') ne sont pas autorisés pour la création de compte.");
-        }
-
-        if (user.email && isDisposableEmail(user.email)) {
-          await firebaseSignOut(auth).catch(() => {});
-          throw new Error("Les adresses email temporaires ne sont pas autorisées. Veuillez utiliser une adresse email permanente.");
-        }
-
-        // Check if normalized email exists in Firestore
-        const usersRef = collection(db, 'users');
-        const qEmail = query(usersRef, where('normalizedEmail', '==', normEmail));
-        const snapEmail = await getDocs(qEmail).catch(() => null);
-        if (snapEmail && !snapEmail.empty) {
-          await firebaseSignOut(auth).catch(() => {});
-          throw new Error("Cette adresse email (ou un alias Google/mail de cette adresse) est déjà associée à un autre compte.");
-        }
-
         const now = new Date();
         const trialHours = getTrialDurationHours();
         const trialExpiry = new Date(now.getTime() + trialHours * 60 * 60 * 1000);

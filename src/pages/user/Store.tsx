@@ -63,6 +63,8 @@ export const Store: React.FC = () => {
     setPaystackConfig({ currency: 'GHS', amount: 200 });
   }, []);
 
+  const pointsEnabled = featureToggles?.pointsSystemEnabled !== false && featureToggles?.pointsStoreUnlockEnabled !== false;
+
   const handlePurchase = async (product: any, usePoints: boolean = false, paymentMethod?: 'paystack' | 'visa' | 'crypto') => {
     if (!user) {
       setShowAuthModal(true);
@@ -75,6 +77,10 @@ export const Store: React.FC = () => {
     }
 
     if (usePoints) {
+      if (!pointsEnabled) {
+        alert("L'utilisation des points spirituels pour débloquer les articles est actuellement désactivée par l'administrateur.");
+        return;
+      }
       if ((user.spiritualPoints || 0) < product.pointsCost) {
         alert("Vous n'avez pas assez de points spirituels. (Solde: " + (user.spiritualPoints || 0) + ")");
         return;
@@ -416,7 +422,7 @@ export const Store: React.FC = () => {
 
                 <div className="flex flex-wrap items-center gap-2 mb-4">
                   <span className="font-bold text-emerald-600 dark:text-emerald-400">{product.price}</span>
-                  {product.pointsCost && (
+                  {pointsEnabled && product.pointsCost && (
                     <span className="text-xs bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 px-2 py-1 rounded-full flex items-center gap-1">
                       <Sparkles size={12} />
                       ou {product.pointsCost} pts
@@ -499,7 +505,7 @@ export const Store: React.FC = () => {
 
                 <div className="flex flex-wrap items-center gap-3 mb-6">
                   <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{selectedProduct.price}</span>
-                  {selectedProduct.pointsCost && (
+                  {pointsEnabled && selectedProduct.pointsCost && (
                     <span className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white px-3 py-1.5 rounded-full flex items-center gap-2 font-semibold shadow-sm">
                       <Sparkles size={16} />
                       ou utiliser {selectedProduct.pointsCost} points
@@ -561,7 +567,7 @@ export const Store: React.FC = () => {
                   </div>
                 ) : (
                   <div className="flex flex-col sm:flex-row gap-4 flex-1">
-                    {selectedProduct.pointsCost && (
+                    {pointsEnabled && selectedProduct.pointsCost && (
                       <button 
                         onClick={() => handlePurchase(selectedProduct, true)}
                         className="flex-1 py-4 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 text-white rounded-xl font-bold text-lg transition-colors flex items-center justify-center gap-2 shadow-md"

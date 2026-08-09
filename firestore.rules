@@ -22,10 +22,10 @@ service cloud.firestore {
 
     match /users/{userId} {
       allow read: if true;
+      allow create: if isAdmin();
       allow create: if request.auth != null && request.auth.uid == userId 
                     && (!('subscriptionTier' in request.resource.data) || request.resource.data.subscriptionTier == 'free' || request.resource.data.subscriptionTier == 'standard' || request.resource.data.subscriptionTier == 'premium' || request.resource.data.subscriptionTier == 'pro')
                     && (!('role' in request.resource.data) || request.resource.data.role == 'user');
-      allow create: if request.auth != null && request.auth.uid == userId && isAdmin();
       
       allow update: if request.auth != null && request.auth.uid == userId;
       allow update: if isAdmin();

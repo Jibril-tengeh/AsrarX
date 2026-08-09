@@ -6,9 +6,10 @@ import { X, Mail, Lock, User as UserIcon, AlertCircle, Eye, EyeOff, KeyRound, Ch
 import { signInWithGoogle, signInWithEmail, signUpWithEmail, sendVerificationEmail, auth, db, signOut } from '../lib/firebase';
 import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
 import { useAuth, setLocalUserSession } from '../contexts/AuthContext';
-import { isDisposableEmail, isGmailAddress, hasGmailPlusAlias, normalizeEmail, normalizePhone, validateRegistrationDetails } from '../lib/validationUtils';
+import { isDisposableEmail, isGmailAddress, hasGmailPlusAlias, hasEmailAlias, normalizeEmail, normalizePhone, validateRegistrationDetails } from '../lib/validationUtils';
 import { useNavigate } from 'react-router-dom';
 import { sendPasswordResetEmail } from 'firebase/auth';
+import { useBackButton } from '../hooks/useBackButton';
 
 const countriesData = [
   { name: 'Afghanistan', code: '+93', flag: '🇦🇫' },
@@ -217,6 +218,7 @@ interface AuthModalProps {
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly = false }) => {
+  useBackButton(onClose, isOpen);
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
@@ -299,7 +301,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
     // 1. Instant check for Gmail requirement, plus aliases, and disposable email
     if (email && !isGmailAddress(email)) {
       setEmailFieldError(t('auth.gmailOnlyError', 'Seules les adresses Gmail (@gmail.com) sont autorisées pour la création de compte.'));
-    } else if (email && hasGmailPlusAlias(email)) {
+    } else if (email && (hasGmailPlusAlias(email) || hasEmailAlias(email))) {
       setEmailFieldError(t('auth.gmailAliasError', 'Les extensions et alias Gmail (ex: avec le symbole "+") ne sont pas autorisés.'));
     } else if (email && isDisposableEmail(email)) {
       setEmailFieldError(t('auth.disposableEmailError', 'Les adresses email temporaires ou jetables (temp mail) ne sont pas autorisées.'));
@@ -312,7 +314,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
 
       if (email && !isGmailAddress(email)) {
         currentEmailErr = t('auth.gmailOnlyError', 'Seules les adresses Gmail (@gmail.com) sont autorisées pour la création de compte.');
-      } else if (email && hasGmailPlusAlias(email)) {
+      } else if (email && (hasGmailPlusAlias(email) || hasEmailAlias(email))) {
         currentEmailErr = t('auth.gmailAliasError', 'Les extensions et alias Gmail (ex: avec le symbole "+") ne sont pas autorisés.');
       } else if (email && isDisposableEmail(email)) {
         currentEmailErr = t('auth.disposableEmailError', 'Les adresses email temporaires ou jetables (temp mail) ne sont pas autorisées.');

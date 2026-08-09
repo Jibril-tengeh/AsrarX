@@ -47,6 +47,14 @@ export const getLocalCustomArticles = (): LocalArticle[] => {
   return [];
 };
 
+const safeSetItem = (key: string, value: string) => {
+  try {
+    localStorage.setItem(key, value);
+  } catch (err) {
+    console.warn(`[Storage] Failed to set ${key} due to storage quota:`, err);
+  }
+};
+
 /**
  * Saves or updates an article in local persistent storage so it is NEVER lost,
  * even when offline on Capacitor or when Firestore cache resets.
@@ -62,7 +70,7 @@ export const saveLocalCustomArticle = (article: LocalArticle): LocalArticle[] =>
     } else {
       updated = [article, ...current];
     }
-    localStorage.setItem(LOCAL_CUSTOM_ARTICLES_KEY, JSON.stringify(updated));
+    safeSetItem(LOCAL_CUSTOM_ARTICLES_KEY, JSON.stringify(updated));
 
     // Also update cached lists
     updateCachedArticleLists(article);
@@ -81,7 +89,7 @@ export const deleteLocalCustomArticle = (articleId: string): void => {
   try {
     const current = getLocalCustomArticles();
     const filtered = current.filter(a => a.id !== articleId);
-    localStorage.setItem(LOCAL_CUSTOM_ARTICLES_KEY, JSON.stringify(filtered));
+    safeSetItem(LOCAL_CUSTOM_ARTICLES_KEY, JSON.stringify(filtered));
 
     // Remove from cached lists
     removeFromCachedLists(articleId);
@@ -122,10 +130,10 @@ export const updateCachedArticleLists = (article: LocalArticle): void => {
           } else {
             nextList = [article, ...list];
           }
-          localStorage.setItem(key, JSON.stringify(nextList));
+          safeSetItem(key, JSON.stringify(nextList));
         }
       } else {
-        localStorage.setItem(key, JSON.stringify([article]));
+        safeSetItem(key, JSON.stringify([article]));
       }
     } catch (e) {}
   });
@@ -135,7 +143,7 @@ export const updateCachedArticleLists = (article: LocalArticle): void => {
     const detailsRaw = localStorage.getItem(CACHED_ARTICLE_DETAILS_KEY);
     const details = detailsRaw ? JSON.parse(detailsRaw) : {};
     details[article.id] = article;
-    localStorage.setItem(CACHED_ARTICLE_DETAILS_KEY, JSON.stringify(details));
+    safeSetItem(CACHED_ARTICLE_DETAILS_KEY, JSON.stringify(details));
   } catch (e) {}
 };
 
@@ -151,7 +159,7 @@ export const removeFromCachedLists = (articleId: string): void => {
         const list: any[] = JSON.parse(raw);
         if (Array.isArray(list)) {
           const nextList = list.filter(item => item.id !== articleId);
-          localStorage.setItem(key, JSON.stringify(nextList));
+          safeSetItem(key, JSON.stringify(nextList));
         }
       }
     } catch (e) {}
@@ -162,7 +170,7 @@ export const removeFromCachedLists = (articleId: string): void => {
     if (detailsRaw) {
       const details = JSON.parse(detailsRaw);
       delete details[articleId];
-      localStorage.setItem(CACHED_ARTICLE_DETAILS_KEY, JSON.stringify(details));
+      safeSetItem(CACHED_ARTICLE_DETAILS_KEY, JSON.stringify(details));
     }
   } catch (e) {}
 };

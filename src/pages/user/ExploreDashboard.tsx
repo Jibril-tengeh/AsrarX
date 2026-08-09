@@ -16,8 +16,9 @@ import { UnverifiedEmailGuard } from '../../components/UnverifiedEmailGuard';
 import { AuthModal } from '../../components/AuthModal';
 import { INITIAL_DEFAULT_ARTICLES } from '../../data/defaultArticles';
 import { fetchArticlesFromRest } from '../../lib/firestoreRest';
-import { isPubliclyVisibleArticle } from '../../lib/articleUtils';
+import { isPubliclyVisibleArticle, getTranslatedArticleTitle, getTranslatedArticleHook } from '../../lib/articleUtils';
 import { mergeWithLocalArticles } from '../../lib/localArticles';
+import { useBackButton } from '../../hooks/useBackButton';
 
 export const ExploreDashboard: React.FC = () => {
   const { t, language } = useLanguage();
@@ -109,6 +110,8 @@ export const ExploreDashboard: React.FC = () => {
   const [selectedArticle, setSelectedArticle] = useState<any | null>(null);
   const [showAuthModal, setShowAuthModal] = useState(false);
 
+  useBackButton(() => setSelectedArticle(null), !!selectedArticle);
+
   useEffect(() => {
     // Randomize daily wisdom based on current day (pseudo-random)
     const today = new Date().getDate();
@@ -169,9 +172,9 @@ export const ExploreDashboard: React.FC = () => {
     const processExploreRaw = (data: any, docId: string) => {
       if (!data) return null;
       if (!isPublishedStatus(data.status)) return null;
-      const activeTitle = language === 'fr' ? data.title : data[`title_${language}`] || data.title || 'Sans titre';
+      const activeTitle = getTranslatedArticleTitle(data, language) || 'Sans titre';
       const activeContent = language === 'fr' ? data.content : data[`content_${language}`] || data.content || '';
-      let activeHook = language === 'fr' ? data.hook : data[`hook_${language}`] || data.hook || '';
+      let activeHook = getTranslatedArticleHook(data, language);
       if (!activeHook && activeContent) {
         activeHook = activeContent.replace(/<[^>]+>/g, '').substring(0, 120) + '...';
       }
@@ -201,13 +204,8 @@ export const ExploreDashboard: React.FC = () => {
         if (language === 'en' && art.content_en) activeContent = art.content_en;
         if (language === 'ha' && art.content_ha) activeContent = art.content_ha;
 
-        let hookText = art.hook || '';
-        if (language === 'en' && art.hook_en) hookText = art.hook_en;
-        if (language === 'ha' && art.hook_ha) hookText = art.hook_ha;
-
-        let titleText = art.title || '';
-        if (language === 'en' && art.title_en) titleText = art.title_en;
-        if (language === 'ha' && art.title_ha) titleText = art.title_ha;
+        let hookText = getTranslatedArticleHook(art, language);
+        let titleText = getTranslatedArticleTitle(art, language);
 
         return {
           id: art.id,

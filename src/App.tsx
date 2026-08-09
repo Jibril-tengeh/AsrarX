@@ -702,7 +702,22 @@ export default function App() {
 
       // 2. Fallback check for active modal overlays or close buttons in DOM
       const activeModalCloseBtn = document.querySelector<HTMLElement>(
-        '[data-modal-overlay="true"] button[aria-label="Close"], [data-modal-overlay="true"] button.close-modal, .modal-backdrop button, [role="dialog"] button[aria-label="Close"], .modal-close-btn, button[data-close-modal="true"]'
+        [
+          '[data-modal-overlay="true"] button[aria-label="Close"]',
+          '[data-modal-overlay="true"] button[aria-label="Fermer"]',
+          '[data-modal-overlay="true"] button.close-modal',
+          '.modal-backdrop button',
+          '[role="dialog"] button[aria-label="Close"]',
+          '[role="dialog"] button[aria-label="Fermer"]',
+          '[role="dialog"] button.close-modal',
+          '.modal-close-btn',
+          'button[data-close-modal="true"]',
+          '.fixed.inset-0 button svg.lucide-x',
+          'button[aria-label="Fermer"]',
+          'button[aria-label="fermer"]',
+          'button[aria-label="Close"]',
+          'button[aria-label="close"]'
+        ].join(', ')
       );
       if (activeModalCloseBtn) {
         console.log('[Navigation] Closing active modal overlay via DOM close button.');

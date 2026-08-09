@@ -1,5 +1,6 @@
 // Validation utilities for preventing disposable emails, email aliases, and duplicate phone numbers
 import { collection, query, where, getDocs } from 'firebase/firestore';
+import { fetchUsersFromRest } from './firestoreRest';
 
 // Comprehensive list of known disposable / temporary email domains
 const DISPOSABLE_EMAIL_DOMAINS = new Set([
@@ -23,7 +24,8 @@ const DISPOSABLE_EMAIL_DOMAINS = new Set([
   'mintemail.com', 'mytrashmail.com', 'no-spam.ws', 'noclickemail.com', 'nospam4.us',
   'nospamthanks.info', 'onesecmail.com', 'onesecmail.net', 'onesecmail.org', 'pookmail.com',
   'safersignup.com', 'tempinbox.com', 'trashcanmail.com', 'wegwerfemail.de', 'wetaint.com', 'wrongmail.com', 'zippymail.in',
-  'bupya.com', 'vmani.com', 'cefsf.com', 'rmqkr.net', 'mvrht.net', 'btcmod.com', 'd41.co', 'flecto.net'
+  'bupya.com', 'vmani.com', 'cefsf.com', 'rmqkr.net', 'mvrht.net', 'btcmod.com', 'd41.co', 'flecto.net',
+  'dropmail.me', 'snapmail.cc', 'guerrillamail.info'
 ]);
 
 // Keywords in domain name that indicate temporary / disposable email service
@@ -41,7 +43,7 @@ const DISPOSABLE_KEYWORDS = [
   'mintemail', 'mytrashmail', 'noclickemail', 'pookmail', 'safersignup',
   'trashcanmail', 'wetaint', 'wrongmail', 'zippymail', 'bupya', 'vmani', 'cefsf',
   'rmqkr', 'mvrht', 'btcmod', 'flecto', 'armyspy', 'cuvox', 'dayrep', 'einrot',
-  'fleckens', 'gustr', 'jourrapide', 'rhyta', 'superrito', 'teleworm', 'tinypm', 'trbvm'
+  'fleckens', 'gustr', 'jourrapide', 'rhyta', 'superrito', 'teleworm', 'tinypm', 'trbvm', 'snapmail'
 ];
 
 /**
@@ -49,8 +51,12 @@ const DISPOSABLE_KEYWORDS = [
  */
 export const isDisposableEmail = (email: string): boolean => {
   if (!email || !email.includes('@')) return false;
-  const parts = email.split('@');
-  const domain = parts[parts.length - 1].trim().toLowerCase();
+  let clean = email.trim().toLowerCase();
+  try {
+    clean = decodeURIComponent(clean);
+  } catch (e) {}
+  const parts = clean.split('@');
+  const domain = parts[parts.length - 1].trim();
 
   // Check exact domain match
   if (DISPOSABLE_EMAIL_DOMAINS.has(domain)) {
@@ -72,18 +78,61 @@ export const isDisposableEmail = (email: string): boolean => {
  */
 export const isGmailAddress = (email: string): boolean => {
   if (!email || !email.includes('@')) return false;
-  const parts = email.trim().toLowerCase().split('@');
+  let clean = email.trim().toLowerCase();
+  try {
+    clean = decodeURIComponent(clean);
+  } catch (e) {}
+  const parts = clean.split('@');
   const domain = parts[parts.length - 1];
   return domain === 'gmail.com' || domain === 'googlemail.com';
 };
 
 /**
- * Checks if an email address uses a Gmail plus alias (e.g. user+alias@gmail.com)
+ * Checks if an email address uses a Gmail plus alias or sub-addressing (e.g. user+alias@gmail.com or user%2Balias@gmail.com)
  */
 export const hasGmailPlusAlias = (email: string): boolean => {
   if (!email || !email.includes('@')) return false;
-  const localPart = email.trim().toLowerCase().split('@')[0];
-  return localPart.includes('+');
+  let clean = email.trim().toLowerCase();
+  try {
+    clean = decodeURIComponent(clean);
+  } catch (e) {}
+  clean = clean.replace(/\uFF0B/g, '+');
+
+  const localPart = clean.split('@')[0];
+  return localPart.includes('+') || localPart.includes('%2b') || localPart.includes('%2B');
+};
+
+/**
+ * Checks if an email address has any alias indicator (plus sign, encoded plus, or invalid leading/trailing/double dots)
+ */
+export const hasEmailAlias = (email: string): boolean => {
+  if (!email || !email.includes('@')) return false;
+  let clean = email.trim().toLowerCase();
+  try {
+    clean = decodeURIComponent(clean);
+  } catch (e) {}
+  clean = clean.replace(/\uFF0B/g, '+');
+
+  const parts = clean.split('@');
+  const localPart = parts[0];
+  const domainPart = parts.slice(1).join('@');
+
+  // Check for sub-addressing / plus sign anywhere in localPart
+  if (localPart.includes('+') || localPart.includes('%2b') || localPart.includes('%2B')) {
+    return true;
+  }
+
+  // Check for invalid or alias dot placement (leading, trailing, consecutive)
+  if (localPart.startsWith('.') || localPart.endsWith('.') || localPart.includes('..')) {
+    return true;
+  }
+
+  // Check domain aliases
+  if (domainPart === 'googlemail.com' || domainPart === 'google.com') {
+    return true;
+  }
+
+  return false;
 };
 
 /**
@@ -97,23 +146,33 @@ export const hasGmailPlusAlias = (email: string): boolean => {
 export const normalizeEmail = (email: string): string => {
   if (!email || !email.includes('@')) return (email || '').trim().toLowerCase();
 
-  const trimmed = email.trim().toLowerCase();
-  const parts = trimmed.split('@');
+  let clean = email.trim().toLowerCase();
+  try {
+    clean = decodeURIComponent(clean);
+  } catch (e) {}
+  clean = clean.replace(/\uFF0B/g, '+');
+
+  const parts = clean.split('@');
   let localPart = parts[0];
   let domainPart = parts.slice(1).join('@');
+
+  // Strip anything after '+' (email sub-addressing / aliases)
+  if (localPart.includes('+')) {
+    localPart = localPart.split('+')[0];
+  }
+  if (localPart.includes('%2b') || localPart.includes('%2B')) {
+    localPart = localPart.split(/%2[bB]/)[0];
+  }
 
   // Treat googlemail.com and google.com as gmail.com
   if (domainPart === 'googlemail.com' || domainPart === 'google.com') {
     domainPart = 'gmail.com';
   }
 
-  // Strip anything after '+' (email sub-addressing / aliases for Gmail, Outlook, Yahoo, iCloud, etc.)
-  if (localPart.includes('+')) {
-    localPart = localPart.split('+')[0];
+  // Strip all dots from localPart for Gmail alias normalization
+  if (domainPart === 'gmail.com') {
+    localPart = localPart.replace(/\./g, '');
   }
-
-  // Strip all dots from localPart for alias normalization
-  localPart = localPart.replace(/\./g, '');
 
   return `${localPart}@${domainPart}`;
 };
@@ -177,7 +236,12 @@ export const validateRegistrationDetails = async (
   phone: string,
   firestoreDb: any
 ): Promise<RegistrationValidationResult> => {
-  const rawEmail = (email || '').trim().toLowerCase();
+  let rawEmail = (email || '').trim().toLowerCase();
+  try {
+    rawEmail = decodeURIComponent(rawEmail);
+  } catch (e) {}
+  rawEmail = rawEmail.replace(/\uFF0B/g, '+');
+
   const normEmail = normalizeEmail(rawEmail);
   const normPhone = normalizePhone(phone);
   const rawPhoneTrim = (phone || '').trim();
@@ -190,11 +254,11 @@ export const validateRegistrationDetails = async (
     };
   }
 
-  // 2. Check for Gmail plus aliases (e.g. user+alias@gmail.com)
-  if (rawEmail && hasGmailPlusAlias(rawEmail)) {
+  // 2. Check for Gmail plus aliases (e.g. user+alias@gmail.com) or invalid alias dot patterns
+  if (rawEmail && (hasGmailPlusAlias(rawEmail) || hasEmailAlias(rawEmail))) {
     return {
       valid: false,
-      error: "Les extensions et alias Gmail (ex: nom+alias@gmail.com avec le symbole '+') ne sont pas autorisés. Veuillez utiliser votre adresse Gmail principale."
+      error: "Les extensions et alias Gmail (ex: avec le symbole '+' ou format alias) ne sont pas autorisés. Veuillez utiliser votre adresse Gmail principale."
     };
   }
 
@@ -220,6 +284,8 @@ export const validateRegistrationDetails = async (
     };
   }
 
+  const existingUsersMap = new Map<string, { email?: string; normalizedEmail?: string; phone?: string; normalizedPhone?: string }>();
+
   try {
     if (firestoreDb) {
       const usersRef = collection(firestoreDb, 'users');
@@ -231,7 +297,7 @@ export const validateRegistrationDetails = async (
         if (snapEmailNorm && !snapEmailNorm.empty) {
           return {
             valid: false,
-            error: "Cette adresse email (ou un alias Google/mail de cette adresse) est déjà utilisée par un autre compte."
+            error: "Cette adresse email (ou un alias Google/mail de cette adresse, ex: avec des points) est déjà associée à un autre compte."
           };
         }
 
@@ -243,6 +309,15 @@ export const validateRegistrationDetails = async (
             error: "Cette adresse email est déjà enregistrée. Veuillez vous connecter."
           };
         }
+
+        const qEmailNormAsRaw = query(usersRef, where('email', '==', normEmail));
+        const snapEmailNormAsRaw = await getDocs(qEmailNormAsRaw).catch(() => null);
+        if (snapEmailNormAsRaw && !snapEmailNormAsRaw.empty) {
+          return {
+            valid: false,
+            error: "Cette adresse email (ou un alias de cette adresse) est déjà associée à un autre compte."
+          };
+        }
       }
 
       // Query 2: normalizedPhone and raw phone match
@@ -252,7 +327,7 @@ export const validateRegistrationDetails = async (
         if (snapPhoneNorm && !snapPhoneNorm.empty) {
           return {
             valid: false,
-            error: `Le numéro de téléphone ${normPhone} est déjà utilisé par un autre compte. Chaque numéro ne peut être utilisé qu'une seule fois.`
+            error: `Le numéro de téléphone ${normPhone} est déjà utilisé par un autre compte.`
           };
         }
 
@@ -261,81 +336,93 @@ export const validateRegistrationDetails = async (
         if (snapPhoneRaw && !snapPhoneRaw.empty) {
           return {
             valid: false,
-            error: `Le numéro de téléphone ${rawPhoneTrim} est déjà utilisé par un autre compte. Chaque numéro ne peut être utilisé qu'une seule fois.`
+            error: `Le numéro de téléphone ${rawPhoneTrim} est déjà utilisé par un autre compte.`
           };
         }
       }
 
-      // Query 3: Full documents scan for legacy documents without normalized fields
+      // Try full documents scan from Firestore
       const allUsersSnap = await getDocs(usersRef).catch(() => null);
       if (allUsersSnap && !allUsersSnap.empty) {
-        for (const userDoc of allUsersSnap.docs) {
-          const uData = userDoc.data();
-          
-          // Check email alias match against existing user email
-          if (normEmail) {
-            if (uData.email) {
-              const uNormEmail = normalizeEmail(uData.email);
-              if (uNormEmail === normEmail || uData.email.trim().toLowerCase() === rawEmail) {
-                return {
-                  valid: false,
-                  error: "Cette adresse email (ou un alias de cette adresse) est déjà utilisée par un autre compte."
-                };
-              }
-            }
-            if (uData.normalizedEmail && uData.normalizedEmail === normEmail) {
-              return {
-                valid: false,
-                error: "Cette adresse email (ou un alias de cette adresse) est déjà utilisée par un autre compte."
-              };
-            }
-          }
-
-          // Check phone match against existing user phone using arePhoneNumbersEqual
-          if (rawPhoneTrim) {
-            if (uData.phone && arePhoneNumbersEqual(uData.phone, rawPhoneTrim)) {
-              return {
-                valid: false,
-                error: `Le numéro de téléphone (${rawPhoneTrim}) est déjà associé à un autre compte. Chaque numéro ne peut être utilisé qu'une seule fois.`
-              };
-            }
-            if (uData.normalizedPhone && arePhoneNumbersEqual(uData.normalizedPhone, rawPhoneTrim)) {
-              return {
-                valid: false,
-                error: `Le numéro de téléphone (${rawPhoneTrim}) est déjà associé à un autre compte. Chaque numéro ne peut être utilisé qu'une seule fois.`
-              };
-            }
-          }
-        }
+        allUsersSnap.docs.forEach(doc => {
+          existingUsersMap.set(doc.id, doc.data());
+        });
       }
     }
   } catch (err) {
-    console.warn("Firestore validation check exception:", err);
+    console.warn("Firestore query exception in validateRegistrationDetails:", err);
   }
 
-  // Also check local storage for local backup sessions
+  // Fallback REST fetch to ensure all accounts are checked even if Firestore read fails
+  try {
+    const restUsers = await fetchUsersFromRest().catch(() => []);
+    if (restUsers && Array.isArray(restUsers)) {
+      restUsers.forEach((u: any) => {
+        const key = u.id || u.uid || u.email || Math.random().toString();
+        if (!existingUsersMap.has(key)) {
+          existingUsersMap.set(key, u);
+        }
+      });
+    }
+  } catch (e) {}
+
+  // Check local storage accounts
   try {
     const savedLocalUsers = localStorage.getItem('asrarhub_all_local_users');
     if (savedLocalUsers) {
       const usersList = JSON.parse(savedLocalUsers);
-      for (const u of usersList) {
-        if (rawEmail && u.email && (normalizeEmail(u.email) === normEmail || u.email.trim().toLowerCase() === rawEmail)) {
+      if (Array.isArray(usersList)) {
+        usersList.forEach((u: any) => {
+          const key = u.id || u.uid || u.email || Math.random().toString();
+          if (!existingUsersMap.has(key)) {
+            existingUsersMap.set(key, u);
+          }
+        });
+      }
+    }
+  } catch (e) {}
+
+  // Comprehensive iteration over all gathered users to detect alias matches
+  for (const uData of existingUsersMap.values()) {
+    if (rawEmail && normEmail) {
+      if (uData.email) {
+        const existingNorm = normalizeEmail(uData.email);
+        const existingRaw = uData.email.trim().toLowerCase();
+        if (existingNorm === normEmail || existingRaw === rawEmail || normalizeEmail(existingRaw) === normEmail) {
           return {
             valid: false,
-            error: "Cette adresse email (ou un alias de cette adresse) est déjà enregistrée."
+            error: "Cette adresse email (ou un alias Google/mail de cette adresse, ex: avec des points ou un symbole '+') est déjà associée à un autre compte."
           };
         }
-        if (rawPhoneTrim && u.phone && arePhoneNumbersEqual(u.phone, rawPhoneTrim)) {
+      }
+
+      if (uData.normalizedEmail) {
+        const existingNorm2 = normalizeEmail(uData.normalizedEmail);
+        if (existingNorm2 === normEmail) {
           return {
             valid: false,
-            error: `Le numéro de téléphone (${rawPhoneTrim}) est déjà utilisé par un autre compte. Chaque numéro ne peut être utilisé qu'une seule fois.`
+            error: "Cette adresse email (ou un alias Google/mail de cette adresse, ex: avec des points ou un symbole '+') est déjà associée à un autre compte."
           };
         }
       }
     }
-  } catch (e) {
-    // Ignore localStorage parse errors
+
+    if (rawPhoneTrim) {
+      if (uData.phone && arePhoneNumbersEqual(uData.phone, rawPhoneTrim)) {
+        return {
+          valid: false,
+          error: `Le numéro de téléphone (${rawPhoneTrim}) est déjà associé à un autre compte.`
+        };
+      }
+      if (uData.normalizedPhone && arePhoneNumbersEqual(uData.normalizedPhone, rawPhoneTrim)) {
+        return {
+          valid: false,
+          error: `Le numéro de téléphone (${rawPhoneTrim}) est déjà associé à un autre compte.`
+        };
+      }
+    }
   }
 
   return { valid: true };
 };
+

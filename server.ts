@@ -893,6 +893,75 @@ Détails de la conversation actuelle :
     }
   });
 
+  // AI Book Cover Generator endpoint
+  app.post("/api/admin/generate-book-cover", async (req, res) => {
+    try {
+      const { prompt, title, subtitle, author, themeStyle } = req.body;
+      const apiKey = process.env.GEMINI_API_KEY;
+      
+      let generatedImageUrl: string | null = null;
+      let enhancedPrompt = prompt || `Book cover illustration for a book titled "${title || 'Le Livre des Secrets'}", ${themeStyle || 'mystical gold and emerald'}, high quality book cover art`;
+
+      if (apiKey) {
+        const ai = new GoogleGenAI({
+          apiKey,
+          httpOptions: {
+            headers: {
+              'User-Agent': 'aistudio-build',
+            }
+          }
+        });
+
+        // Prompt expansion using gemini-2.5-flash
+        try {
+          const promptExpansion = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: `System: You are a world-class artistic director specializing in luxury book cover artwork, spiritual manuscripts, and e-book design. Create a detailed visual prompt in English (max 45 words) for an image generator to create a stunning background artwork for:
+Title: "${title || 'Les Secrets Spirituels'}"
+Subtitle: "${subtitle || ''}"
+Theme/Style: ${themeStyle || 'Islamic spiritual manuscript, gold filigree, emerald leather, sacred geometry'}
+User Description: ${prompt || 'elegant book cover artwork with gold accents'}
+Return ONLY the English visual prompt text.`
+          });
+          if (promptExpansion.text) {
+            enhancedPrompt = promptExpansion.text.trim();
+          }
+        } catch (expansionErr) {
+          console.warn("Prompt expansion fallback:", expansionErr);
+        }
+
+        // Try Imagen 3.0 image generation
+        try {
+          const imageRes = await ai.models.generateImages({
+            model: "imagen-3.0-generate-002",
+            prompt: enhancedPrompt,
+            config: {
+              numberOfImages: 1,
+              outputMimeType: "image/jpeg",
+              aspectRatio: "3:4"
+            }
+          });
+
+          if (imageRes.generatedImages && imageRes.generatedImages[0]?.image?.imageBytes) {
+            const base64Bytes = imageRes.generatedImages[0].image.imageBytes;
+            generatedImageUrl = `data:image/jpeg;base64,${base64Bytes}`;
+          }
+        } catch (imgErr: any) {
+          console.warn("Imagen generation error (falling back to prompt & client canvas):", imgErr?.message || imgErr);
+        }
+      }
+
+      res.json({
+        success: true,
+        imageUrl: generatedImageUrl,
+        enhancedPrompt
+      });
+    } catch (error: any) {
+      console.error("Error in /api/admin/generate-book-cover:", error);
+      res.status(500).json({ error: error.message || "Failed to process book cover request" });
+    }
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const { createServer: createViteServer } = await import("vite");

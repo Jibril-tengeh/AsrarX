@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import { BookOpen, Sparkles, ScrollText, Image as ImageIcon, Crown } from 'lucide-react';
 import { AsrarItem } from '../types';
+import { getApiUrl } from '../lib/api';
 
 export type LayoutMode = 'grid2' | 'grid1' | 'list';
 
@@ -41,23 +42,82 @@ const ImageWithFallback: React.FC<{ src: string; alt: string; className?: string
 
 export const SecretCard: React.FC<SecretCardProps> = ({ item, layoutMode = 'grid2', categories }) => {
   const { t, language } = useLanguage();
-  
-  // Use cached translation if available
-  let displayTitle = item.title;
-  let displayHook = item.hook;
-  
-  if (language !== 'fr') {
+  const [translated, setTranslated] = useState<{ title?: string; hook?: string }>({});
+
+  // 1. Check direct manual translation properties on item
+  let manualTitle = '';
+  let manualHook = '';
+
+  if (language === 'en') {
+    manualTitle = item.title_en || '';
+    manualHook = item.hook_en || '';
+  } else if (language === 'ha') {
+    manualTitle = item.title_ha || '';
+    manualHook = item.hook_ha || '';
+  } else if (language === 'fr') {
+    manualTitle = item.title_fr || item.title || '';
+    manualHook = item.hook_fr || item.hook || '';
+  }
+
+  // 2. Check local storage cache or auto-translate if missing
+  useEffect(() => {
+    if (language === 'fr') return;
+    if (manualTitle && manualHook) return;
+
+    const cacheKey = `asrar_trans_${item.id}_${language}`;
     try {
-      const cached = localStorage.getItem(`asrar_trans_${item.id}_${language}`);
+      const cached = localStorage.getItem(cacheKey);
       if (cached) {
         const parsed = JSON.parse(cached);
-        if (parsed.title) displayTitle = parsed.title;
-        if (parsed.hook) displayHook = parsed.hook;
+        if (parsed.title || parsed.hook) {
+          setTranslated({
+            title: parsed.title,
+            hook: parsed.hook
+          });
+          return;
+        }
       }
-    } catch (e) {
-      // silent fail
-    }
-  }
+    } catch (e) {}
+
+    let isMounted = true;
+    const fetchAutoTranslation = async () => {
+      try {
+        const res = await fetch(getApiUrl('/api/translate-article'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: item.title,
+            hook: item.hook || '',
+            content: item.content || '',
+            benefits: item.benefits || [],
+            targetLanguage: language
+          })
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data && (data.title || data.hook)) {
+            localStorage.setItem(cacheKey, JSON.stringify(data));
+            if (isMounted) {
+              setTranslated({
+                title: data.title,
+                hook: data.hook
+              });
+            }
+          }
+        }
+      } catch (e) {
+        console.warn(`[SecretCard] Translation error for ${item.id} (${language}):`, e);
+      }
+    };
+
+    fetchAutoTranslation();
+    return () => { isMounted = false; };
+  }, [item.id, item.title, item.hook, language, manualTitle, manualHook]);
+
+  // Final display title and hook
+  const displayTitle = manualTitle || translated.title || item.title;
+  const displayHook = manualHook || translated.hook || item.hook || '';
   
   // Dynamic category resolution
   let categoryLabel = '';

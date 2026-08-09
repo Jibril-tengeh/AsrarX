@@ -400,32 +400,54 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               pushNotificationsEnabled: data.pushNotificationsEnabled !== undefined ? data.pushNotificationsEnabled : true
             };
           } else {
+            const now = new Date();
+            const trialHours = getTrialDurationHours();
+            const trialExpiry = new Date(now.getTime() + trialHours * 60 * 60 * 1000);
+
             resolvedUser = {
               uid: firebaseUser.uid,
               email: firebaseUser.email,
-              name: firebaseUser.displayName,
+              name: firebaseUser.displayName || (firebaseUser.email ? firebaseUser.email.split('@')[0] : 'Membre AsrarHub'),
               role: currentRole,
               isBanned: false,
               mysteryToolsDisabled: false,
               blockedTools: [],
-              isTrusted: false,
+              isTrusted: true,
               emailVerified: true,
               photoURL: firebaseUser.photoURL || null,
               coverPhotoURL: null,
-              spiritualPoints: 0,
-              subscriptionTier: currentRole === 'admin' ? 'premium' : 'free',
-              premiumUntil: null,
-              freeTrialActivated: false,
-              freeTrialActivatedAt: null,
-              freeTrialExpiresAt: null,
+              spiritualPoints: 100,
+              subscriptionTier: 'premium',
+              premiumUntil: trialExpiry.toISOString(),
+              freeTrialActivated: true,
+              freeTrialActivatedAt: now.toISOString(),
+              freeTrialExpiresAt: trialExpiry.toISOString(),
               hasSeenTrialPopup: false,
               hideAds: false,
-              streakDays: 0,
+              streakDays: 1,
               purchasedItems: [],
               country: '',
               phone: '',
               pushNotificationsEnabled: true
             };
+
+            // Auto-persist user profile to Firestore so admin dashboard sees them!
+            setDoc(userRef, {
+              email: firebaseUser.email || '',
+              name: resolvedUser.name,
+              role: currentRole,
+              isBanned: false,
+              mysteryToolsDisabled: false,
+              isTrusted: true,
+              createdAt: now.toISOString(),
+              subscriptionTier: 'premium',
+              freeTrialActivated: true,
+              freeTrialActivatedAt: now.toISOString(),
+              freeTrialExpiresAt: trialExpiry.toISOString(),
+              premiumUntil: trialExpiry.toISOString(),
+              hasSeenTrialPopup: false,
+              requiresValidation: false
+            }, { merge: true }).catch(err => console.warn("Auto-persist missing user doc note:", err));
           }
 
           setUser(resolvedUser);

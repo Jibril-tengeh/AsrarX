@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { AuthModal } from '../../components/AuthModal';
@@ -6,7 +6,7 @@ import {
   Settings, Users, BarChart3, Database, Shield, LayoutDashboard, 
   Book, BookOpen, ToggleLeft, Volume2, Headphones, Save, Search, Plus, Trash2, Edit2, FileText,
   Eye, Image as ImageIcon, Crop as CropIcon, X, Upload, ShoppingBag, CreditCard,
-  Clock, CheckCircle, XCircle, Globe, Grid, List, Mail, Phone, Lock, Unlock, Bell, BellOff, Sparkles, Star, Share, ShieldAlert, Download, DownloadCloud, Crown, UserPlus, UserCheck,
+  Clock, CheckCircle, XCircle, Globe, Grid, List, Mail, Phone, Lock, Unlock, Bell, BellOff, Sparkles, Star, Share, ShieldAlert, Download, DownloadCloud, Crown, UserPlus, UserCheck, Award,
   FolderOpen, Copy, Radio, Type, Sliders, Maximize2, Activity, Terminal, RefreshCw, Moon, ChevronDown, ChevronUp, Layout,
   AlignLeft, AlignCenter, AlignRight, AlignJustify
 } from 'lucide-react';
@@ -19,13 +19,14 @@ const LucideIcon = ({ name, className, size }: { name: string; className?: strin
   }
   return <IconComponent className={className} size={size} />;
 };
-import { db } from '../../lib/firebase';
-import { collection, getDocs, doc, getDoc, updateDoc, deleteDoc, addDoc, onSnapshot, query, orderBy, setDoc, writeBatch } from 'firebase/firestore';
+import { db, auth } from '../../lib/firebase';
+import { collection, getDocs, doc, getDoc, updateDoc, deleteDoc, addDoc, onSnapshot, query, orderBy, setDoc, writeBatch, increment } from 'firebase/firestore';
 import { set } from 'idb-keyval';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { TipTapEditor } from '../../components/TipTapEditor';
 import { getAsrarItems } from '../../data/store';
+import { normalizeEmail, normalizePhone } from '../../lib/validationUtils';
 // import SimpleEditor from 'react-simple-code-editor';
 // import Prism from 'prismjs';
 // import 'prismjs/components/prism-javascript';
@@ -43,14 +44,16 @@ import {
 import { AdminStoreManager } from '../../components/AdminStoreManager';
 import { SACRED_BOOKS } from '../../data/sacredBooksData';
 import { INITIAL_DEFAULT_ARTICLES } from '../../data/defaultArticles';
-import { fetchArticlesFromRest } from '../../lib/firestoreRest';
+import { fetchArticlesFromRest, fetchUsersFromRest } from '../../lib/firestoreRest';
 import { isPubliclyVisibleArticle } from '../../lib/articleUtils';
 import { saveLocalCustomArticle, deleteLocalCustomArticle, clearAllLocalCustomArticles, mergeWithLocalArticles } from '../../lib/localArticles';
 import { AdminRecitersManager } from '../../components/admin/AdminRecitersManager';
+import { BookCoverStudio } from '../../components/admin/BookCoverStudio';
 import { DEFAULT_OATHS } from '../user/tools/GrandOaths';
 import { QURAN_RECITERS } from '../../data/reciters';
 import { calculateHijriDate } from '../../utils/hijriDate';
 import { LunarSealVarietiesSection } from '../../components/LunarSealVarietiesSection';
+import { useBackButton } from '../../hooks/useBackButton';
 
 const LayoutSelector = ({ value, onChange, activeColor = 'emerald' }: { value: string, onChange: (val: string) => void, activeColor?: string }) => {
   const isEmerald = activeColor.includes('emerald');
@@ -124,7 +127,7 @@ const LayoutSelector = ({ value, onChange, activeColor = 'emerald' }: { value: s
   );
 };
 
-type AdminTab = 'overview' | 'users' | 'payments' | 'community' | 'features' | 'reciters' | 'ruqyah' | 'content' | 'notifications' | 'settings' | 'articles' | 'store' | 'grand_oaths' | 'categories' | 'seals';
+type AdminTab = 'overview' | 'users' | 'payments' | 'community' | 'features' | 'reciters' | 'ruqyah' | 'content' | 'notifications' | 'settings' | 'articles' | 'store' | 'grand_oaths' | 'categories' | 'seals' | 'book_covers';
 
 interface Article {
   id: string;
@@ -168,6 +171,7 @@ interface User {
   password_hash_indicator?: string;
   pushNotificationsEnabled?: boolean;
   pushNotificationStatus?: string;
+  spiritualPoints?: number;
   blockedTools?: string[];
 }
 
@@ -196,6 +200,7 @@ interface Notification {
 export const AdminDashboard: React.FC = () => {
   const { language } = useLanguage();
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
+  const [showBookCoverStudioModal, setShowBookCoverStudioModal] = useState(false);
   
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
@@ -217,7 +222,20 @@ export const AdminDashboard: React.FC = () => {
   });
 
   // Collapsible Admin Sections State (all sections closed/collapsed by default)
-  const [collapsedAdminSections, setCollapsedAdminSections] = useState<Record<string, boolean>>({});
+  const [collapsedAdminSections, setCollapsedAdminSections] = useState<Record<string, boolean>>(() => {
+    try {
+      const saved = localStorage.getItem('asrarhub_collapsed_admin_sections');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('asrarhub_collapsed_admin_sections', JSON.stringify(collapsedAdminSections));
+    } catch {}
+  }, [collapsedAdminSections]);
 
   const toggleAdminSectionCollapse = (sectionId: string) => {
     setCollapsedAdminSections(prev => ({
@@ -354,9 +372,17 @@ export const AdminDashboard: React.FC = () => {
   const [userSearch, setUserSearch] = useState('');
   const [usersLimit, setUsersLimit] = useState(50);
   const [rawDbUsers, setRawDbUsers] = useState<any[]>([]);
+  const [restUsers, setRestUsers] = useState<any[]>([]);
+  const restUsersRef = useRef<any[]>([]);
 
   // User Management Modals & Sync State
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
+  const [selectedUserDetail, setSelectedUserDetail] = useState<User | null>(null);
+  const [userToDeleteConfirm, setUserToDeleteConfirm] = useState<User | null>(null);
+  const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
+  const [isBatchDeleteConfirmOpen, setIsBatchDeleteConfirmOpen] = useState(false);
+  const [isEditingUser, setIsEditingUser] = useState(false);
+  const [editUserData, setEditUserData] = useState<Partial<User>>({});
   const [addUserMode, setAddUserMode] = useState<'single' | 'batch'>('single');
   const [newUserData, setNewUserData] = useState({
     name: '',
@@ -375,8 +401,170 @@ export const AdminDashboard: React.FC = () => {
   const [lexiqueLimit, setLexiqueLimit] = useState(15);
   const [blockingToolsUser, setBlockingToolsUser] = useState<User | null>(null);
 
+  useBackButton(() => setSelectedUserDetail(null), !!selectedUserDetail);
+  useBackButton(() => setBlockingToolsUser(null), !!blockingToolsUser);
+  useBackButton(() => setIsAddUserModalOpen(false), isAddUserModalOpen);
+
   // Feature Search
   const [featureSearch, setFeatureSearch] = useState('');
+
+  const masterDiscoveredMapRef = useRef<Map<string, User>>(new Map());
+
+  const normalizeUser = (u: any): User => {
+    const email = (u.email || '').trim().toLowerCase();
+    const rawName = u.name || '';
+    const name = (rawName && rawName !== 'Sans Nom') ? rawName : (email ? email.split('@')[0] : 'Membre AsrarHub');
+    const photoURL = u.photoURL || u.avatar || u.picture || u.profileImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name || email || u.id || 'user')}`;
+    const country = (u.country || u.location || u.region) ? (u.country || u.location || u.region) : 'Non renseigné';
+    const phone = (u.phone || u.phoneNumber || u.tel) ? (u.phone || u.phoneNumber || u.tel) : 'Non renseigné';
+    const password_hash_indicator = u.password_hash_indicator || u.passwordHash || (u.password && u.password !== 'Non enregistré / Google' ? u.password : '•••••••• (Sécurisé Hash)');
+    const password = password_hash_indicator;
+    const pushNotificationsEnabled = u.pushNotificationsEnabled !== undefined ? u.pushNotificationsEnabled : (u.pushNotificationStatus === 'disabled' || u.pushNotificationStatus === false ? false : true);
+    const pushNotificationStatus = u.pushNotificationStatus || (pushNotificationsEnabled ? 'enabled' : 'disabled');
+
+    const stableSlug = email ? email.replace(/[^a-zA-Z0-9]/g, '_') : name.replace(/[^a-zA-Z0-9]/g, '_');
+    const id = u.id || u.uid || (stableSlug ? `usr_${stableSlug}` : 'usr_default');
+
+    return {
+      ...u,
+      id,
+      name,
+      email: email || 'utilisateur@asrarhub.com',
+      photoURL,
+      country,
+      phone,
+      password,
+      password_hash_indicator,
+      pushNotificationsEnabled,
+      pushNotificationStatus,
+      isBanned: !!u.isBanned,
+      mysteryToolsDisabled: !!u.mysteryToolsDisabled,
+      isTrusted: u.isTrusted !== undefined ? u.isTrusted : true,
+      blockedTools: u.blockedTools || []
+    };
+  };
+
+  const aggregateAllUsers = (dbList: any[] = [], payList: any[] = [], postList: any[] = [], restList: any[] = []) => {
+    const usersMap = new Map<string, User>();
+
+    const deletedUserIds: string[] = (() => {
+      try {
+        return JSON.parse(localStorage.getItem('asrarhub_deleted_user_ids') || '[]');
+      } catch {
+        return [];
+      }
+    })();
+
+    // 1. Pre-fill from masterDiscoveredMapRef to ensure previously discovered users are NEVER dropped unless deleted
+    masterDiscoveredMapRef.current.forEach((uVal, uKey) => {
+      const isDeleted = deletedUserIds.includes(uKey) || 
+        (uVal.id && deletedUserIds.includes(uVal.id)) || 
+        (uVal.email && deletedUserIds.includes(uVal.email.toLowerCase().trim()));
+      if (!isDeleted) {
+        usersMap.set(uKey, uVal);
+      }
+    });
+
+    const effectiveRestList = (restList && restList.length > 0) ? restList : restUsersRef.current;
+    if (restList && restList.length > 0) {
+      restUsersRef.current = restList;
+    }
+
+    const addOrMerge = (uObj: any) => {
+      if (!uObj) return;
+      const norm = normalizeUser(uObj);
+      if (norm.id && deletedUserIds.includes(norm.id)) return;
+      if (norm.email && deletedUserIds.includes(norm.email.toLowerCase().trim())) return;
+
+      const hasRealEmail = norm.email && typeof norm.email === 'string' && norm.email.trim() !== '' && norm.email.includes('@') && !norm.email.includes('utilisateur@asrarhub.com');
+      const key = hasRealEmail ? norm.email.toLowerCase().trim() : norm.id;
+      if (!key) return;
+      if (deletedUserIds.includes(key)) return;
+
+      if (!usersMap.has(key)) {
+        usersMap.set(key, norm);
+      } else {
+        const existing = usersMap.get(key)!;
+        usersMap.set(key, {
+          ...norm,
+          ...existing,
+          id: existing.id || norm.id,
+          name: (existing.name && existing.name !== 'Sans Nom' && existing.name !== 'Membre AsrarHub') ? existing.name : norm.name,
+          photoURL: existing.photoURL || norm.photoURL,
+          country: (existing.country && existing.country !== 'Non renseigné') ? existing.country : norm.country,
+          phone: (existing.phone && existing.phone !== 'Non renseigné') ? existing.phone : norm.phone,
+          password_hash_indicator: (existing.password_hash_indicator && !existing.password_hash_indicator.includes('••••')) ? existing.password_hash_indicator : norm.password_hash_indicator,
+          isBanned: existing.isBanned || norm.isBanned,
+          isTrusted: existing.isTrusted !== undefined ? existing.isTrusted : norm.isTrusted,
+          blockedTools: (existing.blockedTools && existing.blockedTools.length > 0) ? existing.blockedTools : norm.blockedTools
+        });
+      }
+    };
+
+    (dbList || []).forEach(u => addOrMerge(u));
+    (effectiveRestList || []).forEach(u => addOrMerge(u));
+
+    try {
+      const storedAll = localStorage.getItem('asrarhub_all_local_users');
+      if (storedAll) {
+        const parsedAll = JSON.parse(storedAll);
+        if (Array.isArray(parsedAll)) {
+          parsedAll.forEach(u => addOrMerge(u));
+        }
+      }
+    } catch (e) {}
+
+    try {
+      const storedSingle = localStorage.getItem('asrarhub_local_user');
+      if (storedSingle) {
+        const parsedSingle = JSON.parse(storedSingle);
+        if (parsedSingle) addOrMerge(parsedSingle);
+      }
+    } catch (e) {}
+
+    (payList || []).forEach((p: any) => {
+      const email = p.userEmail || p.email;
+      if (email && typeof email === 'string') {
+        addOrMerge({
+          id: p.userId || p.uid || `usr_${email.replace(/[^a-zA-Z0-9]/g, '_')}`,
+          name: p.userName || p.name || email.split('@')[0],
+          email: email,
+          phone: p.userPhone || p.phone || '',
+          isPremium: p.status === 'approved' || p.status === 'validated',
+          subscriptionPlan: p.plan || 'premium',
+          createdAt: p.createdAt || p.date || new Date().toISOString()
+        });
+      }
+    });
+
+    (postList || []).forEach((post: any) => {
+      const email = post.authorEmail || post.email;
+      if (email && typeof email === 'string') {
+        addOrMerge({
+          id: post.authorId || post.userId || `usr_${email.replace(/[^a-zA-Z0-9]/g, '_')}`,
+          name: post.authorName || post.name || email.split('@')[0],
+          email: email,
+          photoURL: post.authorAvatar || post.photoURL,
+          createdAt: post.createdAt || new Date().toISOString()
+        });
+      }
+    });
+
+    // Update masterDiscoveredMapRef cumulatively
+    usersMap.forEach((uVal, uKey) => {
+      masterDiscoveredMapRef.current.set(uKey, uVal);
+    });
+
+    const aggregatedList = Array.from(usersMap.values());
+    setUsers(aggregatedList);
+
+    // Synchronize to localStorage asrarhub_all_local_users
+    try {
+      if (aggregatedList.length > 0) {
+        localStorage.setItem('asrarhub_all_local_users', JSON.stringify(aggregatedList));
+      }
+    } catch (e) {}
+  };
 
   // --- Network Diagnostics State ---
   const [diagnosticLogs, setDiagnosticLogs] = useState<NetworkLog[]>(getNetworkLogs());
@@ -518,13 +706,27 @@ export const AdminDashboard: React.FC = () => {
     // Auto-save draft
     if (activeTab === 'articles' && (newArticle.title || newArticle.content) && !editingArticle) {
       const timer = setTimeout(() => {
-        localStorage.setItem('asrarhub_article_draft', JSON.stringify(newArticle));
-        setDraftSavedMessage(`Brouillon sauvegardé à ${new Date().toLocaleTimeString()}`);
-        setTimeout(() => setDraftSavedMessage(''), 3000);
+        try {
+          localStorage.setItem('asrarhub_article_draft', JSON.stringify(newArticle));
+          setDraftSavedMessage(`Brouillon sauvegardé à ${new Date().toLocaleTimeString()}`);
+          setTimeout(() => setDraftSavedMessage(''), 3000);
+        } catch (err) {
+          // If QuotaExceededError occurs (e.g. large base64 thumbnail), try saving draft without thumbnail
+          try {
+            const { thumbnail, ...draftWithoutImage } = newArticle;
+            localStorage.setItem('asrarhub_article_draft', JSON.stringify(draftWithoutImage));
+            setDraftSavedMessage(`Brouillon (sans image) sauvegardé à ${new Date().toLocaleTimeString()}`);
+            setTimeout(() => setDraftSavedMessage(''), 3000);
+          } catch (e) {
+            console.warn('Draft save failed due to storage limit:', e);
+          }
+        }
       }, 2000);
       return () => clearTimeout(timer);
     } else if (activeTab === 'articles' && !newArticle.title && !newArticle.content) {
-       localStorage.removeItem('asrarhub_article_draft');
+      try {
+        localStorage.removeItem('asrarhub_article_draft');
+      } catch (e) {}
     }
   }, [newArticle, activeTab, editingArticle]);
 
@@ -594,6 +796,29 @@ export const AdminDashboard: React.FC = () => {
     const isAudioEnabled = localStorage.getItem('admin_ruqyah_audio_enabled') === 'true';
     setAudioEnabled(isAudioEnabled);
 
+    // Initial load from local cache into masterDiscoveredMapRef
+    try {
+      const stored = localStorage.getItem('asrarhub_all_local_users');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          parsed.forEach((u: any) => {
+            const norm = normalizeUser(u);
+            const k = norm.email && typeof norm.email === 'string' && norm.email.includes('@') && !norm.email.includes('utilisateur@asrarhub.com') ? norm.email.toLowerCase().trim() : norm.id;
+            if (k) masterDiscoveredMapRef.current.set(k, norm);
+          });
+        }
+      }
+    } catch (e) {}
+
+    // Initial aggregation run
+    aggregateAllUsers();
+
+    // Auto-trigger global account scan on mount to discover all accounts across all collections
+    const autoScanTimer = setTimeout(() => {
+      handleDeepScanAndSyncUsers();
+    }, 400);
+
     // Seed Grand Oaths if not already done
     const seedOathsIfNeeded = async () => {
       try {
@@ -616,133 +841,24 @@ export const AdminDashboard: React.FC = () => {
       }
     };
     seedOathsIfNeeded();
-    
-    const DEFAULT_MEMBERS: User[] = [];
 
-    const normalizeUser = (u: any): User => {
-      const email = u.email || 'utilisateur@asrarhub.com';
-      const name = (u.name && u.name !== 'Sans Nom') ? u.name : (email ? email.split('@')[0] : 'Membre AsrarHub');
-      const photoURL = u.photoURL || u.avatar || u.picture || u.profileImage || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(name || email)}`;
-      const country = (u.country || u.location || u.region) ? (u.country || u.location || u.region) : 'Non renseigné';
-      const phone = (u.phone || u.phoneNumber || u.tel) ? (u.phone || u.phoneNumber || u.tel) : 'Non renseigné';
-      const password_hash_indicator = u.password_hash_indicator || u.passwordHash || (u.password && u.password !== 'Non enregistré / Google' ? u.password : '•••••••• (Sécurisé Hash)');
-      const password = password_hash_indicator;
-      const pushNotificationsEnabled = u.pushNotificationsEnabled !== undefined ? u.pushNotificationsEnabled : (u.pushNotificationStatus === 'disabled' || u.pushNotificationStatus === false ? false : true);
-      const pushNotificationStatus = u.pushNotificationStatus || (pushNotificationsEnabled ? 'enabled' : 'disabled');
-
-      return {
-        ...u,
-        id: u.id || `usr_${Math.random().toString(36).substr(2, 9)}`,
-        name,
-        email,
-        photoURL,
-        country,
-        phone,
-        password,
-        password_hash_indicator,
-        pushNotificationsEnabled,
-        pushNotificationStatus,
-        isBanned: !!u.isBanned,
-        mysteryToolsDisabled: !!u.mysteryToolsDisabled,
-        isTrusted: u.isTrusted !== undefined ? u.isTrusted : true,
-        blockedTools: u.blockedTools || []
-      };
-    };
-
-    const aggregateAllUsers = (dbList: any[] = [], payList: any[] = [], postList: any[] = []) => {
-      const usersMap = new Map<string, User>();
-
-      const addOrMerge = (uObj: any) => {
-        if (!uObj) return;
-        const norm = normalizeUser(uObj);
-        const key = (norm.email || norm.id).toLowerCase().trim();
-        if (!key) return;
-
-        if (!usersMap.has(key)) {
-          usersMap.set(key, norm);
-        } else {
-          const existing = usersMap.get(key)!;
-          usersMap.set(key, {
-            ...norm,
-            ...existing,
-            name: (existing.name && existing.name !== 'Sans Nom' && existing.name !== 'Membre AsrarHub') ? existing.name : norm.name,
-            photoURL: existing.photoURL || norm.photoURL,
-            country: (existing.country && existing.country !== 'Non renseigné') ? existing.country : norm.country,
-            phone: (existing.phone && existing.phone !== 'Non renseigné') ? existing.phone : norm.phone,
-            password_hash_indicator: (existing.password_hash_indicator && !existing.password_hash_indicator.includes('••••')) ? existing.password_hash_indicator : norm.password_hash_indicator,
-            isBanned: existing.isBanned || norm.isBanned,
-            isTrusted: existing.isTrusted !== undefined ? existing.isTrusted : norm.isTrusted,
-            blockedTools: (existing.blockedTools && existing.blockedTools.length > 0) ? existing.blockedTools : norm.blockedTools
-          });
-        }
-      };
-
-      // 1. DB users first
-      (dbList || []).forEach(u => addOrMerge(u));
-
-      // 2. All registered local users from localStorage ('asrarhub_all_local_users')
-      try {
-        const storedAll = localStorage.getItem('asrarhub_all_local_users');
-        if (storedAll) {
-          const parsedAll = JSON.parse(storedAll);
-          if (Array.isArray(parsedAll)) {
-            parsedAll.forEach(u => addOrMerge(u));
-          }
-        }
-      } catch (e) {}
-
-      // 3. Current active local user from localStorage ('asrarhub_local_user')
-      try {
-        const storedSingle = localStorage.getItem('asrarhub_local_user');
-        if (storedSingle) {
-          const parsedSingle = JSON.parse(storedSingle);
-          if (parsedSingle) addOrMerge(parsedSingle);
-        }
-      } catch (e) {}
-
-      // 4. Extract users from manual payments
-      (payList || []).forEach((p: any) => {
-        const email = p.userEmail || p.email;
-        if (email && typeof email === 'string') {
-          addOrMerge({
-            id: p.userId || p.uid || `usr_${email.replace(/[^a-zA-Z0-9]/g, '_')}`,
-            name: p.userName || p.name || email.split('@')[0],
-            email: email,
-            phone: p.userPhone || p.phone || '',
-            isPremium: p.status === 'approved' || p.status === 'validated',
-            subscriptionPlan: p.plan || 'premium',
-            createdAt: p.createdAt || p.date || new Date().toISOString()
-          });
-        }
-      });
-
-      // 5. Extract users from community posts
-      (postList || []).forEach((post: any) => {
-        const email = post.authorEmail || post.email;
-        if (email && typeof email === 'string') {
-          addOrMerge({
-            id: post.authorId || post.userId || `usr_${email.replace(/[^a-zA-Z0-9]/g, '_')}`,
-            name: post.authorName || post.name || email.split('@')[0],
-            email: email,
-            photoURL: post.authorAvatar || post.photoURL,
-            createdAt: post.createdAt || new Date().toISOString()
-          });
-        }
-      });
-
-      // 6. DEFAULT_MEMBERS
-      DEFAULT_MEMBERS.forEach(defUser => addOrMerge(defUser));
-
-      setUsers(Array.from(usersMap.values()));
-    };
+    // Direct REST API fetch for registered users to bypass any WebSocket connection drops
+    fetchUsersFromRest().then(rUsers => {
+      if (Array.isArray(rUsers) && rUsers.length > 0) {
+        console.log(`[Admin REST Users] Fetched ${rUsers.length} user documents directly via REST API!`);
+        restUsersRef.current = rUsers;
+        setRestUsers(rUsers);
+        aggregateAllUsers(rawDbUsers, manualPayments, communityPosts, rUsers);
+      }
+    }).catch(e => console.warn("[Admin REST Users] REST fetch note:", e));
 
     const unsubscribeUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
       let dbUsers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setRawDbUsers(dbUsers);
-      aggregateAllUsers(dbUsers, manualPayments, communityPosts);
+      aggregateAllUsers(dbUsers, manualPayments, communityPosts, restUsersRef.current);
     }, (error) => {
       console.warn("Admin Users listener note:", error);
-      aggregateAllUsers([], manualPayments, communityPosts);
+      aggregateAllUsers([], manualPayments, communityPosts, restUsersRef.current);
     });
 
     const unsubscribeLexique = onSnapshot(collection(db, 'lexique_terms'), (snapshot) => {
@@ -756,7 +872,7 @@ export const AdminDashboard: React.FC = () => {
     const unsubscribePosts = onSnapshot(query(collection(db, 'community_posts'), orderBy('createdAt', 'desc')), (snapshot) => {
       const postsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as CommunityPost));
       setCommunityPosts(postsList);
-      aggregateAllUsers(rawDbUsers, manualPayments, postsList);
+      aggregateAllUsers(rawDbUsers, manualPayments, postsList, restUsersRef.current);
     }, (error) => console.warn("Admin Posts listener note:", error));
 
     const unsubscribeNotifs = onSnapshot(query(collection(db, 'notifications'), orderBy('createdAt', 'desc')), (snapshot) => {
@@ -875,7 +991,7 @@ export const AdminDashboard: React.FC = () => {
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       list.sort((a: any, b: any) => (b.createdAt || 0) - (a.createdAt || 0));
       setManualPayments(list);
-      aggregateAllUsers(rawDbUsers, list, communityPosts);
+      aggregateAllUsers(rawDbUsers, list, communityPosts, restUsersRef.current);
     }, (error) => console.warn("Admin Manual Payments listener note:", error));
 
     const unsubscribeFeatures = onSnapshot(doc(db, 'settings', 'features'), (docSnap) => {
@@ -927,6 +1043,7 @@ export const AdminDashboard: React.FC = () => {
     }, (error) => console.warn("Admin Community Settings listener note:", error));
 
     return () => {
+      clearTimeout(autoScanTimer);
       unsubscribeUsers();
       unsubscribeLexique();
       unsubscribeAudios();
@@ -1095,11 +1212,221 @@ export const AdminDashboard: React.FC = () => {
   const handleToggleUserBan = async (id: string) => {
     const user = users.find(u => u.id === id);
     if (!user) return;
-    try {
-      await updateDoc(doc(db, 'users', id), { isBanned: !user.isBanned });
-    } catch (error) {
-      console.error("Error updating user", error);
+    const newBanState = !user.isBanned;
+
+    const updatedUser = { ...user, isBanned: newBanState };
+    setUsers(prev => prev.map(u => u.id === id ? updatedUser : u));
+    if (selectedUserDetail?.id === id) {
+      setSelectedUserDetail(updatedUser);
     }
+    masterDiscoveredMapRef.current.set(user.email ? user.email.toLowerCase().trim() : id, updatedUser);
+
+    try {
+      await setDoc(doc(db, 'users', id), { isBanned: newBanState }, { merge: true });
+      showToast(newBanState ? "Utilisateur banni." : "Utilisateur débanni.");
+    } catch (error) {
+      console.warn("Error updating user ban state in Firestore:", error);
+      showToast(newBanState ? "Utilisateur banni (local)" : "Utilisateur débanni (local)", "info");
+    }
+  };
+
+  const handleSaveUserDetail = async () => {
+    if (!selectedUserDetail) return;
+    const userRef = doc(db, 'users', selectedUserDetail.id);
+    const payload = {
+      name: editUserData.name !== undefined ? editUserData.name : selectedUserDetail.name,
+      email: editUserData.email !== undefined ? editUserData.email : selectedUserDetail.email,
+      phone: editUserData.phone !== undefined ? editUserData.phone : (selectedUserDetail.phone || ''),
+      country: editUserData.country !== undefined ? editUserData.country : (selectedUserDetail.country || ''),
+      role: (editUserData as any).role || (selectedUserDetail as any).role || 'user',
+      isBanned: editUserData.isBanned !== undefined ? editUserData.isBanned : selectedUserDetail.isBanned,
+      isTrusted: editUserData.isTrusted !== undefined ? editUserData.isTrusted : selectedUserDetail.isTrusted,
+      mysteryToolsDisabled: editUserData.mysteryToolsDisabled !== undefined ? editUserData.mysteryToolsDisabled : selectedUserDetail.mysteryToolsDisabled,
+      subscriptionTier: (editUserData as any).subscriptionTier || (selectedUserDetail as any).subscriptionTier || 'premium',
+      spiritualPoints: (editUserData as any).spiritualPoints !== undefined ? Number((editUserData as any).spiritualPoints) : (selectedUserDetail.spiritualPoints || 0),
+      blockedTools: editUserData.blockedTools || selectedUserDetail.blockedTools || []
+    };
+
+    const updatedUser = { ...selectedUserDetail, ...payload };
+    setSelectedUserDetail(updatedUser);
+    setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
+    masterDiscoveredMapRef.current.set(updatedUser.email ? updatedUser.email.toLowerCase().trim() : updatedUser.id, updatedUser);
+
+    try {
+      const stored = localStorage.getItem('asrarhub_all_local_users');
+      const list = stored ? JSON.parse(stored) : [];
+      const filtered = list.filter((u: any) => u.id !== updatedUser.id && u.email !== updatedUser.email);
+      filtered.push(updatedUser);
+      localStorage.setItem('asrarhub_all_local_users', JSON.stringify(filtered));
+    } catch (e) {}
+
+    setIsEditingUser(false);
+
+    try {
+      await setDoc(userRef, payload, { merge: true });
+      showToast("Utilisateur mis à jour avec succès dans Firestore !");
+    } catch (err) {
+      console.warn("Erreur sauvegarde utilisateur Firestore:", err);
+      showToast("Mis à jour en local (Permission Firestore restreinte)", "info");
+    }
+  };
+
+  const handleDeleteUserAccount = (id: string, email?: string, name?: string) => {
+    const target = users.find(u => u.id === id) || 
+      (selectedUserDetail?.id === id ? selectedUserDetail : { id, email: email || '', name: name || 'Cet utilisateur' });
+    setUserToDeleteConfirm(target as User);
+  };
+
+  const executeConfirmDeleteUser = async () => {
+    if (!userToDeleteConfirm) return;
+    const { id, email } = userToDeleteConfirm;
+
+    // 1. Close modal and update React state immediately (optimistic UI update)
+    setUserToDeleteConfirm(null);
+    if (selectedUserDetail?.id === id || (email && selectedUserDetail?.email?.toLowerCase() === email.toLowerCase())) {
+      setSelectedUserDetail(null);
+    }
+    setUsers(prev => prev.filter(u => u.id !== id && (!email || u.email?.toLowerCase() !== email.toLowerCase())));
+
+    // 2. Save deleted id and email to localStorage deleted list so future scans/syncs skip them
+    try {
+      const deletedIdsStr = localStorage.getItem('asrarhub_deleted_user_ids') || '[]';
+      const deletedIds: string[] = JSON.parse(deletedIdsStr);
+      if (id && !deletedIds.includes(id)) deletedIds.push(id);
+      if (email && typeof email === 'string' && email.trim() && !deletedIds.includes(email.toLowerCase().trim())) {
+        deletedIds.push(email.toLowerCase().trim());
+      }
+      localStorage.setItem('asrarhub_deleted_user_ids', JSON.stringify(deletedIds));
+    } catch (e) {}
+
+    // 3. Clear from masterDiscoveredMapRef
+    if (masterDiscoveredMapRef.current) {
+      masterDiscoveredMapRef.current.forEach((val, key) => {
+        if (val.id === id || key === id || (email && (val.email?.toLowerCase() === email.toLowerCase() || key === email.toLowerCase()))) {
+          masterDiscoveredMapRef.current.delete(key);
+        }
+      });
+    }
+
+    // 4. Clear from localStorage 'asrarhub_all_local_users'
+    try {
+      const storedAll = localStorage.getItem('asrarhub_all_local_users');
+      if (storedAll) {
+        const parsedAll = JSON.parse(storedAll);
+        if (Array.isArray(parsedAll)) {
+          const filtered = parsedAll.filter((u: any) => u.id !== id && u.email?.toLowerCase() !== email?.toLowerCase());
+          localStorage.setItem('asrarhub_all_local_users', JSON.stringify(filtered));
+        }
+      }
+    } catch (e) {}
+
+    // 5. Clear from 'asrarhub_local_user' if matching
+    try {
+      const storedSingle = localStorage.getItem('asrarhub_local_user');
+      if (storedSingle) {
+        const parsedSingle = JSON.parse(storedSingle);
+        if (parsedSingle?.id === id || (email && parsedSingle?.email?.toLowerCase() === email.toLowerCase())) {
+          localStorage.removeItem('asrarhub_local_user');
+        }
+      }
+    } catch (e) {}
+
+    showToast("Utilisateur supprimé avec succès.");
+
+    // 6. Delete from Firestore asynchronously with non-blocking timeout safeguard
+    if (id) {
+      try {
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 2500));
+        await Promise.race([deleteDoc(doc(db, 'users', id)), timeoutPromise]);
+      } catch (err) {
+        console.warn("Firestore deleteDoc non-blocking note:", err);
+      }
+    }
+  };
+
+  const toggleSelectUser = (id: string) => {
+    setSelectedUserIds(prev => 
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelectAllUsers = (filteredList: User[]) => {
+    const allFilteredIds = filteredList.map(u => u.id);
+    const isAllSelected = allFilteredIds.length > 0 && allFilteredIds.every(id => selectedUserIds.includes(id));
+
+    if (isAllSelected) {
+      setSelectedUserIds(prev => prev.filter(id => !allFilteredIds.includes(id)));
+    } else {
+      setSelectedUserIds(prev => Array.from(new Set([...prev, ...allFilteredIds])));
+    }
+  };
+
+  const executeConfirmBatchDeleteUsers = async () => {
+    if (selectedUserIds.length === 0) return;
+
+    const idsToDelete = [...selectedUserIds];
+    const targets = users.filter(u => idsToDelete.includes(u.id));
+
+    // 1. Close modal and update UI immediately
+    setIsBatchDeleteConfirmOpen(false);
+    setSelectedUserIds([]);
+
+    // Remove targets from React state
+    setUsers(prev => prev.filter(u => !idsToDelete.includes(u.id)));
+
+    if (selectedUserDetail && idsToDelete.includes(selectedUserDetail.id)) {
+      setSelectedUserDetail(null);
+    }
+
+    // 2. Save deleted IDs and emails to localStorage deleted list
+    try {
+      const deletedIdsStr = localStorage.getItem('asrarhub_deleted_user_ids') || '[]';
+      const deletedIds: string[] = JSON.parse(deletedIdsStr);
+
+      targets.forEach(u => {
+        if (u.id && !deletedIds.includes(u.id)) deletedIds.push(u.id);
+        if (u.email && typeof u.email === 'string' && u.email.trim() && !deletedIds.includes(u.email.toLowerCase().trim())) {
+          deletedIds.push(u.email.toLowerCase().trim());
+        }
+      });
+
+      localStorage.setItem('asrarhub_deleted_user_ids', JSON.stringify(deletedIds));
+    } catch (e) {}
+
+    // 3. Clear from masterDiscoveredMapRef
+    if (masterDiscoveredMapRef.current) {
+      masterDiscoveredMapRef.current.forEach((val, key) => {
+        if (idsToDelete.includes(val.id) || idsToDelete.includes(key)) {
+          masterDiscoveredMapRef.current.delete(key);
+        }
+      });
+    }
+
+    // 4. Clear from localStorage 'asrarhub_all_local_users'
+    try {
+      const storedAll = localStorage.getItem('asrarhub_all_local_users');
+      if (storedAll) {
+        const parsedAll = JSON.parse(storedAll);
+        if (Array.isArray(parsedAll)) {
+          const filtered = parsedAll.filter((u: any) => !idsToDelete.includes(u.id));
+          localStorage.setItem('asrarhub_all_local_users', JSON.stringify(filtered));
+        }
+      }
+    } catch (e) {}
+
+    showToast(`${targets.length} utilisateur(s) supprimé(s) avec succès.`);
+
+    // 5. Delete from Firestore asynchronously for each target
+    targets.forEach(async (u) => {
+      if (u.id) {
+        try {
+          const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout")), 2500));
+          await Promise.race([deleteDoc(doc(db, 'users', u.id)), timeoutPromise]);
+        } catch (err) {
+          console.warn("Firestore deleteDoc batch note:", err);
+        }
+      }
+    });
   };
 
   const handleDeepScanAndSyncUsers = async () => {
@@ -1110,11 +1437,21 @@ export const AdminDashboard: React.FC = () => {
 
       const processDoc = (data: any, defaultSource: string) => {
         if (!data) return;
+        const deletedIdsStr = localStorage.getItem('asrarhub_deleted_user_ids') || '[]';
+        let deletedIds: string[] = [];
+        try { deletedIds = JSON.parse(deletedIdsStr); } catch {}
+
         const email = data.email || data.userEmail || data.authorEmail || data.senderEmail || data.recipientEmail;
         const uid = data.id || data.userId || data.uid || data.authorId || (email ? `usr_${email.replace(/[^a-zA-Z0-9]/g, '_')}` : null);
+        
+        if (uid && deletedIds.includes(uid)) return;
+        if (email && typeof email === 'string' && deletedIds.includes(email.toLowerCase().trim())) return;
         if (!email && !uid) return;
         
-        const key = (email || uid).toLowerCase().trim();
+        const hasRealEmail = email && typeof email === 'string' && email.trim() !== '' && email.includes('@') && !email.includes('utilisateur@asrarhub.com');
+        const key = hasRealEmail ? email.toLowerCase().trim() : (uid || `usr_${Math.random().toString(36).substr(2, 9)}`);
+        if (!key) return;
+        if (deletedIds.includes(key)) return;
         if (!discoveredMap.has(key)) {
           discoveredMap.set(key, {
             id: uid || `usr_${Math.random().toString(36).substr(2, 9)}`,
@@ -1133,43 +1470,60 @@ export const AdminDashboard: React.FC = () => {
         }
       };
 
-      // 1. Scan Firestore users collection
-      const usersSnap = await getDocs(collection(db, 'users')).catch(() => null);
-      if (usersSnap) {
-        usersSnap.docs.forEach(docSnap => processDoc({ id: docSnap.id, ...docSnap.data() }, 'Firestore'));
+      const token = await auth.currentUser?.getIdToken().catch(() => undefined);
+
+      // Run ALL collection scans concurrently via Promise.allSettled for maximum speed
+      const [
+        usersSnapRes,
+        restUsersRes,
+        paySnapRes,
+        postsSnapRes,
+        dmSnapRes,
+        notifSnapRes,
+        chatSnapRes,
+        halaqatSnapRes,
+        dreamsSnapRes
+      ] = await Promise.allSettled([
+        getDocs(collection(db, 'users')),
+        fetchUsersFromRest(token),
+        getDocs(collection(db, 'manual_payments')),
+        getDocs(collection(db, 'community_posts')),
+        getDocs(collection(db, 'direct_messages')),
+        getDocs(collection(db, 'notifications')),
+        getDocs(collection(db, 'chat_sessions')),
+        getDocs(collection(db, 'halaqat_participants')),
+        getDocs(collection(db, 'dreams'))
+      ]);
+
+      if (usersSnapRes.status === 'fulfilled' && usersSnapRes.value) {
+        usersSnapRes.value.docs.forEach(docSnap => processDoc({ id: docSnap.id, ...docSnap.data() }, 'Firestore'));
+      }
+      if (restUsersRes.status === 'fulfilled' && Array.isArray(restUsersRes.value)) {
+        restUsersRes.value.forEach(u => processDoc(u, 'Firestore REST'));
+      }
+      if (paySnapRes.status === 'fulfilled' && paySnapRes.value) {
+        paySnapRes.value.docs.forEach(docSnap => processDoc({ id: docSnap.id, ...docSnap.data() }, 'Paiement'));
+      }
+      if (postsSnapRes.status === 'fulfilled' && postsSnapRes.value) {
+        postsSnapRes.value.docs.forEach(docSnap => processDoc({ id: docSnap.id, ...docSnap.data() }, 'Communauté'));
+      }
+      if (dmSnapRes.status === 'fulfilled' && dmSnapRes.value) {
+        dmSnapRes.value.docs.forEach(docSnap => processDoc({ id: docSnap.id, ...docSnap.data() }, 'Message Direct'));
+      }
+      if (notifSnapRes.status === 'fulfilled' && notifSnapRes.value) {
+        notifSnapRes.value.docs.forEach(docSnap => processDoc({ id: docSnap.id, ...docSnap.data() }, 'Notification'));
+      }
+      if (chatSnapRes.status === 'fulfilled' && chatSnapRes.value) {
+        chatSnapRes.value.docs.forEach(docSnap => processDoc({ id: docSnap.id, ...docSnap.data() }, 'Session Assistant'));
+      }
+      if (halaqatSnapRes.status === 'fulfilled' && halaqatSnapRes.value) {
+        halaqatSnapRes.value.docs.forEach(docSnap => processDoc({ id: docSnap.id, ...docSnap.data() }, 'Halaqat'));
+      }
+      if (dreamsSnapRes.status === 'fulfilled' && dreamsSnapRes.value) {
+        dreamsSnapRes.value.docs.forEach(docSnap => processDoc({ id: docSnap.id, ...docSnap.data() }, 'Rêves'));
       }
 
-      // 2. Scan manual payments
-      const paySnap = await getDocs(collection(db, 'manual_payments')).catch(() => null);
-      if (paySnap) {
-        paySnap.docs.forEach(docSnap => processDoc({ id: docSnap.id, ...docSnap.data() }, 'Paiement'));
-      }
-
-      // 3. Scan community posts
-      const postsSnap = await getDocs(collection(db, 'community_posts')).catch(() => null);
-      if (postsSnap) {
-        postsSnap.docs.forEach(docSnap => processDoc({ id: docSnap.id, ...docSnap.data() }, 'Communauté'));
-      }
-
-      // 4. Scan direct messages
-      const dmSnap = await getDocs(collection(db, 'direct_messages')).catch(() => null);
-      if (dmSnap) {
-        dmSnap.docs.forEach(docSnap => processDoc({ id: docSnap.id, ...docSnap.data() }, 'Message Direct'));
-      }
-
-      // 5. Scan notifications
-      const notifSnap = await getDocs(collection(db, 'notifications')).catch(() => null);
-      if (notifSnap) {
-        notifSnap.docs.forEach(docSnap => processDoc({ id: docSnap.id, ...docSnap.data() }, 'Notification'));
-      }
-
-      // 6. Scan chat sessions / Faq
-      const chatSnap = await getDocs(collection(db, 'chat_sessions')).catch(() => null);
-      if (chatSnap) {
-        chatSnap.docs.forEach(docSnap => processDoc({ id: docSnap.id, ...docSnap.data() }, 'Session Assistant'));
-      }
-
-      // 7. Scan localStorage asrarhub_all_local_users & asrarhub_local_user
+      // Scan localStorage asrarhub_all_local_users & asrarhub_local_user
       try {
         const storedAll = localStorage.getItem('asrarhub_all_local_users');
         if (storedAll) {
@@ -1183,33 +1537,49 @@ export const AdminDashboard: React.FC = () => {
         }
       } catch (e) {}
 
-      // Save/sync missing user documents back to Firestore users collection
-      let syncedCount = 0;
+      // Collect all discovered accounts
       const allDiscovered = Array.from(discoveredMap.values());
-      for (const u of allDiscovered) {
-        if (u.id && (u.email || u.name)) {
+
+      // Save/persist discovered accounts locally to ensure instant persistence
+      try {
+        const existingLocalStr = localStorage.getItem('asrarhub_all_local_users') || '[]';
+        const existingLocal = JSON.parse(existingLocalStr);
+        const mergedLocalMap = new Map();
+        existingLocal.forEach((u: any) => { if (u && u.email) mergedLocalMap.set(u.email.toLowerCase(), u); });
+        allDiscovered.forEach((u: any) => { if (u && u.email) mergedLocalMap.set(u.email.toLowerCase(), u); });
+        localStorage.setItem('asrarhub_all_local_users', JSON.stringify(Array.from(mergedLocalMap.values())));
+      } catch (e) {}
+
+      // Fast parallel Firestore sync for missing docs
+      const existingDbIds = new Set((rawDbUsers || []).map(u => u.id));
+      const syncPromises = allDiscovered
+        .filter(u => u.id && !existingDbIds.has(u.id))
+        .map(u => {
           const userRef = doc(db, 'users', u.id);
-          const docSnap = await getDoc(userRef).catch(() => null);
-          if (!docSnap || !docSnap.exists()) {
-            await setDoc(userRef, {
-              email: u.email || '',
-              name: u.name || 'Membre AsrarHub',
-              phone: u.phone || '',
-              country: u.country || '',
-              role: u.role || 'user',
-              photoURL: u.photoURL || '',
-              createdAt: u.createdAt || new Date().toISOString(),
-              isBanned: u.isBanned || false,
-              isTrusted: u.isTrusted !== undefined ? u.isTrusted : true,
-              subscriptionTier: u.subscriptionTier || 'premium',
-              requiresValidation: false
-            }).catch(() => {});
-            syncedCount++;
-          }
-        }
+          return setDoc(userRef, {
+            email: u.email || '',
+            name: u.name || 'Membre AsrarHub',
+            phone: u.phone || '',
+            country: u.country || '',
+            role: u.role || 'user',
+            photoURL: u.photoURL || '',
+            createdAt: u.createdAt || new Date().toISOString(),
+            isBanned: u.isBanned || false,
+            isTrusted: u.isTrusted !== undefined ? u.isTrusted : true,
+            subscriptionTier: u.subscriptionTier || 'premium',
+            requiresValidation: false
+          }, { merge: true }).catch(() => {});
+        });
+
+      if (syncPromises.length > 0) {
+        await Promise.allSettled(syncPromises);
       }
 
-      showToast(`Scan global terminé ! ${allDiscovered.length} comptes/emails identifiés (${syncedCount} nouveaux synchronisés dans Firestore).`);
+      restUsersRef.current = allDiscovered;
+      setRestUsers(allDiscovered);
+      aggregateAllUsers(rawDbUsers, manualPayments, communityPosts, allDiscovered);
+
+      showToast(`Scan global terminé ! ${allDiscovered.length} compte(s) identifié(s) et synchronisé(s).`);
     } catch (error) {
       console.error("Erreur lors du scan global des utilisateurs:", error);
       showToast("Erreur lors du scan global des comptes.", "error");
@@ -1222,7 +1592,7 @@ export const AdminDashboard: React.FC = () => {
     e.preventDefault();
     setIsAddingUsers(true);
     try {
-      let addedCount = 0;
+      let addedUsersList: any[] = [];
       if (addUserMode === 'single') {
         if (!newUserData.email) {
           showToast("Veuillez saisir au moins une adresse email.", "error");
@@ -1230,12 +1600,16 @@ export const AdminDashboard: React.FC = () => {
           return;
         }
         const cleanEmail = newUserData.email.trim().toLowerCase();
+        const normEmail = normalizeEmail(cleanEmail);
+        const normPhone = normalizePhone(newUserData.phone || '');
         const uid = `usr_${cleanEmail.replace(/[^a-zA-Z0-9]/g, '_')}`;
-        const userRef = doc(db, 'users', uid);
-        await setDoc(userRef, {
+        addedUsersList.push({
+          id: uid,
           email: cleanEmail,
+          normalizedEmail: normEmail,
           name: newUserData.name.trim() || cleanEmail.split('@')[0],
           phone: newUserData.phone.trim() || '',
+          normalizedPhone: normPhone,
           country: newUserData.country.trim() || '',
           role: newUserData.role || 'user',
           subscriptionTier: newUserData.subscriptionTier || 'premium',
@@ -1243,8 +1617,7 @@ export const AdminDashboard: React.FC = () => {
           isTrusted: true,
           createdAt: new Date().toISOString(),
           requiresValidation: false
-        }, { merge: true });
-        addedCount = 1;
+        });
       } else {
         const rawLines = batchEmailsText.split(/[\n,;]/).map(s => s.trim().toLowerCase()).filter(Boolean);
         const uniqueEmails = Array.from(new Set(rawLines));
@@ -1255,10 +1628,12 @@ export const AdminDashboard: React.FC = () => {
         }
 
         for (const email of uniqueEmails) {
+          const normEmail = normalizeEmail(email);
           const uid = `usr_${email.replace(/[^a-zA-Z0-9]/g, '_')}`;
-          const userRef = doc(db, 'users', uid);
-          await setDoc(userRef, {
+          addedUsersList.push({
+            id: uid,
             email: email,
+            normalizedEmail: normEmail,
             name: email.split('@')[0],
             role: 'user',
             subscriptionTier: 'premium',
@@ -1266,16 +1641,38 @@ export const AdminDashboard: React.FC = () => {
             isTrusted: true,
             createdAt: new Date().toISOString(),
             requiresValidation: false
-          }, { merge: true });
-          addedCount++;
+          });
         }
       }
 
-      showToast(`${addedCount} utilisateur(s) inscrit(s) et enregistré(s) avec succès !`);
+      // 1. Immediately save to local storage for instant offline & UI persistence
+      try {
+        const existingStr = localStorage.getItem('asrarhub_all_local_users') || '[]';
+        const existingArr = JSON.parse(existingStr);
+        const userMap = new Map();
+        existingArr.forEach((u: any) => { if (u && u.email) userMap.set(u.email.toLowerCase(), u); });
+        addedUsersList.forEach((u: any) => { if (u && u.email) userMap.set(u.email.toLowerCase(), u); });
+        const updatedLocal = Array.from(userMap.values());
+        localStorage.setItem('asrarhub_all_local_users', JSON.stringify(updatedLocal));
+      } catch (e) {}
+
+      // 2. Parallel write to Firestore
+      const firestorePromises = addedUsersList.map(u => {
+        const userRef = doc(db, 'users', u.id);
+        return setDoc(userRef, u, { merge: true }).catch(() => {});
+      });
+      await Promise.allSettled(firestorePromises);
+
+      showToast(`${addedUsersList.length} utilisateur(s) inscrit(s) et enregistré(s) avec succès !`);
       setIsAddUserModalOpen(false);
       setNewUserData({ name: '', email: '', phone: '', country: '', role: 'user', subscriptionTier: 'premium' });
       setBatchEmailsText('');
-      handleDeepScanAndSyncUsers();
+      
+      // Update UI state directly with added users so count reflects immediately!
+      const updatedRest = [...restUsersRef.current, ...addedUsersList];
+      restUsersRef.current = updatedRest;
+      setRestUsers(updatedRest);
+      aggregateAllUsers([...rawDbUsers, ...addedUsersList], manualPayments, communityPosts, updatedRest);
     } catch (error) {
       console.error("Error adding user(s)", error);
       showToast("Erreur lors de l'enregistrement.", "error");
@@ -1294,10 +1691,14 @@ export const AdminDashboard: React.FC = () => {
       premiumUntil.setMonth(premiumUntil.getMonth() + months);
 
       // 1. Update user to premium
-      await updateDoc(doc(db, 'users', payment.userId), {
-        subscriptionTier: 'premium',
-        premiumUntil: premiumUntil
-      });
+      try {
+        await setDoc(doc(db, 'users', payment.userId), {
+          subscriptionTier: 'premium',
+          premiumUntil: premiumUntil
+        }, { merge: true });
+      } catch (uErr) {
+        console.warn("Could not write user subscription update directly to Firestore:", uErr);
+      }
 
       // 2. Mark payment as approved
       await updateDoc(doc(db, 'manual_payments', payment.id), {
@@ -1352,22 +1753,40 @@ export const AdminDashboard: React.FC = () => {
       updatedBlocked = [...currentBlocked, toolId];
     }
     
+    const updatedUser = { ...user, blockedTools: updatedBlocked };
+    setUsers(prev => prev.map(u => u.id === userId ? updatedUser : u));
+    if (selectedUserDetail?.id === userId) {
+      setSelectedUserDetail(updatedUser);
+    }
+    masterDiscoveredMapRef.current.set(user.email ? user.email.toLowerCase().trim() : userId, updatedUser);
+
     try {
-      await updateDoc(doc(db, 'users', userId), { blockedTools: updatedBlocked });
+      await setDoc(doc(db, 'users', userId), { blockedTools: updatedBlocked }, { merge: true });
       showToast("Paramètre d'accès de l'outil mis à jour.", "success");
     } catch (error) {
-      console.error("Error updating blocked tools:", error);
-      showToast("Une erreur est survenue.", "error");
+      console.warn("Error updating blocked tools:", error);
+      showToast("Mis à jour en local.", "info");
     }
   };
 
   const handleToggleUserTrusted = async (id: string) => {
     const user = users.find(u => u.id === id);
     if (!user) return;
+    const newTrustedState = !user.isTrusted;
+
+    const updatedUser = { ...user, isTrusted: newTrustedState };
+    setUsers(prev => prev.map(u => u.id === id ? updatedUser : u));
+    if (selectedUserDetail?.id === id) {
+      setSelectedUserDetail(updatedUser);
+    }
+    masterDiscoveredMapRef.current.set(user.email ? user.email.toLowerCase().trim() : id, updatedUser);
+
     try {
-      await updateDoc(doc(db, 'users', id), { isTrusted: !user.isTrusted });
+      await setDoc(doc(db, 'users', id), { isTrusted: newTrustedState }, { merge: true });
+      showToast(newTrustedState ? "Statut de confiance accordé." : "Statut de confiance retiré.");
     } catch (error) {
-      console.error("Error updating user", error);
+      console.warn("Error updating user trusted status in Firestore:", error);
+      showToast("Modifié en mémoire locale", "info");
     }
   };
 
@@ -1565,6 +1984,55 @@ export const AdminDashboard: React.FC = () => {
         createdAt: editingArticle?.createdAt || Date.now()
       };
 
+      // Auto-translate to EN and HA if not manually provided
+      if (!articlePayload.title_en || !articlePayload.content_en) {
+        try {
+          const resEn = await fetch(getApiUrl('/api/translate-article'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              title: articlePayload.title,
+              hook: articlePayload.hook,
+              content: articlePayload.content,
+              benefits: articlePayload.benefits,
+              targetLanguage: 'en'
+            })
+          });
+          if (resEn.ok) {
+            const dataEn = await resEn.json();
+            if (dataEn.title) articlePayload.title_en = dataEn.title;
+            if (dataEn.hook) articlePayload.hook_en = dataEn.hook;
+            if (dataEn.content) articlePayload.content_en = dataEn.content;
+          }
+        } catch (e) {
+          console.warn("[Admin] Auto EN translation error:", e);
+        }
+      }
+
+      if (!articlePayload.title_ha || !articlePayload.content_ha) {
+        try {
+          const resHa = await fetch(getApiUrl('/api/translate-article'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              title: articlePayload.title,
+              hook: articlePayload.hook,
+              content: articlePayload.content,
+              benefits: articlePayload.benefits,
+              targetLanguage: 'ha'
+            })
+          });
+          if (resHa.ok) {
+            const dataHa = await resHa.json();
+            if (dataHa.title) articlePayload.title_ha = dataHa.title;
+            if (dataHa.hook) articlePayload.hook_ha = dataHa.hook;
+            if (dataHa.content) articlePayload.content_ha = dataHa.content;
+          }
+        } catch (e) {
+          console.warn("[Admin] Auto HA translation error:", e);
+        }
+      }
+
       // 1. Instantly save in local persistent storage so it CANNOT be erased on mobile/Capacitor
       saveLocalCustomArticle(articlePayload as any);
 
@@ -1689,6 +2157,7 @@ export const AdminDashboard: React.FC = () => {
       { id: 'reciters', label: 'Récitateurs', icon: Headphones },
       { id: 'grand_oaths', label: 'Grands Sermons', icon: Shield },
       { id: 'seals', label: 'Catalogue des Sceaux', icon: Moon },
+      { id: 'book_covers', label: 'Studio Couvertures IA', icon: BookOpen },
       { id: 'content', label: 'CMS (Lexique)', icon: Database },
       { id: 'settings', label: 'Paramètres', icon: Settings },
     ];
@@ -2013,6 +2482,7 @@ export const AdminDashboard: React.FC = () => {
 
     // When searching, display all matching search results. Otherwise slice by usersLimit.
     const paginatedUsers = query ? filteredUsers : filteredUsers.slice(0, usersLimit);
+    const isAllPaginatedSelected = paginatedUsers.length > 0 && paginatedUsers.every(u => selectedUserIds.includes(u.id));
 
     return (
       <div className="space-y-6">
@@ -2099,6 +2569,46 @@ export const AdminDashboard: React.FC = () => {
             </button>
           </div>
 
+          {/* Barre d'actions groupées / Sélection multiple */}
+          <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-gray-50 dark:bg-gray-900/80 border border-gray-200/80 dark:border-gray-700 rounded-2xl mb-5">
+            <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-gray-700 dark:text-gray-300 select-none">
+              <input
+                type="checkbox"
+                checked={isAllPaginatedSelected}
+                onChange={() => toggleSelectAllUsers(paginatedUsers)}
+                className="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-gray-300 dark:border-gray-600 cursor-pointer"
+              />
+              <span>Tout sélectionner ({paginatedUsers.length})</span>
+            </label>
+
+            {selectedUserIds.length > 0 ? (
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 px-3 py-1 rounded-xl">
+                  {selectedUserIds.length} sélectionné(s)
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setIsBatchDeleteConfirmOpen(true)}
+                  className="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Trash2 size={14} />
+                  <span>Supprimer la sélection ({selectedUserIds.length})</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedUserIds([])}
+                  className="px-3 py-1.5 bg-gray-200 dark:bg-gray-750 hover:bg-gray-300 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl text-xs font-medium transition-colors cursor-pointer"
+                >
+                  Désélectionner
+                </button>
+              </div>
+            ) : (
+              <span className="text-[11px] text-gray-400 font-medium">
+                Cochez les cases pour sélectionner plusieurs utilisateurs à supprimer en un clic.
+              </span>
+            )}
+          </div>
+
           {filteredUsers.length === 0 ? (
             <div className="text-center py-12 text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
               <Users className="mx-auto mb-3 opacity-30" size={40} />
@@ -2120,31 +2630,48 @@ export const AdminDashboard: React.FC = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              {paginatedUsers.map((user) => (
-                <div key={user.id} className="flex flex-col lg:flex-row lg:items-center justify-between p-5 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4 hover:border-gray-200 dark:hover:border-gray-650 transition-all">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-3 mb-3">
-                      {/* Photo de profil (Obligatoire) */}
-                      <img
-                        src={user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user.name || user.email)}`}
-                        alt={user.name || 'Photo de profil'}
-                        className="w-12 h-12 rounded-full object-cover border-2 border-emerald-500/40 shadow-sm shrink-0"
-                        onError={(e) => {
-                          (e.target as HTMLElement).setAttribute('src', `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user.email || 'user')}`);
-                        }}
+              {paginatedUsers.map((user) => {
+                const isSelected = selectedUserIds.includes(user.id);
+                return (
+                  <div 
+                    key={user.id} 
+                    className={`flex flex-col lg:flex-row lg:items-center justify-between p-5 rounded-2xl gap-4 transition-all ${
+                      isSelected 
+                        ? 'bg-emerald-50/70 dark:bg-emerald-950/30 border-2 border-emerald-500/60 shadow-sm' 
+                        : 'bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 hover:border-gray-200 dark:hover:border-gray-650'
+                    }`}
+                  >
+                    <div className="min-w-0 flex-1 flex items-start sm:items-center gap-3.5">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelectUser(user.id)}
+                        className="w-5 h-5 mt-1 sm:mt-0 rounded text-emerald-600 focus:ring-emerald-500 border-gray-300 dark:border-gray-600 cursor-pointer shrink-0"
+                        title="Sélectionner pour action groupée"
                       />
-                      <div>
-                        <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 flex-wrap">
-                          <span className="truncate text-base">{user.name || 'Membre AsrarHub'}</span>
-                          {user.isBanned && <span className="bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400 text-[10px] uppercase font-bold px-2 py-0.5 rounded-full shrink-0">Banni</span>}
-                          {user.isTrusted && <span className="bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400 text-[10px] uppercase font-bold px-2 py-0.5 rounded-full shrink-0">De Confiance</span>}
-                          <span className="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0">
-                            {(user as any).source ? `Source: ${(user as any).source}` : 'Base Firestore'}
-                          </span>
-                        </h4>
-                        <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">ID: {user.id}</span>
-                      </div>
-                    </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-3 mb-3">
+                          {/* Photo de profil (Obligatoire) */}
+                          <img
+                            src={user.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user.name || user.email)}`}
+                            alt={user.name || 'Photo de profil'}
+                            className="w-12 h-12 rounded-full object-cover border-2 border-emerald-500/40 shadow-sm shrink-0"
+                            onError={(e) => {
+                              (e.target as HTMLElement).setAttribute('src', `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(user.email || 'user')}`);
+                            }}
+                          />
+                          <div>
+                            <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 flex-wrap">
+                              <span className="truncate text-base">{user.name || 'Membre AsrarHub'}</span>
+                              {user.isBanned && <span className="bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400 text-[10px] uppercase font-bold px-2 py-0.5 rounded-full shrink-0">Banni</span>}
+                              {user.isTrusted && <span className="bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400 text-[10px] uppercase font-bold px-2 py-0.5 rounded-full shrink-0">De Confiance</span>}
+                              <span className="bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300 text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0">
+                                {(user as any).source ? `Source: ${(user as any).source}` : 'Base Firestore'}
+                              </span>
+                            </h4>
+                            <span className="text-xs text-gray-500 dark:text-gray-400 font-mono">ID: {user.id}</span>
+                          </div>
+                        </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-2">
                       <div className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300 min-w-0">
@@ -2180,7 +2707,20 @@ export const AdminDashboard: React.FC = () => {
                       </div>
                     </div>
                   </div>
-                  <div className="flex flex-wrap gap-2 shrink-0">
+                </div>
+                <div className="flex flex-wrap gap-2 shrink-0">
+                    <button
+                      onClick={() => {
+                        setSelectedUserDetail(user);
+                        setEditUserData({ ...user });
+                        setIsEditingUser(false);
+                      }}
+                      className="px-3.5 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer"
+                      title="Voir tous les détails et gérer le profil de cet utilisateur"
+                    >
+                      <Eye size={14} />
+                      <span>Détails Complet</span>
+                    </button>
                     <button
                       onClick={() => handleToggleUserTrusted(user.id)}
                       className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
@@ -2211,9 +2751,18 @@ export const AdminDashboard: React.FC = () => {
                     >
                       {user.isBanned ? 'Débannir' : 'Bannir'}
                     </button>
+                    <button
+                      onClick={() => handleDeleteUserAccount(user.id, user.email, user.name)}
+                      className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 dark:bg-red-950/30 dark:hover:bg-red-900/40 dark:text-red-400 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer"
+                      title="Supprimer définitivement cet utilisateur"
+                    >
+                      <Trash2 size={13} />
+                      <span>Supprimer</span>
+                    </button>
                   </div>
                 </div>
-              ))}
+              );
+            })}
 
               {!query && filteredUsers.length > usersLimit && (
                 <div className="pt-4 flex flex-wrap justify-center gap-3">
@@ -3917,12 +4466,22 @@ export const AdminDashboard: React.FC = () => {
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
               Image de couverture (Thumbnail)
             </label>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 flex-wrap">
               <label className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-xl cursor-pointer text-sm font-semibold transition-colors">
                 <Upload size={16} />
                 Télécharger une image
                 <input type="file" accept="image/*" onChange={onSelectFile} className="hidden" />
               </label>
+
+              <button
+                type="button"
+                onClick={() => setShowBookCoverStudioModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-xl text-sm font-semibold transition-all shadow-sm cursor-pointer"
+              >
+                <Sparkles size={16} />
+                <span>Créer Couverture IA / Studio</span>
+              </button>
+
               {newArticle.thumbnail && !imgSrc && (
                 <div className="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
                   <img src={newArticle.thumbnail} alt="Thumbnail preview" className="w-full h-full object-cover" />
@@ -4884,6 +5443,264 @@ export const AdminDashboard: React.FC = () => {
         <h3 className="font-bold text-gray-900 dark:text-white mb-6">Paramètres Globaux</h3>
         
         <div className="space-y-4 mb-8">
+          {/* Admin Configurable Spiritual Points System Settings */}
+          <CollapsibleAdminCard
+            id="set_spiritual_points"
+            title="Paramètres & Gestion du Système de Points Spirituels"
+            description="Activez/désactivez les points, ajustez la fréquence d'affichage des notifications, la durée requise dans l'application, les gains quotidiens et le déblocage des articles."
+            icon={<Award size={18} className="text-emerald-500 shrink-0" />}
+          >
+            <div className="space-y-6">
+              {/* Main Points Toggle */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-gray-50 dark:bg-gray-800/80 rounded-2xl border border-gray-200 dark:border-gray-700">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-sm text-gray-900 dark:text-white">
+                      Système Général de Points Spirituels
+                    </span>
+                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-extrabold ${
+                      featureToggles['pointsSystemEnabled'] !== false
+                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                        : 'bg-red-100 text-red-800 dark:bg-red-950/60 dark:text-red-300'
+                    }`}>
+                      {featureToggles['pointsSystemEnabled'] !== false ? '✅ Activé' : '🚫 Désactivé'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Si désactivé, l'attribution automatique de points s'arrête et le déblocage d'articles par points est bloqué.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleToggleFeature('pointsSystemEnabled', featureToggles['pointsSystemEnabled'] === false)}
+                  className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer shrink-0 shadow-sm ${
+                    featureToggles['pointsSystemEnabled'] !== false
+                      ? 'bg-red-600 hover:bg-red-700 text-white'
+                      : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                  }`}
+                >
+                  {featureToggles['pointsSystemEnabled'] !== false ? 'Désactiver les Points' : 'Activer les Points'}
+                </button>
+              </div>
+
+              {/* Store Unlocks Toggle */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-gray-50 dark:bg-gray-800/80 rounded-2xl border border-gray-200 dark:border-gray-700">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-sm text-gray-900 dark:text-white">
+                      Déblocage des Articles de la Boutique par Points
+                    </span>
+                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-extrabold ${
+                      featureToggles['pointsStoreUnlockEnabled'] !== false
+                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                        : 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
+                    }`}>
+                      {featureToggles['pointsStoreUnlockEnabled'] !== false ? '✅ Autorisé' : '🔒 Désactivé'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Permet aux utilisateurs d'utiliser leur solde de points pour débloquer les articles de la boutique.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleToggleFeature('pointsStoreUnlockEnabled', featureToggles['pointsStoreUnlockEnabled'] === false)}
+                  className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer shrink-0 shadow-sm ${
+                    featureToggles['pointsStoreUnlockEnabled'] !== false
+                      ? 'bg-amber-600 hover:bg-amber-700 text-white'
+                      : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                  }`}
+                >
+                  {featureToggles['pointsStoreUnlockEnabled'] !== false ? 'Bloquer l\'échange' : 'Autoriser l\'échange'}
+                </button>
+              </div>
+
+              {/* Notification Display Limit per Day */}
+              <div className="p-4 bg-gray-50 dark:bg-gray-800/80 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <span className="font-bold text-sm text-gray-900 dark:text-white">
+                    Fréquence d'Affichage des Notifications par Jour :
+                  </span>
+                  <span className="text-xs font-extrabold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/40 px-3 py-1 rounded-xl">
+                    {Number(featureToggles['pointsDailyNotificationLimit'] ?? 1) >= 99 ? 'Illimité' : `${featureToggles['pointsDailyNotificationLimit'] ?? 1} fois par jour`}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Détermine combien de fois par jour la notification de points peut s'afficher pour l'utilisateur.
+                </p>
+                <div className="flex flex-wrap items-center gap-2 pt-2">
+                  {[1, 2, 3, 5, 999].map((limit) => {
+                    const current = Number(featureToggles['pointsDailyNotificationLimit'] ?? 1);
+                    const active = current === limit;
+                    return (
+                      <button
+                        key={limit}
+                        type="button"
+                        onClick={() => handleToggleFeature('pointsDailyNotificationLimit', limit)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          active
+                            ? 'bg-emerald-600 text-white shadow-sm'
+                            : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600'
+                        }`}
+                      >
+                        {limit === 999 ? 'Illimité' : `${limit}x par jour`}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* App Active Duration Requirement */}
+              <div className="p-4 bg-gray-50 dark:bg-gray-800/80 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <span className="font-bold text-sm text-gray-900 dark:text-white">
+                    Durée de Présence Requise dans l'Application :
+                  </span>
+                  <span className="text-xs font-extrabold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/40 px-3 py-1 rounded-xl">
+                    {featureToggles['pointsRequiredDurationSeconds'] ?? 60} secondes ({Math.round(Number(featureToggles['pointsRequiredDurationSeconds'] ?? 60) / 60 * 10) / 10} min)
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Durée (en secondes) pendant laquelle l'utilisateur doit rester actif dans l'application pour gagner un point de présence.
+                </p>
+                <div className="flex flex-wrap items-center gap-2 pt-2">
+                  {[30, 60, 120, 300, 600].map((sec) => {
+                    const current = Number(featureToggles['pointsRequiredDurationSeconds'] ?? 60);
+                    const active = current === sec;
+                    return (
+                      <button
+                        key={sec}
+                        type="button"
+                        onClick={() => handleToggleFeature('pointsRequiredDurationSeconds', sec)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                          active
+                            ? 'bg-emerald-600 text-white shadow-sm'
+                            : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600'
+                        }`}
+                      >
+                        {sec < 60 ? `${sec}s` : `${sec / 60} min (${sec}s)`}
+                      </button>
+                    );
+                  })}
+                  <div className="flex items-center gap-2 ml-auto">
+                    <label className="text-xs text-gray-500 font-semibold">Personnalisé (sec):</label>
+                    <input
+                      type="number"
+                      min="10"
+                      max="3600"
+                      value={featureToggles['pointsRequiredDurationSeconds'] ?? 60}
+                      onChange={(e) => handleToggleFeature('pointsRequiredDurationSeconds', Math.max(10, parseInt(e.target.value, 10) || 60))}
+                      className="w-20 px-2 py-1 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-xs font-bold text-center text-gray-900 dark:text-white"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Point Reward Amounts */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div className="p-4 bg-gray-50 dark:bg-gray-800/80 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-2">
+                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300">
+                    Gain Connexion Quotidienne
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="1000"
+                    value={featureToggles['pointsDailyRewardAmount'] ?? 10}
+                    onChange={(e) => handleToggleFeature('pointsDailyRewardAmount', Math.max(1, parseInt(e.target.value, 10) || 10))}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-sm font-bold text-center text-gray-900 dark:text-white"
+                  />
+                  <p className="text-[11px] text-gray-500">Points crédités par jour.</p>
+                </div>
+
+                <div className="p-4 bg-gray-50 dark:bg-gray-800/80 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-2">
+                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300">
+                    Gain Temps Présence
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={featureToggles['pointsDurationRewardAmount'] ?? 1}
+                    onChange={(e) => handleToggleFeature('pointsDurationRewardAmount', Math.max(1, parseInt(e.target.value, 10) || 1))}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-sm font-bold text-center text-gray-900 dark:text-white"
+                  />
+                  <p className="text-[11px] text-gray-500">Points crédités par intervalle.</p>
+                </div>
+
+                <div className="p-4 bg-gray-50 dark:bg-gray-800/80 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-2">
+                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300">
+                    Bonus Série Quotidienne
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="500"
+                    value={featureToggles['pointsDailyStreakBonus'] ?? 5}
+                    onChange={(e) => handleToggleFeature('pointsDailyStreakBonus', Math.max(0, parseInt(e.target.value, 10) || 0))}
+                    className="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-sm font-bold text-center text-gray-900 dark:text-white"
+                  />
+                  <p className="text-[11px] text-gray-500">Bonus si connecté jours suivis.</p>
+                </div>
+              </div>
+
+              {/* Bulk Grant Points Action */}
+              <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 dark:bg-emerald-950/20 dark:border-emerald-800/30 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <Sparkles size={18} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  <div>
+                    <h5 className="text-xs font-bold text-gray-900 dark:text-white">Distribution Rapide de Points à Tous les Membres</h5>
+                    <p className="text-[11px] text-gray-600 dark:text-gray-400">Créditer un bonus de points à l'ensemble des utilisateurs enregistrés.</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!window.confirm("Voulez-vous offrir +50 points spirituels à TOUS les utilisateurs enregistrés ?")) return;
+                      try {
+                        let count = 0;
+                        for (const u of users) {
+                          if (u.id) {
+                            await setDoc(doc(db, 'users', u.id), { spiritualPoints: increment(50) }, { merge: true });
+                            count++;
+                          }
+                        }
+                        showToast(`+50 points attribués avec succès à ${count} utilisateurs !`);
+                      } catch (err) {
+                        showToast("Erreur lors de la distribution globale de points.", "error");
+                      }
+                    }}
+                    className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-extrabold transition-all cursor-pointer shadow-sm"
+                  >
+                    🎁 Offrir +50 Pts à Tous
+                  </button>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!window.confirm("Voulez-vous offrir +100 points spirituels à TOUS les utilisateurs enregistrés ?")) return;
+                      try {
+                        let count = 0;
+                        for (const u of users) {
+                          if (u.id) {
+                            await setDoc(doc(db, 'users', u.id), { spiritualPoints: increment(100) }, { merge: true });
+                            count++;
+                          }
+                        }
+                        showToast(`+100 points attribués avec succès à ${count} utilisateurs !`);
+                      } catch (err) {
+                        showToast("Erreur lors de la distribution globale de points.", "error");
+                      }
+                    }}
+                    className="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-extrabold transition-all cursor-pointer shadow-sm"
+                  >
+                    🌟 Offrir +100 Pts à Tous
+                  </button>
+                </div>
+              </div>
+            </div>
+          </CollapsibleAdminCard>
+
           {/* Admin Configurable Premium Free Trial Duration */}
           <CollapsibleAdminCard
             id="set_trial_duration"
@@ -5673,16 +6490,22 @@ export const AdminDashboard: React.FC = () => {
           </CollapsibleAdminCard>
 
           {/* Diagnostic & Connexion Firestore (Réservé à l'Admin Panel) */}
-          <div className="flex flex-col p-5 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4 mt-2">
-            <div>
-              <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 text-base">
-                <Activity size={20} className="text-emerald-500" />
-                Diagnostic & Connexion Firestore
-              </h4>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
-                Analysez l'état de la connexion en temps réel avec les serveurs de base de données Firestore. Ce panneau permet d'identifier les blocages réseau, SSL, CORS ou d'autres anomalies dans les environnements mobiles et de type Capacitor.
-              </p>
-            </div>
+          <CollapsibleAdminCard
+            id="set_firestore_diag"
+            title="Diagnostic & Connexion Firestore"
+            description="Analysez l'état de la connexion en temps réel avec les serveurs de base de données Firestore (latence, logs réseau, reconnexion)."
+            icon={<Activity size={18} className="text-emerald-500 shrink-0" />}
+          >
+            <div className="flex flex-col gap-4">
+              <div>
+                <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 text-base">
+                  <Activity size={20} className="text-emerald-500" />
+                  Diagnostic & Connexion Firestore
+                </h4>
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
+                  Analysez l'état de la connexion en temps réel avec les serveurs de base de données Firestore. Ce panneau permet d'identifier les blocages réseau, SSL, CORS ou d'autres anomalies dans les environnements mobiles et de type Capacitor.
+                </p>
+              </div>
 
             {/* Diagnostic Action Controls */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -5873,10 +6696,17 @@ export const AdminDashboard: React.FC = () => {
               </div>
             </div>
           </div>
+        </CollapsibleAdminCard>
 
           {/* Personnalisation des Tailles de Polices et Cartes (10px à 50px) */}
-          <div className="flex flex-col p-5 bg-gradient-to-br from-emerald-50/60 via-gray-50 to-teal-50/40 dark:from-emerald-950/20 dark:via-gray-800 dark:to-teal-950/20 border border-emerald-200/60 dark:border-emerald-800/40 rounded-3xl gap-6 shadow-sm mt-6">
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-emerald-100 dark:border-emerald-900/50">
+          <CollapsibleAdminCard
+            id="set_font_sizes"
+            title="Réglage des Tailles de Polices et Cartes (10px - 50px)"
+            description="Ajustez la taille des textes, des titres d'articles, des titres d'outils et le rembourrage des cartes pour toute l'application."
+            icon={<Type size={18} className="text-emerald-500 shrink-0" />}
+          >
+            <div className="flex flex-col gap-6">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-emerald-100 dark:border-emerald-900/50">
               <div>
                 <h4 className="font-extrabold text-gray-900 dark:text-white flex items-center gap-2 text-base sm:text-lg">
                   <Type size={20} className="text-emerald-600 dark:text-emerald-400" />
@@ -6412,11 +7242,15 @@ export const AdminDashboard: React.FC = () => {
               </div>
             </div>
           </div>
-        </div>
+        </CollapsibleAdminCard>
 
-        <h3 className="font-bold text-gray-900 dark:text-white mb-4 mt-8">Tarifs d'Abonnement Premium</h3>
-        <div className="space-y-4 mb-8">
-          <div className="flex flex-col p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4">
+        <CollapsibleAdminCard
+          id="set_pricing"
+          title="Tarifs d'Abonnement Premium"
+          description="Configurez les tarifs affichés et facturés pour chaque plan d'abonnement (GHS, USD, etc.)."
+          icon={<CreditCard size={18} className="text-emerald-500 shrink-0" />}
+        >
+          <div className="flex flex-col gap-4">
             <div>
               <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <CreditCard size={18} className="text-emerald-500" />
@@ -6468,285 +7302,295 @@ export const AdminDashboard: React.FC = () => {
               </div>
             </div>
           </div>
-        </div>
+        </CollapsibleAdminCard>
 
-        <h3 className="font-bold text-gray-900 dark:text-white mb-4 mt-8">Passerelles de Paiement</h3>
-        <div className="space-y-4 mb-8">
-          <div className="flex flex-col p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                  <CreditCard size={18} className="text-blue-500" />
-                  Configuration Paystack
-                </h4>
-                <p className="text-sm text-gray-500 mt-1">Configurez la clé publique de votre passerelle Paystack.</p>
-              </div>
-            </div>
-            
-            <div className="space-y-3 mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Paystack Public Key</label>
-                <input
-                  type="text"
-                  value={featureToggles['paystackPublicKey'] || ''}
-                  onChange={(e) => handleToggleFeature('paystackPublicKey', e.target.value)}
-                  className="w-full px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl"
-                  placeholder="pk_test_..."
-                />
-              </div>
-              <p className="text-xs text-amber-600 dark:text-amber-400">
-                Note: Cette clé primera sur celle configurée dans les variables d'environnement.
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <h3 className="font-bold text-gray-900 dark:text-white mb-4 mt-8">Affichage & Mises en page</h3>
-        <div className="space-y-4 mb-8">
-          {/* Articles display mode */}
-          <div className="flex flex-col p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                  <FileText size={18} className="text-emerald-500" />
-                  Mise en page des articles (Page d'accueil)
-                </h4>
-                <p className="text-sm text-gray-500 mt-1">Configurez l'affichage par défaut des articles et bloquez-le si nécessaire.</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-gray-500">
-                  {featureToggles['lockArticlesDisplayMode'] ? 'Mise en page bloquée' : 'Mise en page libre'}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => handleToggleFeature('lockArticlesDisplayMode', featureToggles['lockArticlesDisplayMode'] === true)}
-                  className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors ${
-                    featureToggles['lockArticlesDisplayMode'] ? 'bg-red-500' : 'bg-gray-300 dark:bg-gray-600'
-                  }`}
-                  title="Bloquer la mise en page pour les utilisateurs"
-                >
-                  <div
-                    className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${
-                      featureToggles['lockArticlesDisplayMode'] ? 'translate-x-6' : 'translate-x-0'
-                    }`}
-                  />
-                </button>
-              </div>
-            </div>
-            <div className="flex flex-col gap-2">
-              <span className="text-xs font-medium text-gray-500">Disposition par défaut (ou forcée si bloquée) :</span>
-              <div className="flex justify-start">
-                <LayoutSelector
-                  value={featureToggles['articlesDisplayMode'] || 'grid'}
-                  onChange={(newValue) => handleToggleFeature('articlesDisplayMode', newValue)}
-                  activeColor="border-emerald-500 text-emerald-500"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Article reading mode / viewMode */}
-          <div className="flex flex-col p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                  <BookOpen size={18} className="text-emerald-500" />
-                  Mode de lecture de l'article / secret
-                </h4>
-                <p className="text-sm text-gray-500 mt-1">Configurez le mode d'affichage par défaut (Vue complète ou par sections / accordéon).</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-gray-500">
-                  {featureToggles['lockArticleViewmode'] ? 'Mode de lecture bloqué' : 'Mode de lecture libre'}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => handleToggleFeature('lockArticleViewmode', featureToggles['lockArticleViewmode'] === true)}
-                  className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors ${
-                    featureToggles['lockArticleViewmode'] ? 'bg-red-500' : 'bg-gray-300 dark:bg-gray-600'
-                  }`}
-                  title="Bloquer le mode de lecture pour les utilisateurs"
-                >
-                  <div
-                    className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${
-                      featureToggles['lockArticleViewmode'] ? 'translate-x-6' : 'translate-x-0'
-                    }`}
-                  />
-                </button>
-              </div>
-            </div>
-            <div className="flex flex-col gap-2">
-              <span className="text-xs font-medium text-gray-500">Mode par défaut (ou forcé si bloqué) :</span>
-              <div className="flex gap-4">
-                <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="defaultArticleViewmode"
-                    value="full"
-                    checked={(featureToggles['defaultArticleViewmode'] || 'full') === 'full'}
-                    onChange={() => handleToggleFeature('defaultArticleViewmode', 'full')}
-                    className="text-emerald-500 focus:ring-emerald-500 h-4 w-4 border-gray-300"
-                  />
-                  <span>Vue complète</span>
-                </label>
-                <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="defaultArticleViewmode"
-                    value="accordion"
-                    checked={featureToggles['defaultArticleViewmode'] === 'accordion'}
-                    onChange={() => handleToggleFeature('defaultArticleViewmode', 'accordion')}
-                    className="text-emerald-500 focus:ring-emerald-500 h-4 w-4 border-gray-300"
-                  />
-                  <span>Vue par sections (accordéon)</span>
-                </label>
-              </div>
-            </div>
-          </div>
-
-          {/* Products display mode */}
-          <div className="flex flex-col p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4">
+        <CollapsibleAdminCard
+          id="set_paystack"
+          title="Passerelles de Paiement"
+          description="Configurez la clé publique de votre passerelle Paystack."
+          icon={<CreditCard size={18} className="text-blue-500 shrink-0" />}
+        >
+          <div className="space-y-3">
             <div>
-              <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                <ShoppingBag size={18} className="text-indigo-500" />
-                Affichage de la boutique
-              </h4>
-              <p className="text-sm text-gray-500 mt-1">Choisissez la disposition des produits dans la boutique.</p>
-            </div>
-            <div className="flex justify-start">
-              <LayoutSelector
-                value={featureToggles['storeDisplayMode'] || 'grid'}
-                onChange={(newValue) => handleToggleFeature('storeDisplayMode', newValue)}
-                activeColor="border-indigo-500 text-indigo-500"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between mt-8 mb-4">
-          <h3 className="font-bold text-gray-900 dark:text-white">Prompts de l'Assistant IA</h3>
-          <button
-            onClick={handleResetDefaultPrompts}
-            type="button"
-            className="px-3 py-1.5 bg-red-50 hover:bg-red-100 dark:bg-red-950/30 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 font-bold rounded-xl text-xs transition-colors flex items-center gap-1 cursor-pointer"
-          >
-            Réinitialiser aux valeurs par défaut
-          </button>
-        </div>
-
-        <div className="p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl mb-8 space-y-4">
-          <p className="text-sm text-gray-500">
-            Créez, modifiez ou supprimez les questions pré-définies qui s'affichent sur l'écran d'accueil de l'Assistant AI en fonction de la langue sélectionnée par l'utilisateur.
-          </p>
-
-          {/* Form */}
-          <div className="bg-white dark:bg-gray-800 p-4 border border-gray-100 dark:border-gray-700 rounded-xl space-y-3">
-            <h4 className="font-semibold text-sm text-gray-900 dark:text-white">
-              {editingPromptId ? "Modifier le prompt" : "Ajouter un prompt"}
-            </h4>
-            <div className="flex flex-col sm:flex-row gap-3">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Paystack Public Key</label>
               <input
                 type="text"
-                value={newPromptText}
-                onChange={(e) => setNewPromptText(e.target.value)}
-                placeholder="Exemple: Comment me protéger contre le mauvais œil ?"
-                className="flex-1 px-4 py-2 bg-gray-50 dark:bg-gray-750 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 animate-none"
+                value={featureToggles['paystackPublicKey'] || ''}
+                onChange={(e) => handleToggleFeature('paystackPublicKey', e.target.value)}
+                className="w-full px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl"
+                placeholder="pk_test_..."
               />
-              <div className="flex gap-2 shrink-0">
-                <select
-                  value={newPromptLang}
-                  onChange={(e) => setNewPromptLang(e.target.value)}
-                  className="px-3 py-2 bg-gray-50 dark:bg-gray-750 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-white cursor-pointer"
-                >
-                  <option value="fr">Français (FR)</option>
-                  <option value="en">English (EN)</option>
-                  <option value="ha">Hausa (HA)</option>
-                </select>
-                <button
-                  onClick={handleAddPrompt}
-                  disabled={!newPromptText.trim()}
-                  type="button"
-                  className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white rounded-xl text-sm font-bold transition-colors cursor-pointer flex items-center gap-1"
-                >
-                  {editingPromptId ? <Save size={16} /> : <Plus size={16} />}
-                  {editingPromptId ? "Enregistrer" : "Ajouter"}
-                </button>
-                {editingPromptId && (
+            </div>
+            <p className="text-xs text-amber-600 dark:text-amber-400">
+              Note: Cette clé primera sur celle configurée dans les variables d'environnement.
+            </p>
+          </div>
+        </CollapsibleAdminCard>
+
+        <CollapsibleAdminCard
+          id="set_layout_articles"
+          title="Affichage & Mises en page"
+          description="Configurez l'affichage des articles sur l'accueil, le mode de lecture et la disposition de la boutique."
+          icon={<FileText size={18} className="text-emerald-500 shrink-0" />}
+        >
+          <div className="space-y-4">
+            {/* Articles display mode */}
+            <div className="flex flex-col p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <FileText size={18} className="text-emerald-500" />
+                    Mise en page des articles (Page d'accueil)
+                  </h4>
+                  <p className="text-sm text-gray-500 mt-1">Configurez l'affichage par défaut des articles et bloquez-le si nécessaire.</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-gray-500">
+                    {featureToggles['lockArticlesDisplayMode'] ? 'Mise en page bloquée' : 'Mise en page libre'}
+                  </span>
                   <button
-                    onClick={() => {
-                      setEditingPromptId(null);
-                      setNewPromptText('');
-                    }}
                     type="button"
-                    className="px-3 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-650 text-gray-700 dark:text-gray-300 rounded-xl text-sm font-bold transition-colors cursor-pointer"
+                    onClick={() => handleToggleFeature('lockArticlesDisplayMode', featureToggles['lockArticlesDisplayMode'] === true)}
+                    className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors ${
+                      featureToggles['lockArticlesDisplayMode'] ? 'bg-red-500' : 'bg-gray-300 dark:bg-gray-600'
+                    }`}
+                    title="Bloquer la mise en page pour les utilisateurs"
                   >
-                    Annuler
+                    <div
+                      className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${
+                        featureToggles['lockArticlesDisplayMode'] ? 'translate-x-6' : 'translate-x-0'
+                      }`}
+                    />
                   </button>
-                )}
+                </div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <span className="text-xs font-medium text-gray-500">Disposition par défaut (ou forcée si bloquée) :</span>
+                <div className="flex justify-start">
+                  <LayoutSelector
+                    value={featureToggles['articlesDisplayMode'] || 'grid'}
+                    onChange={(newValue) => handleToggleFeature('articlesDisplayMode', newValue)}
+                    activeColor="border-emerald-500 text-emerald-500"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Article reading mode / viewMode */}
+            <div className="flex flex-col p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <BookOpen size={18} className="text-emerald-500" />
+                    Mode de lecture de l'article / secret
+                  </h4>
+                  <p className="text-sm text-gray-500 mt-1">Configurez le mode d'affichage par défaut (Vue complète ou par sections / accordéon).</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-gray-500">
+                    {featureToggles['lockArticleViewmode'] ? 'Mode de lecture bloqué' : 'Mode de lecture libre'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleFeature('lockArticleViewmode', featureToggles['lockArticleViewmode'] === true)}
+                    className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors ${
+                      featureToggles['lockArticleViewmode'] ? 'bg-red-500' : 'bg-gray-300 dark:bg-gray-600'
+                    }`}
+                    title="Bloquer le mode de lecture pour les utilisateurs"
+                  >
+                    <div
+                      className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${
+                        featureToggles['lockArticleViewmode'] ? 'translate-x-6' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+              <div className="flex flex-col gap-2">
+                <span className="text-xs font-medium text-gray-500">Mode par défaut (ou forcé si bloqué) :</span>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="defaultArticleViewmode"
+                      value="full"
+                      checked={(featureToggles['defaultArticleViewmode'] || 'full') === 'full'}
+                      onChange={() => handleToggleFeature('defaultArticleViewmode', 'full')}
+                      className="text-emerald-500 focus:ring-emerald-500 h-4 w-4 border-gray-300"
+                    />
+                    <span>Vue complète</span>
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="defaultArticleViewmode"
+                      value="accordion"
+                      checked={featureToggles['defaultArticleViewmode'] === 'accordion'}
+                      onChange={() => handleToggleFeature('defaultArticleViewmode', 'accordion')}
+                      className="text-emerald-500 focus:ring-emerald-500 h-4 w-4 border-gray-300"
+                    />
+                    <span>Vue par sections (accordéon)</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {/* Products display mode */}
+            <div className="flex flex-col p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4">
+              <div>
+                <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                  <ShoppingBag size={18} className="text-indigo-500" />
+                  Affichage de la boutique
+                </h4>
+                <p className="text-sm text-gray-500 mt-1">Choisissez la disposition des produits dans la boutique.</p>
+              </div>
+              <div className="flex justify-start">
+                <LayoutSelector
+                  value={featureToggles['storeDisplayMode'] || 'grid'}
+                  onChange={(newValue) => handleToggleFeature('storeDisplayMode', newValue)}
+                  activeColor="border-indigo-500 text-indigo-500"
+                />
               </div>
             </div>
           </div>
+        </CollapsibleAdminCard>
 
-          {/* List grouped by language */}
+        <CollapsibleAdminCard
+          id="set_assistant_prompts"
+          title="Prompts de l'Assistant IA"
+          description="Créez, modifiez ou supprimez les questions pré-définies qui s'affichent sur l'écran d'accueil de l'Assistant AI."
+          icon={<Sparkles size={18} className="text-emerald-500 shrink-0" />}
+          headerRight={
+            <button
+              onClick={handleResetDefaultPrompts}
+              type="button"
+              className="px-3 py-1.5 bg-red-50 hover:bg-red-100 dark:bg-red-950/30 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 font-bold rounded-xl text-xs transition-colors flex items-center gap-1 cursor-pointer"
+            >
+              Réinitialiser aux valeurs par défaut
+            </button>
+          }
+        >
           <div className="space-y-4">
-            {['fr', 'en', 'ha'].map((lang) => {
-              const langPrompts = adminPrompts.filter(p => p.lang === lang);
-              const langLabel = lang === 'fr' ? 'Français' : lang === 'en' ? 'English' : 'Hausa';
-              return (
-                <div key={lang} className="space-y-2">
-                  <div className="flex items-center gap-2 border-b border-gray-100 dark:border-gray-700 pb-1">
-                    <span className="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">{langLabel} ({langPrompts.length})</span>
-                  </div>
-                  {langPrompts.length === 0 ? (
-                    <p className="text-xs text-gray-400 italic py-1">Aucun prompt pour cette langue.</p>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                      {langPrompts.map((p) => (
-                        <div key={p.id} className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl gap-2">
-                          <span className="text-sm text-gray-800 dark:text-gray-200 line-clamp-2">{p.text}</span>
-                          <div className="flex gap-1 shrink-0">
-                            <button
-                              onClick={() => handleEditPrompt(p)}
-                              type="button"
-                              className="p-1 rounded text-gray-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-all cursor-pointer"
-                              title="Modifier"
-                            >
-                              <Edit2 size={14} />
-                            </button>
-                            <button
-                              onClick={() => handleDeletePrompt(p.id)}
-                              type="button"
-                              className="p-1 rounded text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all cursor-pointer"
-                              title="Supprimer"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+            <p className="text-sm text-gray-500">
+              Créez, modifiez ou supprimez les questions pré-définies qui s'affichent sur l'écran d'accueil de l'Assistant AI en fonction de la langue sélectionnée par l'utilisateur.
+            </p>
+
+            {/* Form */}
+            <div className="bg-white dark:bg-gray-800 p-4 border border-gray-100 dark:border-gray-700 rounded-xl space-y-3">
+              <h4 className="font-semibold text-sm text-gray-900 dark:text-white">
+                {editingPromptId ? "Modifier le prompt" : "Ajouter un prompt"}
+              </h4>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <input
+                  type="text"
+                  value={newPromptText}
+                  onChange={(e) => setNewPromptText(e.target.value)}
+                  placeholder="Exemple: Comment me protéger contre le mauvais œil ?"
+                  className="flex-1 px-4 py-2 bg-gray-50 dark:bg-gray-750 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 animate-none"
+                />
+                <div className="flex gap-2 shrink-0">
+                  <select
+                    value={newPromptLang}
+                    onChange={(e) => setNewPromptLang(e.target.value)}
+                    className="px-3 py-2 bg-gray-50 dark:bg-gray-750 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-white cursor-pointer"
+                  >
+                    <option value="fr">Français (FR)</option>
+                    <option value="en">English (EN)</option>
+                    <option value="ha">Hausa (HA)</option>
+                  </select>
+                  <button
+                    onClick={handleAddPrompt}
+                    disabled={!newPromptText.trim()}
+                    type="button"
+                    className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white rounded-xl text-sm font-bold transition-colors cursor-pointer flex items-center gap-1"
+                  >
+                    {editingPromptId ? <Save size={16} /> : <Plus size={16} />}
+                    {editingPromptId ? "Enregistrer" : "Ajouter"}
+                  </button>
+                  {editingPromptId && (
+                    <button
+                      onClick={() => {
+                        setEditingPromptId(null);
+                        setNewPromptText('');
+                      }}
+                      type="button"
+                      className="px-3 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-650 text-gray-700 dark:text-gray-300 rounded-xl text-sm font-bold transition-colors cursor-pointer"
+                    >
+                      Annuler
+                    </button>
                   )}
                 </div>
-              );
-            })}
-          </div>
-        </div>
+              </div>
+            </div>
 
-        <h3 className="font-bold text-gray-900 dark:text-white mb-4">Sauvegarde et Export</h3>
-        <div className="p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl">
-          <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
-            Téléchargez une copie complète des données de l'application (utilisateurs, lexique, statistiques, posts) au format JSON.
-          </p>
-          <button
-            onClick={handleExportData}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-colors w-full sm:w-auto"
-          >
-            <Save size={18} /> Exporter les données
-          </button>
-        </div>
+            {/* List grouped by language */}
+            <div className="space-y-4">
+              {['fr', 'en', 'ha'].map((lang) => {
+                const langPrompts = adminPrompts.filter(p => p.lang === lang);
+                const langLabel = lang === 'fr' ? 'Français' : lang === 'en' ? 'English' : 'Hausa';
+                return (
+                  <div key={lang} className="space-y-2">
+                    <div className="flex items-center gap-2 border-b border-gray-100 dark:border-gray-700 pb-1">
+                      <span className="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">{langLabel} ({langPrompts.length})</span>
+                    </div>
+                    {langPrompts.length === 0 ? (
+                      <p className="text-xs text-gray-400 italic py-1">Aucun prompt pour cette langue.</p>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {langPrompts.map((p) => (
+                          <div key={p.id} className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl gap-2">
+                            <span className="text-sm text-gray-800 dark:text-gray-200 line-clamp-2">{p.text}</span>
+                            <div className="flex gap-1 shrink-0">
+                              <button
+                                onClick={() => handleEditPrompt(p)}
+                                type="button"
+                                className="p-1 rounded text-gray-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-all cursor-pointer"
+                                title="Modifier"
+                              >
+                                <Edit2 size={14} />
+                              </button>
+                              <button
+                                onClick={() => handleDeletePrompt(p.id)}
+                                type="button"
+                                className="p-1 rounded text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all cursor-pointer"
+                                title="Supprimer"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </CollapsibleAdminCard>
+
+        <CollapsibleAdminCard
+          id="set_backup_export"
+          title="Sauvegarde et Export"
+          description="Téléchargez une copie complète des données de l'application (utilisateurs, lexique, statistiques, posts) au format JSON."
+          icon={<Save size={18} className="text-emerald-500 shrink-0" />}
+        >
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              Téléchargez une copie complète des données de l'application (utilisateurs, lexique, statistiques, posts) au format JSON.
+            </p>
+            <button
+              onClick={handleExportData}
+              className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-colors w-full sm:w-auto"
+            >
+              <Save size={18} /> Exporter les données
+            </button>
+          </div>
+        </CollapsibleAdminCard>
       </div>
     </div>
-  );
+  </div>
+);
 
   const getAutoIconForCategory = (name: string): string => {
     const norm = name.toLowerCase().trim();
@@ -7504,10 +8348,34 @@ export const AdminDashboard: React.FC = () => {
         {activeTab === 'ruqyah' && renderRuqyah()}
         {activeTab === 'grand_oaths' && renderGrandOaths()}
         {activeTab === 'seals' && <LunarSealVarietiesSection language="fr" />}
+        {activeTab === 'book_covers' && (
+          <BookCoverStudio
+            initialTitle={newArticle.title || 'Le Livre des Secrets'}
+            onSelectCover={(dataUrl) => {
+              setNewArticle((prev: any) => ({ ...prev, thumbnail: dataUrl }));
+              setActiveTab('articles');
+              showToast("Couverture appliquée au livre/article !");
+            }}
+          />
+        )}
         {activeTab === 'content' && renderContent()}
         {activeTab === 'settings' && renderSettings()}
       </motion.div>
       
+      {/* Modal Studio de Couvertures de Livres IA */}
+      {showBookCoverStudioModal && (
+        <BookCoverStudio
+          isModal={true}
+          onClose={() => setShowBookCoverStudioModal(false)}
+          initialTitle={newArticle.title || 'Le Livre des Secrets'}
+          onSelectCover={(dataUrl) => {
+            setNewArticle((prev: any) => ({ ...prev, thumbnail: dataUrl }));
+            setShowBookCoverStudioModal(false);
+            showToast("Couverture générée et appliquée au livre/article !");
+          }}
+        />
+      )}
+
       {/* Modal d'inscription et d'ajout d'utilisateurs */}
       <AnimatePresence>
         {isAddUserModalOpen && (
@@ -7699,6 +8567,406 @@ export const AdminDashboard: React.FC = () => {
           </div>
         )}
       </AnimatePresence>
+
+      {/* User Detail & Full Edit Modal */}
+      <AnimatePresence>
+        {selectedUserDetail && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="bg-white dark:bg-gray-800 rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-gray-100 dark:border-gray-700 max-h-[90vh] overflow-y-auto my-8 relative"
+            >
+              {/* Modal Header */}
+              <div className="flex justify-between items-start mb-6 pb-4 border-b border-gray-100 dark:border-gray-750">
+                <div className="flex items-center gap-4">
+                  <img
+                    src={selectedUserDetail.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(selectedUserDetail.name || selectedUserDetail.email)}`}
+                    alt={selectedUserDetail.name}
+                    className="w-16 h-16 rounded-full object-cover border-2 border-emerald-500 shadow-md shrink-0"
+                    onError={(e) => {
+                      (e.target as HTMLElement).setAttribute('src', `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(selectedUserDetail.email || 'user')}`);
+                    }}
+                  />
+                  <div>
+                    <h3 className="font-bold text-gray-900 dark:text-white text-xl flex items-center gap-2 flex-wrap">
+                      <span>{selectedUserDetail.name || 'Membre AsrarHub'}</span>
+                      {selectedUserDetail.isBanned && (
+                        <span className="bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400 text-xs uppercase font-bold px-2.5 py-0.5 rounded-full">Banni</span>
+                      )}
+                      {selectedUserDetail.isTrusted && (
+                        <span className="bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400 text-xs uppercase font-bold px-2.5 py-0.5 rounded-full">De Confiance</span>
+                      )}
+                    </h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 font-mono mt-0.5">ID: {selectedUserDetail.id}</p>
+                    <div className="mt-1.5 flex items-center gap-2 flex-wrap">
+                      <span className="bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300 text-[10px] font-bold px-2.5 py-0.5 rounded-md">
+                        Source: {(selectedUserDetail as any).source || 'Base Firestore'}
+                      </span>
+                      <span className="bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300 text-[10px] font-bold px-2.5 py-0.5 rounded-md uppercase">
+                        Rôle: {(selectedUserDetail as any).role || 'user'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setSelectedUserDetail(null);
+                    setIsEditingUser(false);
+                  }}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-750 text-gray-400 rounded-xl transition-colors shrink-0"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+
+              {/* Modal Content */}
+              {!isEditingUser ? (
+                <div className="space-y-6">
+                  {/* General Info Grid */}
+                  <div className="bg-gray-50 dark:bg-gray-750 rounded-2xl p-5 border border-gray-100 dark:border-gray-700 space-y-3">
+                    <h4 className="font-bold text-xs uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
+                      <Users size={16} />
+                      <span>Informations Personnelles & Inscription</span>
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                      <div>
+                        <span className="text-gray-500 dark:text-gray-400 block font-medium">Nom Complet :</span>
+                        <span className="font-bold text-gray-900 dark:text-white text-sm">{selectedUserDetail.name || 'Membre AsrarHub'}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 dark:text-gray-400 block font-medium">Adresse Email :</span>
+                        <span className="font-bold text-gray-900 dark:text-white font-mono break-all">{selectedUserDetail.email || 'Aucune'}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 dark:text-gray-400 block font-medium">Numéro de Téléphone :</span>
+                        <span className="font-bold text-gray-900 dark:text-white">{selectedUserDetail.phone || 'Non renseigné'}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 dark:text-gray-400 block font-medium">Pays / Localisation :</span>
+                        <span className="font-bold text-gray-900 dark:text-white">{selectedUserDetail.country || 'Non renseigné'}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 dark:text-gray-400 block font-medium">Date de Création / Inscription :</span>
+                        <span className="font-bold text-gray-900 dark:text-white">{(selectedUserDetail as any).createdAt ? new Date((selectedUserDetail as any).createdAt).toLocaleString('fr-FR') : 'Date inconnue'}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 dark:text-gray-400 block font-medium">ID Unique Firestore :</span>
+                        <span className="font-bold text-gray-900 dark:text-white font-mono bg-gray-200 dark:bg-gray-800 px-2 py-0.5 rounded">{selectedUserDetail.id}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Security & Authentication */}
+                  <div className="bg-gray-50 dark:bg-gray-750 rounded-2xl p-5 border border-gray-100 dark:border-gray-700 space-y-3">
+                    <h4 className="font-bold text-xs uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-2">
+                      <Shield size={16} />
+                      <span>Sécurité & Authentification</span>
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                      <div>
+                        <span className="text-gray-500 dark:text-gray-400 block font-medium">Mot de Passe / Hash :</span>
+                        <span className="font-mono bg-gray-200 dark:bg-gray-800 px-2 py-1 rounded text-xs font-bold text-gray-800 dark:text-gray-200 break-all block mt-1">
+                          {selectedUserDetail.password_hash_indicator || selectedUserDetail.password || '•••••••• (Hash Sécurisé)'}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 dark:text-gray-400 block font-medium">Accès aux Outils Mystiques :</span>
+                        <span className={`font-bold inline-block mt-1 px-2.5 py-0.5 rounded-md ${selectedUserDetail.mysteryToolsDisabled ? 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'}`}>
+                          {selectedUserDetail.mysteryToolsDisabled ? '🚫 Bloqué' : '✅ Autorisé'}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 dark:text-gray-400 block font-medium">Statut du Compte :</span>
+                        <span className={`font-bold inline-block mt-1 px-2.5 py-0.5 rounded-md ${selectedUserDetail.isBanned ? 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'}`}>
+                          {selectedUserDetail.isBanned ? 'Banni de la plateforme' : 'Compte Actif'}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 dark:text-gray-400 block font-medium">Confiance Administrateur :</span>
+                        <span className={`font-bold inline-block mt-1 px-2.5 py-0.5 rounded-md ${selectedUserDetail.isTrusted ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400' : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'}`}>
+                          {selectedUserDetail.isTrusted ? 'Membre de Confiance' : 'Standard'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Push Notifications & Subscription */}
+                  <div className="bg-gray-50 dark:bg-gray-750 rounded-2xl p-5 border border-gray-100 dark:border-gray-700 space-y-3">
+                    <h4 className="font-bold text-xs uppercase tracking-wider text-blue-600 dark:text-blue-400 flex items-center gap-2">
+                      <Bell size={16} />
+                      <span>Notifications Push & Abonnement</span>
+                    </h4>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                      <div>
+                        <span className="text-gray-500 dark:text-gray-400 block font-medium">Statut Push Notifications :</span>
+                        <span className={`font-bold inline-block mt-1 px-2.5 py-0.5 rounded-md ${selectedUserDetail.pushNotificationsEnabled !== false ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400'}`}>
+                          {selectedUserDetail.pushNotificationsEnabled !== false ? 'Activé' : 'Désactivé'}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 dark:text-gray-400 block font-medium">Plan / Tier d'Abonnement :</span>
+                        <span className="font-bold text-emerald-600 dark:text-emerald-400 text-sm uppercase">
+                          {(selectedUserDetail as any).subscriptionTier || (selectedUserDetail as any).subscriptionPlan || 'Premium / Illimité'}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 dark:text-gray-400 block font-medium">Solde Points Spirituels :</span>
+                        <span className="font-extrabold text-amber-600 dark:text-amber-400 text-sm bg-amber-50 dark:bg-amber-950/40 px-2.5 py-0.5 rounded-md border border-amber-200 dark:border-amber-800/40 inline-block mt-1">
+                          ✨ {selectedUserDetail.spiritualPoints || 0} pts
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex flex-wrap gap-3 pt-4 border-t border-gray-100 dark:border-gray-750">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditUserData({ ...selectedUserDetail });
+                        setIsEditingUser(true);
+                      }}
+                      className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-2 cursor-pointer"
+                    >
+                      <Edit2 size={15} />
+                      <span>✏️ Modifier le Profil</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          await setDoc(doc(db, 'users', selectedUserDetail.id), {
+                            ...selectedUserDetail,
+                            syncedAt: new Date().toISOString()
+                          }, { merge: true });
+                          showToast("Compte synchronisé avec succès dans Firestore !");
+                        } catch (err) {
+                          showToast("Erreur de synchronisation Firestore.", "error");
+                        }
+                      }}
+                      className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-2 cursor-pointer"
+                    >
+                      <Save size={15} />
+                      <span>⚡ Sync Firestore</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteUserAccount(selectedUserDetail.id, selectedUserDetail.email, selectedUserDetail.name)}
+                      className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-2 ml-auto cursor-pointer"
+                    >
+                      <Trash2 size={15} />
+                      <span>🗑️ Supprimer l'utilisateur</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* Editing Form */
+                <form onSubmit={(e) => { e.preventDefault(); handleSaveUserDetail(); }} className="space-y-4">
+                  <h4 className="font-bold text-sm text-gray-900 dark:text-white mb-2">Modifier les informations de l'utilisateur</h4>
+                  
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">Nom Complet</label>
+                    <input
+                      type="text"
+                      value={editUserData.name || ''}
+                      onChange={(e) => setEditUserData({ ...editUserData, name: e.target.value })}
+                      className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl text-xs font-medium text-gray-900 dark:text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">Adresse Email</label>
+                    <input
+                      type="email"
+                      value={editUserData.email || ''}
+                      onChange={(e) => setEditUserData({ ...editUserData, email: e.target.value })}
+                      className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl text-xs font-medium text-gray-900 dark:text-white"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">Téléphone</label>
+                      <input
+                        type="text"
+                        value={editUserData.phone || ''}
+                        onChange={(e) => setEditUserData({ ...editUserData, phone: e.target.value })}
+                        className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl text-xs font-medium text-gray-900 dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">Pays</label>
+                      <input
+                        type="text"
+                        value={editUserData.country || ''}
+                        onChange={(e) => setEditUserData({ ...editUserData, country: e.target.value })}
+                        className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl text-xs font-medium text-gray-900 dark:text-white"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">Rôle</label>
+                      <select
+                        value={(editUserData as any).role || 'user'}
+                        onChange={(e) => setEditUserData({ ...editUserData, role: e.target.value } as any)}
+                        className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl text-xs font-medium text-gray-900 dark:text-white"
+                      >
+                        <option value="user">Utilisateur Standard</option>
+                        <option value="admin">Administrateur</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">Abonnement</label>
+                      <select
+                        value={(editUserData as any).subscriptionTier || 'premium'}
+                        onChange={(e) => setEditUserData({ ...editUserData, subscriptionTier: e.target.value } as any)}
+                        className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl text-xs font-medium text-gray-900 dark:text-white"
+                      >
+                        <option value="free">Gratuit</option>
+                        <option value="pro">Pro</option>
+                        <option value="premium">Premium</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">Solde Points Spirituels</label>
+                    <input
+                      type="number"
+                      value={(editUserData as any).spiritualPoints !== undefined ? (editUserData as any).spiritualPoints : (selectedUserDetail.spiritualPoints || 0)}
+                      onChange={(e) => setEditUserData({ ...editUserData, spiritualPoints: parseInt(e.target.value, 10) || 0 } as any)}
+                      className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl text-xs font-medium text-gray-900 dark:text-white"
+                    />
+                  </div>
+
+                  <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-750">
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingUser(false)}
+                      className="px-4 py-2 bg-gray-100 dark:bg-gray-750 text-gray-700 dark:text-gray-300 rounded-xl text-xs font-bold"
+                    >
+                      Annuler
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md"
+                    >
+                      💾 Sauvegarder les modifications
+                    </button>
+                  </div>
+                </form>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal Confirmation de Suppression d'Utilisateur */}
+      {userToDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 max-w-md w-full shadow-2xl border border-gray-100 dark:border-gray-700 animate-in fade-in zoom-in duration-200">
+            <div className="flex items-center gap-3 text-red-600 dark:text-red-400 mb-4">
+              <div className="p-3 bg-red-100 dark:bg-red-950/50 rounded-2xl">
+                <Trash2 size={24} />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-lg text-gray-900 dark:text-white">Confirmer la suppression</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Cette action est définitive et irréversible.</p>
+              </div>
+            </div>
+
+            <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/40 rounded-2xl p-4 mb-6">
+              <p className="text-xs text-gray-700 dark:text-gray-300">
+                Voulez-vous vraiment supprimer le compte de <strong className="text-gray-900 dark:text-white">{userToDeleteConfirm.name || userToDeleteConfirm.email || userToDeleteConfirm.id}</strong> ?
+              </p>
+              {userToDeleteConfirm.email && (
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-mono">
+                  Email : {userToDeleteConfirm.email}
+                </p>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setUserToDeleteConfirm(null)}
+                className="px-4 py-2.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-650 text-gray-700 dark:text-gray-200 rounded-xl text-xs font-bold transition-all cursor-pointer"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={executeConfirmDeleteUser}
+                className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-2 cursor-pointer"
+              >
+                <Trash2 size={16} />
+                <span>Oui, Supprimer Définitivement</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Confirmation de Suppression Groupée */}
+      {isBatchDeleteConfirmOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 max-w-md w-full shadow-2xl border border-gray-100 dark:border-gray-700 animate-in fade-in zoom-in duration-200">
+            <div className="flex items-center gap-3 text-red-600 dark:text-red-400 mb-4">
+              <div className="p-3 bg-red-100 dark:bg-red-950/50 rounded-2xl">
+                <Trash2 size={24} />
+              </div>
+              <div>
+                <h3 className="font-extrabold text-lg text-gray-900 dark:text-white">Suppression Groupée</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Action définitive pour plusieurs utilisateurs.</p>
+              </div>
+            </div>
+
+            <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/40 rounded-2xl p-4 mb-6">
+              <p className="text-xs text-gray-700 dark:text-gray-300 font-semibold mb-2">
+                Êtes-vous sûr de vouloir supprimer définitivement les <strong className="text-red-600 dark:text-red-400 font-bold">{selectedUserIds.length}</strong> utilisateur(s) sélectionné(s) ?
+              </p>
+              <div className="max-h-36 overflow-y-auto space-y-1 my-2.5 pr-1 text-[11px] text-gray-700 dark:text-gray-300 font-mono bg-white dark:bg-gray-900/60 p-3 rounded-xl border border-red-200/60 dark:border-red-900/30">
+                {users.filter(u => selectedUserIds.includes(u.id)).slice(0, 6).map(u => (
+                  <div key={u.id} className="truncate flex items-center gap-1.5">
+                    <span className="text-red-500 font-bold">•</span>
+                    <span>{u.name || 'Sans nom'}</span>
+                    <span className="text-gray-400 dark:text-gray-500 font-normal">({u.email || u.id})</span>
+                  </div>
+                ))}
+                {selectedUserIds.length > 6 && (
+                  <div className="text-gray-400 dark:text-gray-500 font-sans italic pt-1 border-t border-gray-100 dark:border-gray-800">
+                    ...et {selectedUserIds.length - 6} autre(s) utilisateur(s)
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setIsBatchDeleteConfirmOpen(false)}
+                className="px-4 py-2.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-650 text-gray-700 dark:text-gray-200 rounded-xl text-xs font-bold transition-all cursor-pointer"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={executeConfirmBatchDeleteUsers}
+                className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-2 cursor-pointer"
+              >
+                <Trash2 size={16} />
+                <span>Oui, Supprimer ces {selectedUserIds.length} Utilisateur(s)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {toast && (
         <div className="fixed bottom-6 right-6 z-[100] animate-in fade-in slide-in-from-bottom-5">

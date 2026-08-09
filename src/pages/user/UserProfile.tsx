@@ -5,6 +5,7 @@ import { requestStoragePermission, requestMicrophonePermission, requestGeolocati
 import { motion, AnimatePresence } from 'motion/react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth, handleFirestoreError, OperationType } from '../../contexts/AuthContext';
+import { useFeatures } from '../../contexts/FeatureContext';
 import { PremiumBadge } from '../../components/PremiumBadge';
 import { Premium12hCountdownWidget } from '../../components/Premium12hCountdownWidget';
 import { AuthModal } from '../../components/AuthModal';
@@ -167,6 +168,7 @@ export const UserProfile: React.FC = () => {
   const { t, language } = useLanguage();
   const { theme, setTheme } = useTheme();
   const { user } = useAuth();
+  const { featureToggles } = useFeatures();
   const navigate = useNavigate();
   
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -897,9 +899,16 @@ export const UserProfile: React.FC = () => {
               </p>
               {user && (
                 <div className="flex items-center justify-center sm:justify-start gap-2 mt-2">
-                  <div className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-1.5 border border-emerald-100 dark:border-emerald-800">
+                  <div className={`px-3 py-1 rounded-full text-sm font-semibold flex items-center gap-1.5 border ${
+                    featureToggles?.pointsSystemEnabled !== false
+                      ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-emerald-100 dark:border-emerald-800'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700'
+                  }`}>
                     <Sparkles size={14} />
                     <span>{user?.spiritualPoints || 0} pts</span>
+                    {featureToggles?.pointsSystemEnabled === false && (
+                      <span className="text-[10px] font-normal text-amber-600 dark:text-amber-400 ml-1">(Désactivés)</span>
+                    )}
                   </div>
                 </div>
               )}

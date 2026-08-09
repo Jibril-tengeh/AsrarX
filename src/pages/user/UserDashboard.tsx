@@ -17,8 +17,9 @@ import { AsrarQuickWidget } from '../../components/AsrarQuickWidget';
 
 import { INITIAL_DEFAULT_ARTICLES, DefaultArticle } from '../../data/defaultArticles';
 import { fetchArticlesFromRest } from '../../lib/firestoreRest';
-import { isPubliclyVisibleArticle } from '../../lib/articleUtils';
+import { isPubliclyVisibleArticle, getTranslatedArticleTitle, getTranslatedArticleHook } from '../../lib/articleUtils';
 import { mergeWithLocalArticles } from '../../lib/localArticles';
+import { useBackButton } from '../../hooks/useBackButton';
 
 const LucideIcon = ({ name, className, size }: { name: string; className?: string; size?: number }) => {
   const IconComponent = (Icons as any)[name];
@@ -150,6 +151,13 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
   const [affirmation, setAffirmation] = useState({ verse: '', reference: '' });
   const [scrolled, setScrolled] = useState(false);
   const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
+
+  useBackButton(() => setIsSearchOpen(false), isSearchOpen);
+  useBackButton(() => setIsFilterOpen(false), isFilterOpen);
+  useBackButton(() => setIsCategoryModalOpen(false), isCategoryModalOpen);
+  useBackButton(() => setIsTopContributorsOpen(false), isTopContributorsOpen);
+  useBackButton(() => setIsGlobalSearchOpen(false), isGlobalSearchOpen);
+  useBackButton(() => setIsCalendarOpen(false), isCalendarOpen);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -342,17 +350,12 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
       if (language === 'en' && data.content_en) activeContent = data.content_en;
       if (language === 'ha' && data.content_ha) activeContent = data.content_ha;
 
-      let hookText = data.hook || '';
-      if (language === 'en' && data.hook_en) hookText = data.hook_en;
-      if (language === 'ha' && data.hook_ha) hookText = data.hook_ha;
-      
+      let hookText = getTranslatedArticleHook(data, language);
       if (!hookText && activeContent) {
         hookText = activeContent.replace(/<[^>]+>/g, '').substring(0, 120) + '...';
       }
       
-      let titleText = data.title || '';
-      if (language === 'en' && data.title_en) titleText = data.title_en;
-      if (language === 'ha' && data.title_ha) titleText = data.title_ha;
+      let titleText = getTranslatedArticleTitle(data, language);
 
       const hasManual = language !== 'fr' && !!(data[`title_${language}`] || data[`content_${language}`]);
       return {
@@ -386,13 +389,8 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
         if (language === 'en' && art.content_en) activeContent = art.content_en;
         if (language === 'ha' && art.content_ha) activeContent = art.content_ha;
 
-        let hookText = art.hook || '';
-        if (language === 'en' && art.hook_en) hookText = art.hook_en;
-        if (language === 'ha' && art.hook_ha) hookText = art.hook_ha;
-
-        let titleText = art.title || '';
-        if (language === 'en' && art.title_en) titleText = art.title_en;
-        if (language === 'ha' && art.title_ha) titleText = art.title_ha;
+        let hookText = getTranslatedArticleHook(art, language);
+        let titleText = getTranslatedArticleTitle(art, language);
 
         return {
           id: art.id,

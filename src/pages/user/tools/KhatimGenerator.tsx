@@ -306,6 +306,9 @@ export const KhatimGenerator: React.FC = () => {
   const [isCenterEmpty, setIsCenterEmpty] = useState<boolean>(false);
   const [centerCustomText, setCenterCustomText] = useState<string>('');
 
+  // Tawq framing borders option (enable / disable)
+  const [isTawqEnabled, setIsTawqEnabled] = useState<boolean>(true);
+
   // Helper to override center cell when Bait Al-Khali is active
   const applyCenterCellOverride = (
     rawGrid: (number | string)[][] | null,
@@ -1385,67 +1388,87 @@ export const KhatimGenerator: React.FC = () => {
 
             {/* Tawq Framing Borders Inputs */}
             <div className="space-y-3 pt-2 border-t border-fuchsia-300 dark:border-fuchsia-500/20">
-              <label className="block text-xs font-bold text-fuchsia-950 dark:text-fuchsia-200">
-                {i18n.tawqSectionTitle}
-              </label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
-                  <span className="text-[10px] text-fuchsia-900 dark:text-fuchsia-300 font-semibold">{i18n.tawqTopLabel}</span>
-                  <input
-                    type="text"
-                    dir="rtl"
-                    value={customTawqTop}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setCustomTawqTop(val);
-                      setTawqFrame((prev) => [val, prev[1] ?? customTawqRight, prev[2] ?? customTawqBottom, prev[3] ?? customTawqLeft]);
-                    }}
-                    className="w-full bg-white dark:bg-black/40 border border-fuchsia-300 dark:border-fuchsia-500/30 rounded-xl p-2 text-xs font-arabic text-amber-800 dark:text-amber-300 focus:outline-none focus:border-fuchsia-500 shadow-sm"
-                  />
-                </div>
-                <div>
-                  <span className="text-[10px] text-fuchsia-900 dark:text-fuchsia-300 font-semibold">{i18n.tawqRightLabel}</span>
-                  <input
-                    type="text"
-                    dir="rtl"
-                    value={customTawqRight}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setCustomTawqRight(val);
-                      setTawqFrame((prev) => [prev[0] ?? customTawqTop, val, prev[2] ?? customTawqBottom, prev[3] ?? customTawqLeft]);
-                    }}
-                    className="w-full bg-white dark:bg-black/40 border border-fuchsia-300 dark:border-fuchsia-500/30 rounded-xl p-2 text-xs font-arabic text-amber-800 dark:text-amber-300 focus:outline-none focus:border-fuchsia-500 shadow-sm"
-                  />
-                </div>
-                <div>
-                  <span className="text-[10px] text-fuchsia-900 dark:text-fuchsia-300 font-semibold">{i18n.tawqBottomLabel}</span>
-                  <input
-                    type="text"
-                    dir="rtl"
-                    value={customTawqBottom}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setCustomTawqBottom(val);
-                      setTawqFrame((prev) => [prev[0] ?? customTawqTop, prev[1] ?? customTawqRight, val, prev[3] ?? customTawqLeft]);
-                    }}
-                    className="w-full bg-white dark:bg-black/40 border border-fuchsia-300 dark:border-fuchsia-500/30 rounded-xl p-2 text-xs font-arabic text-amber-800 dark:text-amber-300 focus:outline-none focus:border-fuchsia-500 shadow-sm"
-                  />
-                </div>
-                <div>
-                  <span className="text-[10px] text-fuchsia-900 dark:text-fuchsia-300 font-semibold">{i18n.tawqLeftLabel}</span>
-                  <input
-                    type="text"
-                    dir="rtl"
-                    value={customTawqLeft}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setCustomTawqLeft(val);
-                      setTawqFrame((prev) => [prev[0] ?? customTawqTop, prev[1] ?? customTawqRight, prev[2] ?? customTawqBottom, val]);
-                    }}
-                    className="w-full bg-white dark:bg-black/40 border border-fuchsia-300 dark:border-fuchsia-500/30 rounded-xl p-2 text-xs font-arabic text-amber-800 dark:text-amber-300 focus:outline-none focus:border-fuchsia-500 shadow-sm"
-                  />
-                </div>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <label className="block text-xs font-bold text-fuchsia-950 dark:text-fuchsia-200">
+                  {i18n.tawqSectionTitle}
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setIsTawqEnabled(!isTawqEnabled)}
+                  className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 border shadow-sm ${
+                    isTawqEnabled
+                      ? 'bg-emerald-600 text-white border-emerald-500 hover:bg-emerald-500'
+                      : 'bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-700 hover:bg-gray-300 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  <span>{isTawqEnabled ? '✓ Bordures Activées' : '✕ Bordures Désactivées'}</span>
+                </button>
               </div>
+
+              {isTawqEnabled ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <span className="text-[10px] text-fuchsia-900 dark:text-fuchsia-300 font-semibold">{i18n.tawqTopLabel}</span>
+                    <input
+                      type="text"
+                      dir="rtl"
+                      value={customTawqTop}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setCustomTawqTop(val);
+                        setTawqFrame((prev) => [val, prev[1] ?? customTawqRight, prev[2] ?? customTawqBottom, prev[3] ?? customTawqLeft]);
+                      }}
+                      className="w-full bg-white dark:bg-black/40 border border-fuchsia-300 dark:border-fuchsia-500/30 rounded-xl p-2 text-xs font-arabic text-amber-800 dark:text-amber-300 focus:outline-none focus:border-fuchsia-500 shadow-sm"
+                    />
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-fuchsia-900 dark:text-fuchsia-300 font-semibold">{i18n.tawqRightLabel}</span>
+                    <input
+                      type="text"
+                      dir="rtl"
+                      value={customTawqRight}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setCustomTawqRight(val);
+                        setTawqFrame((prev) => [prev[0] ?? customTawqTop, val, prev[2] ?? customTawqBottom, prev[3] ?? customTawqLeft]);
+                      }}
+                      className="w-full bg-white dark:bg-black/40 border border-fuchsia-300 dark:border-fuchsia-500/30 rounded-xl p-2 text-xs font-arabic text-amber-800 dark:text-amber-300 focus:outline-none focus:border-fuchsia-500 shadow-sm"
+                    />
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-fuchsia-900 dark:text-fuchsia-300 font-semibold">{i18n.tawqBottomLabel}</span>
+                    <input
+                      type="text"
+                      dir="rtl"
+                      value={customTawqBottom}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setCustomTawqBottom(val);
+                        setTawqFrame((prev) => [prev[0] ?? customTawqTop, prev[1] ?? customTawqRight, val, prev[3] ?? customTawqLeft]);
+                      }}
+                      className="w-full bg-white dark:bg-black/40 border border-fuchsia-300 dark:border-fuchsia-500/30 rounded-xl p-2 text-xs font-arabic text-amber-800 dark:text-amber-300 focus:outline-none focus:border-fuchsia-500 shadow-sm"
+                    />
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-fuchsia-900 dark:text-fuchsia-300 font-semibold">{i18n.tawqLeftLabel}</span>
+                    <input
+                      type="text"
+                      dir="rtl"
+                      value={customTawqLeft}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setCustomTawqLeft(val);
+                        setTawqFrame((prev) => [prev[0] ?? customTawqTop, prev[1] ?? customTawqRight, prev[2] ?? customTawqBottom, val]);
+                      }}
+                      className="w-full bg-white dark:bg-black/40 border border-fuchsia-300 dark:border-fuchsia-500/30 rounded-xl p-2 text-xs font-arabic text-amber-800 dark:text-amber-300 focus:outline-none focus:border-fuchsia-500 shadow-sm"
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 bg-fuchsia-100/50 dark:bg-black/30 rounded-xl border border-dashed border-fuchsia-300 dark:border-fuchsia-500/30 text-xs text-fuchsia-900 dark:text-fuchsia-300 font-medium italic text-center">
+                  Les 4 bordures extérieures (Tawq) sont désactivées. Le Khatim sera généré sans les inscriptions de cadrage.
+                </div>
+              )}
             </div>
 
             {/* Corner Calligraphy Custom Inputs */}
@@ -1783,28 +1806,40 @@ export const KhatimGenerator: React.FC = () => {
             className="relative flex flex-col items-center gap-6"
           >
             {/* Theme Selector Toggle Bar */}
-            <div className="flex items-center justify-center gap-2 bg-zinc-900/90 dark:bg-zinc-900 p-1.5 rounded-2xl border border-amber-500/30">
+            <div className="flex flex-wrap items-center justify-center gap-2 bg-zinc-900/90 dark:bg-zinc-900 p-1.5 rounded-2xl border border-amber-500/30">
               <button
                 type="button"
                 onClick={() => setExportTheme('dark')}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
                   exportTheme === 'dark'
                     ? 'bg-gradient-to-r from-purple-900 to-indigo-900 text-amber-300 shadow-md border border-amber-500/40'
                     : 'text-gray-400 hover:text-white'
                 }`}
               >
-                <span>🌙 Nuit Mystique (Foncé)</span>
+                <span>🌙 Nuit Mystique</span>
               </button>
               <button
                 type="button"
                 onClick={() => setExportTheme('parchment')}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
                   exportTheme === 'parchment'
                     ? 'bg-amber-100 text-amber-950 font-black shadow-md border border-amber-600'
                     : 'text-gray-400 hover:text-white'
                 }`}
               >
-                <span>📜 Parchemin Doré (Papyrus)</span>
+                <span>📜 Parchemin Doré</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsTawqEnabled(!isTawqEnabled)}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
+                  isTawqEnabled
+                    ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/50 shadow-md'
+                    : 'bg-zinc-800 text-zinc-400 border-zinc-700 hover:text-white'
+                }`}
+                title="Activer ou désactiver l'affichage des 4 bordures (Tawq)"
+              >
+                <span>{isTawqEnabled ? '🖼️ Bordures : Activées' : '🖼️ Bordures : Désactivées'}</span>
               </button>
             </div>
 
@@ -1912,7 +1947,7 @@ export const KhatimGenerator: React.FC = () => {
                {/* Tawq Framing Borders System (4 Sides) */}
                <div className="w-full my-3 space-y-2 z-10 relative">
                  {/* Top Border (Bordure Haute: tawqFrame[0]) */}
-                 {tawqFrame[0] && (
+                 {isTawqEnabled && tawqFrame[0] && (
                    <div className={`text-center font-uthmani text-xs sm:text-sm font-bold tracking-wider leading-relaxed px-4 py-1.5 rounded-xl border max-w-fit mx-auto shadow-md ${
                       exportTheme === 'parchment'
                         ? 'bg-[#fde68a]/90 text-[#5c2406] border-[#b45309]/60 shadow-[#b45309]/15'
@@ -1925,7 +1960,7 @@ export const KhatimGenerator: React.FC = () => {
                  {/* Middle Section: Left Border (tawqFrame[3]), Central Matrix, Right Border (tawqFrame[1]) */}
                  <div className="flex flex-row items-stretch justify-center gap-1.5 sm:gap-2.5 w-full">
                    {/* Left Border (Bordure Gauche: tawqFrame[3]) */}
-                   {tawqFrame[3] && (
+                   {isTawqEnabled && tawqFrame[3] && (
                      <div className={`text-center font-arabic text-[11px] sm:text-xs font-medium px-1.5 py-3 rounded-l-xl border-l border-y shadow-sm flex items-center justify-center [writing-mode:vertical-rl] rotate-180 select-none ${
                        exportTheme === 'parchment'
                          ? 'bg-[#fde68a]/60 text-[#78350f] border-[#b45309]/30'
@@ -1985,7 +2020,7 @@ export const KhatimGenerator: React.FC = () => {
                    </div>
 
                    {/* Right Border (Bordure Droite: tawqFrame[1]) */}
-                   {tawqFrame[1] && (
+                   {isTawqEnabled && tawqFrame[1] && (
                      <div className={`text-center font-arabic text-[11px] sm:text-xs font-medium px-1.5 py-3 rounded-r-xl border-r border-y shadow-sm flex items-center justify-center [writing-mode:vertical-rl] select-none ${
                        exportTheme === 'parchment'
                          ? 'bg-[#fde68a]/60 text-[#78350f] border-[#b45309]/30'
@@ -1997,7 +2032,7 @@ export const KhatimGenerator: React.FC = () => {
                  </div>
 
                  {/* Bottom Border (Bordure Basse: tawqFrame[2]) */}
-                 {tawqFrame[2] && (
+                 {isTawqEnabled && tawqFrame[2] && (
                    <div className={`text-center font-arabic text-xs sm:text-sm font-medium px-4 py-1.5 rounded-xl border max-w-fit mx-auto shadow-sm ${
                      exportTheme === 'parchment' 
                        ? 'bg-[#fde68a]/70 text-[#78350f] border-[#b45309]/40' 

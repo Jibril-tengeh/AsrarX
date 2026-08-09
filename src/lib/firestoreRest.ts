@@ -102,3 +102,30 @@ export const fetchSingleArticleFromRest = async (id: string): Promise<any | null
     return null;
   }
 };
+
+/**
+ * Direct HTTPS REST API fetcher for Firestore collection 'users'.
+ */
+export const fetchUsersFromRest = async (idToken?: string): Promise<any[]> => {
+  try {
+    const config = firebaseConfig;
+    if (!config || !config.projectId || !config.apiKey) return [];
+    const url = `https://firestore.googleapis.com/v1/projects/${config.projectId}/databases/(default)/documents/users?key=${config.apiKey}&pageSize=500`;
+    const headers: Record<string, string> = {};
+    if (idToken) {
+      headers['Authorization'] = `Bearer ${idToken}`;
+    }
+    const res = await fetch(url, { method: 'GET', headers, cache: 'no-store' });
+    if (!res.ok) {
+      console.warn(`[Firestore REST Users] Fetch failed with status ${res.status}`);
+      return [];
+    }
+    const json = await res.json();
+    if (!json.documents || !Array.isArray(json.documents)) return [];
+    return json.documents.map(parseFirestoreRestDoc);
+  } catch (err) {
+    console.warn(`[Firestore REST Users] Note: could not fetch users via REST:`, err);
+    return [];
+  }
+};
+
