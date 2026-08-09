@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Flame, Droplets, Wind, Mountain, ArrowLeft, Info, Database, Wifi } from 'lucide-react';
+import { Flame, Droplets, Wind, Mountain, ArrowLeft, Info, Database, Wifi, History } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { ToolInfoTooltip } from '../../../components/ToolInfoTooltip';
 import { motion } from 'motion/react';
+import { CalculationHistoryModal } from '../../../components/CalculationHistoryModal';
+import { saveCalculationToHistory } from '../../../utils/calculationHistory';
 
 const ELEMENTS_BASE = {
   FIRE: {
@@ -136,6 +138,7 @@ export const ElementalAnalyzer: React.FC = () => {
 
   const [input, setInput] = useState('');
   const [isUsingCache, setIsUsingCache] = useState(true);
+  const [showHistory, setShowHistory] = useState(false);
 
   useEffect(() => {
     try {
@@ -151,6 +154,29 @@ export const ElementalAnalyzer: React.FC = () => {
     try {
       localStorage.setItem('asrar_elemental_input', input);
     } catch (e) {}
+
+    if (input.trim().length >= 2) {
+      const timer = setTimeout(() => {
+        const text = input.replace(/\s/g, '');
+        let counts = { FIRE: 0, EARTH: 0, AIR: 0, WATER: 0 };
+        for (const char of text) {
+          if (ELEMENTS_BASE.FIRE.letters.includes(char)) counts.FIRE++;
+          else if (ELEMENTS_BASE.EARTH.letters.includes(char)) counts.EARTH++;
+          else if (ELEMENTS_BASE.AIR.letters.includes(char)) counts.AIR++;
+          else if (ELEMENTS_BASE.WATER.letters.includes(char)) counts.WATER++;
+        }
+        const summaryStr = `Feu: ${counts.FIRE} | Terre: ${counts.EARTH} | Air: ${counts.AIR} | Eau: ${counts.WATER}`;
+        saveCalculationToHistory({
+          toolId: 'elemental',
+          toolName: 'Analyseur des 4 Éléments',
+          title: input.trim(),
+          summary: summaryStr,
+          details: { input: input.trim(), counts },
+          tags: ['Éléments', 'Tabai']
+        });
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
   }, [input]);
   
   const analyze = () => {
@@ -175,28 +201,51 @@ export const ElementalAnalyzer: React.FC = () => {
 
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 safe-area-pt pb-24">
-      <div className="mb-8">
-        <Link to="/tools" className="inline-flex items-center text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-medium mb-4">
-          <ArrowLeft className="mr-2" size={20} />
-          {t("common.backToTools", "Retour au tableau de bord")}
-        </Link>
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-          <Flame className="text-red-500" />
-          {dict.title}
-        </h1>
-        <p className="text-gray-500 dark:text-gray-300 mt-2">{t("tools.elemental.description")}</p>
-        {isUsingCache ? (
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border border-amber-100 dark:border-amber-900/30 mt-2">
-            <Database size={11} className="animate-pulse" />
-            <span>{dict.offlineCache}</span>
-          </div>
-        ) : (
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30 mt-2">
-            <Wifi size={11} />
-            <span>{dict.onlineSync}</span>
-          </div>
-        )}
+      <div className="mb-8 flex items-start justify-between gap-4">
+        <div>
+          <Link to="/tools" className="inline-flex items-center text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 font-medium mb-4">
+            <ArrowLeft className="mr-2" size={20} />
+            {t("common.backToTools", "Retour au tableau de bord")}
+          </Link>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+            <Flame className="text-red-500" />
+            {dict.title}
+          </h1>
+          <p className="text-gray-500 dark:text-gray-300 mt-2">{t("tools.elemental.description")}</p>
+          {isUsingCache ? (
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border border-amber-100 dark:border-amber-900/30 mt-2">
+              <Database size={11} className="animate-pulse" />
+              <span>{dict.offlineCache}</span>
+            </div>
+          ) : (
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/30 dark:text-emerald-400 border border-emerald-100 dark:border-emerald-900/30 mt-2">
+              <Wifi size={11} />
+              <span>{dict.onlineSync}</span>
+            </div>
+          )}
+        </div>
+
+        <button
+          onClick={() => setShowHistory(true)}
+          className="mt-6 px-3.5 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-600 dark:text-amber-400 border border-amber-500/20 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer shadow-sm shrink-0"
+        >
+          <History size={16} />
+          <span>{language === 'ha' ? 'Tarihi' : language === 'en' ? 'History' : 'Historique'}</span>
+        </button>
       </div>
+
+      <CalculationHistoryModal
+        isOpen={showHistory}
+        onClose={() => setShowHistory(false)}
+        toolFilter="elemental"
+        onSelectCalculation={(item) => {
+          if (item.details?.input) {
+            setInput(item.details.input);
+          } else if (item.title) {
+            setInput(item.title);
+          }
+        }}
+      />
 
       <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-6 shadow-sm mb-8">
         <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">{dict.inputLabel}</label>

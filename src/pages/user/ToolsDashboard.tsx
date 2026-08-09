@@ -27,6 +27,7 @@ import {
   Share2,
   ShieldAlert,
   RefreshCw,
+  History,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useLanguage } from "../../contexts/LanguageContext";
@@ -37,6 +38,8 @@ import { doc, onSnapshot } from "firebase/firestore";
 import { db, isAutoSaveEnabled } from "../../lib/firebase";
 import { tools } from "../../data/tools";
 import { CelestialRecommendations } from "../../components/CelestialRecommendations";
+import { CalculationHistoryModal } from "../../components/CalculationHistoryModal";
+import { getCalculationHistory } from "../../utils/calculationHistory";
 
 
 import { BannerAd } from "../../components/BannerAd";
@@ -47,9 +50,20 @@ export const ToolsDashboard: React.FC = () => {
   const navigate = useNavigate();
   const [showGuide, setShowGuide] = useState(false);
   const [guideStep, setGuideStep] = useState(0);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [historyCount, setHistoryCount] = useState(0);
   const [activeTab, setActiveTab] = useState<"simple" | "advanced">(
     () => (localStorage.getItem("active_tools_tab") as "simple" | "advanced") || "simple"
   );
+
+  useEffect(() => {
+    const updateCount = () => {
+      setHistoryCount(getCalculationHistory().length);
+    };
+    updateCount();
+    window.addEventListener('calculation_history_updated', updateCount);
+    return () => window.removeEventListener('calculation_history_updated', updateCount);
+  }, []);
   const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
   const [touchEnd, setTouchEnd] = useState<{ x: number; y: number } | null>(null);
 
@@ -142,10 +156,7 @@ export const ToolsDashboard: React.FC = () => {
   }>({ isOpen: false, title: "" });
 
   useEffect(() => {
-    const hasSeenGuide = 
-      localStorage.getItem("hasSeenMysticToolsGuide") === "true" ||
-      sessionStorage.getItem("hasSeenMysticToolsGuide") === "true" ||
-      !!(user && (user as any).hasSeenMysticToolsGuide);
+    const hasSeenGuide = true;
 
     if (!hasSeenGuide) {
       setShowGuide(true);
@@ -312,19 +323,39 @@ export const ToolsDashboard: React.FC = () => {
         <p className="text-gray-500 dark:text-gray-400 mt-2 mb-4">
           {t("toolsDashboard.description")}
         </p>
-        <div className="relative max-w-md">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search size={18} className="text-gray-400" />
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <div className="relative flex-1 max-w-md">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search size={18} className="text-gray-400" />
+            </div>
+            <input
+              type="text"
+              placeholder={t("search", "Rechercher un outil...")}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm text-gray-900 dark:text-white"
+            />
           </div>
-          <input
-            type="text"
-            placeholder={t("search", "Rechercher...")}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm text-gray-900 dark:text-white"
-          />
+
+          <button
+            onClick={() => setIsHistoryOpen(true)}
+            className="px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
+          >
+            <History size={18} />
+            <span>{language === 'ha' ? 'Tarihin Hisabi' : language === 'en' ? 'Calculation History' : 'Historique des Calculs'}</span>
+            {historyCount > 0 && (
+              <span className="px-2 py-0.5 text-[10px] font-black rounded-full bg-emerald-600 text-white">
+                {historyCount}
+              </span>
+            )}
+          </button>
         </div>
       </div>
+
+      <CalculationHistoryModal
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+      />
 
       {/* Tabs */}
       <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-xl mb-3 relative">

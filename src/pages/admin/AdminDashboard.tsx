@@ -6920,7 +6920,7 @@ export const AdminDashboard: React.FC = () => {
                 <p className="text-[11px] text-gray-500">Titres principaux dans les articles, bibliothèque et sagesses.</p>
                 <input
                   type="range"
-                  min={10}
+                  min={4}
                   max={50}
                   step={1}
                   disabled={!!featureToggles['lockFontSettings']}
@@ -6929,7 +6929,7 @@ export const AdminDashboard: React.FC = () => {
                   className="w-full accent-blue-600 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg disabled:cursor-not-allowed"
                 />
                 <div className="flex justify-between text-[10px] text-gray-400 font-bold">
-                  <span>10px</span>
+                  <span>4px</span>
                   <span>25px</span>
                   <span>50px</span>
                 </div>
@@ -7152,7 +7152,7 @@ export const AdminDashboard: React.FC = () => {
             </div>
 
             {/* Interactive Live Preview Box */}
-            <div className="mt-2 p-4 bg-white dark:bg-gray-900 border border-emerald-200 dark:border-emerald-800/60 rounded-2xl space-y-3">
+            <div className="mt-2 p-4 bg-white dark:bg-gray-900 border border-emerald-200 dark:border-emerald-800/60 rounded-2xl space-y-3 max-h-96 overflow-y-auto">
               <span className="text-[11px] font-black uppercase text-emerald-600 dark:text-emerald-400 tracking-wider">
                 👁️ Aperçu en direct de vos réglages :
               </span>
@@ -8185,7 +8185,7 @@ export const AdminDashboard: React.FC = () => {
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto p-4 sm:p-6 lg:p-8 safe-area-pt pb-24 border-none min-h-screen overflow-x-hidden">
+    <div className="admin-dashboard admin-ui w-full max-w-5xl mx-auto p-4 sm:p-6 lg:p-8 safe-area-pt pb-24 border-none min-h-screen overflow-x-hidden">
       {renderArticlePreviewModal()}
       {renderBlockingToolsModal()}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">

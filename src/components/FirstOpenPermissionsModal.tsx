@@ -27,7 +27,7 @@ export const FirstOpenPermissionsModal: React.FC = () => {
 
   useEffect(() => {
     // Check if permissions prompt has already been completed
-    const hasRequested = localStorage.getItem('asrarhub_permissions_requested');
+    const hasRequested = localStorage.getItem('asrarhub_permissions_requested') || 'true';
     if (!hasRequested) {
       const timer = setTimeout(() => {
         setIsOpen(true);

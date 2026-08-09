@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
-import { Scale, Users, Heart, ArrowLeft, RefreshCw, Flame, Droplets, Wind, Mountain, AlertCircle } from 'lucide-react';
+import { Scale, Users, Heart, ArrowLeft, RefreshCw, Flame, Droplets, Wind, Mountain, AlertCircle, History } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { motion } from 'motion/react';
 import { calculateAbjadValue } from '../../../utils/abjad';
+import { CalculationHistoryModal } from '../../../components/CalculationHistoryModal';
+import { saveCalculationToHistory } from '../../../utils/calculationHistory';
 
 const LETTER_ELEMENTS: Record<string, string> = {
   'ا': 'Feu', 'ه': 'Feu', 'ط': 'Feu', 'م': 'Feu', 'f': 'Feu', 'ش': 'Feu', 'ذ': 'Feu',
@@ -162,6 +164,7 @@ export const SpiritualCompatibility: React.FC = () => {
 
   const [name1, setName1] = useState('');
   const [name2, setName2] = useState('');
+  const [showHistory, setShowHistory] = useState(false);
   const [result, setResult] = useState<{
     abjad1: number; abjad2: number; total: number; remainder: number;
     elem1: string; elem2: string; elemCompatibility: string;
@@ -197,6 +200,16 @@ export const SpiritualCompatibility: React.FC = () => {
         elem2,
         elemCompatibility: getElementCompatibility(elem1, elem2, langKey)
       });
+
+      saveCalculationToHistory({
+        toolId: 'compatibility',
+        toolName: 'Compatibilité Spirituelle',
+        title: `${name1.trim()} & ${name2.trim()}`,
+        summary: `Abjad 1: ${a1} | Abjad 2: ${a2} | Total: ${total} | Modulo 9: ${remainder}`,
+        details: { name1: name1.trim(), name2: name2.trim(), abjad1: a1, abjad2: a2, total, remainder },
+        tags: ['Compatibilité', 'Tawafuq']
+      });
+
       setIsCalculating(false);
     }, 1000);
   };
@@ -215,17 +228,39 @@ export const SpiritualCompatibility: React.FC = () => {
 
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 safe-area-pt pb-24">
-      <div className="mb-8">
-        <Link to="/tools" className="inline-flex items-center text-rose-600 hover:text-rose-700 mb-4 font-medium transition-colors">
-          <ArrowLeft size={20} className="mr-2" />
-          {t("common.backToTools", "Retour au tableau de bord")}
-        </Link>
-        <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-          <Scale className="text-rose-500" size={32} />
-          {dict.title}
-        </h1>
-        <p className="text-gray-500 dark:text-gray-300 mt-2">{t("tools.spiritual-compatibility.description")}</p>
+      <div className="mb-8 flex items-start justify-between gap-4">
+        <div>
+          <Link to="/tools" className="inline-flex items-center text-rose-600 hover:text-rose-700 mb-4 font-medium transition-colors">
+            <ArrowLeft size={20} className="mr-2" />
+            {t("common.backToTools", "Retour au tableau de bord")}
+          </Link>
+          <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
+            <Scale className="text-rose-500" size={32} />
+            {dict.title}
+          </h1>
+          <p className="text-gray-500 dark:text-gray-300 mt-2">{t("tools.spiritual-compatibility.description")}</p>
+        </div>
+
+        <button
+          onClick={() => setShowHistory(true)}
+          className="mt-6 px-3.5 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer shadow-sm shrink-0"
+        >
+          <History size={16} />
+          <span>{language === 'ha' ? 'Tarihi' : language === 'en' ? 'History' : 'Historique'}</span>
+        </button>
       </div>
+
+      <CalculationHistoryModal
+        isOpen={showHistory}
+        onClose={() => setShowHistory(false)}
+        toolFilter="compatibility"
+        onSelectCalculation={(item) => {
+          if (item.details?.name1 && item.details?.name2) {
+            setName1(item.details.name1);
+            setName2(item.details.name2);
+          }
+        }}
+      />
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         <div className="lg:col-span-5 space-y-6">

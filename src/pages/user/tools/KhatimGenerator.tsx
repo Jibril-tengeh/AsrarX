@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
-  Star, ArrowLeft, Grid, Type, Download, Share2, FileDown, Image, Sparkles, Feather, Key, BookOpen, Crown, Edit3, Check, Compass, Info, Trash2, RefreshCw, Layers, Sliders, Eye
+  Star, ArrowLeft, Grid, Type, Download, Share2, FileDown, Image, Sparkles, Feather, Key, BookOpen, Crown, Edit3, Check, Compass, Info, Trash2, RefreshCw, Layers, Sliders, Eye, History
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
@@ -15,6 +15,8 @@ import { jsPDF } from 'jspdf';
 import { downloadCanvasImage } from '../../../utils/downloadHelper';
 import { notifyDownloadStart, notifyDownloadSuccess, notifyDownloadError } from '../../../utils/downloadNotification';
 import { ShareToCommunityModal } from '../../../components/ShareToCommunityModal';
+import { CalculationHistoryModal } from '../../../components/CalculationHistoryModal';
+import { saveCalculationToHistory } from '../../../utils/calculationHistory';
 import { 
   KhatimMethod, 
   KhatimDoor, 
@@ -259,6 +261,7 @@ export const KhatimGenerator: React.FC = () => {
   const [method, setMethod] = useState<KhatimMethod>('ghazali');
   const [selectedDoor, setSelectedDoor] = useState<number>(1); // 1 to 9
   const [selectedPreset, setSelectedPreset] = useState<VersetNeedPreset | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
 
   const [inputText, setInputText] = useState('');
   const [gridSize, setGridSize] = useState<number>(3);
@@ -843,6 +846,15 @@ export const KhatimGenerator: React.FC = () => {
 
       setCalculatedTotal(weight);
       
+      saveCalculationToHistory({
+        toolId: 'khatim',
+        toolName: 'Générateur de Khatim & Wafq',
+        title: inputText.trim() || (selectedPreset ? selectedPreset.titleFr : 'Khatim Wafq'),
+        summary: `Grille ${gridSize}x${gridSize} | Poids Mystique: ${weight} | Méthode: ${method}`,
+        details: { inputText: inputText.trim(), weight, gridSize, method, selectedPresetId: selectedPreset?.id },
+        tags: ['Khatim', 'Wafq', `${gridSize}x${gridSize}`]
+      });
+
       let stats; try { stats = JSON.parse(localStorage.getItem('asrar_stats') || '{}'); if (!stats || typeof stats !== 'object') stats = {}; } catch(e) { stats = {}; }
       stats.tools_used = (stats.tools_used || 0) + 1;
       localStorage.setItem('asrar_stats', JSON.stringify(stats));
@@ -956,23 +968,46 @@ export const KhatimGenerator: React.FC = () => {
   return (
     <div className="w-full max-w-7xl mx-auto p-3 sm:p-6 lg:p-8 safe-area-pt min-h-screen pb-24 flex flex-col">
       {/* Header */}
-      <div className="flex items-start sm:items-center gap-3 sm:gap-4 mb-4 shrink-0 min-w-0">
-        <Link 
-          to="/tools" 
-          className="p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 transition-colors shrink-0 mt-0.5 sm:mt-0"
-        >
-          <ArrowLeft size={24} />
-        </Link>
-        <div className="flex-1 min-w-0">
-          <h1 className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <Star className="text-purple-500 shrink-0" size={22} />
-            <span className="break-words leading-tight">{i18n.dynamicTitle}</span>
-          </h1>
-          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-300 mt-1 leading-relaxed break-words">
-            {i18n.subtitle}
-          </p>
+      <div className="flex items-start sm:items-center justify-between gap-3 sm:gap-4 mb-4 shrink-0 min-w-0">
+        <div className="flex items-start sm:items-center gap-3 sm:gap-4 min-w-0 flex-1">
+          <Link 
+            to="/tools" 
+            className="p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 transition-colors shrink-0 mt-0.5 sm:mt-0"
+          >
+            <ArrowLeft size={24} />
+          </Link>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <Star className="text-purple-500 shrink-0" size={22} />
+              <span className="break-words leading-tight">{i18n.dynamicTitle}</span>
+            </h1>
+            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-300 mt-1 leading-relaxed break-words">
+              {i18n.subtitle}
+            </p>
+          </div>
         </div>
+
+        <button
+          onClick={() => setShowHistory(true)}
+          className="px-3 py-1.5 sm:px-4 sm:py-2 bg-purple-500/10 hover:bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/20 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer shadow-sm shrink-0"
+        >
+          <History size={16} />
+          <span>{language === 'ha' ? 'Tarihi' : language === 'en' ? 'History' : 'Historique'}</span>
+        </button>
       </div>
+
+      <CalculationHistoryModal
+        isOpen={showHistory}
+        onClose={() => setShowHistory(false)}
+        toolFilter="khatim"
+        onSelectCalculation={(item) => {
+          if (item.details?.inputText) {
+            setInputText(item.details.inputText);
+          } else if (item.title) {
+            setInputText(item.title);
+          }
+        }}
+      />
 
       <div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pr-0.5 min-w-0">
 

@@ -33,7 +33,7 @@ export const FeatureProvider: React.FC<{ children: React.ReactNode }> = ({ child
       root.classList.remove('has-custom-body-size');
     }
 
-    if (mergedData.textSizeArticleTitle && Number(mergedData.textSizeArticleTitle) >= 10 && Number(mergedData.textSizeArticleTitle) <= 50) {
+    if (mergedData.textSizeArticleTitle && Number(mergedData.textSizeArticleTitle) >= 4 && Number(mergedData.textSizeArticleTitle) <= 50) {
       root.style.setProperty('--app-article-title-font-size', `${mergedData.textSizeArticleTitle}px`);
       root.classList.add('has-custom-article-title-size');
     } else {

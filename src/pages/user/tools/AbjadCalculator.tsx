@@ -6,6 +6,8 @@ import { ToolInfoTooltip } from '../../../components/ToolInfoTooltip';
 import { motion, AnimatePresence } from 'motion/react';
 import { ShareToCommunityModal } from '../../../components/ShareToCommunityModal';
 import { exportWirdToImage } from '../../../utils/wirdExporter';
+import { CalculationHistoryModal } from '../../../components/CalculationHistoryModal';
+import { saveCalculationToHistory } from '../../../utils/calculationHistory';
 
 // Simplified Abjad table mapping (Standard/Eastern)
 const abjadMashriqi: Record<string, number> = {
@@ -288,6 +290,14 @@ export const AbjadCalculator: React.FC = () => {
 
   const saveToHistory = () => {
     if (!text.trim() || totalMashriqi === 0) return;
+    saveCalculationToHistory({
+      toolId: 'abjad',
+      toolName: 'Calculateur Abjad',
+      title: text.trim(),
+      summary: `Mashriqi: ${totalMashriqi} | Maghribi: ${totalMaghribi} (${words} mots, ${letterCount} lettres)`,
+      details: { text: text.trim(), totalMashriqi, totalMaghribi },
+      tags: ['Abjad', 'Calcul']
+    });
     const newItem = {
       id: Date.now().toString(),
       text: text.trim(),
@@ -432,7 +442,28 @@ export const AbjadCalculator: React.FC = () => {
             </p>
           </div>
         </div>
+
+        <button
+          onClick={() => setShowHistory(true)}
+          className="px-3 py-1.5 sm:px-4 sm:py-2 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 border border-blue-500/20 rounded-xl font-bold text-xs sm:text-sm flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+        >
+          <History size={16} />
+          <span>{language === 'ha' ? 'Tarihi' : language === 'en' ? 'History' : 'Historique'}</span>
+        </button>
       </div>
+
+      <CalculationHistoryModal
+        isOpen={showHistory}
+        onClose={() => setShowHistory(false)}
+        toolFilter="abjad"
+        onSelectCalculation={(item) => {
+          if (item.details?.text) {
+            setText(item.details.text);
+          } else if (item.title) {
+            setText(item.title);
+          }
+        }}
+      />
 
       {/* Tabs Switcher */}
       <div className="flex items-center justify-start gap-1 overflow-x-auto pb-2 mb-4 no-scrollbar border-b border-gray-200 dark:border-gray-700 shrink-0">
