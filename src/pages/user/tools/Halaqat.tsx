@@ -624,7 +624,7 @@ export const Halaqat = () => {
                         ? "👑 Siffar Premium: Qirqirar halaqobin zikiri na gizo wani dama ne na mambobin Premium a AsrarHub. Haɓaka zuwa Premium domin ƙirƙirar halaqobinku."
                         : "👑 Option Premium : La création de cercles de zikr virtuels (Halaqat) est une fonctionnalité réservée aux membres Premium d'AsrarHub. Passez au compte Premium pour créer vos propres cercles.";
                       alert(msg);
-                      navigate('/user/profile');
+                      navigate('/profile');
                       return;
                     }
                     setShowCreateModal(true);

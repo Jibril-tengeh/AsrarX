@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { db } from '../../../lib/firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
+import { getZikrCache, setZikrCache, syncTasbihSessionOffline } from '../../../utils/zikrSyncEngine';
 
 interface Zikr {
   id: string;
@@ -673,7 +674,11 @@ export const Tasbih: React.FC = () => {
       };
       const newHistory = [newSession, ...history].slice(0, 100); // Keep last 100
       setHistory(newHistory);
-      localStorage.setItem('tasbih_history', JSON.stringify(newHistory));
+      
+      // Async sync with idb-keyval and queue for Firestore cloud sync
+      syncTasbihSessionOffline(newSession, totalLifetime, dailyTotal).catch(err => {
+        console.warn('Tasbih session cached offline:', err);
+      });
     }
   };
 
@@ -684,11 +689,11 @@ export const Tasbih: React.FC = () => {
     // Update daily and lifetime
     const newLifetime = totalLifetime + 1;
     setTotalLifetime(newLifetime);
-    localStorage.setItem('tasbih_lifetime_total', newLifetime.toString());
+    setZikrCache('tasbih_lifetime_total', newLifetime).catch(() => {});
 
     const newDaily = dailyTotal + 1;
     setDailyTotal(newDaily);
-    localStorage.setItem(`tasbih_daily_${new Date().toDateString()}`, newDaily.toString());
+    setZikrCache(`tasbih_daily_${new Date().toDateString()}`, newDaily).catch(() => {});
 
     if (newCount > 0 && newCount % 100 === 0) {
       triggerVibration('hundred');

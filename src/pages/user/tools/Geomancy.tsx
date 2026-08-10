@@ -1,15 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Compass, ArrowLeft, RefreshCw, Layers, Sparkles, BookOpen, Info, 
   Globe, ShieldCheck, HeartHandshake, Flame, Wind, Droplets, Mountain, 
   Key, Sliders, User, Calculator, CheckCircle, AlertTriangle, Search, Eye,
-  Download, GitMerge, MapPin, TrendingUp, Target
+  Download, GitMerge, MapPin, TrendingUp, Target, History, Save, Copy, Check,
+  Trash2, Share2, FileText, Touchpad, Bookmark
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { downloadCanvasImage } from '../../../utils/downloadHelper';
 import { ToolInfoTooltip } from '../../../components/ToolInfoTooltip';
+import { getZikrCache, setZikrCache } from '../../../utils/zikrSyncEngine';
 
 // Abjad mapping for Name calculation mode
 const ABJAD_MAP: Record<string, number> = {
@@ -557,14 +559,26 @@ const GEOMANCY_I18N: Record<string, any> = {
     tabElements: "⚖️ Éléments & Astrologie",
     tabSecret: "🔑 Voie du Secret & Remèdes",
     tabDictionary: "📖 Encyclopédie (16 Figures)",
+    tabHistory: "📜 Historique & Archives",
 
     // Modes & Generation
     generationModeLabel: "Mode de Génération :",
     modeAuto: "Tirage Sable",
     modeManual: "Saisie Mères",
     modeAbjad: "Abjad (Nom)",
+    modeSandCanvas: "Tracé Interactif",
     generating: "Consultation du sable en cours...",
     generate: "Générer le Thème",
+    copyReport: "Copier Bilan Textuel",
+    reportCopied: "Bilan copié dans le presse-papier !",
+    saveReading: "Enregistrer Thème",
+    savedSuccess: "Thème enregistré avec succès !",
+    readingTitlePrompt: "Titre du Thème / Question :",
+    sandPrompt: "Table de Sable Rituelle (Taper/Cliquer sur le sable 16 fois pour tracer les lignes) :",
+    lineLabel: "Ligne",
+    tapSandBtn: "Tracer une ligne de sable (+)",
+    resetSandBtn: "Réinitialiser le sable",
+    sandComplete: "16 Lignes Tracées ! Génération des 4 Mères...",
     manualPrompt: "Sélectionnez les 4 Mères (M1, M2, M3, M4) :",
     motherLabel: "Mère",
     namePrompt: "Nom du Consultant / Questionneur :",
@@ -670,6 +684,17 @@ const GEOMANCY_I18N: Record<string, any> = {
     canvasSubtitle: "Calcul des 16 Maisons • Mizan, Passations & Remèdes Spirituels",
     canvasFooter: "Prophétique & Géomancie Traditionnelle — AsrarHub Application",
 
+    // Sand Bed & History
+    sandInstruction: "Cliquez ou tapez ici pour tracer la 1ère ligne dans le sable...",
+    sandSubtitle: "Tirage traditionnel à 16 lignes de points",
+    evenLabel: "Paire = 2",
+    oddLabel: "Impaire = 1",
+    noSavedReadings: "Aucun thème géomantique enregistré pour le moment.",
+    noSavedReadingsSub: "Générez un thème puis cliquez sur \"Enregistrer ce Thème\" pour le retrouver ici.",
+    loadReadingBtn: "Charger ce Thème",
+    deleteTooltip: "Supprimer",
+    titlePlaceholder: "ex : Projet Immobilier, Thème de Santé...",
+
     houseNames: [
       "M1 : La Vie & Le Consultant",
       "M2 : L'Argent & Finances",
@@ -702,14 +727,26 @@ const GEOMANCY_I18N: Record<string, any> = {
     tabElements: "⚖️ Elements & Astrology",
     tabSecret: "🔑 Secret Path & Remedies",
     tabDictionary: "📖 Encyclopedia (16 Figures)",
+    tabHistory: "📜 History & Archives",
 
     // Modes & Generation
     generationModeLabel: "Generation Mode:",
     modeAuto: "Sand Casting",
     modeManual: "Mothers Input",
     modeAbjad: "Abjad (Name)",
+    modeSandCanvas: "Interactive Tracing",
     generating: "Consulting the sand...",
     generate: "Generate Chart",
+    copyReport: "Copy Text Report",
+    reportCopied: "Report copied to clipboard!",
+    saveReading: "Save Chart",
+    savedSuccess: "Chart saved successfully!",
+    readingTitlePrompt: "Chart Title / Question:",
+    sandPrompt: "Ritual Sand Bed (Tap/Click sand 16 times to trace lines):",
+    lineLabel: "Line",
+    tapSandBtn: "Trace sand line (+)",
+    resetSandBtn: "Reset sand",
+    sandComplete: "16 Lines Traced! Generating 4 Mothers...",
     manualPrompt: "Select the 4 Mothers (M1, M2, M3, M4):",
     motherLabel: "Mother",
     namePrompt: "Consultant / Questioner Name:",
@@ -815,6 +852,17 @@ const GEOMANCY_I18N: Record<string, any> = {
     canvasSubtitle: "16 Houses Calculation • Mizan, Passations & Spiritual Remedies",
     canvasFooter: "Prophetic & Traditional Geomancy — AsrarHub Application",
 
+    // Sand Bed & History
+    sandInstruction: "Click or tap here to trace the 1st line in the sand...",
+    sandSubtitle: "Traditional casting with 16 dot lines",
+    evenLabel: "Even = 2",
+    oddLabel: "Odd = 1",
+    noSavedReadings: "No geomantic charts saved yet.",
+    noSavedReadingsSub: "Generate a chart then click \"Save Chart\" to retrieve it here.",
+    loadReadingBtn: "Load This Chart",
+    deleteTooltip: "Delete",
+    titlePlaceholder: "e.g.: Real Estate Project, Health Reading...",
+
     houseNames: [
       "H1: Life & The Consultant",
       "H2: Money & Wealth",
@@ -847,14 +895,26 @@ const GEOMANCY_I18N: Record<string, any> = {
     tabElements: "⚖️ Abubuwa & Taurari",
     tabSecret: "🔑 Hanyar Asiri & Magani",
     tabDictionary: "📖 Kamus na Alamomi 16",
+    tabHistory: "📜 Tarihin Duba & Ajiya",
 
     // Modes & Generation
     generationModeLabel: "Hanyar Samarda Kasa:",
     modeAuto: "Duban Yashi",
     modeManual: "Shigar da Uwaye",
     modeAbjad: "Lissafin Abjad (Suna)",
+    modeSandCanvas: "Zana a Yashi",
     generating: "Ana duban kasa...",
     generate: "Samarda Jadawali",
+    copyReport: "Kwafi Bincike",
+    reportCopied: "An kwafi bincike!",
+    saveReading: "Ajiye Jadawali",
+    savedSuccess: "An ajiye jadawali lami lafiya!",
+    readingTitlePrompt: "Kan Tambaya / Jadawali:",
+    sandPrompt: "Teburin Yashi (Danna sau 16 don zana rajukan yashi):",
+    lineLabel: "Raji",
+    tapSandBtn: "Zana Rajin Yashi (+)",
+    resetSandBtn: "Sake Teburin Yashi",
+    sandComplete: "An kammala zana rajuka 16!",
     manualPrompt: "Zabi uwayen kasa guda 4 (M1, M2, M3, M4):",
     motherLabel: "Mahaifiya",
     namePrompt: "Sunan Mai Tambaya:",
@@ -960,6 +1020,17 @@ const GEOMANCY_I18N: Record<string, any> = {
     canvasSubtitle: "Lissafin Gidaje 16 • Mizan, Motsi da Maganin Ruhi",
     canvasFooter: "Ilimin Kasa na Annabawa da Al'ada — AsrarHub Application",
 
+    // Sand Bed & History
+    sandInstruction: "Danna nan don zana layi na 1 a cikin yashi...",
+    sandSubtitle: "Duban gargajiya na rajukan yashi 16",
+    evenLabel: "Cikakku = 2",
+    oddLabel: "Marasa cika = 1",
+    noSavedReadings: "Babu jadawalin duba da aka ajiye a halin yanzu.",
+    noSavedReadingsSub: "Samar da jadawali sannan danna \"Ajiye Jadawali\" don gani a nan.",
+    loadReadingBtn: "Bude Wannan Jadawali",
+    deleteTooltip: "Goge",
+    titlePlaceholder: "misali: Sha'anin Gida, Duban Lafiya...",
+
     houseNames: [
       "G1: Rayuwa da Mai Duba",
       "G2: Kudi da Dukiya",
@@ -981,13 +1052,22 @@ const GEOMANCY_I18N: Record<string, any> = {
   }
 };
 
+export interface SavedGeomancyReading {
+  id: string;
+  title: string;
+  question?: string;
+  date: string;
+  figures: number[][];
+  inputMode: string;
+}
+
 export const Geomancy: React.FC = () => {
   const { language } = useLanguage();
   const langKey = (language === 'ha' || language === 'en' || language === 'fr') ? language : 'fr';
   const i18n = GEOMANCY_I18N[langKey] || GEOMANCY_I18N['fr'];
 
-  const [activeTab, setActiveTab] = useState<'chart' | 'interpretation' | 'traditions' | 'elements' | 'secret' | 'dictionary'>('chart');
-  const [inputMode, setInputMode] = useState<'auto' | 'manual' | 'abjad'>('auto');
+  const [activeTab, setActiveTab] = useState<'chart' | 'interpretation' | 'traditions' | 'elements' | 'secret' | 'dictionary' | 'history'>('chart');
+  const [inputMode, setInputMode] = useState<'auto' | 'manual' | 'abjad' | 'sandCanvas'>('auto');
   const [selectedDomain, setSelectedDomain] = useState<number>(10); // Default to House 10 (Career/Power)
   
   // Custom manual inputs
@@ -995,10 +1075,29 @@ export const Geomancy: React.FC = () => {
   const [userName, setUserName] = useState('');
   const [userMotherName, setUserMotherName] = useState('');
 
+  // Sand Canvas state
+  const [sandLines, setSandLines] = useState<number[]>([]);
+
+  // History & Saving state
+  const [savedReadings, setSavedReadings] = useState<SavedGeomancyReading[]>([]);
+  const [readingTitle, setReadingTitle] = useState('');
+  const [readingQuestion, setReadingQuestion] = useState('');
+  const [copiedReport, setCopiedReport] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
   const [figures, setFigures] = useState<number[][]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [selectedHouse, setSelectedHouse] = useState<number | null>(null);
   const [dictionarySearch, setDictionarySearch] = useState('');
+
+  // Load saved readings on mount
+  useEffect(() => {
+    getZikrCache<SavedGeomancyReading[]>('asrar_geomancy_readings', []).then(cached => {
+      if (cached && cached.length > 0) {
+        setSavedReadings(cached);
+      }
+    });
+  }, []);
 
   // Calculate 16 figures from 4 mothers
   const computeFullChartFromMothers = (m1: number[], m2: number[], m3: number[], m4: number[]) => {
@@ -1028,6 +1127,147 @@ export const Geomancy: React.FC = () => {
     const r = combine(j, m1);
 
     return [m1, m2, m3, m4, d1, d2, d3, d4, n1, n2, n3, n4, w1, w2, j, r];
+  };
+
+  const handleAddSandLine = () => {
+    if (sandLines.length >= 16) return;
+    const randomDots = Math.floor(Math.random() * 11) + 5; // 5 to 15 dots
+    const updated = [...sandLines, randomDots];
+    setSandLines(updated);
+
+    if (updated.length === 16) {
+      setIsGenerating(true);
+      setTimeout(() => {
+        const getVal = (count: number) => (count % 2 === 0 ? 2 : 1);
+        const m1 = [getVal(updated[0]), getVal(updated[1]), getVal(updated[2]), getVal(updated[3])];
+        const m2 = [getVal(updated[4]), getVal(updated[5]), getVal(updated[6]), getVal(updated[7])];
+        const m3 = [getVal(updated[8]), getVal(updated[9]), getVal(updated[10]), getVal(updated[11])];
+        const m4 = [getVal(updated[12]), getVal(updated[13]), getVal(updated[14]), getVal(updated[15])];
+
+        const fullChart = computeFullChartFromMothers(m1, m2, m3, m4);
+        setFigures(fullChart);
+        setIsGenerating(false);
+      }, 600);
+    }
+  };
+
+  const handleResetSand = () => {
+    setSandLines([]);
+  };
+
+  const handleSaveReading = () => {
+    if (figures.length < 16) return;
+    const newReading: SavedGeomancyReading = {
+      id: Date.now().toString(),
+      title: readingTitle.trim() || (langKey === 'ha' ? 'Kaddara ta Kasa' : langKey === 'en' ? 'Geomantic Reading' : 'Thème Géomantique'),
+      question: readingQuestion.trim(),
+      date: new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+      figures,
+      inputMode
+    };
+    const updated = [newReading, ...savedReadings];
+    setSavedReadings(updated);
+    setZikrCache('asrar_geomancy_readings', updated).catch(() => {});
+    setSaveSuccess(true);
+    setTimeout(() => setSaveSuccess(false), 3000);
+  };
+
+  const handleDeleteReading = (id: string) => {
+    const updated = savedReadings.filter(r => r.id !== id);
+    setSavedReadings(updated);
+    setZikrCache('asrar_geomancy_readings', updated).catch(() => {});
+  };
+
+  const handleReloadReading = (reading: SavedGeomancyReading) => {
+    setFigures(reading.figures);
+    setActiveTab('chart');
+  };
+
+  const handleCopyTextReport = () => {
+    if (figures.length < 16) return;
+    const m1 = getFigureDetail(figures[0]);
+    const m15 = getFigureDetail(figures[14]);
+    const m16 = getFigureDetail(figures[15]);
+    const stats = getElementalStats();
+
+    let report = "";
+    if (langKey === 'ha') {
+      report = `
+========================================
+ASRARHUB — BIKATAN DUBAN KASA
+========================================
+Jadawali : ${readingTitle || 'Duba da Khatt ar-Raml'}
+Kwanan wata : ${new Date().toLocaleDateString()}
+Mawadada : ${inputMode.toUpperCase()}
+
+1. ALAMOMI MASU MUHIMMANCI :
+   • G1 (Mai Tambaya) : ${m1.latin} (${m1.arabic}) - ${m1.nature.ha}
+   • G15 (Alkali / Hukunci) : ${m15.latin} (${m15.arabic}) - ${m15.meaning.ha}
+   • G16 (Mafi Daukaka / Karshe) : ${m16.latin} (${m16.arabic}) - ${m16.meaning.ha}
+
+2. SINADARI MAFI RINJAYE : ${stats.dominant.toUpperCase()} (${stats[stats.dominant as keyof typeof stats]} alamomi)
+
+3. SIKIDY DA SADAKA :
+   • Sadaka da Ake Bada Shawara : ${m15.africanSaraka.ha}
+   • Ambato (Dhikr) : ${m15.recommendedDhikr}
+
+========================================
+Samarwa daga AsrarHub — https://asrarhub.com
+========================================
+`.trim();
+    } else if (langKey === 'en') {
+      report = `
+========================================
+ASRARHUB — GEOMANTIC REPORT
+========================================
+Chart : ${readingTitle || 'Khatt ar-Raml Consultation'}
+Date : ${new Date().toLocaleDateString()}
+Mode : ${inputMode.toUpperCase()}
+
+1. KEY FIGURES :
+   • H1 (Applicant) : ${m1.latin} (${m1.arabic}) - ${m1.nature.en}
+   • H15 (The Judge / Verdict) : ${m15.latin} (${m15.arabic}) - ${m15.meaning.en}
+   • H16 (The Supreme / Outcome) : ${m16.latin} (${m16.arabic}) - ${m16.meaning.en}
+
+2. DOMINANT ELEMENT : ${stats.dominant.toUpperCase()} (${stats[stats.dominant as keyof typeof stats]} figures)
+
+3. SIKIDY & REMEDIES :
+   • Recommended Charity (Saraka) : ${m15.africanSaraka.en}
+   • Protective Dhikr : ${m15.recommendedDhikr}
+
+========================================
+Generated by AsrarHub — https://asrarhub.com
+========================================
+`.trim();
+    } else {
+      report = `
+========================================
+ASRARHUB — COMPTE-RENDU GÉOMANTIQUE
+========================================
+Thème : ${readingTitle || 'Consultation Khatt ar-Raml'}
+Date : ${new Date().toLocaleDateString()}
+Mode : ${inputMode.toUpperCase()}
+
+1. FIGURES CLÉS :
+   • M1 (Consultant / Demandeur) : ${m1.latin} (${m1.arabic}) - ${m1.nature.fr}
+   • M15 (Le Juge / Verdict) : ${m15.latin} (${m15.arabic}) - ${m15.meaning.fr}
+   • M16 (Le Suprême / Issue) : ${m16.latin} (${m16.arabic}) - ${m16.meaning.fr}
+
+2. ÉLÉMENT DOMINANT : ${stats.dominant.toUpperCase()} (${stats[stats.dominant as keyof typeof stats]} figures)
+
+3. SIKIDY & REMÈDES :
+   • Aumône Recommandée (Saraka) : ${m15.africanSaraka.fr}
+   • Dhikr Protecteur : ${m15.recommendedDhikr}
+
+========================================
+Généré par AsrarHub — https://asrarhub.com
+========================================
+`.trim();
+    }
+
+    navigator.clipboard.writeText(report);
+    setCopiedReport(true);
+    setTimeout(() => setCopiedReport(false), 3000);
   };
 
   const generateFigures = () => {
@@ -1154,23 +1394,60 @@ export const Geomancy: React.FC = () => {
       map[code].push(idx + 1); // 1-indexed House numbers
     });
 
+    const housePrefix = langKey === 'ha' ? 'G' : langKey === 'en' ? 'H' : 'M';
     const results: { code: string; detail: GeomancyFigureDetail; houses: number[]; interpretation: string }[] = [];
     Object.entries(map).forEach(([code, houses]) => {
       if (houses.length >= 2) {
         const detail = FIGURES_DATABASE[code] || FIGURES_DATABASE["1-1-1-1"];
         let interp = "";
         if (houses.includes(1) && houses.includes(10)) {
-          interp = "Passation remarquable entre le Demandeur (M1) et le Pouvoir (M10) : L'intention du consultant se concrétise directement dans la sphère d'autorité, garantissant succès et promotion.";
+          if (langKey === 'ha') {
+            interp = `Tafiyar alama tsakanin Mai Tambaya (${housePrefix}1) da Sarauta/Iko (${housePrefix}10): Niyyar mai tambaya tana tabbata kai tsaye a fada ko matsayin iko, tare da samun nasara da daukaka.`;
+          } else if (langKey === 'en') {
+            interp = `Remarkable passation between Applicant (${housePrefix}1) and Power (${housePrefix}10): The consultant's intention directly materializes in the authority sphere, guaranteeing success and promotion.`;
+          } else {
+            interp = `Passation remarquable entre le Demandeur (${housePrefix}1) et le Pouvoir (${housePrefix}10) : L'intention du consultant se concrétise directement dans la sphère d'autorité, garantissant succès et promotion.`;
+          }
         } else if (houses.includes(1) && houses.includes(7)) {
-          interp = "Passation entre le Demandeur (M1) et l'Adversaire/Partenaire (M7) : Lien direct ou effet miroir avec l'autre partie. Négociation, association ou rencontre décisive.";
+          if (langKey === 'ha') {
+            interp = `Tafiyar alama tsakanin Mai Tambaya (${housePrefix}1) da Abokin Hulɗa/Makiya (${housePrefix}7): Haɗin gwiwa, tattaunawa ko gamuwa mai mahimmanci tare da ɗayan ɓangaren.`;
+          } else if (langKey === 'en') {
+            interp = `Passation between Applicant (${housePrefix}1) and Opponent/Partner (${housePrefix}7): Direct link or mirror reflection with the other party. Crucial negotiation, partnership or encounter.`;
+          } else {
+            interp = `Passation entre le Demandeur (${housePrefix}1) et l'Adversaire/Partenaire (${housePrefix}7) : Lien direct ou effet miroir avec l'autre partie. Négociation, association ou rencontre décisive.`;
+          }
         } else if (houses.includes(1) && houses.includes(2)) {
-          interp = "Passation vers les Biens (M2) : Les démarches personnelles du consultant agissent immédiatement sur ses finances et bénéfices matériels.";
+          if (langKey === 'ha') {
+            interp = `Tafiyar alama zuwa Dukiya (${housePrefix}2): Ayyukan mai tambaya suna tasiri nan take akan dukiyarsa da al'amuran kudi.`;
+          } else if (langKey === 'en') {
+            interp = `Passation towards Wealth (${housePrefix}2): Personal endeavors directly impact finances and material benefits.`;
+          } else {
+            interp = `Passation vers les Biens (${housePrefix}2) : Les démarches personnelles du consultant agissent immédiatement sur ses finances et bénéfices matériels.`;
+          }
         } else if (houses.includes(1) && houses.includes(8)) {
-          interp = "Présence simultanée en M1 et M8 (Crainte/Transformation) : Avertissement sur une entrave temporaire ou une inquiétude à apaiser par le Dhikr.";
+          if (langKey === 'ha') {
+            interp = `Sami a ${housePrefix}1 da ${housePrefix}8 a lokaci guda (Tsoro/Canja Yanayi): Garɗama ko damuwa ta dan lokaci wadda za a magance ta da Ambata (Dhikr).`;
+          } else if (langKey === 'en') {
+            interp = `Simultaneous presence in ${housePrefix}1 and ${housePrefix}8 (Fear/Transformation): Warning of temporary friction or anxiety to be soothed by Dhikr.`;
+          } else {
+            interp = `Présence simultanée en ${housePrefix}1 et ${housePrefix}8 (Crainte/Transformation) : Avertissement sur une entrave temporaire ou une inquiétude à apaiser par le Dhikr.`;
+          }
         } else if (houses.includes(15) || houses.includes(16)) {
-          interp = `Répétition dans la Maison du Juge/Suprême (M15/M16) : La force de la figure ${detail.latin} (${detail.arabic}) scelle le dénouement de la consultation.`;
+          if (langKey === 'ha') {
+            interp = `Maimaituwa a Gidan Alkali/Mafi Daukaka (${housePrefix}15/${housePrefix}16): Karfin alama ta ${detail.latin} (${detail.arabic}) ita ke yanke hukuncin wannan duba.`;
+          } else if (langKey === 'en') {
+            interp = `Repetition in the Judge/Supreme House (${housePrefix}15/${housePrefix}16): The strength of figure ${detail.latin} (${detail.arabic}) seals the final outcome of the consultation.`;
+          } else {
+            interp = `Répétition dans la Maison du Juge/Suprême (${housePrefix}15/${housePrefix}16) : La force de la figure ${detail.latin} (${detail.arabic}) scelle le dénouement de la consultation.`;
+          }
         } else {
-          interp = `Répétition de la figure ${detail.latin} dans les Maisons ${houses.join(', ')} : Amplification de la vibration élémentaire ${detail.elementName.fr} dans ces secteurs de vie.`;
+          if (langKey === 'ha') {
+            interp = `Maimaituwar alama ta ${detail.latin} a Gidaje ${houses.map(h => housePrefix + h).join(', ')}: Yaduwar sinadarin ${detail.elementName[langKey]} a waɗannan ɓangarori na rayuwa.`;
+          } else if (langKey === 'en') {
+            interp = `Repetition of figure ${detail.latin} in Houses ${houses.map(h => housePrefix + h).join(', ')}: Amplification of the elemental vibration ${detail.elementName[langKey]} in these life sectors.`;
+          } else {
+            interp = `Répétition de la figure ${detail.latin} dans les Maisons ${houses.map(h => housePrefix + h).join(', ')} : Amplification de la vibration élémentaire ${detail.elementName[langKey]} dans ces secteurs de vie.`;
+          }
         }
         results.push({ code, detail, houses, interpretation: interp });
       }
@@ -1180,22 +1457,31 @@ export const Geomancy: React.FC = () => {
 
   // Spatial Direction / Compass calculation
   const getSpatialDirection = () => {
-    if (figures.length < 16) return { primary: 'Nord', secondary: 'Est', advice: '' };
+    if (figures.length < 16) return { primary: i18n.dirNorthName, secondary: i18n.dirEastName, advice: '', primaryObj: { desc: '' } };
     const stats = getElementalStats();
     // Fire = Est, Air = Nord, Water = Ouest, Earth = Sud
     const dirScores = [
-      { name: 'Est (Feu / Orient)', count: stats.fire, element: 'fire', desc: 'Secteur de l\'action, des décisions rapides, de la vitalité et des initiatives.' },
-      { name: 'Nord (Air / Vent)', count: stats.air, element: 'air', desc: 'Secteur de l\'intelligence, des communications, du commerce et de la sagesse.' },
-      { name: 'Ouest (Eau / Coucher)', count: stats.water, element: 'water', desc: 'Secteur des émotions, de la guérison, de l\'intuition et des voyages maritimes.' },
-      { name: 'Sud (Terre / Sol)', count: stats.earth, element: 'earth', desc: 'Secteur de l\'ancrage, du patrimoine immobilier, de la stabilité et de la patience.' }
+      { name: i18n.dirEastName, count: stats.fire, element: 'fire', desc: i18n.dirEastDesc },
+      { name: i18n.dirNorthName, count: stats.air, element: 'air', desc: i18n.dirNorthDesc },
+      { name: i18n.dirWestName, count: stats.water, element: 'water', desc: i18n.dirWestDesc },
+      { name: i18n.dirSouthName, count: stats.earth, element: 'earth', desc: i18n.dirSouthDesc }
     ].sort((a, b) => b.count - a.count);
+
+    let advice = "";
+    if (langKey === 'ha') {
+      advice = `Karfin alkibla na wannan duba yana fuskantar bangaren ${dirScores[0].name}. Don neman wani abu da ya bace, tafiya ko gudanar da al'amari, ka fifita wannan bangare.`;
+    } else if (langKey === 'en') {
+      advice = `The predominant spatial energy of the chart points toward ${dirScores[0].name}. For physical endeavors, searching for a lost item, or directing an action, prioritize this quadrant.`;
+    } else {
+      advice = `L'énergie spatiale dominante du thème pointe vers la direction ${dirScores[0].name}. Pour vos démarches physiques, la recherche d'un objet égaré ou l'orientation d'un lieu d'action, privilégiez ce quadrant.`;
+    }
 
     return {
       primary: dirScores[0].name,
       secondary: dirScores[1].name,
       primaryObj: dirScores[0],
       secondaryObj: dirScores[1],
-      advice: `L'énergie spatiale dominante du thème pointe vers la direction ${dirScores[0].name}. Pour vos démarches physiques, la recherche d'un objet égaré ou l'orientation d'un lieu d'action, privilégiez ce quadrant.`
+      advice
     };
   };
 
@@ -1219,10 +1505,10 @@ export const Geomancy: React.FC = () => {
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 28px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('ASRARHUB — THÈME GÉOMANTIQUE COMPLET (KHATT AR-RAML)', canvas.width / 2, 45);
+    ctx.fillText(i18n.canvasTitle, canvas.width / 2, 45);
 
     ctx.font = '16px sans-serif';
-    ctx.fillText('Calcul des 16 Maisons • Mizan, Passations & Remèdes Spirituels', canvas.width / 2, 72);
+    ctx.fillText(i18n.canvasSubtitle, canvas.width / 2, 72);
 
     // Grid of 16 houses
     const cols = 4;
@@ -1331,9 +1617,10 @@ export const Geomancy: React.FC = () => {
             <Sliders size={16} className="text-amber-500" />
             <span>{i18n.generationModeLabel}</span>
           </div>
-          <div className="grid grid-cols-3 gap-1.5 p-1 bg-gray-100 dark:bg-gray-700/50 rounded-xl w-full sm:w-auto">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 p-1 bg-gray-100 dark:bg-gray-700/50 rounded-xl w-full sm:w-auto">
             {[
               { id: 'auto', label: i18n.modeAuto, icon: Sparkles },
+              { id: 'sandCanvas', label: i18n.modeSandCanvas, icon: Touchpad },
               { id: 'manual', label: i18n.modeManual, icon: Layers },
               { id: 'abjad', label: i18n.modeAbjad, icon: Calculator }
             ].map(m => {
@@ -1342,7 +1629,7 @@ export const Geomancy: React.FC = () => {
                 <button
                   key={m.id}
                   onClick={() => setInputMode(m.id as any)}
-                  className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap ${
+                  className={`px-2 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap ${
                     inputMode === m.id
                       ? 'bg-amber-500 text-white shadow-sm'
                       : 'text-gray-600 dark:text-gray-300 hover:text-amber-600 dark:hover:text-amber-400'
@@ -1355,6 +1642,77 @@ export const Geomancy: React.FC = () => {
             })}
           </div>
         </div>
+
+        {/* Dynamic Inputs depending on mode */}
+        {inputMode === 'sandCanvas' && (
+          <div className="p-4 bg-stone-900 dark:bg-stone-950 rounded-2xl border border-amber-600/50 shadow-inner space-y-3">
+            <div className="flex items-center justify-between border-b border-stone-800 pb-2">
+              <div className="flex items-center gap-2 text-amber-200 text-xs sm:text-sm font-bold">
+                <Touchpad size={18} className="text-amber-400 animate-pulse" />
+                <span>{i18n.sandPrompt}</span>
+              </div>
+              <span className="px-2.5 py-0.5 rounded-full bg-amber-900/80 text-amber-300 font-mono text-xs font-bold border border-amber-700/60">
+                {sandLines.length} / 16
+              </span>
+            </div>
+
+            {/* Sand Surface Tap Area */}
+            <div
+              onClick={handleAddSandLine}
+              className="w-full min-h-[120px] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-amber-950 via-stone-900 to-black rounded-xl border border-amber-700/40 p-3 flex flex-wrap content-start gap-1.5 overflow-y-auto cursor-pointer select-none hover:border-amber-400 transition-all group"
+            >
+              {sandLines.length === 0 ? (
+                <div className="w-full h-24 flex flex-col items-center justify-center text-amber-400/80 text-xs text-center space-y-1">
+                  <Sparkles size={22} className="animate-bounce text-amber-400" />
+                  <p className="font-semibold">{i18n.sandInstruction}</p>
+                  <p className="text-[10px] text-amber-500/70">{i18n.sandSubtitle}</p>
+                </div>
+              ) : (
+                sandLines.map((count, idx) => (
+                  <div key={idx} className="flex items-center gap-1.5 bg-amber-950/80 px-2.5 py-1 rounded-lg border border-amber-700/60 text-xs font-mono text-amber-200">
+                    <span className="text-amber-400 font-bold">{i18n.lineLabel} {idx + 1}:</span>
+                    <span className="flex gap-1">
+                      {Array.from({ length: Math.min(count, 10) }).map((_, i) => (
+                        <span key={i} className="w-2 h-2 rounded-full bg-amber-400 inline-block shadow-sm"></span>
+                      ))}
+                    </span>
+                    <span className="ml-1 text-[10px] text-amber-300 font-sans font-bold">
+                      ({count % 2 === 0 ? i18n.evenLabel : i18n.oddLabel})
+                    </span>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex items-center justify-between pt-1">
+              <button
+                onClick={handleResetSand}
+                className="px-3 py-1.5 rounded-lg bg-stone-800 hover:bg-stone-700 text-amber-300 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
+              >
+                <RefreshCw size={12} />
+                <span>{i18n.resetSandBtn}</span>
+              </button>
+
+              {sandLines.length < 16 && (
+                <button
+                  onClick={handleAddSandLine}
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-md hover:from-amber-600 hover:to-orange-600 cursor-pointer"
+                >
+                  <Touchpad size={14} />
+                  <span>{i18n.tapSandBtn} ({sandLines.length + 1}/16)</span>
+                </button>
+              )}
+
+              {sandLines.length === 16 && (
+                <span className="text-xs font-bold text-emerald-400 animate-pulse flex items-center gap-1">
+                  <CheckCircle size={14} />
+                  {i18n.sandComplete}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Dynamic Inputs depending on mode */}
         {inputMode === 'manual' && (
@@ -1437,7 +1795,7 @@ export const Geomancy: React.FC = () => {
       </div>
 
       {/* Tabs Header */}
-      {figures.length > 0 && (
+      {(figures.length > 0 || savedReadings.length > 0) && (
         <div className="flex items-center justify-start gap-1.5 overflow-x-auto pb-2.5 mb-5 no-scrollbar border-b border-gray-200 dark:border-gray-700">
           {[
             { id: 'chart', label: i18n.tabTheme, icon: Layers },
@@ -1445,7 +1803,8 @@ export const Geomancy: React.FC = () => {
             { id: 'traditions', label: i18n.tabTraditions, icon: Globe },
             { id: 'elements', label: i18n.tabElements, icon: Flame },
             { id: 'secret', label: i18n.tabSecret, icon: Key },
-            { id: 'dictionary', label: i18n.tabDictionary, icon: BookOpen }
+            { id: 'dictionary', label: i18n.tabDictionary, icon: BookOpen },
+            { id: 'history', label: `${i18n.tabHistory} (${savedReadings.length})`, icon: History }
           ].map(tab => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -1470,7 +1829,7 @@ export const Geomancy: React.FC = () => {
       {/* Tab 1: 16 Houses Chart & Interactive Grid */}
       {figures.length > 0 && activeTab === 'chart' && (
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-          {/* Validity Badge & PNG Export */}
+          {/* Validity Badge & Actions */}
           <div className="flex flex-wrap items-center justify-between gap-2.5 p-3 sm:p-3.5 bg-amber-50/70 dark:bg-amber-950/30 rounded-xl border border-amber-200/60 dark:border-amber-800/30">
             <div className="flex items-center gap-2 text-xs font-bold text-amber-900 dark:text-amber-200">
               {isMizanValid() ? (
@@ -1486,11 +1845,15 @@ export const Geomancy: React.FC = () => {
               )}
             </div>
 
-            <div className="flex items-center gap-3">
-              <p className="text-xs text-amber-700/80 dark:text-amber-400/80 hidden sm:flex items-center gap-1">
-                <Info size={13} />
-                {i18n.clickHouse}
-              </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={handleCopyTextReport}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-stone-800 hover:bg-stone-700 text-amber-300 shadow-xs transition-colors cursor-pointer border border-stone-700"
+              >
+                {copiedReport ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
+                <span>{copiedReport ? i18n.reportCopied : i18n.copyReport}</span>
+              </button>
+
               <button
                 onClick={exportChartAsImage}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white shadow-xs transition-colors cursor-pointer"
@@ -1499,6 +1862,28 @@ export const Geomancy: React.FC = () => {
                 <span>{i18n.exportPNG}</span>
               </button>
             </div>
+          </div>
+
+          {/* Save Reading Bar */}
+          <div className="p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row items-center gap-2.5">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-gray-700 dark:text-gray-300 shrink-0">
+              <Save size={15} className="text-amber-500" />
+              <span>{i18n.readingTitlePrompt}</span>
+            </div>
+            <input
+              type="text"
+              placeholder={i18n.titlePlaceholder}
+              value={readingTitle}
+              onChange={(e) => setReadingTitle(e.target.value)}
+              className="flex-1 w-full px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900 text-xs text-gray-900 dark:text-white"
+            />
+            <button
+              onClick={handleSaveReading}
+              className="w-full sm:w-auto px-4 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer shrink-0"
+            >
+              {saveSuccess ? <Check size={14} className="text-white" /> : <Bookmark size={14} />}
+              <span>{saveSuccess ? i18n.savedSuccess : i18n.saveReading}</span>
+            </button>
           </div>
 
           {/* 16 Houses Grid */}
@@ -2063,6 +2448,87 @@ export const Geomancy: React.FC = () => {
                   );
                 })}
             </div>
+          </div>
+        </motion.div>
+      )}
+
+      {/* Tab 6: History & Archives */}
+      {activeTab === 'history' && (
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-5 shadow-sm border border-gray-200/80 dark:border-gray-700 space-y-4">
+            <div className="flex items-center justify-between border-b border-gray-200/80 dark:border-gray-700 pb-3">
+              <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <History className="text-amber-500" size={18} />
+                <span>{i18n.tabHistory}</span>
+              </h3>
+              <span className="px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-bold text-xs">
+                {savedReadings.length} {langKey === 'ha' ? 'jadawali' : langKey === 'en' ? 'readings' : 'thèmes'}
+              </span>
+            </div>
+
+            {savedReadings.length === 0 ? (
+              <div className="py-12 text-center text-gray-500 dark:text-gray-400 space-y-2">
+                <Bookmark size={32} className="mx-auto text-amber-400/50" />
+                <p className="text-sm font-medium">{i18n.noSavedReadings}</p>
+                <p className="text-xs text-gray-400">{i18n.noSavedReadingsSub}</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                {savedReadings.map(reading => {
+                  const m1 = getFigureDetail(reading.figures[0]);
+                  const m15 = getFigureDetail(reading.figures[14]);
+                  const m16 = getFigureDetail(reading.figures[15]);
+                  return (
+                    <div key={reading.id} className="p-4 rounded-xl bg-gray-50 dark:bg-gray-900/50 border border-gray-200/80 dark:border-gray-700 space-y-2.5 hover:border-amber-400 transition-all">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <h4 className="font-bold text-sm text-gray-900 dark:text-white">{reading.title}</h4>
+                          <span className="text-[10px] text-gray-500 dark:text-gray-400 block">{reading.date} • Mode: {reading.inputMode}</span>
+                        </div>
+                        <button
+                          onClick={() => handleDeleteReading(reading.id)}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors cursor-pointer"
+                          title={i18n.deleteTooltip}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+
+                      {reading.question && (
+                        <p className="text-xs text-amber-700 dark:text-amber-400 italic bg-amber-50 dark:bg-amber-950/30 p-2 rounded-lg border border-amber-200/50">
+                          « {reading.question} »
+                        </p>
+                      )}
+
+                      <div className="grid grid-cols-3 gap-1.5 text-[11px] p-2 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                        <div>
+                          <span className="text-[10px] text-gray-400 block">{i18n.consultantLabel}</span>
+                          <strong className="text-gray-800 dark:text-gray-200">{m1.latin}</strong>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-amber-500 font-bold block">{i18n.judgeLabel}</span>
+                          <strong className="text-amber-700 dark:text-amber-300">{m15.latin}</strong>
+                        </div>
+                        <div>
+                          <span className="text-[10px] text-emerald-500 font-bold block">{i18n.supremeLabel}</span>
+                          <strong className="text-emerald-700 dark:text-emerald-300">{m16.latin}</strong>
+                        </div>
+                      </div>
+
+                      <div className="pt-1 flex justify-end">
+                        <button
+                          onClick={() => handleReloadReading(reading)}
+                          className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs transition-all"
+                        >
+                          <Eye size={13} />
+                          <span>{i18n.loadReadingBtn}</span>
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </motion.div>
       )}

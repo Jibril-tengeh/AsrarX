@@ -3,6 +3,7 @@ import { User, Shield, Key, Search, ArrowLeft, RefreshCw, Sparkles, BookOpen, Fo
 import { db } from '../../../lib/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { exportWirdToImage } from '../../../utils/wirdExporter';
+import { getZikrCache, setZikrCache, syncPersonalWirdsOffline } from '../../../utils/zikrSyncEngine';
 
 interface SavedWird {
   id: string;
@@ -642,9 +643,7 @@ export const PersonalWird: React.FC = () => {
   const [folders, setFolders] = useState<Folder[]>(() => {
     const saved = localStorage.getItem('asrar_wird_folders');
     if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {}
+      try { return JSON.parse(saved); } catch (e) {}
     }
     return DEFAULT_FOLDERS;
   });
@@ -652,12 +651,31 @@ export const PersonalWird: React.FC = () => {
   const [savedWirds, setSavedWirds] = useState<SavedWird[]>(() => {
     const saved = localStorage.getItem('asrar_saved_wirds');
     if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {}
+      try { return JSON.parse(saved); } catch (e) {}
     }
     return [];
   });
+
+  // Hydrate savedWirds and folders asynchronously from idb-keyval
+  useEffect(() => {
+    getZikrCache<SavedWird[]>('asrar_saved_wirds', savedWirds).then((cached) => {
+      if (Array.isArray(cached) && cached.length > 0) {
+        setSavedWirds(cached);
+      }
+    });
+
+    getZikrCache<Folder[]>('asrar_wird_folders', folders).then((cachedFolders) => {
+      if (Array.isArray(cachedFolders) && cachedFolders.length > 0) {
+        setFolders(cachedFolders);
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    syncPersonalWirdsOffline(savedWirds).catch((err) => {
+      console.warn('Personal wirds cached offline:', err);
+    });
+  }, [savedWirds]);
 
   const [newFolderName, setNewFolderName] = useState('');
   const [isAddingFolder, setIsAddingFolder] = useState(false);
@@ -744,7 +762,7 @@ export const PersonalWird: React.FC = () => {
     };
     const updated = [...folders, newFolder];
     setFolders(updated);
-    localStorage.setItem('asrar_wird_folders', JSON.stringify(updated));
+    setZikrCache('asrar_wird_folders', updated).catch(() => {});
     setNewFolderName('');
     setIsAddingFolder(false);
   };
@@ -754,12 +772,11 @@ export const PersonalWird: React.FC = () => {
     // Remove folder
     const updatedFolders = folders.filter(f => f.id !== folderId);
     setFolders(updatedFolders);
-    localStorage.setItem('asrar_wird_folders', JSON.stringify(updatedFolders));
+    setZikrCache('asrar_wird_folders', updatedFolders).catch(() => {});
 
     // Move all wirds in that folder to Uncategorized
     const updatedWirds = savedWirds.map(w => w.folderId === folderId ? { ...w, folderId: 'uncategorized' } : w);
     setSavedWirds(updatedWirds);
-    localStorage.setItem('asrar_saved_wirds', JSON.stringify(updatedWirds));
   };
 
   const calculateWird = () => {

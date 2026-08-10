@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ArrowLeft, Hexagon, Info, Flame, Wind, Droplets, Mountain, Compass, Sparkles, Check, Copy, Download, Play, Pause, SkipForward, SkipBack, RotateCcw, FileCode, Printer } from 'lucide-react';
+import { ArrowLeft, Hexagon, Info, Flame, Wind, Droplets, Mountain, Compass, Sparkles, Check, Copy, Download, Play, Pause, SkipForward, SkipBack, RotateCcw, FileCode, Printer, Sun, Moon, Layers, Calculator, Feather, ShieldCheck } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { useAuth } from '../../../contexts/AuthContext';
@@ -10,50 +10,80 @@ import { downloadCanvasImage } from '../../../utils/downloadHelper';
 import { toCanvas } from 'html-to-image';
 import { AsrarHubWatermark } from '../../../components/AsrarHubWatermark';
 import { KhatimUsageGuide } from '../../../components/KhatimUsageGuide';
+import { numberToAbjadLetters } from '../../../utils/abjad';
+import { WafqValidator } from '../../../components/WafqValidator';
+import { WafqCombine } from '../../../components/WafqCombine';
 import { 
   KhatimMethod, 
   KhatimDoor, 
   DAHMOUCH_DOORS, 
   KOUNTIYOU_DOORS, 
-  VERSETS_BESOINS_PRESETS, 
-  VersetNeedPreset, 
   generateAdvancedKhatim 
 } from '../../../utils/khatimEngine';
 
 const awfaqDict = {
   fr: {
-    title: "Générateur d'Awfaq Supérieurs (3x3 à 10x10)",
-    desc: "Générez des carrés magiques sacrés (Muthallath, Murabba, Mukhammas, etc.) avec répartition du Kasr (fraction) et alignement des 4 éléments.",
+    title: "Générateur d'Awfaq & Carrés Magiques",
+    desc: "Générez des carrés magiques sacrés (Ghazali, Khali al-Wast, Soleil 6x6, Lune 9x9, Wafq al-Huruf, Wafq Combiné & Correcteur).",
+    tabGenerator: "1. Générateur d'Awfaq (3x3 à 10x10)",
+    tabCombine: "2. Wafq Combiné (Nom Divin + Verset)",
+    tabValidator: "3. Wafq Validator (Correcteur - 27)",
     targetLabel: "Valeur Numérique Cible (Adad Total / Jummal)",
-    targetPlaceholder: "Ex: 129 ou 1000",
-    gridTypeLabel: "Type de Carré (Tard / Wafq)",
-    generateBtn: "Générer le Carré & Alignement Élémenaire",
+    targetPlaceholder: "Ex: 129, 111, 369 ou 1000",
+    gridTypeLabel: "Type de Carré (Matrice / Ordre)",
+    generateBtn: "Générer le Carré & Alignement Élémentaire",
     invalidValue: "Veuillez entrer une valeur numérique valide.",
     yourWafq: (size: number) => `Wafq Ordinaire et Répartition (${size}x${size})`,
     ruleTitle: "Règle de Remplissage (Ordre du Sayr) :",
     ruleDesc: "Pour activer le Wafq spirituellement, gravez ou écrivez les cases dans l'ordre croissant des maisons (de la Miftah - case 1 - jusqu'à la Mughlaq - dernière case).",
     kasrTitle: "Analyse du Kasr (Fraction / Reste) :",
-    elementalTitle: "Alignement des 4 Éléments (Tabai' al-Wafq)"
+    elementalTitle: "Alignement des 4 Éléments (Tabai' al-Wafq)",
+    khaliWastLabel: "Symbole / Nom de la Case Centrale (Khali al-Wast) :",
+    khaliWastPlaceholder: "Ex: الله, يا لطيف, أو اسم الطالب...",
+    presetSolarTitle: "Wafq du Soleil (Shamsi 6x6)",
+    presetLunarTitle: "Wafq de la Lune (Qamari 9x9)",
+    solarDesc: "Proportions solaires (6x6) • Constante 111 • Total 666 • Métal : Or • Dimanche",
+    lunarDesc: "Proportions lunaires (9x9) • Constante 369 • Total 3321 • Métal : Argent • Lundi",
+    viewModeValues: "Chiffres (Arqam)",
+    viewModeLetters: "Lettres Abjad (Wafq al-Huruf / Littéral)",
+    viewModeHouses: "Ordre Sayr (Gidaje)",
+    viewModeAnim: "Animation du Tracé"
   },
   en: {
-    title: "Higher Awfaq Generator (3x3 to 10x10)",
-    desc: "Generate sacred magic squares with Kasr (fraction) distribution and 4-element alignment.",
+    title: "Awfaq & Magic Squares Generator",
+    desc: "Generate sacred magic squares (Ghazali, Khali al-Wast, Sun 6x6, Moon 9x9, Wafq al-Huruf, Combined Wafq & Validator).",
+    tabGenerator: "1. Awfaq Generator (3x3 to 10x10)",
+    tabCombine: "2. Combined Wafq (Divine Name + Verse)",
+    tabValidator: "3. Wafq Validator (Corrector - 27)",
     targetLabel: "Target Numerical Value (Total Adad)",
-    targetPlaceholder: "Ex: 129 or 1000",
-    gridTypeLabel: "Square Type (Wafq)",
+    targetPlaceholder: "Ex: 129, 111, 369 or 1000",
+    gridTypeLabel: "Square Type (Grid Order)",
     generateBtn: "Generate Square & Elemental Alignment",
     invalidValue: "Please enter a valid numerical value.",
     yourWafq: (size: number) => `Wafq Grid (${size}x${size})`,
     ruleTitle: "Filling Rule (Sayr Order):",
     ruleDesc: "To activate the Wafq spiritually, fill the cells in ascending house order from cell 1 (Miftah) to the final cell (Mughlaq).",
     kasrTitle: "Kasr (Remainder/Fraction) Analysis:",
-    elementalTitle: "4 Elements Alignment"
+    elementalTitle: "4 Elements Alignment",
+    khaliWastLabel: "Center Cell Name / Symbol (Khali al-Wast):",
+    khaliWastPlaceholder: "Ex: Allah, Ya Latif, or Intention Name...",
+    presetSolarTitle: "Wafq of the Sun (Shamsi 6x6)",
+    presetLunarTitle: "Wafq of the Moon (Qamari 9x9)",
+    solarDesc: "Solar proportions (6x6) • Constant 111 • Total 666 • Metal: Gold • Sunday",
+    lunarDesc: "Lunar proportions (9x9) • Constant 369 • Total 3321 • Metal: Silver • Monday",
+    viewModeValues: "Numbers (Arqam)",
+    viewModeLetters: "Abjad Letters (Wafq al-Huruf)",
+    viewModeHouses: "Sayr Order (Houses)",
+    viewModeAnim: "Trace Animation"
   },
   ha: {
-    title: "Générateur d'Awfaq (3x3 zuwa 10x10)",
-    desc: "Hada rukunin murabba'ai masu albarka tare da rarraba Kasr da daidaiton abubuwa 4.",
+    title: "Mai Kera Awfaq da Hatimi",
+    desc: "Hada Wafq na Ghazali, Khali al-Wast, Rana 6x6, Wata 9x9, Wafq al-Huruf da Hadadden Wafq.",
+    tabGenerator: "1. Mai Kera Wafq (3x3 zuwa 10x10)",
+    tabCombine: "2. Haɗaɗɗen Wafq (Sunan Allah + Aya)",
+    tabValidator: "3. Gwada Wafq (Mai Gyaran Hatimi - 27)",
     targetLabel: "Darajar Lambar Buƙata (Adad)",
-    targetPlaceholder: "Alal misali: 129",
+    targetPlaceholder: "Alal misali: 129, 111, 369",
     gridTypeLabel: "Nau'in Murabba'i",
     generateBtn: "Générer Wafq",
     invalidValue: "Shigar da darajar lamba mai kyau.",
@@ -61,7 +91,17 @@ const awfaqDict = {
     ruleTitle: "Dokar Cikawa (Sayr):",
     ruleDesc: "Cika gidajen daga gida na 1 zuwa na ƙarshe.",
     kasrTitle: "Kasr Analysis:",
-    elementalTitle: "Daidaiton Abubuwa 4"
+    elementalTitle: "Daidaiton Abubuwa 4",
+    khaliWastLabel: "Sunan Tsakiyar Gida (Khali al-Wast):",
+    khaliWastPlaceholder: "Misali: Allah, Ya Latif...",
+    presetSolarTitle: "Wafq na Rana (Shamsi 6x6)",
+    presetLunarTitle: "Wafq na Wata (Qamari 9x9)",
+    solarDesc: "Siffar Rana (6x6) • Constant 111 • Total 666 • Zariya • Lahadi",
+    lunarDesc: "Siffar Wata (9x9) • Constant 369 • Total 3321 • Azurfa • Litinin",
+    viewModeValues: "Lambobi (Arqam)",
+    viewModeLetters: "Haruffan Abjad (Wafq al-Huruf)",
+    viewModeHouses: "Tsarin Sayr (Gidaje)",
+    viewModeAnim: "Kallo na Tracé"
   }
 };
 
@@ -183,19 +223,50 @@ export const AwfaqAdvanced: React.FC = () => {
   const disableDuaCopy = !!featureToggles?.disable_dua_copy;
   const dict = awfaqDict[(language as 'fr' | 'en' | 'ha') || 'fr'] || awfaqDict.fr;
 
+  const [activeTab, setActiveTab] = useState<'generator' | 'combine' | 'validator'>('generator');
+
   const [targetValue, setTargetValue] = useState<string>('129');
   const [gridSize, setGridSize] = useState<number>(3); // 3x3 to 10x10
-  const [method, setMethod] = useState<KhatimMethod>('ghazali');
+  const [method, setMethod] = useState<KhatimMethod | 'khali_wast'>('ghazali');
+  const [centerSymbol, setCenterSymbol] = useState<string>('الله');
   const [selectedDoor, setSelectedDoor] = useState<number>(1);
   const [activeDoorInfo, setActiveDoorInfo] = useState<KhatimDoor | null>(null);
 
-  const [viewMode, setViewMode] = useState<'values' | 'houses' | 'animation'>('values');
+  const [viewMode, setViewMode] = useState<'values' | 'letters' | 'houses' | 'animation'>('values');
   const [grid, setGrid] = useState<(number | string)[][]>([]);
   const [baseHousesGrid, setBaseHousesGrid] = useState<number[][]>([]);
   const [kasrInfo, setKasrInfo] = useState<{ base: number; rem: number; kasrCellIndex: number; minRequired: number } | null>(null);
   const [copiedGrid, setCopiedGrid] = useState(false);
   const [error, setError] = useState<string>('');
   const wafqRef = useRef<HTMLDivElement>(null);
+
+  // Quick preset handlers for Sun (6x6) and Moon (9x9)
+  const applySolarPreset = () => {
+    setGridSize(6);
+    setTargetValue('111');
+    setMethod('ghazali');
+    setTimeout(() => {
+      generateWafqWithParams(6, 111, 'ghazali');
+    }, 50);
+  };
+
+  const applyLunarPreset = () => {
+    setGridSize(9);
+    setTargetValue('369');
+    setMethod('ghazali');
+    setTimeout(() => {
+      generateWafqWithParams(9, 369, 'ghazali');
+    }, 50);
+  };
+
+  const applyKhaliWastPreset = () => {
+    setGridSize(3);
+    setTargetValue('129');
+    setMethod('khali_wast');
+    setTimeout(() => {
+      generateWafqWithParams(3, 129, 'khali_wast');
+    }, 50);
+  };
 
   // Animation Ghazali State
   const [animStep, setAnimStep] = useState<number>(1);
@@ -238,7 +309,7 @@ export const AwfaqAdvanced: React.FC = () => {
   <rect x="22" y="22" width="${width - 44}" height="${height - 44}" fill="none" stroke="#d97706" stroke-width="1" stroke-dasharray="6,4" rx="12" />
   <!-- Bismillah Header -->
   <text x="${width / 2}" y="52" font-family="'Amiri', 'Traditional Arabic', serif" font-size="22" fill="#f59e0b" text-anchor="middle" font-weight="bold">بسم الله الرحمن الرحيم</text>
-  <text x="${width / 2}" y="74" font-family="sans-serif" font-size="12" fill="#9ca3af" text-anchor="middle">Khatim Wafq Ghazali (${size}x${size}) - Adad Jummal: ${targetValue}</text>
+  <text x="${width / 2}" y="74" font-family="sans-serif" font-size="12" fill="#9ca3af" text-anchor="middle">Khatim Wafq (${size}x${size}) - Adad Jummal: ${targetValue}</text>
   <!-- Grid Matrix -->
   <g transform="translate(${padding}, ${padding + 25})">
 `;
@@ -247,7 +318,7 @@ export const AwfaqAdvanced: React.FC = () => {
       row.forEach((val, c) => {
         const x = c * cellSize;
         const y = r * cellSize;
-        const houseNum = baseHousesGrid[r][c] + 1;
+        const houseNum = baseHousesGrid[r] ? baseHousesGrid[r][c] + 1 : 0;
         const isKasr = kasrInfo && houseNum === kasrInfo.kasrCellIndex && kasrInfo.rem > 0;
 
         svgContent += `
@@ -288,62 +359,31 @@ export const AwfaqAdvanced: React.FC = () => {
     }
   };
 
-  const generateWafq = () => {
-    const val = parseInt(targetValue, 10);
-    if (isNaN(val) || val <= 0) {
-      setError(dict.invalidValue);
-      return;
-    }
+  const generateWafqWithParams = (sz: number, targetVal: number, mth: string) => {
     setError('');
+    const cn = (sz * (sz * sz - 1)) / 2;
+    const minVal = cn + sz;
 
-    if (method !== 'ghazali') {
-      try {
-        const res = generateAdvancedKhatim(method, selectedDoor, gridSize, val);
-        setGrid(res.grid);
-        setBaseHousesGrid(res.housesGrid);
-        setActiveDoorInfo(res.doorInfo || null);
-        setKasrInfo({
-          base: res.step,
-          rem: res.remainder,
-          kasrCellIndex: res.kasrHouse,
-          minRequired: res.minRequired
-        });
-        return;
-      } catch (e: any) {
-        setError(e.message);
-        return;
-      }
-    }
-
-    // Sum of sequence 0 to n^2 - 1 = n * (n^2 - 1) / 2
-    const cn = (gridSize * (gridSize * gridSize - 1)) / 2;
-    const minVal = cn + gridSize;
-
-    if (val < minVal) {
-      setError(language === 'fr' 
-        ? `Le nombre cible doit être supérieur ou égal à ${minVal} pour ce type de carré (${gridSize}x${gridSize}).`
-        : language === 'ha'
-        ? `Lambar buƙata dole ne ta kasance aƙalla ${minVal} don wannan murabba'i.`
-        : `The target value must be at least ${minVal} for this square type.`
-      );
+    if (targetVal < minVal) {
+      setError(`Le nombre cible doit être d'au moins ${minVal} pour ${sz}x${sz}.`);
       return;
     }
 
-    const base = Math.floor((val - cn) / gridSize);
-    const rem = (val - cn) % gridSize;
+    const base = Math.floor((targetVal - cn) / sz);
+    const rem = (targetVal - cn) % sz;
 
-    const baseSq = generateBaseMagicSquare(gridSize);
-    
-    // Kasr cell target is based on the specific house index
-    const targetHouseIndex = KASR_HOUSES[gridSize]?.house || (gridSize * gridSize - 2);
-    // Find cell containing value equal to targetHouseIndex - 1
+    const baseSq = generateBaseMagicSquare(sz);
+    const targetHouseIndex = KASR_HOUSES[sz]?.house || (sz * sz - 2);
     let kasrCellVal = targetHouseIndex - 1;
-    if (kasrCellVal >= gridSize * gridSize) {
-      kasrCellVal = gridSize * gridSize - 1;
-    }
 
-    const newGrid = baseSq.map((row) => 
-      row.map((cell) => {
+    const midR = Math.floor(sz / 2);
+    const midC = Math.floor(sz / 2);
+
+    const newGrid = baseSq.map((row, rIdx) => 
+      row.map((cell, cIdx) => {
+        if (mth === 'khali_wast' && rIdx === midR && cIdx === midC && sz % 2 !== 0) {
+          return centerSymbol.trim() || 'خالي الوسط';
+        }
         let finalVal = cell + base;
         if (cell === kasrCellVal) {
           finalVal += rem;
@@ -361,6 +401,41 @@ export const AwfaqAdvanced: React.FC = () => {
       kasrCellIndex: kasrCellVal + 1,
       minRequired: minVal
     });
+  };
+
+  const generateWafq = () => {
+    const val = parseInt(targetValue, 10);
+    if (isNaN(val) || val <= 0) {
+      setError(dict.invalidValue);
+      return;
+    }
+    setError('');
+
+    if (method === 'khali_wast') {
+      generateWafqWithParams(gridSize, val, 'khali_wast');
+      return;
+    }
+
+    if (method !== 'ghazali') {
+      try {
+        const res = generateAdvancedKhatim(method as KhatimMethod, selectedDoor, gridSize, val);
+        setGrid(res.grid);
+        setBaseHousesGrid(res.housesGrid);
+        setActiveDoorInfo(res.doorInfo || null);
+        setKasrInfo({
+          base: res.step,
+          rem: res.remainder,
+          kasrCellIndex: res.kasrHouse,
+          minRequired: res.minRequired
+        });
+        return;
+      } catch (e: any) {
+        setError(e.message);
+        return;
+      }
+    }
+
+    generateWafqWithParams(gridSize, val, 'ghazali');
   };
 
   const handleCopyGridText = () => {
@@ -440,121 +515,233 @@ export const AwfaqAdvanced: React.FC = () => {
 
       <div className="flex-1 overflow-y-auto no-scrollbar space-y-4 pr-0.5">
 
-      <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 sm:p-8 border border-gray-100 dark:border-gray-700 shadow-sm mb-8 space-y-6">
-        {/* Method Selector */}
-        <div>
-          <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
-            Méthode de Génération du Wafq :
-          </label>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 bg-gray-100 dark:bg-gray-900 rounded-2xl p-1.5">
-            {[
-              { id: 'ghazali', label: 'Ghazali Standard (الغزالي)' },
-              { id: 'dahmouch', label: 'Dahmouch (دهموش) - 9 Portes' },
-              { id: 'kountiyou', label: 'Kountiyou (الكنتي) - 9 Portes' },
-            ].map((m) => (
-              <button
-                key={m.id}
-                type="button"
-                onClick={() => setMethod(m.id as KhatimMethod)}
-                className={`py-2 px-3 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
-                  method === m.id
-                    ? 'bg-fuchsia-600 text-white shadow-md'
-                    : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
-                }`}
-              >
-                {m.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Door Selector for Dahmouch / Kountiyou */}
-        {(method === 'dahmouch' || method === 'kountiyou') && (
-          <div className="bg-slate-900 border border-fuchsia-500/30 p-4 rounded-2xl text-fuchsia-100 space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-bold text-fuchsia-300">
-                Choix de la Porte ({method === 'dahmouch' ? 'Dahmouch' : 'Cheikh Al-Kounti'}) :
-              </label>
-              <span className="text-[10px] font-mono text-fuchsia-400 bg-fuchsia-500/10 px-2 py-0.5 rounded-full border border-fuchsia-500/30">
-                Porte {selectedDoor} sur 9
-              </span>
-            </div>
-            <div className="grid grid-cols-3 sm:grid-cols-9 gap-1.5">
-              {(method === 'dahmouch' ? DAHMOUCH_DOORS : KOUNTIYOU_DOORS).map((door) => (
-                <button
-                  key={door.id}
-                  type="button"
-                  onClick={() => setSelectedDoor(door.id)}
-                  className={`py-1.5 px-1 text-center rounded-lg border text-xs font-bold transition-all cursor-pointer ${
-                    selectedDoor === door.id
-                      ? 'bg-fuchsia-600 text-white border-fuchsia-400 scale-105 shadow'
-                      : 'bg-black/40 text-fuchsia-200/80 border-fuchsia-500/20 hover:bg-black/70'
-                  }`}
-                >
-                  Porte {door.id}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div>
-            <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
-              {dict.targetLabel}
-            </label>
-            <input
-              type="number"
-              value={targetValue}
-              onChange={(e) => setTargetValue(e.target.value)}
-              placeholder={dict.targetPlaceholder}
-              className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 text-xl font-bold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-fuchsia-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
-              {dict.gridTypeLabel}
-            </label>
-            <div className="grid grid-cols-4 gap-1.5 bg-gray-100 dark:bg-gray-900 rounded-2xl p-1.5">
-              {[
-                { value: 3, label: '3x3 (Muthallath)' },
-                { value: 4, label: '4x4 (Murabba)' },
-                { value: 5, label: '5x5 (Mukhammas)' },
-                { value: 6, label: '6x6 (Musaddas)' },
-                { value: 7, label: '7x7 (Musabba)' },
-                { value: 8, label: '8x8 (Muthamman)' },
-                { value: 9, label: '9x9 (Mutassa)' },
-                { value: 10, label: '10x10 (Mu\'ashshar)' }
-              ].map(opt => (
-                <button
-                  key={opt.value}
-                  onClick={() => setGridSize(opt.value)}
-                  className={`py-2 rounded-xl font-bold text-xs sm:text-sm transition-colors ${
-                    gridSize === opt.value 
-                      ? 'bg-white dark:bg-gray-800 text-fuchsia-600 dark:text-fuchsia-400 shadow-sm' 
-                      : 'text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-300'
-                  }`}
-                >
-                  {opt.label.split(' ')[0]}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-
+      {/* Top Tab Bar Navigation */}
+      <div className="flex flex-wrap items-center gap-2 p-1.5 bg-gray-100 dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700">
         <button
-          onClick={generateWafq}
-          className="w-full h-[56px] rounded-2xl bg-gradient-to-br from-fuchsia-600 to-pink-700 hover:from-fuchsia-500 hover:to-pink-600 text-white font-bold transition-transform hover:scale-[1.01] active:scale-[0.99] shadow-lg flex items-center justify-center gap-2 cursor-pointer"
+          type="button"
+          onClick={() => setActiveTab('generator')}
+          className={`flex-1 min-w-[180px] py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
+            activeTab === 'generator'
+              ? 'bg-fuchsia-600 text-white shadow-md'
+              : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+          }`}
         >
-          <Sparkles size={20} />
-          {dict.generateBtn}
+          <Sparkles size={16} />
+          <span>{dict.tabGenerator}</span>
         </button>
 
-        {error && (
-          <p className="text-rose-500 font-medium text-sm mt-4 text-center">{error}</p>
-        )}
+        <button
+          type="button"
+          onClick={() => setActiveTab('combine')}
+          className={`flex-1 min-w-[180px] py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
+            activeTab === 'combine'
+              ? 'bg-gradient-to-r from-fuchsia-600 to-amber-600 text-white shadow-md'
+              : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+          }`}
+        >
+          <Layers size={16} />
+          <span>{dict.tabCombine}</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab('validator')}
+          className={`flex-1 min-w-[180px] py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
+            activeTab === 'validator'
+              ? 'bg-amber-600 text-white shadow-md'
+              : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+          }`}
+        >
+          <Calculator size={16} />
+          <span>{dict.tabValidator}</span>
+        </button>
       </div>
+
+      {activeTab === 'combine' && <WafqCombine />}
+      {activeTab === 'validator' && <WafqValidator />}
+
+      {activeTab === 'generator' && (
+        <>
+          {/* Presets Banner for Specialized Wafq Types */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <button
+              type="button"
+              onClick={applyKhaliWastPreset}
+              className="p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/10 to-amber-600/10 border border-amber-500/30 text-left hover:border-amber-500 transition-all cursor-pointer group"
+            >
+              <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300 font-extrabold text-xs sm:text-sm">
+                <Feather size={16} className="text-amber-500 group-hover:scale-110 transition-transform" />
+                <span>Wafq Khali al-Wast</span>
+              </div>
+              <p className="text-[11px] text-gray-500 dark:text-gray-300 mt-1">
+                Case centrale vacante pour y inscrire un nom ou symbole sacralisé.
+              </p>
+            </button>
+
+            <button
+              type="button"
+              onClick={applySolarPreset}
+              className="p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/10 to-yellow-500/10 border border-amber-500/30 text-left hover:border-amber-500 transition-all cursor-pointer group"
+            >
+              <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-extrabold text-xs sm:text-sm">
+                <Sun size={16} className="text-amber-500 group-hover:rotate-45 transition-transform" />
+                <span>{dict.presetSolarTitle}</span>
+              </div>
+              <p className="text-[11px] text-gray-500 dark:text-gray-300 mt-1">
+                {dict.solarDesc}
+              </p>
+            </button>
+
+            <button
+              type="button"
+              onClick={applyLunarPreset}
+              className="p-3.5 rounded-2xl bg-gradient-to-r from-purple-500/10 to-fuchsia-500/10 border border-purple-500/30 text-left hover:border-purple-500 transition-all cursor-pointer group"
+            >
+              <div className="flex items-center gap-2 text-purple-600 dark:text-purple-300 font-extrabold text-xs sm:text-sm">
+                <Moon size={16} className="text-purple-400 group-hover:scale-110 transition-transform" />
+                <span>{dict.presetLunarTitle}</span>
+              </div>
+              <p className="text-[11px] text-gray-500 dark:text-gray-300 mt-1">
+                {dict.lunarDesc}
+              </p>
+            </button>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 sm:p-8 border border-gray-100 dark:border-gray-700 shadow-sm mb-8 space-y-6">
+            {/* Method Selector */}
+            <div>
+              <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                Méthode de Génération du Wafq :
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 bg-gray-100 dark:bg-gray-900 rounded-2xl p-1.5">
+                {[
+                  { id: 'ghazali', label: 'Ghazali Standard (الغزالي)' },
+                  { id: 'khali_wast', label: 'Khali al-Wast (خالي الوسط)' },
+                  { id: 'dahmouch', label: 'Dahmouch (دهموش)' },
+                  { id: 'kountiyou', label: 'Kountiyou (الكنتي)' },
+                ].map((m) => (
+                  <button
+                    key={m.id}
+                    type="button"
+                    onClick={() => setMethod(m.id as KhatimMethod | 'khali_wast')}
+                    className={`py-2 px-3 rounded-xl font-bold text-xs sm:text-sm transition-all cursor-pointer ${
+                      method === m.id
+                        ? 'bg-fuchsia-600 text-white shadow-md'
+                        : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
+                    }`}
+                  >
+                    {m.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Custom Center Symbol for Khali al-Wast */}
+            {method === 'khali_wast' && (
+              <div className="bg-amber-500/10 border border-amber-500/30 p-4 rounded-2xl space-y-2">
+                <label className="block text-xs font-bold text-amber-700 dark:text-amber-300 uppercase tracking-wider">
+                  {dict.khaliWastLabel}
+                </label>
+                <input
+                  type="text"
+                  value={centerSymbol}
+                  onChange={(e) => setCenterSymbol(e.target.value)}
+                  placeholder={dict.khaliWastPlaceholder}
+                  className="w-full bg-white dark:bg-gray-900 border border-amber-300 dark:border-amber-800 rounded-xl p-3 text-base font-arabic font-bold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  dir="rtl"
+                />
+              </div>
+            )}
+
+            {/* Door Selector for Dahmouch / Kountiyou */}
+            {(method === 'dahmouch' || method === 'kountiyou') && (
+              <div className="bg-slate-900 border border-fuchsia-500/30 p-4 rounded-2xl text-fuchsia-100 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-fuchsia-300">
+                    Choix de la Porte ({method === 'dahmouch' ? 'Dahmouch' : 'Cheikh Al-Kounti'}) :
+                  </label>
+                  <span className="text-[10px] font-mono text-fuchsia-400 bg-fuchsia-500/10 px-2 py-0.5 rounded-full border border-fuchsia-500/30">
+                    Porte {selectedDoor} sur 9
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 sm:grid-cols-9 gap-1.5">
+                  {(method === 'dahmouch' ? DAHMOUCH_DOORS : KOUNTIYOU_DOORS).map((door) => (
+                    <button
+                      key={door.id}
+                      type="button"
+                      onClick={() => setSelectedDoor(door.id)}
+                      className={`py-1.5 px-1 text-center rounded-lg border text-xs font-bold transition-all cursor-pointer ${
+                        selectedDoor === door.id
+                          ? 'bg-fuchsia-600 text-white border-fuchsia-400 scale-105 shadow'
+                          : 'bg-black/40 text-fuchsia-200/80 border-fuchsia-500/20 hover:bg-black/70'
+                      }`}
+                    >
+                      Porte {door.id}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                  {dict.targetLabel}
+                </label>
+                <input
+                  type="number"
+                  value={targetValue}
+                  onChange={(e) => setTargetValue(e.target.value)}
+                  placeholder={dict.targetPlaceholder}
+                  className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl p-4 text-xl font-bold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-fuchsia-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-2">
+                  {dict.gridTypeLabel}
+                </label>
+                <div className="grid grid-cols-4 gap-1.5 bg-gray-100 dark:bg-gray-900 rounded-2xl p-1.5">
+                  {[
+                    { value: 3, label: '3x3 (Muthallath)' },
+                    { value: 4, label: '4x4 (Murabba)' },
+                    { value: 5, label: '5x5 (Mukhammas)' },
+                    { value: 6, label: '6x6 (Musaddas)' },
+                    { value: 7, label: '7x7 (Musabba)' },
+                    { value: 8, label: '8x8 (Muthamman)' },
+                    { value: 9, label: '9x9 (Mutassa)' },
+                    { value: 10, label: '10x10 (Mu\'ashshar)' }
+                  ].map(opt => (
+                    <button
+                      key={opt.value}
+                      onClick={() => setGridSize(opt.value)}
+                      className={`py-2 rounded-xl font-bold text-xs sm:text-sm transition-colors ${
+                        gridSize === opt.value 
+                          ? 'bg-white dark:bg-gray-800 text-fuchsia-600 dark:text-fuchsia-400 shadow-sm' 
+                          : 'text-gray-500 dark:text-gray-300 hover:text-gray-700 dark:hover:text-gray-300'
+                      }`}
+                    >
+                      {opt.label.split(' ')[0]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={generateWafq}
+              className="w-full h-[56px] rounded-2xl bg-gradient-to-br from-fuchsia-600 to-pink-700 hover:from-fuchsia-500 hover:to-pink-600 text-white font-bold transition-transform hover:scale-[1.01] active:scale-[0.99] shadow-lg flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Sparkles size={20} />
+              {dict.generateBtn}
+            </button>
+
+            {error && (
+              <p className="text-rose-500 font-medium text-sm mt-4 text-center">{error}</p>
+            )}
+          </div>
+        </>
+      )}
 
       {grid.length > 0 && (
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
@@ -572,7 +759,15 @@ export const AwfaqAdvanced: React.FC = () => {
                     viewMode === 'values' ? 'bg-white dark:bg-gray-800 text-fuchsia-600 dark:text-fuchsia-400 shadow-sm' : 'text-gray-500 dark:text-gray-300'
                   }`}
                 >
-                  Valeurs (Adad)
+                  {dict.viewModeValues}
+                </button>
+                <button
+                  onClick={() => setViewMode('letters')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
+                    viewMode === 'letters' ? 'bg-gradient-to-r from-fuchsia-600 to-amber-600 text-white shadow-sm' : 'text-gray-500 dark:text-gray-300'
+                  }`}
+                >
+                  {dict.viewModeLetters}
                 </button>
                 <button
                   onClick={() => setViewMode('houses')}
@@ -580,7 +775,7 @@ export const AwfaqAdvanced: React.FC = () => {
                     viewMode === 'houses' ? 'bg-white dark:bg-gray-800 text-fuchsia-600 dark:text-fuchsia-400 shadow-sm' : 'text-gray-500 dark:text-gray-300'
                   }`}
                 >
-                  Ordre Sayr (Gidaje)
+                  {dict.viewModeHouses}
                 </button>
                 <button
                   onClick={() => {
@@ -593,7 +788,7 @@ export const AwfaqAdvanced: React.FC = () => {
                   }`}
                 >
                   <Play size={12} />
-                  <span>Animation du Tracé</span>
+                  <span>{dict.viewModeAnim}</span>
                 </button>
               </div>
             </div>
@@ -676,7 +871,12 @@ export const AwfaqAdvanced: React.FC = () => {
                       const houseNum = baseHousesGrid[i][j] + 1;
                       const isKasrCell = kasrInfo && houseNum === kasrInfo.kasrCellIndex;
                       
-                      let displayVal = viewMode === 'values' ? cell : `M.${houseNum}`;
+                      let displayVal: any = cell;
+                      if (viewMode === 'letters') {
+                        displayVal = typeof cell === 'number' ? numberToAbjadLetters(cell) : cell;
+                      } else if (viewMode === 'houses') {
+                        displayVal = `M.${houseNum}`;
+                      }
                       let isVisibleInAnim = true;
                       let isCurrentAnimHighlight = false;
 

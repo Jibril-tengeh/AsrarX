@@ -6,6 +6,7 @@ import { app, auth, db } from '../../../lib/firebase';
 import { useAuth } from '../../../contexts/AuthContext';
 import { collection, query, where, onSnapshot, setDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import { getApiUrl } from '../../../lib/api';
+import { getZikrCache, setZikrCache, syncDhikrGoalOffline } from '../../../utils/zikrSyncEngine';
 
 interface DhikrGoal {
   id: string;
@@ -155,27 +156,20 @@ export const DailyDhikrTracker: React.FC = () => {
   };
 
   useEffect(() => {
-    // 1. Load from local cache first
-    const saved = localStorage.getItem('asrar_dhikr_tracker');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          // Check for new day and reset if needed
-          const today = new Date().toDateString();
-          const updated = parsed.map(goal => {
-            const goalDate = new Date(goal.lastUpdated).toDateString();
-            if (goalDate !== today) {
-              return { ...goal, progress: 0, lastUpdated: new Date().toISOString() };
-            }
-            return goal;
-          });
-          setGoals(updated);
-        }
-      } catch (e) {
-        console.error('Error parsing local dhikr tracker data:', e);
+    // 1. Load from IndexedDB / local cache asynchronously
+    getZikrCache<DhikrGoal[]>('asrar_dhikr_tracker', []).then((cachedGoals) => {
+      if (Array.isArray(cachedGoals) && cachedGoals.length > 0) {
+        const today = new Date().toDateString();
+        const updated = cachedGoals.map(goal => {
+          const goalDate = new Date(goal.lastUpdated).toDateString();
+          if (goalDate !== today) {
+            return { ...goal, progress: 0, lastUpdated: new Date().toISOString() };
+          }
+          return goal;
+        });
+        setGoals(updated);
       }
-    }
+    });
 
     if (!user) {
       setSyncStatus('local');
@@ -213,10 +207,10 @@ export const DailyDhikrTracker: React.FC = () => {
       });
 
       setGoals(fbGoals);
-      localStorage.setItem('asrar_dhikr_tracker', JSON.stringify(fbGoals));
+      setZikrCache('asrar_dhikr_tracker', fbGoals);
       setSyncStatus('synced');
     }, (error) => {
-      console.error("Error loading dhikr goals from cloud:", error);
+      console.warn("Error loading dhikr goals from cloud, relying on idb-keyval local cache:", error);
       setSyncStatus('local');
     });
 
@@ -235,22 +229,15 @@ export const DailyDhikrTracker: React.FC = () => {
       lastUpdated: new Date().toISOString()
     };
 
-    if (user) {
-      setSyncStatus('syncing');
-      try {
-        await setDoc(doc(db, 'dhikr_goals', goalId), {
-          ...newGoal,
-          userId: user.uid
-        });
-        setSyncStatus('synced');
-      } catch (e) {
-        console.error("Error saving dhikr goal to cloud:", e);
-        setSyncStatus('local');
-      }
-    } else {
-      const updated = [...goals, newGoal];
-      setGoals(updated);
-      localStorage.setItem('asrar_dhikr_tracker', JSON.stringify(updated));
+    const updated = [...goals, newGoal];
+    setGoals(updated);
+
+    try {
+      await syncDhikrGoalOffline(goalId, { ...newGoal, userId: user?.uid });
+      setSyncStatus(user ? 'synced' : 'local');
+    } catch (e) {
+      console.warn("Dhikr goal queued locally:", e);
+      setSyncStatus('local');
     }
 
     setNewDhikrName('');
@@ -258,79 +245,53 @@ export const DailyDhikrTracker: React.FC = () => {
   };
 
   const updateProgress = async (id: string, amount: number) => {
-    const updated = goals.map(g => {
-      if (g.id === id) {
-        const newProgress = Math.min(g.progress + amount, g.target);
-        return { ...g, progress: newProgress, lastUpdated: new Date().toISOString() };
-      }
-      return g;
-    });
+    const targetGoal = goals.find(g => g.id === id);
+    if (!targetGoal) return;
+
+    const newProgress = Math.min(targetGoal.progress + amount, targetGoal.target);
+    const updatedGoal = { ...targetGoal, progress: newProgress, lastUpdated: new Date().toISOString() };
+    const updatedGoals = goals.map(g => g.id === id ? updatedGoal : g);
 
     // Optimistically update local state
-    setGoals(updated);
-    localStorage.setItem('asrar_dhikr_tracker', JSON.stringify(updated));
+    setGoals(updatedGoals);
 
-    if (user) {
-      setSyncStatus('syncing');
-      try {
-        const targetGoal = updated.find(g => g.id === id);
-        if (targetGoal) {
-          await setDoc(doc(db, 'dhikr_goals', id), {
-            ...targetGoal,
-            userId: user.uid
-          }, { merge: true });
-        }
-        setSyncStatus('synced');
-      } catch (e) {
-        console.error("Error updating progress in cloud:", e);
-        setSyncStatus('local');
-      }
+    try {
+      await syncDhikrGoalOffline(id, { ...updatedGoal, userId: user?.uid });
+      setSyncStatus(user ? 'synced' : 'local');
+    } catch (e) {
+      console.warn("Progress update queued offline:", e);
+      setSyncStatus('local');
     }
   };
 
   const resetProgress = async (id: string) => {
-    const updated = goals.map(g => {
-      if (g.id === id) {
-        return { ...g, progress: 0, lastUpdated: new Date().toISOString() };
-      }
-      return g;
-    });
+    const targetGoal = goals.find(g => g.id === id);
+    if (!targetGoal) return;
 
-    setGoals(updated);
-    localStorage.setItem('asrar_dhikr_tracker', JSON.stringify(updated));
+    const updatedGoal = { ...targetGoal, progress: 0, lastUpdated: new Date().toISOString() };
+    const updatedGoals = goals.map(g => g.id === id ? updatedGoal : g);
 
-    if (user) {
-      setSyncStatus('syncing');
-      try {
-        const targetGoal = updated.find(g => g.id === id);
-        if (targetGoal) {
-          await setDoc(doc(db, 'dhikr_goals', id), {
-            ...targetGoal,
-            userId: user.uid
-          }, { merge: true });
-        }
-        setSyncStatus('synced');
-      } catch (e) {
-        console.error("Error resetting progress in cloud:", e);
-        setSyncStatus('local');
-      }
+    setGoals(updatedGoals);
+
+    try {
+      await syncDhikrGoalOffline(id, { ...updatedGoal, userId: user?.uid });
+      setSyncStatus(user ? 'synced' : 'local');
+    } catch (e) {
+      console.warn("Reset progress queued offline:", e);
+      setSyncStatus('local');
     }
   };
 
   const deleteGoal = async (id: string) => {
     const updated = goals.filter(g => g.id !== id);
     setGoals(updated);
-    localStorage.setItem('asrar_dhikr_tracker', JSON.stringify(updated));
 
-    if (user) {
-      setSyncStatus('syncing');
-      try {
-        await deleteDoc(doc(db, 'dhikr_goals', id));
-        setSyncStatus('synced');
-      } catch (e) {
-        console.error("Error deleting dhikr goal from cloud:", e);
-        setSyncStatus('local');
-      }
+    try {
+      await syncDhikrGoalOffline(id, null, true);
+      setSyncStatus(user ? 'synced' : 'local');
+    } catch (e) {
+      console.warn("Delete goal queued offline:", e);
+      setSyncStatus('local');
     }
   };
 

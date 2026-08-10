@@ -58,13 +58,47 @@ export const CollapsibleFloatingWidget: React.FC = () => {
   const [abjadValue, setAbjadValue] = useState(0);
   
   // Notification State
-  const [notifPermission, setNotifPermission] = useState<NotificationPermission>(
-    typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'default'
-  );
+  const [notifPermission, setNotifPermission] = useState<NotificationPermission>(() => {
+    if (typeof window !== 'undefined' && 'Notification' in window) {
+      if (Notification.permission === 'granted' || localStorage.getItem('asrar_bg_reminders') === 'true' || localStorage.getItem('asrar_fcm_token')) {
+        return 'granted';
+      }
+      return Notification.permission;
+    }
+    if (typeof window !== 'undefined' && localStorage.getItem('asrar_bg_reminders') === 'true') {
+      return 'granted';
+    }
+    return 'default';
+  });
   const [testSent, setTestSent] = useState(false);
   const [bgRemindersEnabled, setBgRemindersEnabled] = useState(() => {
     return localStorage.getItem('asrar_bg_reminders') === 'true';
   });
+
+  // Keep notification status dynamically updated in real-time
+  useEffect(() => {
+    const updateNotifPermission = () => {
+      const isGranted = (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted') ||
+                        localStorage.getItem('asrar_bg_reminders') === 'true' ||
+                        !!localStorage.getItem('asrar_fcm_token');
+
+      if (isGranted) {
+        setNotifPermission('granted');
+        setBgRemindersEnabled(true);
+      } else if (typeof window !== 'undefined' && 'Notification' in window) {
+        setNotifPermission(Notification.permission);
+      }
+    };
+
+    updateNotifPermission();
+
+    window.addEventListener('focus', updateNotifPermission);
+    document.addEventListener('visibilitychange', updateNotifPermission);
+    return () => {
+      window.removeEventListener('focus', updateNotifPermission);
+      document.removeEventListener('visibilitychange', updateNotifPermission);
+    };
+  }, []);
 
   // Update planetary info periodically
   useEffect(() => {
@@ -88,14 +122,20 @@ export const CollapsibleFloatingWidget: React.FC = () => {
     setAbjadValue(val);
   }, [abjadInput]);
 
-  // Handle notification request & redirect directly to settings
+  // Handle notification request & redirect directly to profile settings (/profile) if blocked
   const handleEnableNotifications = async () => {
+    // If already granted, no need to request or redirect
+    if (notifPermission === 'granted' || (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted')) {
+      setNotifPermission('granted');
+      setBgRemindersEnabled(true);
+      localStorage.setItem('asrar_bg_reminders', 'true');
+      return;
+    }
+
     try {
       const granted = await requestNotificationPermission();
-      if ('Notification' in window) {
-        setNotifPermission(Notification.permission);
-      }
-      if (granted) {
+      if (granted || (typeof window !== 'undefined' && 'Notification' in window && Notification.permission === 'granted')) {
+        setNotifPermission('granted');
         setBgRemindersEnabled(true);
         localStorage.setItem('asrar_bg_reminders', 'true');
         
@@ -123,13 +163,14 @@ export const CollapsibleFloatingWidget: React.FC = () => {
             console.warn('Service worker registration notice:', e);
           }
         }
+        return; // Successfully enabled locally
       }
     } catch (e) {
       console.warn('Error requesting permissions:', e);
     }
 
-    // Redirect user directly to settings page (/user/profile) to accept/manage permissions
-    navigate('/user/profile', { state: { openPermissions: true } });
+    // Redirect user directly to settings page (/profile) to accept/manage permissions if blocked
+    navigate('/profile', { state: { openPermissions: true } });
   };
 
   // Trigger test background notification (delays 3 seconds so user can switch tabs)
@@ -446,13 +487,19 @@ export const CollapsibleFloatingWidget: React.FC = () => {
                       </span>
                       <button
                         type="button"
-                        onClick={handleEnableNotifications}
+                        onClick={() => {
+                          if (notifPermission === 'granted') {
+                            navigate('/profile', { state: { openPermissions: true } });
+                          } else {
+                            handleEnableNotifications();
+                          }
+                        }}
                         className={`text-[11px] font-bold px-2.5 py-1 rounded-full transition-all flex items-center gap-1 cursor-pointer ${
                           notifPermission === 'granted' 
-                            ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' 
+                            ? 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/30' 
                             : 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 shadow-sm active:scale-95 animate-pulse'
                         }`}
-                        title={notifPermission !== 'granted' ? (language === 'fr' ? 'Cliquer pour aller aux paramètres et autoriser les notifications' : 'Click to go to settings and allow permissions') : ''}
+                        title={notifPermission === 'granted' ? (language === 'fr' ? 'Gérer les permissions dans le profil' : 'Manage permissions in profile') : (language === 'fr' ? 'Activer les notifications' : 'Enable notifications')}
                       >
                         <span>
                           {notifPermission === 'granted' 

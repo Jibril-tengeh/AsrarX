@@ -7,6 +7,7 @@ import { useLanguage } from '../../../contexts/LanguageContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { ToolInfoTooltip } from '../../../components/ToolInfoTooltip';
 import { getApiUrl } from '../../../lib/api';
+import { getZikrCache, setZikrCache, syncMuridJournalOffline } from '../../../utils/zikrSyncEngine';
 
 interface MuridLogEntry {
   id: string;
@@ -145,15 +146,32 @@ export const MuridJournal: React.FC = () => {
   const [isInterpreting, setIsInterpreting] = useState(false);
 
   useEffect(() => {
-    localStorage.setItem('asrarhub_arbain_days', JSON.stringify(arbainProgress));
+    // Hydrate entries asynchronously from idb-keyval
+    getZikrCache<MuridLogEntry[]>('asrarhub_murid_entries', entries).then((cached) => {
+      if (Array.isArray(cached) && cached.length > 0) {
+        setEntries(cached);
+      }
+    });
+
+    getZikrCache<boolean[]>('asrarhub_arbain_days', []).then((cachedDays) => {
+      if (Array.isArray(cachedDays) && cachedDays.length === 40) {
+        setArbainProgress(cachedDays);
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    setZikrCache('asrarhub_arbain_days', arbainProgress).catch(() => {});
   }, [arbainProgress]);
 
   useEffect(() => {
-    localStorage.setItem('asrarhub_arbain_intention', arbainIntention);
+    setZikrCache('asrarhub_arbain_intention', arbainIntention).catch(() => {});
   }, [arbainIntention]);
 
   useEffect(() => {
-    localStorage.setItem('asrarhub_murid_entries', JSON.stringify(entries));
+    syncMuridJournalOffline(entries).catch((err) => {
+      console.warn("Murid entries cached offline:", err);
+    });
   }, [entries]);
 
   const toggleArbainDay = (index: number) => {

@@ -2061,7 +2061,7 @@ export const Community: React.FC = () => {
                                           Le code source de cet aperçu interactif est réservé aux membres Premium d'AsrarHub.
                                         </p>
                                         <button
-                                          onClick={() => navigate("/user/profile")}
+                                          onClick={() => navigate("/profile")}
                                           className="mt-4 px-4 py-2 bg-gradient-to-r from-amber-500 to-yellow-600 text-white text-[9px] font-black uppercase rounded-xl shadow-md cursor-pointer hover:scale-105 active:scale-95 transition-all"
                                         >
                                           Devenir Premium
@@ -3088,7 +3088,7 @@ export const Community: React.FC = () => {
                         Débloquez l'IA spirituelle pour obtenir des recommandations personnalisées de wirds, l'interprétation de vos rêves selon Ibn Sirin, et la science des Noms d'Allah.
                       </p>
                       <button
-                        onClick={() => navigate("/user/profile")}
+                        onClick={() => navigate("/profile")}
                         className="w-full py-2.5 bg-gradient-to-r from-amber-500 to-yellow-600 text-white text-xs font-black uppercase rounded-2xl shadow-lg hover:scale-102 active:scale-98 transition-all cursor-pointer"
                       >
                         Devenir Premium
