@@ -823,3 +823,5 @@ export const ToolsDashboard: React.FC = () => {
     </div>
   );
 };
+
+export default ToolsDashboard;

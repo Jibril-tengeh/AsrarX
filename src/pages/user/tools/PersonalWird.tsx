@@ -4,6 +4,7 @@ import { db } from '../../../lib/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { exportWirdToImage } from '../../../utils/wirdExporter';
 import { getZikrCache, setZikrCache, syncPersonalWirdsOffline } from '../../../utils/zikrSyncEngine';
+import { RitualDhikrCalculator } from '../../../components/RitualDhikrCalculator';
 
 interface SavedWird {
   id: string;
@@ -1169,6 +1170,11 @@ export const PersonalWird: React.FC = () => {
             </div>
           )}
         </div>
+      </div>
+
+      {/* CALCULS DE RITUELS (AWRAD & DHIKR) SUITE */}
+      <div className="mt-10">
+        <RitualDhikrCalculator />
       </div>
 
       {/* Imam Al-Ghazali Dedicated Section */}

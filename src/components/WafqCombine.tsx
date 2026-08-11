@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import { Sparkles, Layers, Check, Copy, Download, Feather } from 'lucide-react';
 import { toCanvas } from 'html-to-image';
 import { useLanguage } from '../contexts/LanguageContext';
-import { calculateAbjadValue, numberToAbjadLetters } from '../utils/abjad';
+import { calculateAbjadValue, numberToAbjadLetters, extractCelestialKhadimName } from '../utils/abjad';
 import { AsrarHubWatermark } from './AsrarHubWatermark';
 import { ParchmentExporterModal } from './ParchmentExporterModal';
 import { downloadCanvasImage } from '../utils/downloadHelper';
@@ -127,10 +127,10 @@ export const WafqCombine: React.FC = () => {
 
   const combinedTotal = activeDivineWeight + activeVerseWeight;
 
-  // Extract Angelic Khadim Name from Combined Total
+  // Extract Angelic Khadim Name from Combined Total with Tashkeel
+  const khadimData = extractCelestialKhadimName(combinedTotal);
   const extractKhadimName = (val: number): string => {
-    const letters = numberToAbjadLetters(val);
-    return `${letters}ايل (أيها المَلَك ${letters}ـائيل)`;
+    return extractCelestialKhadimName(val).displayText;
   };
 
   // Generate 3x3 to 7x7 Ghazali Matrix for Combined Total

@@ -11,6 +11,10 @@ import { motion, AnimatePresence } from 'motion/react';
 import { SpiritualCompatibilityTawafuq } from '../../../components/SpiritualCompatibilityTawafuq';
 import { KhatimWafqGenerator } from '../../../components/KhatimWafqGenerator';
 import { PlanetaryLetterClock } from '../../../components/PlanetaryLetterClock';
+import { TakseerPermutation } from '../../../components/TakseerPermutation';
+import { NuraniZulmaniAnalyzer } from '../../../components/NuraniZulmaniAnalyzer';
+import { LiteralRootFinder } from '../../../components/LiteralRootFinder';
+import { KhatimHurufSeal } from '../../../components/KhatimHurufSeal';
 import { db } from '../../../lib/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 
@@ -58,6 +62,19 @@ export const GRAND_MASTER_WORDS = [
     benefits: ["Élévation de la conscience spirituelle", "Clarté d'esprit et charisme royal", "Ouverture des verrous psychiques"]
   },
   {
+    id: 'ibn_arabi_waw',
+    letterChar: 'و',
+    title: "Wird Al-Waw Wal-Wilayah (La Connexion Divine & Amour Universel)",
+    master: "Cheikh al-Akbar Ibn 'Arabi (Al-Futuhat al-Makkiyya)",
+    targetLetter: "Waw (و)",
+    repetitionCount: 12,
+    arabicText: "يَا وَدُودُ يَا وَالِي بِسِرِّ الوَاوِ الَّذِي رَبَطْتَ بِهِ بَيْنَ العَوَالِمِ، صِلْنِي بِحَبْلِ وَلاَيَتِكَ وَأَلْقِ مَحَبَّتِي فِي القُلُوبِ.",
+    transliteration: "Ya Wadudu ya Wali bi-sirri al-Wawi alladhi rabatta bihi bayna al-'awalimi, silni bi-habli walayatika wa alqi mahabbati fi al-qulub.",
+    translation: "Ô Aimant, Ô Protector, par le secret du Waw avec lequel Tu as relié les mondes, unis-moi au câble de Ta proximité et insuffle mon amour dans les cœurs.",
+    ritual: "À réciter à la fin du Tahajjud avec fumigation d'ambre et d'eau de rose.",
+    benefits: ["Harmonie relationnelle profonde", "Ouverture du cœur et affection universelle", "Lien direct avec la Wilayah (Alliance Divine)"]
+  },
+  {
     id: 'ghazali_qaf',
     letterChar: 'ق',
     title: "Wird Al-Qaf Al-Qahhariyya (La Domination des Forces Subtiles)",
@@ -97,6 +114,19 @@ export const GRAND_MASTER_WORDS = [
     benefits: ["Courage inébranlable et sérénité", "Rayonnement de l'autorité spirituelle", "Guérison des peurs et faiblesses"]
   },
   {
+    id: 'jilani_fatihah',
+    letterChar: 'ح',
+    title: "Sirr Al-Fatiha Al-Qadiriyya (La Clef des Trésors Inépuisables)",
+    master: "Sultan al-Awliya Cheikh 'Abdul Qadir al-Jilani",
+    targetLetter: "Ha (ح) / Ya (ي)",
+    repetitionCount: 70,
+    arabicText: "يَا فَتَّاحُ يَا رَزَّاقُ بِسِرِّ الفَاتِحَةِ وَعَظَمَتِهَا، اِفْتَحْ لِي أَبْوَابَ الخَيْرَاتِ وَسَخِّرْ لِي الأَرْزَاقَ مِنْ حَيْثُ لاَ أَحْتَسِبُ.",
+    transliteration: "Ya Fattahu ya Razzaqu bi-sirri al-Fatihati wa 'azamatiha, iftah li abwaba al-khayrati wa sakhkhir li al-arzaqa min haythu la ahtasib.",
+    translation: "Ô Grand Ouvreur, Ô Pourvoyeur, par le secret de la Fatiha et sa grandeur, ouvre-moi les portes de toutes les grâces et soumets-moi la subsistance d'où je ne m'y attends pas.",
+    ritual: "À réciter 70 fois après la prière du Duha (matinée) avec bougie et encens suave.",
+    benefits: ["Déblocage financier fulgurant", "Prospérité bénie et pérenne", "Éradication du besoin et des dettes"]
+  },
+  {
     id: 'nawawi_bism',
     letterChar: 'ب',
     title: "Hizb Al-Hifz Wal-Aman (Le Bouclier des Prophètes & Pieux)",
@@ -123,6 +153,19 @@ export const GRAND_MASTER_WORDS = [
     benefits: ["Acquisition de la sagesse inspirée (Ilm Ladunni)", "Protection contre l'orgueil", "Paix intérieure profonde"]
   },
   {
+    id: 'albuni_wafq_3x3',
+    letterChar: 'ط',
+    title: "Sirr Al-Wafq Al-Muthallath (L'Harmonie du Carré Sacré 3x3)",
+    master: "Imam Ahmad al-Buni (Shams al-Ma'arif al-Kubra)",
+    targetLetter: "Ta (ط) / Gimel (ج)",
+    repetitionCount: 15,
+    arabicText: "يَا كَافِي يَا غَنِيُّ يَا فَتَّاحُ، بِسِرِّ الأَعْدَادِ وَالمُوَافَقَاتِ النُّورَانِيَّةِ، سَخِّرْ لِي الأَرْوَاحَ الرَّوحَانِيَّةَ لِقَضَاءِ حَوَائِجِي.",
+    transliteration: "Ya Kafi ya Ghaniyyu ya Fattahu, bi-sirri al-a'dadi wal-muwafaqati an-nuraniyyah, sakhkhir li al-arwaha ar-ruhaniyyata li-qada'i hawa'iji.",
+    translation: "Ô Suffisant, Ô Rempli de Richesse, Ô Ouvreur, par le secret divin des nombres et des concordances lumineuses, aligne les influences spirituelles pour exaucer mes vœux noblement.",
+    ritual: "Dessiner le carré 3x3 sur du papier safrané et réciter 15 fois à minuit.",
+    benefits: ["Réalisation accélérée des désirs légitimes", "Lumière mathématique et géométrique de l'âme", "Maîtrise des vibrations numériques"]
+  },
+  {
     id: 'tijani_nun',
     letterChar: 'ن',
     title: "Wird Al-Nun Wal-Qalam (L'Encre de la Table Gardée)",
@@ -134,6 +177,19 @@ export const GRAND_MASTER_WORDS = [
     translation: "Nun. Par la plume et ce qu'ils écrivent. Ô Allah, illumine ma vision intérieure par la lumière du Nun, et compte-moi parmi ceux que Tu as guidés sur Ton droit chemin.",
     ritual: "Récitation après la prière du 'Isha, idéalement les nuits de pleine lune.",
     benefits: ["Activation du Kashf (Vision subtile)", "Amélioration de la mémoire et des capacités d'apprentissage", "Protection des enfants"]
+  },
+  {
+    id: 'tijani_salat_fatih',
+    letterChar: 'ص',
+    title: "Sirr Al-Salat Al-Fatih (La Clef Suprême d'Ouverture)",
+    master: "Cheikh Ahmad At-Tijani",
+    targetLetter: "Sad (ص) / Mim (م)",
+    repetitionCount: 100,
+    arabicText: "اللَّهُمَّ صَلِّ عَلَى سَيِّدِنَا مُحَمَّدٍ الفَاتِحِ لِمَا أُغْلِقَ، وَالخَاتِمِ لِمَا سَبَقَ، نَاصِرِ الحَقِّ بِالحَقِّ، وَالهَادِي إِلَى صِرَاطِكَ المُسْتَقِيمِ، وَعَلَى آلِهِ حَقَّ قَدْرِهِ وَمِقْدَارِهِ العَظِيمِ.",
+    transliteration: "Allahumma salli 'ala Sayyidina Muhammadin al-Fatihi lima ughliqa, wal-Khatimi lima sabaqa, Nasiri al-haqqi bil-haqqi, wal-Hadi ila Siratika al-mustaqim, wa 'ala alihi haqqa qadrihi wa miqdarihi al-'azim.",
+    translation: "Ô Allah, répands Tes grâces sur notre Seigneur Mouhammad, qui a ouvert ce qui était clos, qui a scellé ce qui a précédé, le défenseur de la Vérité par la Vérité et le guide vers Ton Droit Chemin...",
+    ritual: "À réciter 100 fois quotidiennement (ou 11 fois après chaque prière obligatoire).",
+    benefits: ["Pardon des péchés et purification intégrale", "Victoire absolue sur l'adversité", "Proximité prophétique ultime"]
   },
   {
     id: 'shadhili_lam_alif',
@@ -149,6 +205,19 @@ export const GRAND_MASTER_WORDS = [
     benefits: ["Dissolution des blocages financiers et relationnels", "Victoire sur les complots", "Attraction du charisme"]
   },
   {
+    id: 'shadhili_hizb_bahr',
+    letterChar: 'ش',
+    title: "Sirr Hizb Al-Bahr (Le Litanie de la Mer & Traverse Sûre)",
+    master: "Imam Abu al-Hasan ash-Shadhili",
+    targetLetter: "Shin (ش) / Kaf (ك)",
+    repetitionCount: 1,
+    arabicText: "يَا عَلِيُّ يَا عَظِيمُ يَا حَلِيمُ يَا عَلِيمُ، أَنْتَ رَبِّي وَعِلْمُكَ حَسْبِي، فَنِعْمَ الرَّبُّ رَبِّي وَنِعْمَ الحَسْبُ حَسْبِي، تَنْصُرُ مَنْ تَشَاءُ وَأَنْتَ العَزِيزُ الرَّحِيمُ.",
+    transliteration: "Ya 'Aliyyu ya 'Azimu ya Halimu ya 'Alim, Anta Rabbi wa 'Ilmuka hasbi, fa-ni'ma ar-Rabbu Rabbi wa ni'ma al-hasbu hasbi, tansuru man tasha'u wa Anta al-'Azizu ar-Rahim.",
+    translation: "Ô Très-Haut, Ô Immense, Ô Indulgent, Ô Omniscient ! Tu es mon Seigneur et Ta Connaissance me suffit. Quel excellent Seigneur est le mien et quel excellent protecteur ! Tu secours qui Tu veux...",
+    ritual: "Réciter une fois par jour au lever ou coucher du soleil avec orientation vers l'Est.",
+    benefits: ["Traversée victorieuse des tempêtes de la vie", "Sécurité absolue en voyage", "Subjugation des tyrans"]
+  },
+  {
     id: 'rifai_shin',
     letterChar: 'ش',
     title: "Wird Al-Sirr Al-Rifa'i (La Clef de l'Humilité & du Secours)",
@@ -160,6 +229,32 @@ export const GRAND_MASTER_WORDS = [
     translation: "Ô Secours de ceux qui implorent assistance, Ô Refuge des apeurés, rejoins-moi par le secret de l'humilité et place-moi sous Ta protection inviolable.",
     ritual: "À réciter après le Maghrib avec présence du cœur et fumigation de santal.",
     benefits: ["Apaisement immédiat des urgences", "Protection lors des épreuves", "Attraction de la clémence"]
+  },
+  {
+    id: 'darqawi_ya',
+    letterChar: 'ي',
+    title: "Sirr Al-Tawhid Al-Darqawi (La Purification Cœur & Extinction)",
+    master: "Mawlay Al-Arabi Ad-Darqawi",
+    targetLetter: "Ya (ي) / Alif (ا)",
+    repetitionCount: 1000,
+    arabicText: "لاَ إِلَهَ إِلاَّ اللهُ مُحَمَّدٌ رَسُولُ اللهِ، يَا نُورَ النُّورِ يَا مُنَوِّرَ الصُّدُورِ، جَلِّ قَلْبِي بِنُورِ التَّوْحِيدِ.",
+    transliteration: "La ilaha illa Allahu Muhammadun Rasulullah, ya Nura an-nuri ya munawwira as-sudur, jalli qalbi bi-nuri at-tawhid.",
+    translation: "Il n'y a de dieu qu'Allah, Mouhammad est le Messager d'Allah. Ô Lumière des lumières, Ô Illuminateur des poitrines, polis mon cœur par la lumière de l'Unicité.",
+    ritual: "Pratique en assise contemplative silencieuse après la prière du Sobh.",
+    benefits: ["Extinction des illusions de l'ego (Fana)", "Sérénité céleste inébranlable", "Polissage miroitant du cœur"]
+  },
+  {
+    id: 'idrisi_khalil',
+    letterChar: 'ص',
+    title: "Wird Al-Asma' Al-Idrisiyya (Les 40 Noms Sublimés d'Idris)",
+    master: "Cheikh Ahmad Ibn Idris Al-Fasi",
+    targetLetter: "Sad (ص) / Ha (ح)",
+    repetitionCount: 40,
+    arabicText: "يَا زَكِيُّ الطَّاهِرُ مِنْ كُلِّ آفَةٍ بِقُدْسِهِ، يَا كَافِي المُوَسِّعُ لِمَا خَلَقَ مِنْ عَطَايَا فَضْلِهِ.",
+    transliteration: "Ya Zakiyyu at-Tahiru min kulli afatin bi-qudsih, ya Kafi al-muwassi'u lima khalaqa min 'ataya fadlih.",
+    translation: "Ô Pur, Saint exempt de tout défaut par Sa sacralité, Ô Suffisant qui élargit à Ses créatures les dons de Sa grâce.",
+    ritual: "Réciter les 40 invocations d'Idris à l'Aube en isolant sa pensée.",
+    benefits: ["Purification des miasmes spirituels", "Élévation parmi les gnostiques", "Prospérité spirituelle et temporelle"]
   },
   {
     id: 'busiri_burda',
@@ -1107,6 +1202,10 @@ const scienceDict = {
     subtitle: "Explorez les 28 vérités primordiales, la Rouhaniyya des anges, les correspondances anatomiques et les Wirds secrets des grands maîtres (Ibn 'Arabi, Al-Buni, At-Tijani, Ash-Shadhili).",
     tabGrid: "Grille (28 Lettres)",
     tabCalc: "Extracteur (Nom)",
+    tabTakseer: "Takseer (Permutation)",
+    tabNurani: "Lumineuses & Sombres",
+    tabRoots: "Racines Littérales",
+    tabSeal: "Sceau de Lettres",
     tabTawafuq: "Compatibilité (Tawafuq)",
     tabKhatim: "Carrés Magiques",
     tabClock: "Horloge Planétaire",
@@ -1161,6 +1260,10 @@ const scienceDict = {
     subtitle: "Explore the 28 primordial truths, the Rouhaniyya of angels, anatomical correspondences, and secret Wirds of the great masters (Ibn 'Arabi, Al-Buni, At-Tijani, Ash-Shadhili).",
     tabGrid: "Grid (28 Letters)",
     tabCalc: "Name Extractor",
+    tabTakseer: "Takseer (Permutation)",
+    tabNurani: "Luminous & Dark",
+    tabRoots: "Literal Roots",
+    tabSeal: "Letter Seal",
     tabTawafuq: "Compatibility (Tawafuq)",
     tabKhatim: "Magic Squares",
     tabClock: "Planetary Clock",
@@ -1215,6 +1318,10 @@ const scienceDict = {
     subtitle: "Binciki gaskiya 28 na farko, Mala'ikun Rouhaniyya, alaƙa da jiki, da Wirds na asiri daga manyan malamai (Ibn 'Arabi, Al-Buni, At-Tijani, Ash-Shadhili).",
     tabGrid: "Jadawalin Haruffa 28",
     tabCalc: "Fitar da Suna",
+    tabTakseer: "Taksir (Juya Haruffa)",
+    tabNurani: "Haruffan Haske & Duhu",
+    tabRoots: "Saiwoyin Kalmomi",
+    tabSeal: "Hatimin Haruffa",
     tabTawafuq: "Dacewa (Tawafuq)",
     tabKhatim: "Kayan Khatim da Wafq",
     tabClock: "Agogon Taurari",
@@ -1271,7 +1378,7 @@ export const ScienceOfLetters: React.FC = () => {
   const dict = scienceDict[(language as 'fr' | 'en' | 'ha') || 'fr'] || scienceDict.fr;
   const { isPremium } = useAuth();
   const [selectedLetter, setSelectedLetter] = useState<LetterInfo | null>(FULL_28_LETTERS_DATA[0]);
-  const [activeTab, setActiveTab] = useState<'grid' | 'calculator' | 'tawafuq' | 'khatim' | 'clock' | 'vault'>('grid');
+  const [activeTab, setActiveTab] = useState<'grid' | 'calculator' | 'takseer' | 'nurani' | 'roots' | 'seal' | 'tawafuq' | 'khatim' | 'clock' | 'vault'>('grid');
   const [filterElement, setFilterElement] = useState<string>('Tous');
   const [filterNature, setFilterNature] = useState<string>('Tous');
   const [selectedMasterFilter, setSelectedMasterFilter] = useState<string>('Tous');
@@ -1438,6 +1545,54 @@ export const ScienceOfLetters: React.FC = () => {
         >
           <Calculator size={15} />
           <span>{dict.tabCalc}</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('takseer')}
+          className={`py-1.5 px-2.5 sm:px-3.5 text-xs sm:text-sm font-bold flex items-center gap-1.5 rounded-xl whitespace-nowrap shrink-0 transition-all cursor-pointer ${
+            activeTab === 'takseer'
+              ? 'bg-emerald-600 text-white shadow-sm'
+              : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+          }`}
+        >
+          <Layers size={15} />
+          <span>{dict.tabTakseer}</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('nurani')}
+          className={`py-1.5 px-2.5 sm:px-3.5 text-xs sm:text-sm font-bold flex items-center gap-1.5 rounded-xl whitespace-nowrap shrink-0 transition-all cursor-pointer ${
+            activeTab === 'nurani'
+              ? 'bg-emerald-600 text-white shadow-sm'
+              : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+          }`}
+        >
+          <Moon size={15} />
+          <span>{dict.tabNurani}</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('roots')}
+          className={`py-1.5 px-2.5 sm:px-3.5 text-xs sm:text-sm font-bold flex items-center gap-1.5 rounded-xl whitespace-nowrap shrink-0 transition-all cursor-pointer ${
+            activeTab === 'roots'
+              ? 'bg-emerald-600 text-white shadow-sm'
+              : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+          }`}
+        >
+          <Compass size={15} />
+          <span>{dict.tabRoots}</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('seal')}
+          className={`py-1.5 px-2.5 sm:px-3.5 text-xs sm:text-sm font-bold flex items-center gap-1.5 rounded-xl whitespace-nowrap shrink-0 transition-all cursor-pointer ${
+            activeTab === 'seal'
+              ? 'bg-emerald-600 text-white shadow-sm'
+              : 'text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'
+          }`}
+        >
+          <Grid size={15} />
+          <span>{dict.tabSeal}</span>
         </button>
 
         <button
@@ -1820,6 +1975,26 @@ export const ScienceOfLetters: React.FC = () => {
             </motion.div>
           )}
         </div>
+      )}
+
+      {/* TAKSEER (PERMUTATION) */}
+      {activeTab === 'takseer' && (
+        <TakseerPermutation />
+      )}
+
+      {/* LETTRES LUMINEUSES & SOMBRES */}
+      {activeTab === 'nurani' && (
+        <NuraniZulmaniAnalyzer />
+      )}
+
+      {/* RACINES LITTÉRALES */}
+      {activeTab === 'roots' && (
+        <LiteralRootFinder />
+      )}
+
+      {/* SCEAU DE LETTRES (KHATIM AL-HURUF) */}
+      {activeTab === 'seal' && (
+        <KhatimHurufSeal />
       )}
 
       {/* TAB 3: COMPATIBILITÉ SPIRITUELLE (TAWAFUQ) */}

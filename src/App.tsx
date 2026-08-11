@@ -145,6 +145,13 @@ const SealsCatalogue = lazyWithRetry(() => import('./pages/user/tools/SealsCatal
 const RajmaCharms = lazyWithRetry(() => import('./pages/user/tools/RajmaCharms'));
 const SacredBooksLibrary = lazyWithRetry(() => import('./pages/user/tools/SacredBooksLibrary'));
 const AlBuniShams = lazyWithRetry(() => import('./pages/user/tools/AlBuniShams'));
+const DiagnosticProtection = lazyWithRetry(() => import('./pages/user/tools/DiagnosticProtection'));
+const TalismanicGeometry = lazyWithRetry(() => import('./pages/user/tools/TalismanicGeometry'));
+const TalsamsExtraction = lazyWithRetry(() => import('./pages/user/tools/TalsamsExtraction'));
+const AstrologicalElections = lazyWithRetry(() => import('./pages/user/tools/AstrologicalElections'));
+const SacredGeography = lazyWithRetry(() => import('./pages/user/tools/SacredGeography'));
+const AdvancedAlchemy = lazyWithRetry(() => import('./pages/user/tools/AdvancedAlchemy'));
+const MetaphysicalDefense = lazyWithRetry(() => import('./pages/user/tools/MetaphysicalDefense'));
 const Store = lazyWithRetry(() => import('./pages/user/Store'));
 const FaqPage = lazyWithRetry(() => import('./pages/FaqPage'));
 
@@ -1118,6 +1125,22 @@ export default function App() {
                   <Route path="/tools/al-buni-shams" element={<AlBuniShams />} />
                   <Route path="/tools/buni" element={<AlBuniShams />} />
                   <Route path="/tools/shams" element={<AlBuniShams />} />
+                  <Route path="/tools/diagnostic-protection" element={<DiagnosticProtection />} />
+                  <Route path="/tools/diagnostic" element={<DiagnosticProtection />} />
+                  <Route path="/tools/talismanic-geometry" element={<TalismanicGeometry />} />
+                  <Route path="/tools/tilasim" element={<TalismanicGeometry />} />
+                  <Route path="/tools/talsams-extraction" element={<TalsamsExtraction />} />
+                  <Route path="/tools/talsams" element={<TalsamsExtraction />} />
+                  <Route path="/tools/astrological-elections" element={<AstrologicalElections />} />
+                  <Route path="/tools/elections" element={<AstrologicalElections />} />
+                  <Route path="/tools/sacred-geography" element={<SacredGeography />} />
+                  <Route path="/tools/geographie-sacree" element={<SacredGeography />} />
+                  <Route path="/tools/advanced-alchemy" element={<AdvancedAlchemy />} />
+                  <Route path="/tools/alchemy" element={<AdvancedAlchemy />} />
+                  <Route path="/tools/alchimie" element={<AdvancedAlchemy />} />
+                  <Route path="/tools/metaphysical-defense" element={<MetaphysicalDefense />} />
+                  <Route path="/tools/defense-metaphysique" element={<MetaphysicalDefense />} />
+                  <Route path="/tools/defense" element={<MetaphysicalDefense />} />
                   
                   {/* Additional Protected Routes */}
                   <Route path="/explore" element={<ExploreDashboard />} />

@@ -5,6 +5,7 @@ import { useLanguage } from '../../../contexts/LanguageContext';
 import { ToolInfoTooltip } from '../../../components/ToolInfoTooltip';
 import { motion, AnimatePresence } from 'motion/react';
 import { exportWirdToImage } from '../../../utils/wirdExporter';
+import { vocalizeAbjadRoot } from '../../../utils/abjad';
 
 export const RouhaniyyaExtractor: React.FC = () => {
   const { t } = useLanguage();
@@ -54,12 +55,13 @@ export const RouhaniyyaExtractor: React.FC = () => {
     localStorage.setItem('asrar_stats', JSON.stringify(stats));
 
     const coreLetters = extractLetters(n);
+    const vocalized = vocalizeAbjadRoot(coreLetters);
     
-    // Suffixes:
-    // Celestial (Malaikah): ـائيل (A'il)
-    // Terrestrial (Rouhan): ـطيش ou ـيوش (Tish / Yush)
-    const celestial = coreLetters + 'َائِيلُ';
-    const terrestrial = coreLetters + 'طَيْشُ';
+    // Suffixes with Tashkeel:
+    // Celestial (Malaikah): ـَائِيلُ (A'il)
+    // Terrestrial (Rouhan): ـَطَيْشُ (Tish / Yush)
+    const celestial = vocalized + 'ائِيلُ';
+    const terrestrial = vocalized + 'طَيْشُ';
 
     setResult({
       letters: coreLetters,

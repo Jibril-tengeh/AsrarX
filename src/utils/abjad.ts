@@ -60,11 +60,89 @@ export function numberToAbjadLetters(num: number): string {
   else if (n === 8) res += "ح";
   else if (n === 7) res += "ز";
   else if (n === 6) res += "و";
-  else if (n === 5) res += "هـ";
+  else if (n === 5) res += "ه";
   else if (n === 4) res += "د";
   else if (n === 3) res += "ج";
   else if (n === 2) res += "ب";
   else if (n === 1) res += "أ";
 
   return res || "٠";
+}
+
+/**
+ * Vocalizes raw Abjad root letters for authentic Angelic name construction with Tashkeel
+ */
+export function vocalizeAbjadRoot(letters: string): string {
+  const clean = letters.replace(/[\u0640\s]/g, '');
+  if (!clean) return '';
+
+  const chars = Array.from(clean);
+  if (chars.length === 1) {
+    return chars[0] === 'ا' || chars[0] === 'أ' ? 'أَ' : `${chars[0]}َ`;
+  }
+
+  let result = '';
+  chars.forEach((ch, idx) => {
+    let baseChar = ch;
+    if (baseChar === 'ا' || baseChar === 'إ' || baseChar === 'آ') baseChar = 'أ';
+
+    if (idx === 0) {
+      result += `${baseChar}َ`;
+    } else if (idx === 1 && chars.length >= 3 && !['أ', 'و', 'ي', 'ا'].includes(baseChar)) {
+      result += `${baseChar}ْ`;
+    } else {
+      result += `${baseChar}َ`;
+    }
+  });
+
+  return result;
+}
+
+export const FIRE_LETTERS = ['ا', 'أ', 'إ', 'آ', 'ه', 'ة', 'ط', 'م', 'ف', 'ش', 'ذ'];
+export const AIR_LETTERS = ['ج', 'ز', 'ك', 'س', 'ق', 'ث', 'ظ'];
+export const WATER_LETTERS = ['د', 'ح', 'ل', 'ع', 'ر', 'خ', 'غ'];
+export const EARTH_LETTERS = ['ب', 'و', 'ؤ', 'ي', 'ى', 'ئ', 'ن', 'ص', 'ت', 'ض'];
+
+export const COLD_LETTERS = [...WATER_LETTERS, ...EARTH_LETTERS];
+
+export function getElementalBreakdown(input: string): { fire: number; air: number; water: number; earth: number } {
+  if (!input) return { fire: 25, air: 25, water: 25, earth: 25 };
+
+  let fireCount = 0;
+  let airCount = 0;
+  let waterCount = 0;
+  let earthCount = 0;
+
+  for (const char of input) {
+    if (FIRE_LETTERS.includes(char)) fireCount++;
+    else if (AIR_LETTERS.includes(char)) airCount++;
+    else if (WATER_LETTERS.includes(char)) waterCount++;
+    else if (EARTH_LETTERS.includes(char)) earthCount++;
+  }
+
+  const total = fireCount + airCount + waterCount + earthCount;
+  if (total === 0) return { fire: 25, air: 25, water: 25, earth: 25 };
+
+  return {
+    fire: Math.round((fireCount / total) * 100),
+    air: Math.round((airCount / total) * 100),
+    water: Math.round((waterCount / total) * 100),
+    earth: Math.round((earthCount / total) * 100),
+  };
+}
+export function extractCelestialKhadimName(val: number): {
+  name: string;
+  invocation: string;
+  displayText: string;
+} {
+  const rootLetters = numberToAbjadLetters(val);
+  const vocalizedRoot = vocalizeAbjadRoot(rootLetters);
+  const name = `${vocalizedRoot}ائِيلُ`;
+  const invocation = `أَيُّهَا المَلَكُ ${name}`;
+
+  return {
+    name,
+    invocation,
+    displayText: `${name} (${invocation})`
+  };
 }

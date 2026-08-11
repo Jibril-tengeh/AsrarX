@@ -179,6 +179,10 @@
       "clearHistory": "Clear",
       "noHistory": "No history yet."
     },
+    "custom-dua": {
+      "title": "Custom Du'a Generator",
+      "description": "Personalized supplications aligned with your name, intention, and Abjad score."
+    },
     "asma": {
       "title": "Personal Divine Names (Asma)",
       "description": "Discover your divine names corresponding to the mystical weight of your name.",
@@ -543,6 +547,34 @@
       "description": "In-depth theurgic analyses of sacred books from Al-Buni, Majriti, Ibn Arabi, Jifr, Jazuli, and great sages, with 3D Seals and downloadable Parchments.",
       "search": "Search for a book, an author..."
     },
+    "diagnostic-protection": {
+      "title": "Diagnostic & Spiritual Protection",
+      "description": "Comprehensive analysis of mystical knots, Modulo 9, Modulo 12, Modulo 4, Suhuf, Jihat, Business Rizq, Dreams, Last Third of Night, Hijama, Bukhoor and Eclipses."
+    },
+    "talismanic-geometry": {
+      "title": "Talismanic Geometry (Tilasim)",
+      "description": "Seal of Solomon (7 symbols), Kufic Calligraphy, Dairat Al-Ghazali 3x3, Circular Seal, Mirror Symmetry, Qalam Angle and Shapes in Numbers."
+    },
+    "talsams-extraction": {
+      "title": "Talsams Extraction & Drawing",
+      "description": "Grid sigils (Khat al-Wafq), Talsam al-Huruf, Talsam al-Arqam, Khatim al-Khafiyy, Talsam al-Imtizaj and Miftah al-Talsam."
+    },
+    "astrological-elections": {
+      "title": "Astrological Elections (Ikhtiyarat)",
+      "description": "Traditional calculations for building foundation, travel, alliances (marriage), contracts, agriculture, and commerce."
+    },
+    "sacred-geography": {
+      "title": "Sacred Geography",
+      "description": "Abjad Coordinates, Resonance Compass, Abjad Qibla, Speculative Tellurism, and Solar Zenith Time."
+    },
+    "advanced-alchemy": {
+      "title": "Advanced Alchemical Systems",
+      "description": "Tilasim al-Nujum (15 Behenian Stars), Khatam Jabir (Alchemical Balance), Usturlab al-Manazil (3D Azimuth), and Khatam al-Sahar (Pre-Dawn Square)."
+    },
+    "metaphysical-defense": {
+      "title": "Metaphysical Defense",
+      "description": "Hissn al-Hadid (Iron Shield), Al-Tafreeq (Dispersion), Mizan al-Shabah (Minerals), and Wafq al-Masdood (Fortress)."
+    },
     "protectionModal": {
       "premiumAccess": "Premium Access Only",
       "downloadTitle": "Download Restricted",
@@ -799,18 +831,18 @@
       "deviceFormat": "{browser} on {os}"
     },
     "countdown": {
-      "title": "12-Hour Premium Countdown",
-      "label": "12h Premium Trial",
+      "title": "Premium Countdown ({hours}h)",
+      "label": "{hours}h Premium Trial",
       "adminTitle": "Unlimited Premium Access",
       "adminDesc": "Your admin status grants you permanent access to all Premium features.",
-      "activeSub": "Full access unlocked during your 12-hour trial period.",
-      "expiredSub": "Your 12-hour free trial period has ended.",
+      "activeSub": "Full access unlocked during your {hours} {unit} trial period.",
+      "expiredSub": "Your {hours} {unit} free trial period has ended.",
       "hours": "Hours",
       "minutes": "Minutes",
       "seconds": "Seconds",
-      "statusActive": "Time remaining on your 12h trial",
+      "statusActive": "Time remaining on your {hours}h trial",
       "expiresAt": "Free trial ends today at",
-      "trialEndedTitle": "Your 12-hour free trial has expired",
+      "trialEndedTitle": "Your {hours}h free trial has expired",
       "trialEndedDesc": "Subscribe to maintain unlimited access to advanced secrets and tools.",
       "renewBtn": "Upgrade to Premium",
       "upgradeNow": "Activate Premium"

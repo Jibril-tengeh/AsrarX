@@ -31,6 +31,7 @@ import { ToolInfoTooltip } from '../../../components/ToolInfoTooltip';
 import { AsrarHubWatermark } from '../../../components/AsrarHubWatermark';
 import { KhatimUsageGuide } from '../../../components/KhatimUsageGuide';
 import { downloadCanvasImage } from '../../../utils/downloadHelper';
+import { applyTashkeel } from '../../../utils/tashkeel';
 import { motion, AnimatePresence } from 'motion/react';
 
 const talsamDict = {
@@ -377,7 +378,7 @@ export const Talsam: React.FC = () => {
 
     // Connects words using standard single spaces, keeping the Arabic cursive letters 
     // unified inside their respective words, avoiding any browser letter-spacing separation!
-    const formulaText = `يَا ${w1} ${w2} ${w3}`;
+    const formulaText = applyTashkeel(`يَا ${w1} ${w2} ${w3}`);
     const phoneticText = `Yâ ${w1Phonetic} ${w2Phonetic} ${w3Phonetic}`;
     const repetition = abjadValue * 3 + nameSum;
 

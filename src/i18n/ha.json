@@ -179,6 +179,10 @@
       "clearHistory": "Goge",
       "noHistory": "Babu tarihi tukuna."
     },
+    "custom-dua": {
+      "title": "Manhajar Samun Du'a Ta Musamman",
+      "description": "Addu'o'i na musamman da aka daidaita da sunanki, niyya da nauyin Abjad."
+    },
     "asma": {
       "title": "Sunayen Allah na Keɓaɓɓu (Asma)",
       "description": "Gano sunayen Allah masu dacewa da nauyin asirin sunanku.",
@@ -543,6 +547,34 @@
       "description": "Zurfafa binciken ilimin ruhi na littattafan Al-Buni, Majriti, Ibn Arabi, Jifr, Jazuli da sauran manyan malamai, tare da Hatimai 3D da Takardun Parchemin.",
       "search": "Nemi littafi, marubuci..."
     },
+    "diagnostic-protection": {
+      "title": "Bincike & Kariyar Asiri",
+      "description": "Cikakken bincike na sa'a, Modulo 9, Modulo 12, Modulo 4, Suhuf, Jihat, Rizq na kasuwanci, Mafarki, Sulusi na karshe na dare, Hijama, Turare da Husufi."
+    },
+    "talismanic-geometry": {
+      "title": "Ilimin Kayan Asiri (Tilasim)",
+      "description": "Hatimin Sulaiman (alamomi 7), Rubutun Kufi, Dairat Al-Ghazali 3x3, Hatimin Da'ira, Rubutun Madubi, Madaidaicin Alqalam da Siffofi."
+    },
+    "talsams-extraction": {
+      "title": "Haka da Zana Hatiman Talsam",
+      "description": "Zanen layi a gidan wafq (Khat al-Wafq), Talsam al-Huruf, Talsam al-Arqam, Khatim al-Khafiyy, Talsam al-Imtizaj da Miftah al-Talsam."
+    },
+    "astrological-elections": {
+      "title": "Zaben Lokutan Taurari (Ikhtiyarat)",
+      "description": "Lissafin lokuta masu albarka na gina gida, tafiya, aure, kwangila, noma da kasuwanci."
+    },
+    "sacred-geography": {
+      "title": "Ilimin Kasa Mai Tsarki",
+      "description": "Lissafin Lambobin Abjad na Kasa, Ma'aunin Nisa da Alkibla, Alkiblar Abjad, Yanayin Kasa, da Zawal na Rana."
+    },
+    "advanced-alchemy": {
+      "title": "Tsarin Alchimie na Ci Gaba",
+      "description": "Tilasim al-Nujum (Taurari 15 na Hermetisme), Khatam Jabir (Awon Alchimie), Usturlab al-Manazil (Usturlab 3D), da Khatam al-Sahar (Gidan Asuba)."
+    },
+    "metaphysical-defense": {
+      "title": "Défense Métaphysique (Kariya ta Sirri)",
+      "description": "Hissn al-Hadid (Ganuwar Karfe), Al-Tafreeq (Tarwatsa Rikici), Mizan al-Shabah (Duwatsun Kariya), da Wafq al-Masdood (Gidan Masdood)."
+    },
     "protectionModal": {
       "premiumAccess": "Kebantaccen Amfani na Premium",
       "downloadTitle": "Sauke yana Kebance",
@@ -799,18 +831,18 @@
       "deviceFormat": "{browser} a {os}"
     },
     "countdown": {
-      "title": "Kwararren Lissafi na Premium (Sa'o'i 12)",
-      "label": "Gwajin Premium (Sa'o'i 12)",
+      "title": "Kwararren Lissafi na Premium (Sa'o'i {hours})",
+      "label": "Gwajin Premium (Sa'o'i {hours})",
       "adminTitle": "Shigar Premium Mara iyaka",
       "adminDesc": "Matsayin ku na ma'aikaci yana ba ku damar har abada zuwa duk abubuwan haɗin Premium.",
-      "activeSub": "Cikakken shiga an buɗe shi a lokacin gwajin sa'o'i 12.",
-      "expiredSub": "Lokacin gwajin kyauta na sa'o'i 12 ya ƙare.",
+      "activeSub": "Cikakken shiga an buɗe shi a lokacin gwajin sa'o'i {hours}.",
+      "expiredSub": "Lokacin gwajin kyauta na sa'o'i {hours} ya ƙare.",
       "hours": "Sa'o'i",
       "minutes": "Minti",
       "seconds": "Daƙiƙa",
-      "statusActive": "Sauran lokaci akan gwajin sa'o'i 12",
+      "statusActive": "Sauran lokaci akan gwajin sa'o'i {hours}",
       "expiresAt": "Gwajin kyauta zai ƙare a yau da karfe",
-      "trialEndedTitle": "Gwajin sa'o'i 12 ya ƙare",
+      "trialEndedTitle": "Gwajin sa'o'i {hours} ya ƙare",
       "trialEndedDesc": "Yi rajista don ci gaba da shigar marar iyaka zuwa asirai da kayan aiki.",
       "renewBtn": "Zama Premium",
       "upgradeNow": "Kunna Premium"

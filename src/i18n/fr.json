@@ -179,6 +179,10 @@
       "clearHistory": "Effacer",
       "noHistory": "Aucun historique pour le moment."
     },
+    "custom-dua": {
+      "title": "Générateur de Du'a Custom",
+      "description": "Invocations sur-mesure personnalisées selon l'intention et le poids Abjad."
+    },
     "asma": {
       "title": "Noms Divins Personnels",
       "description": "Découvrez vos noms divins correspondants au poids mystique de votre nom.",
@@ -266,8 +270,8 @@
       "description": "Analysez et documentez vos rêves avec interprétations."
     },
     "personal-wird": {
-      "title": "Générateur de Wird",
-      "description": "Istikhraj al-Asma: Calculez votre Zikr personnel selon votre poids mystique."
+      "title": "Générateur de Wird & Rituels",
+      "description": "Istikhraj al-Asma & Calculs de Rituels (Awrad & Dhikr) : Calculez votre Zikr personnel selon votre poids mystique."
     },
     "lunar-mansions": {
       "title": "Demeures de la Lune",
@@ -517,8 +521,8 @@
       "description": "Recherche d'analogie coranique et versets correspondants au poids mystique."
     },
     "zikr-levels": {
-      "title": "Calculateur 3 Niveaux de Zikr",
-      "description": "Calcul des 3 régimes d'incantation : Al-Kabīr, Al-Wasaṭ et Al-Ṣaghīr."
+      "title": "Calculateur 3 Niveaux de Zikr & Awrad",
+      "description": "Calculs de Rituels (Awrad & Dhikr) : Al-Kabīr, Al-Wasaṭ et Al-Ṣaghīr."
     },
     "hijri-full-moon": {
       "title": "Calendrier Hijri & Pleine Lune",
@@ -542,6 +546,34 @@
       "tooltip": "Compendium d'études approfondies des livres ésotériques majeurs d'Al-Buni, Ibn Arabi, Majriti, Jazuli et des sages anciens. Chaque manuscrit comprend une analyse en 3 langues et son Khatim sacrée téléchargeable.",
       "description": "Analyses théurgiques approfondies des livres sacrés d'Al-Buni, Majriti, Ibn Arabi, Jifr, Jazuli et des grands sages, avec Sceaux 3D et Parchemins téléchargeables.",
       "search": "Rechercher un livre, un auteur..."
+    },
+    "diagnostic-protection": {
+      "title": "Diagnostic & Protection Spirituelle",
+      "description": "Bilan complet des nœuds mystiques, Modulo 9, Modulo 12, Modulo 4, Suhuf, Jihat, Rizq commercial, Rêves, Dernier Tiers de la Nuit, Hijama, Bukhoor et Éclipses."
+    },
+    "talismanic-geometry": {
+      "title": "Géométrie Talismanique (Tilasim)",
+      "description": "Sceau de Salomon (7 symboles), Calligraphie Kufique, Dairat Al-Ghazali 3x3, Sceau Circulaire, Symétrie Miroir, Angle du Qalam et Formes en Chiffres."
+    },
+    "talsams-extraction": {
+      "title": "Extraction et Tracé de Talsams",
+      "description": "Sigils de grilles (Khat al-Wafq), Talsam al-Huruf, Talsam al-Arqam, Khatim al-Khafiyy, Talsam al-Imtizaj et Miftah al-Talsam."
+    },
+    "astrological-elections": {
+      "title": "Élections Astrologiques (Ikhtiyarat)",
+      "description": "Calculs traditionnels pour la fondation, les voyages, les alliances (mariage), les contrats, l'agriculture et le commerce."
+    },
+    "sacred-geography": {
+      "title": "Géographie Sacrée",
+      "description": "Coordonnées Abjad, Boussole de Résonance, Qibla par l'Abjad, Tellurisme Spéculatif et Heure de Passage Solaire."
+    },
+    "advanced-alchemy": {
+      "title": "Systèmes Alchimiques Avancés",
+      "description": "Tilasim al-Nujum (15 Étoiles Béhéniennes), Khatam Jabir (Balance Alchimique), Usturlab al-Manazil (Azimut 3D) et Khatam al-Sahar (Aube)."
+    },
+    "metaphysical-defense": {
+      "title": "Défense Métaphysique",
+      "description": "Hissn al-Hadid (Bouclier de Fer), Al-Tafreeq (Dispersion), Mizan al-Shabah (Minéraux) et Wafq al-Masdood (Forteresse)."
     },
     "protectionModal": {
       "premiumAccess": "Accès Réservé Premium",

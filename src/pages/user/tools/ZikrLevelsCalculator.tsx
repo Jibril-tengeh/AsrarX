@@ -6,6 +6,7 @@ import { useLanguage } from '../../../contexts/LanguageContext';
 import { calculateAbjadValue } from '../../../utils/abjad';
 import { ParchmentExporterModal } from '../../../components/ParchmentExporterModal';
 import { ToolInfoTooltip } from '../../../components/ToolInfoTooltip';
+import { RitualDhikrCalculator } from '../../../components/RitualDhikrCalculator';
 
 export const ZikrLevelsCalculator: React.FC = () => {
   const { t, language } = useLanguage();
@@ -162,7 +163,7 @@ export const ZikrLevelsCalculator: React.FC = () => {
 
       <button
         onClick={() => setShowParchment(true)}
-        className="w-full py-3 rounded-2xl bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold text-xs flex items-center justify-center gap-2 shadow-lg cursor-pointer transition-all"
+        className="w-full py-3 rounded-2xl bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold text-xs flex items-center justify-center gap-2 shadow-lg cursor-pointer transition-all mb-8"
       >
         <Feather className="w-4 h-4" />
         <span>
@@ -173,6 +174,8 @@ export const ZikrLevelsCalculator: React.FC = () => {
             : 'Export Zikr Sheet to Parchment'}
         </span>
       </button>
+
+      <RitualDhikrCalculator />
 
       <ParchmentExporterModal
         isOpen={showParchment}

@@ -248,7 +248,7 @@ export const Premium12hCountdownWidget: React.FC<Premium12hCountdownWidgetProps>
             <div className="flex justify-between items-center text-[11px] font-semibold text-gray-600 dark:text-gray-300">
               <span className="flex items-center gap-1">
                 <ShieldCheck size={13} className="text-emerald-500" />
-                <span>{t('profile.countdown.statusActive', `Temps restant sur votre essai de ${trialDurationHours}h`)}</span>
+                <span>{t('profile.countdown.statusActive', `Temps restant sur votre essai de ${trialDurationHours}h`, { hours: trialDurationHours, unit: unitStr })}</span>
               </span>
               <span className="font-mono text-amber-600 dark:text-amber-400 font-bold">
                 {Math.round(progressPercent)}%
@@ -276,7 +276,7 @@ export const Premium12hCountdownWidget: React.FC<Premium12hCountdownWidgetProps>
             <AlertTriangle className="text-red-500 shrink-0" size={24} />
             <div>
               <h4 className="font-bold text-red-900 dark:text-red-200 text-sm">
-                {t('profile.countdown.trialEndedTitle', `Votre essai gratuit de ${trialDurationHours}h est expiré`)}
+                {t('profile.countdown.trialEndedTitle', `Votre essai gratuit de ${trialDurationHours}h est expiré`, { hours: trialDurationHours, unit: unitStr })}
               </h4>
               <p className="text-xs text-red-700 dark:text-red-300 mt-0.5">
                 {t('profile.countdown.trialEndedDesc', 'Abonnez-vous pour conserver un accès illimité aux secrets avancés et aux outils.')}
