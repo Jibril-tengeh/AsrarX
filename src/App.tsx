@@ -182,6 +182,7 @@ const FaqButton = () => {
 
 import { App as CapacitorApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
+import { executeStepByStepBack } from './utils/backNavigation';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { pingFirestore, addNetworkLog } from './utils/networkLogger';
 
@@ -696,82 +697,7 @@ export default function App() {
 
   React.useEffect(() => {
     const handleBackButton = () => {
-      const currentPath = window.location.pathname;
-      console.log(`[Navigation] Capacitor backButton event triggered on path: "${currentPath}"`);
-
-      // 1. Dispatch custom event so open modals/drawers can handle back press and close themselves
-      const customBackEvent = new CustomEvent('app:backbutton', { cancelable: true });
-      const wasCancelled = !window.dispatchEvent(customBackEvent);
-      if (wasCancelled) {
-        console.log('[Navigation] Back press consumed by modal/overlay handler.');
-        return;
-      }
-
-      // 2. Fallback check for active modal overlays or close buttons in DOM
-      const activeModalCloseBtn = document.querySelector<HTMLElement>(
-        [
-          '[data-modal-overlay="true"] button[aria-label="Close"]',
-          '[data-modal-overlay="true"] button[aria-label="Fermer"]',
-          '[data-modal-overlay="true"] button.close-modal',
-          '.modal-backdrop button',
-          '[role="dialog"] button[aria-label="Close"]',
-          '[role="dialog"] button[aria-label="Fermer"]',
-          '[role="dialog"] button.close-modal',
-          '.modal-close-btn',
-          'button[data-close-modal="true"]',
-          '.fixed.inset-0 button svg.lucide-x',
-          'button[aria-label="Fermer"]',
-          'button[aria-label="fermer"]',
-          'button[aria-label="Close"]',
-          'button[aria-label="close"]'
-        ].join(', ')
-      );
-      if (activeModalCloseBtn) {
-        console.log('[Navigation] Closing active modal overlay via DOM close button.');
-        activeModalCloseBtn.click();
-        return;
-      }
-      
-      // 3. Handle page navigation back
-      // A. If on primary root home screen, require double back press to exit app
-      const rootHomePaths = ['/user/dashboard', '/', '/home', '/login'];
-      if (rootHomePaths.includes(currentPath)) {
-        const now = Date.now();
-        if (now - lastBackPressTimeRef.current < 2000) {
-          console.log(`[Navigation] Double back press confirmed on root home (${currentPath}). Exiting app.`);
-          CapacitorApp.exitApp();
-        } else {
-          lastBackPressTimeRef.current = now;
-          setBackExitToast(true);
-          setTimeout(() => {
-            setBackExitToast(false);
-          }, 2000);
-        }
-        return;
-      }
-
-      // B. If on any other screen, navigate back in history to the previous screen
-      const stack = internalHistoryStackRef.current;
-      if (stack.length > 1) {
-        stack.pop();
-        console.log(`[Navigation] Navigating back (-1) from ${currentPath}. Remaining stack depth: ${stack.length}`);
-        navigate(-1);
-      } else {
-        // Fallback navigation when no history stack exists (e.g. direct deep link opening)
-        if (currentPath.startsWith('/tools/')) {
-          console.log(`[Navigation] Direct tool path fallback. Redirecting to /tools`);
-          navigate('/tools');
-        } else if (currentPath.startsWith('/explore/')) {
-          console.log(`[Navigation] Direct explore path fallback. Redirecting to /explore`);
-          navigate('/explore');
-        } else if (currentPath.startsWith('/secret/')) {
-          console.log(`[Navigation] Direct secret path fallback. Redirecting to /user/dashboard`);
-          navigate('/user/dashboard');
-        } else {
-          console.log(`[Navigation] Root sub-page or fallback. Redirecting to /user/dashboard.`);
-          navigate('/user/dashboard');
-        }
-      }
+      executeStepByStepBack(navigate, lastBackPressTimeRef, setBackExitToast);
     };
 
     let listenerHandle: any = null;

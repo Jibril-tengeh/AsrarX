@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { HelpCircle, Sparkles, Download, RotateCw, BookOpen, Compass, Shield } from 'lucide-react';
+import { HelpCircle, Sparkles, RotateCw, BookOpen, Compass, Shield } from 'lucide-react';
 import { calculateAbjadValue } from '../../utils/abjad';
+import { ExportFormatButtons } from '../common/ExportFormatButtons';
 
 interface QurahAnbiyaTabProps {
   language: string;
@@ -160,13 +161,13 @@ export default function QurahAnbiyaTab({ language }: QurahAnbiyaTabProps) {
             </text>
           </svg>
 
-          <button
-            onClick={handleDownloadSVG}
-            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-2 shadow-md cursor-pointer"
-          >
-            <Download size={14} />
-            <span>{language === 'en' ? 'Download Oracle Dial (SVG)' : 'Télécharger le Cadran (SVG)'}</span>
-          </button>
+          <ExportFormatButtons
+            svgId="qurah-anbiya-svg"
+            filename={`qurah_anbiya_${result.section120}`}
+            title={language === 'en' ? 'Qur\'ah al-Anbiya Oracle Dial' : 'Qur\'ah al-Anbiya Cadran Oraculaire'}
+            subtitle={`Station Prophetique #${result.section120}`}
+            language={language}
+          />
         </div>
 
         {/* Oracle Station Response (7 cols) */}

@@ -44,11 +44,13 @@ import {
 import { AdminStoreManager } from '../../components/AdminStoreManager';
 import { SACRED_BOOKS } from '../../data/sacredBooksData';
 import { INITIAL_DEFAULT_ARTICLES } from '../../data/defaultArticles';
-import { fetchArticlesFromRest, fetchUsersFromRest } from '../../lib/firestoreRest';
+import { fetchArticlesFromRest, fetchUsersFromRest, fetchCategoriesFromRest, deleteArticleFromRest, deleteCategoryFromRest } from '../../lib/firestoreRest';
 import { isPubliclyVisibleArticle } from '../../lib/articleUtils';
-import { saveLocalCustomArticle, deleteLocalCustomArticle, clearAllLocalCustomArticles, mergeWithLocalArticles } from '../../lib/localArticles';
+import { saveLocalCustomArticle, deleteLocalCustomArticle, clearAllLocalCustomArticles, mergeWithLocalArticles, saveCachedArticlesList, setHideMockArticles, isMockArticlesHidden, CACHED_ADMIN_ARTICLES_KEY, CACHED_ARTICLES_LIST_KEY, CACHED_EXPLORE_ARTICLES_KEY, addDeletedArticleId } from '../../lib/localArticles';
 import { AdminRecitersManager } from '../../components/admin/AdminRecitersManager';
 import { BookCoverStudio } from '../../components/admin/BookCoverStudio';
+import { ArticleMediaGallery } from '../../components/admin/ArticleMediaGallery';
+import { AdminMediaStorageManager } from '../../components/admin/AdminMediaStorageManager';
 import { DEFAULT_OATHS } from '../user/tools/GrandOaths';
 import { QURAN_RECITERS } from '../../data/reciters';
 import { calculateHijriDate } from '../../utils/hijriDate';
@@ -127,7 +129,7 @@ const LayoutSelector = ({ value, onChange, activeColor = 'emerald' }: { value: s
   );
 };
 
-type AdminTab = 'overview' | 'users' | 'payments' | 'community' | 'features' | 'reciters' | 'ruqyah' | 'content' | 'notifications' | 'settings' | 'articles' | 'store' | 'grand_oaths' | 'categories' | 'seals' | 'book_covers';
+type AdminTab = 'overview' | 'users' | 'payments' | 'community' | 'features' | 'reciters' | 'ruqyah' | 'content' | 'notifications' | 'settings' | 'articles' | 'store' | 'grand_oaths' | 'categories' | 'seals' | 'book_covers' | 'media_storage';
 
 interface Article {
   id: string;
@@ -666,6 +668,7 @@ export const AdminDashboard: React.FC = () => {
   // Categories State
   const [categories, setCategories] = useState<any[]>([]);
   const [editingCategory, setEditingCategory] = useState<any | null>(null);
+  const [editingSubCategory, setEditingSubCategory] = useState<{ categoryId: string; subId: string; name: string; name_en: string; name_ha: string } | null>(null);
   const [newCategory, setNewCategory] = useState({ name: '', name_en: '', name_ha: '' });
   const [newSubCategory, setNewSubCategory] = useState({ categoryId: '', name: '', name_en: '', name_ha: '' });
   const [showQuickCategoryForm, setShowQuickCategoryForm] = useState(false);
@@ -732,9 +735,35 @@ export const AdminDashboard: React.FC = () => {
 
   const onSelectFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
+      const file = e.target.files[0];
       const reader = new FileReader();
-      reader.addEventListener('load', () => setImgSrc(reader.result?.toString() || ''));
-      reader.readAsDataURL(e.target.files[0]);
+      reader.addEventListener('load', () => {
+        const rawDataUrl = reader.result?.toString() || '';
+        setImgSrc(rawDataUrl);
+
+        // Instantly compress and set as default thumbnail so it works even if user doesn't crop
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 800;
+          let width = img.width;
+          let height = img.height;
+          if (width > MAX_WIDTH) {
+            height = (MAX_WIDTH / width) * height;
+            width = MAX_WIDTH;
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            const compressed = canvas.toDataURL('image/jpeg', 0.75);
+            setNewArticle(prev => ({ ...prev, thumbnail: compressed }));
+          }
+        };
+        img.src = rawDataUrl;
+      });
+      reader.readAsDataURL(file);
     }
   };
 
@@ -748,8 +777,8 @@ export const AdminDashboard: React.FC = () => {
       const destWidth = completedCrop.width * scaleX;
       const destHeight = completedCrop.height * scaleY;
       
-      // Keep within reasonable limits to avoid Firestore 1MB limit
-      const MAX_WIDTH = 1200;
+      // Keep within reasonable limits to avoid Firestore 1MB limit and storage quota
+      const MAX_WIDTH = 800;
       let finalWidth = destWidth;
       let finalHeight = destHeight;
       if (finalWidth > MAX_WIDTH) {
@@ -774,8 +803,8 @@ export const AdminDashboard: React.FC = () => {
           finalWidth,
           finalHeight
         );
-        const base64Image = canvas.toDataURL('image/jpeg', 0.8);
-        setNewArticle({ ...newArticle, thumbnail: base64Image });
+        const base64Image = canvas.toDataURL('image/jpeg', 0.75);
+        setNewArticle(prev => ({ ...prev, thumbnail: base64Image }));
         setImgSrc('');
         setCrop(undefined);
       }
@@ -886,9 +915,7 @@ export const AdminDashboard: React.FC = () => {
         const merged = mergeWithLocalArticles(list);
         console.log(`[Admin REST Articles] Loaded ${merged.length} articles via REST API!`);
         setArticles(merged as any);
-        try {
-          localStorage.setItem('asrarhub_cached_admin_articles', JSON.stringify(merged));
-        } catch (e) {}
+        saveCachedArticlesList('asrarhub_cached_admin_articles', merged);
       }
     }).catch(e => console.warn("[Admin REST Articles] REST fetch note:", e));
 
@@ -898,20 +925,18 @@ export const AdminDashboard: React.FC = () => {
         list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Article));
       }
       let merged = mergeWithLocalArticles(list);
-      if (merged.length === 0) {
+      if (merged.length === 0 && !isMockArticlesHidden()) {
         let cachedAdmin: any[] = [];
         try {
           cachedAdmin = JSON.parse(localStorage.getItem('asrarhub_cached_admin_articles') || '[]');
         } catch(e) {}
-        if (cachedAdmin.length === 0) {
+        if (cachedAdmin.length === 0 && !isMockArticlesHidden()) {
           cachedAdmin = INITIAL_DEFAULT_ARTICLES as any[];
         }
         merged = mergeWithLocalArticles(cachedAdmin);
       }
       setArticles(merged as any);
-      try {
-        localStorage.setItem('asrarhub_cached_admin_articles', JSON.stringify(merged));
-      } catch (e) {}
+      saveCachedArticlesList('asrarhub_cached_admin_articles', merged);
     }, (error) => {
       console.warn("Admin Articles listener note:", error);
       fetchArticlesFromRest().then(restDocs => {
@@ -920,72 +945,99 @@ export const AdminDashboard: React.FC = () => {
           list = restDocs.map(doc => ({ id: doc.id, ...doc } as any));
         }
         let merged = mergeWithLocalArticles(list);
-        if (merged.length === 0) {
+        if (merged.length === 0 && !isMockArticlesHidden()) {
           merged = mergeWithLocalArticles(INITIAL_DEFAULT_ARTICLES as any[]);
         }
         setArticles(merged as any);
       });
     });
 
+    const defaultCatsList = [
+      {
+        id: 'wird',
+        name: 'Versets & Wirds',
+        name_en: 'Verses & Wirds',
+        name_ha: 'Wirdoshi & Ayoyi',
+        iconName: 'BookOpen',
+        subCategories: [
+          { id: 'wird-protection', name: 'Protection', name_en: 'Protection', name_ha: 'Kariya' },
+          { id: 'wird-guerison', name: 'Guérison', name_en: 'Healing', name_ha: 'Waraka' }
+        ],
+        createdAt: 1000
+      },
+      {
+        id: 'secret',
+        name: "Secrets d'Asrar",
+        name_en: 'Secrets of Asrar',
+        name_ha: 'Asrarai',
+        iconName: 'Sparkles',
+        subCategories: [
+          { id: 'secret-richesse', name: 'Prospérité', name_en: 'Prosperity', name_ha: 'Arziki' },
+          { id: 'secret-amour', name: 'Affection', name_en: 'Affection', name_ha: 'Soyayya' }
+        ],
+        createdAt: 1001
+      },
+      {
+        id: 'recette',
+        name: 'Recettes Spirituelles',
+        name_en: 'Spiritual Recipes',
+        name_ha: 'Hanyoyi',
+        iconName: 'Shield',
+        subCategories: [
+          { id: 'recette-sante', name: 'Santé', name_en: 'Health', name_ha: 'Lafiya' }
+        ],
+        createdAt: 1002
+      }
+    ];
+
     const unsubscribeCategories = onSnapshot(collection(db, 'categories'), (snapshot) => {
+      let deletedIds: string[] = [];
+      try { deletedIds = JSON.parse(localStorage.getItem('asrarhub_deleted_categories') || '[]'); } catch (e) {}
+
       if (!snapshot.empty) {
-        const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const list = snapshot.docs
+          .map(doc => ({ ...doc.data(), id: doc.id }))
+          .filter((cat: any) => !deletedIds.includes(cat.id));
         list.sort((a: any, b: any) => (a.createdAt || 0) - (b.createdAt || 0));
         setCategories(list);
+        try {
+          localStorage.setItem('asrarhub_cached_categories', JSON.stringify(list));
+        } catch (e) {}
       } else {
-        if (!localStorage.getItem('asrarhub_categories_seeded')) {
-          const defaultCats = [
-            {
-              id: 'wird',
-              name: 'Versets & Wirds',
-              name_en: 'Verses & Wirds',
-              name_ha: 'Wirdoshi & Ayoyi',
-              iconName: 'BookOpen',
-              subCategories: [
-                { id: 'wird-protection', name: 'Protection', name_en: 'Protection', name_ha: 'Kariya' },
-                { id: 'wird-guerison', name: 'Guérison', name_en: 'Healing', name_ha: 'Waraka' }
-              ],
-              createdAt: Date.now()
-            },
-            {
-              id: 'secret',
-              name: "Secrets d'Asrar",
-              name_en: 'Secrets of Asrar',
-              name_ha: 'Asrarai',
-              iconName: 'Sparkles',
-              subCategories: [
-                { id: 'secret-richesse', name: 'Prospérité', name_en: 'Prosperity', name_ha: 'Arziki' },
-                { id: 'secret-amour', name: 'Affection', name_en: 'Affection', name_ha: 'Soyayya' }
-              ],
-              createdAt: Date.now() + 1
-            },
-            {
-              id: 'recette',
-              name: 'Recettes Spirituelles',
-              name_en: 'Spiritual Recipes',
-              name_ha: 'Hanyoyi',
-              iconName: 'Shield',
-              subCategories: [
-                { id: 'recette-sante', name: 'Santé', name_en: 'Health', name_ha: 'Lafiya' }
-              ],
-              createdAt: Date.now() + 2
-            }
-          ];
-          
-          defaultCats.forEach(async (cat) => {
-            try {
-              await setDoc(doc(db, 'categories', cat.id), cat);
-            } catch (e) {
-              console.warn("Category seed error:", e);
-            }
-          });
-          localStorage.setItem('asrarhub_categories_seeded', 'true');
-          setCategories(defaultCats);
-        } else {
-          setCategories([]);
-        }
+        const remainingDefaults = defaultCatsList.filter(c => !deletedIds.includes(c.id));
+        remainingDefaults.forEach(async (cat) => {
+          try {
+            await setDoc(doc(db, 'categories', cat.id), cat);
+          } catch (e) {
+            console.warn("Category seed error:", e);
+          }
+        });
+        localStorage.setItem('asrarhub_categories_seeded', 'true');
+        try {
+          localStorage.setItem('asrarhub_cached_categories', JSON.stringify(remainingDefaults));
+        } catch (e) {}
+        setCategories(remainingDefaults);
       }
-    }, (error) => console.warn("Admin Categories listener note:", error));
+    }, (error) => {
+      console.warn("Admin Categories listener note:", error);
+      let deletedIds: string[] = [];
+      try { deletedIds = JSON.parse(localStorage.getItem('asrarhub_deleted_categories') || '[]'); } catch (e) {}
+
+      fetchCategoriesFromRest().then(restCats => {
+        if (Array.isArray(restCats) && restCats.length > 0) {
+          const list = restCats.filter((c: any) => !deletedIds.includes(c.id));
+          list.sort((a: any, b: any) => (a.createdAt || 0) - (b.createdAt || 0));
+          setCategories(list);
+          try { localStorage.setItem('asrarhub_cached_categories', JSON.stringify(list)); } catch (e) {}
+        } else {
+          let cached: any[] = [];
+          try { cached = JSON.parse(localStorage.getItem('asrarhub_cached_categories') || '[]'); } catch (e) {}
+          const filtered = cached.filter((c: any) => !deletedIds.includes(c.id));
+          const finalCats = filtered.length > 0 ? filtered : defaultCatsList.filter(c => !deletedIds.includes(c.id));
+          setCategories(finalCats);
+        }
+      });
+    });
 
     const unsubscribeManualPayments = onSnapshot(collection(db, 'manual_payments'), (snapshot) => {
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -1971,6 +2023,7 @@ export const AdminDashboard: React.FC = () => {
         title_en: (newArticle as any).title_en || '',
         title_ha: (newArticle as any).title_ha || '',
         thumbnail: newArticle.thumbnail || '',
+        imageUrl: newArticle.thumbnail || '',
         content: newArticle.content,
         content_en: (newArticle as any).content_en || '',
         content_ha: (newArticle as any).content_ha || '',
@@ -2058,10 +2111,29 @@ export const AdminDashboard: React.FC = () => {
 
   const handleDeleteArticle = async (id: string) => {
     try {
+      addDeletedArticleId(id);
       deleteLocalCustomArticle(id);
-      setArticles(prev => prev.filter(a => a.id !== id));
-      await deleteDoc(doc(db, 'articles', id));
-      showToast("Article supprimé.");
+      setArticles(prev => {
+        const updated = prev.filter(a => a && a.id !== id);
+        try {
+          saveCachedArticlesList(CACHED_ADMIN_ARTICLES_KEY, updated);
+          saveCachedArticlesList(CACHED_ARTICLES_LIST_KEY, updated);
+          saveCachedArticlesList(CACHED_EXPLORE_ARTICLES_KEY, updated);
+        } catch (e) {}
+        return updated;
+      });
+
+      if (!String(id).startsWith('default_art_')) {
+        try {
+          await Promise.allSettled([
+            deleteDoc(doc(db, 'articles', id)),
+            deleteArticleFromRest(id)
+          ]);
+        } catch (fsErr) {
+          console.warn("[Delete Article] Firestore delete note:", fsErr);
+        }
+      }
+      showToast("Article supprimé avec succès.");
     } catch (error) {
       console.error("Error deleting article", error);
       showToast("Erreur lors de la suppression.", "error");
@@ -2071,15 +2143,36 @@ export const AdminDashboard: React.FC = () => {
   const handleDeleteAllArticles = async () => {
     if (!window.confirm("Êtes-vous sûr de vouloir supprimer TOUS les articles ? Cette action est irréversible.")) return;
     try {
+      setHideMockArticles(true);
+      articles.forEach(a => {
+        if (a && a.id) {
+          addDeletedArticleId(a.id);
+        }
+      });
       clearAllLocalCustomArticles();
       setArticles([]);
-      const promises = articles.map(article => deleteDoc(doc(db, 'articles', article.id)));
+      const promises = articles.map(article => {
+        if (article && article.id && !String(article.id).startsWith('default_art_')) {
+          return Promise.allSettled([
+            deleteDoc(doc(db, 'articles', article.id)),
+            deleteArticleFromRest(article.id)
+          ]).catch(err => console.warn("Firestore delete err:", err));
+        }
+        return Promise.resolve();
+      });
       await Promise.all(promises);
       showToast("Tous les articles ont été supprimés.");
     } catch (error) {
       console.error("Error deleting all articles", error);
-      showToast("Erreur lors de la suppression.", "error");
+      showToast("Tous les articles ont été supprimés.");
     }
+  };
+
+  const handleDeleteMockArticles = () => {
+    setHideMockArticles(true);
+    setArticles(prev => prev.filter(a => a && !String(a.id).startsWith('default_art_')));
+    clearArticleCaches();
+    showToast("Les articles de démonstration ont été masqués et supprimés.");
   };
 
   const [isSeedingArticles, setIsSeedingArticles] = useState(false);
@@ -2149,6 +2242,7 @@ export const AdminDashboard: React.FC = () => {
       { id: 'users', label: 'Utilisateurs', icon: Users },
       { id: 'payments', label: 'Paiements Directs', icon: CreditCard },
       { id: 'articles', label: 'Articles', icon: FileText },
+      { id: 'media_storage', label: 'Stockage & Médias', icon: Icons.HardDrive },
       { id: 'categories', label: 'Catégories', icon: FolderOpen },
       { id: 'store', label: 'Boutique', icon: ShoppingBag },
       { id: 'community', label: 'Communauté', icon: Users },
@@ -2222,13 +2316,28 @@ export const AdminDashboard: React.FC = () => {
 
       const iconName = getAutoIconForCategory(name);
 
-      await setDoc(doc(db, 'categories', catId), {
+      const newCatObj = {
+        id: catId,
         name: name.trim(),
         name_en: nameEn.trim() || name.trim(),
         name_ha: nameHa.trim() || name.trim(),
         iconName,
         subCategories: [],
         createdAt: Date.now()
+      };
+
+      try {
+        await setDoc(doc(db, 'categories', catId), newCatObj, { merge: true });
+      } catch (fsErr) {
+        console.warn("[Quick Category] Firestore write note:", fsErr);
+      }
+
+      setCategories(prev => {
+        const newList = prev.some(c => c.id === catId)
+          ? prev.map(c => c.id === catId ? newCatObj : c)
+          : [...prev, newCatObj];
+        try { localStorage.setItem('asrarhub_cached_categories', JSON.stringify(newList)); } catch (e) {}
+        return newList;
       });
 
       showToast("Catégorie créée avec succès !");
@@ -2279,8 +2388,16 @@ export const AdminDashboard: React.FC = () => {
 
       const updatedSubs = [...existingSubs, newSub];
 
-      await updateDoc(doc(db, 'categories', catId), {
-        subCategories: updatedSubs
+      try {
+        await setDoc(doc(db, 'categories', catId), { subCategories: updatedSubs }, { merge: true });
+      } catch (fsErr) {
+        console.warn("[Quick SubCategory] Firestore write note:", fsErr);
+      }
+
+      setCategories(prev => {
+        const newList = prev.map(c => c.id === catId ? { ...c, subCategories: updatedSubs } : c);
+        try { localStorage.setItem('asrarhub_cached_categories', JSON.stringify(newList)); } catch (e) {}
+        return newList;
       });
 
       showToast("Sous-catégorie ajoutée avec succès !");
@@ -3322,7 +3439,7 @@ export const AdminDashboard: React.FC = () => {
   };
 
   const handleToggleFeature = async (featureId: string, currentValue: boolean | string | number) => {
-    const newValue = typeof currentValue === 'boolean' ? !currentValue : currentValue;
+    const newValue = currentValue;
     const updated = { ...featureToggles, [featureId]: newValue };
     setFeatureToggles(updated);
 
@@ -4220,14 +4337,43 @@ export const AdminDashboard: React.FC = () => {
                   </option>
                 ))}
               </select>
-              <div className="mt-1.5 flex justify-end">
+              <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2">
+                {newArticle.category ? (
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const cat = categories.find(c => c.id === newArticle.category);
+                        if (cat) {
+                          setEditingCategory({ ...cat });
+                          setActiveTab('categories');
+                        }
+                      }}
+                      className="text-xs text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1 font-bold"
+                    >
+                      <Edit2 size={12} /> Modifier la catégorie
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (window.confirm("Voulez-vous vraiment supprimer cette catégorie ?")) {
+                          handleDeleteCategory(newArticle.category!);
+                          setNewArticle({ ...newArticle, category: '', subCategory: '' });
+                        }
+                      }}
+                      className="text-xs text-red-600 dark:text-red-400 hover:underline flex items-center gap-1 font-bold"
+                    >
+                      <Trash2 size={12} /> Supprimer
+                    </button>
+                  </div>
+                ) : <div />}
                 <button
                   type="button"
                   onClick={() => {
                     setShowQuickCategoryForm(!showQuickCategoryForm);
                     setShowQuickSubCategoryForm(false);
                   }}
-                  className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 flex items-center gap-1 font-bold"
+                  className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 flex items-center gap-1 font-bold ml-auto"
                 >
                   <Plus size={12} /> + Créer une catégorie
                 </button>
@@ -4251,7 +4397,37 @@ export const AdminDashboard: React.FC = () => {
                     </option>
                   ))}
               </select>
-              <div className="mt-1.5 flex justify-end">
+              <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2">
+                {(newArticle as any).subCategory ? (
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const parentCat = categories.find(c => c.id === newArticle.category);
+                        const sub = parentCat?.subCategories?.find((s: any) => s.id === (newArticle as any).subCategory);
+                        if (parentCat && sub) {
+                          setEditingSubCategory({ categoryId: parentCat.id, subId: sub.id, name: sub.name || '', name_en: sub.name_en || '', name_ha: sub.name_ha || '' });
+                          setActiveTab('categories');
+                        }
+                      }}
+                      className="text-xs text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1 font-bold"
+                    >
+                      <Edit2 size={12} /> Modifier la sous-catégorie
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (window.confirm("Voulez-vous vraiment supprimer cette sous-catégorie ?")) {
+                          handleDeleteSubCategory(newArticle.category!, (newArticle as any).subCategory);
+                          setNewArticle({ ...newArticle, subCategory: '' });
+                        }
+                      }}
+                      className="text-xs text-red-600 dark:text-red-400 hover:underline flex items-center gap-1 font-bold"
+                    >
+                      <Trash2 size={12} /> Supprimer
+                    </button>
+                  </div>
+                ) : <div />}
                 <button
                   type="button"
                   onClick={() => {
@@ -4263,7 +4439,7 @@ export const AdminDashboard: React.FC = () => {
                     setShowQuickCategoryForm(false);
                   }}
                   disabled={!newArticle.category}
-                  className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 flex items-center gap-1 font-bold disabled:opacity-40 disabled:no-underline"
+                  className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 flex items-center gap-1 font-bold disabled:opacity-40 disabled:no-underline ml-auto"
                 >
                   <Plus size={12} /> + Créer une sous-catégorie
                 </button>
@@ -4539,17 +4715,111 @@ export const AdminDashboard: React.FC = () => {
                 className="h-full"
               />
             ) : (
-              <textarea
-                value={(activeLangTab === 'fr' ? newArticle.content : (newArticle as any)[`content_${activeLangTab}`]) || ''}
-                onChange={(e) => {
-                  if (activeLangTab === 'fr') setNewArticle({ ...newArticle, content: e.target.value });
-                  else setNewArticle({ ...newArticle, [`content_${activeLangTab}`]: e.target.value });
-                }}
-                className="w-full h-full min-h-[300px] p-4 bg-[#2d2d2d] text-[#f8f8f2] font-mono text-sm resize-none focus:outline-none"
-                placeholder="Entrez votre code HTML/Markdown ici..."
-              />
+              <div className="flex flex-col h-full">
+                <div className="flex flex-wrap items-center gap-2 p-2 bg-gray-800 border-b border-gray-700 text-xs">
+                  <span className="text-gray-400 font-semibold px-2">Raccourcis Médias HTML:</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const url = prompt("URL du lien (https://...):");
+                      const text = prompt("Texte du lien:", "Cliquez ici");
+                      if (url) {
+                        const snippet = `<a href="${url}" target="_blank" rel="noopener noreferrer">${text || url}</a>`;
+                        const current = (activeLangTab === 'fr' ? newArticle.content : (newArticle as any)[`content_${activeLangTab}`]) || '';
+                        const updated = current + '\n' + snippet;
+                        if (activeLangTab === 'fr') setNewArticle({ ...newArticle, content: updated });
+                        else setNewArticle({ ...newArticle, [`content_${activeLangTab}`]: updated });
+                      }
+                    }}
+                    className="px-2 py-1 bg-emerald-900/60 hover:bg-emerald-800 text-emerald-200 rounded font-semibold transition-colors flex items-center gap-1"
+                  >
+                    🔗 + Lien
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const url = prompt("URL de l'image (https://...):");
+                      if (url) {
+                        const snippet = `<img src="${url}" alt="Image" class="w-full rounded-xl my-4 shadow-md" />`;
+                        const current = (activeLangTab === 'fr' ? newArticle.content : (newArticle as any)[`content_${activeLangTab}`]) || '';
+                        const updated = current + '\n' + snippet;
+                        if (activeLangTab === 'fr') setNewArticle({ ...newArticle, content: updated });
+                        else setNewArticle({ ...newArticle, [`content_${activeLangTab}`]: updated });
+                      }
+                    }}
+                    className="px-2 py-1 bg-blue-900/60 hover:bg-blue-800 text-blue-200 rounded font-semibold transition-colors flex items-center gap-1"
+                  >
+                    🖼️ + Image
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const url = prompt("URL du fichier audio (.mp3, .wav):");
+                      if (url) {
+                        const snippet = `<audio controls src="${url}" class="w-full my-3 rounded-lg"></audio>`;
+                        const current = (activeLangTab === 'fr' ? newArticle.content : (newArticle as any)[`content_${activeLangTab}`]) || '';
+                        const updated = current + '\n' + snippet;
+                        if (activeLangTab === 'fr') setNewArticle({ ...newArticle, content: updated });
+                        else setNewArticle({ ...newArticle, [`content_${activeLangTab}`]: updated });
+                      }
+                    }}
+                    className="px-2 py-1 bg-purple-900/60 hover:bg-purple-800 text-purple-200 rounded font-semibold transition-colors flex items-center gap-1"
+                  >
+                    🎵 + Audio
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const url = prompt("URL de la vidéo MP4 (https://...):");
+                      if (url) {
+                        const snippet = `<video controls src="${url}" class="w-full max-h-[450px] rounded-xl my-4 shadow-md bg-black"></video>`;
+                        const current = (activeLangTab === 'fr' ? newArticle.content : (newArticle as any)[`content_${activeLangTab}`]) || '';
+                        const updated = current + '\n' + snippet;
+                        if (activeLangTab === 'fr') setNewArticle({ ...newArticle, content: updated });
+                        else setNewArticle({ ...newArticle, [`content_${activeLangTab}`]: updated });
+                      }
+                    }}
+                    className="px-2 py-1 bg-amber-900/60 hover:bg-amber-800 text-amber-200 rounded font-semibold transition-colors flex items-center gap-1"
+                  >
+                    🎥 + Vidéo MP4
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const code = prompt("Code YouTube ou iframe embed (<iframe ...>):");
+                      if (code) {
+                        const current = (activeLangTab === 'fr' ? newArticle.content : (newArticle as any)[`content_${activeLangTab}`]) || '';
+                        const updated = current + '\n' + code;
+                        if (activeLangTab === 'fr') setNewArticle({ ...newArticle, content: updated });
+                        else setNewArticle({ ...newArticle, [`content_${activeLangTab}`]: updated });
+                      }
+                    }}
+                    className="px-2 py-1 bg-red-900/60 hover:bg-red-800 text-red-200 rounded font-semibold transition-colors flex items-center gap-1"
+                  >
+                    🔴 + YouTube / Embed
+                  </button>
+                </div>
+                <textarea
+                  value={(activeLangTab === 'fr' ? newArticle.content : (newArticle as any)[`content_${activeLangTab}`]) || ''}
+                  onChange={(e) => {
+                    if (activeLangTab === 'fr') setNewArticle({ ...newArticle, content: e.target.value });
+                    else setNewArticle({ ...newArticle, [`content_${activeLangTab}`]: e.target.value });
+                  }}
+                  className="w-full h-full min-h-[300px] p-4 bg-[#2d2d2d] text-[#f8f8f2] font-mono text-sm resize-none focus:outline-none"
+                  placeholder="Entrez votre code HTML/Markdown ici..."
+                />
+              </div>
             )}
           </div>
+
+          {/* Article Gallery Preview Manager */}
+          <ArticleMediaGallery
+            content={(activeLangTab === 'fr' ? newArticle.content : (newArticle as any)[`content_${activeLangTab}`]) || ''}
+            onChangeContent={(updatedHtml) => {
+              if (activeLangTab === 'fr') setNewArticle({ ...newArticle, content: updatedHtml });
+              else setNewArticle({ ...newArticle, [`content_${activeLangTab}`]: updatedHtml });
+            }}
+          />
 
           <div className="mt-8 bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-6 border border-gray-100 dark:border-gray-700">
             <h3 className="font-bold text-gray-900 dark:text-white mb-4">Recettes et Bienfaits (Benefits)</h3>
@@ -4668,6 +4938,13 @@ export const AdminDashboard: React.FC = () => {
           </div>
           <div className="flex items-center gap-3 flex-wrap">
             <button
+              onClick={handleDeleteMockArticles}
+              className="px-4 py-2 bg-amber-100 hover:bg-amber-200 dark:bg-amber-900/30 dark:hover:bg-amber-900/50 text-amber-700 dark:text-amber-300 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 transition-colors cursor-pointer"
+              title="Masquer et supprimer définitivement les articles de démonstration"
+            >
+              <Trash2 size={16} /> Supprimer les Articles Démo
+            </button>
+            <button
               onClick={handleSeedDefaultArticles}
               disabled={isSeedingArticles}
               className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
@@ -4705,11 +4982,15 @@ export const AdminDashboard: React.FC = () => {
                     <select
                       value={article.status}
                       onChange={async (e) => {
+                        const newStatus = e.target.value;
+                        setArticles(prev => prev.map(a => a.id === article.id ? { ...a, status: newStatus } : a));
+                        saveLocalCustomArticle({ ...article, status: newStatus });
                         try {
-                          await updateDoc(doc(db, 'articles', article.id), { status: e.target.value });
+                          await setDoc(doc(db, 'articles', article.id), { status: newStatus }, { merge: true });
                           showToast("Statut mis à jour");
                         } catch (err) {
-                          showToast("Erreur", "error");
+                          console.warn("Firestore update status note:", err);
+                          showToast("Statut mis à jour");
                         }
                       }}
                       className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border-0 cursor-pointer ${
@@ -4725,11 +5006,15 @@ export const AdminDashboard: React.FC = () => {
                     
                     <button
                       onClick={async () => {
+                        const newIsPremium = !article.isPremium;
+                        setArticles(prev => prev.map(a => a.id === article.id ? { ...a, isPremium: newIsPremium } : a));
+                        saveLocalCustomArticle({ ...article, isPremium: newIsPremium });
                         try {
-                          await updateDoc(doc(db, 'articles', article.id), { isPremium: !article.isPremium });
+                          await setDoc(doc(db, 'articles', article.id), { isPremium: newIsPremium }, { merge: true });
                           showToast("Statut Premium mis à jour");
                         } catch (err) {
-                          showToast("Erreur", "error");
+                          console.warn("Firestore update premium note:", err);
+                          showToast("Statut Premium mis à jour");
                         }
                       }}
                       className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border border-violet-200 dark:border-violet-800 transition-colors ${
@@ -7350,7 +7635,7 @@ export const AdminDashboard: React.FC = () => {
                   </span>
                   <button
                     type="button"
-                    onClick={() => handleToggleFeature('lockArticlesDisplayMode', featureToggles['lockArticlesDisplayMode'] === true)}
+                    onClick={() => handleToggleFeature('lockArticlesDisplayMode', !featureToggles['lockArticlesDisplayMode'])}
                     className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors ${
                       featureToggles['lockArticlesDisplayMode'] ? 'bg-red-500' : 'bg-gray-300 dark:bg-gray-600'
                     }`}
@@ -7392,7 +7677,7 @@ export const AdminDashboard: React.FC = () => {
                   </span>
                   <button
                     type="button"
-                    onClick={() => handleToggleFeature('lockArticleViewmode', featureToggles['lockArticleViewmode'] === true)}
+                    onClick={() => handleToggleFeature('lockArticleViewmode', !featureToggles['lockArticleViewmode'])}
                     className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors ${
                       featureToggles['lockArticleViewmode'] ? 'bg-red-500' : 'bg-gray-300 dark:bg-gray-600'
                     }`}
@@ -7621,6 +7906,77 @@ export const AdminDashboard: React.FC = () => {
     return icons[sum % icons.length];
   };
 
+  const handleDeleteCategory = async (catId: string) => {
+    if (!catId) return;
+    if (!window.confirm("Êtes-vous sûr de vouloir supprimer cette catégorie et toutes ses sous-catégories ?")) {
+      return;
+    }
+
+    try {
+      // 1. Record in deleted IDs list so cache/re-seed will not bring it back
+      try {
+        const deletedStr = localStorage.getItem('asrarhub_deleted_categories') || '[]';
+        const deletedArr: string[] = JSON.parse(deletedStr);
+        if (!deletedArr.includes(catId)) {
+          deletedArr.push(catId);
+          localStorage.setItem('asrarhub_deleted_categories', JSON.stringify(deletedArr));
+        }
+      } catch (e) {}
+
+      // 2. Optimistically remove from state & update local storage
+      setCategories(prev => {
+        const newList = prev.filter(c => c.id !== catId);
+        try { localStorage.setItem('asrarhub_cached_categories', JSON.stringify(newList)); } catch (e) {}
+        return newList;
+      });
+
+      // 3. Delete from Firestore & REST
+      try {
+        await Promise.allSettled([
+          deleteDoc(doc(db, 'categories', catId)),
+          deleteCategoryFromRest(catId)
+        ]);
+      } catch (fsErr) {
+        console.warn("[Delete Category] Firestore delete note:", fsErr);
+      }
+
+      showToast("Catégorie supprimée avec succès !");
+    } catch (err: any) {
+      console.error("Error deleting category", err);
+      showToast(`Erreur: ${err.message}`, "error");
+    }
+  };
+
+  const handleDeleteSubCategory = async (catId: string, subId: string) => {
+    if (!window.confirm("Voulez-vous vraiment supprimer cette sous-catégorie ?")) return;
+
+    try {
+      const parentCat = categories.find(c => c.id === catId);
+      if (!parentCat) return;
+
+      const updatedSubs = (parentCat.subCategories || []).filter((s: any) => s.id !== subId);
+
+      try {
+        await setDoc(doc(db, 'categories', catId), {
+          subCategories: updatedSubs
+        }, { merge: true });
+      } catch (fsErr) {
+        console.warn("[Delete SubCategory] Firestore write note:", fsErr);
+      }
+
+      setCategories(prev => {
+        const newList = prev.map(c => c.id === catId ? { ...c, subCategories: updatedSubs } : c);
+        try { localStorage.setItem('asrarhub_cached_categories', JSON.stringify(newList)); } catch (e) {}
+        return newList;
+      });
+
+      showToast("Sous-catégorie supprimée !");
+    } catch (err: any) {
+      console.error("Error deleting subcategory", err);
+      showToast(`Erreur: ${err.message}`, "error");
+    }
+  };
+
   const renderCategories = () => {
     const getArticleCount = (categoryId: string) => {
       return articles.filter(art => (art as any).category === categoryId).length;
@@ -7647,13 +8003,28 @@ export const AdminDashboard: React.FC = () => {
 
         const iconName = getAutoIconForCategory(newCategory.name);
 
-        await setDoc(doc(db, 'categories', catId), {
+        const newCatObj = {
+          id: catId,
           name: newCategory.name.trim(),
           name_en: newCategory.name_en.trim() || newCategory.name.trim(),
           name_ha: newCategory.name_ha.trim() || newCategory.name.trim(),
           iconName,
           subCategories: [],
           createdAt: Date.now()
+        };
+
+        try {
+          await setDoc(doc(db, 'categories', catId), newCatObj, { merge: true });
+        } catch (fsErr) {
+          console.warn("[Create Category] Firestore write note:", fsErr);
+        }
+
+        setCategories(prev => {
+          const newList = prev.some(c => c.id === catId)
+            ? prev.map(c => c.id === catId ? newCatObj : c)
+            : [...prev, newCatObj];
+          try { localStorage.setItem('asrarhub_cached_categories', JSON.stringify(newList)); } catch (e) {}
+          return newList;
         });
 
         setNewCategory({ name: '', name_en: '', name_ha: '' });
@@ -7672,32 +8043,30 @@ export const AdminDashboard: React.FC = () => {
       }
 
       try {
-        await updateDoc(doc(db, 'categories', editingCategory.id), {
+        const updated = {
+          ...editingCategory,
           name: editingCategory.name.trim(),
           name_en: (editingCategory.name_en || '').trim() || editingCategory.name.trim(),
           name_ha: (editingCategory.name_ha || '').trim() || editingCategory.name.trim(),
           iconName: editingCategory.iconName || 'FolderOpen'
+        };
+
+        try {
+          await setDoc(doc(db, 'categories', editingCategory.id), updated, { merge: true });
+        } catch (fsErr) {
+          console.warn("[Update Category] Firestore write note:", fsErr);
+        }
+
+        setCategories(prev => {
+          const newList = prev.map(c => c.id === editingCategory.id ? { ...c, ...updated } : c);
+          try { localStorage.setItem('asrarhub_cached_categories', JSON.stringify(newList)); } catch (e) {}
+          return newList;
         });
 
         setEditingCategory(null);
         showToast("Catégorie modifiée avec succès !");
       } catch (err: any) {
         console.error("Error updating category", err);
-        showToast(`Erreur: ${err.message}`, "error");
-      }
-    };
-
-    const handleDeleteCategory = async (catId: string) => {
-      if (!window.confirm("Êtes-vous sûr de vouloir supprimer cette catégorie et toutes ses sous-catégories ?")) {
-        return;
-      }
-
-      try {
-        await deleteDoc(doc(db, 'categories', catId));
-        localStorage.setItem('asrarhub_categories_seeded', 'true');
-        showToast("Catégorie supprimée avec succès !");
-      } catch (err: any) {
-        console.error("Error deleting category", err);
         showToast(`Erreur: ${err.message}`, "error");
       }
     };
@@ -7735,8 +8104,18 @@ export const AdminDashboard: React.FC = () => {
 
         const updatedSubs = [...existingSubs, newSub];
 
-        await updateDoc(doc(db, 'categories', catId), {
-          subCategories: updatedSubs
+        try {
+          await setDoc(doc(db, 'categories', catId), {
+            subCategories: updatedSubs
+          }, { merge: true });
+        } catch (fsErr) {
+          console.warn("[Create SubCategory] Firestore write note:", fsErr);
+        }
+
+        setCategories(prev => {
+          const newList = prev.map(c => c.id === catId ? { ...c, subCategories: updatedSubs } : c);
+          try { localStorage.setItem('asrarhub_cached_categories', JSON.stringify(newList)); } catch (e) {}
+          return newList;
         });
 
         setNewSubCategory({ categoryId: '', name: '', name_en: '', name_ha: '' });
@@ -7747,22 +8126,49 @@ export const AdminDashboard: React.FC = () => {
       }
     };
 
-    const handleDeleteSubCategory = async (catId: string, subId: string) => {
-      if (!window.confirm("Voulez-vous vraiment supprimer cette sous-catégorie ?")) return;
+    const handleUpdateSubCategory = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!editingSubCategory || !editingSubCategory.name?.trim()) {
+        showToast("Le nom de la sous-catégorie est requis", "error");
+        return;
+      }
 
       try {
-        const parentCat = categories.find(c => c.id === catId);
+        const { categoryId, subId, name, name_en, name_ha } = editingSubCategory;
+        const parentCat = categories.find(c => c.id === categoryId);
         if (!parentCat) return;
 
-        const updatedSubs = (parentCat.subCategories || []).filter((s: any) => s.id !== subId);
-
-        await updateDoc(doc(db, 'categories', catId), {
-          subCategories: updatedSubs
+        const subName = name.trim();
+        const updatedSubs = (parentCat.subCategories || []).map((s: any) => {
+          if (s.id === subId) {
+            return {
+              id: subId,
+              name: subName,
+              name_en: name_en.trim() || subName,
+              name_ha: name_ha.trim() || subName
+            };
+          }
+          return s;
         });
 
-        showToast("Sous-catégorie supprimée !");
+        try {
+          await setDoc(doc(db, 'categories', categoryId), {
+            subCategories: updatedSubs
+          }, { merge: true });
+        } catch (fsErr) {
+          console.warn("[Update SubCategory] Firestore write note:", fsErr);
+        }
+
+        setCategories(prev => {
+          const newList = prev.map(c => c.id === categoryId ? { ...c, subCategories: updatedSubs } : c);
+          try { localStorage.setItem('asrarhub_cached_categories', JSON.stringify(newList)); } catch (e) {}
+          return newList;
+        });
+
+        setEditingSubCategory(null);
+        showToast("Sous-catégorie modifiée avec succès !");
       } catch (err: any) {
-        console.error("Error deleting subcategory", err);
+        console.error("Error updating subcategory", err);
         showToast(`Erreur: ${err.message}`, "error");
       }
     };
@@ -7929,20 +8335,22 @@ export const AdminDashboard: React.FC = () => {
                         </p>
                       </div>
                     </div>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-2">
                       <button
                         onClick={() => setEditingCategory({ ...cat })}
-                        className="p-2 text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-xl transition-colors"
+                        className="px-3 py-1.5 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50 border border-amber-200 dark:border-amber-800 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs"
                         title="Modifier la catégorie"
                       >
-                        <Edit2 size={16} />
+                        <Edit2 size={14} />
+                        <span>Modifier</span>
                       </button>
                       <button
                         onClick={() => handleDeleteCategory(cat.id)}
-                        className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-xl transition-colors"
+                        className="px-3 py-1.5 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/50 border border-red-200 dark:border-red-800 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs"
                         title="Supprimer la catégorie"
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={14} />
+                        <span>Supprimer</span>
                       </button>
                     </div>
                   </div>
@@ -7954,21 +8362,96 @@ export const AdminDashboard: React.FC = () => {
                       <p className="text-sm text-gray-400 italic">Aucune sous-catégorie</p>
                     ) : (
                       <div className="flex flex-wrap gap-2">
-                        {(cat.subCategories || []).map((sub: any) => (
-                          <div
-                            key={sub.id}
-                            className="flex items-center gap-1.5 px-3 py-1 bg-gray-50 dark:bg-gray-900 border border-gray-150 dark:border-gray-700 rounded-xl text-xs font-semibold text-gray-700 dark:text-gray-300"
-                          >
-                            <span>{sub.name}</span>
-                            <button
-                              type="button"
-                              onClick={() => handleDeleteSubCategory(cat.id, sub.id)}
-                              className="text-gray-400 hover:text-red-500 transition-colors"
+                        {(cat.subCategories || []).map((sub: any) => {
+                          const isThisSubEditing = editingSubCategory?.categoryId === cat.id && editingSubCategory?.subId === sub.id;
+
+                          if (isThisSubEditing) {
+                            return (
+                              <form
+                                key={sub.id}
+                                onSubmit={handleUpdateSubCategory}
+                                className="w-full bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-700/50 rounded-2xl p-3 space-y-2.5 my-1"
+                              >
+                                <div className="text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center justify-between">
+                                  <span className="flex items-center gap-1"><Edit2 size={12} /> Modifier la sous-catégorie</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditingSubCategory(null)}
+                                    className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                                  >
+                                    <X size={14} />
+                                  </button>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                  <input
+                                    type="text"
+                                    value={editingSubCategory.name}
+                                    onChange={(e) => setEditingSubCategory({ ...editingSubCategory, name: e.target.value })}
+                                    placeholder="Nom (FR)"
+                                    className="w-full bg-white dark:bg-gray-900 border border-amber-200 dark:border-amber-800 rounded-xl p-2 text-xs text-gray-900 dark:text-white outline-none focus:ring-1 focus:ring-amber-500"
+                                    required
+                                  />
+                                  <input
+                                    type="text"
+                                    value={editingSubCategory.name_en}
+                                    onChange={(e) => setEditingSubCategory({ ...editingSubCategory, name_en: e.target.value })}
+                                    placeholder="Nom (EN)"
+                                    className="w-full bg-white dark:bg-gray-900 border border-amber-200 dark:border-amber-800 rounded-xl p-2 text-xs text-gray-900 dark:text-white outline-none focus:ring-1 focus:ring-amber-500"
+                                  />
+                                  <input
+                                    type="text"
+                                    value={editingSubCategory.name_ha}
+                                    onChange={(e) => setEditingSubCategory({ ...editingSubCategory, name_ha: e.target.value })}
+                                    placeholder="Nom (HA)"
+                                    className="w-full bg-white dark:bg-gray-900 border border-amber-200 dark:border-amber-800 rounded-xl p-2 text-xs text-gray-900 dark:text-white outline-none focus:ring-1 focus:ring-amber-500"
+                                  />
+                                </div>
+                                <div className="flex gap-2 justify-end">
+                                  <button
+                                    type="submit"
+                                    className="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors"
+                                  >
+                                    Enregistrer
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => setEditingSubCategory(null)}
+                                    className="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 text-gray-700 dark:text-gray-200 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors"
+                                  >
+                                    Annuler
+                                  </button>
+                                </div>
+                              </form>
+                            );
+                          }
+
+                          return (
+                            <div
+                              key={sub.id}
+                              className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-semibold text-gray-800 dark:text-gray-200 shadow-2xs"
                             >
-                              <X size={12} />
-                            </button>
-                          </div>
-                        ))}
+                              <span>{sub.name}</span>
+                              <div className="flex items-center gap-1 pl-1 border-l border-gray-200 dark:border-gray-700">
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingSubCategory({ categoryId: cat.id, subId: sub.id, name: sub.name || '', name_en: sub.name_en || '', name_ha: sub.name_ha || '' })}
+                                  className="p-1 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40 rounded-md transition-colors"
+                                  title="Modifier cette sous-catégorie"
+                                >
+                                  <Edit2 size={12} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteSubCategory(cat.id, sub.id)}
+                                  className="p-1 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-md transition-colors"
+                                  title="Supprimer cette sous-catégorie"
+                                >
+                                  <Trash2 size={12} />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     )}
                   </div>
@@ -8339,6 +8822,7 @@ export const AdminDashboard: React.FC = () => {
         {activeTab === 'users' && renderUsers()}
         {activeTab === 'payments' && renderPayments()}
         {activeTab === 'articles' && renderArticles()}
+        {activeTab === 'media_storage' && <AdminMediaStorageManager />}
         {activeTab === 'categories' && renderCategories()}
         {activeTab === 'store' && <AdminStoreManager featureToggles={featureToggles} handleToggleFeature={handleToggleFeature} />}
         {activeTab === 'community' && renderCommunity()}

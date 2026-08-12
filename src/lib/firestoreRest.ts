@@ -129,3 +129,69 @@ export const fetchUsersFromRest = async (idToken?: string): Promise<any[]> => {
   }
 };
 
+/**
+ * Direct HTTPS REST API fetcher for Firestore collection 'categories'.
+ */
+export const fetchCategoriesFromRest = async (): Promise<any[]> => {
+  try {
+    const config = firebaseConfig;
+    if (!config || !config.projectId || !config.apiKey) return [];
+    const url = `https://firestore.googleapis.com/v1/projects/${config.projectId}/databases/(default)/documents/categories?key=${config.apiKey}`;
+    const res = await fetch(url, { method: 'GET', cache: 'no-store' });
+    if (!res.ok) return [];
+    const json = await res.json();
+    if (!json.documents || !Array.isArray(json.documents)) return [];
+    return json.documents.map(parseFirestoreRestDoc);
+  } catch (err) {
+    console.warn(`[Firestore REST Categories] Note: could not fetch categories via REST:`, err);
+    return [];
+  }
+};
+
+/**
+ * Direct HTTPS REST API deletion for an article document in Firestore.
+ */
+export const deleteArticleFromRest = async (id: string): Promise<boolean> => {
+  if (!id) return false;
+  try {
+    const config = firebaseConfig;
+    if (!config || !config.projectId || !config.apiKey) return false;
+    const url = `https://firestore.googleapis.com/v1/projects/${config.projectId}/databases/(default)/documents/articles/${id}?key=${config.apiKey}`;
+    const res = await fetch(url, { method: 'DELETE' });
+    if (res.ok) {
+      console.log(`[Firestore REST] Article ${id} deleted successfully from Firebase Firestore via REST API.`);
+      return true;
+    } else {
+      console.warn(`[Firestore REST] Delete article ${id} REST request returned status ${res.status}`);
+      return false;
+    }
+  } catch (err) {
+    console.warn(`[Firestore REST] Could not delete article ${id} via REST:`, err);
+    return false;
+  }
+};
+
+/**
+ * Direct HTTPS REST API deletion for a category document in Firestore.
+ */
+export const deleteCategoryFromRest = async (id: string): Promise<boolean> => {
+  if (!id) return false;
+  try {
+    const config = firebaseConfig;
+    if (!config || !config.projectId || !config.apiKey) return false;
+    const url = `https://firestore.googleapis.com/v1/projects/${config.projectId}/databases/(default)/documents/categories/${id}?key=${config.apiKey}`;
+    const res = await fetch(url, { method: 'DELETE' });
+    if (res.ok) {
+      console.log(`[Firestore REST] Category ${id} deleted successfully from Firebase Firestore via REST API.`);
+      return true;
+    } else {
+      console.warn(`[Firestore REST] Delete category ${id} REST request returned status ${res.status}`);
+      return false;
+    }
+  } catch (err) {
+    console.warn(`[Firestore REST] Could not delete category ${id} via REST:`, err);
+    return false;
+  }
+};
+
+

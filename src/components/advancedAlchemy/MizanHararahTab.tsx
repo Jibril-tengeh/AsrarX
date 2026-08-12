@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { Flame, Sparkles, Download, Info, ShieldAlert, RefreshCw, Activity, HeartHandshake } from 'lucide-react';
+import { Flame, Sparkles, Info, ShieldAlert, RefreshCw, Activity, HeartHandshake } from 'lucide-react';
 import { calculateAbjadValue } from '../../utils/abjad';
+import { ExportFormatButtons } from '../common/ExportFormatButtons';
 
 interface MizanHararahTabProps {
   language: string;
@@ -205,13 +206,13 @@ export default function MizanHararahTab({ language }: MizanHararahTabProps) {
             {language === 'en' ? 'Thermal Load:' : 'Charge Thermique :'} <span className="font-bold text-amber-300">{analysis.totalThermalUnits} U.T.</span>
           </div>
 
-          <button
-            onClick={handleDownloadSVG}
-            className="px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-500 text-white font-bold text-xs flex items-center gap-2 shadow-md cursor-pointer"
-          >
-            <Download size={14} />
-            <span>{language === 'en' ? 'Download Thermal Gauge (SVG)' : 'Télécharger le Cadran (SVG)'}</span>
-          </button>
+          <ExportFormatButtons
+            svgId="mizan-hararah-svg"
+            filename={`mizan_hararah_${inputText}`}
+            title={language === 'en' ? 'Mizan al-Hararah Thermal Gauge' : 'Mizan al-Hararah Cadran Thermique'}
+            subtitle={`Formule: ${inputText} • Risque: ${analysis.fatigueRiskPct}%`}
+            language={language}
+          />
         </div>
 
         {/* Diagnostic Metrics & Counter-Balance Protocol (7 cols) */}

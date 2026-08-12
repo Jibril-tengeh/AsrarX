@@ -1,25 +1,29 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { ArrowLeft } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { executeStepByStepBack, getCurrentRoutePath } from '../utils/backNavigation';
 
 export const FloatingBackButton: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useLanguage();
   const [hasActiveOverlay, setHasActiveOverlay] = useState(false);
+  const lastBackPressTimeRef = useRef<number>(0);
+
+  const activePath = getCurrentRoutePath();
 
   // Track internal route stack in sessionStorage step-by-step
   useEffect(() => {
-    const currentFull = location.pathname + location.search + location.hash;
+    const currentFull = activePath + location.search + location.hash;
     try {
       const rawStack = sessionStorage.getItem('asrar_route_stack');
       let stack: string[] = rawStack ? JSON.parse(rawStack) : [];
       stack = stack.filter(Boolean);
 
       if (stack[stack.length - 1] !== currentFull) {
-        if (location.pathname === '/' || location.pathname === '/user/dashboard') {
+        if (activePath === '/' || activePath === '/user/dashboard') {
           stack = ['/user/dashboard'];
         } else {
           stack.push(currentFull);
@@ -32,7 +36,7 @@ export const FloatingBackButton: React.FC = () => {
     } catch (e) {
       console.warn("Error updating route stack", e);
     }
-  }, [location.pathname, location.search, location.hash]);
+  }, [activePath, location.search, location.hash]);
 
   // Monitor DOM for active overlays/modals
   useEffect(() => {
@@ -48,82 +52,11 @@ export const FloatingBackButton: React.FC = () => {
     return () => observer.disconnect();
   }, []);
 
-  const isMainPageName = location.pathname === '/' || location.pathname === '/user/dashboard';
+  const isMainPageName = activePath === '/' || activePath === '/user/dashboard';
   const isVisible = !isMainPageName || hasActiveOverlay || Boolean(location.search) || Boolean(location.hash);
 
   const handleBack = () => {
-    // 1. Dispatch custom event for components to handle in-page step-back (e.g. closing selected items)
-    const backEvent = new CustomEvent('asrar_back', { cancelable: true });
-    window.dispatchEvent(backEvent);
-
-    if (backEvent.defaultPrevented) {
-      return;
-    }
-
-    // 2. Check if a DOM modal overlay exists and try to close it
-    const activeOverlay = document.querySelector('[data-modal-overlay="true"], .modal-overlay, [role="dialog"]');
-    if (activeOverlay) {
-      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true }));
-      const closeBtn = activeOverlay.querySelector('button[aria-label*="close" i], button[aria-label*="fermer" i], button.close-modal') as HTMLButtonElement | null;
-      if (closeBtn) {
-        closeBtn.click();
-      }
-      return;
-    }
-
-    // 3. Clear search parameters / query filters if present
-    if (location.search || location.hash) {
-      navigate(location.pathname, { replace: true });
-      return;
-    }
-
-    // 4. Try popping from internal stack
-    try {
-      const rawStack = sessionStorage.getItem('asrar_route_stack');
-      let stack: string[] = rawStack ? JSON.parse(rawStack) : [];
-      const currentFull = location.pathname + location.search + location.hash;
-
-      // Remove current location and any identical top entries
-      while (stack.length > 0 && stack[stack.length - 1] === currentFull) {
-        stack.pop();
-      }
-
-      if (stack.length > 0) {
-        const prevPath = stack.pop()!;
-        sessionStorage.setItem('asrar_route_stack', JSON.stringify(stack));
-        navigate(prevPath);
-        return;
-      }
-    } catch (e) {
-      console.warn("Error reading route stack", e);
-    }
-
-    // 5. Smart hierarchical route fallback
-    const currentPath = location.pathname;
-
-    if (currentPath.startsWith('/tools/') && currentPath !== '/tools') {
-      navigate('/tools');
-      return;
-    }
-
-    if (currentPath.startsWith('/explore/') && currentPath !== '/explore') {
-      navigate('/explore');
-      return;
-    }
-
-    if (currentPath.startsWith('/secret/')) {
-      const lastMain = sessionStorage.getItem('last_active_main_path') || '/explore';
-      navigate(lastMain);
-      return;
-    }
-
-    if (['/tools', '/explore', '/journal', '/saved', '/profile', '/store', '/community', '/faq', '/payment', '/admin'].includes(currentPath)) {
-      navigate('/user/dashboard');
-      return;
-    }
-
-    // Final fallback to dashboard
-    navigate('/user/dashboard');
+    executeStepByStepBack(navigate, lastBackPressTimeRef);
   };
 
   return (
@@ -145,3 +78,4 @@ export const FloatingBackButton: React.FC = () => {
     </AnimatePresence>
   );
 };
+

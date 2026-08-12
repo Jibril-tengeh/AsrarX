@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { Music, Sparkles, Download, Info, Activity, Radio, Volume2 } from 'lucide-react';
+import { Music, Sparkles, Info, Activity, Radio, Volume2 } from 'lucide-react';
 import { calculateAbjadValue } from '../../utils/abjad';
+import { ExportFormatButtons } from '../common/ExportFormatButtons';
 
 interface MizanTaraneemTabProps {
   language: string;
@@ -204,13 +205,13 @@ export default function MizanTaraneemTab({ language }: MizanTaraneemTabProps) {
             </text>
           </svg>
 
-          <button
-            onClick={handleDownloadSVG}
-            className="px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-white font-bold text-xs flex items-center gap-2 shadow-md cursor-pointer"
-          >
-            <Download size={14} />
-            <span>{language === 'en' ? 'Download Wave Graph (SVG)' : 'Télécharger le Graphe Wave (SVG)'}</span>
-          </button>
+          <ExportFormatButtons
+            svgId="mizan-taraneem-svg"
+            filename={`mizan_taraneem_${activeText}`}
+            title={language === 'en' ? 'Mizan al-Taraneem Acoustic Wave' : 'Mizan al-Taraneem Resonance Phonétique'}
+            subtitle={`Fréquence: ${metrics.baseFreqHz} Hz • Formule: ${activeText}`}
+            language={language}
+          />
         </div>
 
         {/* Breakdown Analysis (7 cols) */}

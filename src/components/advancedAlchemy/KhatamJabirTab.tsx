@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { Scale, Sparkles, Download, Info, RefreshCw, Activity, Layers, ShieldCheck } from 'lucide-react';
+import { Scale, Sparkles, Info, RefreshCw, Activity, Layers, ShieldCheck } from 'lucide-react';
 import { calculateAbjadValue } from '../../utils/abjad';
+import { ExportFormatButtons } from '../common/ExportFormatButtons';
 
 interface KhatamJabirTabProps {
   language: string;
@@ -237,13 +238,13 @@ export default function KhatamJabirTab({ language }: KhatamJabirTabProps) {
             </text>
           </svg>
 
-          <button
-            onClick={handleDownloadSVG}
-            className="px-4 py-2 rounded-xl bg-teal-600 hover:bg-teal-500 text-white font-bold text-xs flex items-center gap-2 shadow-md cursor-pointer"
-          >
-            <Download size={14} />
-            <span>{language === 'en' ? 'Download Balance Diagram (SVG)' : 'Télécharger le Schéma de Balance (SVG)'}</span>
-          </button>
+          <ExportFormatButtons
+            svgId="jabir-scale-svg"
+            filename={`khatam_jabir_${inputText}`}
+            title={language === 'en' ? 'Mizan Jabir Ibn Hayyan Balance' : 'Mizan Jabir Ibn Hayyan'}
+            subtitle={`Nom/Formule: ${inputText} • Abjad: ${analysis.abjadVal}`}
+            language={language}
+          />
         </div>
 
         {/* 4 Elemental Quality Bars & Diagnosis (7 cols) */}

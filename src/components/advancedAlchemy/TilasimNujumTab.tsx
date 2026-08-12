@@ -554,13 +554,13 @@ export default function TilasimNujumTab({ language }: TilasimNujumTabProps) {
             {language === 'en' ? 'Combined Sigil Abjad:' : 'Valeur Abjad Combinée :'} <span className="font-bold text-amber-400">{combinedTotal}</span>
           </div>
 
-          <button
-            onClick={handleDownloadSVG}
-            className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs flex items-center gap-2 shadow-md cursor-pointer"
-          >
-            <Download size={14} />
-            <span>{language === 'en' ? 'Download Star Sigil (SVG)' : 'Télécharger le Sceau (SVG)'}</span>
-          </button>
+          <ExportFormatButtons
+            svgId="behenian-sigil-svg"
+            filename={`tilasim_nujum_${selectedStar.id}_${intentionAbjad}`}
+            title={language === 'en' ? `Behenian Star Sigil (${selectedStar.modernName})` : `Tilasim Nujum (${selectedStar.nameFr})`}
+            subtitle={`Sceau d'Étoile • Abjad Combiné: ${combinedTotal}`}
+            language={language}
+          />
         </div>
 
         {/* Hermetic Correspondences & Instructions (7 cols) */}

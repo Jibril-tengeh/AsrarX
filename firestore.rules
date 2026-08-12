@@ -114,13 +114,11 @@ service cloud.firestore {
     }
     
     match /articles/{document=**} {
-      allow read: if true;
-      allow write: if isAdmin();
+      allow read, write: if true;
     }
 
     match /categories/{document=**} {
-      allow read: if true;
-      allow write: if isAdmin();
+      allow read, write: if true;
     }
 
     match /halaqat/{circleId} {

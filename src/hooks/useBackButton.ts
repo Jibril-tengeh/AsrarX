@@ -16,8 +16,11 @@ export function useBackButton(onBack: () => void, active: boolean = true) {
     };
 
     window.addEventListener('app:backbutton', handleBack);
+    window.addEventListener('asrar_back', handleBack);
     return () => {
       window.removeEventListener('app:backbutton', handleBack);
+      window.removeEventListener('asrar_back', handleBack);
     };
   }, [onBack, active]);
 }
+

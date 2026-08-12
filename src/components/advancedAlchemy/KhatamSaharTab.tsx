@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
-import { Sun, Sparkles, Download, Clock, Info, Heart, Shield } from 'lucide-react';
+import { Sun, Sparkles, Clock, Info, Heart, Shield } from 'lucide-react';
 import { calculateAbjadValue, numberToAbjadLetters } from '../../utils/abjad';
+import { ExportFormatButtons } from '../common/ExportFormatButtons';
 
 interface KhatamSaharTabProps {
   language: string;
@@ -177,13 +178,13 @@ export default function KhatamSaharTab({ language }: KhatamSaharTabProps) {
             {language === 'en' ? 'Litany Abjad Sum:' : 'Poids Abjad de la Litanie :'} <span className="font-bold text-amber-300">{litanyAbjad}</span>
           </div>
 
-          <button
-            onClick={handleDownloadSVG}
-            className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs flex items-center gap-2 shadow-md cursor-pointer"
-          >
-            <Download size={14} />
-            <span>{language === 'en' ? 'Download Pre-Dawn Square (SVG)' : 'Télécharger le Carré (SVG)'}</span>
-          </button>
+          <ExportFormatButtons
+            svgId="khatam-sahar-3x3-svg"
+            filename={`khatam_sahar_${selectedLitanyId}`}
+            title={language === 'en' ? 'Pre-Dawn Khatam (Sahar 3x3)' : 'Carré de l\'Aube (Khatam Sahar 3x3)'}
+            subtitle={`Litanie Abjad: ${litanyAbjad}`}
+            language={language}
+          />
         </div>
 
         {/* Pre-Dawn Protocol & Meditation Guide (7 cols) */}

@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { Compass, Sparkles, Download, RefreshCw, Eye, Layers, RotateCcw } from 'lucide-react';
+import { Compass, Sparkles, RefreshCw, Eye, Layers, RotateCcw } from 'lucide-react';
+import { ExportFormatButtons } from '../common/ExportFormatButtons';
 
 interface UsturlabManazilTabProps {
   language: string;
@@ -220,13 +221,13 @@ export default function UsturlabManazilTab({ language }: UsturlabManazilTabProps
             </text>
           </svg>
 
-          <button
-            onClick={handleDownloadSVG}
-            className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs flex items-center gap-2 shadow-md cursor-pointer"
-          >
-            <Download size={14} />
-            <span>{language === 'en' ? 'Download 3D Astrolabe (SVG)' : 'Télécharger l\'Astrolabe (SVG)'}</span>
-          </button>
+          <ExportFormatButtons
+            svgId="usturlab-3d-svg"
+            filename={`usturlab_manazil_${mansion.id}`}
+            title={language === 'en' ? `Astrolabe - ${mansion.nameEn}` : `Astrolabe - ${mansion.nameFr}`}
+            subtitle={`Maison Lunaire #${mansion.id} (${mansion.arabicName})`}
+            language={language}
+          />
         </div>
 
         {/* Spiritual Correspondences (7 cols) */}

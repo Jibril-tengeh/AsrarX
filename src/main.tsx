@@ -14,8 +14,12 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 // Detect Capacitor / Native Mobile environment
 const isCapacitorNative = typeof window !== 'undefined' && (
   !!(window as any)?.Capacitor?.isNativePlatform?.() ||
+  !!(window as any)?.Capacitor ||
+  window.location.protocol === 'capacitor:' ||
   window.location.protocol === 'file:' ||
-  (window.location.hostname === 'localhost' && !!(window as any)?.Capacitor)
+  window.location.hostname === 'localhost' ||
+  navigator.userAgent.includes('Capacitor') ||
+  navigator.userAgent.includes('wv')
 );
 
 // Unregister active service worker in development or in Capacitor to avoid chunk/view conflicts

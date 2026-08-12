@@ -17,7 +17,7 @@ import { AuthModal } from '../../components/AuthModal';
 import { INITIAL_DEFAULT_ARTICLES } from '../../data/defaultArticles';
 import { fetchArticlesFromRest } from '../../lib/firestoreRest';
 import { isPubliclyVisibleArticle, getTranslatedArticleTitle, getTranslatedArticleHook } from '../../lib/articleUtils';
-import { mergeWithLocalArticles } from '../../lib/localArticles';
+import { mergeWithLocalArticles, saveCachedArticlesList, combineWithDefaultArticles } from '../../lib/localArticles';
 import { useBackButton } from '../../hooks/useBackButton';
 
 export const ExploreDashboard: React.FC = () => {
@@ -165,9 +165,7 @@ export const ExploreDashboard: React.FC = () => {
       }
     } catch (e) {}
 
-    const q = isAdmin 
-      ? collection(db, 'articles') 
-      : query(collection(db, 'articles'), where('status', 'in', ['Published', 'published']));
+    const q = collection(db, 'articles');
 
     const processExploreRaw = (data: any, docId: string) => {
       if (!data) return null;
@@ -178,12 +176,15 @@ export const ExploreDashboard: React.FC = () => {
       if (!activeHook && activeContent) {
         activeHook = activeContent.replace(/<[^>]+>/g, '').substring(0, 120) + '...';
       }
+      const img = data.thumbnail || data.imageUrl || '';
       return {
         id: docId || data.id,
         ...data,
         title: activeTitle,
         content: activeContent,
         hook: activeHook,
+        imageUrl: img,
+        thumbnail: img,
         createdAt: formatCreatedAt(data.createdAt)
       };
     };
@@ -216,6 +217,7 @@ export const ExploreDashboard: React.FC = () => {
           content: activeContent,
           benefits: art.benefits || [],
           imageUrl: art.thumbnail,
+          thumbnail: art.thumbnail,
           isPremium: art.isPremium || false,
           createdAt: art.createdAt
         };
@@ -236,10 +238,9 @@ export const ExploreDashboard: React.FC = () => {
           }
         }
       } catch (e) {}
-      if (base.length === 0) {
-        base = getDefaultExploreArticles().filter((art: any) => isPublishedStatus(art.status));
-      }
-      const merged = mergeWithLocalArticles(base);
+      const defaultItems = getDefaultExploreArticles().filter((art: any) => isPublishedStatus(art.status));
+      const combined = combineWithDefaultArticles(defaultItems, base);
+      const merged = mergeWithLocalArticles(combined);
       setArticles(merged);
       setIsLoading(false);
     };
@@ -253,14 +254,14 @@ export const ExploreDashboard: React.FC = () => {
         const fresh = restDocs
           .map(d => processExploreRaw(d, d.id))
           .filter((art: any) => art !== null && isPublishedStatus(art.status));
-        const merged = mergeWithLocalArticles(fresh);
+        const defaultItems = getDefaultExploreArticles().filter((art: any) => isPublishedStatus(art.status));
+        const combined = combineWithDefaultArticles(defaultItems, fresh);
+        const merged = mergeWithLocalArticles(combined);
         if (merged.length > 0) {
           console.log(`[Articles REST - ExploreDashboard] Loaded ${merged.length} articles via REST API!`);
           setArticles(merged);
           setIsLoading(false);
-          try {
-            localStorage.setItem('asrarhub_cached_explore_articles', JSON.stringify(merged));
-          } catch (e) {}
+          saveCachedArticlesList('asrarhub_cached_explore_articles', merged);
         }
       }
     }).catch(err => {
@@ -275,14 +276,14 @@ export const ExploreDashboard: React.FC = () => {
         .map(d => processExploreDoc(d))
         .filter((art: any) => art !== null && isPublishedStatus(art.status));
 
-      const merged = mergeWithLocalArticles(fresh);
+      const defaultItems = getDefaultExploreArticles().filter((art: any) => isPublishedStatus(art.status));
+      const combined = combineWithDefaultArticles(defaultItems, fresh);
+      const merged = mergeWithLocalArticles(combined);
       console.log(`[Articles getDocs - ExploreDashboard] ${merged.length} published articles ready.`);
       if (merged.length > 0) {
         setArticles(merged);
         setIsLoading(false);
-        try {
-          localStorage.setItem('asrarhub_cached_explore_articles', JSON.stringify(merged));
-        } catch (e) {}
+        saveCachedArticlesList('asrarhub_cached_explore_articles', merged);
       } else {
         tryRestoreExploreCacheOrDefaults();
       }
@@ -297,13 +298,13 @@ export const ExploreDashboard: React.FC = () => {
         .map(d => processExploreDoc(d))
         .filter((art: any) => art !== null && (isAdmin || isPublishedStatus(art.status)));
 
-      const merged = mergeWithLocalArticles(allArticles);
+      const defaultItems = getDefaultExploreArticles().filter((art: any) => isPublishedStatus(art.status));
+      const combined = combineWithDefaultArticles(defaultItems, allArticles);
+      const merged = mergeWithLocalArticles(combined);
       if (merged.length > 0) {
         console.log(`[Articles onSnapshot - ExploreDashboard] ${merged.length} published articles ready to display.`);
         setArticles(merged);
-        try {
-          localStorage.setItem('asrarhub_cached_explore_articles', JSON.stringify(merged));
-        } catch (e) {}
+        saveCachedArticlesList('asrarhub_cached_explore_articles', merged);
       } else {
         console.warn("[Articles onSnapshot - ExploreDashboard] Empty snapshot received, restoring cached/default articles.");
         tryRestoreExploreCacheOrDefaults();

@@ -18,7 +18,7 @@ import { AsrarQuickWidget } from '../../components/AsrarQuickWidget';
 import { INITIAL_DEFAULT_ARTICLES, DefaultArticle } from '../../data/defaultArticles';
 import { fetchArticlesFromRest } from '../../lib/firestoreRest';
 import { isPubliclyVisibleArticle, getTranslatedArticleTitle, getTranslatedArticleHook } from '../../lib/articleUtils';
-import { mergeWithLocalArticles } from '../../lib/localArticles';
+import { mergeWithLocalArticles, saveCachedArticlesList, combineWithDefaultArticles, setHideMockArticles, isMockArticlesHidden } from '../../lib/localArticles';
 import { useBackButton } from '../../hooks/useBackButton';
 
 const LucideIcon = ({ name, className, size }: { name: string; className?: string; size?: number }) => {
@@ -358,6 +358,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
       let titleText = getTranslatedArticleTitle(data, language);
 
       const hasManual = language !== 'fr' && !!(data[`title_${language}`] || data[`content_${language}`]);
+      const img = data.thumbnail || data.imageUrl || '';
       return {
         id: docId || data.id,
         title: titleText || data.title || 'Sans titre',
@@ -367,7 +368,8 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
         status: data.status || 'Published',
         content: activeContent,
         benefits: data.benefits || [],
-        imageUrl: data.thumbnail || data.imageUrl || '',
+        imageUrl: img,
+        thumbnail: img,
         isPremium: data.isPremium || false,
         createdAt: formatCreatedAt(data.createdAt),
         title_en: data.title_en,
@@ -402,6 +404,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
           content: activeContent,
           benefits: art.benefits || [],
           imageUrl: art.thumbnail,
+          thumbnail: art.thumbnail,
           isPremium: art.isPremium || false,
           createdAt: art.createdAt,
           title_en: art.title_en,
@@ -433,10 +436,9 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
           }
         }
       } catch (e) {}
-      if (baseItems.length === 0) {
-        baseItems = getDefaultItemsAsAsrarItems();
-      }
-      const merged = mergeWithLocalArticles(baseItems);
+      const defaultItems = getDefaultItemsAsAsrarItems();
+      const combined = combineWithDefaultArticles(defaultItems, baseItems);
+      const merged = mergeWithLocalArticles(combined);
       setItems(merged);
       setIsLoading(false);
     };
@@ -450,24 +452,22 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
         const parsed = restDocs
           .map(d => processRawObject(d, d.id))
           .filter((item): item is AsrarItem => item !== null);
-        const merged = mergeWithLocalArticles(parsed);
+        const defaultItems = getDefaultItemsAsAsrarItems();
+        const combined = combineWithDefaultArticles(defaultItems, parsed);
+        const merged = mergeWithLocalArticles(combined);
         if (merged.length > 0) {
           console.log(`[Articles REST - UserDashboard] Successfully loaded ${merged.length} real public articles via REST API!`);
           setItems(merged);
           setIsLoading(false);
-          try {
-            localStorage.setItem('asrarhub_cached_articles_list', JSON.stringify(merged));
-          } catch (e) {}
+          saveCachedArticlesList('asrarhub_cached_articles_list', merged);
         }
       }
     }).catch(err => {
       console.warn("[Articles REST - UserDashboard] REST fetch warning:", err);
     });
 
-    const isAdmin = user?.role === 'admin';
-    const q = isAdmin 
-      ? collection(db, 'articles') 
-      : query(collection(db, 'articles'), where('status', 'in', ['Published', 'published']));
+    // Query entire collection so articles with missing or custom status values are NEVER excluded
+    const q = collection(db, 'articles');
     console.log(`[Articles Query - UserDashboard] Querying collection 'articles'. User role: "${user?.role || 'user'}".`);
 
     // Standard getDocs fallback for reliable loading on native mobile/Capacitor builds
@@ -477,14 +477,14 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
         .map(d => processDocData(d))
         .filter((item): item is AsrarItem => item !== null);
 
-      const merged = mergeWithLocalArticles(freshItems);
+      const defaultItems = getDefaultItemsAsAsrarItems();
+      const combined = combineWithDefaultArticles(defaultItems, freshItems);
+      const merged = mergeWithLocalArticles(combined);
       console.log(`[Articles getDocs - UserDashboard] ${merged.length} published articles ready.`);
       if (merged.length > 0) {
         setItems(merged);
         setIsLoading(false);
-        try {
-          localStorage.setItem('asrarhub_cached_articles_list', JSON.stringify(merged));
-        } catch (e) {}
+        saveCachedArticlesList('asrarhub_cached_articles_list', merged);
       } else {
         tryRestoreCachedOrDefaults();
       }
@@ -499,15 +499,13 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
         .map(d => processDocData(d))
         .filter((item): item is AsrarItem => item !== null);
 
-      const merged = mergeWithLocalArticles(firestoreItems);
+      const defaultItems = getDefaultItemsAsAsrarItems();
+      const combined = combineWithDefaultArticles(defaultItems, firestoreItems);
+      const merged = mergeWithLocalArticles(combined);
       if (merged.length > 0) {
         console.log(`[Articles onSnapshot - UserDashboard] ${merged.length} published articles ready to display.`);
         setItems(merged);
-        try {
-          localStorage.setItem('asrarhub_cached_articles_list', JSON.stringify(merged));
-        } catch (e) {
-          console.error("Error writing articles list to cache", e);
-        }
+        saveCachedArticlesList('asrarhub_cached_articles_list', merged);
       } else {
         console.warn("[Articles onSnapshot - UserDashboard] Empty snapshot received (offline or 0 items), restoring cached/default articles.");
         tryRestoreCachedOrDefaults();
@@ -701,20 +699,28 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
     ];
 
     const unsubscribe = onSnapshot(collection(db, 'categories'), (snapshot) => {
+      let deletedIds: string[] = [];
+      try { deletedIds = JSON.parse(localStorage.getItem('asrarhub_deleted_categories') || '[]'); } catch (e) {}
+
       if (!snapshot.empty) {
-        const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const list = snapshot.docs
+          .map(doc => ({ ...doc.data(), id: doc.id }))
+          .filter((cat: any) => !deletedIds.includes(cat.id));
         list.sort((a: any, b: any) => (a.createdAt || 0) - (b.createdAt || 0));
         setCategories(list);
         try {
           localStorage.setItem('asrarhub_cached_categories', JSON.stringify(list));
         } catch (e) {}
       } else {
-        setCategories(defaultCats);
+        const remainingDefaults = defaultCats.filter(c => !deletedIds.includes(c.id));
+        setCategories(remainingDefaults);
       }
     }, (error) => {
       console.warn("Categories fetch note (using local fallback):", error);
-      // Gracefully fall back to local default categories if permission is denied or offline
-      setCategories(defaultCats);
+      let deletedIds: string[] = [];
+      try { deletedIds = JSON.parse(localStorage.getItem('asrarhub_deleted_categories') || '[]'); } catch (e) {}
+      const remainingDefaults = defaultCats.filter(c => !deletedIds.includes(c.id));
+      setCategories(remainingDefaults);
     });
 
     return () => unsubscribe();

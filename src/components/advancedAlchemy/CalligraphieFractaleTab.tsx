@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { Sparkles, Download, Layers, Palette, RefreshCw, Eye } from 'lucide-react';
+import { Sparkles, Layers, Palette, RefreshCw, Eye } from 'lucide-react';
+import { ExportFormatButtons } from '../common/ExportFormatButtons';
 
 interface CalligraphieFractaleTabProps {
   language: string;
@@ -254,13 +255,13 @@ export default function CalligraphieFractaleTab({ language }: CalligraphieFracta
           ))}
         </svg>
 
-        <button
-          onClick={handleDownloadSVG}
-          className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs flex items-center gap-2 shadow-md cursor-pointer"
-        >
-          <Download size={14} />
-          <span>{language === 'en' ? 'Download Vector Fractal (SVG)' : 'Télécharger le Fractal Vectoriel (SVG)'}</span>
-        </button>
+        <ExportFormatButtons
+          svgId="calligraphie-fractale-svg"
+          filename={`fractal_calligraphy_${activeText}`}
+          title={language === 'en' ? 'Fractal Calligraphy' : 'Calligraphie Fractale'}
+          subtitle={`Géométrie: ${geometry} • Profondeur: ${depth}`}
+          language={language}
+        />
       </div>
     </div>
   );

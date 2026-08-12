@@ -838,13 +838,13 @@ export const SecretDetail: React.FC = () => {
                 localStorage.setItem('asrarhub_cached_article_details', JSON.stringify(cachedDetails));
               }
             } catch (e) {
-              console.error("Error saving article to offline cache", e);
+              console.warn("[Storage] Offline article cache warning:", e);
               // Fallback: if we STILL fail, try clearing the cache completely and just save the current one
               try {
                 const singleCache = { [id]: { ...fetchedItem, cachedAt: Date.now() } };
                 localStorage.setItem('asrarhub_cached_article_details', JSON.stringify(singleCache));
               } catch (retryError) {
-                console.error("Critical: Failed to save single article to cache", retryError);
+                console.warn("[Storage] Skipping single article offline cache due to storage quota:", retryError);
               }
             }
           } else {
