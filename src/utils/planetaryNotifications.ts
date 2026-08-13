@@ -1,9 +1,10 @@
+import { Capacitor } from '@capacitor/core';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { Geolocation } from '@capacitor/geolocation';
 import { Camera } from '@capacitor/camera';
 import { Filesystem } from '@capacitor/filesystem';
-import { Capacitor } from '@capacitor/core';
+import { getLocalizedNotificationText, dispatchSystemNotification } from './notificationLocalization';
 
 /**
  * Utility for Planetary Hours Browser & Capacitor Push Notifications with Audio Sound Alerts
@@ -375,74 +376,18 @@ export function checkAndTriggerPlanetaryNotification(overrideLang?: SupportedLan
     const favorability = rawPlanet.favorability[langKey] || rawPlanet.favorability.fr;
     const isPropitious = rawPlanet.isPropitious;
 
-    let title = '';
-    let body = '';
-
-    if (langKey === 'en') {
-      title = `Planetary Hour: ${planetName} (${rawPlanet.arabic})`;
-      body = `Influence: ${favorability}.\nA ${isPropitious ? 'highly beneficial' : 'special'} period has just begun.`;
-    } else if (langKey === 'ha') {
-      title = `Sa'ar Tauraro: ${planetName} (${rawPlanet.arabic})`;
-      body = `Tasiri: ${favorability}.\nLokaci mai ${isPropitious ? 'albarka mai yawa' : 'muhimmanci'} ya soma.`;
-    } else {
-      title = `Heure Planétaire : ${planetName} (${rawPlanet.arabic})`;
-      body = `Prospérité : ${favorability}.\nUne période ${isPropitious ? 'hautement bénéfique' : 'particulière'} vient de débuter.`;
-    }
+    const { title, body } = getLocalizedNotificationText('planetaryHour', langKey, {
+      planetName,
+      planetArabic: rawPlanet.arabic,
+      favorability,
+      isPropitious,
+    });
 
     // Ring audio alert
     playNotificationTone();
 
-    // Check Capacitor LocalNotifications
-    if (Capacitor.isNativePlatform()) {
-      try {
-        LocalNotifications.schedule({
-          notifications: [
-            {
-              title,
-              body,
-              id: Math.floor(Math.random() * 10000) + 1,
-              schedule: { at: new Date(Date.now() + 100) },
-              actionTypeId: '',
-              channelId: 'asrarhub_alerts',
-              extra: null,
-            },
-          ],
-        }).catch((err) => {
-          console.warn('Capacitor LocalNotification schedule promise rejection:', err);
-        });
-        return;
-      } catch (e) {
-        console.warn('Capacitor LocalNotification trigger error:', e);
-      }
-    }
-
-    // Service Worker Background Notification Dispatch
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.ready.then((registration) => {
-        registration.showNotification(title, {
-          body,
-          icon: '/icon-192.png',
-          badge: '/icon-192.png',
-          tag: 'planetary-hour-alert',
-          vibrate: [200, 100, 200, 100, 300],
-          data: { url: '/' }
-        } as any).catch(() => {
-          if ('Notification' in window && Notification.permission === 'granted') {
-            new Notification(title, { body, icon: '/icon-192.png', tag: 'planetary-hour-alert' });
-          }
-        });
-      }).catch(() => {
-        if ('Notification' in window && Notification.permission === 'granted') {
-          new Notification(title, { body, icon: '/icon-192.png', tag: 'planetary-hour-alert' });
-        }
-      });
-    } else if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification(title, {
-        body,
-        icon: '/icon-192.png',
-        tag: 'planetary-hour-alert',
-      });
-    }
+    // Dispatch localized notification
+    dispatchSystemNotification(title, body);
   }
 }
 

@@ -5,7 +5,7 @@ import { LayoutTester } from './components/LayoutTester';
 import { useAuth } from './contexts/AuthContext';
 import { useLanguage } from './contexts/LanguageContext';
 import { AuthModal } from './components/AuthModal';
-import { ShieldAlert, LogIn, RefreshCw, Sparkles, WifiOff, X } from 'lucide-react';
+import { ShieldAlert, LogIn, RefreshCw, Sparkles, WifiOff, X, Database } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { db, isAutoSaveEnabled } from './lib/firebase';
 import { BottomNav } from './components/BottomNav';
@@ -14,6 +14,7 @@ import { useAudio } from './contexts/AudioContext';
 import { AudioPlayer } from './components/AudioPlayer';
 import { SacredAudioPlayer } from './components/SacredAudioPlayer';
 import { requestNotificationPermission, requestAllPermissions, checkAndTriggerPlanetaryNotification } from './utils/planetaryNotifications';
+import { getLocalizedNotificationText, dispatchSystemNotification } from './utils/notificationLocalization';
 import { Onboarding } from './pages/Onboarding';
 import { DailyRewardHandler } from './components/DailyRewardHandler';
 import { ContentProtectionManager } from './components/ContentProtectionManager';
@@ -26,6 +27,7 @@ import { FirstOpenPermissionsModal } from './components/FirstOpenPermissionsModa
 import { CollapsibleFloatingWidget } from './components/CollapsibleFloatingWidget';
 import { FloatingTextResizer } from './components/FloatingTextResizer';
 import { FeatureProvider, useFeatures } from './contexts/FeatureContext';
+import { ImageDebugger } from './components/ImageDebugger';
 import UserDashboard from './pages/user/UserDashboard';
 import { FreeTrial24hModal } from './components/FreeTrial24hModal';
 import { UnverifiedEmailGuard } from './components/UnverifiedEmailGuard';
@@ -152,6 +154,13 @@ const AstrologicalElections = lazyWithRetry(() => import('./pages/user/tools/Ast
 const SacredGeography = lazyWithRetry(() => import('./pages/user/tools/SacredGeography'));
 const AdvancedAlchemy = lazyWithRetry(() => import('./pages/user/tools/AdvancedAlchemy'));
 const MetaphysicalDefense = lazyWithRetry(() => import('./pages/user/tools/MetaphysicalDefense'));
+const DiscretionMentalProtection = lazyWithRetry(() => import('./pages/user/tools/DiscretionMentalProtection'));
+const AnchoringAstralStability = lazyWithRetry(() => import('./pages/user/tools/AnchoringAstralStability'));
+const SpiritualToolsHub = lazyWithRetry(() => import('./pages/user/tools/SpiritualToolsHub'));
+const ThiebissabaTradition = lazyWithRetry(() => import('./pages/user/tools/ThiebissabaTradition'));
+const HighPrecisionIndividualization = lazyWithRetry(() => import('./pages/user/tools/HighPrecisionIndividualization'));
+const AdvancedRamlProcessing = lazyWithRetry(() => import('./pages/user/tools/AdvancedRamlProcessing'));
+const TraditionalDivinationQurah = lazyWithRetry(() => import('./pages/user/tools/TraditionalDivinationQurah'));
 const Store = lazyWithRetry(() => import('./pages/user/Store'));
 const FaqPage = lazyWithRetry(() => import('./pages/FaqPage'));
 
@@ -185,12 +194,61 @@ import { Capacitor } from '@capacitor/core';
 import { executeStepByStepBack } from './utils/backNavigation';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { pingFirestore, addNetworkLog } from './utils/networkLogger';
+import { revalidatePublishedArticles, getSWRCacheStats, SWRCacheStats } from './lib/swrArticleCache';
 
 const NetworkStatus = () => {
   const [isOnline, setIsOnline] = React.useState(navigator.onLine);
   const [checking, setChecking] = React.useState(false);
   const [statusFeedback, setStatusFeedback] = React.useState<string | null>(null);
+  const [bgSyncMessage, setBgSyncMessage] = React.useState<string | null>(null);
   const [isDismissed, setIsDismissed] = React.useState(false);
+  const [swrStats, setSwrStats] = React.useState<SWRCacheStats | null>(null);
+  const [isSwrSyncing, setIsSwrSyncing] = React.useState(false);
+
+  const loadSwrStats = React.useCallback(async () => {
+    try {
+      const stats = await getSWRCacheStats();
+      setSwrStats(stats);
+    } catch (e) {}
+  }, []);
+
+  const handleSWRRevalidate = React.useCallback(async (
+    triggerSource = 'manual',
+    options: { isSilent?: boolean } = {}
+  ) => {
+    const isSilent = options.isSilent ?? false;
+    setIsSwrSyncing(true);
+
+    if (!isSilent) {
+      setStatusFeedback("SWR : Synchronisation IndexedDB des articles en cours...");
+    } else {
+      setBgSyncMessage("Synchronisation IndexedDB des articles en arrière-plan...");
+    }
+
+    try {
+      const articles = await revalidatePublishedArticles(triggerSource);
+      await loadSwrStats();
+      if (!isSilent) {
+        setStatusFeedback(`Cache IndexedDB à jour : ${articles.length} articles révalidés.`);
+      } else {
+        setBgSyncMessage(`Synchro arrière-plan terminée (${articles.length} articles)`);
+        setTimeout(() => setBgSyncMessage(null), 4000);
+      }
+    } catch (err: any) {
+      console.warn('[NetworkStatus] SWR revalidation error:', err);
+      if (!isSilent) {
+        setStatusFeedback(`Mode Hors Ligne : Articles servis depuis IndexedDB.`);
+      } else {
+        setBgSyncMessage(`Synchro arrière-plan : Mode hors ligne.`);
+        setTimeout(() => setBgSyncMessage(null), 4000);
+      }
+    } finally {
+      setIsSwrSyncing(false);
+      if (!isSilent) {
+        setTimeout(() => setStatusFeedback(null), 6000);
+      }
+    }
+  }, [loadSwrStats]);
 
   const handleTestWebViewFetch = async () => {
     setChecking(true);
@@ -232,17 +290,42 @@ const NetworkStatus = () => {
   };
 
   React.useEffect(() => {
-    // Expose diagnostic tool on window for debugging in console
+    // Expose diagnostic tool & SWR revalidator on window for debugging
     if (typeof window !== 'undefined') {
       (window as any).asrarhub_test_webview_fetch = handleTestWebViewFetch;
+      (window as any).asrarhub_revalidate_swr = (silent = true) => handleSWRRevalidate('console', { isSilent: silent });
     }
+
+    // Load initial IndexedDB stats
+    loadSwrStats();
+
+    // Trigger initial SWR background revalidation if online (silent)
+    if (navigator.onLine) {
+      handleSWRRevalidate('app_start', { isSilent: true });
+    }
+
+    // Periodic background sync every 10 minutes
+    const periodicSyncInterval = setInterval(() => {
+      if (navigator.onLine) {
+        handleSWRRevalidate('periodic_bg', { isSilent: true });
+      }
+    }, 10 * 60 * 1000);
+
+    // Sync on tab visibility change
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && navigator.onLine) {
+        handleSWRRevalidate('tab_visible', { isSilent: true });
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     const doubleCheckOnline = () => {
       fetch('https://www.google.com/favicon.ico', { method: 'HEAD', mode: 'no-cors' })
         .then(() => {
           setIsOnline(true);
-          setIsDismissed(false);
           console.log("[NetworkStatus] Connection verified successfully via fetch.");
+          // Automatic Stale-While-Revalidate when online status confirmed
+          handleSWRRevalidate('online_reconnect', { isSilent: true });
         })
         .catch(() => {
           setIsOnline(false);
@@ -252,18 +335,16 @@ const NetworkStatus = () => {
 
     const handleOnline = () => {
       setIsOnline(true);
-      setIsDismissed(false);
       console.log("[NetworkStatus] Device went online.");
+      handleSWRRevalidate('online_event', { isSilent: true });
     };
     const handleOffline = () => {
-      // Double check before showing offline
       doubleCheckOnline();
     };
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    // Initial check on mount
     if (!navigator.onLine) {
       doubleCheckOnline();
     }
@@ -271,8 +352,10 @@ const NetworkStatus = () => {
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      clearInterval(periodicSyncInterval);
     };
-  }, []);
+  }, [handleSWRRevalidate, loadSwrStats]);
 
   const handleCheckStatus = async () => {
     setChecking(true);
@@ -281,6 +364,7 @@ const NetworkStatus = () => {
       const result = await pingFirestore();
       if (result.reachable) {
         setStatusFeedback(`Serveur OK (Latence: ${result.latencyMs}ms)`);
+        handleSWRRevalidate('ping_success', { isSilent: false });
       } else {
         setStatusFeedback(`Serveur injoignable : ${result.errorMessage || 'Erreur réseau'}`);
       }
@@ -292,23 +376,26 @@ const NetworkStatus = () => {
     }
   };
 
-  if (isOnline && !statusFeedback) return null;
+  // Render floating pill if dismissed OR if online with no active modal feedback
+  if (isDismissed || (isOnline && !statusFeedback)) {
+    // When online, article synchronization runs silently in the background without showing any floating pill on screen
+    if (!isOnline && isDismissed) {
+      return (
+        <button 
+          onClick={() => setIsDismissed(false)}
+          className="fixed bottom-20 left-4 z-[9990] bg-amber-600 hover:bg-amber-700 text-white text-xs px-3 py-1.5 rounded-full flex items-center gap-2 shadow-lg transition-all font-medium cursor-pointer border-0"
+          title="Connexion hors ligne - Cliquer pour ouvrir le diagnostic"
+        >
+          <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+          <span>Hors ligne ({swrStats?.count || 'Plusieurs'} articles en cache IndexedDB)</span>
+        </button>
+      );
+    }
 
-  // If user dismissed modal while offline, show a subtle floating pill at bottom corner to let them re-open or check
-  if (isDismissed && !isOnline) {
-    return (
-      <button 
-        onClick={() => setIsDismissed(false)}
-        className="fixed bottom-20 left-4 z-[9990] bg-amber-600 hover:bg-amber-700 text-white text-xs px-3 py-1.5 rounded-full flex items-center gap-2 shadow-lg transition-all font-medium cursor-pointer border-0"
-        title="Connexion hors ligne - Cliquer pour ouvrir les détails"
-      >
-        <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
-        <span>Hors ligne (Mode local)</span>
-      </button>
-    );
+    return null;
   }
 
-  // Pop Up Modal avertissant l'utilisateur qu'il est hors ligne
+  // Pop Up Modal avertissant l'utilisateur du réseau et affichant le statut du cache SWR IndexedDB
   return (
     <div className="fixed inset-0 z-[10001] bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
       <div className="bg-white dark:bg-slate-900 border border-amber-500/30 dark:border-amber-500/20 text-slate-800 dark:text-slate-100 rounded-2xl shadow-2xl p-6 max-w-md w-full relative space-y-4">
@@ -331,11 +418,41 @@ const NetworkStatus = () => {
             </h3>
             <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
               {!isOnline 
-                ? "Vous êtes actuellement hors ligne. Vos articles publiés, wirds et données enregistrées restent consultables localement sans connexion."
-                : "Ajustement ou analyse de la connectivité réseau en cours."
+                ? "Vous êtes hors ligne. Vos articles publiés sont conservés dans IndexedDB et restent accessibles en lecture instantanée."
+                : "Connectivité réseau active avec revalidation automatique Stale-While-Revalidate en arrière-plan."
               }
             </p>
           </div>
+        </div>
+
+        {/* IndexedDB Cache SWR Info Box */}
+        <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 rounded-xl flex items-center justify-between text-xs">
+          <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300">
+            <Database className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
+            <div>
+              <p className="font-bold flex items-center gap-1.5">
+                <span>Cache Persistant IndexedDB (SWR)</span>
+                <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-ping" title="Synchro arrière-plan active" />
+              </p>
+              <p className="text-[11px] text-emerald-700/80 dark:text-emerald-400/80">
+                {swrStats ? `${swrStats.count} articles publiés prêts • Synchro: ${swrStats.lastSyncFormatted}` : 'Chargement du cache...'}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => handleSWRRevalidate('user_click', { isSilent: false })}
+            disabled={isSwrSyncing || !isOnline}
+            className="p-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg transition-all border-0 cursor-pointer shrink-0"
+            title="Revalider les articles depuis le serveur (SWR)"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isSwrSyncing ? 'animate-spin' : ''}`} />
+          </button>
+        </div>
+
+        {/* Background Sync Notice Badge */}
+        <div className="px-3 py-2 bg-slate-100 dark:bg-slate-800/80 rounded-xl text-[11px] text-slate-600 dark:text-slate-300 flex items-center justify-between">
+          <span className="font-medium">⚡ Revalidation arrière-plan automatique :</span>
+          <span className="font-bold text-emerald-600 dark:text-emerald-400">Active (10m)</span>
         </div>
 
         {/* Status Feedback readout */}
@@ -347,10 +464,25 @@ const NetworkStatus = () => {
 
         {/* Actions */}
         <div className="pt-2 border-t border-slate-200 dark:border-slate-800 flex flex-col gap-2">
+          {/* Synchronize in background button */}
+          <button
+            onClick={() => {
+              setIsDismissed(true);
+              if (!isSwrSyncing && isOnline) {
+                handleSWRRevalidate('user_bg_click', { isSilent: true });
+              }
+            }}
+            disabled={!isOnline}
+            className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all shadow-md text-center cursor-pointer border-0 flex items-center justify-center gap-2"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${isSwrSyncing ? 'animate-spin' : ''}`} />
+            <span>{isSwrSyncing ? 'Poursuivre la synchronisation en arrière-plan' : 'Synchroniser en arrière-plan'}</span>
+          </button>
+
           <div className="flex flex-wrap gap-2">
             <button 
               onClick={handleCheckStatus}
-              disabled={checking}
+              disabled={checking || isSwrSyncing}
               className="flex-1 px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 border-0"
             >
               {checking ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : null}
@@ -359,7 +491,7 @@ const NetworkStatus = () => {
 
             <button 
               onClick={handleTestWebViewFetch}
-              disabled={checking}
+              disabled={checking || isSwrSyncing}
               className="flex-1 px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-xl text-xs font-semibold transition-all cursor-pointer border-0"
               title="Tester si le WebView Capacitor bloque les requêtes (CORS / Schème local)"
             >
@@ -369,9 +501,9 @@ const NetworkStatus = () => {
 
           <button 
             onClick={() => setIsDismissed(true)}
-            className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-md text-center cursor-pointer border-0"
+            className="w-full py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-medium transition-all text-center cursor-pointer border-0"
           >
-            Compris / Continuer en mode local
+            Continuer en mode local
           </button>
         </div>
       </div>
@@ -753,81 +885,17 @@ export default function App() {
       const currentMinute = now.getMinutes();
       const todayDateStr = now.toDateString();
 
-      // Trigger standard notifications using Capacitor LocalNotifications on native mobile, or ServiceWorker/Notification API on web
-      const dispatchNotification = (title: string, body: string) => {
-        try {
-          if (Capacitor.isNativePlatform()) {
-            LocalNotifications.schedule({
-              notifications: [
-                {
-                  title,
-                  body,
-                  id: Math.floor(Math.random() * 10000) + 1,
-                  schedule: { at: new Date(Date.now() + 100) },
-                  channelId: 'asrarhub_alerts',
-                },
-              ],
-            }).catch((err) => {
-              console.warn("Capacitor notification dispatch failed:", err);
-            });
-            return;
-          }
-
-          if ('Notification' in window && window.Notification && window.Notification.permission === 'granted') {
-            if ('serviceWorker' in navigator) {
-              navigator.serviceWorker.ready.then((registration) => {
-                registration.showNotification(title, {
-                  body,
-                  icon: '/icon-192.png',
-                  badge: '/icon-192.png'
-                }).catch(() => {
-                  try { new Notification(title, { body }); } catch {}
-                });
-              }).catch(() => {
-                try { new Notification(title, { body }); } catch {}
-              });
-            } else {
-              try { new Notification(title, { body }); } catch {}
-            }
-          }
-        } catch (e) {
-          console.error("Notification dispatch error", e);
-        }
-      };
-
       if (currentMinute !== lastCheckedMinute) {
         lastCheckedMinute = currentMinute;
         const currentTimeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-        
         const currentLang = (language || localStorage.getItem('language') || 'fr') as 'fr' | 'en' | 'ha';
 
         // Custom manually created reminders
         reminders.forEach((rem: any) => {
           if (rem.enabled && rem.time === currentTimeString) {
-            let title = '';
-            let body = '';
-            if (rem.isZikr) {
-              if (currentLang === 'en') {
-                title = 'Daily Dhikr Reminder 📿';
-                body = `It is time for your Dhikr: ${rem.label}`;
-              } else if (currentLang === 'ha') {
-                title = 'Tunasatar Dhikri 📿';
-                body = `Lokaci ya yi na Dhikri: ${rem.label}`;
-              } else {
-                title = 'Rappel de Zikr Quotidien 📿';
-                body = `Il est temps pour votre Zikr : ${rem.label}`;
-              }
-            } else {
-              title = 'AsrarHub';
-              if (currentLang === 'en') {
-                body = `Time for: ${rem.label}`;
-              } else if (currentLang === 'ha') {
-                body = `Lokaci ya yi na: ${rem.label}`;
-              } else {
-                body = `Il est temps pour : ${rem.label}`;
-              }
-            }
-            dispatchNotification(title, body);
+            const notificationType = rem.isZikr ? 'dhikrDaily' : 'customReminder';
+            const { title, body } = getLocalizedNotificationText(notificationType, currentLang, { label: rem.label });
+            dispatchSystemNotification(title, body);
           }
         });
 
@@ -837,20 +905,11 @@ export default function App() {
             if (time === currentTimeString) {
               const lastPrayerDate = autoRemindersConfig.lastPrayerReminders?.[prayer];
               if (lastPrayerDate !== todayDateStr) {
-                // Trigger notification
-                let title = '';
-                let body = '';
-                if (currentLang === 'en') {
-                  title = 'Prayer Time 🕌';
-                  body = `It is time for ${prayer} prayer (${time}). Take a sacred moment to pray.`;
-                } else if (currentLang === 'ha') {
-                  title = 'Lokacin Salati 🕌';
-                  body = `Lokacin salati ya yi na ${prayer} (${time}). Samu lokaci mai albarka don rokon Allah.`;
-                } else {
-                  title = `Heure de la Prière 🕌`;
-                  body = `C'est l'heure de la prière de ${prayer} (${time}). Prenez un moment sacré pour invoquer Dieu.`;
-                }
-                dispatchNotification(title, body);
+                const { title, body } = getLocalizedNotificationText('prayerTime', currentLang, {
+                  prayerName: prayer,
+                  time: String(time),
+                });
+                dispatchSystemNotification(title, body);
 
                 // Update last triggering date
                 if (!autoRemindersConfig.lastPrayerReminders) {
@@ -870,19 +929,8 @@ export default function App() {
         const intervalMs = (autoRemindersConfig.dhikrInterval || 60) * 60 * 1000;
         if (Date.now() - lastDhikrTime >= intervalMs) {
           const currentLang = (language || localStorage.getItem('language') || 'fr') as 'fr' | 'en' | 'ha';
-          let title = '';
-          let body = '';
-          if (currentLang === 'en') {
-            title = 'Recurring Dhikr Reminder 📿';
-            body = `It is time to remember Allah. Take a minute to do your Dhikr and purify your heart.`;
-          } else if (currentLang === 'ha') {
-            title = 'Tunasatar Dhikri Mai Maimaitawa 📿';
-            body = `Lokacin ambaton Allah ya yi. Samu minti daya don yin Dhikri da tsarkake zuciya.`;
-          } else {
-            title = `Rappel de Dhikr Récurrent 📿`;
-            body = `C'est l'heure d'évoquer Allah. Prenez une minute pour faire votre Zikr et purifier votre esprit.`;
-          }
-          dispatchNotification(title, body);
+          const { title, body } = getLocalizedNotificationText('dhikrRecurring', currentLang);
+          dispatchSystemNotification(title, body);
 
           // Update last triggering time
           autoRemindersConfig.lastDhikrReminder = Date.now();
@@ -1067,6 +1115,27 @@ export default function App() {
                   <Route path="/tools/metaphysical-defense" element={<MetaphysicalDefense />} />
                   <Route path="/tools/defense-metaphysique" element={<MetaphysicalDefense />} />
                   <Route path="/tools/defense" element={<MetaphysicalDefense />} />
+                  <Route path="/tools/discretion-protection" element={<DiscretionMentalProtection />} />
+                  <Route path="/tools/discretion-mental-protection" element={<DiscretionMentalProtection />} />
+                  <Route path="/tools/discretion" element={<DiscretionMentalProtection />} />
+                  <Route path="/tools/anchoring-stability" element={<AnchoringAstralStability />} />
+                  <Route path="/tools/ancrage-stabilite" element={<AnchoringAstralStability />} />
+                  <Route path="/tools/anchoring" element={<AnchoringAstralStability />} />
+                  <Route path="/tools/spiritual-hub" element={<SpiritualToolsHub />} />
+                  <Route path="/tools/spiritual" element={<SpiritualToolsHub />} />
+                  <Route path="/tools/thiebissaba-tradition" element={<ThiebissabaTradition />} />
+                  <Route path="/tools/thiebissaba" element={<ThiebissabaTradition />} />
+                  <Route path="/tools/cebesaba" element={<ThiebissabaTradition />} />
+                  <Route path="/tools/high-precision-individualization" element={<HighPrecisionIndividualization />} />
+                  <Route path="/tools/individualisation" element={<HighPrecisionIndividualization />} />
+                  <Route path="/tools/high-precision" element={<HighPrecisionIndividualization />} />
+                  <Route path="/tools/advanced-raml-processing" element={<AdvancedRamlProcessing />} />
+                  <Route path="/tools/khatam-raml" element={<AdvancedRamlProcessing />} />
+                  <Route path="/tools/raml" element={<AdvancedRamlProcessing />} />
+                  <Route path="/tools/divination-qurah" element={<TraditionalDivinationQurah />} />
+                  <Route path="/tools/qurah" element={<TraditionalDivinationQurah />} />
+                  <Route path="/tools/cauris" element={<TraditionalDivinationQurah />} />
+                  <Route path="/tools/azlam" element={<TraditionalDivinationQurah />} />
                   
                   {/* Additional Protected Routes */}
                   <Route path="/explore" element={<ExploreDashboard />} />
@@ -1131,6 +1200,9 @@ export default function App() {
             </motion.div>
           )}
         </AnimatePresence>
+        {/* Image Error Interceptor & Debugger */}
+        <ImageDebugger />
+
         {/* Download pop-up notification */}
         <DownloadNotificationPopup />
 

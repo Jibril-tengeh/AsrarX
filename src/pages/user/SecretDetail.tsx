@@ -8,6 +8,9 @@ import { INITIAL_DEFAULT_ARTICLES } from "../../data/defaultArticles";
 import { fetchSingleArticleFromRest } from "../../lib/firestoreRest";
 import { isPubliclyVisibleArticle } from "../../lib/articleUtils";
 import { getLocalCustomArticles } from "../../lib/localArticles";
+import { getOfflineData, setOfflineData } from "../../lib/offlineStorage";
+import { getArticleImageUrl, getArticleFallbackImage, getThematicSvgPlaceholder } from "../../utils/articleImageUtils";
+import { reportImageError } from "../../utils/imageDebugger";
 import {
   ArrowLeft,
   BookOpen,
@@ -735,6 +738,35 @@ export const SecretDetail: React.FC = () => {
       } catch (e) {
         console.error("Error reading cached article detail", e);
       }
+
+      // Asynchronous IndexedDB fallback check
+      getOfflineData<Record<string, any>>('asrarhub_cached_article_details').then(idbDetails => {
+        if (idbDetails && idbDetails[id]) {
+          const cachedItem = idbDetails[id];
+          setItem(prev => prev || {
+            ...cachedItem,
+            title_fr: cachedItem.title_fr || cachedItem.title,
+            content_fr: cachedItem.content_fr || cachedItem.content,
+            hook_fr: cachedItem.hook_fr || cachedItem.hook,
+          });
+        } else {
+          Promise.all([
+            getOfflineData<any[]>('asrarhub_cached_articles_list'),
+            getOfflineData<any[]>('asrarhub_cached_explore_articles')
+          ]).then(([dashList, expList]) => {
+            const listCombined = [...(dashList || []), ...(expList || [])];
+            const foundIdb = listCombined.find((art: any) => art && art.id === id);
+            if (foundIdb) {
+              setItem(prev => prev || {
+                ...foundIdb,
+                title_fr: foundIdb.title_fr || foundIdb.title,
+                content_fr: foundIdb.content_fr || foundIdb.content,
+                hook_fr: foundIdb.hook_fr || foundIdb.hook,
+              });
+            }
+          }).catch(() => {});
+        }
+      }).catch(() => {});
     }
 
     if (initialItem) {
@@ -809,43 +841,29 @@ export const SecretDetail: React.FC = () => {
             setItem(fetchedItem);
             checkBookmark(docSnap.id);
 
-            // Save to local cache
+            // Save to local cache (IndexedDB + localStorage)
+            const itemToCache = {
+              ...fetchedItem,
+              cachedAt: Date.now()
+            };
+
+            getOfflineData<Record<string, any>>('asrarhub_cached_article_details').then(idbDetails => {
+              const detailsMap = idbDetails || {};
+              detailsMap[id] = itemToCache;
+              setOfflineData('asrarhub_cached_article_details', detailsMap).catch(() => {});
+            }).catch(() => {
+              setOfflineData('asrarhub_cached_article_details', { [id]: itemToCache }).catch(() => {});
+            });
+
             try {
               const cachedDetails = JSON.parse(localStorage.getItem('asrarhub_cached_article_details') || '{}');
-              
-              // Add a timestamp to the item we are caching
-              const itemToCache = {
-                ...fetchedItem,
-                cachedAt: Date.now()
-              };
               cachedDetails[id] = itemToCache;
-              
-              // Limit the cache size to the 8 most recently viewed articles to prevent QuotaExceededError
-              const entries = Object.entries(cachedDetails);
-              if (entries.length > 8) {
-                entries.sort((a: any, b: any) => {
-                  const tA = a[1]?.cachedAt || 0;
-                  const tB = b[1]?.cachedAt || 0;
-                  return tB - tA; // Sort descending (newest first)
-                });
-                
-                const trimmedDetails: Record<string, any> = {};
-                entries.slice(0, 8).forEach(([k, v]) => {
-                  trimmedDetails[k] = v;
-                });
-                localStorage.setItem('asrarhub_cached_article_details', JSON.stringify(trimmedDetails));
-              } else {
-                localStorage.setItem('asrarhub_cached_article_details', JSON.stringify(cachedDetails));
-              }
+              localStorage.setItem('asrarhub_cached_article_details', JSON.stringify(cachedDetails));
             } catch (e) {
-              console.warn("[Storage] Offline article cache warning:", e);
-              // Fallback: if we STILL fail, try clearing the cache completely and just save the current one
               try {
-                const singleCache = { [id]: { ...fetchedItem, cachedAt: Date.now() } };
+                const singleCache = { [id]: itemToCache };
                 localStorage.setItem('asrarhub_cached_article_details', JSON.stringify(singleCache));
-              } catch (retryError) {
-                console.warn("[Storage] Skipping single article offline cache due to storage quota:", retryError);
-              }
+              } catch (retryError) {}
             }
           } else {
             if (!initialItem) {
@@ -1315,13 +1333,26 @@ export const SecretDetail: React.FC = () => {
       <div
         className={`w-full overflow-hidden transition-all duration-500 ${readingMode ? "max-w-3xl mx-auto bg-transparent border-none" : "bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700"}`}
       >
-        {item.imageUrl && !readingMode && (
+        {!readingMode && (
           <div className="w-full h-64 sm:h-80 md:h-96 relative overflow-hidden bg-gray-100 dark:bg-gray-800">
             <img
-              src={item.imageUrl}
-              alt={item.title}
+              src={getArticleImageUrl(item)}
+              alt={item?.title || ''}
               className="w-full h-full object-cover"
               referrerPolicy="no-referrer"
+              onError={(e) => {
+                const target = e.currentTarget as HTMLImageElement;
+                if (target.src && !target.src.startsWith('data:image/svg+xml')) {
+                  reportImageError(target.src, { id: item?.id, title: item?.title });
+                }
+                const fallback = getArticleFallbackImage(item);
+                const svgFallback = getThematicSvgPlaceholder(item);
+                if (target.src !== fallback && target.src !== svgFallback) {
+                  target.src = fallback;
+                } else if (target.src !== svgFallback) {
+                  target.src = svgFallback;
+                }
+              }}
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
           </div>

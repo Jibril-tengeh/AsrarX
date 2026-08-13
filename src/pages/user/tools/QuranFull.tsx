@@ -23,6 +23,7 @@ import { QURAN_RECITERS } from '../../../data/reciters';
 import { getEffectiveQuranReciters } from '../../../utils/reciterManager';
 import { LunarDailyInspirationCard } from '../../../components/LunarDailyInspirationCard';
 import { VerseSaveExportModal } from '../../../components/VerseSaveExportModal';
+import { dispatchSystemNotification } from '../../../utils/notificationLocalization';
 
 const MUSHAF_OPTIONS = [
   { id: 'Amiri Quran', name: 'Uthmani (Amiri)', desc: 'Standard Uthmani script', preview: 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ\n\nأَرَءَيْتَ ٱلَّذِى يُكَذِّبُ بِٱلدِّينِ ﴿١﴾', style: {fontFamily: '"Amiri Quran", "Amiri", serif'} },
@@ -2431,10 +2432,6 @@ export const QuranFull: React.FC = () => {
 
   useEffect(() => {
     if (!reminderTime) return;
-    
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
-    }
 
     const checkReminder = () => {
       const now = new Date();
@@ -2447,14 +2444,9 @@ export const QuranFull: React.FC = () => {
         const todayDate = now.toDateString();
         
         if (lastReminded !== todayDate) {
-           const notifTitle = t('quran.readingReminderTitle', 'Rappel de lecture');
+           const notifTitle = t('quran.readingReminderTitle', 'Rappel de lecture 📖');
            const notifBody = t('quran.readingReminderBody', 'Il est temps de lire votre portion quotidienne du Coran.');
-           if ('Notification' in window && Notification.permission === 'granted') {
-             new Notification(notifTitle, {
-                body: notifBody,
-             });
-           }
-           alert(`${notifTitle} : ${notifBody}`);
+           dispatchSystemNotification(notifTitle, notifBody);
            localStorage.setItem('asrarhub_last_reminder_date', todayDate);
         }
       }

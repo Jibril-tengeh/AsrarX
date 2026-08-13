@@ -575,6 +575,22 @@
       "title": "Metaphysical Defense",
       "description": "Hissn al-Hadid (Iron Shield), Al-Tafreeq (Dispersion), Mizan al-Shabah (Minerals), and Wafq al-Masdood (Fortress)."
     },
+    "discretion-protection": {
+      "title": "Discretion and Mental Protection",
+      "description": "Khatam al-Khumm (19 Mute Letters Seal), Hissn al-Aql (Mental Shield), Al-Tarkib al-Harfi (Monogram), and Usturlab al-Asrar (Astrolabe)."
+    },
+    "anchoring-stability": {
+      "title": "Astral Anchoring and Stability",
+      "description": "Ism al-Batin (Soul Name), Khatam al-Thabat (Locked Square), Mizan al-Thawabit (Fixed Stars), and Khatim al-Irtikaz (Vector Anchor)."
+    },
+    "spiritual-hub": {
+      "title": "Spiritual Protection & Anchoring Hub",
+      "description": "Unified hub combining Discretion & Mental Protection (4 sub-tools) and Astral Anchoring & Stability (4 sub-tools)."
+    },
+    "thiebissaba-tradition": {
+      "title": "Thiebissaba Tradition (Cèbèsaba)",
+      "description": "3 Rows Trace, Four Houses (Sô), Mandingue Archetypes, Kadyo Verdict, Saraka Alms, Koun wa Sen, Timing, and Abjad Fusion."
+    },
     "protectionModal": {
       "premiumAccess": "Premium Access Only",
       "downloadTitle": "Download Restricted",
@@ -1466,5 +1482,13 @@
       "activationRules": "Al-Buni Activation Rules:",
       "activationText": "Write this Wafq with saffron and rose water ink during the favorable hour. Recite the Divine Name {divine} equal to the Abjad weight ({weight}) over the Wafq."
     }
+  },
+  "spiritualToolsHub": {
+    "pageTitle": "Spiritual Protection & Anchoring Hub",
+    "pageSubtitle": "Unified hub uniting all 8 sacred sub-tools for Kitmān, Hissn al-Aql, Thabat, and Mizan al-Nujum.",
+    "headerBadge": "Advanced Spiritual Module",
+    "categoryAll": "All 8 Sub-Tools",
+    "categoryDiscretion": "Discretion & Mental Protection",
+    "categoryAnchoring": "Astral Anchoring & Stability"
   }
 }

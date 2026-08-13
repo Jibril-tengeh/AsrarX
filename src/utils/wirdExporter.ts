@@ -12,6 +12,9 @@ export interface ExportWirdParams {
   isParchment?: boolean;   // Standard vs Parchment background
   includeZikrGuide?: boolean; // Whether to include Zikr Accomplishment Guide (default: true)
   lang?: 'fr' | 'en' | 'ha'; // Language parameter
+  khatamMatrix?: (string | number)[][]; // 2D matrix for Khatam grid (e.g. 4x4, 3x3)
+  khatamTitle?: string;                 // Subtitle above grid
+  detailsList?: { label: string; value: string; highlight?: boolean }[]; // Detailed breakdown list
 }
 
 /**
@@ -22,7 +25,22 @@ export async function exportWirdToImage(params: ExportWirdParams): Promise<boole
   const includeGuide = params.includeZikrGuide !== false; // Default to true
   const lang = params.lang || 'fr';
   const width = 1200;
-  const height = includeGuide ? 1750 : 1500;
+
+  const hasMatrix = !!(params.khatamMatrix && params.khatamMatrix.length > 0);
+  const details = params.detailsList || [];
+  const detailsCount = details.length;
+
+  // Dynamic canvas height calculation to fit all content cleanly
+  let baseHeight = 900;
+  if (params.name || params.motherName) baseHeight += 48;
+  if (hasMatrix) baseHeight += 120; // Larger central box for Khatam grid
+  if (detailsCount > 0) {
+    const detailRows = Math.ceil(detailsCount / (detailsCount > 4 ? 2 : 1));
+    baseHeight += detailRows * 42 + 90;
+  }
+  if (includeGuide) baseHeight += 780;
+
+  const height = Math.max(1500, baseHeight);
 
   // Dictionaries for localized export text
   const i18n = {
@@ -301,11 +319,11 @@ export async function exportWirdToImage(params: ExportWirdParams): Promise<boole
   }
   ctx.fillText(weightStr, width / 2, nextY);
 
-  // 5. Central Sacred Geometry Calligraphy Box
-  const boxX = 90;
+  // 5. Central Sacred Geometry Calligraphy Box or Khatam Matrix Grid
+  const boxX = 80;
   const boxY = nextY + 38;
-  const boxW = width - 180;
-  const boxH = 370;
+  const boxW = width - 160;
+  const boxH = hasMatrix ? 440 : 370;
 
   // Box Background
   ctx.fillStyle = isParchment ? 'rgba(254, 243, 199, 0.85)' : 'rgba(6, 78, 59, 0.5)';
@@ -319,36 +337,90 @@ export async function exportWirdToImage(params: ExportWirdParams): Promise<boole
   ctx.lineWidth = 1.5;
   ctx.strokeRect(boxX + 10, boxY + 10, boxW - 20, boxH - 20);
 
-  // Central Octagram Circle Overlay in Box background
   const centerX = width / 2;
   const centerY = boxY + boxH / 2;
 
-  ctx.save();
-  ctx.strokeStyle = isParchment ? 'rgba(180, 83, 9, 0.28)' : 'rgba(16, 185, 129, 0.28)';
-  ctx.lineWidth = 2.5;
-  ctx.beginPath();
-  ctx.arc(centerX, centerY, 145, 0, Math.PI * 2);
-  ctx.stroke();
+  if (hasMatrix && params.khatamMatrix) {
+    // RENDER SACRED KHATAM / WAFQ MATRIX GRID
+    const matrix = params.khatamMatrix;
+    const rows = matrix.length;
+    const cols = matrix[0]?.length || 1;
 
-  ctx.beginPath();
-  ctx.arc(centerX, centerY, 125, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.restore();
+    const gridPadding = 20;
+    const gridX = boxX + gridPadding;
+    const gridY = boxY + gridPadding;
+    const gridW = boxW - gridPadding * 2;
+    const gridH = boxH - gridPadding * 2;
 
-  // Main Arabic Zikr Calligraphy in Box
-  ctx.fillStyle = isParchment ? '#451a03' : '#ffffff';
-  
-  let zikrFontSize = 72;
-  ctx.font = `bold ${zikrFontSize}px "Amiri", "Traditional Arabic", serif`;
-  
-  // Measure width and dynamically shrink font if needed
-  while (ctx.measureText(formattedArabic).width > boxW - 60 && zikrFontSize > 28) {
-    zikrFontSize -= 2;
+    const cellW = gridW / cols;
+    const cellH = gridH / rows;
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const cellX = gridX + c * cellW;
+        const cellY = gridY + r * cellH;
+        const cellVal = String(matrix[r][c] || '');
+
+        // Cell background
+        ctx.fillStyle = isParchment ? 'rgba(245, 158, 11, 0.08)' : 'rgba(16, 185, 129, 0.12)';
+        ctx.fillRect(cellX + 2, cellY + 2, cellW - 4, cellH - 4);
+
+        // Cell border
+        ctx.strokeStyle = isParchment ? '#b45309' : '#10b981';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(cellX, cellY, cellW, cellH);
+
+        // Cell index marker (e.g. M1..M16 or 1..16)
+        const cellNum = r * cols + c + 1;
+        ctx.fillStyle = isParchment ? '#92400e' : '#34d399';
+        ctx.font = 'bold 13px sans-serif';
+        ctx.textAlign = 'right';
+        ctx.fillText(`${cellNum}`, cellX + cellW - 6, cellY + 16);
+
+        // Cell Main Value
+        ctx.fillStyle = isParchment ? '#451a03' : '#ffffff';
+        ctx.textAlign = 'center';
+
+        let fontSize = rows > 3 ? 24 : 32;
+        ctx.font = `bold ${fontSize}px "Amiri", "Traditional Arabic", serif, sans-serif`;
+
+        while (ctx.measureText(cellVal).width > cellW - 12 && fontSize > 12) {
+          fontSize -= 1;
+          ctx.font = `bold ${fontSize}px "Amiri", "Traditional Arabic", serif, sans-serif`;
+        }
+
+        ctx.fillText(cellVal, cellX + cellW / 2, cellY + cellH / 2 + fontSize / 3);
+      }
+    }
+  } else {
+    // Central Octagram Circle Overlay in Box background
+    ctx.save();
+    ctx.strokeStyle = isParchment ? 'rgba(180, 83, 9, 0.28)' : 'rgba(16, 185, 129, 0.28)';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, 145, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, 125, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+
+    // Main Arabic Zikr Calligraphy in Box
+    ctx.fillStyle = isParchment ? '#451a03' : '#ffffff';
+    
+    let zikrFontSize = 72;
     ctx.font = `bold ${zikrFontSize}px "Amiri", "Traditional Arabic", serif`;
-  }
+    
+    // Measure width and dynamically shrink font if needed
+    while (ctx.measureText(formattedArabic).width > boxW - 60 && zikrFontSize > 28) {
+      zikrFontSize -= 2;
+      ctx.font = `bold ${zikrFontSize}px "Amiri", "Traditional Arabic", serif`;
+    }
 
-  // Draw Main Arabic Zikr centered inside the box
-  ctx.fillText(formattedArabic, centerX, centerY + 22);
+    // Draw Main Arabic Zikr centered inside the box
+    ctx.fillText(formattedArabic, centerX, centerY + 22);
+  }
 
   // 6. Transliteration Section below Box
   let footerY = boxY + boxH + 52;
@@ -396,6 +468,74 @@ export async function exportWirdToImage(params: ExportWirdParams): Promise<boole
       footerY += 32;
       ctx.fillText(line2, width / 2, footerY);
     }
+  }
+
+  // 6.5 DETAILED INFORMATION TABLE (If detailsList provided)
+  if (detailsCount > 0) {
+    const detailsX = 60;
+    const detailsY = footerY + 35;
+    const detailsW = width - 120;
+
+    const useTwoCols = detailsCount > 4;
+    const colCount = useTwoCols ? 2 : 1;
+    const rowCount = Math.ceil(detailsCount / colCount);
+    const itemH = 46;
+    const detailsH = rowCount * itemH + 80;
+
+    // Card Box
+    ctx.fillStyle = isParchment ? 'rgba(120, 53, 15, 0.05)' : 'rgba(16, 185, 129, 0.08)';
+    ctx.fillRect(detailsX, detailsY, detailsW, detailsH);
+
+    ctx.strokeStyle = isParchment ? '#b45309' : '#10b981';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(detailsX, detailsY, detailsW, detailsH);
+
+    // Header Title for Details
+    ctx.fillStyle = isParchment ? '#78350f' : '#f59e0b';
+    ctx.font = 'bold 26px serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('۞ DÉTAILS DE LA CONSULTATION & KHATAM ۞', width / 2, detailsY + 38);
+
+    // Separator line
+    ctx.strokeStyle = isParchment ? 'rgba(180, 83, 9, 0.3)' : 'rgba(16, 185, 129, 0.3)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(detailsX + 40, detailsY + 50);
+    ctx.lineTo(detailsX + detailsW - 40, detailsY + 50);
+    ctx.stroke();
+
+    // Render Key-Value Rows
+    const colW = (detailsW - 40) / colCount;
+
+    details.forEach((item, idx) => {
+      const colIdx = useTwoCols ? idx % 2 : 0;
+      const rowIdx = useTwoCols ? Math.floor(idx / 2) : idx;
+
+      const itemX = detailsX + 20 + colIdx * colW;
+      const itemY = detailsY + 75 + rowIdx * itemH;
+
+      // Label
+      ctx.textAlign = 'left';
+      ctx.fillStyle = isParchment ? '#78350f' : '#34d399';
+      ctx.font = 'bold 18px sans-serif';
+      const labelStr = item.label + ' : ';
+      ctx.fillText(labelStr, itemX, itemY);
+
+      // Value
+      const labelW = ctx.measureText(labelStr).width;
+      ctx.fillStyle = isParchment ? '#451a03' : '#ffffff';
+      ctx.font = item.highlight ? 'bold 19px sans-serif' : '18px sans-serif';
+
+      let valStr = item.value;
+      const maxValW = colW - labelW - 10;
+      while (ctx.measureText(valStr).width > maxValW && valStr.length > 5) {
+        valStr = valStr.substring(0, valStr.length - 2) + '…';
+      }
+
+      ctx.fillText(valStr, itemX + labelW, itemY);
+    });
+
+    footerY = detailsY + detailsH + 20;
   }
 
   // 7. Zikr Accomplishment Guide (Protocol Section)

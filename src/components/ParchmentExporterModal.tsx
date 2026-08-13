@@ -1,7 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { X, Printer, Download, Sparkles, Feather, Users } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { toCanvas } from 'html-to-image';
+import { exportElementToCanvas } from '../utils/exportSerializationHelper';
 import { downloadCanvasImage } from '../utils/downloadHelper';
 import { useLanguage } from '../contexts/LanguageContext';
 import { AsrarHubWatermark } from './AsrarHubWatermark';
@@ -38,28 +38,7 @@ export const ParchmentExporterModal: React.FC<ParchmentExporterModalProps> = ({
     setIsExporting(true);
     try {
       const el = parchmentRef.current;
-      const width = el.scrollWidth || el.offsetWidth || 550;
-      const height = el.scrollHeight || el.offsetHeight || 1200;
-
-      const canvas = await toCanvas(el, {
-        quality: 0.98,
-        pixelRatio: 2,
-        cacheBust: true,
-        skipFonts: true,
-        fontEmbedCSS: '',
-        width: width,
-        height: height,
-        style: {
-          transform: 'none',
-          margin: '0',
-          maxHeight: 'none',
-          maxWidth: 'none',
-          height: `${height}px`,
-          width: `${width}px`,
-          overflow: 'visible',
-        },
-        backgroundColor: '#fef3c7',
-      });
+      const canvas = await exportElementToCanvas(el, '#fef3c7');
       const cleanTitle = title.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
       await downloadCanvasImage(canvas, `parchemin_rituel_${cleanTitle}.png`);
     } catch (err) {

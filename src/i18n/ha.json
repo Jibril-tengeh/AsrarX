@@ -575,6 +575,22 @@
       "title": "Défense Métaphysique (Kariya ta Sirri)",
       "description": "Hissn al-Hadid (Ganuwar Karfe), Al-Tafreeq (Tarwatsa Rikici), Mizan al-Shabah (Duwatsun Kariya), da Wafq al-Masdood (Gidan Masdood)."
     },
+    "discretion-protection": {
+      "title": "Tsantsan Sirri da Kariya ga Tunanin Mutum",
+      "description": "Khatam al-Khumm (Hatimin Shiru), Hissn al-Aql (Ganuwar Tunani), Al-Tarkib al-Harfi (Tambarin Haruffa), da Usturlab al-Asrar (Agogon Taurari)."
+    },
+    "anchoring-stability": {
+      "title": "Kariya da Tabbatar da Taurari",
+      "description": "Ism al-Batin (Sunan Kurwa), Khatam al-Thabat (Hatimin Tabbata), Mizan al-Thawabit (Awo da Taurari Kafaffu) da Khatim al-Irtikaz (Ma'aunin Fara Rubutu)."
+    },
+    "spiritual-hub": {
+      "title": "Cibiyar Kariya da Tabbatar da Ruhi",
+      "description": "Wuri guda domin dukkanin kayan aikin sirri (4 na kariya da tunani, 4 na tabbata da taurari)."
+    },
+    "thiebissaba-tradition": {
+      "title": "Al'adar Thiebissaba (Cèbèsaba)",
+      "description": "Zanen Layi 3, Gidaje Huda (Sô), Siffofin Mandingue, Hukuncin Kadyo, Saraka (Sadaka), Koun wa Sen, Lokaci da Awon Abjad."
+    },
     "protectionModal": {
       "premiumAccess": "Kebantaccen Amfani na Premium",
       "downloadTitle": "Sauke yana Kebance",
@@ -1466,5 +1482,13 @@
       "activationRules": "Dokokin Kunna Aiki na Al-Buni:",
       "activationText": "Rubuta wannan Wafq da tawadar za'afaran da ruwan wardi a cikin sa'a mai albarka. Karanta Sunan Allah {divine} daidai da nauyin Abjad ({weight}) a kan Wafq."
     }
+  },
+  "spiritualToolsHub": {
+    "pageTitle": "Cibiyar Kariya da Tabbatar da Ruhi",
+    "pageSubtitle": "Sadarwa guda ɗaya mai haɗe dukkanin kayan aikin sirri 8 na Kitmān, Hissn al-Aql, Thabat, da Mizan al-Nujum.",
+    "headerBadge": "Kayan Aikin Ruhi na Gaba-Gaba",
+    "categoryAll": "Dukkan Kayan Aiki 8",
+    "categoryDiscretion": "Sirri da Kariyya Tunanin Mutum",
+    "categoryAnchoring": "Kariya da Tabbatar da Taurari"
   }
 }

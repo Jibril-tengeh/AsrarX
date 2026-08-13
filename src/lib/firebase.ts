@@ -73,14 +73,29 @@ if (typeof window !== 'undefined' && window.localStorage) {
 
 const initFirestore = () => {
   try {
-    console.log('[Firestore Init] Setting up Firestore with memoryLocalCache to prevent QuotaExceededError.');
+    console.log('[Firestore Init] Attempting Firestore setup with persistent local cache (IndexedDB)...');
     return initializeFirestore(app, {
       experimentalAutoDetectLongPolling: true,
-      localCache: memoryLocalCache()
+      localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
     });
   } catch (err1) {
-    console.warn('[Firestore Init] Memory cache init failed, falling back to default getFirestore:', err1);
-    return getFirestore(app);
+    try {
+      console.warn('[Firestore Init] Multi-tab persistent cache failed, trying single-tab persistent cache:', err1);
+      return initializeFirestore(app, {
+        experimentalAutoDetectLongPolling: true,
+        localCache: persistentLocalCache()
+      });
+    } catch (err2) {
+      console.warn('[Firestore Init] Persistent localCache init failed, falling back to memoryLocalCache:', err2);
+      try {
+        return initializeFirestore(app, {
+          experimentalAutoDetectLongPolling: true,
+          localCache: memoryLocalCache()
+        });
+      } catch (err3) {
+        return getFirestore(app);
+      }
+    }
   }
 };
 

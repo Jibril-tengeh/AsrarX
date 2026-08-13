@@ -16,6 +16,7 @@ import { LunarSealVarietiesSection } from './LunarSealVarietiesSection';
 import { SacredKhatim3DDisplay } from './SacredKhatim3DDisplay';
 import { getSealVersionInfo } from '../utils/lunarSealVersions';
 import { calculateSolarTimes } from '../utils/solarCalculator';
+import { getInitialCalendarScales, saveCalendarScales, subscribeCalendarScales } from '../lib/calendarScale';
 import {
   getLocalizedHijriMonths,
   getLocalizedMysticEvent,
@@ -248,48 +249,35 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                   user?.role === 'super_admin' || 
                   (user?.email && ['jibriltengeh4@gmail.com', 'sbireino@gmail.com', 'tenibawwal10@gmail.com', 'jibriltengeh57@gmail.com'].includes(user.email.toLowerCase()));
 
-  const [globalCardScale, setGlobalCardScale] = useState<number>(() => {
-    const saved = localStorage.getItem('asrarhub_admin_calendar_global_scale');
-    const parsed = saved ? parseFloat(saved) : 1.0;
-    return isNaN(parsed) || parsed < 0.85 ? 1.0 : parsed;
-  });
-
-  const [subCardScale, setSubCardScale] = useState<number>(() => {
-    const saved = localStorage.getItem('asrarhub_admin_calendar_subcards_scale');
-    const parsed = saved ? parseFloat(saved) : 1.0;
-    return isNaN(parsed) || parsed < 0.85 ? 1.0 : parsed;
-  });
+  const [globalCardScale, setGlobalCardScale] = useState<number>(() => getInitialCalendarScales().globalScale);
+  const [subCardScale, setSubCardScale] = useState<number>(() => getInitialCalendarScales().subCardScale);
 
   const [showAdminScaleControls, setShowAdminScaleControls] = useState<boolean>(false);
 
   useEffect(() => {
-    const handleStorage = () => {
-      const savedGlobal = localStorage.getItem('asrarhub_admin_calendar_global_scale');
-      if (savedGlobal) setGlobalCardScale(parseFloat(savedGlobal));
-      const savedSub = localStorage.getItem('asrarhub_admin_calendar_subcards_scale');
-      if (savedSub) setSubCardScale(parseFloat(savedSub));
-    };
-    window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
+    const unsubscribe = subscribeCalendarScales(({ globalScale, subCardScale: subScale }) => {
+      setGlobalCardScale(globalScale);
+      setSubCardScale(subScale);
+    });
+    return () => unsubscribe();
   }, []);
 
   const changeGlobalScale = (delta: number) => {
     const next = Math.min(1.8, Math.max(0.6, Math.round((globalCardScale + delta) * 100) / 100));
     setGlobalCardScale(next);
-    localStorage.setItem('asrarhub_admin_calendar_global_scale', next.toString());
+    saveCalendarScales(next, subCardScale);
   };
 
   const changeSubCardScale = (delta: number) => {
     const next = Math.min(1.8, Math.max(0.6, Math.round((subCardScale + delta) * 100) / 100));
     setSubCardScale(next);
-    localStorage.setItem('asrarhub_admin_calendar_subcards_scale', next.toString());
+    saveCalendarScales(globalCardScale, next);
   };
 
   const resetScales = () => {
     setGlobalCardScale(1.0);
     setSubCardScale(1.0);
-    localStorage.setItem('asrarhub_admin_calendar_global_scale', '1.0');
-    localStorage.setItem('asrarhub_admin_calendar_subcards_scale', '1.0');
+    saveCalendarScales(1.0, 1.0);
   };
 
   // Feature Request: Custom Synth state for Daily Task Frequencies
@@ -1469,7 +1457,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                         type="button"
                         onClick={() => {
                           setGlobalCardScale(preset.val);
-                          localStorage.setItem('asrarhub_admin_calendar_global_scale', preset.val.toString());
+                          saveCalendarScales(preset.val, subCardScale);
                         }}
                         className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
                           Math.abs(globalCardScale - preset.val) < 0.01
@@ -1499,7 +1487,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                       onChange={(e) => {
                         const val = parseFloat(e.target.value);
                         setGlobalCardScale(val);
-                        localStorage.setItem('asrarhub_admin_calendar_global_scale', val.toString());
+                        saveCalendarScales(val, subCardScale);
                       }}
                       className="w-full accent-amber-500 cursor-pointer h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg"
                     />
@@ -1535,7 +1523,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                         type="button"
                         onClick={() => {
                           setSubCardScale(preset.val);
-                          localStorage.setItem('asrarhub_admin_calendar_subcards_scale', preset.val.toString());
+                          saveCalendarScales(globalCardScale, preset.val);
                         }}
                         className={`px-1.5 py-0.5 rounded text-[10px] font-bold transition-all cursor-pointer ${
                           Math.abs(subCardScale - preset.val) < 0.01
@@ -1565,7 +1553,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                       onChange={(e) => {
                         const val = parseFloat(e.target.value);
                         setSubCardScale(val);
-                        localStorage.setItem('asrarhub_admin_calendar_subcards_scale', val.toString());
+                        saveCalendarScales(globalCardScale, val);
                       }}
                       className="w-full accent-amber-500 cursor-pointer h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg"
                     />

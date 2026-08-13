@@ -575,6 +575,22 @@
       "title": "Défense Métaphysique",
       "description": "Hissn al-Hadid (Bouclier de Fer), Al-Tafreeq (Dispersion), Mizan al-Shabah (Minéraux) et Wafq al-Masdood (Forteresse)."
     },
+    "discretion-protection": {
+      "title": "Discrétion et Protection Mentale",
+      "description": "Khatam al-Khumm (Sceau Muet 19 lettres), Hissn al-Aql (Barrière Mentale), Al-Tarkib al-Harfi (Monogramme) et Usturlab al-Asrar (Astrolabe)."
+    },
+    "anchoring-stability": {
+      "title": "Ancrage et Stabilité Astrale",
+      "description": "Ism al-Batin (Nom de l'Âme), Khatam al-Thabat (Carré Verrouillé), Mizan al-Thawabit (Étoiles Fixes) et Khatim al-Irtikaz (Ancre Vectorielle)."
+    },
+    "spiritual-hub": {
+      "title": "Centre de Protection & Ancrage Spirituel",
+      "description": "Hub unifié regroupant Discrétion & Protection Mentale (4 sous-outils) et Ancrage & Stabilité Astrale (4 sous-outils)."
+    },
+    "thiebissaba-tradition": {
+      "title": "Tradition Thiebissaba (Cèbèsaba)",
+      "description": "Tracé 3 Rangs, Quatre Maisons (Sô), Archétypes Mandingues, Verdict Kadyo, Saraka, Koun wa Sen, Timing et Fusion Abjad."
+    },
     "protectionModal": {
       "premiumAccess": "Accès Réservé Premium",
       "downloadTitle": "Téléchargement Réservé",
@@ -1466,5 +1482,13 @@
       "activationRules": "Règles d'Activation d'Al-Buni :",
       "activationText": "Écrire ce Wafq à l'encre de safran et d'eau de rose durant l'heure favorable. Réciter le Nom Divin {divine} au nombre du poids Abjad ({weight}) au-dessus du Wafq."
     }
+  },
+  "spiritualToolsHub": {
+    "pageTitle": "Centre de Protection & Ancrage Spirituel",
+    "pageSubtitle": "Hub unifié regroupant les 8 sous-outils sacrés de Kitmān, Hissn al-Aql, Thabat et Mizan al-Nujum.",
+    "headerBadge": "Module Spirituel Avancé",
+    "categoryAll": "Tous les 8 Sous-Outils",
+    "categoryDiscretion": "Discrétion & Protection Mentale",
+    "categoryAnchoring": "Ancrage & Stabilité Astrale"
   }
 }

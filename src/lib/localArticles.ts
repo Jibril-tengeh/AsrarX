@@ -1,4 +1,6 @@
 import { INITIAL_DEFAULT_ARTICLES } from '../data/defaultArticles';
+import { setOfflineData, getOfflineData, removeOfflineData } from './offlineStorage';
+import { getArticleImageUrl } from '../utils/articleImageUtils';
 
 export const LOCAL_CUSTOM_ARTICLES_KEY = 'asrarhub_custom_local_articles';
 export const CACHED_ADMIN_ARTICLES_KEY = 'asrarhub_cached_admin_articles';
@@ -107,11 +109,9 @@ export const stripArticleForListCache = (art: any): any => {
   const copy: any = { ...art };
 
   // Ensure both thumbnail and imageUrl properties exist and are synced
-  const img = copy.thumbnail || copy.imageUrl || '';
-  if (img) {
-    copy.thumbnail = img;
-    copy.imageUrl = img;
-  }
+  const img = getArticleImageUrl(copy);
+  copy.thumbnail = img;
+  copy.imageUrl = img;
 
   // Truncate long content text for list previews
   if (typeof copy.content === 'string' && copy.content.length > 300) {
@@ -187,8 +187,8 @@ export const combineWithDefaultArticles = <T extends { id: string }>(defaultArti
 };
 
 /**
- * Safely saves article lists into localStorage with automatic size optimization
- * and quota fallback handling. Never throws quota errors.
+ * Safely saves article lists into IndexedDB (unlimited storage) and localStorage.
+ * Never throws quota errors.
  */
 export const saveCachedArticlesList = (key: string, articles: any[]): void => {
   if (!Array.isArray(articles)) return;
@@ -199,31 +199,64 @@ export const saveCachedArticlesList = (key: string, articles: any[]): void => {
     try {
       localStorage.setItem(key, '[]');
     } catch (e) {}
+    setOfflineData(key, []).catch(() => {});
     return;
   }
 
+  // 1. Save full, non-truncated articles array into IndexedDB (unlimited storage)
+  setOfflineData(key, validArticles).catch(err => {
+    console.warn(`[Storage] IndexedDB setOfflineData error for ${key}:`, err);
+  });
+
+  // 2. Also save lightweight preview list in localStorage for instant synchronous initial render
   const lightweightList = validArticles.map(stripArticleForListCache);
 
   try {
     localStorage.setItem(key, JSON.stringify(lightweightList));
   } catch (err) {
-    console.warn(`[Storage] Primary cache setItem failed for ${key}, attempting quota cleanup...`);
+    console.warn(`[Storage] Primary localStorage cache setItem failed for ${key}, attempting cleanup...`);
     try {
-      // 1. Remove non-essential cached details to free space
       localStorage.removeItem(CACHED_ARTICLE_DETAILS_KEY);
-      
-      // 2. Reduce list to top 40 items and minimal text
-      const trimmedList = lightweightList.slice(0, 40).map(a => ({
+      const trimmedList = lightweightList.slice(0, 30).map(a => ({
         ...a,
-        content: typeof a.content === 'string' ? a.content.slice(0, 100) : '',
-        content_en: typeof a.content_en === 'string' ? a.content_en.slice(0, 100) : '',
-        content_ha: typeof a.content_ha === 'string' ? a.content_ha.slice(0, 100) : '',
+        content: typeof a.content === 'string' ? a.content.slice(0, 80) : '',
       }));
       localStorage.setItem(key, JSON.stringify(trimmedList));
     } catch (fallbackErr) {
-      console.warn(`[Storage] Storage quota severely exceeded for ${key}. Skipping local cache save.`);
+      console.warn(`[Storage] Storage quota exceeded for localStorage ${key}. IndexedDB holds full cache.`);
     }
   }
+};
+
+/**
+ * Asynchronously retrieves cached article list from IndexedDB first, with fallback to localStorage.
+ */
+export const getCachedArticlesListAsync = async (key: string): Promise<any[]> => {
+  const deletedIds = getDeletedArticleIds();
+
+  // 1. Try IndexedDB first (contains full list without size truncation)
+  try {
+    const idbData = await getOfflineData<any[]>(key);
+    if (Array.isArray(idbData) && idbData.length > 0) {
+      const valid = idbData.filter(a => a && a.id && !deletedIds.has(a.id));
+      if (valid.length > 0) {
+        return valid;
+      }
+    }
+  } catch (e) {}
+
+  // 2. Fallback to localStorage
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed.filter(a => a && a.id && !deletedIds.has(a.id));
+      }
+    }
+  } catch (e) {}
+
+  return [];
 };
 
 /**

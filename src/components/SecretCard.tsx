@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
-import { BookOpen, Sparkles, ScrollText, Image as ImageIcon, Crown } from 'lucide-react';
+import { BookOpen, Sparkles, ScrollText, Crown } from 'lucide-react';
 import { AsrarItem } from '../types';
 import { getApiUrl } from '../lib/api';
+import { getArticleImageUrl, getArticleFallbackImage, getThematicSvgPlaceholder, sanitizeImageSource } from '../utils/articleImageUtils';
+import { reportImageError } from '../utils/imageDebugger';
 
 export type LayoutMode = 'grid2' | 'grid1' | 'list';
 
@@ -13,27 +15,68 @@ interface SecretCardProps {
   categories?: any[];
 }
 
-const ImageWithFallback: React.FC<{ src: string; alt: string; className?: string; [key: string]: any }> = ({ src, alt, className, ...props }) => {
+const ImageWithFallback: React.FC<{
+  src: string;
+  alt: string;
+  fallbackSrc?: string;
+  itemInfo?: { id?: string; title?: string; category?: string; subCategory?: string };
+  className?: string;
+  [key: string]: any;
+}> = ({ src, alt, fallbackSrc, itemInfo, className, ...props }) => {
   const [status, setStatus] = useState<'loading' | 'loaded' | 'error'>('loading');
+  const [currentSrc, setCurrentSrc] = useState(() => sanitizeImageSource(src));
+  const svgFallback = getThematicSvgPlaceholder(itemInfo);
+  const imgRef = React.useRef<HTMLImageElement>(null);
+
+  useEffect(() => {
+    const sanitized = sanitizeImageSource(src);
+    setCurrentSrc(sanitized);
+    setStatus('loading');
+  }, [src]);
+
+  const handleError = () => {
+    // Intercept and report error to ImageDebugger
+    if (currentSrc && !currentSrc.startsWith('data:image/svg+xml')) {
+      reportImageError(currentSrc, { id: itemInfo?.id, title: itemInfo?.title || alt });
+    }
+
+    const sanitizedFallback = sanitizeImageSource(fallbackSrc);
+    if (sanitizedFallback && currentSrc !== sanitizedFallback && currentSrc !== svgFallback) {
+      setCurrentSrc(sanitizedFallback);
+      setStatus('loading');
+    } else if (currentSrc !== svgFallback) {
+      // Tertiary fail-safe: Thematic SVG Data URI placeholder
+      setCurrentSrc(svgFallback);
+      setStatus('loading');
+    } else {
+      setStatus('loaded'); // SVG Data URI is guaranteed to load
+    }
+  };
+
+  useEffect(() => {
+    if (imgRef.current && imgRef.current.complete) {
+      if (imgRef.current.naturalWidth > 0) {
+        setStatus('loaded');
+      } else if (imgRef.current.naturalWidth === 0 && currentSrc) {
+        handleError();
+      }
+    }
+  }, [currentSrc]);
 
   return (
-    <div className="absolute inset-0 w-full h-full">
+    <div className="absolute inset-0 w-full h-full bg-gray-900 overflow-hidden">
       {status === 'loading' && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-200 dark:bg-gray-800 animate-pulse">
+        <div className="absolute inset-0 flex items-center justify-center bg-gray-200 dark:bg-gray-800 animate-pulse z-10">
            <div className="w-6 h-6 border-2 border-gray-300 border-t-emerald-500 rounded-full animate-spin"></div>
         </div>
       )}
-      {status === 'error' && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-200 dark:bg-gray-800">
-           <ImageIcon className="text-gray-400 opacity-50" size={32} />
-        </div>
-      )}
       <img
-        src={src}
+        ref={imgRef}
+        src={currentSrc}
         alt={alt}
-        className={`${className} ${status === 'loaded' ? 'opacity-100' : 'opacity-0'}`}
+        className={`${className} ${status === 'error' ? 'opacity-0' : 'opacity-100'} transition-opacity duration-300`}
         onLoad={() => setStatus('loaded')}
-        onError={() => setStatus('error')}
+        onError={handleError}
         {...props}
       />
     </div>
@@ -152,24 +195,23 @@ export const SecretCard: React.FC<SecretCardProps> = ({ item, layoutMode = 'grid
 
   const CategoryIcon = item.category === 'secret' ? BookOpen : item.category === 'recette' ? Sparkles : ScrollText;
 
+  const resolvedImageUrl = getArticleImageUrl(item);
+  const fallbackImageUrl = getArticleFallbackImage(item);
+
   if (layoutMode === 'list') {
     return (
       <Link to={`/secret/${item.id}`} state={{ item }} className="block w-full group">
         <div className="flex flex-row h-[130px] sm:h-[150px] cursor-pointer bg-white dark:bg-gray-800 rounded-[1.25rem] shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden transition-all duration-300 group-hover:shadow-md group-hover:-translate-y-1">
           {/* Image Area */}
           <div className="w-[110px] sm:w-[140px] h-full relative bg-gray-100 dark:bg-gray-900 flex-shrink-0">
-            {item.imageUrl ? (
-              <ImageWithFallback 
-                src={item.imageUrl} 
-                alt={displayTitle} 
-                className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-                referrerPolicy="no-referrer"
-              />
-            ) : (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-200 dark:bg-gray-800 text-gray-400">
-                <CategoryIcon size={32} className="opacity-30" />
-              </div>
-            )}
+            <ImageWithFallback 
+              src={resolvedImageUrl} 
+              fallbackSrc={fallbackImageUrl}
+              itemInfo={item}
+              alt={displayTitle} 
+              className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+              referrerPolicy="no-referrer"
+            />
             
             {/* Badge */}
             <div className="absolute top-2 left-2 flex gap-1 z-10 max-w-[calc(100%-16px)]">
@@ -207,18 +249,14 @@ export const SecretCard: React.FC<SecretCardProps> = ({ item, layoutMode = 'grid
     <Link to={`/secret/${item.id}`} state={{ item }} className="block h-full group">
        <div className="flex flex-col h-full cursor-pointer bg-white dark:bg-gray-800 rounded-[1.5rem] sm:rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden transition-all duration-300 group-hover:shadow-md group-hover:-translate-y-1">
           <div className={`w-full overflow-hidden relative bg-gray-100 dark:bg-gray-900 flex-shrink-0 ${isGrid1 ? 'aspect-video' : 'aspect-[4/5] sm:aspect-square'}`}>
-             {item.imageUrl ? (
-               <ImageWithFallback 
-                 src={item.imageUrl} 
-                 alt={displayTitle} 
-                 className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
-                 referrerPolicy="no-referrer"
-               />
-             ) : (
-               <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-200 dark:bg-gray-800 text-gray-400">
-                 <CategoryIcon size={isGrid1 ? 48 : 40} className="opacity-30" />
-               </div>
-             )}
+             <ImageWithFallback 
+               src={resolvedImageUrl} 
+               fallbackSrc={fallbackImageUrl}
+               itemInfo={item}
+               alt={displayTitle} 
+               className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+               referrerPolicy="no-referrer"
+             />
              
              {/* Badge Over Image */}
              <div className="absolute top-3 left-3 flex gap-1.5 z-10 transition-colors max-w-[calc(100%-24px)]">

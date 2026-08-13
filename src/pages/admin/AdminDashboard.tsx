@@ -36,6 +36,8 @@ import { normalizeEmail, normalizePhone } from '../../lib/validationUtils';
 import ReactCrop, { type Crop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { getApiUrl } from '../../lib/api';
+import { getArticleImageUrl } from '../../utils/articleImageUtils';
+import { ThumbnailValidatorWidget } from '../../components/admin/ThumbnailValidatorWidget';
 import { pingFirestore, getNetworkLogs, clearNetworkLogs, addNetworkLog, triggerBackgroundReconnect, NetworkLog, PingResult } from '../../utils/networkLogger';
 import { 
   ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, CartesianGrid 
@@ -43,6 +45,7 @@ import {
 
 import { AdminStoreManager } from '../../components/AdminStoreManager';
 import { SACRED_BOOKS } from '../../data/sacredBooksData';
+import { getInitialCalendarScales, saveCalendarScales, subscribeCalendarScales } from '../../lib/calendarScale';
 import { INITIAL_DEFAULT_ARTICLES } from '../../data/defaultArticles';
 import { fetchArticlesFromRest, fetchUsersFromRest, fetchCategoriesFromRest, deleteArticleFromRest, deleteCategoryFromRest } from '../../lib/firestoreRest';
 import { isPubliclyVisibleArticle } from '../../lib/articleUtils';
@@ -214,14 +217,16 @@ export const AdminDashboard: React.FC = () => {
   // Settings State
   const [audioEnabled, setAudioEnabled] = useState(false);
   const [maintenanceMode, setMaintenanceMode] = useState(false);
-  const [calendarGlobalScale, setCalendarGlobalScale] = useState<number>(() => {
-    const saved = localStorage.getItem('asrarhub_admin_calendar_global_scale');
-    return saved ? parseFloat(saved) : 1.0;
-  });
-  const [calendarSubCardScale, setCalendarSubCardScale] = useState<number>(() => {
-    const saved = localStorage.getItem('asrarhub_admin_calendar_subcards_scale');
-    return saved ? parseFloat(saved) : 1.0;
-  });
+  const [calendarGlobalScale, setCalendarGlobalScale] = useState<number>(() => getInitialCalendarScales().globalScale);
+  const [calendarSubCardScale, setCalendarSubCardScale] = useState<number>(() => getInitialCalendarScales().subCardScale);
+
+  useEffect(() => {
+    const unsubscribe = subscribeCalendarScales(({ globalScale, subCardScale: subScale }) => {
+      setCalendarGlobalScale(globalScale);
+      setCalendarSubCardScale(subScale);
+    });
+    return () => unsubscribe();
+  }, []);
 
   // Collapsible Admin Sections State (all sections closed/collapsed by default)
   const [collapsedAdminSections, setCollapsedAdminSections] = useState<Record<string, boolean>>(() => {
@@ -2022,8 +2027,8 @@ export const AdminDashboard: React.FC = () => {
         hook_ha: (newArticle as any).hook_ha || '',
         title_en: (newArticle as any).title_en || '',
         title_ha: (newArticle as any).title_ha || '',
-        thumbnail: newArticle.thumbnail || '',
-        imageUrl: newArticle.thumbnail || '',
+        thumbnail: getArticleImageUrl(newArticle),
+        imageUrl: getArticleImageUrl(newArticle),
         content: newArticle.content,
         content_en: (newArticle as any).content_en || '',
         content_ha: (newArticle as any).content_ha || '',
@@ -4135,6 +4140,9 @@ export const AdminDashboard: React.FC = () => {
 
     return (
       <div className="space-y-6">
+        {/* Validator & Diagnostic Tool for Article Thumbnails */}
+        <ThumbnailValidatorWidget articles={articles} onUpdateArticles={(updated) => setArticles(updated)} />
+
         {/* Diagnostic Dashboard Section for Articles Debugging */}
         <div className="bg-gradient-to-br from-slate-900 to-indigo-950 text-white rounded-3xl p-6 shadow-xl border border-indigo-900/50">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-indigo-800/40">
@@ -6129,8 +6137,7 @@ export const AdminDashboard: React.FC = () => {
                   onClick={() => {
                     setCalendarGlobalScale(1.0);
                     setCalendarSubCardScale(1.0);
-                    localStorage.setItem('asrarhub_admin_calendar_global_scale', '1.0');
-                    localStorage.setItem('asrarhub_admin_calendar_subcards_scale', '1.0');
+                    saveCalendarScales(1.0, 1.0);
                   }}
                   className="px-3 py-1.5 bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 rounded-xl text-xs font-bold transition-colors cursor-pointer shrink-0"
                 >
@@ -6169,7 +6176,7 @@ export const AdminDashboard: React.FC = () => {
                         type="button"
                         onClick={() => {
                           setCalendarGlobalScale(preset.val);
-                          localStorage.setItem('asrarhub_admin_calendar_global_scale', preset.val.toString());
+                          saveCalendarScales(preset.val, calendarSubCardScale);
                         }}
                         className={`px-2 py-0.5 rounded text-[11px] font-bold transition-all cursor-pointer ${
                           Math.abs(calendarGlobalScale - preset.val) < 0.01
@@ -6188,7 +6195,7 @@ export const AdminDashboard: React.FC = () => {
                       onClick={() => {
                         const next = Math.max(0.5, Math.round((calendarGlobalScale - 0.05) * 100) / 100);
                         setCalendarGlobalScale(next);
-                        localStorage.setItem('asrarhub_admin_calendar_global_scale', next.toString());
+                        saveCalendarScales(next, calendarSubCardScale);
                       }}
                       className="px-2.5 py-1 bg-gray-200 dark:bg-gray-700 hover:bg-amber-500 hover:text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
                     >
@@ -6203,7 +6210,7 @@ export const AdminDashboard: React.FC = () => {
                       onChange={(e) => {
                         const val = parseFloat(e.target.value);
                         setCalendarGlobalScale(val);
-                        localStorage.setItem('asrarhub_admin_calendar_global_scale', val.toString());
+                        saveCalendarScales(val, calendarSubCardScale);
                       }}
                       className="w-full accent-amber-500 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg"
                     />
@@ -6212,7 +6219,7 @@ export const AdminDashboard: React.FC = () => {
                       onClick={() => {
                         const next = Math.min(1.8, Math.round((calendarGlobalScale + 0.05) * 100) / 100);
                         setCalendarGlobalScale(next);
-                        localStorage.setItem('asrarhub_admin_calendar_global_scale', next.toString());
+                        saveCalendarScales(next, calendarSubCardScale);
                       }}
                       className="px-2.5 py-1 bg-gray-200 dark:bg-gray-700 hover:bg-amber-500 hover:text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
                     >
@@ -6251,7 +6258,7 @@ export const AdminDashboard: React.FC = () => {
                         type="button"
                         onClick={() => {
                           setCalendarSubCardScale(preset.val);
-                          localStorage.setItem('asrarhub_admin_calendar_subcards_scale', preset.val.toString());
+                          saveCalendarScales(calendarGlobalScale, preset.val);
                         }}
                         className={`px-2 py-0.5 rounded text-[11px] font-bold transition-all cursor-pointer ${
                           Math.abs(calendarSubCardScale - preset.val) < 0.01
@@ -6270,7 +6277,7 @@ export const AdminDashboard: React.FC = () => {
                       onClick={() => {
                         const next = Math.max(0.5, Math.round((calendarSubCardScale - 0.05) * 100) / 100);
                         setCalendarSubCardScale(next);
-                        localStorage.setItem('asrarhub_admin_calendar_subcards_scale', next.toString());
+                        saveCalendarScales(calendarGlobalScale, next);
                       }}
                       className="px-2.5 py-1 bg-gray-200 dark:bg-gray-700 hover:bg-amber-500 hover:text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
                     >
@@ -6285,7 +6292,7 @@ export const AdminDashboard: React.FC = () => {
                       onChange={(e) => {
                         const val = parseFloat(e.target.value);
                         setCalendarSubCardScale(val);
-                        localStorage.setItem('asrarhub_admin_calendar_subcards_scale', val.toString());
+                        saveCalendarScales(calendarGlobalScale, val);
                       }}
                       className="w-full accent-amber-500 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg"
                     />
@@ -6294,7 +6301,7 @@ export const AdminDashboard: React.FC = () => {
                       onClick={() => {
                         const next = Math.min(1.8, Math.round((calendarSubCardScale + 0.05) * 100) / 100);
                         setCalendarSubCardScale(next);
-                        localStorage.setItem('asrarhub_admin_calendar_subcards_scale', next.toString());
+                        saveCalendarScales(calendarGlobalScale, next);
                       }}
                       className="px-2.5 py-1 bg-gray-200 dark:bg-gray-700 hover:bg-amber-500 hover:text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
                     >

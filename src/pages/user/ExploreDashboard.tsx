@@ -17,8 +17,10 @@ import { AuthModal } from '../../components/AuthModal';
 import { INITIAL_DEFAULT_ARTICLES } from '../../data/defaultArticles';
 import { fetchArticlesFromRest } from '../../lib/firestoreRest';
 import { isPubliclyVisibleArticle, getTranslatedArticleTitle, getTranslatedArticleHook } from '../../lib/articleUtils';
-import { mergeWithLocalArticles, saveCachedArticlesList, combineWithDefaultArticles } from '../../lib/localArticles';
+import { mergeWithLocalArticles, saveCachedArticlesList, combineWithDefaultArticles, getCachedArticlesListAsync } from '../../lib/localArticles';
+import { SWR_EVENT_NAME } from '../../lib/swrArticleCache';
 import { useBackButton } from '../../hooks/useBackButton';
+import { getArticleImageUrl } from '../../utils/articleImageUtils';
 
 export const ExploreDashboard: React.FC = () => {
   const { t, language } = useLanguage();
@@ -176,7 +178,7 @@ export const ExploreDashboard: React.FC = () => {
       if (!activeHook && activeContent) {
         activeHook = activeContent.replace(/<[^>]+>/g, '').substring(0, 120) + '...';
       }
-      const img = data.thumbnail || data.imageUrl || '';
+      const img = getArticleImageUrl(data);
       return {
         id: docId || data.id,
         ...data,
@@ -243,6 +245,18 @@ export const ExploreDashboard: React.FC = () => {
       const merged = mergeWithLocalArticles(combined);
       setArticles(merged);
       setIsLoading(false);
+
+      // Asynchronously fetch full cached list from IndexedDB (untruncated)
+      getCachedArticlesListAsync('asrarhub_cached_explore_articles').then(idbItems => {
+        if (Array.isArray(idbItems) && idbItems.length > 0) {
+          const valid = idbItems.filter((art: any) => isPublishedStatus(art.status));
+          if (valid.length > 0) {
+            const idbCombined = combineWithDefaultArticles(defaultItems, valid);
+            const idbMerged = mergeWithLocalArticles(idbCombined);
+            setArticles(idbMerged);
+          }
+        }
+      }).catch(() => {});
     };
 
     // Restore cached/local articles immediately so articles are available offline with zero latency
@@ -315,7 +329,20 @@ export const ExploreDashboard: React.FC = () => {
       tryRestoreExploreCacheOrDefaults();
     });
 
-    return () => unsubscribe();
+    const handleSWRUpdate = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail?.articles && Array.isArray(customEvent.detail.articles)) {
+        console.log(`[SWR Event - ExploreDashboard] Article list updated via SWR (${customEvent.detail.articles.length} items).`);
+        setArticles(customEvent.detail.articles);
+        setIsLoading(false);
+      }
+    };
+    window.addEventListener(SWR_EVENT_NAME, handleSWRUpdate);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener(SWR_EVENT_NAME, handleSWRUpdate);
+    };
   }, [language]);
 
   const toggleBookmarkArticle = (articleId: string) => {
@@ -599,7 +626,14 @@ export const ExploreDashboard: React.FC = () => {
           
           {(() => {
             const displayMode = featureToggles?.articlesDisplayMode || 'grid';
-            const displayedArticles = articles.slice(0, visibleCount);
+            const displayedArticles = articles.slice(0, visibleCount).map(art => {
+              const imgUrl = getArticleImageUrl(art);
+              return {
+                ...art,
+                thumbnail: imgUrl,
+                imageUrl: imgUrl
+              };
+            });
             
             if (displayMode === 'list') {
               return (

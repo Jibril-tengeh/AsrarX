@@ -18,8 +18,10 @@ import { AsrarQuickWidget } from '../../components/AsrarQuickWidget';
 import { INITIAL_DEFAULT_ARTICLES, DefaultArticle } from '../../data/defaultArticles';
 import { fetchArticlesFromRest } from '../../lib/firestoreRest';
 import { isPubliclyVisibleArticle, getTranslatedArticleTitle, getTranslatedArticleHook } from '../../lib/articleUtils';
-import { mergeWithLocalArticles, saveCachedArticlesList, combineWithDefaultArticles, setHideMockArticles, isMockArticlesHidden } from '../../lib/localArticles';
+import { mergeWithLocalArticles, saveCachedArticlesList, combineWithDefaultArticles, setHideMockArticles, isMockArticlesHidden, getCachedArticlesListAsync } from '../../lib/localArticles';
+import { SWR_EVENT_NAME } from '../../lib/swrArticleCache';
 import { useBackButton } from '../../hooks/useBackButton';
+import { getArticleImageUrl } from '../../utils/articleImageUtils';
 
 const LucideIcon = ({ name, className, size }: { name: string; className?: string; size?: number }) => {
   const IconComponent = (Icons as any)[name];
@@ -358,7 +360,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
       let titleText = getTranslatedArticleTitle(data, language);
 
       const hasManual = language !== 'fr' && !!(data[`title_${language}`] || data[`content_${language}`]);
-      const img = data.thumbnail || data.imageUrl || '';
+      const img = getArticleImageUrl(data);
       return {
         id: docId || data.id,
         title: titleText || data.title || 'Sans titre',
@@ -421,7 +423,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
       });
     };
 
-    // Helper to attempt restoring real articles from local storage cache before defaulting
+    // Helper to attempt restoring real articles from IndexedDB / local storage cache before defaulting
     const tryRestoreCachedOrDefaults = () => {
       let baseItems: AsrarItem[] = [];
       try {
@@ -441,6 +443,18 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
       const merged = mergeWithLocalArticles(combined);
       setItems(merged);
       setIsLoading(false);
+
+      // Asynchronously fetch full cached list from IndexedDB (untruncated)
+      getCachedArticlesListAsync('asrarhub_cached_articles_list').then(idbItems => {
+        if (Array.isArray(idbItems) && idbItems.length > 0) {
+          const validItems = idbItems.filter((it: any) => isPublishedArticleStatus(it.status));
+          if (validItems.length > 0) {
+            const idbCombined = combineWithDefaultArticles(defaultItems, validItems as AsrarItem[]);
+            const idbMerged = mergeWithLocalArticles(idbCombined);
+            setItems(idbMerged);
+          }
+        }
+      }).catch(() => {});
     };
 
     // Restore cached articles immediately for zero latency offline access
@@ -572,8 +586,21 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
       data[todayStr] = Math.max(1, data[todayStr]);
       setActivityData(data);
     } catch(e) {}
-    
-    return () => unsubscribe();
+
+    const handleSWRUpdate = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail?.articles && Array.isArray(customEvent.detail.articles)) {
+        console.log(`[SWR Event - UserDashboard] Article list updated via SWR (${customEvent.detail.articles.length} items).`);
+        setItems(customEvent.detail.articles);
+        setIsLoading(false);
+      }
+    };
+    window.addEventListener(SWR_EVENT_NAME, handleSWRUpdate);
+
+    return () => {
+      unsubscribe();
+      window.removeEventListener(SWR_EVENT_NAME, handleSWRUpdate);
+    };
   }, [language]);
 
   // Refresh bookmarks when window gets focus (in case they changed it on another page)
