@@ -1446,24 +1446,24 @@ export const SevenKingsSeals: React.FC = () => {
           </div>
 
           {/* Invocation Ritual Formula */}
-          <div className="bg-slate-900 text-white p-5 sm:p-6 rounded-3xl border border-slate-800 shadow-lg space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-800">
+          <div className="bg-white dark:bg-slate-900 text-stone-900 dark:text-white p-5 sm:p-6 rounded-3xl border border-stone-200 dark:border-slate-800 shadow-md space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-stone-100 dark:border-slate-800">
               <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-amber-700 dark:text-amber-400 animate-spin-slow" />
-                <h3 className="text-sm font-extrabold text-amber-700 dark:text-amber-400 tracking-wider uppercase font-mono">
+                <Sparkles className="w-5 h-5 text-amber-600 dark:text-amber-400 animate-spin-slow" />
+                <h3 className="text-sm font-extrabold text-amber-800 dark:text-amber-400 tracking-wider uppercase font-mono">
                   ✦ {t('seven-kings.invocationHeader', "Formule d'Invocation Rituelle")} ✦
                 </h3>
               </div>
 
               {/* View mode buttons */}
-              <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800 text-[11px]">
+              <div className="flex items-center gap-1 bg-stone-100 dark:bg-slate-950 p-1 rounded-xl border border-stone-200 dark:border-slate-800 text-[11px]">
                 <button
                   type="button"
                   onClick={() => setInvocationViewMode('ar')}
                   className={`px-2.5 py-1 rounded-lg font-extrabold transition-all cursor-pointer ${
                     invocationViewMode === 'ar'
-                      ? 'bg-amber-500 text-black shadow-xs'
-                      : 'text-gray-700 dark:text-gray-300 hover:text-white'
+                      ? 'bg-amber-500 text-slate-950 shadow-xs'
+                      : 'text-stone-600 dark:text-gray-300 hover:text-stone-900 dark:hover:text-white'
                   }`}
                 >
                   🇸🇦 {t('seven-kings.arabic', 'Arabe')}
@@ -1473,8 +1473,8 @@ export const SevenKingsSeals: React.FC = () => {
                   onClick={() => setInvocationViewMode('phonetic')}
                   className={`px-2.5 py-1 rounded-lg font-extrabold transition-all cursor-pointer ${
                     invocationViewMode === 'phonetic'
-                      ? 'bg-amber-500 text-black shadow-xs'
-                      : 'text-gray-700 dark:text-gray-300 hover:text-white'
+                      ? 'bg-amber-500 text-slate-950 shadow-xs'
+                      : 'text-stone-600 dark:text-gray-300 hover:text-stone-900 dark:hover:text-white'
                   }`}
                 >
                   🗣️ {t('seven-kings.phonetic', 'Phonétique')}
@@ -1484,8 +1484,8 @@ export const SevenKingsSeals: React.FC = () => {
                   onClick={() => setInvocationViewMode('both')}
                   className={`px-2.5 py-1 rounded-lg font-extrabold transition-all cursor-pointer ${
                     invocationViewMode === 'both'
-                      ? 'bg-amber-500 text-black shadow-xs'
-                      : 'text-gray-700 dark:text-gray-300 hover:text-white'
+                      ? 'bg-amber-500 text-slate-950 shadow-xs'
+                      : 'text-stone-600 dark:text-gray-300 hover:text-stone-900 dark:hover:text-white'
                   }`}
                 >
                   ✨ {t('seven-kings.both', 'Les Deux')}
@@ -1497,13 +1497,13 @@ export const SevenKingsSeals: React.FC = () => {
             <div className="space-y-4 pt-1">
               {/* Arabic Original Script */}
               {(invocationViewMode === 'ar' || invocationViewMode === 'both') && (
-                <div className="p-4 bg-amber-950/30 border border-amber-500/40 rounded-2xl space-y-2 text-right">
+                <div className="p-4 bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-500/40 rounded-2xl space-y-2 text-right">
                   <span className="text-[10px] font-bold uppercase tracking-widest text-amber-700 dark:text-amber-400 block text-left">
                     {t('seven-kings.arabicScriptHeader', 'النص العربي الأصلي (مع التشكيل)')}
                   </span>
                   <p 
                     dir="rtl" 
-                    className="text-xl sm:text-2xl font-serif text-amber-800 dark:text-amber-200 leading-relaxed font-semibold tracking-wide"
+                    className="text-xl sm:text-2xl font-serif text-amber-950 dark:text-amber-200 leading-relaxed font-semibold tracking-wide"
                   >
                     "{selectedDay.invocationAr}"
                   </p>
@@ -1512,21 +1512,21 @@ export const SevenKingsSeals: React.FC = () => {
 
               {/* Phonetic Transliteration */}
               {(invocationViewMode === 'phonetic' || invocationViewMode === 'both') && (
-                <div className="p-4 bg-gray-900/80 border border-gray-800 rounded-2xl space-y-2">
-                  <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-400 block">
+                <div className="p-4 bg-stone-50 dark:bg-gray-900/80 border border-stone-200 dark:border-gray-800 rounded-2xl space-y-2">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-emerald-700 dark:text-emerald-400 block">
                     {t('seven-kings.phoneticHeader', 'Translitération Phonétique Exacte')}
                   </span>
-                  <p className="text-sm sm:text-base font-serif italic text-gray-800 dark:text-gray-200 leading-relaxed">
+                  <p className="text-sm sm:text-base font-serif italic text-stone-800 dark:text-gray-200 leading-relaxed font-medium">
                     "{selectedDay.invocationPhonetic}"
                   </p>
                 </div>
               )}
 
               {/* Localized Translation */}
-              <div className="p-3 bg-gray-950/60 rounded-xl text-xs text-gray-600 dark:text-gray-300 border border-gray-800/80 flex items-start gap-2">
-                <Info size={16} className="text-amber-700 dark:text-amber-400 shrink-0 mt-0.5" />
+              <div className="p-3 bg-stone-50 dark:bg-gray-950/60 rounded-xl text-xs text-stone-700 dark:text-gray-300 border border-stone-200 dark:border-gray-800/80 flex items-start gap-2">
+                <Info size={16} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                 <p>
-                  <strong className="text-gray-700 dark:text-gray-300">{t('seven-kings.invocationMeaning', "Sens de l'Invocation :")} </strong>
+                  <strong className="text-stone-900 dark:text-gray-200">{t('seven-kings.invocationMeaning', "Sens de l'Invocation :")} </strong>
                   {getInvocationMeaning(selectedDay)}
                 </p>
               </div>
@@ -1780,23 +1780,31 @@ export const SevenKingsSeals: React.FC = () => {
 
             {/* Action Bar */}
             <div className="w-full mt-4 z-10 pt-3 border-t border-gray-800/80 space-y-2">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                 <button
                   onClick={handleDownloadSeal}
                   className="py-2.5 px-3 rounded-2xl bg-gray-900 hover:bg-gray-800 text-white font-extrabold text-xs flex items-center justify-center gap-2 border border-gray-800 transition-all cursor-pointer shadow-sm"
                 >
-                  <Download className="w-4 h-4 text-amber-700 dark:text-amber-400" />
-                  <span>{t('seven-kings.downloadPNGSize', 'Télécharger PNG ({size}x{size})').replace(/{size}/g, String(wafqSize))}</span>
+                  <Download className="w-4 h-4 text-amber-500" />
+                  <span>{t('seven-kings.downloadPNGSize', 'Télécharger PNG')}</span>
                   {!isPremium && <Lock className="w-3.5 h-3.5 text-amber-500/80 ml-auto" />}
+                </button>
+
+                <button
+                  onClick={() => setShowParchment(true)}
+                  className="py-2.5 px-3 rounded-2xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 font-extrabold text-xs flex items-center justify-center gap-2 border border-amber-500/40 transition-all cursor-pointer shadow-sm"
+                >
+                  <Feather className="w-4 h-4 text-amber-400" />
+                  <span>{t('seven-kings.exportParchment', 'Parchemin')}</span>
                 </button>
 
                 <button
                   onClick={handleDownloadSVG}
                   className="py-2.5 px-3 rounded-2xl bg-gradient-to-r from-amber-500/20 to-amber-600/20 hover:from-amber-500/30 hover:to-amber-600/30 text-amber-800 dark:text-amber-300 font-extrabold text-xs flex items-center justify-center gap-2 border border-amber-500/30 transition-all cursor-pointer shadow-sm"
                 >
-                  <Sparkles className="w-4 h-4 text-amber-700 dark:text-amber-400" />
-                  <span>{t('seven-kings.downloadSVG', 'Vectoriel SVG (HD)')}</span>
-                  {!isPremium && <Lock className="w-3.5 h-3.5 text-amber-700 dark:text-amber-400 ml-auto" />}
+                  <Sparkles className="w-4 h-4 text-amber-500" />
+                  <span>{t('seven-kings.downloadSVG', 'Vectoriel SVG')}</span>
+                  {!isPremium && <Lock className="w-3.5 h-3.5 text-amber-500 ml-auto" />}
                 </button>
               </div>
 
@@ -1856,52 +1864,52 @@ export const SevenKingsSeals: React.FC = () => {
         </div>
 
         {/* Section 2: Protocole Pratique & Règles de Sécurité (Adab) */}
-        <div className="bg-gradient-to-br from-emerald-950/30 via-slate-900 to-gray-900 p-6 rounded-3xl border border-emerald-500/30 text-white shadow-lg space-y-4">
-          <div className="flex items-center gap-2 pb-3 border-b border-emerald-800/50">
-            <Shield className="w-6 h-6 text-emerald-400" />
+        <div className="bg-emerald-50/50 dark:bg-gradient-to-br dark:from-emerald-950/30 dark:via-slate-900 dark:to-gray-900 p-6 rounded-3xl border border-emerald-200 dark:border-emerald-500/30 shadow-lg space-y-4">
+          <div className="flex items-center gap-2 pb-3 border-b border-emerald-200 dark:border-emerald-800/50">
+            <Shield className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
             <div>
-              <h3 className="text-base sm:text-lg font-extrabold text-emerald-400 font-serif">
+              <h3 className="text-base sm:text-lg font-extrabold text-emerald-900 dark:text-emerald-400 font-serif">
                 {t('seven-kings.protocolTitle', 'Protocole de Pratique Recommandé (Adab Al-Amal & Sécurité)')}
               </h3>
-              <p className="text-xs text-gray-700 dark:text-gray-300">
+              <p className="text-xs text-stone-600 dark:text-gray-300">
                 {t('seven-kings.protocolSubtitle', "Directives traditionnelles pour la contemplation et l'utilisation sereine du sceau")}
               </p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-            <div className="p-3.5 bg-gray-900/80 rounded-2xl border border-gray-800 space-y-1">
+            <div className="p-3.5 bg-white dark:bg-gray-900/80 rounded-2xl border border-emerald-100 dark:border-gray-800 space-y-1 shadow-xs">
               <span className="font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1">
                 <Check size={14} /> {t('seven-kings.p1Title', '1. Purification (Taharah & Wudu)')}
               </span>
-              <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+              <p className="text-stone-700 dark:text-gray-300 leading-relaxed">
                 {t('seven-kings.p1Desc', 'Effectuez de douces ablutions rituelles, habillez-vous de vêtements propres et choisissez un endroit calme exempt de toute distraction.')}
               </p>
             </div>
 
-            <div className="p-3.5 bg-gray-900/80 rounded-2xl border border-gray-800 space-y-1">
+            <div className="p-3.5 bg-white dark:bg-gray-900/80 rounded-2xl border border-emerald-100 dark:border-gray-800 space-y-1 shadow-xs">
               <span className="font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1">
                 <Check size={14} /> {t('seven-kings.p2Title', '2. Alignement & Heure Planétaire')}
               </span>
-              <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+              <p className="text-stone-700 dark:text-gray-300 leading-relaxed">
                 {t('seven-kings.p2DescDetail', "Pratiquez idéalement le jour du sceau (ex: {day} au lever du soleil) pour bénéficier de l'alignement de la planète {planet}.").replace('{day}', getDayName(selectedDay)).replace('{planet}', getPlanetName(selectedDay))}
               </p>
             </div>
 
-            <div className="p-3.5 bg-gray-900/80 rounded-2xl border border-gray-800 space-y-1">
+            <div className="p-3.5 bg-white dark:bg-gray-900/80 rounded-2xl border border-emerald-100 dark:border-gray-800 space-y-1 shadow-xs">
               <span className="font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1">
                 <Check size={14} /> {t('seven-kings.p3Title', '3. Encens de Fumigation (Bakhour)')}
               </span>
-              <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+              <p className="text-stone-700 dark:text-gray-300 leading-relaxed">
                 {t('seven-kings.p3DescDetail', "Faites brûler une pincée d'encens naturel ({incense}) pour élever l'atmosphère vibratoire du lieu.").replace('{incense}', getIncenseName(selectedDay))}
               </p>
             </div>
 
-            <div className="p-3.5 bg-gray-900/80 rounded-2xl border border-gray-800 space-y-1">
+            <div className="p-3.5 bg-white dark:bg-gray-900/80 rounded-2xl border border-emerald-100 dark:border-gray-800 space-y-1 shadow-xs">
               <span className="font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1">
                 <Check size={14} /> {t('seven-kings.p4Title', '4. Bouclier de Protection (Tahseen)')}
               </span>
-              <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+              <p className="text-stone-700 dark:text-gray-300 leading-relaxed">
                 {t('seven-kings.p4Desc', 'Récitez 7 fois le Verset du Trône (Ayat Al-Kursi) et les Sourates Al-Falaq et An-Nas avant toute méditation ou tracé du sceau.')}
               </p>
             </div>

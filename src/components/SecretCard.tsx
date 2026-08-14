@@ -123,16 +123,17 @@ export const SecretCard: React.FC<SecretCardProps> = ({ item, layoutMode = 'grid
     } catch (e) {}
 
     let isMounted = true;
-    const fetchAutoTranslation = async () => {
+    // Add random jitter/stagger to avoid all cards hitting the backend simultaneously
+    const timer = setTimeout(async () => {
       try {
-        const res = await fetch(getApiUrl('/api/translate-article'), {
+        const res = await fetch(getApiUrl('/api/translate-text'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            title: item.title,
-            hook: item.hook || '',
-            content: item.content || '',
-            benefits: item.benefits || [],
+            texts: {
+              title: item.title || '',
+              hook: item.hook || ''
+            },
             targetLanguage: language
           })
         });
@@ -140,22 +141,25 @@ export const SecretCard: React.FC<SecretCardProps> = ({ item, layoutMode = 'grid
         if (res.ok) {
           const data = await res.json();
           if (data && (data.title || data.hook)) {
-            localStorage.setItem(cacheKey, JSON.stringify(data));
+            const transResult = {
+              title: data.title || item.title,
+              hook: data.hook || item.hook
+            };
+            localStorage.setItem(cacheKey, JSON.stringify(transResult));
             if (isMounted) {
-              setTranslated({
-                title: data.title,
-                hook: data.hook
-              });
+              setTranslated(transResult);
             }
           }
         }
       } catch (e) {
         console.warn(`[SecretCard] Translation error for ${item.id} (${language}):`, e);
       }
-    };
+    }, Math.floor(Math.random() * 400));
 
-    fetchAutoTranslation();
-    return () => { isMounted = false; };
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+    };
   }, [item.id, item.title, item.hook, language, manualTitle, manualHook]);
 
   // Final display title and hook

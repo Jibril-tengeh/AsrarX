@@ -997,29 +997,29 @@ CONSEILS RITUELS :
           </div>
 
           {/* Planetary Protocol & Jeweler Directives Box */}
-          <div className="w-full bg-gradient-to-r from-amber-950/30 via-slate-900 to-amber-950/30 border border-amber-500/30 rounded-3xl p-5 text-amber-100 space-y-3 shadow-md">
-            <h3 className="text-xs font-extrabold text-amber-300 flex items-center gap-2 uppercase tracking-wider">
-              <Flame size={16} className="text-amber-400" />
+          <div className="w-full bg-amber-50/70 dark:bg-gradient-to-r dark:from-amber-950/30 dark:via-slate-900 dark:to-amber-950/30 border border-amber-200 dark:border-amber-500/30 rounded-3xl p-5 text-stone-800 dark:text-amber-100 space-y-3 shadow-md">
+            <h3 className="text-xs font-extrabold text-amber-800 dark:text-amber-300 flex items-center gap-2 uppercase tracking-wider">
+              <Flame size={16} className="text-amber-600 dark:text-amber-400" />
               <span>{dict.protocolTitle}</span>
             </h3>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
-              <div className="p-2.5 bg-black/40 rounded-xl border border-amber-500/20">
-                <span className="text-[10px] text-amber-400 font-bold block">{dict.planetPlanet}</span>
-                <span className="font-extrabold text-white">{metal.planetFr}</span>
+              <div className="p-2.5 bg-white dark:bg-black/40 rounded-xl border border-amber-200/80 dark:border-amber-500/20 shadow-xs">
+                <span className="text-[10px] text-amber-700 dark:text-amber-400 font-bold block">{dict.planetPlanet}</span>
+                <span className="font-extrabold text-stone-900 dark:text-white">{metal.planetFr}</span>
               </div>
-              <div className="p-2.5 bg-black/40 rounded-xl border border-amber-500/20">
-                <span className="text-[10px] text-amber-400 font-bold block">{dict.planetDay}</span>
-                <span className="font-extrabold text-white">{metal.dayFr}</span>
+              <div className="p-2.5 bg-white dark:bg-black/40 rounded-xl border border-amber-200/80 dark:border-amber-500/20 shadow-xs">
+                <span className="text-[10px] text-amber-700 dark:text-amber-400 font-bold block">{dict.planetDay}</span>
+                <span className="font-extrabold text-stone-900 dark:text-white">{metal.dayFr}</span>
               </div>
-              <div className="p-2.5 bg-black/40 rounded-xl border border-amber-500/20">
-                <span className="text-[10px] text-amber-400 font-bold block">{dict.planetIncense}</span>
-                <span className="font-extrabold text-amber-200 truncate block">{metal.incenseFr}</span>
+              <div className="p-2.5 bg-white dark:bg-black/40 rounded-xl border border-amber-200/80 dark:border-amber-500/20 shadow-xs">
+                <span className="text-[10px] text-amber-700 dark:text-amber-400 font-bold block">{dict.planetIncense}</span>
+                <span className="font-extrabold text-amber-800 dark:text-amber-200 truncate block">{metal.incenseFr}</span>
               </div>
             </div>
 
-            <p className="text-[11px] text-amber-200/80 leading-relaxed bg-black/30 p-3 rounded-2xl border border-amber-500/20">
-              <strong className="text-amber-300">{dict.jewelerNote}</strong> Effectuer la gravure à l'heure planétaire correspondante. Purifier l'alliage avec l'eau de rose et la fumigation préconisée. {engravingSide === 'back' ? "Graveur en dessous de la gemme pour contact direct avec la peau." : "Ciselure nette en creux sur la face externe."}
+            <p className="text-[11px] text-stone-700 dark:text-amber-200/80 leading-relaxed bg-white/80 dark:bg-black/30 p-3 rounded-2xl border border-amber-200/80 dark:border-amber-500/20">
+              <strong className="text-amber-900 dark:text-amber-300">{dict.jewelerNote}</strong> Effectuer la gravure à l'heure planétaire correspondante. Purifier l'alliage avec l'eau de rose et la fumigation préconisée. {engravingSide === 'back' ? "Graveur en dessous de la gemme pour contact direct avec la peau." : "Ciselure nette en creux sur la face externe."}
             </p>
           </div>
 

@@ -591,4 +591,22 @@ export const tools: ToolItem[] = [
     path: "/tools/divination-qurah",
     level: "advanced",
   },
+  {
+    id: "ibn-arabi-seals",
+    title: "Sceaux d'Ibn al-Arabi",
+    description: "Wafq al-Huroof (mondes métaphysiques), Sceau des 4 Anges, Wafq al-Mutaqati', Arbre de l'Existence (Shajarat) et Pentagrammes Numériques.",
+    icon: Crown,
+    color: "from-amber-500 via-emerald-800 to-slate-950",
+    path: "/tools/ibn-arabi-seals",
+    level: "advanced",
+  },
+  {
+    id: "advanced-geomancy",
+    title: "Géomancie des 3 Traditions (Arabe, Zanati & Ifa)",
+    description: "Arabe Classique (Damir, Tashteed, Mizan al-Anasir, Mizan al-Mizan, Inqilab), Maghrébine (Dairat as-Souss, Mizan al-Gharb, Khatam Zanati, Voyage Saharien, Jiwar) & Africaine (Opele 256 Odus, Opon Ifa, Amulu, Sikidy, Ebo, Hakata, Rano, Odu Ori).",
+    icon: Compass,
+    color: "from-amber-600 via-emerald-700 to-stone-950",
+    path: "/tools/advanced-geomancy",
+    level: "advanced",
+  },
 ];

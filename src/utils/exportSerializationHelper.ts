@@ -1,8 +1,8 @@
-import html2canvas from 'html2canvas';
+import { toCanvas } from 'html-to-image';
 
 /**
- * Helper callback for html2canvas/toCanvas onclone to ensure all <canvas> and <svg> elements
- * are properly serialized into the exported image file without losing content.
+ * Helper callback to ensure all <canvas> and <svg> elements
+ * are properly prepared for serialization into the exported image file.
  */
 export function prepareClonedDOMForCanvas(origEl: HTMLElement, clonedEl: HTMLElement, clonedDoc: Document) {
   // 1. Convert all <canvas> elements to data URL <img> tags in cloned DOM
@@ -50,17 +50,66 @@ export function prepareClonedDOMForCanvas(origEl: HTMLElement, clonedEl: HTMLEle
 }
 
 /**
- * High-quality export helper using html2canvas with full canvas & SVG serialization.
+ * High-quality export helper using html-to-image with full modern CSS support
+ * (oklab, oklch, gradients, shadows) and multi-tier fallbacks.
  */
-export async function exportElementToCanvas(element: HTMLElement, backgroundColor = '#0c0a09'): Promise<HTMLCanvasElement> {
-  return html2canvas(element, {
-    scale: 2,
-    backgroundColor: backgroundColor,
-    useCORS: true,
-    logging: false,
-    allowTaint: true,
-    onclone: (clonedDoc, clonedEl) => {
-      prepareClonedDOMForCanvas(element, clonedEl, clonedDoc);
-    },
-  });
+export async function exportElementToCanvas(
+  element: HTMLElement,
+  backgroundColor = '#0c0a09',
+  options?: { pixelRatio?: number; cacheBust?: boolean; quality?: number; width?: number; height?: number }
+): Promise<HTMLCanvasElement> {
+  const pixelRatio = options?.pixelRatio ?? 2;
+  const quality = options?.quality ?? 0.98;
+
+  // Calculate true unconstrained dimensions to avoid clipping tall content
+  const width = Math.ceil(
+    options?.width ??
+    Math.max(element.scrollWidth, element.offsetWidth, element.clientWidth, element.getBoundingClientRect().width, 500)
+  );
+  const height = Math.ceil(
+    options?.height ??
+    Math.max(element.scrollHeight, element.offsetHeight, element.clientHeight, element.getBoundingClientRect().height)
+  );
+
+  const renderStyle: Partial<CSSStyleDeclaration> = {
+    maxHeight: 'none',
+    height: `${height}px`,
+    width: `${width}px`,
+    overflow: 'visible',
+    transform: 'none',
+  };
+
+  try {
+    const canvas = await toCanvas(element, {
+      backgroundColor: backgroundColor,
+      pixelRatio: pixelRatio,
+      cacheBust: true,
+      quality: quality,
+      width: width,
+      height: height,
+      style: renderStyle as any,
+    });
+    return canvas;
+  } catch (err) {
+    console.warn('[exportElementToCanvas] Primary render attempt failed, retrying with fallback options:', err);
+    try {
+      // Fallback: Skip font CSS embedding in case of cross-origin stylesheet font rules
+      const canvas = await toCanvas(element, {
+        backgroundColor: backgroundColor,
+        pixelRatio: pixelRatio,
+        cacheBust: true,
+        quality: quality,
+        width: width,
+        height: height,
+        style: renderStyle as any,
+        skipFonts: true,
+        fontEmbedCSS: '',
+      });
+      return canvas;
+    } catch (fallbackErr) {
+      console.error('[exportElementToCanvas] Final export canvas failure:', fallbackErr);
+      throw fallbackErr;
+    }
+  }
 }
+

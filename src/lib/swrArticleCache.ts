@@ -84,7 +84,7 @@ export async function revalidatePublishedArticles(sourceTag = 'manual'): Promise
 
     // 1. Attempt Firestore SDK fetch with timeout
     try {
-      const q = query(collection(db, 'articles'), where('status', 'in', ['published', 'publie', 'Publié', 'published_public', 'active']));
+      const q = collection(db, 'articles');
       const snapshot = await Promise.race([
         getDocs(q),
         new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Firestore SDK timeout')), 6000))
@@ -93,7 +93,7 @@ export async function revalidatePublishedArticles(sourceTag = 'manual'): Promise
       snapshot.forEach((docSnap) => {
         fetchedItems.push({ id: docSnap.id, ...docSnap.data() });
       });
-      console.log(`[SWR Revalidate] Firestore SDK returned ${fetchedItems.length} published articles.`);
+      console.log(`[SWR Revalidate] Firestore SDK returned ${fetchedItems.length} articles.`);
     } catch (sdkErr: any) {
       console.warn(`[SWR Revalidate] Firestore SDK fetch skipped/failed (${sdkErr?.message}), trying HTTPS REST fallback...`);
       fetchedItems = [];
@@ -213,18 +213,20 @@ export async function getSWRCacheStats(): Promise<SWRCacheStats> {
   let lastSyncTime: number | null = null;
 
   try {
-    const cachedList = await getOfflineData<any[]>(CACHED_ARTICLES_LIST_KEY);
-    if (Array.isArray(cachedList)) {
+    const cachedList = (await getOfflineData<any[]>(CACHED_ARTICLES_LIST_KEY)) || (await getOfflineData<any[]>(CACHED_EXPLORE_ARTICLES_KEY));
+    if (Array.isArray(cachedList) && cachedList.length > 0) {
       count = cachedList.filter(a => a && isPubliclyVisibleArticle(a.status)).length;
     }
   } catch (e) {}
 
   if (count === 0) {
     try {
-      const raw = localStorage.getItem(CACHED_ARTICLES_LIST_KEY);
+      const raw = localStorage.getItem(CACHED_ARTICLES_LIST_KEY) || localStorage.getItem(CACHED_EXPLORE_ARTICLES_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) count = parsed.length;
+        if (Array.isArray(parsed)) {
+          count = parsed.filter((a: any) => a && isPubliclyVisibleArticle(a.status)).length;
+        }
       }
     } catch (e) {}
   }

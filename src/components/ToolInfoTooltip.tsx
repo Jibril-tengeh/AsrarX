@@ -231,25 +231,25 @@ export const ToolInfoTooltip: React.FC<ToolInfoTooltipProps> = ({ toolId, title:
 
   if (customTitle && customContent) {
     return (
-      <div className="w-full max-w-full overflow-hidden break-words bg-blue-50/40 dark:bg-blue-950/10 border border-blue-100/70 dark:border-blue-900/30 rounded-2xl p-4 transition-all duration-300">
+      <div className="w-full max-w-full overflow-hidden break-words bg-amber-50/90 dark:bg-stone-900/90 border border-amber-300/60 dark:border-amber-500/30 rounded-2xl p-4 transition-all duration-300 shadow-sm">
         <button
           onClick={() => setIsOpen(!isOpen)}
           className="w-full flex items-center justify-between text-left focus:outline-none group gap-2"
         >
           <div className="flex items-center gap-3 min-w-0">
-            <div className="p-2 bg-blue-100/60 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl shrink-0">
+            <div className="p-2 bg-amber-500/20 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 rounded-xl shrink-0 border border-amber-500/30">
               <Info size={18} className="animate-pulse" />
             </div>
             <div className="min-w-0 flex-1">
-              <h4 className="text-sm font-bold text-gray-950 dark:text-gray-150 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate">
+              <h4 className="text-sm font-bold text-stone-900 dark:text-amber-300 group-hover:text-amber-700 dark:group-hover:text-amber-200 transition-colors truncate">
                 {customTitle}
               </h4>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+              <p className="text-xs text-stone-600 dark:text-stone-400 mt-0.5 truncate font-medium">
                 {t('toolTooltip.clickToInterpret', "Cliquez pour voir comment interpréter les résultats")}
               </p>
             </div>
           </div>
-          <div className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 shrink-0">
+          <div className="p-1 text-stone-500 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-100 shrink-0">
             {isOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
           </div>
         </button>
@@ -261,7 +261,7 @@ export const ToolInfoTooltip: React.FC<ToolInfoTooltipProps> = ({ toolId, title:
               animate={{ height: 'auto', opacity: 1, marginTop: 16 }}
               exit={{ height: 0, opacity: 0, marginTop: 0 }}
               transition={{ duration: 0.25, ease: 'easeInOut' }}
-              className="overflow-hidden text-xs sm:text-sm text-gray-700 dark:text-gray-300 border-t border-blue-100/40 dark:border-blue-900/20 pt-3 break-words"
+              className="overflow-hidden text-xs sm:text-sm text-stone-800 dark:text-stone-200 border-t border-amber-300/40 dark:border-amber-500/20 pt-3 break-words leading-relaxed"
             >
               {customContent}
             </motion.div>
@@ -274,25 +274,25 @@ export const ToolInfoTooltip: React.FC<ToolInfoTooltipProps> = ({ toolId, title:
   if (!currentGuide) return null;
 
   return (
-    <div className="w-full max-w-full overflow-hidden break-words bg-blue-50/40 dark:bg-blue-950/10 border border-blue-100/70 dark:border-blue-900/30 rounded-2xl p-4 transition-all duration-300">
+    <div className="w-full max-w-full overflow-hidden break-words bg-amber-50/90 dark:bg-stone-900/90 border border-amber-300/60 dark:border-amber-500/30 rounded-2xl p-4 transition-all duration-300 shadow-sm">
       <button
         onClick={() => setIsOpen(!isOpen)}
         className="w-full flex items-center justify-between text-left focus:outline-none group gap-2"
       >
         <div className="flex items-center gap-3 min-w-0">
-          <div className="p-2 bg-blue-100/60 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl shrink-0">
+          <div className="p-2 bg-amber-500/20 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 rounded-xl shrink-0 border border-amber-500/30">
             <Info size={18} className="animate-pulse" />
           </div>
           <div className="min-w-0 flex-1">
-            <h4 className="text-sm font-bold text-gray-950 dark:text-gray-150 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors truncate">
+            <h4 className="text-sm font-bold text-stone-900 dark:text-amber-300 group-hover:text-amber-700 dark:group-hover:text-amber-200 transition-colors truncate">
               {currentGuide.title}
             </h4>
-            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 truncate">
+            <p className="text-xs text-stone-600 dark:text-stone-400 mt-0.5 truncate font-medium">
               {t('toolTooltip.clickToInterpret', "Cliquez pour voir comment interpréter les résultats")}
             </p>
           </div>
         </div>
-        <div className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 shrink-0">
+        <div className="p-1 text-stone-500 hover:text-stone-800 dark:text-stone-400 dark:hover:text-stone-100 shrink-0">
           {isOpen ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
         </div>
       </button>
@@ -306,33 +306,33 @@ export const ToolInfoTooltip: React.FC<ToolInfoTooltipProps> = ({ toolId, title:
             transition={{ duration: 0.25, ease: 'easeInOut' }}
             className="overflow-hidden"
           >
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-blue-100/40 dark:border-blue-900/20 pt-4 text-xs sm:text-sm">
-              <div className="space-y-1.5 p-3 bg-white/40 dark:bg-gray-800/20 rounded-xl border border-blue-50/50 dark:border-gray-850">
-                <h5 className="font-bold text-gray-900 dark:text-white flex items-center gap-1.5 text-xs text-blue-600 dark:text-blue-400 uppercase tracking-wider">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-t border-amber-300/40 dark:border-amber-500/20 pt-4 text-xs sm:text-sm">
+              <div className="space-y-1.5 p-3 bg-white/80 dark:bg-stone-950/60 rounded-xl border border-amber-200/70 dark:border-stone-800 shadow-sm">
+                <h5 className="font-bold text-blue-700 dark:text-blue-400 flex items-center gap-1.5 text-xs uppercase tracking-wider">
                   <Key size={13} />
                   {t('toolTooltip.howItWorks', "Fonctionnement")}
                 </h5>
-                <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-[12.5px]">
+                <p className="text-stone-700 dark:text-stone-300 leading-relaxed text-[12.5px]">
                   {currentGuide.howItWorks}
                 </p>
               </div>
 
-              <div className="space-y-1.5 p-3 bg-white/40 dark:bg-gray-800/20 rounded-xl border border-blue-50/50 dark:border-gray-850">
-                <h5 className="font-bold text-gray-900 dark:text-white flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+              <div className="space-y-1.5 p-3 bg-white/80 dark:bg-stone-950/60 rounded-xl border border-amber-200/70 dark:border-stone-800 shadow-sm">
+                <h5 className="font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-1.5 text-xs uppercase tracking-wider">
                   <BookOpen size={13} />
                   {t('toolTooltip.interpretation', "Interprétation")}
                 </h5>
-                <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-[12.5px]">
+                <p className="text-stone-700 dark:text-stone-300 leading-relaxed text-[12.5px]">
                   {currentGuide.interpretation}
                 </p>
               </div>
 
-              <div className="space-y-1.5 p-3 bg-white/40 dark:bg-gray-800/20 rounded-xl border border-blue-50/50 dark:border-gray-850">
-                <h5 className="font-bold text-gray-900 dark:text-white flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400 uppercase tracking-wider">
+              <div className="space-y-1.5 p-3 bg-white/80 dark:bg-stone-950/60 rounded-xl border border-amber-200/70 dark:border-stone-800 shadow-sm">
+                <h5 className="font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1.5 text-xs uppercase tracking-wider">
                   <Sparkles size={13} />
                   {t('toolTooltip.spiritualAdvice', "Conseil d'usage")}
                 </h5>
-                <p className="text-gray-600 dark:text-gray-300 leading-relaxed text-[12.5px]">
+                <p className="text-stone-700 dark:text-stone-300 leading-relaxed text-[12.5px]">
                   {currentGuide.advice}
                 </p>
               </div>

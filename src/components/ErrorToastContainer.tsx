@@ -80,8 +80,10 @@ export const ErrorToastContainer: React.FC = () => {
       if (
         lowerMsg.includes('websocket') || 
         lowerMsg.includes('extension') ||
-        lowerMsg.includes('hmr') ||
-        lowerMsg.includes('vite')
+        lowerMsg.includes('hmr') || 
+        lowerMsg.includes('vite') ||
+        lowerMsg.includes('script error') ||
+        !lowerMsg.trim()
       ) return;
 
       const fbType = checkFirebaseError(event.message || '');

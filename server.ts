@@ -92,15 +92,63 @@ async function startServer() {
     }
   });
 
-  // Helper for retrying Gemini API calls
+  // Server-side in-memory cache for translations to avoid repeated API calls
+  const translationCache = new Map<string, any>();
+  const MAX_CACHE_SIZE = 1000;
+
+  const getCachedTranslation = (key: string) => translationCache.get(key);
+  const setCachedTranslation = (key: string, data: any) => {
+    if (translationCache.size >= MAX_CACHE_SIZE) {
+      const firstKey = translationCache.keys().next().value;
+      if (firstKey) translationCache.delete(firstKey);
+    }
+    translationCache.set(key, data);
+  };
+
+  // Helper for retrying Gemini API calls with model fallbacks and exponential backoff
   const generateWithRetry = async (ai: GoogleGenAI, params: any, retries = 3) => {
+    const fallbackModels = ["gemini-3.7-flash", "gemini-flash-latest", "gemini-3.1-flash-lite"];
+    let currentModelIndex = 0;
+    
+    // If the caller provided a model, ensure it's first or replace outdated models
+    if (params.model && !fallbackModels.includes(params.model)) {
+      params.model = "gemini-3.7-flash";
+    }
+
     for (let i = 0; i < retries; i++) {
       try {
-        return await ai.models.generateContent(params);
+        const modelToUse = fallbackModels[currentModelIndex] || "gemini-3.7-flash";
+        const currentParams = { ...params, model: modelToUse };
+        return await ai.models.generateContent(currentParams);
       } catch (error: any) {
-        const isTransient = error?.status === 503 || error?.status === 429 || error?.message?.includes("503") || error?.message?.includes("429");
-        if (i === retries - 1 || !isTransient) throw error;
-        await new Promise(resolve => setTimeout(resolve, 2000 * (i + 1))); // Exponential-ish backoff
+        const errMsg = error?.message || "";
+        const isRateLimit = error?.status === 429 || errMsg.includes("429") || errMsg.includes("RESOURCE_EXHAUSTED") || errMsg.includes("quota");
+        const isTransient = isRateLimit || error?.status === 503 || errMsg.includes("503") || errMsg.includes("Overloaded");
+        
+        console.warn(`[Gemini API] Call attempt ${i + 1}/${retries} failed on model '${fallbackModels[currentModelIndex]}':`, errMsg.slice(0, 150));
+
+        if (isRateLimit && currentModelIndex < fallbackModels.length - 1) {
+          // Try next fallback model immediately if quota exhausted
+          currentModelIndex++;
+          console.info(`[Gemini API] Switching to fallback model '${fallbackModels[currentModelIndex]}' due to rate limit/quota.`);
+          continue;
+        }
+
+        if (i === retries - 1 || !isTransient) {
+          throw error;
+        }
+
+        // Try extracting retry delay from error if specified
+        let waitMs = (1000 * Math.pow(2, i)) + Math.floor(Math.random() * 500);
+        const retryMatch = errMsg.match(/retry in ([0-9.]+)s/i);
+        if (retryMatch && retryMatch[1]) {
+          const seconds = parseFloat(retryMatch[1]);
+          if (!isNaN(seconds) && seconds > 0 && seconds < 10) {
+            waitMs = Math.min(seconds * 1000, 8000);
+          }
+        }
+
+        await new Promise(resolve => setTimeout(resolve, waitMs));
       }
     }
   };
@@ -152,7 +200,7 @@ Format de réponse attendu : Un objet JSON valide respectant cette structure exa
 `;
 
       const response = await generateWithRetry(ai, {
-        model: "gemini-3.5-flash",
+        model: "gemini-3.7-flash",
         contents: prompt,
         config: {
           responseMimeType: "application/json",
@@ -244,7 +292,7 @@ Formatez votre interprétation de manière structurée et élégante en Markdown
 `;
 
       const response = await generateWithRetry(ai, {
-        model: "gemini-3.5-flash",
+        model: "gemini-3.7-flash",
         contents: prompt,
       });
 
@@ -296,7 +344,7 @@ Ne mettez aucun texte d'enrobage avant ou après le JSON.
       `;
 
       const response = await generateWithRetry(ai, {
-        model: "gemini-3.5-flash",
+        model: "gemini-3.7-flash",
         contents: prompt,
         config: {
           responseMimeType: "application/json",
@@ -358,7 +406,7 @@ Ne mettez aucun texte d'enrobage avant ou après le JSON.
 `;
 
       const response = await generateWithRetry(ai, {
-        model: "gemini-3.5-flash",
+        model: "gemini-3.7-flash",
         contents: prompt,
         config: {
           responseMimeType: "application/json",
@@ -419,7 +467,7 @@ Votre message ici...
 `;
 
       const response = await generateWithRetry(ai, {
-        model: "gemini-3.5-flash",
+        model: "gemini-3.7-flash",
         contents: prompt,
       });
 
@@ -478,7 +526,7 @@ Règles de comportement et formatage (TRÈS IMPORTANT) :
 `;
 
       const response = await generateWithRetry(ai, {
-        model: "gemini-3.5-flash",
+        model: "gemini-3.7-flash",
         contents: prompt,
       });
 
@@ -541,7 +589,7 @@ Format de réponse attendu : Un objet JSON valide respectant cette structure exa
       `;
 
       const response = await generateWithRetry(ai, {
-        model: "gemini-3.5-flash",
+        model: "gemini-3.7-flash",
         contents: prompt,
         config: {
           responseMimeType: "application/json",
@@ -582,6 +630,13 @@ Format de réponse attendu : Un objet JSON valide respectant cette structure exa
         return res.status(400).json({ error: "Invalid target language. Supported: 'en', 'ha'" });
       }
 
+      // Check server cache first
+      const cacheKey = `art_${targetLanguage}_${(title || '').slice(0, 50)}_${(content || '').slice(0, 50)}`;
+      const cached = getCachedTranslation(cacheKey);
+      if (cached) {
+        return res.json(cached);
+      }
+
       const ai = new GoogleGenAI({
         apiKey,
         httpOptions: {
@@ -620,7 +675,7 @@ Benefits: ${JSON.stringify(benefits || [])}
 `;
 
       const response = await generateWithRetry(ai, {
-        model: "gemini-3.5-flash",
+        model: "gemini-3.7-flash",
         contents: prompt,
         config: {
           responseMimeType: "application/json",
@@ -643,6 +698,7 @@ Benefits: ${JSON.stringify(benefits || [])}
 
       const resultText = response?.text?.trim() || "{}";
       const translatedData = JSON.parse(resultText);
+      setCachedTranslation(cacheKey, translatedData);
       res.json(translatedData);
     } catch (error: any) {
       console.error("AI Article Translation error:", error);
@@ -661,6 +717,13 @@ Benefits: ${JSON.stringify(benefits || [])}
 
       if (!targetLanguage || (targetLanguage !== 'en' && targetLanguage !== 'ha')) {
         return res.status(400).json({ error: "Invalid target language. Supported: 'en', 'ha'" });
+      }
+
+      // Check server cache first
+      const cacheKey = `txt_${targetLanguage}_${JSON.stringify(texts || {})}`;
+      const cached = getCachedTranslation(cacheKey);
+      if (cached) {
+        return res.json(cached);
       }
 
       const ai = new GoogleGenAI({
@@ -691,7 +754,7 @@ ${JSON.stringify(textArray)}
 `;
 
       const response = await generateWithRetry(ai, {
-        model: "gemini-3.5-flash",
+        model: "gemini-3.7-flash",
         contents: prompt,
         config: {
           responseMimeType: "application/json",
@@ -725,6 +788,7 @@ ${JSON.stringify(textArray)}
           }
         });
       }
+      setCachedTranslation(cacheKey, translatedData);
       res.json(translatedData);
     } catch (error: any) {
       console.error("AI Text Translation error:", error);
@@ -882,7 +946,7 @@ Détails de la conversation actuelle :
 `;
 
       const response = await generateWithRetry(ai, {
-        model: "gemini-3.5-flash",
+        model: "gemini-3.7-flash",
         contents: prompt,
       });
 
@@ -912,10 +976,10 @@ Détails de la conversation actuelle :
           }
         });
 
-        // Prompt expansion using gemini-2.5-flash
+        // Prompt expansion using gemini-3.7-flash
         try {
-          const promptExpansion = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
+          const promptExpansion = await generateWithRetry(ai, {
+            model: "gemini-3.7-flash",
             contents: `System: You are a world-class artistic director specializing in luxury book cover artwork, spiritual manuscripts, and e-book design. Create a detailed visual prompt in English (max 45 words) for an image generator to create a stunning background artwork for:
 Title: "${title || 'Les Secrets Spirituels'}"
 Subtitle: "${subtitle || ''}"
@@ -923,7 +987,7 @@ Theme/Style: ${themeStyle || 'Islamic spiritual manuscript, gold filigree, emera
 User Description: ${prompt || 'elegant book cover artwork with gold accents'}
 Return ONLY the English visual prompt text.`
           });
-          if (promptExpansion.text) {
+          if (promptExpansion?.text) {
             enhancedPrompt = promptExpansion.text.trim();
           }
         } catch (expansionErr) {

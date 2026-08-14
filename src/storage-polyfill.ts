@@ -74,8 +74,27 @@ if (typeof window !== 'undefined') {
   });
 
   window.addEventListener('error', (event) => {
-    console.warn('[Global Window Error Caught Safely]', event.message || event.error);
+    const msg = String(event.message || event.error || '');
+    if (msg.toLowerCase().includes('script error') || !msg) {
+      if (event.preventDefault) {
+        event.preventDefault();
+      }
+      return;
+    }
+    console.warn('[Global Window Error Caught Safely]', msg);
+    if (event.preventDefault) {
+      event.preventDefault();
+    }
   });
+
+  window.onerror = function (msg, url, lineNo, columnNo, error) {
+    const messageStr = String(msg || '');
+    if (messageStr.toLowerCase().includes('script error') || !messageStr) {
+      return true; // Suppress cross-origin / third-party generic script error
+    }
+    console.warn('[Window.onerror Handled]', messageStr, url, lineNo, error);
+    return true; // Prevent unhandled error propagation
+  };
 }
 
 // Global Fetch Interceptor for Deep CORS/SSL/Offline Diagnostics

@@ -367,9 +367,7 @@ export const UserProfile: React.FC = () => {
 
   useEffect(() => {
     const isAdmin = user?.role === 'admin';
-    const q = isAdmin
-      ? query(collection(db, 'articles'))
-      : query(collection(db, 'articles'), where('status', 'in', ['Published', 'published']));
+    const q = collection(db, 'articles');
     const unsubscribe = onSnapshot(q, (snapshot) => {
       let allItems: any[] = snapshot.docs.map(doc => ({
         id: doc.id,

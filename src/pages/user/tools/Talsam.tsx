@@ -703,7 +703,7 @@ export const Talsam: React.FC = () => {
                   </div>
                   
                   <p 
-                    className="font-arabic text-5xl sm:text-7xl md:text-8xl text-amber-800 dark:text-amber-300 font-extrabold leading-normal text-center select-all tracking-normal drop-shadow-[0_0_15px_rgba(245,158,11,0.5)]"
+                    className="font-arabic text-5xl sm:text-7xl md:text-8xl text-amber-300 dark:text-amber-300 font-extrabold leading-normal text-center select-all tracking-normal drop-shadow-[0_0_15px_rgba(245,158,11,0.5)]"
                     style={{ letterSpacing: '0px', wordSpacing: '12px' }}
                     dir="rtl"
                   >
@@ -712,7 +712,7 @@ export const Talsam: React.FC = () => {
 
                   {/* Transliteration / Pronunciation block - MUCH LARGER & EXTREMELY CLEAR */}
                   <div className="mt-6 pt-4 border-t border-amber-500/10 space-y-1">
-                    <span className="text-[10px] font-bold text-amber-500/60 uppercase tracking-widest block">PRONONCIATION SACRÉE (TRANSLITTÉRATION)</span>
+                    <span className="text-[10px] font-bold text-amber-400/80 uppercase tracking-widest block">PRONONCIATION SACRÉE (TRANSLITTÉRATION)</span>
                     <p className="text-xl sm:text-2xl font-black text-white tracking-wide font-serif italic text-center select-all bg-white/5 py-2 px-4 rounded-xl border border-white/5">
                       {talsamPhonetic}
                     </p>
@@ -732,20 +732,20 @@ export const Talsam: React.FC = () => {
 
                 {/* Word breakdown for educational / spiritual secrets */}
                 <div className="max-w-xl mx-auto p-4 bg-slate-950/60 rounded-2xl border border-white/5 text-left space-y-3">
-                  <h4 className="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-widest text-center pb-2 border-b border-white/5">
+                  <h4 className="text-xs font-bold text-amber-400 uppercase tracking-widest text-center pb-2 border-b border-white/5">
                     Anatomie Vibratoire du Talsam Extrait
                   </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-[11px] text-gray-700 dark:text-gray-300">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-[11px] text-stone-200">
                     <div className="p-2.5 bg-white/5 rounded-xl border border-white/5">
-                      <span className="font-extrabold text-amber-800 dark:text-amber-300 block mb-0.5">Yâ (يَا)</span>
+                      <span className="font-extrabold text-amber-300 block mb-0.5">Yâ (يَا)</span>
                       Le vecteur de projection spirituelle et d'interpellation du flux divin.
                     </div>
                     <div className="p-2.5 bg-white/5 rounded-xl border border-white/5">
-                      <span className="font-extrabold text-amber-800 dark:text-amber-300 block mb-0.5">Mot Spirituel 1</span>
+                      <span className="font-extrabold text-amber-300 block mb-0.5">Mot Spirituel 1</span>
                       {talsamPhonetic.split(' ')[1] || 'Angélique'} : Connecte votre intention pure à l'élément de la terre.
                     </div>
                     <div className="p-2.5 bg-white/5 rounded-xl border border-white/5">
-                      <span className="font-extrabold text-amber-800 dark:text-amber-300 block mb-0.5">Mot Spirituel 2</span>
+                      <span className="font-extrabold text-amber-300 block mb-0.5">Mot Spirituel 2</span>
                       {talsamPhonetic.split(' ')[2] || 'Gardien'} : Harmonise le rythme cardiaque avec les ondes planétaires.
                     </div>
                   </div>
@@ -852,9 +852,9 @@ export const Talsam: React.FC = () => {
                     {/* Hover indicator */}
                     <div className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center z-20">
                       <div className="bg-slate-900/90 border border-amber-500/30 rounded-2xl px-4 py-2 text-center shadow-2xl scale-95 group-hover:scale-100 transition-transform">
-                        <Maximize className="text-amber-700 dark:text-amber-400 mx-auto mb-1 animate-pulse" size={20} />
-                        <span className="text-[11px] font-extrabold uppercase text-amber-800 dark:text-amber-200 tracking-wider block">Agrandir & Télécharger</span>
-                        <span className="text-[9px] text-gray-600 dark:text-gray-300">Cliquez pour ouvrir le Sceau Sacré</span>
+                        <Maximize className="text-amber-400 mx-auto mb-1 animate-pulse" size={20} />
+                        <span className="text-[11px] font-extrabold uppercase text-amber-200 tracking-wider block">Agrandir & Télécharger</span>
+                        <span className="text-[9px] text-stone-300">Cliquez pour ouvrir le Sceau Sacré</span>
                       </div>
                     </div>
 
@@ -866,11 +866,11 @@ export const Talsam: React.FC = () => {
                             className="bg-slate-900 aspect-square flex flex-col items-center justify-center border border-amber-500/10 p-1 rounded-lg text-center select-all group-hover:bg-slate-800 transition-colors"
                           >
                             {/* Standard western digits */}
-                            <span className="font-mono text-sm sm:text-base font-extrabold text-amber-700 dark:text-amber-400">
+                            <span className="font-mono text-sm sm:text-base font-extrabold text-amber-300">
                               {cell}
                             </span>
                             {/* Classical Eastern Arabic digits */}
-                            <span className="text-[10px] sm:text-[11px] text-amber-500/50 font-arabic font-bold">
+                            <span className="text-[10px] sm:text-[11px] text-amber-400/70 font-arabic font-bold">
                               {toArabicNumerals(cell)}
                             </span>
                           </div>
@@ -1065,18 +1065,18 @@ export const Talsam: React.FC = () => {
               {/* Close button */}
               <button 
                 onClick={() => setIsSceauModalOpen(false)}
-                className="absolute top-4 right-4 p-2 bg-white/5 hover:bg-white/10 rounded-full text-gray-600 dark:text-gray-300 hover:text-white transition-all cursor-pointer border border-white/5"
+                className="absolute top-4 right-4 p-2 bg-white/5 hover:bg-white/10 rounded-full text-stone-300 hover:text-white transition-all cursor-pointer border border-white/5"
               >
                 <X size={20} />
               </button>
 
               <div className="space-y-1">
-                <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400 uppercase tracking-widest block">GRAND SCEAU SACRÉ D'ASRARHUB</span>
+                <span className="text-[10px] font-bold text-amber-400 uppercase tracking-widest block">GRAND SCEAU SACRÉ D'ASRARHUB</span>
                 <h3 className="text-xl sm:text-2xl font-black text-white uppercase tracking-wider">
                   Khatim Muthallath de Ghazali
                 </h3>
-                <p className="text-xs text-gray-600 dark:text-gray-300 max-w-md mx-auto">
-                  Voici le tracé haute résolution du condensateur cosmique correspondant à votre intention : <span className="text-amber-800 dark:text-amber-300 italic">"{intention}"</span>
+                <p className="text-xs text-stone-300 max-w-md mx-auto">
+                  Voici le tracé haute résolution du condensateur cosmique correspondant à votre intention : <span className="text-amber-300 italic">"{intention}"</span>
                 </p>
               </div>
 
@@ -1090,11 +1090,11 @@ export const Talsam: React.FC = () => {
                         className="bg-slate-900 aspect-square flex flex-col items-center justify-center border-2 border-amber-500/20 p-2 rounded-xl text-center shadow-md shadow-black"
                       >
                         {/* Standard western digits */}
-                        <span className="font-mono text-xl sm:text-2xl font-black text-amber-800 dark:text-amber-300">
+                        <span className="font-mono text-xl sm:text-2xl font-black text-amber-300">
                           {cell}
                         </span>
                         {/* Classical Eastern Arabic digits */}
-                        <span className="text-xs sm:text-sm text-amber-500/70 font-arabic font-extrabold mt-0.5">
+                        <span className="text-xs sm:text-sm text-amber-400/80 font-arabic font-extrabold mt-0.5">
                           {toArabicNumerals(cell)}
                         </span>
                       </div>
@@ -1105,9 +1105,9 @@ export const Talsam: React.FC = () => {
 
               {/* Talsam displays below */}
               <div className="space-y-2 max-w-md mx-auto">
-                <span className="text-[10px] font-bold text-amber-500/60 uppercase tracking-widest block">Formule Talsamique Associée</span>
+                <span className="text-[10px] font-bold text-amber-400/80 uppercase tracking-widest block">Formule Talsamique Associée</span>
                 <p 
-                  className="font-arabic text-3xl sm:text-4xl text-amber-800 dark:text-amber-300 font-extrabold tracking-normal"
+                  className="font-arabic text-3xl sm:text-4xl text-amber-300 font-extrabold tracking-normal"
                   style={{ letterSpacing: '0px' }}
                   dir="rtl"
                 >
@@ -1141,14 +1141,14 @@ export const Talsam: React.FC = () => {
               </div>
 
               {/* Secret guidelines inside modal */}
-              <div className="text-left bg-slate-950/60 p-4 rounded-2xl border border-white/5 text-xs text-gray-600 dark:text-gray-300 space-y-2">
-                <p className="font-extrabold text-amber-700 dark:text-amber-400 uppercase tracking-widest text-[10px] border-b border-white/5 pb-1 flex items-center gap-1.5">
+              <div className="text-left bg-slate-950/60 p-4 rounded-2xl border border-white/5 text-xs text-stone-200 space-y-2">
+                <p className="font-extrabold text-amber-400 uppercase tracking-widest text-[10px] border-b border-white/5 pb-1 flex items-center gap-1.5">
                   <ShieldCheck size={12} /> Secrets d'Activation Sacrés :
                 </p>
                 <ul className="list-disc pl-4 space-y-1.5 leading-relaxed">
                   <li>Tracez cette grille exactement avec de l'encre de safran et de l'eau de rose sur du papier vierge.</li>
-                  <li>Inscrivez la formule talsamique <strong className="text-amber-800 dark:text-amber-300">{talsam}</strong> juste sous le sceau.</li>
-                  <li>Récitez la formule sacrée <strong className="text-amber-800 dark:text-amber-300 font-mono">{repetitionCount} fois</strong> de suite face à l'Est (Qiblah).</li>
+                  <li>Inscrivez la formule talsamique <strong className="text-amber-300">{talsam}</strong> juste sous le sceau.</li>
+                  <li>Récitez la formule sacrée <strong className="text-amber-300 font-mono">{repetitionCount} fois</strong> de suite face à l'Est (Qiblah).</li>
                   <li>Une fois chargé, pliez et gardez le sceau sur vous, caché des yeux indiscrets pour sceller sa vibration mystique.</li>
                 </ul>
               </div>

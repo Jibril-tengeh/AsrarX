@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { X, Printer, Download, Sparkles, Feather, Users } from 'lucide-react';
+import { X, Printer, Download, Sparkles, Feather, Users, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { exportElementToCanvas } from '../utils/exportSerializationHelper';
 import { downloadCanvasImage } from '../utils/downloadHelper';
@@ -29,18 +29,27 @@ export const ParchmentExporterModal: React.FC<ParchmentExporterModalProps> = ({
   const { t } = useLanguage();
   const parchmentRef = useRef<HTMLDivElement>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
   const [isCommunityModalOpen, setIsCommunityModalOpen] = useState(false);
 
   if (!isOpen) return null;
 
   const handleDownload = async () => {
-    if (!parchmentRef.current) return;
+    if (!parchmentRef.current || isExporting) return;
     setIsExporting(true);
     try {
       const el = parchmentRef.current;
-      const canvas = await exportElementToCanvas(el, '#fef3c7');
+      const fullWidth = Math.max(el.scrollWidth, el.offsetWidth, 620);
+      const fullHeight = Math.max(el.scrollHeight, el.offsetHeight);
+      const canvas = await exportElementToCanvas(el, '#fef3c7', { 
+        pixelRatio: 2,
+        width: fullWidth,
+        height: fullHeight,
+      });
       const cleanTitle = title.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
       await downloadCanvasImage(canvas, `parchemin_rituel_${cleanTitle}.png`);
+      setIsSuccess(true);
+      setTimeout(() => setIsSuccess(false), 3000);
     } catch (err) {
       console.error('Error exporting parchment:', err);
     } finally {
@@ -88,16 +97,29 @@ export const ParchmentExporterModal: React.FC<ParchmentExporterModalProps> = ({
               <button
                 onClick={handleDownload}
                 disabled={isExporting}
-                className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-zinc-950 font-bold text-xs transition-colors shadow-lg cursor-pointer disabled:opacity-50"
+                className={`flex items-center gap-1.5 px-4 py-1.5 rounded-xl font-bold text-xs transition-colors shadow-lg cursor-pointer disabled:opacity-50 ${
+                  isSuccess
+                    ? 'bg-emerald-500 text-white'
+                    : 'bg-amber-500 hover:bg-amber-600 text-zinc-950'
+                }`}
               >
-                <Download className="w-3.5 h-3.5" />
-                <span>
-                  {isExporting ? '...' : t('parchmentModal.download', 'Télécharger Image')}
-                </span>
+                {isSuccess ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-white" />
+                    <span>Téléchargé !</span>
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-3.5 h-3.5" />
+                    <span>
+                      {isExporting ? '...' : t('parchmentModal.download', 'Télécharger Image')}
+                    </span>
+                  </>
+                )}
               </button>
               <button
                 onClick={onClose}
-                className="p-1.5 rounded-full text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors"
+                className="p-1.5 rounded-full text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-200 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>

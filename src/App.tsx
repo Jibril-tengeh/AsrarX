@@ -161,6 +161,8 @@ const ThiebissabaTradition = lazyWithRetry(() => import('./pages/user/tools/Thie
 const HighPrecisionIndividualization = lazyWithRetry(() => import('./pages/user/tools/HighPrecisionIndividualization'));
 const AdvancedRamlProcessing = lazyWithRetry(() => import('./pages/user/tools/AdvancedRamlProcessing'));
 const TraditionalDivinationQurah = lazyWithRetry(() => import('./pages/user/tools/TraditionalDivinationQurah'));
+const IbnArabiSeals = lazyWithRetry(() => import('./pages/user/tools/IbnArabiSeals').then(m => ({ default: m.IbnArabiSeals })));
+const AdvancedGeomancy = lazyWithRetry(() => import('./pages/user/tools/AdvancedGeomancy').then(m => ({ default: m.AdvancedGeomancy })));
 const Store = lazyWithRetry(() => import('./pages/user/Store'));
 const FaqPage = lazyWithRetry(() => import('./pages/FaqPage'));
 
@@ -376,139 +378,8 @@ const NetworkStatus = () => {
     }
   };
 
-  // Render floating pill if dismissed OR if online with no active modal feedback
-  if (isDismissed || (isOnline && !statusFeedback)) {
-    // When online, article synchronization runs silently in the background without showing any floating pill on screen
-    if (!isOnline && isDismissed) {
-      return (
-        <button 
-          onClick={() => setIsDismissed(false)}
-          className="fixed bottom-20 left-4 z-[9990] bg-amber-600 hover:bg-amber-700 text-white text-xs px-3 py-1.5 rounded-full flex items-center gap-2 shadow-lg transition-all font-medium cursor-pointer border-0"
-          title="Connexion hors ligne - Cliquer pour ouvrir le diagnostic"
-        >
-          <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
-          <span>Hors ligne ({swrStats?.count || 'Plusieurs'} articles en cache IndexedDB)</span>
-        </button>
-      );
-    }
-
-    return null;
-  }
-
-  // Pop Up Modal avertissant l'utilisateur du réseau et affichant le statut du cache SWR IndexedDB
-  return (
-    <div className="fixed inset-0 z-[10001] bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-slate-900 border border-amber-500/30 dark:border-amber-500/20 text-slate-800 dark:text-slate-100 rounded-2xl shadow-2xl p-6 max-w-md w-full relative space-y-4">
-        {/* Close Button X */}
-        <button 
-          onClick={() => setIsDismissed(true)}
-          className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-white p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer border-0"
-          title="Fermer la notification"
-        >
-          <X className="w-5 h-5" />
-        </button>
-
-        <div className="flex items-start gap-4">
-          <div className="p-3 bg-amber-500/10 dark:bg-amber-500/20 rounded-xl text-amber-600 dark:text-amber-400 shrink-0">
-            <WifiOff className="w-7 h-7" />
-          </div>
-          <div className="space-y-1 pr-4">
-            <h3 className="font-bold text-lg text-slate-900 dark:text-white flex items-center gap-2">
-              {!isOnline ? "Connexion Hors Ligne" : "Diagnostic Réseau"}
-            </h3>
-            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
-              {!isOnline 
-                ? "Vous êtes hors ligne. Vos articles publiés sont conservés dans IndexedDB et restent accessibles en lecture instantanée."
-                : "Connectivité réseau active avec revalidation automatique Stale-While-Revalidate en arrière-plan."
-              }
-            </p>
-          </div>
-        </div>
-
-        {/* IndexedDB Cache SWR Info Box */}
-        <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 rounded-xl flex items-center justify-between text-xs">
-          <div className="flex items-center gap-2 text-emerald-800 dark:text-emerald-300">
-            <Database className="w-4 h-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
-            <div>
-              <p className="font-bold flex items-center gap-1.5">
-                <span>Cache Persistant IndexedDB (SWR)</span>
-                <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-ping" title="Synchro arrière-plan active" />
-              </p>
-              <p className="text-[11px] text-emerald-700/80 dark:text-emerald-400/80">
-                {swrStats ? `${swrStats.count} articles publiés prêts • Synchro: ${swrStats.lastSyncFormatted}` : 'Chargement du cache...'}
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={() => handleSWRRevalidate('user_click', { isSilent: false })}
-            disabled={isSwrSyncing || !isOnline}
-            className="p-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-lg transition-all border-0 cursor-pointer shrink-0"
-            title="Revalider les articles depuis le serveur (SWR)"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isSwrSyncing ? 'animate-spin' : ''}`} />
-          </button>
-        </div>
-
-        {/* Background Sync Notice Badge */}
-        <div className="px-3 py-2 bg-slate-100 dark:bg-slate-800/80 rounded-xl text-[11px] text-slate-600 dark:text-slate-300 flex items-center justify-between">
-          <span className="font-medium">⚡ Revalidation arrière-plan automatique :</span>
-          <span className="font-bold text-emerald-600 dark:text-emerald-400">Active (10m)</span>
-        </div>
-
-        {/* Status Feedback readout */}
-        {statusFeedback && (
-          <div className="p-3 bg-slate-950 text-amber-200 text-xs font-mono rounded-xl border border-amber-500/30 break-words">
-            {statusFeedback}
-          </div>
-        )}
-
-        {/* Actions */}
-        <div className="pt-2 border-t border-slate-200 dark:border-slate-800 flex flex-col gap-2">
-          {/* Synchronize in background button */}
-          <button
-            onClick={() => {
-              setIsDismissed(true);
-              if (!isSwrSyncing && isOnline) {
-                handleSWRRevalidate('user_bg_click', { isSilent: true });
-              }
-            }}
-            disabled={!isOnline}
-            className="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all shadow-md text-center cursor-pointer border-0 flex items-center justify-center gap-2"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isSwrSyncing ? 'animate-spin' : ''}`} />
-            <span>{isSwrSyncing ? 'Poursuivre la synchronisation en arrière-plan' : 'Synchroniser en arrière-plan'}</span>
-          </button>
-
-          <div className="flex flex-wrap gap-2">
-            <button 
-              onClick={handleCheckStatus}
-              disabled={checking || isSwrSyncing}
-              className="flex-1 px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center justify-center gap-1.5 border-0"
-            >
-              {checking ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : null}
-              {checking ? "Analyse..." : "Vérifier le statut"}
-            </button>
-
-            <button 
-              onClick={handleTestWebViewFetch}
-              disabled={checking || isSwrSyncing}
-              className="flex-1 px-3 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 rounded-xl text-xs font-semibold transition-all cursor-pointer border-0"
-              title="Tester si le WebView Capacitor bloque les requêtes (CORS / Schème local)"
-            >
-              Diag WebView / CORS
-            </button>
-          </div>
-
-          <button 
-            onClick={() => setIsDismissed(true)}
-            className="w-full py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-medium transition-all text-center cursor-pointer border-0"
-          >
-            Continuer en mode local
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+  // Silent background network manager (Visual indicators and controls are located in the header's SyncStatusBadge)
+  return null;
 };
 
 const ProtectedToolsLayout: React.FC = () => {
@@ -1136,6 +1007,15 @@ export default function App() {
                   <Route path="/tools/qurah" element={<TraditionalDivinationQurah />} />
                   <Route path="/tools/cauris" element={<TraditionalDivinationQurah />} />
                   <Route path="/tools/azlam" element={<TraditionalDivinationQurah />} />
+                  <Route path="/tools/ibn-arabi-seals" element={<IbnArabiSeals />} />
+                  <Route path="/tools/ibn-arabi" element={<IbnArabiSeals />} />
+                  <Route path="/tools/sceaux-ibn-arabi" element={<IbnArabiSeals />} />
+                  <Route path="/tools/akbari-seals" element={<IbnArabiSeals />} />
+                  <Route path="/tools/advanced-geomancy" element={<AdvancedGeomancy />} />
+                  <Route path="/tools/geomancy-traditions" element={<AdvancedGeomancy />} />
+                  <Route path="/tools/geomancie-avancee" element={<AdvancedGeomancy />} />
+                  <Route path="/tools/ifa" element={<AdvancedGeomancy />} />
+                  <Route path="/tools/sikidy" element={<AdvancedGeomancy />} />
                   
                   {/* Additional Protected Routes */}
                   <Route path="/explore" element={<ExploreDashboard />} />

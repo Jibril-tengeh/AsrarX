@@ -61,7 +61,7 @@ export const fetchArticlesFromRest = async (): Promise<any[]> => {
       console.warn('[Firestore REST] Missing firebase config.');
       return [];
     }
-    const url = `https://firestore.googleapis.com/v1/projects/${config.projectId}/databases/(default)/documents/articles?key=${config.apiKey}`;
+    const url = `https://firestore.googleapis.com/v1/projects/${config.projectId}/databases/(default)/documents/articles?key=${config.apiKey}&pageSize=500`;
     console.log(`[Firestore REST] Fetching real public articles directly via REST API from: ${url}`);
     
     const res = await fetch(url, { method: 'GET', cache: 'no-store' });

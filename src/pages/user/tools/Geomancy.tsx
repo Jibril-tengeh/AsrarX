@@ -1331,11 +1331,11 @@ Généré par AsrarHub — https://asrarhub.com
           <div key={i} className="flex gap-1.5">
             {val === 2 ? (
               <>
-                <div className={`${dotSizes[size]} rounded-full bg-amber-900 dark:bg-amber-100 shadow-sm`}></div>
-                <div className={`${dotSizes[size]} rounded-full bg-amber-900 dark:bg-amber-100 shadow-sm`}></div>
+                <div className={`${dotSizes[size]} rounded-full bg-amber-700 dark:bg-amber-300 shadow-xs`}></div>
+                <div className={`${dotSizes[size]} rounded-full bg-amber-700 dark:bg-amber-300 shadow-xs`}></div>
               </>
             ) : (
-              <div className={`${dotSizes[size]} rounded-full bg-amber-900 dark:bg-amber-100 shadow-sm`}></div>
+              <div className={`${dotSizes[size]} rounded-full bg-amber-700 dark:bg-amber-300 shadow-xs`}></div>
             )}
           </div>
         ))}
@@ -1645,13 +1645,13 @@ Généré par AsrarHub — https://asrarhub.com
 
         {/* Dynamic Inputs depending on mode */}
         {inputMode === 'sandCanvas' && (
-          <div className="p-4 bg-stone-900 dark:bg-stone-950 rounded-2xl border border-amber-600/50 shadow-inner space-y-3">
-            <div className="flex items-center justify-between border-b border-stone-800 pb-2">
-              <div className="flex items-center gap-2 text-amber-200 text-xs sm:text-sm font-bold">
-                <Touchpad size={18} className="text-amber-400 animate-pulse" />
+          <div className="p-4 bg-amber-50/80 dark:bg-stone-950 rounded-2xl border border-amber-300 dark:border-amber-600/50 shadow-inner space-y-3">
+            <div className="flex items-center justify-between border-b border-amber-200 dark:border-stone-800 pb-2">
+              <div className="flex items-center gap-2 text-amber-900 dark:text-amber-200 text-xs sm:text-sm font-bold">
+                <Touchpad size={18} className="text-amber-600 dark:text-amber-400 animate-pulse" />
                 <span>{i18n.sandPrompt}</span>
               </div>
-              <span className="px-2.5 py-0.5 rounded-full bg-amber-900/80 text-amber-300 font-mono text-xs font-bold border border-amber-700/60">
+              <span className="px-2.5 py-0.5 rounded-full bg-amber-200/80 dark:bg-amber-900/80 text-amber-900 dark:text-amber-300 font-mono text-xs font-bold border border-amber-300 dark:border-amber-700/60">
                 {sandLines.length} / 16
               </span>
             </div>
@@ -1659,24 +1659,24 @@ Généré par AsrarHub — https://asrarhub.com
             {/* Sand Surface Tap Area */}
             <div
               onClick={handleAddSandLine}
-              className="w-full min-h-[120px] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-amber-950 via-stone-900 to-black rounded-xl border border-amber-700/40 p-3 flex flex-wrap content-start gap-1.5 overflow-y-auto cursor-pointer select-none hover:border-amber-400 transition-all group"
+              className="w-full min-h-[120px] bg-gradient-to-b from-amber-100/90 via-amber-50 to-amber-100/70 dark:from-amber-950 dark:via-stone-900 dark:to-black rounded-xl border border-amber-300 dark:border-amber-700/40 p-3 flex flex-wrap content-start gap-1.5 overflow-y-auto cursor-pointer select-none hover:border-amber-500 transition-all group shadow-inner"
             >
               {sandLines.length === 0 ? (
-                <div className="w-full h-24 flex flex-col items-center justify-center text-amber-400/80 text-xs text-center space-y-1">
-                  <Sparkles size={22} className="animate-bounce text-amber-400" />
+                <div className="w-full h-24 flex flex-col items-center justify-center text-amber-800 dark:text-amber-400/80 text-xs text-center space-y-1">
+                  <Sparkles size={22} className="animate-bounce text-amber-600 dark:text-amber-400" />
                   <p className="font-semibold">{i18n.sandInstruction}</p>
-                  <p className="text-[10px] text-amber-500/70">{i18n.sandSubtitle}</p>
+                  <p className="text-[10px] text-amber-700/80 dark:text-amber-500/70">{i18n.sandSubtitle}</p>
                 </div>
               ) : (
                 sandLines.map((count, idx) => (
-                  <div key={idx} className="flex items-center gap-1.5 bg-amber-950/80 px-2.5 py-1 rounded-lg border border-amber-700/60 text-xs font-mono text-amber-200">
-                    <span className="text-amber-400 font-bold">{i18n.lineLabel} {idx + 1}:</span>
+                  <div key={idx} className="flex items-center gap-1.5 bg-white/90 dark:bg-amber-950/80 px-2.5 py-1 rounded-lg border border-amber-300 dark:border-amber-700/60 text-xs font-mono text-stone-900 dark:text-amber-200 shadow-xs">
+                    <span className="text-amber-700 dark:text-amber-400 font-bold">{i18n.lineLabel} {idx + 1}:</span>
                     <span className="flex gap-1">
                       {Array.from({ length: Math.min(count, 10) }).map((_, i) => (
-                        <span key={i} className="w-2 h-2 rounded-full bg-amber-400 inline-block shadow-sm"></span>
+                        <span key={i} className="w-2 h-2 rounded-full bg-amber-600 dark:bg-amber-400 inline-block shadow-xs"></span>
                       ))}
                     </span>
-                    <span className="ml-1 text-[10px] text-amber-300 font-sans font-bold">
+                    <span className="ml-1 text-[10px] text-amber-800 dark:text-amber-300 font-sans font-bold">
                       ({count % 2 === 0 ? i18n.evenLabel : i18n.oddLabel})
                     </span>
                   </div>
@@ -1688,7 +1688,7 @@ Généré par AsrarHub — https://asrarhub.com
             <div className="flex items-center justify-between pt-1">
               <button
                 onClick={handleResetSand}
-                className="px-3 py-1.5 rounded-lg bg-stone-800 hover:bg-stone-700 text-amber-300 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
+                className="px-3 py-1.5 rounded-lg bg-stone-200 dark:bg-stone-800 hover:bg-stone-300 dark:hover:bg-stone-700 text-stone-800 dark:text-amber-300 text-xs font-bold flex items-center gap-1 transition-all cursor-pointer border border-stone-300 dark:border-transparent"
               >
                 <RefreshCw size={12} />
                 <span>{i18n.resetSandBtn}</span>
@@ -1705,7 +1705,7 @@ Généré par AsrarHub — https://asrarhub.com
               )}
 
               {sandLines.length === 16 && (
-                <span className="text-xs font-bold text-emerald-400 animate-pulse flex items-center gap-1">
+                <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 animate-pulse flex items-center gap-1">
                   <CheckCircle size={14} />
                   {i18n.sandComplete}
                 </span>
@@ -1848,9 +1848,9 @@ Généré par AsrarHub — https://asrarhub.com
             <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={handleCopyTextReport}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-stone-800 hover:bg-stone-700 text-amber-300 shadow-xs transition-colors cursor-pointer border border-stone-700"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold bg-white dark:bg-stone-800 hover:bg-stone-100 dark:hover:bg-stone-700 text-stone-800 dark:text-amber-300 shadow-xs transition-colors cursor-pointer border border-stone-200 dark:border-stone-700"
               >
-                {copiedReport ? <Check size={13} className="text-emerald-400" /> : <Copy size={13} />}
+                {copiedReport ? <Check size={13} className="text-emerald-600 dark:text-emerald-400" /> : <Copy size={13} />}
                 <span>{copiedReport ? i18n.reportCopied : i18n.copyReport}</span>
               </button>
 
@@ -1901,14 +1901,14 @@ Généré par AsrarHub — https://asrarhub.com
                       : 'border-gray-200/80 dark:border-gray-700'
                   }`}
                 >
-                  <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 mb-0.5 h-4 text-center leading-tight flex items-center justify-center truncate w-full">
+                  <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400 mb-0.5 h-4 text-center leading-tight flex items-center justify-center truncate w-full">
                     {i18n.houseNames[i].split(' : ')[0]}
                   </span>
                   <div className="my-1 h-11 flex items-center justify-center" dir="ltr">
                     {renderDots(fig, 'sm')}
                   </div>
                   <span className="text-[10px] font-bold text-gray-900 dark:text-white mt-0.5 truncate w-full text-center">{detail.latin}</span>
-                  <span className="text-[9px] font-arabic text-amber-600 dark:text-amber-400 truncate w-full text-center" dir="rtl">{detail.arabic.split(' ')[0]}</span>
+                  <span className="text-[9px] font-arabic text-amber-700 dark:text-amber-400 truncate w-full text-center" dir="rtl">{detail.arabic.split(' ')[0]}</span>
                 </button>
               );
             })}
@@ -2249,6 +2249,35 @@ Généré par AsrarHub — https://asrarhub.com
                   </div>
                 );
               })}
+            </div>
+
+            {/* Direct Access to the 3 Traditions Deep Engine */}
+            <div className="mt-4 p-4 rounded-xl bg-gradient-to-r from-amber-50 via-stone-50 to-emerald-50 dark:from-amber-950/40 dark:via-stone-900/50 dark:to-emerald-950/40 border border-amber-300/80 dark:border-amber-500/30 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs">
+              <div>
+                <h4 className="text-sm font-bold text-stone-900 dark:text-amber-200 flex items-center gap-2">
+                  <Compass className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+                  {langKey === 'fr' 
+                    ? "Accéder au Moteur Complet des 3 Traditions"
+                    : langKey === 'ha'
+                    ? "Shiga Cikakken Zauren Ilimin Ramli na Hanyoyi 3"
+                    : "Access Full 3 Traditions Engine"
+                  }
+                </h4>
+                <p className="text-xs text-stone-600 dark:text-stone-300 mt-0.5 leading-relaxed">
+                  {langKey === 'fr'
+                    ? "Arabe Classique (Damir, Tashteed, Mizan al-Anasir, M17/M18), Maghrébine (Souss, Zanati, Voyage) & Africaine (Opele, Opon Ifa, Amulu, Sikidy, Hakata)."
+                    : langKey === 'ha'
+                    ? "Ramlin Larabawa (Damir, Tashteed, Mizan), Magariba (Souss, Zanati) da Duban Afirka (Opele, Opon Ifa, Amulu, Sikidy, Hakata)."
+                    : "Classical Arabic (Damir, Tashteed, Mizan, M17/M18), Maghrebi (Souss, Zanati) & African (Opele, Opon Ifa, Amulu, Sikidy, Hakata)."
+                  }
+                </p>
+              </div>
+              <Link
+                to="/tools/advanced-geomancy"
+                className="px-4 py-2 bg-gradient-to-r from-amber-600 to-emerald-700 hover:from-amber-500 hover:to-emerald-600 text-white rounded-lg text-xs font-bold shrink-0 transition-all shadow-sm"
+              >
+                {langKey === 'fr' ? "Ouvrir les 3 Traditions →" : langKey === 'ha' ? "Bude Hanyoyi 3 →" : "Open 3 Traditions →"}
+              </Link>
             </div>
           </div>
         </motion.div>
