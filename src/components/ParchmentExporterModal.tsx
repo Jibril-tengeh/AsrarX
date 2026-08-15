@@ -39,15 +39,19 @@ export const ParchmentExporterModal: React.FC<ParchmentExporterModalProps> = ({
     setIsExporting(true);
     try {
       const el = parchmentRef.current;
-      const fullWidth = Math.max(el.scrollWidth, el.offsetWidth, 620);
-      const fullHeight = Math.max(el.scrollHeight, el.offsetHeight);
+      
+      // Calculate true natural unconstrained dimensions
+      const fullWidth = Math.ceil(Math.max(el.scrollWidth, el.offsetWidth, el.clientWidth, 540));
+      const fullHeight = Math.ceil(Math.max(el.scrollHeight, el.offsetHeight, el.clientHeight));
+
       const canvas = await exportElementToCanvas(el, '#fef3c7', { 
-        pixelRatio: 2,
+        pixelRatio: 2.5,
         width: fullWidth,
         height: fullHeight,
       });
       const cleanTitle = title.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
-      await downloadCanvasImage(canvas, `parchemin_rituel_${cleanTitle}.png`);
+      // Skip the dark overlay footer bar because parchment has its own authentic sacred watermark, borders & footer stamp
+      await downloadCanvasImage(canvas, `parchemin_rituel_${cleanTitle}.png`, true);
       setIsSuccess(true);
       setTimeout(() => setIsSuccess(false), 3000);
     } catch (err) {

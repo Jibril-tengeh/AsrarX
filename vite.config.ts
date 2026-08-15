@@ -169,6 +169,7 @@ export default defineConfig(() => {
       alias: {
         "@": path.resolve(__dirname, "."),
       },
+      dedupe: ['react', 'react-dom'],
     },
     define: {
       __APP_URL__: JSON.stringify(process.env.APP_URL || '')

@@ -177,9 +177,13 @@ export function getLocalizedNotificationText(
 }
 
 /**
- * Universal cross-platform notification dispatch function
+ * Universal cross-platform notification dispatch function with extra payload support
  */
-export async function dispatchSystemNotification(title: string, body: string) {
+export async function dispatchSystemNotification(
+  title: string,
+  body: string,
+  extra: Record<string, any> = {}
+) {
   try {
     if (Capacitor.isNativePlatform()) {
       await LocalNotifications.schedule({
@@ -190,6 +194,7 @@ export async function dispatchSystemNotification(title: string, body: string) {
             id: Math.floor(Math.random() * 10000) + 1,
             schedule: { at: new Date(Date.now() + 100) },
             channelId: 'asrarhub_alerts',
+            extra,
           },
         ],
       });
@@ -205,14 +210,19 @@ export async function dispatchSystemNotification(title: string, body: string) {
             icon: '/icon-192.png',
             badge: '/icon-192.png',
             tag: 'asrarhub-alert',
+            data: extra,
           } as any);
           return;
         } catch (swErr) {
-          try { new window.Notification(title, { body, icon: '/icon-192.png' }); } catch {}
+          try {
+            new window.Notification(title, { body, icon: '/icon-192.png', data: extra } as any);
+          } catch {}
           return;
         }
       }
-      try { new window.Notification(title, { body, icon: '/icon-192.png' }); } catch {}
+      try {
+        new window.Notification(title, { body, icon: '/icon-192.png', data: extra } as any);
+      } catch {}
     }
   } catch (err) {
     console.error('[NotificationLocalization] Dispatch error:', err);
@@ -225,8 +235,9 @@ export async function dispatchSystemNotification(title: string, body: string) {
 export async function dispatchLocalizedNotification(
   type: NotificationType,
   lang: SupportedLanguage = 'fr',
-  params: NotificationPayloadParams = {}
+  params: NotificationPayloadParams = {},
+  extra: Record<string, any> = {}
 ) {
   const { title, body } = getLocalizedNotificationText(type, lang, params);
-  await dispatchSystemNotification(title, body);
+  await dispatchSystemNotification(title, body, { type, ...params, ...extra });
 }

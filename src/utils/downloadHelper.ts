@@ -20,6 +20,12 @@ export async function downloadCanvasImage(
     const finalCanvas = skipWatermark ? sourceCanvas : applyAsrarHubWatermark(sourceCanvas);
     const dataUrl = finalCanvas.toDataURL('image/png');
 
+    const extraData = {
+      dataUrl,
+      fileType: 'image' as const,
+      toolRoute: typeof window !== 'undefined' ? window.location.pathname : undefined,
+    };
+
     if (Capacitor.isNativePlatform()) {
       // Native storage execution (Android / iOS via Capacitor)
       const base64Data = dataUrl.replace(/^data:image\/png;base64,/, '');
@@ -39,7 +45,7 @@ export async function downloadCanvasImage(
           directory: Directory.Documents,
           recursive: true
         });
-        notifyDownloadSuccess(cleanFileName);
+        notifyDownloadSuccess(cleanFileName, undefined, extraData);
         return true;
       } catch (docErr) {
         console.warn('Documents write failed, retrying in Cache directory:', docErr);
@@ -50,7 +56,7 @@ export async function downloadCanvasImage(
             directory: Directory.Cache,
             recursive: true
           });
-          notifyDownloadSuccess(cleanFileName);
+          notifyDownloadSuccess(cleanFileName, undefined, extraData);
           return true;
         } catch (cacheErr) {
           console.warn('Cache write failed, retrying in Data directory:', cacheErr);
@@ -60,7 +66,7 @@ export async function downloadCanvasImage(
             directory: Directory.Data,
             recursive: true
           });
-          notifyDownloadSuccess(cleanFileName);
+          notifyDownloadSuccess(cleanFileName, undefined, extraData);
           return true;
         }
       }
@@ -72,7 +78,7 @@ export async function downloadCanvasImage(
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      notifyDownloadSuccess(cleanFileName);
+      notifyDownloadSuccess(cleanFileName, undefined, extraData);
       return true;
     }
   } catch (err) {
@@ -82,13 +88,18 @@ export async function downloadCanvasImage(
     try {
       const finalCanvas = skipWatermark ? sourceCanvas : applyAsrarHubWatermark(sourceCanvas);
       const dataUrl = finalCanvas.toDataURL('image/png');
+      const extraData = {
+        dataUrl,
+        fileType: 'image' as const,
+        toolRoute: typeof window !== 'undefined' ? window.location.pathname : undefined,
+      };
       const link = document.createElement('a');
       link.download = cleanFileName;
       link.href = dataUrl;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      notifyDownloadSuccess(cleanFileName);
+      notifyDownloadSuccess(cleanFileName, undefined, extraData);
       return true;
     } catch (e) {
       console.error('Fallback browser download also failed:', e);

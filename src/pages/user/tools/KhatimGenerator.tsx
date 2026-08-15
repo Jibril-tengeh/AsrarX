@@ -13,6 +13,7 @@ import { toCanvas, toPng, toSvg } from 'html-to-image';
 import { jsPDF } from 'jspdf';
 
 import { downloadCanvasImage } from '../../../utils/downloadHelper';
+import { exportElementToCanvas } from '../../../utils/exportSerializationHelper';
 import { notifyDownloadStart, notifyDownloadSuccess, notifyDownloadError } from '../../../utils/downloadNotification';
 import { ShareToCommunityModal } from '../../../components/ShareToCommunityModal';
 import { CalculationHistoryModal } from '../../../components/CalculationHistoryModal';
@@ -624,11 +625,10 @@ export const KhatimGenerator: React.FC = () => {
     const fname = `khatim-${method}-porte${selectedDoor}-${gridSize}x${gridSize}.png`;
     notifyDownloadStart(fname);
     try {
-      const canvas = await toCanvas(resultRef.current, { 
-        backgroundColor: exportTheme === 'parchment' ? '#fef3c7' : '#18181b',
-        pixelRatio: 2,
+      const bgColor = exportTheme === 'parchment' ? '#fef3c7' : '#18181b';
+      const canvas = await exportElementToCanvas(resultRef.current, bgColor, {
+        pixelRatio: 2.5,
         quality: 0.98,
-        cacheBust: true,
       });
       await downloadCanvasImage(canvas, fname);
       notifyDownloadSuccess(fname);
@@ -645,15 +645,14 @@ export const KhatimGenerator: React.FC = () => {
     const prevTheme = exportTheme;
     setExportTheme('parchment');
     try {
-      await new Promise(r => setTimeout(r, 60));
+      // Ensure layout and font rendering complete after theme state update
+      await new Promise(r => setTimeout(r, 120));
       if (!resultRef.current) return;
-      const canvas = await toCanvas(resultRef.current, { 
-        backgroundColor: '#fef3c7',
-        pixelRatio: 2,
+      const canvas = await exportElementToCanvas(resultRef.current, '#fef3c7', {
+        pixelRatio: 2.5,
         quality: 0.98,
-        cacheBust: true,
       });
-      await downloadCanvasImage(canvas, fname);
+      await downloadCanvasImage(canvas, fname, true);
       notifyDownloadSuccess(fname);
     } catch (e) {
       console.error('Error generating parchment image:', e);

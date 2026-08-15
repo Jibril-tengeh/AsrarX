@@ -1176,6 +1176,7 @@ const MenuBar = ({ editor, isFullScreen, onToggleFullScreen }: { editor: any; is
 
 export const TipTapEditor: React.FC<TipTapEditorProps> = ({ value, onChange, className }) => {
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const isSettingContentRef = useRef(false);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -1223,9 +1224,11 @@ export const TipTapEditor: React.FC<TipTapEditorProps> = ({ value, onChange, cla
         types: ['heading', 'paragraph'],
       }),
     ] as any[],
-    content: value,
+    content: value || '',
     onUpdate: ({ editor }) => {
-      onChange(editor.getHTML());
+      if (isSettingContentRef.current) return;
+      const html = editor.isEmpty ? '' : editor.getHTML();
+      onChange(html === '<p></p>' ? '' : html);
     },
     editorProps: {
       attributes: {
@@ -1235,8 +1238,29 @@ export const TipTapEditor: React.FC<TipTapEditorProps> = ({ value, onChange, cla
   });
 
   useEffect(() => {
-    if (editor && value !== editor.getHTML()) {
-      editor.commands.setContent(value);
+    if (!editor) return;
+    const currentHtml = editor.getHTML();
+    const targetHtml = value || '';
+    const isTargetEmpty = !targetHtml || targetHtml === '<p></p>' || targetHtml.trim() === '';
+    const isCurrentEmpty = !currentHtml || currentHtml === '<p></p>' || currentHtml.trim() === '' || editor.isEmpty;
+
+    if (isTargetEmpty && isCurrentEmpty) {
+      if (!editor.isEmpty) {
+        isSettingContentRef.current = true;
+        editor.commands.clearContent();
+        isSettingContentRef.current = false;
+      }
+      return;
+    }
+
+    if (targetHtml !== currentHtml) {
+      isSettingContentRef.current = true;
+      if (isTargetEmpty) {
+        editor.commands.clearContent();
+      } else {
+        editor.commands.setContent(targetHtml);
+      }
+      isSettingContentRef.current = false;
     }
   }, [value, editor]);
 

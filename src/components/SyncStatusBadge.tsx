@@ -7,11 +7,12 @@ import { db, isAutoSaveEnabled } from '../lib/firebase';
 import { doc, getDocFromServer } from 'firebase/firestore';
 import { getSWRCacheStats, SWRCacheStats, revalidatePublishedArticles } from '../lib/swrArticleCache';
 import { pingFirestore } from '../utils/networkLogger';
+import { useNetworkStatus } from '../hooks/useNetworkStatus';
 
 export const SyncStatusBadge: React.FC = () => {
   const { user } = useAuth();
   const { language } = useLanguage();
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const { isOnline, recheckNetwork } = useNetworkStatus();
   const [syncState, setSyncState] = useState<'synced' | 'syncing' | 'offline' | 'guest'>('synced');
   const [showPopover, setShowPopover] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(new Date());
@@ -148,40 +149,18 @@ export const SyncStatusBadge: React.FC = () => {
   useEffect(() => {
     refreshCacheStats();
 
-    const handleOnline = () => {
-      setIsOnline(true);
-      // Trigger a temporary syncing state when coming back online
-      if (user) {
-        setSyncState('syncing');
-        revalidatePublishedArticles('badge_online').finally(() => {
-          refreshCacheStats();
-        });
-        const timer = setTimeout(() => {
-          setSyncState('synced');
-          setLastSyncTime(new Date());
-        }, 1500);
-        return () => clearTimeout(timer);
-      }
-    };
-    
-    const handleOffline = () => {
-      setIsOnline(false);
-      refreshCacheStats();
-    };
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    // Initial check
-    if (!navigator.onLine) {
-      setIsOnline(false);
+    if (isOnline && user) {
+      setSyncState('syncing');
+      revalidatePublishedArticles('badge_online').finally(() => {
+        refreshCacheStats();
+      });
+      const timer = setTimeout(() => {
+        setSyncState('synced');
+        setLastSyncTime(new Date());
+      }, 1500);
+      return () => clearTimeout(timer);
     }
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, [user]);
+  }, [user, isOnline]);
 
   // Handle syncing state transitions
   useEffect(() => {
@@ -217,16 +196,15 @@ export const SyncStatusBadge: React.FC = () => {
     try {
       if (!isOnline) {
         // Run ping check
-        const ping = await pingFirestore();
-        if (ping.reachable) {
-          setIsOnline(true);
+        const reachable = await recheckNetwork();
+        if (reachable) {
           await revalidatePublishedArticles('badge_retry');
           await refreshCacheStats();
           setLastSyncTime(new Date());
           setShowSuccessMsg(true);
           setTimeout(() => setShowSuccessMsg(false), 3000);
         } else {
-          setTestResult(ping.errorMessage || tStr.stillOffline);
+          setTestResult(tStr.stillOffline);
           setTimeout(() => setTestResult(null), 4000);
         }
         return;

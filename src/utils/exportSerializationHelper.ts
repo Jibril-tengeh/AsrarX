@@ -61,14 +61,26 @@ export async function exportElementToCanvas(
   const pixelRatio = options?.pixelRatio ?? 2;
   const quality = options?.quality ?? 0.98;
 
-  // Calculate true unconstrained dimensions to avoid clipping tall content
+  // Calculate true unconstrained dimensions to avoid clipping tall content or adding artificial horizontal gaps
+  const boundingWidth = element.getBoundingClientRect().width;
   const width = Math.ceil(
-    options?.width ??
-    Math.max(element.scrollWidth, element.offsetWidth, element.clientWidth, element.getBoundingClientRect().width, 500)
+    Math.max(
+      options?.width ?? 0,
+      element.scrollWidth,
+      element.offsetWidth,
+      element.clientWidth,
+      boundingWidth
+    )
   );
+  const boundingHeight = element.getBoundingClientRect().height;
   const height = Math.ceil(
-    options?.height ??
-    Math.max(element.scrollHeight, element.offsetHeight, element.clientHeight, element.getBoundingClientRect().height)
+    Math.max(
+      options?.height ?? 0,
+      element.scrollHeight,
+      element.offsetHeight,
+      element.clientHeight,
+      boundingHeight
+    )
   );
 
   const renderStyle: Partial<CSSStyleDeclaration> = {

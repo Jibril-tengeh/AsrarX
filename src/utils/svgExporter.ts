@@ -121,9 +121,22 @@ export async function exportAsParchment({
   try {
     const { img, width: svgW, height: svgH } = await svgElementToImage(svgElement);
 
-    // Parchment Canvas Dimensions
+    // Target Diagram Dimensions with max constraints
+    const maxSvgWidth = 680;
+    const maxSvgHeight = 850;
+    let targetSvgWidth = maxSvgWidth;
+    let targetSvgHeight = (svgH / svgW) * targetSvgWidth;
+
+    if (targetSvgHeight > maxSvgHeight) {
+      targetSvgHeight = maxSvgHeight;
+      targetSvgWidth = (svgW / svgH) * targetSvgHeight;
+    }
+
+    // Parchment Canvas Dimensions - dynamically calculated so nothing is clipped
     const canvasW = 1000;
-    const canvasH = 1300;
+    const headerHeight = 210;
+    const footerHeight = 130;
+    const canvasH = Math.max(1300, Math.ceil(headerHeight + targetSvgHeight + footerHeight));
 
     const canvas = document.createElement('canvas');
     canvas.width = canvasW;
@@ -135,7 +148,7 @@ export async function exportAsParchment({
     // 1. Aged Warm Parchment Background Gradient
     const bgGrad = ctx.createRadialGradient(
       canvasW / 2, canvasH / 2, 100,
-      canvasW / 2, canvasH / 2, canvasW * 0.8
+      canvasW / 2, canvasH / 2, Math.max(canvasW, canvasH) * 0.7
     );
     bgGrad.addColorStop(0, '#fef9c3'); // Warm light parchment
     bgGrad.addColorStop(0.5, '#fde68a'); // Warm amber parchment
@@ -146,8 +159,8 @@ export async function exportAsParchment({
 
     // 2. Burnt Edge Vignette Effect
     const edgeGrad = ctx.createRadialGradient(
-      canvasW / 2, canvasH / 2, canvasW * 0.35,
-      canvasW / 2, canvasH / 2, canvasW * 0.75
+      canvasW / 2, canvasH / 2, Math.min(canvasW, canvasH) * 0.35,
+      canvasW / 2, canvasH / 2, Math.max(canvasW, canvasH) * 0.75
     );
     edgeGrad.addColorStop(0, 'rgba(120, 53, 15, 0)');
     edgeGrad.addColorStop(0.7, 'rgba(120, 53, 15, 0.35)');
@@ -213,11 +226,9 @@ export async function exportAsParchment({
     ctx.restore();
 
     // 5. Center Diagram (SVG rendered onto Parchment Frame)
-    const targetSvgWidth = 620;
-    const targetSvgHeight = (svgH / svgW) * targetSvgWidth;
-
     const svgX = (canvasW - targetSvgWidth) / 2;
-    const svgY = 200 + (canvasH - 280 - targetSvgHeight) / 2;
+    const availableDiagramSpace = canvasH - headerHeight - footerHeight;
+    const svgY = headerHeight + Math.max(0, (availableDiagramSpace - targetSvgHeight) / 2);
 
     // Shadow under diagram on parchment
     ctx.save();
@@ -254,7 +265,7 @@ export async function exportAsParchment({
         : language === 'en'
         ? 'AsrarHub Sacred Collection - Metaphysical Protection Seal'
         : 'Collection Sacrée AsrarHub - Sceau de Protection Métaphysique';
-    ctx.fillText(footerText, canvasW / 2, canvasH - 85);
+    ctx.fillText(footerText, canvasW / 2, canvasH - 75);
     ctx.restore();
 
     const baseName = filename.replace(/\.(png|svg)$/i, '');

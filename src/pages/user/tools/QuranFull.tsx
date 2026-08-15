@@ -24,6 +24,7 @@ import { getEffectiveQuranReciters } from '../../../utils/reciterManager';
 import { LunarDailyInspirationCard } from '../../../components/LunarDailyInspirationCard';
 import { VerseSaveExportModal } from '../../../components/VerseSaveExportModal';
 import { dispatchSystemNotification } from '../../../utils/notificationLocalization';
+import { useNetworkStatus } from '../../../hooks/useNetworkStatus';
 
 const MUSHAF_OPTIONS = [
   { id: 'Amiri Quran', name: 'Uthmani (Amiri)', desc: 'Standard Uthmani script', preview: 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ\n\nأَرَءَيْتَ ٱلَّذِى يُكَذِّبُ بِٱلدِّينِ ﴿١﴾', style: {fontFamily: '"Amiri Quran", "Amiri", serif'} },
@@ -1640,18 +1641,7 @@ export const QuranFull: React.FC = () => {
   const [touchStart, setTouchStart] = useState<number | null>(null);
   const [touchEnd, setTouchEnd] = useState<number | null>(null);
 
-  const [isOffline, setIsOffline] = useState(!navigator.onLine);
-
-  useEffect(() => {
-    const handleOnline = () => setIsOffline(false);
-    const handleOffline = () => setIsOffline(true);
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
+  const { isOffline } = useNetworkStatus();
 
   const [selectedReciterId, setSelectedReciterId] = useState(() => {
     try {
@@ -2446,7 +2436,10 @@ export const QuranFull: React.FC = () => {
         if (lastReminded !== todayDate) {
            const notifTitle = t('quran.readingReminderTitle', 'Rappel de lecture 📖');
            const notifBody = t('quran.readingReminderBody', 'Il est temps de lire votre portion quotidienne du Coran.');
-           dispatchSystemNotification(notifTitle, notifBody);
+           dispatchSystemNotification(notifTitle, notifBody, {
+             type: 'quranReminder',
+             targetUrl: '/tools/quran',
+           });
            localStorage.setItem('asrarhub_last_reminder_date', todayDate);
         }
       }

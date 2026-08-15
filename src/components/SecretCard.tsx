@@ -205,9 +205,9 @@ export const SecretCard: React.FC<SecretCardProps> = ({ item, layoutMode = 'grid
   if (layoutMode === 'list') {
     return (
       <Link to={`/secret/${item.id}`} state={{ item }} className="block w-full group">
-        <div className="flex flex-row h-[130px] sm:h-[150px] cursor-pointer bg-white dark:bg-gray-800 rounded-[1.25rem] shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden transition-all duration-300 group-hover:shadow-md group-hover:-translate-y-1">
+        <div className="flex flex-row min-h-[130px] sm:min-h-[150px] cursor-pointer bg-white dark:bg-gray-800 rounded-[1.25rem] shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden transition-all duration-300 group-hover:shadow-md group-hover:-translate-y-1">
           {/* Image Area */}
-          <div className="w-[110px] sm:w-[140px] h-full relative bg-gray-100 dark:bg-gray-900 flex-shrink-0">
+          <div className="w-[110px] sm:w-[140px] relative bg-gray-100 dark:bg-gray-900 flex-shrink-0">
             <ImageWithFallback 
               src={resolvedImageUrl} 
               fallbackSrc={fallbackImageUrl}
@@ -231,12 +231,12 @@ export const SecretCard: React.FC<SecretCardProps> = ({ item, layoutMode = 'grid
           </div>
           
           {/* Content Area */}
-          <div className="p-2 sm:p-3 flex-1 flex flex-col justify-center bg-gray-50/50 dark:bg-gray-800/50 overflow-hidden">
-            <h3 className="text-[15px] sm:text-[17px] font-bold text-gray-900 dark:text-gray-100 mb-1.5 leading-snug line-clamp-2 mt-0">
+          <div className="p-3 sm:p-4 flex-1 flex flex-col justify-center bg-gray-50/50 dark:bg-gray-800/50 overflow-hidden">
+            <h3 className="text-[14px] sm:text-[16px] font-bold text-gray-900 dark:text-gray-100 mb-1 leading-snug break-words mt-0">
               {displayTitle}
             </h3>
             {displayHook && (
-              <p className="text-gray-500 dark:text-gray-400 text-[11px] sm:text-[12px] leading-relaxed line-clamp-2">
+              <p className="text-gray-500 dark:text-gray-400 text-[11px] sm:text-[12px] leading-relaxed line-clamp-2 mt-1">
                 {displayHook}
               </p>
             )}
@@ -263,21 +263,27 @@ export const SecretCard: React.FC<SecretCardProps> = ({ item, layoutMode = 'grid
              />
              
              {/* Badge Over Image */}
-             <div className="absolute top-3 left-3 flex gap-1.5 z-10 transition-colors max-w-[calc(100%-24px)]">
+             <div className="absolute top-2.5 sm:top-3 left-2.5 sm:left-3 flex gap-1.5 z-10 transition-colors max-w-[calc(100%-20px)]">
                {item.isPremium && (
                  <div className="bg-gradient-to-r from-amber-400 to-orange-500 text-white px-2 py-1 rounded-full flex items-center shadow-md">
                    <Crown size={14} className="shrink-0" />
                  </div>
                )}
-               <div className="bg-black/60 backdrop-blur-md text-white px-2.5 py-1 rounded-full text-[11px] sm:text-xs font-semibold tracking-wide truncate whitespace-nowrap">
+               <div className="bg-black/65 backdrop-blur-md text-white px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-semibold tracking-wide truncate whitespace-nowrap shadow-sm">
                  <span className="capitalize">{categoryLabel}</span>
                </div>
              </div>
 
-             {/* Title Over Image */}
-             <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/30 to-transparent pointer-events-none z-0"></div>
-             <div className="absolute bottom-0 left-0 right-0 p-2 sm:p-3 z-10">
-               <h3 className={`font-bold text-white mb-0 leading-snug drop-shadow-md line-clamp-3 ${isGrid1 ? 'text-[18px] sm:text-[20px]' : 'text-[14px] sm:text-[16px]'}`}>
+             {/* Enhanced high-contrast gradient overlay so full multiline titles are always legible */}
+             <div className="absolute inset-0 bg-gradient-to-t from-black/95 via-black/60 via-45% to-transparent pointer-events-none z-0"></div>
+             
+             {/* Title Over Image: Full title without line-clamp truncation */}
+             <div className="absolute bottom-0 left-0 right-0 p-2.5 sm:p-3.5 z-10">
+               <h3 className={`font-bold text-white mb-0 drop-shadow-md break-words ${
+                 isGrid1 
+                   ? 'text-[17px] sm:text-[20px] leading-snug' 
+                   : 'text-[12.5px] sm:text-[14.5px] leading-[1.25] sm:leading-snug'
+               }`}>
                  {displayTitle}
                </h3>
              </div>

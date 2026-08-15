@@ -58,6 +58,7 @@ import { DEFAULT_OATHS } from '../user/tools/GrandOaths';
 import { QURAN_RECITERS } from '../../data/reciters';
 import { calculateHijriDate } from '../../utils/hijriDate';
 import { LunarSealVarietiesSection } from '../../components/LunarSealVarietiesSection';
+import { AdminEmailSupportManager } from '../../components/admin/AdminEmailSupportManager';
 import { useBackButton } from '../../hooks/useBackButton';
 
 const LayoutSelector = ({ value, onChange, activeColor = 'emerald' }: { value: string, onChange: (val: string) => void, activeColor?: string }) => {
@@ -132,7 +133,7 @@ const LayoutSelector = ({ value, onChange, activeColor = 'emerald' }: { value: s
   );
 };
 
-type AdminTab = 'overview' | 'users' | 'payments' | 'community' | 'features' | 'reciters' | 'ruqyah' | 'content' | 'notifications' | 'settings' | 'articles' | 'store' | 'grand_oaths' | 'categories' | 'seals' | 'book_covers' | 'media_storage';
+type AdminTab = 'overview' | 'support' | 'users' | 'payments' | 'community' | 'features' | 'reciters' | 'ruqyah' | 'content' | 'notifications' | 'settings' | 'articles' | 'store' | 'grand_oaths' | 'categories' | 'seals' | 'book_covers' | 'media_storage';
 
 interface Article {
   id: string;
@@ -684,6 +685,7 @@ export const AdminDashboard: React.FC = () => {
   // Articles State
   const [articles, setArticles] = useState<Article[]>([]);
   const [editingArticle, setEditingArticle] = useState<Article | null>(null);
+  const [articleFormKey, setArticleFormKey] = useState(0);
   const [newArticle, setNewArticle] = useState<Partial<Article>>({
     title: '', hook: '', thumbnail: '', content: '', type: 'richtext', status: 'Published', category: '', subCategory: ''
   });
@@ -703,8 +705,14 @@ export const AdminDashboard: React.FC = () => {
     if (draft) {
       try {
         const parsed = JSON.parse(draft);
-        if (parsed.title || parsed.content) {
+        const hasText = Boolean(
+          (parsed.title && parsed.title.trim()) ||
+          (parsed.content && parsed.content !== '<p></p>' && parsed.content.trim())
+        );
+        if (hasText) {
           setNewArticle(parsed);
+        } else {
+          localStorage.removeItem('asrarhub_article_draft');
         }
       } catch (e) {}
     }
@@ -712,7 +720,16 @@ export const AdminDashboard: React.FC = () => {
 
   useEffect(() => {
     // Auto-save draft
-    if (activeTab === 'articles' && (newArticle.title || newArticle.content) && !editingArticle) {
+    const hasMeaningfulContent = Boolean(
+      (newArticle.title && newArticle.title.trim()) ||
+      (newArticle.content && newArticle.content !== '<p></p>' && newArticle.content.trim()) ||
+      (newArticle as any).content_en ||
+      (newArticle as any).content_ha ||
+      (newArticle as any).title_en ||
+      (newArticle as any).title_ha
+    );
+
+    if (activeTab === 'articles' && hasMeaningfulContent && !editingArticle) {
       const timer = setTimeout(() => {
         try {
           localStorage.setItem('asrarhub_article_draft', JSON.stringify(newArticle));
@@ -731,7 +748,7 @@ export const AdminDashboard: React.FC = () => {
         }
       }, 2000);
       return () => clearTimeout(timer);
-    } else if (activeTab === 'articles' && !newArticle.title && !newArticle.content) {
+    } else if (activeTab === 'articles' && !hasMeaningfulContent) {
       try {
         localStorage.removeItem('asrarhub_article_draft');
       } catch (e) {}
@@ -2106,8 +2123,36 @@ export const AdminDashboard: React.FC = () => {
 
       setEditingArticle(null);
       showToast(editingArticle ? "Article mis à jour avec succès !" : "Article publié avec succès !");
-      setNewArticle({ title: '', hook: '', thumbnail: '', content: '', type: 'richtext', status: 'Published', publishDate: '', benefits: [], category: '', subCategory: '' } as any);
-      localStorage.removeItem('asrarhub_article_draft');
+      
+      // Fully reset all fields including all language variations, image crop and draft
+      setNewArticle({
+        title: '',
+        title_en: '',
+        title_ha: '',
+        hook: '',
+        hook_en: '',
+        hook_ha: '',
+        thumbnail: '',
+        imageUrl: '',
+        content: '',
+        content_en: '',
+        content_ha: '',
+        type: 'richtext',
+        status: 'Published',
+        publishDate: '',
+        benefits: [],
+        category: '',
+        subCategory: '',
+        isPremium: false,
+      } as any);
+      setImgSrc('');
+      setCrop(undefined);
+      setCompletedCrop(null);
+      setArticleFormKey(k => k + 1);
+
+      try {
+        localStorage.removeItem('asrarhub_article_draft');
+      } catch (e) {}
     } catch (error: any) {
       console.error("Error saving article:", error);
       showToast(`Erreur : ${error?.message || "Erreur lors de la publication de l'article."}`, "error");
@@ -2221,6 +2266,10 @@ export const AdminDashboard: React.FC = () => {
 
   const editArticle = (article: Article) => {
     setEditingArticle(article);
+    setImgSrc('');
+    setCrop(undefined);
+    setCompletedCrop(null);
+    setArticleFormKey(k => k + 1);
     setNewArticle({ 
       title: article.title, 
       hook: (article as any).hook,
@@ -2244,6 +2293,7 @@ export const AdminDashboard: React.FC = () => {
   const renderTabNavigation = () => {
     const tabs = [
       { id: 'overview', label: 'Vue d\'ensemble', icon: LayoutDashboard },
+      { id: 'support', label: 'Support & Emails', icon: Mail },
       { id: 'users', label: 'Utilisateurs', icon: Users },
       { id: 'payments', label: 'Paiements Directs', icon: CreditCard },
       { id: 'articles', label: 'Articles', icon: FileText },
@@ -2586,6 +2636,28 @@ export const AdminDashboard: React.FC = () => {
               ))}
             </div>
           </div>
+        </div>
+
+        {/* Support & Assistance Quick Access Banner */}
+        <div className="bg-gradient-to-r from-emerald-600 to-teal-700 rounded-3xl p-6 text-white shadow-lg flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="p-3.5 bg-white/20 rounded-2xl backdrop-blur-sm shrink-0">
+              <Mail size={28} className="text-white" />
+            </div>
+            <div>
+              <h4 className="text-base font-bold">Centre de Réception & Support E-mail</h4>
+              <p className="text-xs text-emerald-100 mt-1 max-w-xl">
+                Consultez les messages des utilisateurs, configurez votre adresse Gmail liée pour recevoir les notifications et répondez directement avec le contexte complet de l'utilisateur.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setActiveTab('support')}
+            className="px-5 py-3 bg-white text-emerald-800 hover:bg-emerald-50 rounded-2xl font-bold text-xs shadow-md transition-all shrink-0 cursor-pointer flex items-center gap-2"
+          >
+            <Mail size={16} />
+            <span>Ouvrir la boîte de Support</span>
+          </button>
         </div>
       </div>
     );
@@ -4297,7 +4369,7 @@ export const AdminDashboard: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <select
               value={newArticle.status || 'Draft'}
-              onChange={(e) => setNewArticle({ ...newArticle, status: e.target.value })}
+              onChange={(e) => setNewArticle(prev => ({ ...prev, status: e.target.value }))}
               className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
             >
               <option value="Draft">Brouillon</option>
@@ -4308,7 +4380,7 @@ export const AdminDashboard: React.FC = () => {
             <input
               type="date"
               value={newArticle.publishDate || ''}
-              onChange={(e) => setNewArticle({ ...newArticle, publishDate: e.target.value })}
+              onChange={(e) => setNewArticle(prev => ({ ...prev, publishDate: e.target.value }))}
               className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
               title="Date de planification"
             />
@@ -4319,7 +4391,7 @@ export const AdminDashboard: React.FC = () => {
               type="checkbox" 
               id="isPremiumArticle" 
               checked={newArticle.isPremium || false}
-              onChange={(e) => setNewArticle({ ...newArticle, isPremium: e.target.checked })}
+              onChange={(e) => setNewArticle(prev => ({ ...prev, isPremium: e.target.checked }))}
               className="w-5 h-5 text-violet-600 rounded focus:ring-violet-500"
             />
             <label htmlFor="isPremiumArticle" className="text-sm font-bold text-gray-900 dark:text-white cursor-pointer">
@@ -4334,7 +4406,7 @@ export const AdminDashboard: React.FC = () => {
                 value={newArticle.category || ''}
                 onChange={(e) => {
                   const catId = e.target.value;
-                  setNewArticle({ ...newArticle, category: catId, subCategory: '' });
+                  setNewArticle(prev => ({ ...prev, category: catId, subCategory: '' }));
                 }}
                 className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
               >
@@ -4392,7 +4464,10 @@ export const AdminDashboard: React.FC = () => {
               <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Sous-Catégorie de l'article</label>
               <select
                 value={(newArticle as any).subCategory || ''}
-                onChange={(e) => setNewArticle({ ...newArticle, subCategory: e.target.value })}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setNewArticle(prev => ({ ...prev, subCategory: val }));
+                }}
                 disabled={!newArticle.category}
                 className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 disabled:opacity-50"
               >
@@ -4427,7 +4502,7 @@ export const AdminDashboard: React.FC = () => {
                       onClick={() => {
                         if (window.confirm("Voulez-vous vraiment supprimer cette sous-catégorie ?")) {
                           handleDeleteSubCategory(newArticle.category!, (newArticle as any).subCategory);
-                          setNewArticle({ ...newArticle, subCategory: '' });
+                          setNewArticle(prev => ({ ...prev, subCategory: '' }));
                         }
                       }}
                       className="text-xs text-red-600 dark:text-red-400 hover:underline flex items-center gap-1 font-bold"
@@ -4515,7 +4590,7 @@ export const AdminDashboard: React.FC = () => {
                   onClick={async () => {
                     const createdId = await handleQuickCreateCategory(quickCat.name, quickCat.name_en, quickCat.name_ha);
                     if (createdId) {
-                      setNewArticle({ ...newArticle, category: createdId, subCategory: '' });
+                      setNewArticle(prev => ({ ...prev, category: createdId, subCategory: '' }));
                       setQuickCat({ name: '', name_en: '', name_ha: '' });
                       setShowQuickCategoryForm(false);
                     }
@@ -4593,7 +4668,7 @@ export const AdminDashboard: React.FC = () => {
                       quickSub.name_ha
                     );
                     if (createdSubId) {
-                      setNewArticle({ ...newArticle, subCategory: createdSubId });
+                      setNewArticle(prev => ({ ...prev, subCategory: createdSubId }));
                       setQuickSub({ name: '', name_en: '', name_ha: '' });
                       setShowQuickSubCategoryForm(false);
                     }
@@ -4607,7 +4682,9 @@ export const AdminDashboard: React.FC = () => {
           )}
 
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Nouvel Article</h2>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
+              {editingArticle ? "Éditer l'Article" : "Nouvel Article"}
+            </h2>
             <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
               {['fr', 'en', 'ha'].map(lang => (
                 <button
@@ -4630,8 +4707,8 @@ export const AdminDashboard: React.FC = () => {
             placeholder={`Titre de l'article (${activeLangTab.toUpperCase()})`}
             value={(activeLangTab === 'fr' ? newArticle.title : (newArticle as any)[`title_${activeLangTab}`]) || ''}
             onChange={(e) => {
-              if (activeLangTab === 'fr') setNewArticle({ ...newArticle, title: e.target.value });
-              else setNewArticle({ ...newArticle, [`title_${activeLangTab}`]: e.target.value });
+              const val = e.target.value;
+              setNewArticle(prev => (activeLangTab === 'fr' ? { ...prev, title: val } : { ...prev, [`title_${activeLangTab}`]: val }));
             }}
             className="w-full mb-4 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
           />
@@ -4640,8 +4717,8 @@ export const AdminDashboard: React.FC = () => {
             placeholder={`Accroche / Extrait (Hook) (${activeLangTab.toUpperCase()})`}
             value={(activeLangTab === 'fr' ? (newArticle as any).hook : (newArticle as any)[`hook_${activeLangTab}`]) || ''}
             onChange={(e) => {
-              if (activeLangTab === 'fr') setNewArticle({ ...newArticle, hook: e.target.value } as any);
-              else setNewArticle({ ...newArticle, [`hook_${activeLangTab}`]: e.target.value } as any);
+              const val = e.target.value;
+              setNewArticle(prev => (activeLangTab === 'fr' ? { ...prev, hook: val } : { ...prev, [`hook_${activeLangTab}`]: val } as any));
             }}
             className="w-full mb-4 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 h-20 resize-none"
           />
@@ -4669,7 +4746,7 @@ export const AdminDashboard: React.FC = () => {
               {newArticle.thumbnail && !imgSrc && (
                 <div className="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
                   <img src={newArticle.thumbnail} alt="Thumbnail preview" className="w-full h-full object-cover" />
-                  <button onClick={() => setNewArticle({ ...newArticle, thumbnail: '' })} className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600">
+                  <button onClick={() => setNewArticle(prev => ({ ...prev, thumbnail: '' }))} className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600">
                     <X size={12} />
                   </button>
                 </div>
@@ -4695,7 +4772,7 @@ export const AdminDashboard: React.FC = () => {
           
           <div className="flex gap-4 mb-2">
             <button
-              onClick={() => setNewArticle({ ...newArticle, type: 'richtext' })}
+              onClick={() => setNewArticle(prev => ({ ...prev, type: 'richtext' }))}
               className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 ${
                 newArticle.type === 'richtext' ? 'bg-emerald-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
               }`}
@@ -4703,7 +4780,7 @@ export const AdminDashboard: React.FC = () => {
               <FileText size={16} /> Éditeur de Texte
             </button>
             <button
-              onClick={() => setNewArticle({ ...newArticle, type: 'code' })}
+              onClick={() => setNewArticle(prev => ({ ...prev, type: 'code' }))}
               className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 ${
                 newArticle.type === 'code' ? 'bg-emerald-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
               }`}
@@ -4715,10 +4792,13 @@ export const AdminDashboard: React.FC = () => {
           <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden min-h-[300px]">
             {newArticle.type === 'richtext' ? (
               <TipTapEditor 
+                key={`editor-${articleFormKey}-${activeLangTab}-${editingArticle?.id || 'new'}`}
                 value={(activeLangTab === 'fr' ? newArticle.content : (newArticle as any)[`content_${activeLangTab}`]) || ''} 
                 onChange={(val: any) => {
-                  if (activeLangTab === 'fr') setNewArticle({ ...newArticle, content: val });
-                  else setNewArticle({ ...newArticle, [`content_${activeLangTab}`]: val });
+                  setNewArticle(prev => {
+                    if (activeLangTab === 'fr') return { ...prev, content: val };
+                    return { ...prev, [`content_${activeLangTab}`]: val };
+                  });
                 }} 
                 className="h-full"
               />
@@ -4733,10 +4813,12 @@ export const AdminDashboard: React.FC = () => {
                       const text = prompt("Texte du lien:", "Cliquez ici");
                       if (url) {
                         const snippet = `<a href="${url}" target="_blank" rel="noopener noreferrer">${text || url}</a>`;
-                        const current = (activeLangTab === 'fr' ? newArticle.content : (newArticle as any)[`content_${activeLangTab}`]) || '';
-                        const updated = current + '\n' + snippet;
-                        if (activeLangTab === 'fr') setNewArticle({ ...newArticle, content: updated });
-                        else setNewArticle({ ...newArticle, [`content_${activeLangTab}`]: updated });
+                        setNewArticle(prev => {
+                          const current = (activeLangTab === 'fr' ? prev.content : (prev as any)[`content_${activeLangTab}`]) || '';
+                          const updated = current + '\n' + snippet;
+                          if (activeLangTab === 'fr') return { ...prev, content: updated };
+                          return { ...prev, [`content_${activeLangTab}`]: updated };
+                        });
                       }
                     }}
                     className="px-2 py-1 bg-emerald-900/60 hover:bg-emerald-800 text-emerald-200 rounded font-semibold transition-colors flex items-center gap-1"
@@ -4749,10 +4831,12 @@ export const AdminDashboard: React.FC = () => {
                       const url = prompt("URL de l'image (https://...):");
                       if (url) {
                         const snippet = `<img src="${url}" alt="Image" class="w-full rounded-xl my-4 shadow-md" />`;
-                        const current = (activeLangTab === 'fr' ? newArticle.content : (newArticle as any)[`content_${activeLangTab}`]) || '';
-                        const updated = current + '\n' + snippet;
-                        if (activeLangTab === 'fr') setNewArticle({ ...newArticle, content: updated });
-                        else setNewArticle({ ...newArticle, [`content_${activeLangTab}`]: updated });
+                        setNewArticle(prev => {
+                          const current = (activeLangTab === 'fr' ? prev.content : (prev as any)[`content_${activeLangTab}`]) || '';
+                          const updated = current + '\n' + snippet;
+                          if (activeLangTab === 'fr') return { ...prev, content: updated };
+                          return { ...prev, [`content_${activeLangTab}`]: updated };
+                        });
                       }
                     }}
                     className="px-2 py-1 bg-blue-900/60 hover:bg-blue-800 text-blue-200 rounded font-semibold transition-colors flex items-center gap-1"
@@ -4765,10 +4849,12 @@ export const AdminDashboard: React.FC = () => {
                       const url = prompt("URL du fichier audio (.mp3, .wav):");
                       if (url) {
                         const snippet = `<audio controls src="${url}" class="w-full my-3 rounded-lg"></audio>`;
-                        const current = (activeLangTab === 'fr' ? newArticle.content : (newArticle as any)[`content_${activeLangTab}`]) || '';
-                        const updated = current + '\n' + snippet;
-                        if (activeLangTab === 'fr') setNewArticle({ ...newArticle, content: updated });
-                        else setNewArticle({ ...newArticle, [`content_${activeLangTab}`]: updated });
+                        setNewArticle(prev => {
+                          const current = (activeLangTab === 'fr' ? prev.content : (prev as any)[`content_${activeLangTab}`]) || '';
+                          const updated = current + '\n' + snippet;
+                          if (activeLangTab === 'fr') return { ...prev, content: updated };
+                          return { ...prev, [`content_${activeLangTab}`]: updated };
+                        });
                       }
                     }}
                     className="px-2 py-1 bg-purple-900/60 hover:bg-purple-800 text-purple-200 rounded font-semibold transition-colors flex items-center gap-1"
@@ -4781,10 +4867,12 @@ export const AdminDashboard: React.FC = () => {
                       const url = prompt("URL de la vidéo MP4 (https://...):");
                       if (url) {
                         const snippet = `<video controls src="${url}" class="w-full max-h-[450px] rounded-xl my-4 shadow-md bg-black"></video>`;
-                        const current = (activeLangTab === 'fr' ? newArticle.content : (newArticle as any)[`content_${activeLangTab}`]) || '';
-                        const updated = current + '\n' + snippet;
-                        if (activeLangTab === 'fr') setNewArticle({ ...newArticle, content: updated });
-                        else setNewArticle({ ...newArticle, [`content_${activeLangTab}`]: updated });
+                        setNewArticle(prev => {
+                          const current = (activeLangTab === 'fr' ? prev.content : (prev as any)[`content_${activeLangTab}`]) || '';
+                          const updated = current + '\n' + snippet;
+                          if (activeLangTab === 'fr') return { ...prev, content: updated };
+                          return { ...prev, [`content_${activeLangTab}`]: updated };
+                        });
                       }
                     }}
                     className="px-2 py-1 bg-amber-900/60 hover:bg-amber-800 text-amber-200 rounded font-semibold transition-colors flex items-center gap-1"
@@ -4796,10 +4884,12 @@ export const AdminDashboard: React.FC = () => {
                     onClick={() => {
                       const code = prompt("Code YouTube ou iframe embed (<iframe ...>):");
                       if (code) {
-                        const current = (activeLangTab === 'fr' ? newArticle.content : (newArticle as any)[`content_${activeLangTab}`]) || '';
-                        const updated = current + '\n' + code;
-                        if (activeLangTab === 'fr') setNewArticle({ ...newArticle, content: updated });
-                        else setNewArticle({ ...newArticle, [`content_${activeLangTab}`]: updated });
+                        setNewArticle(prev => {
+                          const current = (activeLangTab === 'fr' ? prev.content : (prev as any)[`content_${activeLangTab}`]) || '';
+                          const updated = current + '\n' + code;
+                          if (activeLangTab === 'fr') return { ...prev, content: updated };
+                          return { ...prev, [`content_${activeLangTab}`]: updated };
+                        });
                       }
                     }}
                     className="px-2 py-1 bg-red-900/60 hover:bg-red-800 text-red-200 rounded font-semibold transition-colors flex items-center gap-1"
@@ -4810,8 +4900,11 @@ export const AdminDashboard: React.FC = () => {
                 <textarea
                   value={(activeLangTab === 'fr' ? newArticle.content : (newArticle as any)[`content_${activeLangTab}`]) || ''}
                   onChange={(e) => {
-                    if (activeLangTab === 'fr') setNewArticle({ ...newArticle, content: e.target.value });
-                    else setNewArticle({ ...newArticle, [`content_${activeLangTab}`]: e.target.value });
+                    const val = e.target.value;
+                    setNewArticle(prev => {
+                      if (activeLangTab === 'fr') return { ...prev, content: val };
+                      return { ...prev, [`content_${activeLangTab}`]: val };
+                    });
                   }}
                   className="w-full h-full min-h-[300px] p-4 bg-[#2d2d2d] text-[#f8f8f2] font-mono text-sm resize-none focus:outline-none"
                   placeholder="Entrez votre code HTML/Markdown ici..."
@@ -4824,8 +4917,10 @@ export const AdminDashboard: React.FC = () => {
           <ArticleMediaGallery
             content={(activeLangTab === 'fr' ? newArticle.content : (newArticle as any)[`content_${activeLangTab}`]) || ''}
             onChangeContent={(updatedHtml) => {
-              if (activeLangTab === 'fr') setNewArticle({ ...newArticle, content: updatedHtml });
-              else setNewArticle({ ...newArticle, [`content_${activeLangTab}`]: updatedHtml });
+              setNewArticle(prev => {
+                if (activeLangTab === 'fr') return { ...prev, content: updatedHtml };
+                return { ...prev, [`content_${activeLangTab}`]: updatedHtml };
+              });
             }}
           />
 
@@ -4837,9 +4932,12 @@ export const AdminDashboard: React.FC = () => {
                   <select 
                     value={benefit.icon || 'Star'} 
                     onChange={(e) => {
-                      const newBenefits = [...((newArticle as any).benefits || [])];
-                      newBenefits[idx].icon = e.target.value;
-                      setNewArticle({ ...newArticle, benefits: newBenefits } as any);
+                      const iconVal = e.target.value;
+                      setNewArticle(prev => {
+                        const newBenefits = [...((prev as any).benefits || [])];
+                        newBenefits[idx] = { ...newBenefits[idx], icon: iconVal };
+                        return { ...prev, benefits: newBenefits } as any;
+                      });
                     }}
                     className="bg-gray-50 dark:bg-gray-800 border-none rounded-lg text-sm text-gray-700 dark:text-gray-300 p-2"
                   >
@@ -4855,18 +4953,23 @@ export const AdminDashboard: React.FC = () => {
                     type="text" 
                     value={benefit.text}
                     onChange={(e) => {
-                      const newBenefits = [...((newArticle as any).benefits || [])];
-                      newBenefits[idx].text = e.target.value;
-                      setNewArticle({ ...newArticle, benefits: newBenefits } as any);
+                      const textVal = e.target.value;
+                      setNewArticle(prev => {
+                        const newBenefits = [...((prev as any).benefits || [])];
+                        newBenefits[idx] = { ...newBenefits[idx], text: textVal };
+                        return { ...prev, benefits: newBenefits } as any;
+                      });
                     }}
                     placeholder="Texte du bienfait..."
                     className="flex-1 bg-transparent border-none text-sm text-gray-900 dark:text-white focus:ring-0 p-0"
                   />
                   <button 
                     onClick={() => {
-                      const newBenefits = [...((newArticle as any).benefits || [])];
-                      newBenefits.splice(idx, 1);
-                      setNewArticle({ ...newArticle, benefits: newBenefits } as any);
+                      setNewArticle(prev => {
+                        const newBenefits = [...((prev as any).benefits || [])];
+                        newBenefits.splice(idx, 1);
+                        return { ...prev, benefits: newBenefits } as any;
+                      });
                     }}
                     className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 p-2 rounded-lg"
                   >
@@ -4877,8 +4980,10 @@ export const AdminDashboard: React.FC = () => {
             </div>
             <button
               onClick={() => {
-                const newBenefits = [...((newArticle as any).benefits || []), { text: '', icon: 'Star' }];
-                setNewArticle({ ...newArticle, benefits: newBenefits } as any);
+                setNewArticle(prev => {
+                  const newBenefits = [...((prev as any).benefits || []), { text: '', icon: 'Star' }];
+                  return { ...prev, benefits: newBenefits } as any;
+                });
               }}
               className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400 font-bold hover:bg-emerald-50 dark:hover:bg-emerald-900/30 px-4 py-2 rounded-xl transition-colors"
             >
@@ -4904,7 +5009,33 @@ export const AdminDashboard: React.FC = () => {
               <button
                 onClick={() => {
                   setEditingArticle(null);
-                  setNewArticle({ title: '', thumbnail: '', content: '', type: 'richtext', benefits: [] } as any);
+                  setNewArticle({
+                    title: '',
+                    title_en: '',
+                    title_ha: '',
+                    hook: '',
+                    hook_en: '',
+                    hook_ha: '',
+                    thumbnail: '',
+                    imageUrl: '',
+                    content: '',
+                    content_en: '',
+                    content_ha: '',
+                    type: 'richtext',
+                    status: 'Published',
+                    publishDate: '',
+                    benefits: [],
+                    category: '',
+                    subCategory: '',
+                    isPremium: false,
+                  } as any);
+                  setImgSrc('');
+                  setCrop(undefined);
+                  setCompletedCrop(null);
+                  setArticleFormKey(k => k + 1);
+                  try {
+                    localStorage.removeItem('asrarhub_article_draft');
+                  } catch (e) {}
                 }}
                 className="mt-4 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white px-6 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-colors"
               >
@@ -8826,6 +8957,7 @@ export const AdminDashboard: React.FC = () => {
         transition={{ duration: 0.2 }}
       >
         {activeTab === 'overview' && renderOverview()}
+        {activeTab === 'support' && <AdminEmailSupportManager />}
         {activeTab === 'users' && renderUsers()}
         {activeTab === 'payments' && renderPayments()}
         {activeTab === 'articles' && renderArticles()}

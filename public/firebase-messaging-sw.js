@@ -33,10 +33,21 @@ self.addEventListener('notificationclick', (event) => {
   }
 
   event.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (windowClients) => {
+      const extraData = event.notification.data || {};
+      const payload = {
+        type: 'NOTIFICATION_CLICKED',
+        data: extraData,
+        title: event.notification.title,
+        body: event.notification.body,
+      };
+
       for (let i = 0; i < windowClients.length; i++) {
         const client = windowClients[i];
-        if (client.url === urlToOpen && 'focus' in client) {
+        try {
+          client.postMessage(payload);
+        } catch (e) {}
+        if ('focus' in client) {
           return client.focus();
         }
       }

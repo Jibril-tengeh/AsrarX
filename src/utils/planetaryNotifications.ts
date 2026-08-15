@@ -386,8 +386,19 @@ export function checkAndTriggerPlanetaryNotification(overrideLang?: SupportedLan
     // Ring audio alert
     playNotificationTone();
 
-    // Dispatch localized notification
-    dispatchSystemNotification(title, body);
+    // Dispatch localized notification with interactive payload
+    dispatchSystemNotification(title, body, {
+      type: 'planetaryHour',
+      planetIndex: current.planetIndex,
+      planetName,
+      planetArabic: rawPlanet.arabic,
+      planetSymbol: rawPlanet.symbol,
+      favorability,
+      isPropitious,
+      hourNumber: current.hourNumber,
+      isDaytime: current.isDaytime,
+      targetUrl: '/tools/planetary',
+    });
   }
 }
 

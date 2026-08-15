@@ -170,7 +170,14 @@ export async function revalidatePublishedArticles(sourceTag = 'manual'): Promise
               notifTitle = 'New Articles Available 📚';
               notifBody = `${diff} new spiritual article(s) and secret(s) synchronized.`;
             }
-            dispatchSystemNotification(notifTitle, notifBody);
+            const latestArticle = validPublished[0];
+            const targetUrl = latestArticle?.id ? `/secret/${latestArticle.id}` : '/user/dashboard';
+            dispatchSystemNotification(notifTitle, notifBody, {
+              type: 'article',
+              articleId: latestArticle?.id,
+              articleTitle: latestArticle?.title,
+              targetUrl,
+            });
           }
         }
         localStorage.setItem('asrarhub_last_known_article_count', String(currentCount));

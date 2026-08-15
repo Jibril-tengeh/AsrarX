@@ -1,10 +1,19 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { User, Shield, Key, Search, ArrowLeft, RefreshCw, Sparkles, BookOpen, Folder as FolderIcon, Trash2, Save, Heart, Clock, Sun, Moon, Calendar, CheckCircle2, Copy, Check, Eye, Compass, Plus, ShieldCheck, Download, Feather } from 'lucide-react';
+import { motion } from 'motion/react';
 import { db } from '../../../lib/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
+import { useLanguage } from '../../../contexts/LanguageContext';
+import { useFeatures } from '../../../contexts/FeatureContext';
 import { exportWirdToImage } from '../../../utils/wirdExporter';
 import { getZikrCache, setZikrCache, syncPersonalWirdsOffline } from '../../../utils/zikrSyncEngine';
 import { RitualDhikrCalculator } from '../../../components/RitualDhikrCalculator';
+import { calculateAbjadValue } from '../../../utils/abjad';
+import { ASMA_AL_HUSNA } from '../../../utils/asmaData';
+import { asmaListData } from '../../../data/asmaListData';
+import { asmaListDataTranslations } from '../../../data/asmaListDataTranslations';
+import { applyTashkeel } from '../../../utils/tashkeel';
 
 interface SavedWird {
   id: string;
@@ -354,15 +363,6 @@ const DEFAULT_FOLDERS: Folder[] = [
   { id: 'healing', name: 'Guérison (Healing)' },
   { id: 'uncategorized', name: 'Non classés' }
 ];
-import { Link } from 'react-router-dom';
-import { useLanguage } from '../../../contexts/LanguageContext';
-import { useFeatures } from '../../../contexts/FeatureContext';
-import { motion } from 'motion/react';
-import { calculateAbjadValue } from '../../../utils/abjad';
-import { ASMA_AL_HUSNA } from '../../../utils/asmaData';
-import { asmaListData } from '../../../data/asmaListData';
-import { asmaListDataTranslations } from '../../../data/asmaListDataTranslations';
-import { applyTashkeel } from '../../../utils/tashkeel';
 
 const cleanArabic = (str: string) => {
   return str.replace(/[\u064B-\u065F\u0670]/g, "").replace(/\s+/g, "");

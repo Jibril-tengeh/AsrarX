@@ -553,29 +553,34 @@ export const IbnArabiSeals: React.FC = () => {
                     title={`${tStrings.huroofMatrixTitle} (${huroofGridSize}×${huroofGridSize})`}
                     subtitle={`${tStrings.huroofTotalAdad} : ${huroofAdadTotal} • ${huroofInput}`}
                     parchmentContent={
-                      <div className="space-y-4 text-center font-serif text-amber-950 p-2">
-                        <h4 className="text-xl font-bold">{tStrings.huroofMatrixTitle} ({huroofGridSize}×${huroofGridSize})</h4>
-                        <p className="text-xs text-amber-900 italic font-mono">« {huroofInput} »</p>
+                      <div className="space-y-4 text-center font-serif text-amber-950 p-2 sm:p-4">
+                        <div className="bg-amber-50/80 border border-amber-900/40 rounded-xl p-3 shadow-xs">
+                          <p className="text-sm font-arabic font-bold text-amber-950 text-base sm:text-lg">« {huroofInput} »</p>
+                          <p className="text-xs text-amber-900/80 font-mono mt-1">
+                            {tStrings.huroofTotalAdad} : <strong className="text-amber-950 font-bold">{huroofAdadTotal}</strong>
+                          </p>
+                        </div>
                         <div 
-                          className="grid gap-1 max-w-[420px] mx-auto p-3 border-2 border-amber-900 bg-amber-50 rounded-2xl shadow-inner my-3"
+                          className="grid gap-1.5 max-w-[420px] mx-auto p-3.5 border-2 border-amber-900 bg-amber-50/90 rounded-2xl shadow-inner my-3"
                           style={{ gridTemplateColumns: `repeat(${huroofGridSize}, minmax(0, 1fr))` }}
                         >
                           {huroofMatrix.map((row, r) =>
                             row.map((cell, c) => {
                               if (!cell) return null;
                               return (
-                                <div key={`${r}-${c}`} className="aspect-square border border-amber-800/60 rounded-md flex flex-col items-center justify-center p-0.5 bg-amber-100/60 shadow-xs">
-                                  <span className={`${huroofGridSize > 7 ? 'text-xs' : huroofGridSize > 4 ? 'text-base' : 'text-xl'} font-bold text-amber-950 leading-none`}>
+                                <div key={`${r}-${c}`} className="aspect-square border-2 border-amber-900/70 rounded-xl flex flex-col items-center justify-center p-1 bg-amber-100/70 shadow-xs">
+                                  <span className={`${huroofGridSize > 7 ? 'text-sm' : huroofGridSize > 4 ? 'text-lg' : 'text-2xl'} font-bold text-amber-950 leading-none font-arabic`}>
                                     {cell.letter}
                                   </span>
-                                  <span className="text-[8px] font-mono text-amber-900/80 mt-0.5 leading-none">{cell.adad}</span>
+                                  <span className="text-[10px] font-mono font-bold text-amber-900 mt-1 leading-none">{cell.adad}</span>
                                 </div>
                               );
                             })
                           )}
                         </div>
-                        <div className="text-xs text-amber-900 pt-2 border-t border-amber-800/30">
-                          <span>{tStrings.huroofTotalAdad} : <strong>{huroofAdadTotal}</strong></span>
+                        <div className="text-xs text-amber-900 pt-2 border-t border-amber-800/30 flex items-center justify-between px-2">
+                          <span>{tStrings.huroofTotalAdad} : <strong className="text-amber-950">{huroofAdadTotal}</strong></span>
+                          <span>Format : <strong>{huroofGridSize}×{huroofGridSize}</strong></span>
                         </div>
                       </div>
                     }
@@ -948,13 +953,13 @@ export const IbnArabiSeals: React.FC = () => {
                   <SealExportButtons
                     targetRef={angelsSealRef}
                     title={tStrings.angelsSealTitle}
-                    subtitle={`${angelsNameInput ? `Bénéficiaire: ${angelsNameInput}` : 'Alignement des 4 Piliers'} • ${angelResonance.dominantAngel.namePhonetic}`}
+                    subtitle={`${angelsNameInput ? `${langKey === 'ha' ? 'Mai cin gajiyarsa :' : langKey === 'en' ? 'Recipient:' : 'Bénéficiaire :'} ${angelsNameInput}` : (langKey === 'ha' ? 'Daidaiton Ginshikai 4' : langKey === 'en' ? 'Alignment of the 4 Pillars' : 'Alignement des 4 Piliers')} • ${angelResonance.dominantAngel.namePhonetic}`}
                     recipientName={angelsNameInput}
                     parchmentContent={
-                      <div className="space-y-4 text-center font-serif text-amber-950 p-1">
+                      <div className="w-full space-y-4 text-center font-serif text-amber-950 p-1">
                         <h4 className="text-lg sm:text-xl font-bold text-amber-950">{tStrings.angelsSealTitle}</h4>
                         <p className="text-xs text-amber-900 italic">
-                          {angelsNameInput ? `Bénéficiaire & Alignement Théurgique : ${angelsNameInput}` : 'Alignement des 4 Piliers Angéliques du Trône'}
+                          {angelsNameInput ? `${langKey === 'ha' ? 'Mai cin gajiyarsa da Daidaiton Asiri :' : langKey === 'en' ? 'Recipient & Theurgic Alignment:' : 'Bénéficiaire & Alignement Théurgique :'} ${angelsNameInput}` : (langKey === 'ha' ? "Daidaiton Mala'iku 4 Masu Daukar Al'arshi" : langKey === 'en' ? 'Alignment of the 4 Angelic Pillars of the Throne' : "Alignement des 4 Piliers Angéliques du Trône")}
                         </p>
 
                         {/* Visual SVG Angels Seal on Parchment */}
@@ -993,7 +998,7 @@ export const IbnArabiSeals: React.FC = () => {
                                     {ang.namePhonetic}
                                   </text>
                                   <text x={x} y={y + 17} textAnchor="middle" fill="#b45309" fontSize="6.5" fontFamily="monospace">
-                                    {ang.azimuthDeg}° • {ang.directionFr}
+                                    {ang.azimuthDeg}° • {langKey === 'ha' ? ang.directionHa : langKey === 'en' ? ang.directionEn : ang.directionFr}
                                   </text>
                                 </g>
                               );
@@ -1006,16 +1011,16 @@ export const IbnArabiSeals: React.FC = () => {
                           </svg>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-2 max-w-md mx-auto text-xs my-2">
+                        <div className="grid grid-cols-2 gap-2 w-full max-w-md mx-auto text-xs my-2">
                           {ARCHANGELS_DATA.map(a => (
                             <div key={a.id} className="p-2 border border-amber-900/40 rounded-xl bg-amber-100/70 shadow-xs text-left">
                               <strong className="block text-xs text-amber-950 font-serif">{a.namePhonetic} ({a.nameAr})</strong>
-                              <span className="text-[10px] text-amber-900">{a.directionFr} • Azimuth {a.azimuthDeg}°</span>
+                              <span className="text-[10px] text-amber-900">{langKey === 'ha' ? a.directionHa : langKey === 'en' ? a.directionEn : a.directionFr} • Azimuth {a.azimuthDeg}°</span>
                             </div>
                           ))}
                         </div>
 
-                        <div className="p-3 bg-amber-100/70 rounded-xl border border-amber-900/40 text-xs text-amber-950 max-w-md mx-auto space-y-2">
+                        <div className="p-3 bg-amber-100/70 rounded-xl border border-amber-900/40 text-xs text-amber-950 w-full max-w-md mx-auto space-y-2">
                           <p dir="rtl" className="text-sm font-serif font-bold text-amber-950 leading-relaxed text-right">
                             {tStrings.angelsInvocationArabic}
                           </p>
@@ -1237,8 +1242,8 @@ export const IbnArabiSeals: React.FC = () => {
                           )}
                         </div>
                         <div className="text-xs text-amber-900 flex justify-center gap-4 pt-1 border-t border-amber-800/30">
-                          <span>Cœur 3x3 : <strong>Qalb (Bāṭin)</strong></span>
-                          <span>Enceinte 5x5 : <strong>Ḥijāb (Ẓāhir)</strong></span>
+                          <span>{tStrings.mutaqatiInnerCore} : <strong>Qalb (Bāṭin)</strong></span>
+                          <span>{tStrings.mutaqatiOuterShield} : <strong>Ḥijāb (Ẓāhir)</strong></span>
                         </div>
                       </div>
                     }
@@ -1463,13 +1468,13 @@ export const IbnArabiSeals: React.FC = () => {
                   <SealExportButtons
                     targetRef={shajaratTreeRef}
                     title={tStrings.shajaratTreeTitle}
-                    subtitle={`${shajaratInputName ? `Affinité : ${shajaratInputName}` : 'Cosmologie des 28 Lettres'} • ${personalShajaratBranch.node.titleFr}`}
+                    subtitle={`${shajaratInputName ? `${tStrings.shajaratPersonalAffinity} ${shajaratInputName}` : tStrings.shajaratSubtitle} • ${langKey === 'ha' ? personalShajaratBranch.node.titleHa : langKey === 'en' ? personalShajaratBranch.node.titleEn : personalShajaratBranch.node.titleFr}`}
                     recipientName={shajaratInputName}
                     parchmentContent={
-                      <div className="space-y-4 text-center font-serif text-amber-950 p-1">
+                      <div className="w-full space-y-4 text-center font-serif text-amber-950 p-1">
                         <h4 className="text-lg sm:text-xl font-bold text-amber-950">{tStrings.shajaratTreeTitle}</h4>
                         <p className="text-xs text-amber-900 italic">
-                          {shajaratInputName ? `Arbre Cosmologique & Rameau Spirituel de : ${shajaratInputName}` : "L'Arbre Cosmique de l'Existence (28 Degrés — Shajarat al-Kawn)"}
+                          {shajaratInputName ? `${langKey === 'ha' ? 'Itacen Halitta da Rassan Ruhaniya na :' : langKey === 'en' ? 'Cosmic Tree & Spiritual Branch of :' : 'Arbre Cosmologique & Rameau Spirituel de :'} ${shajaratInputName}` : (langKey === 'ha' ? 'Itacen Halittar Duniya (Digiri 28 — Shajarat al-Kawn)' : langKey === 'en' ? 'The Cosmic Tree of Existence (28 Degrees — Shajarat al-Kawn)' : "L'Arbre Cosmique de l'Existence (28 Degrés — Shajarat al-Kawn)")}
                         </p>
 
                         {/* Visual SVG Tree on Sacred Parchment */}
@@ -1547,10 +1552,10 @@ export const IbnArabiSeals: React.FC = () => {
                         </div>
 
                         {/* Metaphysical & Theurgic Information Box */}
-                        <div className="p-4 bg-amber-100/80 rounded-2xl border-2 border-amber-900/50 text-xs my-3 text-left space-y-2.5 max-w-md mx-auto shadow-inner">
+                        <div className="p-4 bg-amber-100/80 rounded-2xl border-2 border-amber-900/50 text-xs my-3 text-left space-y-2.5 w-full max-w-lg mx-auto shadow-inner">
                           <div className="flex items-center justify-between border-b border-amber-900/20 pb-2">
                             <span className="font-bold text-sm text-amber-950 font-serif">
-                              {langKey === 'ha' ? personalShajaratBranch.node.titleHa : langKey === 'en' ? personalShajaratBranch.node.titleEn : personalShajaratBranch.node.titleFr} ({personalShajaratBranch.rootLetter.letter})
+                              {langKey === 'ha' ? personalShajaratBranch.node.titleHa : langKey === 'en' ? personalShajaratBranch.node.titleEn : personalShajaratBranch.node.titleFr} {personalShajaratBranch.rootLetter?.letter ? `(${personalShajaratBranch.rootLetter.letter})` : ''}
                             </span>
                             <span className="text-[11px] font-mono text-amber-900 font-bold px-2 py-0.5 rounded bg-amber-200/80 border border-amber-400/60">
                               Ratio Φ : {personalShajaratBranch.node.fibonacciRatio}
@@ -1563,28 +1568,28 @@ export const IbnArabiSeals: React.FC = () => {
 
                           <div className="grid grid-cols-2 gap-2 pt-2 border-t border-amber-900/20 text-[11px]">
                             <div>
-                              <span className="text-amber-800/80 block">Présence Divine :</span>
+                              <span className="text-amber-800/80 block">{tStrings.shajaratDivinePresence}</span>
                               <strong className="text-amber-950">
                                 {langKey === 'ha' ? personalShajaratBranch.node.presenceHa : langKey === 'en' ? personalShajaratBranch.node.presenceEn : personalShajaratBranch.node.presenceFr}
                               </strong>
                             </div>
                             <div>
-                              <span className="text-amber-800/80 block">Monde Cosmologique :</span>
+                              <span className="text-amber-800/80 block">{tStrings.shajaratSpiritualSphere}</span>
                               <strong className="text-amber-950">{personalShajaratBranch.node.worldArabic}</strong>
                             </div>
                             <div>
-                              <span className="text-amber-800/80 block">Noms Divins Arabes :</span>
+                              <span className="text-amber-800/80 block">{langKey === 'ha' ? 'Sunayen Allah Larabci :' : langKey === 'en' ? 'Arabic Divine Names:' : 'Noms Divins Arabes :'}</span>
                               <span className="font-serif font-bold text-amber-950" dir="rtl">{personalShajaratBranch.node.divineNamesAr.join(' • ')}</span>
                             </div>
                             <div>
-                              <span className="text-amber-800/80 block">Garde Céleste (Muwakkal) :</span>
+                              <span className="text-amber-800/80 block">{tStrings.shajaratMuwakkalLabel}</span>
                               <strong className="text-amber-950">{personalShajaratBranch.node.angelicGuardAr || personalShajaratBranch.node.angelicGuard}</strong>
                             </div>
                           </div>
 
                           {/* Recitation Dhikr Formula */}
                           <div className="pt-2 border-t border-amber-900/20 text-center space-y-1 bg-amber-200/50 p-2.5 rounded-xl">
-                            <span className="text-[10px] uppercase tracking-wider font-bold text-amber-900 block">Formule Sacrée de Dhikr (Vocalisée)</span>
+                            <span className="text-[10px] uppercase tracking-wider font-bold text-amber-900 block">{tStrings.shajaratSacredFormulaLabel}</span>
                             <p className="text-base sm:text-lg font-serif font-bold text-amber-950 leading-relaxed" dir="rtl">
                               {personalShajaratBranch.node.dhikrFormulaAr}
                             </p>
@@ -1592,7 +1597,7 @@ export const IbnArabiSeals: React.FC = () => {
                               {personalShajaratBranch.node.dhikrFormulaPhonetic}
                             </p>
                             <span className="text-[10px] font-bold text-amber-950 block">
-                              Nombre de répétitions : <strong>{personalShajaratBranch.node.recommendedCount} fois</strong>
+                              {tStrings.shajaratDhikrCount} <strong>{personalShajaratBranch.node.recommendedCount} {tStrings.shajaratTimesUnit}</strong>
                             </span>
                           </div>
                         </div>
@@ -2079,17 +2084,17 @@ export const IbnArabiSeals: React.FC = () => {
                           </svg>
                         </div>
 
-                        <div className="grid grid-cols-5 gap-1.5 max-w-md mx-auto my-2 text-center">
+                        <div className="grid grid-cols-5 gap-1.5 w-full max-w-md mx-auto my-2 text-center">
                           {activePentagramPreset.namesAr.map((name, i) => (
                             <div key={i} className="p-1.5 border border-amber-900/40 rounded-xl bg-amber-100/70 shadow-xs">
                               <span className="text-xs font-bold text-amber-950 block font-serif">{name}</span>
-                              <span className="text-[9px] text-amber-800">Sommet {i + 1}</span>
+                              <span className="text-[9px] text-amber-800">{langKey === 'ha' ? 'Koliya' : langKey === 'en' ? 'Summit' : 'Sommet'} {i + 1}</span>
                             </div>
                           ))}
                         </div>
 
-                        <div className="p-3 bg-amber-100/60 rounded-xl border border-amber-900/40 text-xs text-left max-w-md mx-auto space-y-1">
-                          <p className="font-bold text-amber-950">{tStrings.pentagramWirdTitle} ({activePentagramPreset.wirdCount} répétitions)</p>
+                        <div className="p-3 bg-amber-100/60 rounded-xl border border-amber-900/40 text-xs text-left w-full max-w-md mx-auto space-y-1">
+                          <p className="font-bold text-amber-950">{tStrings.pentagramWirdTitle} ({activePentagramPreset.wirdCount} {tStrings.shajaratTimesUnit})</p>
                           <p className="text-amber-900 italic">{tStrings.pentagramWirdInstructions}</p>
                         </div>
                       </div>
@@ -2108,7 +2113,7 @@ export const IbnArabiSeals: React.FC = () => {
           title={tStrings.toolTitle}
           subtitle={tStrings.toolSubtitle}
           content={
-            <div className="space-y-6 text-slate-900 font-serif p-4">
+            <div className="w-full space-y-6 text-slate-900 font-serif p-2 sm:p-4">
               <div className="text-center space-y-1 border-b-2 border-amber-800/40 pb-4">
                 <h3 className="text-2xl font-bold font-serif text-amber-950">{tStrings.toolTitle}</h3>
                 <p className="text-xs text-amber-900 italic">{tStrings.toolBadge}</p>
@@ -2139,11 +2144,11 @@ export const IbnArabiSeals: React.FC = () => {
               {activeTab === 'angels' && (
                 <div className="space-y-4 text-center">
                   <h4 className="text-lg font-bold text-amber-950">{tStrings.angelsSealTitle}</h4>
-                  <div className="grid grid-cols-2 gap-3 max-w-md mx-auto text-xs">
+                  <div className="grid grid-cols-2 gap-3 w-full max-w-md mx-auto text-xs">
                     {ARCHANGELS_DATA.map(a => (
                       <div key={a.id} className="p-2 border border-amber-800 rounded bg-amber-50">
                         <strong className="block text-sm">{a.namePhonetic} ({a.nameAr})</strong>
-                        <span>{a.directionFr}</span>
+                        <span>{langKey === 'ha' ? a.directionHa : langKey === 'en' ? a.directionEn : a.directionFr}</span>
                       </div>
                     ))}
                   </div>
@@ -2168,10 +2173,10 @@ export const IbnArabiSeals: React.FC = () => {
               )}
 
               {activeTab === 'shajarat' && (
-                <div className="space-y-4 text-center font-serif text-amber-950 p-1">
+                <div className="w-full space-y-4 text-center font-serif text-amber-950 p-1">
                   <h4 className="text-lg sm:text-xl font-bold text-amber-950">{tStrings.shajaratTreeTitle}</h4>
                   <p className="text-xs text-amber-900 italic">
-                    {shajaratInputName ? `Arbre Cosmologique & Rameau Spirituel de : ${shajaratInputName}` : "L'Arbre Cosmique de l'Existence (28 Degrés — Shajarat al-Kawn)"}
+                    {shajaratInputName ? `${langKey === 'ha' ? 'Itacen Halitta da Rassan Ruhaniya na :' : langKey === 'en' ? 'Cosmic Tree & Spiritual Branch of :' : 'Arbre Cosmologique & Rameau Spirituel de :'} ${shajaratInputName}` : (langKey === 'ha' ? 'Itacen Halittar Duniya (Digiri 28 — Shajarat al-Kawn)' : langKey === 'en' ? 'The Cosmic Tree of Existence (28 Degrees — Shajarat al-Kawn)' : "L'Arbre Cosmique de l'Existence (28 Degrés — Shajarat al-Kawn)")}
                   </p>
 
                   {/* Visual SVG Tree on Sacred Parchment */}
@@ -2246,10 +2251,10 @@ export const IbnArabiSeals: React.FC = () => {
                   </div>
 
                   {/* Metaphysical & Theurgic Information Box */}
-                  <div className="p-4 bg-amber-100/80 rounded-2xl border-2 border-amber-900/50 text-xs my-3 text-left space-y-2.5 max-w-md mx-auto shadow-inner">
+                  <div className="p-4 bg-amber-100/80 rounded-2xl border-2 border-amber-900/50 text-xs my-3 text-left space-y-2.5 w-full max-w-lg mx-auto shadow-inner">
                     <div className="flex items-center justify-between border-b border-amber-900/20 pb-2">
                       <span className="font-bold text-sm text-amber-950 font-serif">
-                        {langKey === 'ha' ? personalShajaratBranch.node.titleHa : langKey === 'en' ? personalShajaratBranch.node.titleEn : personalShajaratBranch.node.titleFr} ({personalShajaratBranch.rootLetter.letter})
+                        {langKey === 'ha' ? personalShajaratBranch.node.titleHa : langKey === 'en' ? personalShajaratBranch.node.titleEn : personalShajaratBranch.node.titleFr} {personalShajaratBranch.rootLetter?.letter ? `(${personalShajaratBranch.rootLetter.letter})` : ''}
                       </span>
                       <span className="text-[11px] font-mono text-amber-900 font-bold px-2 py-0.5 rounded bg-amber-200/80 border border-amber-400/60">
                         Ratio Φ : {personalShajaratBranch.node.fibonacciRatio}
@@ -2262,28 +2267,28 @@ export const IbnArabiSeals: React.FC = () => {
 
                     <div className="grid grid-cols-2 gap-2 pt-2 border-t border-amber-900/20 text-[11px]">
                       <div>
-                        <span className="text-amber-800/80 block">Présence Divine :</span>
+                        <span className="text-amber-800/80 block">{tStrings.shajaratDivinePresence}</span>
                         <strong className="text-amber-950">
                           {langKey === 'ha' ? personalShajaratBranch.node.presenceHa : langKey === 'en' ? personalShajaratBranch.node.presenceEn : personalShajaratBranch.node.presenceFr}
                         </strong>
                       </div>
                       <div>
-                        <span className="text-amber-800/80 block">Monde Cosmologique :</span>
+                        <span className="text-amber-800/80 block">{tStrings.shajaratSpiritualSphere}</span>
                         <strong className="text-amber-950">{personalShajaratBranch.node.worldArabic}</strong>
                       </div>
                       <div>
-                        <span className="text-amber-800/80 block">Noms Divins Arabes :</span>
+                        <span className="text-amber-800/80 block">{langKey === 'ha' ? 'Sunayen Allah Larabci :' : langKey === 'en' ? 'Arabic Divine Names:' : 'Noms Divins Arabes :'}</span>
                         <span className="font-serif font-bold text-amber-950" dir="rtl">{personalShajaratBranch.node.divineNamesAr.join(' • ')}</span>
                       </div>
                       <div>
-                        <span className="text-amber-800/80 block">Garde Céleste (Muwakkal) :</span>
+                        <span className="text-amber-800/80 block">{tStrings.shajaratMuwakkalLabel}</span>
                         <strong className="text-amber-950">{personalShajaratBranch.node.angelicGuardAr || personalShajaratBranch.node.angelicGuard}</strong>
                       </div>
                     </div>
 
                     {/* Recitation Dhikr Formula */}
                     <div className="pt-2 border-t border-amber-900/20 text-center space-y-1 bg-amber-200/50 p-2.5 rounded-xl">
-                      <span className="text-[10px] uppercase tracking-wider font-bold text-amber-900 block">Formule Sacrée de Dhikr (Vocalisée)</span>
+                      <span className="text-[10px] uppercase tracking-wider font-bold text-amber-900 block">{tStrings.shajaratSacredFormulaLabel}</span>
                       <p className="text-base sm:text-lg font-serif font-bold text-amber-950 leading-relaxed" dir="rtl">
                         {personalShajaratBranch.node.dhikrFormulaAr}
                       </p>
@@ -2291,7 +2296,7 @@ export const IbnArabiSeals: React.FC = () => {
                         {personalShajaratBranch.node.dhikrFormulaPhonetic}
                       </p>
                       <span className="text-[10px] font-bold text-amber-950 block">
-                        Nombre de répétitions : <strong>{personalShajaratBranch.node.recommendedCount} fois</strong>
+                        {tStrings.shajaratDhikrCount} <strong>{personalShajaratBranch.node.recommendedCount} {tStrings.shajaratTimesUnit}</strong>
                       </span>
                     </div>
                   </div>
@@ -2300,9 +2305,9 @@ export const IbnArabiSeals: React.FC = () => {
 
               {activeTab === 'pentagram' && (
                 <div className="space-y-4 text-center">
-                  <h4 className="text-lg font-bold text-amber-950">{activePentagramPreset.nameFr}</h4>
+                  <h4 className="text-lg font-bold text-amber-950">{langKey === 'ha' ? activePentagramPreset.nameHa : langKey === 'en' ? activePentagramPreset.nameEn : activePentagramPreset.nameFr}</h4>
                   <p className="text-sm font-serif font-bold text-amber-900">
-                    Center: {activePentagramPreset.centerNameAr} — Sum: {pentagramTotalSum}
+                    {langKey === 'ha' ? 'Tsakiya' : langKey === 'en' ? 'Center' : 'Centre'}: {activePentagramPreset.centerNameAr} — {langKey === 'ha' ? 'Jimilla' : langKey === 'en' ? 'Sum' : 'Somme'}: {pentagramTotalSum}
                   </p>
                 </div>
               )}

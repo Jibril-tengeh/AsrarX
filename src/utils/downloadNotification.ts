@@ -1,8 +1,10 @@
 import { dispatchSystemNotification } from './notificationLocalization';
+import { saveRecentDownload, DownloadRecord } from './downloadStorage';
 
 /**
  * Global Download Notification Event System
  * Emits custom events when file, canvas, audio or PDF downloads start or complete.
+ * Links directly with the Download Preview Modal.
  */
 
 export interface DownloadEventData {
@@ -10,6 +12,11 @@ export interface DownloadEventData {
   type: 'start' | 'success' | 'error';
   fileName?: string;
   customMessage?: string;
+  dataUrl?: string;
+  previewUrl?: string;
+  fileType?: 'image' | 'video' | 'audio' | 'pdf' | 'other';
+  toolRoute?: string;
+  toolName?: string;
   timestamp: number;
 }
 
@@ -22,14 +29,51 @@ export function subscribeDownloadNotification(listener: DownloadListener): () =>
   return () => listeners.delete(listener);
 }
 
-function emitDownloadEvent(type: 'start' | 'success' | 'error', fileName?: string, customMessage?: string) {
+/**
+ * Trigger opening the Download Preview modal directly from any component
+ */
+export function openDownloadPreviewModal(downloadData?: Partial<DownloadRecord> | DownloadEventData) {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(
+      new CustomEvent('asrarhub:open_download_preview', {
+        detail: downloadData || null,
+      })
+    );
+  }
+}
+
+function emitDownloadEvent(
+  type: 'start' | 'success' | 'error',
+  fileName?: string,
+  customMessage?: string,
+  extraData?: Partial<DownloadEventData>
+) {
   const eventData: DownloadEventData = {
     id: `dl_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
     type,
     fileName,
     customMessage,
+    dataUrl: extraData?.dataUrl,
+    previewUrl: extraData?.previewUrl,
+    fileType: extraData?.fileType || (fileName?.match(/\.(png|jpe?g|webp|svg)$/i) ? 'image' : fileName?.endsWith('.pdf') ? 'pdf' : fileName?.endsWith('.webm') ? 'video' : 'other'),
+    toolRoute: extraData?.toolRoute || (typeof window !== 'undefined' ? window.location.pathname : undefined),
+    toolName: extraData?.toolName,
     timestamp: Date.now(),
   };
+
+  // Save to IndexedDB / localStorage history if successful
+  if (type === 'success' && fileName) {
+    saveRecentDownload({
+      id: eventData.id,
+      fileName,
+      dataUrl: eventData.dataUrl,
+      fileType: eventData.fileType || 'image',
+      timestamp: eventData.timestamp,
+      toolName: eventData.toolName,
+      toolRoute: eventData.toolRoute,
+      customMessage: eventData.customMessage,
+    }).catch((e) => console.warn('[DownloadNotification] saveRecentDownload error:', e));
+  }
 
   listeners.forEach((listener) => {
     try {
@@ -39,7 +83,7 @@ function emitDownloadEvent(type: 'start' | 'success' | 'error', fileName?: strin
     }
   });
 
-  // Also dispatch a system background notification to the device notification tray
+  // Also dispatch a system background notification to the device notification tray with rich payload
   try {
     const lang = (localStorage.getItem('language') || 'fr') as 'fr' | 'en' | 'ha';
     let notifTitle = 'Téléchargement';
@@ -56,7 +100,14 @@ function emitDownloadEvent(type: 'start' | 'success' | 'error', fileName?: strin
       notifBody = notifBody || 'Une erreur est survenue lors du téléchargement du fichier.';
     }
 
-    dispatchSystemNotification(notifTitle, notifBody);
+    dispatchSystemNotification(notifTitle, notifBody, {
+      type: 'download',
+      downloadId: eventData.id,
+      fileName: eventData.fileName,
+      fileType: eventData.fileType,
+      toolRoute: eventData.toolRoute,
+      targetUrl: eventData.toolRoute || '/tools',
+    });
   } catch (err) {
     console.warn('[DownloadNotification] System notification dispatch error:', err);
   }
@@ -67,14 +118,14 @@ function emitDownloadEvent(type: 'start' | 'success' | 'error', fileName?: strin
   }
 }
 
-export function notifyDownloadStart(fileName?: string, customMessage?: string) {
-  emitDownloadEvent('start', fileName, customMessage);
+export function notifyDownloadStart(fileName?: string, customMessage?: string, extraData?: Partial<DownloadEventData>) {
+  emitDownloadEvent('start', fileName, customMessage, extraData);
 }
 
-export function notifyDownloadSuccess(fileName?: string, customMessage?: string) {
-  emitDownloadEvent('success', fileName, customMessage);
+export function notifyDownloadSuccess(fileName?: string, customMessage?: string, extraData?: Partial<DownloadEventData>) {
+  emitDownloadEvent('success', fileName, customMessage, extraData);
 }
 
-export function notifyDownloadError(fileName?: string, customMessage?: string) {
-  emitDownloadEvent('error', fileName, customMessage);
+export function notifyDownloadError(fileName?: string, customMessage?: string, extraData?: Partial<DownloadEventData>) {
+  emitDownloadEvent('error', fileName, customMessage, extraData);
 }

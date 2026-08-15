@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { User, Bell, Clock, Save, Shield, Moon, Sun, Smartphone, Laptop, Tablet, Globe, Trash2, Award, Medal, Star, Target, LogOut, Camera, Image as ImageIcon, RefreshCw, Sparkles, LogIn, ChevronDown, Plus, XCircle, CheckCircle, FileText, BookOpen, ScrollText, Heart, X, Share2, Wifi, Database, HardDrive, Mic, MapPin, FolderCheck } from 'lucide-react';
+import { User, Bell, Clock, Save, Shield, Moon, Sun, Smartphone, Laptop, Tablet, Globe, Trash2, Award, Medal, Star, Target, LogOut, Camera, Image as ImageIcon, RefreshCw, Sparkles, LogIn, ChevronDown, Plus, XCircle, CheckCircle, FileText, BookOpen, ScrollText, Heart, X, Share2, Wifi, Database, HardDrive, Mic, MapPin, FolderCheck, Mail, MessageSquare } from 'lucide-react';
+import { FloatingSupportContact } from '../../components/FloatingSupportContact';
 import { requestStoragePermission, requestMicrophonePermission, requestGeolocationPermission, requestNotificationPermission, requestAllPermissions } from '../../utils/planetaryNotifications';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -1363,7 +1364,7 @@ export const UserProfile: React.FC = () => {
       >
         <div className="space-y-4">
           <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
-            Sur Android et sur le navigateur web, les autorisations (<strong>Localisation GPS</strong>, <strong>Microphone</strong>, <strong>Stockage</strong>, <strong>Notifications</strong>) apparaissent dans le menu système d'Android uniquement lorsqu'elles ont été sollicitées une première fois par l'application.
+            {t('profile.permissions.subtitle', "Sur Android et sur le navigateur web, les autorisations (Localisation GPS, Microphone, Stockage, Notifications) apparaissent dans le menu système d'Android uniquement lorsqu'elles ont été sollicitées une première fois par l'application.")}
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 my-4">
@@ -1375,11 +1376,11 @@ export const UserProfile: React.FC = () => {
                 </div>
                 <div>
                   <h4 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
-                    Localisation GPS
+                    {t('profile.permissions.geoTitle', 'Localisation GPS')}
                     {appPermissions.geolocation && <CheckCircle size={14} className="text-emerald-500" />}
                   </h4>
                   <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">
-                    Direction de la Qibla, heures de prière et calculs astronomiques.
+                    {t('profile.permissions.geoDesc', 'Direction de la Qibla, heures de prière et calculs astronomiques.')}
                   </p>
                 </div>
               </div>
@@ -1388,7 +1389,7 @@ export const UserProfile: React.FC = () => {
                 onClick={handleRequestGeo}
                 className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer"
               >
-                Autoriser
+                {t('profile.permissions.authorize', 'Autoriser')}
               </button>
             </div>
 
@@ -1400,11 +1401,11 @@ export const UserProfile: React.FC = () => {
                 </div>
                 <div>
                   <h4 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
-                    Microphone & Audio
+                    {t('profile.permissions.micTitle', 'Microphone & Audio')}
                     {appPermissions.microphone && <CheckCircle size={14} className="text-emerald-500" />}
                   </h4>
                   <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">
-                    Compteur Zikr vocal et détection sonore de récitation.
+                    {t('profile.permissions.micDesc', 'Compteur Zikr vocal et détection sonore de récitation.')}
                   </p>
                 </div>
               </div>
@@ -1413,7 +1414,7 @@ export const UserProfile: React.FC = () => {
                 onClick={handleRequestMic}
                 className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer"
               >
-                Autoriser
+                {t('profile.permissions.authorize', 'Autoriser')}
               </button>
             </div>
 
@@ -1425,11 +1426,11 @@ export const UserProfile: React.FC = () => {
                 </div>
                 <div>
                   <h4 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
-                    Stockage & Fichiers
+                    {t('profile.permissions.storageTitle', 'Stockage & Fichiers')}
                     {appPermissions.storage && <CheckCircle size={14} className="text-emerald-500" />}
                   </h4>
                   <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">
-                    Téléchargement des parchemins PNG et cache hors-ligne.
+                    {t('profile.permissions.storageDesc', 'Téléchargement des parchemins PNG et cache hors-ligne.')}
                   </p>
                 </div>
               </div>
@@ -1439,7 +1440,7 @@ export const UserProfile: React.FC = () => {
                 disabled={isRequestingStorage}
                 className="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer"
               >
-                Autoriser
+                {t('profile.permissions.authorize', 'Autoriser')}
               </button>
             </div>
 
@@ -1451,11 +1452,11 @@ export const UserProfile: React.FC = () => {
                 </div>
                 <div>
                   <h4 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
-                    Notifications Push
+                    {t('profile.permissions.notifTitle', 'Notifications Push')}
                     {fcmEnabled && <CheckCircle size={14} className="text-emerald-500" />}
                   </h4>
                   <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">
-                    Heures planétaires, Sa'ah al-Ijābah et rappels de Zikr.
+                    {t('profile.permissions.notifDesc', "Heures planétaires, Sa'ah al-Ijābah et rappels de Zikr.")}
                   </p>
                 </div>
               </div>
@@ -1464,7 +1465,7 @@ export const UserProfile: React.FC = () => {
                 onClick={handleToggleNotifications}
                 className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer"
               >
-                {fcmEnabled ? 'Activé' : 'Activer'}
+                {fcmEnabled ? t('profile.permissions.authorized', 'Activé') : t('profile.permissions.authorize', 'Activer')}
               </button>
             </div>
           </div>
@@ -1478,12 +1479,12 @@ export const UserProfile: React.FC = () => {
             {isRequestingPerms ? (
               <>
                 <RefreshCw className="animate-spin" size={16} />
-                Demande des autorisations en cours...
+                {t('profile.permissions.requestingAll', 'Demande des autorisations en cours...')}
               </>
             ) : (
               <>
                 <Shield size={16} />
-                Activer & Tester toutes les autorisations (Micro, GPS, Stockage, Notifications)
+                {t('profile.permissions.requestAll', 'Activer & Tester toutes les autorisations (Micro, GPS, Stockage, Notifications)')}
               </>
             )}
           </button>
@@ -1526,7 +1527,7 @@ export const UserProfile: React.FC = () => {
       </CollapsibleSection>
 
       <CollapsibleSection
-        title="Abonnement & Achats"
+        title={t('profile.adsAndPurchases.title', "Abonnement & Achats")}
         icon={<Shield className="text-emerald-500" size={20} />}
       >
         <div className="mb-6">
@@ -1537,8 +1538,8 @@ export const UserProfile: React.FC = () => {
           <div className="mb-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between border border-gray-100 dark:border-gray-700 rounded-2xl p-4 bg-gray-50 dark:bg-gray-800/50 gap-4 mb-4">
               <div className="flex flex-col">
-                <h3 className="font-bold text-gray-900 dark:text-white">Désactiver les publicités</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400">Masquer les bannières promotionnelles dans l'application</p>
+                <h3 className="font-bold text-gray-900 dark:text-white">{t('profile.adsAndPurchases.hideAdsTitle', 'Désactiver les publicités')}</h3>
+                <p className="text-sm text-gray-500 dark:text-gray-400">{t('profile.adsAndPurchases.hideAdsDesc', "Masquer les bannières promotionnelles dans l'application")}</p>
               </div>
               <div 
                 onClick={async () => {
@@ -1577,20 +1578,20 @@ export const UserProfile: React.FC = () => {
         <div>
           <h3 className="font-bold text-gray-900 dark:text-white mb-3 flex items-center gap-2">
             <Save className="text-gray-400" size={18} />
-            Historique d'achats
+            {t('profile.adsAndPurchases.purchaseHistory', "Historique d'achats")}
           </h3>
           {user?.purchasedItems && user.purchasedItems.length > 0 ? (
             <div className="space-y-3">
               {user.purchasedItems.map((item, idx) => (
                 <div key={idx} className="bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl p-3 flex items-center justify-between">
                   <span className="text-sm font-medium text-gray-900 dark:text-white">{item}</span>
-                  <span className="text-xs text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-100 dark:bg-emerald-900/30 px-2 py-1 rounded-full">Acheté</span>
+                  <span className="text-xs text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-100 dark:bg-emerald-900/30 px-2 py-1 rounded-full">{t('profile.adsAndPurchases.purchased', 'Acheté')}</span>
                 </div>
               ))}
             </div>
           ) : (
             <div className="text-center py-6 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800">
-              <p className="text-sm text-gray-500 dark:text-gray-400">Aucun achat pour le moment.</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">{t('profile.adsAndPurchases.noPurchases', 'Aucun achat pour le moment.')}</p>
             </div>
           )}
         </div>
@@ -1632,10 +1633,10 @@ export const UserProfile: React.FC = () => {
         <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h4 className="font-bold text-gray-900 dark:text-white text-sm">
-              Sauvegarde automatique sur Firestore
+              {t('profile.offlineMode.autoSaveTitle', 'Sauvegarde automatique sur Firestore')}
             </h4>
             <p className="text-xs text-gray-500 dark:text-gray-450 mt-1 leading-relaxed">
-              Désactivez cette option pour économiser vos données mobiles. Vos modifications seront conservées localement.
+              {t('profile.offlineMode.autoSaveDesc', 'Désactivez cette option pour économiser vos données mobiles. Vos modifications seront conservées localement.')}
             </p>
           </div>
           <div 
@@ -1856,11 +1857,11 @@ export const UserProfile: React.FC = () => {
       </CollapsibleSection>
 
       <CollapsibleSection
-        title="Maintenance"
+        title={t('profile.maintenance.title', "Maintenance")}
         icon={<RefreshCw className="text-emerald-500" size={20} />}
       >
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-5 leading-relaxed">
-          Vider le cache peut résoudre les problèmes de lecture audio ou libérer de l'espace sur votre appareil.
+          {t('profile.maintenance.subtitle', "Vider le cache peut résoudre les problèmes de lecture audio ou libérer de l'espace sur votre appareil.")}
         </p>
 
         <button
@@ -1892,9 +1893,58 @@ export const UserProfile: React.FC = () => {
           className={`flex items-center justify-center gap-2 w-full sm:w-auto bg-red-50 hover:bg-red-100 text-red-600 dark:bg-red-900/20 dark:hover:bg-red-900/40 dark:text-red-400 rounded-xl px-5 py-3 font-bold transition-colors ${isClearingCache ? 'opacity-70 cursor-not-allowed' : ''}`}
         >
           <RefreshCw size={18} className={isClearingCache ? 'animate-spin' : ''} />
-          {isClearingCache ? 'Nettoyage...' : 'Vider le cache'}
+          {isClearingCache ? t('profile.maintenance.clearing', 'Nettoyage...') : t('profile.maintenance.clearCache', 'Vider le cache')}
         </button>
       </CollapsibleSection>
+
+      {/* Centre d'Assistance & Contact Direct avec l'Administrateur */}
+      <CollapsibleSection
+        title={t('profile.supportSection.title', "Assistance & Contact Administrateur")}
+        icon={<Mail className="text-emerald-500" size={20} />}
+        defaultOpen={true}
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+            {t('profile.supportSection.description', "Une question sur un secret, votre abonnement Premium, ou un besoin d'orientation spirituelle ? Contactez directement la direction spirituelle et l'administrateur.")}
+          </p>
+
+          <div className="p-4 bg-gradient-to-r from-emerald-50 via-gray-50 to-amber-50/40 dark:from-gray-800 dark:to-gray-800/80 rounded-2xl border border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="p-3 bg-emerald-600 text-white rounded-2xl shadow-sm shrink-0">
+                <MessageSquare size={22} />
+              </div>
+              <div>
+                <h4 className="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-2">
+                  <span>{t('profile.supportSection.directMessaging', 'Messagerie Directe & Support Gmail')}</span>
+                  {user?.subscriptionTier === 'premium' || user?.subscriptionTier === 'pro' ? (
+                    <span className="text-[10px] bg-amber-500 text-white font-black px-2 py-0.5 rounded-full">{t('profile.supportSection.vipBadge', 'VIP ⭐')}</span>
+                  ) : (
+                    <span className="text-[10px] bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold px-2 py-0.5 rounded-full">{t('profile.supportSection.standardBadge', 'Standard')}</span>
+                  )}
+                </h4>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  {t('profile.supportSection.profileDetailsNote', 'Vos détails de profil (type de compte, points spirituels, diagnostic) sont automatiquement intégrés.')}
+                </p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                const btn = document.getElementById('btn-floating-support-contact');
+                if (btn) btn.click();
+              }}
+              className="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm rounded-xl transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer shrink-0"
+            >
+              <Mail size={15} />
+              {t('profile.supportSection.contactBtn', "Contacter l'Admin")}
+            </button>
+          </div>
+        </div>
+      </CollapsibleSection>
+
+      {/* Floating support contact widget */}
+      <FloatingSupportContact isUserProfile={true} />
 
       {/* Article Modal */}
       {selectedFavArticle && (

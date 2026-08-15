@@ -34,8 +34,6 @@ import {
   ArrowLeftRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
 
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { calculateAbjadValue, numberToAbjadLetters } from '../../../utils/abjad';
@@ -43,9 +41,8 @@ import { saveCalculationToHistory } from '../../../utils/calculationHistory';
 import { applyTashkeel } from '../../../utils/tashkeel';
 import { downloadCanvasImage } from '../../../utils/downloadHelper';
 import ContinentCitySelector from '../../../components/sacredGeography/ContinentCitySelector';
-import InteractiveMap from '../../../components/sacredGeography/InteractiveMap';
 import CityComparisonTab from '../../../components/sacredGeography/CityComparisonTab';
-import { WORLD_CITIES } from '../../../data/worldCities';
+import SacredMapModal from '../../../components/sacredGeography/SacredMapModal';
 
 // Preset Sacred & Historical Centers
 interface SacredCenter {
@@ -866,9 +863,6 @@ export default function SacredGeography() {
 
   // Map Modal State
   const [showMapModal, setShowMapModal] = useState<boolean>(false);
-  const mapContainerRef = useRef<HTMLDivElement | null>(null);
-  const leafletMapInstance = useRef<L.Map | null>(null);
-  const markerInstance = useRef<L.Marker | null>(null);
 
   // Talsam & Khatim User State
   const [selectedIntentionId, setSelectedIntentionId] = useState<string>('protection');
@@ -896,54 +890,6 @@ export default function SacredGeography() {
     }
   }, []);
 
-  // Initialize and handle Leaflet Map
-  useEffect(() => {
-    if (!showMapModal || !mapContainerRef.current) return;
-
-    if (!leafletMapInstance.current) {
-      const map = L.map(mapContainerRef.current).setView([lat, lng], 6);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap'
-      }).addTo(map);
-
-      // Custom icon for Map Marker
-      const customIcon = L.divIcon({
-        className: 'custom-leaflet-pin',
-        html: `<div style="background-color: #f59e0b; width: 32px; height: 32px; border-radius: 50%; border: 3px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.5); display: flex; items-center; justify-content: center; font-size: 16px;">📍</div>`,
-        iconSize: [32, 32],
-        iconAnchor: [16, 16]
-      });
-
-      const marker = L.marker([lat, lng], { draggable: true, icon: customIcon }).addTo(map);
-
-      map.on('click', (e: L.LeafletMouseEvent) => {
-        const newLat = parseFloat(e.latlng.lat.toFixed(4));
-        const newLng = parseFloat(e.latlng.lng.toFixed(4));
-        setLat(newLat);
-        setLng(newLng);
-        marker.setLatLng(e.latlng);
-      });
-
-      marker.on('dragend', () => {
-        const pos = marker.getLatLng();
-        setLat(parseFloat(pos.lat.toFixed(4)));
-        setLng(parseFloat(pos.lng.toFixed(4)));
-      });
-
-      leafletMapInstance.current = map;
-      markerInstance.current = marker;
-    } else {
-      leafletMapInstance.current.setView([lat, lng]);
-      if (markerInstance.current) {
-        markerInstance.current.setLatLng([lat, lng]);
-      }
-    }
-
-    setTimeout(() => {
-      leafletMapInstance.current?.invalidateSize();
-    }, 250);
-  }, [showMapModal]);
-
   // Geolocation trigger button
   const handleUseLocation = () => {
     if (navigator.geolocation) {
@@ -955,11 +901,6 @@ export default function SacredGeography() {
           setLng(autoLng);
           setCityName(language === 'en' ? 'My Location' : language === 'ha' ? "Wurina na Yanzu" : 'Ma Position Actuelle');
           setSelectedPreset('');
-
-          if (leafletMapInstance.current && markerInstance.current) {
-            leafletMapInstance.current.setView([autoLat, autoLng], 10);
-            markerInstance.current.setLatLng([autoLat, autoLng]);
-          }
         },
         (err) => {
           console.warn('Geolocation error:', err);
@@ -976,11 +917,6 @@ export default function SacredGeography() {
       setCityName(language === 'en' ? found.nameEn : language === 'ha' ? found.nameHa : found.nameFr);
       setLat(found.lat);
       setLng(found.lng);
-
-      if (leafletMapInstance.current && markerInstance.current) {
-        leafletMapInstance.current.setView([found.lat, found.lng], 8);
-        markerInstance.current.setLatLng([found.lat, found.lng]);
-      }
     }
   };
 
@@ -1283,69 +1219,21 @@ ${t.labels.cityName} ${cityName} (${lat}° N, ${lng}° E)
         onOpenMap={() => setShowMapModal(true)}
       />
 
-      {/* MAP MODAL */}
-      <AnimatePresence>
-        {showMapModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-slate-950/80 backdrop-blur-md">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-4xl bg-white dark:bg-gray-900 rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col max-h-[90vh]"
-            >
-              {/* Modal Header */}
-              <div className="p-4 sm:p-5 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between bg-gray-50 dark:bg-gray-900">
-                <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400 font-extrabold text-sm sm:text-base">
-                  <Map size={20} />
-                  <span>{t.labels.mapModalTitle}</span>
-                </div>
-                <button
-                  onClick={() => setShowMapModal(false)}
-                  className="p-1.5 rounded-full hover:bg-gray-200 dark:hover:bg-gray-800 text-gray-500 cursor-pointer"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-
-              {/* Instructions Bar */}
-              <div className="px-5 py-2.5 bg-amber-50 dark:bg-amber-950/40 border-b border-amber-200 dark:border-amber-800/40 text-xs text-amber-900 dark:text-amber-200 flex justify-between items-center flex-wrap gap-2">
-                <span>{t.labels.mapInstructions}</span>
-                <button
-                  onClick={handleUseLocation}
-                  className="px-2.5 py-1 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-bold text-[11px] flex items-center gap-1 cursor-pointer"
-                >
-                  <Crosshair size={12} />
-                  <span>{t.labels.useMyLocation}</span>
-                </button>
-              </div>
-
-              {/* Leaflet Map Display */}
-              <div className="relative flex-1 min-h-[350px] sm:min-h-[450px] w-full bg-slate-900">
-                <div ref={mapContainerRef} className="absolute inset-0 w-full h-full z-10" />
-              </div>
-
-              {/* Modal Footer with Current Coordinates & Confirm Button */}
-              <div className="p-4 sm:p-5 border-t border-gray-200 dark:border-gray-800 flex flex-wrap items-center justify-between gap-3 bg-gray-50 dark:bg-gray-900 text-xs">
-                <div className="flex items-center gap-3">
-                  <span className="font-bold text-gray-700 dark:text-gray-300">
-                    {t.labels.latitude}: <strong className="text-amber-600 dark:text-amber-400 font-mono text-sm">{lat}° N</strong>
-                  </span>
-                  <span className="font-bold text-gray-700 dark:text-gray-300">
-                    {t.labels.longitude}: <strong className="text-indigo-600 dark:text-indigo-400 font-mono text-sm">{lng}° E</strong>
-                  </span>
-                </div>
-
-                <button
-                  onClick={() => setShowMapModal(false)}
-                  className="px-6 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold text-xs shadow-lg transition-all cursor-pointer"
-                >
-                  {t.labels.closeMapBtn}
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+      {/* Advanced Sacred World Map Modal */}
+      <SacredMapModal
+        isOpen={showMapModal}
+        onClose={() => setShowMapModal(false)}
+        language={language}
+        currentCityName={cityName}
+        currentLat={lat}
+        currentLng={lng}
+        onConfirmLocation={(selectedCity, selectedLat, selectedLng) => {
+          setCityName(selectedCity);
+          setLat(selectedLat);
+          setLng(selectedLng);
+          setSelectedPreset('');
+        }}
+      />
 
       {/* Tabs Navigation */}
       <div className="flex flex-wrap gap-2 border-b border-gray-200 dark:border-gray-700 pb-2 overflow-x-auto">
@@ -1392,58 +1280,58 @@ ${t.labels.cityName} ${cityName} (${lat}° N, ${lng}° E)
             </div>
 
             {/* DMS Breakdown Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
               {/* Latitude Box */}
-              <div className="p-5 rounded-2xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 space-y-3">
-                <div className="flex items-center justify-between text-xs font-bold text-amber-800 dark:text-amber-300">
+              <div className="p-3 sm:p-5 rounded-2xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 space-y-3">
+                <div className="flex items-center justify-between text-xs font-bold text-amber-800 dark:text-amber-300 flex-wrap gap-1">
                   <span>{t.labels.latitude} (DMS)</span>
-                  <span className="font-mono">{latDMS.degrees}° {latDMS.minutes}' {latDMS.seconds}" N</span>
+                  <span className="font-mono text-[11px] sm:text-xs">{latDMS.degrees}° {latDMS.minutes}' {latDMS.seconds}" N</span>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <div className="p-3 bg-white dark:bg-gray-900 rounded-xl border border-amber-100 dark:border-amber-900/30">
-                    <p className="text-[10px] text-gray-400">{t.labels.degrees} ({latDMS.degrees}°)</p>
-                    <p className="text-lg font-bold text-amber-600 dark:text-amber-400 dir-rtl">{latAbjad.degLetters}</p>
+                <div className="grid grid-cols-3 gap-1.5 sm:gap-2 text-center">
+                  <div className="p-1.5 sm:p-3 bg-white dark:bg-gray-900 rounded-xl border border-amber-100 dark:border-amber-900/30 min-w-0">
+                    <p className="text-[9px] sm:text-[10px] text-gray-400 truncate">{t.labels.degrees} ({latDMS.degrees}°)</p>
+                    <p className="text-base sm:text-lg font-bold text-amber-600 dark:text-amber-400 dir-rtl">{latAbjad.degLetters}</p>
                   </div>
-                  <div className="p-3 bg-white dark:bg-gray-900 rounded-xl border border-amber-100 dark:border-amber-900/30">
-                    <p className="text-[10px] text-gray-400">{t.labels.minutes} ({latDMS.minutes}')</p>
-                    <p className="text-lg font-bold text-amber-600 dark:text-amber-400 dir-rtl">{latAbjad.minLetters}</p>
+                  <div className="p-1.5 sm:p-3 bg-white dark:bg-gray-900 rounded-xl border border-amber-100 dark:border-amber-900/30 min-w-0">
+                    <p className="text-[9px] sm:text-[10px] text-gray-400 truncate">{t.labels.minutes} ({latDMS.minutes}')</p>
+                    <p className="text-base sm:text-lg font-bold text-amber-600 dark:text-amber-400 dir-rtl">{latAbjad.minLetters}</p>
                   </div>
-                  <div className="p-3 bg-white dark:bg-gray-900 rounded-xl border border-amber-100 dark:border-amber-900/30">
-                    <p className="text-[10px] text-gray-400">{t.labels.seconds} ({latDMS.seconds}")</p>
-                    <p className="text-lg font-bold text-amber-600 dark:text-amber-400 dir-rtl">{latAbjad.secLetters}</p>
+                  <div className="p-1.5 sm:p-3 bg-white dark:bg-gray-900 rounded-xl border border-amber-100 dark:border-amber-900/30 min-w-0">
+                    <p className="text-[9px] sm:text-[10px] text-gray-400 truncate">{t.labels.seconds} ({latDMS.seconds}")</p>
+                    <p className="text-base sm:text-lg font-bold text-amber-600 dark:text-amber-400 dir-rtl">{latAbjad.secLetters}</p>
                   </div>
                 </div>
 
                 <div className="text-xs text-amber-900 dark:text-amber-200 font-semibold text-center pt-1">
-                  {t.labels.latLetters} ({latAbjad.totalVal}) : <strong className="font-mono text-base text-amber-600 dark:text-amber-400 dir-rtl ml-1">{latAbjad.totalLetters}</strong>
+                  {t.labels.latLetters} ({latAbjad.totalVal}) : <strong className="font-mono text-sm sm:text-base text-amber-600 dark:text-amber-400 dir-rtl ml-1">{latAbjad.totalLetters}</strong>
                 </div>
               </div>
 
               {/* Longitude Box */}
-              <div className="p-5 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800/40 space-y-3">
-                <div className="flex items-center justify-between text-xs font-bold text-indigo-800 dark:text-indigo-300">
+              <div className="p-3 sm:p-5 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200 dark:border-indigo-800/40 space-y-3">
+                <div className="flex items-center justify-between text-xs font-bold text-indigo-800 dark:text-indigo-300 flex-wrap gap-1">
                   <span>{t.labels.longitude} (DMS)</span>
-                  <span className="font-mono">{lngDMS.degrees}° {lngDMS.minutes}' {lngDMS.seconds}" E</span>
+                  <span className="font-mono text-[11px] sm:text-xs">{lngDMS.degrees}° {lngDMS.minutes}' {lngDMS.seconds}" E</span>
                 </div>
 
-                <div className="grid grid-cols-3 gap-2 text-center">
-                  <div className="p-3 bg-white dark:bg-gray-900 rounded-xl border border-indigo-100 dark:border-indigo-900/30">
-                    <p className="text-[10px] text-gray-400">{t.labels.degrees} ({lngDMS.degrees}°)</p>
-                    <p className="text-lg font-bold text-indigo-600 dark:text-indigo-400 dir-rtl">{lngAbjad.degLetters}</p>
+                <div className="grid grid-cols-3 gap-1.5 sm:gap-2 text-center">
+                  <div className="p-1.5 sm:p-3 bg-white dark:bg-gray-900 rounded-xl border border-indigo-100 dark:border-indigo-900/30 min-w-0">
+                    <p className="text-[9px] sm:text-[10px] text-gray-400 truncate">{t.labels.degrees} ({lngDMS.degrees}°)</p>
+                    <p className="text-base sm:text-lg font-bold text-indigo-600 dark:text-indigo-400 dir-rtl">{lngAbjad.degLetters}</p>
                   </div>
-                  <div className="p-3 bg-white dark:bg-gray-900 rounded-xl border border-indigo-100 dark:border-indigo-900/30">
-                    <p className="text-[10px] text-gray-400">{t.labels.minutes} ({lngDMS.minutes}')</p>
-                    <p className="text-lg font-bold text-indigo-600 dark:text-indigo-400 dir-rtl">{lngAbjad.minLetters}</p>
+                  <div className="p-1.5 sm:p-3 bg-white dark:bg-gray-900 rounded-xl border border-indigo-100 dark:border-indigo-900/30 min-w-0">
+                    <p className="text-[9px] sm:text-[10px] text-gray-400 truncate">{t.labels.minutes} ({lngDMS.minutes}')</p>
+                    <p className="text-base sm:text-lg font-bold text-indigo-600 dark:text-indigo-400 dir-rtl">{lngAbjad.minLetters}</p>
                   </div>
-                  <div className="p-3 bg-white dark:bg-gray-900 rounded-xl border border-indigo-100 dark:border-indigo-900/30">
-                    <p className="text-[10px] text-gray-400">{t.labels.seconds} ({lngDMS.seconds}")</p>
-                    <p className="text-lg font-bold text-indigo-600 dark:text-indigo-400 dir-rtl">{lngAbjad.secLetters}</p>
+                  <div className="p-1.5 sm:p-3 bg-white dark:bg-gray-900 rounded-xl border border-indigo-100 dark:border-indigo-900/30 min-w-0">
+                    <p className="text-[9px] sm:text-[10px] text-gray-400 truncate">{t.labels.seconds} ({lngDMS.seconds}")</p>
+                    <p className="text-base sm:text-lg font-bold text-indigo-600 dark:text-indigo-400 dir-rtl">{lngAbjad.secLetters}</p>
                   </div>
                 </div>
 
                 <div className="text-xs text-indigo-900 dark:text-indigo-200 font-semibold text-center pt-1">
-                  {t.labels.lngLetters} ({lngAbjad.totalVal}) : <strong className="font-mono text-base text-indigo-600 dark:text-indigo-400 dir-rtl ml-1">{lngAbjad.totalLetters}</strong>
+                  {t.labels.lngLetters} ({lngAbjad.totalVal}) : <strong className="font-mono text-sm sm:text-base text-indigo-600 dark:text-indigo-400 dir-rtl ml-1">{lngAbjad.totalLetters}</strong>
                 </div>
               </div>
             </div>

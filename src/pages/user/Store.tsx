@@ -264,7 +264,7 @@ export const Store: React.FC = () => {
           <div className="relative w-full sm:w-64">
             <input 
               type="text" 
-              placeholder={t('search', 'Rechercher...')}
+              placeholder={t('store.searchPlaceholder', 'Rechercher un article...')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-white dark:bg-gray-800 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 rounded-xl pl-10 pr-4 py-2.5 outline-none focus:ring-2 focus:ring-emerald-500 shadow-sm"

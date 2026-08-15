@@ -1,6 +1,9 @@
 // Data structures, graphic symbols, descriptions, and admin utilities for the 17 Lunar Seal Varieties
 // Supports French (fr), English (en), and Hausa (ha)
 
+import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
+import { db } from '../lib/firebase';
+
 export type SealStatus = 'active' | 'premium' | 'maintenance' | 'disabled';
 export type SealTargetUser = 'all' | 'specialized' | 'premium';
 
@@ -1282,9 +1285,6 @@ export const LUNAR_SEAL_VARIETIES: LunarSealVariety[] = [
     defaultTargetUser: 'all'
   }
 ];
-
-import { doc, getDoc, setDoc, onSnapshot } from 'firebase/firestore';
-import { db } from '../lib/firebase';
 
 // LocalStorage Admin Override Keys
 const ADMIN_SEAL_STATUS_KEY = 'asrarhub_lunar_seals_status_config';

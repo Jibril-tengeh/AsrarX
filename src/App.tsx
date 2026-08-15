@@ -23,6 +23,7 @@ import { getApiUrl } from './lib/api';
 import { FloatingBackButton } from './components/FloatingBackButton';
 import { ErrorToastContainer } from './components/ErrorToastContainer';
 import { DownloadNotificationPopup } from './components/DownloadNotificationPopup';
+import { NotificationModalManager } from './components/notifications/NotificationModalManager';
 import { FirstOpenPermissionsModal } from './components/FirstOpenPermissionsModal';
 import { CollapsibleFloatingWidget } from './components/CollapsibleFloatingWidget';
 import { FloatingTextResizer } from './components/FloatingTextResizer';
@@ -31,6 +32,12 @@ import { ImageDebugger } from './components/ImageDebugger';
 import UserDashboard from './pages/user/UserDashboard';
 import { FreeTrial24hModal } from './components/FreeTrial24hModal';
 import { UnverifiedEmailGuard } from './components/UnverifiedEmailGuard';
+import { App as CapacitorApp } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
+import { executeStepByStepBack } from './utils/backNavigation';
+import { LocalNotifications } from '@capacitor/local-notifications';
+import { pingFirestore, addNetworkLog } from './utils/networkLogger';
+import { revalidatePublishedArticles, getSWRCacheStats, SWRCacheStats } from './lib/swrArticleCache';
 
 function lazyWithRetry<T extends React.ComponentType<any> = React.ComponentType<any>>(
   componentImport: () => Promise<any>
@@ -190,13 +197,6 @@ const FaqButton = () => {
     </Link>
   );
 };
-
-import { App as CapacitorApp } from '@capacitor/app';
-import { Capacitor } from '@capacitor/core';
-import { executeStepByStepBack } from './utils/backNavigation';
-import { LocalNotifications } from '@capacitor/local-notifications';
-import { pingFirestore, addNetworkLog } from './utils/networkLogger';
-import { revalidatePublishedArticles, getSWRCacheStats, SWRCacheStats } from './lib/swrArticleCache';
 
 const NetworkStatus = () => {
   const [isOnline, setIsOnline] = React.useState(navigator.onLine);
@@ -766,7 +766,11 @@ export default function App() {
           if (rem.enabled && rem.time === currentTimeString) {
             const notificationType = rem.isZikr ? 'dhikrDaily' : 'customReminder';
             const { title, body } = getLocalizedNotificationText(notificationType, currentLang, { label: rem.label });
-            dispatchSystemNotification(title, body);
+            dispatchSystemNotification(title, body, {
+              type: notificationType,
+              label: rem.label,
+              targetUrl: rem.isZikr ? '/tools/daily-dhikr' : '/journal',
+            });
           }
         });
 
@@ -780,7 +784,12 @@ export default function App() {
                   prayerName: prayer,
                   time: String(time),
                 });
-                dispatchSystemNotification(title, body);
+                dispatchSystemNotification(title, body, {
+                  type: 'prayerTime',
+                  prayerName: prayer,
+                  time: String(time),
+                  targetUrl: '/explore/calendar',
+                });
 
                 // Update last triggering date
                 if (!autoRemindersConfig.lastPrayerReminders) {
@@ -801,7 +810,10 @@ export default function App() {
         if (Date.now() - lastDhikrTime >= intervalMs) {
           const currentLang = (language || localStorage.getItem('language') || 'fr') as 'fr' | 'en' | 'ha';
           const { title, body } = getLocalizedNotificationText('dhikrRecurring', currentLang);
-          dispatchSystemNotification(title, body);
+          dispatchSystemNotification(title, body, {
+            type: 'dhikrRecurring',
+            targetUrl: '/tools/tasbih',
+          });
 
           // Update last triggering time
           autoRemindersConfig.lastDhikrReminder = Date.now();
@@ -1085,6 +1097,9 @@ export default function App() {
 
         {/* Download pop-up notification */}
         <DownloadNotificationPopup />
+
+        {/* Global Interactive Notification Click & Preview Manager */}
+        <NotificationModalManager />
 
         {/* Collapsible Floating App-Wide Quick Widget */}
         <CollapsibleFloatingWidget />

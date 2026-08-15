@@ -9,6 +9,7 @@ import { asmaListData } from '../../../data/asmaListData';
 import { countsBenefitsTranslations } from '../../../data/countsBenefitsData';
 import { asmaListDataTranslations } from '../../../data/asmaListDataTranslations';
 import { getApiUrl } from '../../../lib/api';
+import { applyTashkeel } from '../../../utils/tashkeel';
 
 
 // Helper to generate N x N Khatim / Magic Square (3x3 up to 10x10)
@@ -156,8 +157,6 @@ const gridCellPaddingMap: Record<number, string> = {
   9: 'p-[1px] sm:p-0.5',
   10: 'p-0 sm:p-[1px]',
 };
-
-import { applyTashkeel } from '../../../utils/tashkeel';
 
 // Helper to return the Name in its pure Quranic form without "Ya" (يَا) prefix
 const getZikrName = (arName: string) => {

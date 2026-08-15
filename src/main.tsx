@@ -8,6 +8,7 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { AudioProvider } from './contexts/AudioContext';
 import { AuthProvider } from './contexts/AuthContext';
 import { LanguageProvider } from './contexts/LanguageContext';
+import { TextScaleProvider } from './contexts/TextScaleContext';
 import { FeatureProvider } from './contexts/FeatureContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
@@ -59,8 +60,6 @@ if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
     }
   }
 }
-
-import { TextScaleProvider } from './contexts/TextScaleContext';
 
 const rootElement = document.getElementById('root');
 if (rootElement) {

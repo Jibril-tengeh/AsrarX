@@ -323,23 +323,33 @@ export const ToolsDashboard: React.FC = () => {
         <p className="text-gray-500 dark:text-gray-400 mt-2 mb-4">
           {t("toolsDashboard.description")}
         </p>
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
-          <div className="relative flex-1 max-w-md">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 w-full">
+          <div className="relative flex-1 w-full">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
               <Search size={18} className="text-gray-400" />
             </div>
             <input
               type="text"
-              placeholder={t("search", "Rechercher un outil...")}
+              placeholder={t("toolsDashboard.searchPlaceholder", "Rechercher un outil mystique (Abjad, Wafq, Noms...)")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm text-gray-900 dark:text-white"
+              className="w-full pl-10 pr-10 py-2.5 sm:py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm text-gray-900 dark:text-white shadow-xs transition-all outline-none"
             />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer"
+                title="Effacer"
+              >
+                <X size={16} />
+              </button>
+            )}
           </div>
 
           <button
             onClick={() => setIsHistoryOpen(true)}
-            className="px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm"
+            className="w-full sm:w-auto px-4 py-2.5 sm:py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs whitespace-nowrap shrink-0"
           >
             <History size={18} />
             <span>{language === 'ha' ? 'Tarihin Hisabi' : language === 'en' ? 'Calculation History' : 'Historique des Calculs'}</span>
