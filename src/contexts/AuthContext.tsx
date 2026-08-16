@@ -53,7 +53,10 @@ interface UserData {
   role: string;
   isBanned: boolean;
   mysteryToolsDisabled: boolean;
+  allToolsDisabled?: boolean;
   blockedTools?: string[];
+  allowedTools?: string[];
+  toolOverrides?: Record<string, string>;
   isTrusted: boolean;
   emailVerified: boolean;
   photoURL?: string | null;

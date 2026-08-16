@@ -38,18 +38,20 @@ import { executeStepByStepBack } from './utils/backNavigation';
 import { LocalNotifications } from '@capacitor/local-notifications';
 import { pingFirestore, addNetworkLog } from './utils/networkLogger';
 import { revalidatePublishedArticles, getSWRCacheStats, SWRCacheStats } from './lib/swrArticleCache';
+import { checkFeatureAccess } from './utils/featureAccess';
 
 function lazyWithRetry<T extends React.ComponentType<any> = React.ComponentType<any>>(
   componentImport: () => Promise<any>
 ) {
   return React.lazy(async () => {
     let attempts = 0;
-    while (attempts < 3) {
+    let lastError: any = null;
+    while (attempts < 5) {
       try {
         const module = await componentImport();
-        let component = module.default;
-        if (!component) {
-          const keys = Object.keys(module || {});
+        let component = module?.default;
+        if (!component && module) {
+          const keys = Object.keys(module);
           for (const key of keys) {
             const val = module[key];
             if (typeof val === 'function' || (typeof val === 'object' && val !== null && (val.$$typeof || val.render))) {
@@ -64,13 +66,14 @@ function lazyWithRetry<T extends React.ComponentType<any> = React.ComponentType<
         if (component) {
           return { default: component };
         }
-      } catch (err) {
+      } catch (err: any) {
+        lastError = err;
         attempts++;
-        if (attempts >= 3) {
-          console.error("Dynamic import failed after 3 attempts:", err);
+        if (attempts >= 5) {
+          console.warn(`Dynamic import retry exhausted (${attempts} attempts):`, err);
           break;
         }
-        await new Promise((r) => setTimeout(r, 400 * attempts));
+        await new Promise((r) => setTimeout(r, 300 * Math.pow(1.5, attempts)));
       }
     }
 
@@ -398,24 +401,21 @@ const ProtectedToolsLayout: React.FC = () => {
   const isSubTool = location.pathname.startsWith('/tools/') && location.pathname !== '/tools';
   const pathParts = isSubTool ? location.pathname.split('/') : [];
   const toolId = isSubTool ? pathParts[pathParts.length - 1] : "";
-  const status = isSubTool ? (featureToggles[`tool_${toolId}`] || "active") : "active";
-  const isMaintenance = isSubTool && status === "maintenance";
-  const isInactive = isSubTool && status === "inactive";
-  const isPremiumOnly = isSubTool && status === "premium" && !isPremium && user?.role !== 'admin';
   
-  const advancedToolIds = [
-    "personal-wird", "lunar-mansions", "spiritual-compatibility", "ilm-jafar",
-    "grand-oaths", "elemental", "geomancy", "letters", "rouhaniyya", "taksir",
-    "sirr", "zairja", "khatim", "talsam", "istikhara", "khouddam", "awfaq", "quranic-faal"
-  ];
-  const isAdvanced = isSubTool && advancedToolIds.includes(toolId);
-  const isBlocked = isSubTool && ((user?.mysteryToolsDisabled && isAdvanced) || user?.blockedTools?.includes(toolId) || status === "disabled");
+  const accessResult = isSubTool && toolId
+    ? checkFeatureAccess(toolId, toolId, featureToggles, user, isPremium)
+    : { allowed: true, restrictionType: null, featureName: toolId, status: 'active' as const };
+
+  const isMaintenance = isSubTool && accessResult.restrictionType === 'maintenance';
+  const isInactive = isSubTool && accessResult.restrictionType === 'blocked' && (accessResult.status === 'inactive' || accessResult.status === 'disabled');
+  const isPremiumOnly = isSubTool && accessResult.restrictionType === 'premium';
+  const isBlocked = isSubTool && accessResult.restrictionType === 'blocked' && !isInactive;
 
   React.useEffect(() => {
-    if (user && isSubTool && !isBlocked && !isMaintenance && !isInactive && !isPremiumOnly && toolId) {
+    if (user && isSubTool && accessResult.allowed && toolId) {
       localStorage.setItem('asrarhub_last_tool', toolId);
     }
-  }, [user, location.pathname, isSubTool, isBlocked, isMaintenance, isInactive, isPremiumOnly, toolId]);
+  }, [user, location.pathname, isSubTool, accessResult.allowed, toolId]);
 
   if (!user) {
     return (

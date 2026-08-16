@@ -4,6 +4,7 @@ export interface AccessCheckResult {
   allowed: boolean;
   restrictionType: RestrictionType;
   featureName: string;
+  status: string;
 }
 
 /**
@@ -32,7 +33,7 @@ export function checkFeatureAccess(
 
   const userPhone = user?.phoneNumber || user?.phone || '';
   if (userPhone && blockedPhonesList.some((p: string) => p && userPhone.includes(p))) {
-    return { allowed: false, restrictionType: 'phone_blocked', featureName };
+    return { allowed: false, restrictionType: 'phone_blocked', featureName, status: 'phone_blocked' };
   }
 
   // 2. Check Download restrictions if feature relates to downloads (PNG, PDF, Parchment, Seals)
@@ -51,19 +52,19 @@ export function checkFeatureAccess(
       featureToggles.download_global_enabled === false;
 
     if (globalDownloadDisabled) {
-      return { allowed: false, restrictionType: 'download_disabled', featureName };
+      return { allowed: false, restrictionType: 'download_disabled', featureName, status: 'download_disabled' };
     }
 
     // Per-tool download toggle check
     const perToolDownload = featureToggles[`download_${featureId}`];
     if (perToolDownload === 'inactive' || perToolDownload === 'disabled' || perToolDownload === false) {
-      return { allowed: false, restrictionType: 'download_disabled', featureName };
+      return { allowed: false, restrictionType: 'download_disabled', featureName, status: 'download_disabled' };
     }
   }
 
   // 3. Check user specific account blocked tools
   if (user?.blockedTools && user.blockedTools.includes(featureId)) {
-    return { allowed: false, restrictionType: 'blocked', featureName };
+    return { allowed: false, restrictionType: 'blocked', featureName, status: 'blocked' };
   }
 
   // 4. Check tool status from featureToggles
@@ -75,19 +76,19 @@ export function checkFeatureAccess(
     'active';
 
   if (status === 'disabled' || status === 'blocked' || status === 'inactive') {
-    return { allowed: false, restrictionType: 'blocked', featureName };
+    return { allowed: false, restrictionType: 'blocked', featureName, status };
   }
 
   if (status === 'maintenance') {
-    return { allowed: false, restrictionType: 'maintenance', featureName };
+    return { allowed: false, restrictionType: 'maintenance', featureName, status: 'maintenance' };
   }
 
   if (status === 'premium') {
     const hasPremium = isPremium || user?.role === 'admin' || user?.isPremium;
     if (!hasPremium) {
-      return { allowed: false, restrictionType: 'premium', featureName };
+      return { allowed: false, restrictionType: 'premium', featureName, status: 'premium' };
     }
   }
 
-  return { allowed: true, restrictionType: null, featureName };
+  return { allowed: true, restrictionType: null, featureName, status };
 }

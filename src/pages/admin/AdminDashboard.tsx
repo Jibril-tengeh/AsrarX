@@ -6,8 +6,8 @@ import {
   Settings, Users, BarChart3, Database, Shield, LayoutDashboard, 
   Book, BookOpen, ToggleLeft, Volume2, Headphones, Save, Search, Plus, Trash2, Edit2, FileText,
   Eye, Image as ImageIcon, Crop as CropIcon, X, Upload, ShoppingBag, CreditCard,
-  Clock, CheckCircle, XCircle, Globe, Grid, List, Mail, Phone, Lock, Unlock, Bell, BellOff, Sparkles, Star, Share, ShieldAlert, Download, DownloadCloud, Crown, UserPlus, UserCheck, Award,
-  FolderOpen, Copy, Radio, Type, Sliders, Maximize2, Activity, Terminal, RefreshCw, Moon, ChevronDown, ChevronUp, Layout,
+  Clock, CheckCircle, CheckCircle2, XCircle, Globe, Grid, List, Mail, Phone, Lock, Unlock, Bell, BellOff, Sparkles, Star, Share, ShieldAlert, Download, DownloadCloud, Crown, UserPlus, UserCheck, Award,
+  FolderOpen, Copy, Radio, Type, Sliders, Maximize2, Activity, Terminal, RefreshCw, RotateCcw, AlertTriangle, Moon, ChevronDown, ChevronUp, Layout,
   AlignLeft, AlignCenter, AlignRight, AlignJustify
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
@@ -39,9 +39,7 @@ import { getApiUrl } from '../../lib/api';
 import { getArticleImageUrl } from '../../utils/articleImageUtils';
 import { ThumbnailValidatorWidget } from '../../components/admin/ThumbnailValidatorWidget';
 import { pingFirestore, getNetworkLogs, clearNetworkLogs, addNetworkLog, triggerBackgroundReconnect, NetworkLog, PingResult } from '../../utils/networkLogger';
-import { 
-  ResponsiveContainer, AreaChart, Area, BarChart, Bar, XAxis, YAxis, Tooltip, PieChart, Pie, Cell, CartesianGrid 
-} from 'recharts';
+import { DauAreaChart, ToolUsageBarChart, UserDistributionDonut } from '../../components/admin/AdminAnalyticsCharts';
 
 import { AdminStoreManager } from '../../components/AdminStoreManager';
 import { SACRED_BOOKS } from '../../data/sacredBooksData';
@@ -59,6 +57,7 @@ import { QURAN_RECITERS } from '../../data/reciters';
 import { calculateHijriDate } from '../../utils/hijriDate';
 import { LunarSealVarietiesSection } from '../../components/LunarSealVarietiesSection';
 import { AdminEmailSupportManager } from '../../components/admin/AdminEmailSupportManager';
+import { ToolStatusPicker } from '../../components/admin/ToolStatusPicker';
 import { useBackButton } from '../../hooks/useBackButton';
 
 const LayoutSelector = ({ value, onChange, activeColor = 'emerald' }: { value: string, onChange: (val: string) => void, activeColor?: string }) => {
@@ -168,9 +167,13 @@ interface User {
   name: string;
   email: string;
   photoURL?: string;
+  role?: string;
   isBanned: boolean;
   mysteryToolsDisabled: boolean;
+  allToolsDisabled?: boolean;
   isTrusted: boolean;
+  isPremium?: boolean;
+  subscriptionTier?: string;
   country?: string;
   phone?: string;
   password?: string;
@@ -179,6 +182,8 @@ interface User {
   pushNotificationStatus?: string;
   spiritualPoints?: number;
   blockedTools?: string[];
+  allowedTools?: string[];
+  toolOverrides?: Record<string, string>;
 }
 
 interface RuqyahAudio {
@@ -208,11 +213,13 @@ export const AdminDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
   const [showBookCoverStudioModal, setShowBookCoverStudioModal] = useState(false);
   
+  const toastTimeoutRef = useRef<any>(null);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
 
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
+    if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     setToast({ message, type });
-    setTimeout(() => setToast(null), 3000);
+    toastTimeoutRef.current = setTimeout(() => setToast(null), 3500);
   };
   
   // Settings State
@@ -447,8 +454,14 @@ export const AdminDashboard: React.FC = () => {
       pushNotificationStatus,
       isBanned: !!u.isBanned,
       mysteryToolsDisabled: !!u.mysteryToolsDisabled,
+      allToolsDisabled: !!u.allToolsDisabled,
       isTrusted: u.isTrusted !== undefined ? u.isTrusted : true,
-      blockedTools: u.blockedTools || []
+      isPremium: !!u.isPremium || u.subscriptionTier === 'premium' || u.subscriptionTier === 'pro',
+      subscriptionTier: u.subscriptionTier || (u.isPremium ? 'premium' : 'free'),
+      role: u.role || 'user',
+      blockedTools: u.blockedTools || [],
+      allowedTools: u.allowedTools || [],
+      toolOverrides: u.toolOverrides || {}
     };
   };
 
@@ -503,8 +516,15 @@ export const AdminDashboard: React.FC = () => {
           phone: (existing.phone && existing.phone !== 'Non renseigné') ? existing.phone : norm.phone,
           password_hash_indicator: (existing.password_hash_indicator && !existing.password_hash_indicator.includes('••••')) ? existing.password_hash_indicator : norm.password_hash_indicator,
           isBanned: existing.isBanned || norm.isBanned,
+          mysteryToolsDisabled: existing.mysteryToolsDisabled !== undefined ? existing.mysteryToolsDisabled : norm.mysteryToolsDisabled,
+          allToolsDisabled: existing.allToolsDisabled !== undefined ? existing.allToolsDisabled : norm.allToolsDisabled,
           isTrusted: existing.isTrusted !== undefined ? existing.isTrusted : norm.isTrusted,
-          blockedTools: (existing.blockedTools && existing.blockedTools.length > 0) ? existing.blockedTools : norm.blockedTools
+          isPremium: existing.isPremium !== undefined ? existing.isPremium : norm.isPremium,
+          subscriptionTier: existing.subscriptionTier || norm.subscriptionTier,
+          role: existing.role || norm.role,
+          blockedTools: (existing.blockedTools && existing.blockedTools.length > 0) ? existing.blockedTools : norm.blockedTools,
+          allowedTools: (existing.allowedTools && existing.allowedTools.length > 0) ? existing.allowedTools : norm.allowedTools,
+          toolOverrides: Object.keys(existing.toolOverrides || {}).length > 0 ? existing.toolOverrides : norm.toolOverrides
         });
       }
     };
@@ -655,7 +675,11 @@ export const AdminDashboard: React.FC = () => {
 
   // Features State
   const [featureToggles, setFeatureToggles] = useState<any>({});
+  const [featureCategoryFilter, setFeatureCategoryFilter] = useState<'all' | 'simple' | 'advanced' | 'system'>('all');
+  const [userToolModalSearch, setUserToolModalSearch] = useState('');
+  const [userToolModalCategoryFilter, setUserToolModalCategoryFilter] = useState<'all' | 'simple' | 'advanced' | 'system'>('all');
   const [localBackendUrl, setLocalBackendUrl] = useState('');
+  const [bulkUpdatingStatus, setBulkUpdatingStatus] = useState<string | null>(null);
 
   useEffect(() => {
     if (featureToggles.backend_url !== undefined) {
@@ -1816,30 +1840,156 @@ export const AdminDashboard: React.FC = () => {
     setBlockingToolsUser(user);
   };
 
-  const handleToggleIndividualToolBlock = async (userId: string, toolId: string) => {
+  const handleUpdateUserToolOverride = async (userId: string, toolId: string, status: string) => {
     const user = users.find(u => u.id === userId);
     if (!user) return;
-    const currentBlocked = user.blockedTools || [];
-    let updatedBlocked = [];
-    if (currentBlocked.includes(toolId)) {
-      updatedBlocked = currentBlocked.filter((id: string) => id !== toolId);
-    } else {
-      updatedBlocked = [...currentBlocked, toolId];
-    }
     
-    const updatedUser = { ...user, blockedTools: updatedBlocked };
+    const overrides = { ...(user.toolOverrides || {}) };
+    let updatedBlocked = [...(user.blockedTools || [])];
+    let updatedAllowed = [...(user.allowedTools || [])];
+
+    if (status === 'default') {
+      delete overrides[toolId];
+      updatedBlocked = updatedBlocked.filter(id => id !== toolId);
+      updatedAllowed = updatedAllowed.filter(id => id !== toolId);
+    } else {
+      overrides[toolId] = status;
+      if (status === 'blocked' || status === 'disabled' || status === 'inactive') {
+        if (!updatedBlocked.includes(toolId)) updatedBlocked.push(toolId);
+        updatedAllowed = updatedAllowed.filter(id => id !== toolId);
+      } else if (status === 'active' || status === 'allowed') {
+        updatedBlocked = updatedBlocked.filter(id => id !== toolId);
+        if (!updatedAllowed.includes(toolId)) updatedAllowed.push(toolId);
+      } else {
+        // premium, maintenance
+        updatedBlocked = updatedBlocked.filter(id => id !== toolId);
+      }
+    }
+
+    const updatedUser = { 
+      ...user, 
+      toolOverrides: overrides,
+      blockedTools: updatedBlocked,
+      allowedTools: updatedAllowed
+    };
+
     setUsers(prev => prev.map(u => u.id === userId ? updatedUser : u));
     if (selectedUserDetail?.id === userId) {
       setSelectedUserDetail(updatedUser);
     }
+    if (blockingToolsUser?.id === userId) {
+      setBlockingToolsUser(updatedUser);
+    }
     masterDiscoveredMapRef.current.set(user.email ? user.email.toLowerCase().trim() : userId, updatedUser);
 
     try {
-      await setDoc(doc(db, 'users', userId), { blockedTools: updatedBlocked }, { merge: true });
-      showToast("Paramètre d'accès de l'outil mis à jour.", "success");
+      await setDoc(doc(db, 'users', userId), { 
+        toolOverrides: overrides,
+        blockedTools: updatedBlocked,
+        allowedTools: updatedAllowed
+      }, { merge: true });
+      showToast(`Statut de l'outil mis à jour pour ${user.name || user.email}.`, "success");
     } catch (error) {
-      console.warn("Error updating blocked tools:", error);
+      console.warn("Error updating user tool overrides:", error);
       showToast("Mis à jour en local.", "info");
+    }
+  };
+
+  const handleToggleIndividualToolBlock = async (userId: string, toolId: string) => {
+    const user = users.find(u => u.id === userId);
+    if (!user) return;
+    const currentBlocked = user.blockedTools || [];
+    const isCurrentlyBlocked = currentBlocked.includes(toolId) || (user.toolOverrides && user.toolOverrides[toolId] === 'blocked');
+    
+    await handleUpdateUserToolOverride(userId, toolId, isCurrentlyBlocked ? 'default' : 'blocked');
+  };
+
+  const handleBatchUpdateUserTools = async (userId: string, action: 'allow_all' | 'block_all' | 'reset_default', targetToolIds?: string[]) => {
+    const user = users.find(u => u.id === userId);
+    if (!user) return;
+
+    const toolIdsToProcess = targetToolIds && targetToolIds.length > 0 
+      ? targetToolIds 
+      : ALL_USER_TOOLS.map(t => t.id);
+
+    const overrides = { ...(user.toolOverrides || {}) };
+    let updatedBlocked = [...(user.blockedTools || [])];
+    let updatedAllowed = [...(user.allowedTools || [])];
+    let allToolsDisabled = user.allToolsDisabled;
+
+    if (action === 'allow_all') {
+      allToolsDisabled = false;
+      toolIdsToProcess.forEach(id => {
+        overrides[id] = 'active';
+        updatedBlocked = updatedBlocked.filter(bId => bId !== id);
+        if (!updatedAllowed.includes(id)) updatedAllowed.push(id);
+      });
+    } else if (action === 'block_all') {
+      toolIdsToProcess.forEach(id => {
+        overrides[id] = 'blocked';
+        if (!updatedBlocked.includes(id)) updatedBlocked.push(id);
+        updatedAllowed = updatedAllowed.filter(aId => aId !== id);
+      });
+    } else if (action === 'reset_default') {
+      allToolsDisabled = false;
+      toolIdsToProcess.forEach(id => {
+        delete overrides[id];
+        updatedBlocked = updatedBlocked.filter(bId => bId !== id);
+        updatedAllowed = updatedAllowed.filter(aId => aId !== id);
+      });
+    }
+
+    const updatedUser = { 
+      ...user, 
+      allToolsDisabled,
+      toolOverrides: overrides,
+      blockedTools: updatedBlocked,
+      allowedTools: updatedAllowed
+    };
+
+    setUsers(prev => prev.map(u => u.id === userId ? updatedUser : u));
+    if (selectedUserDetail?.id === userId) {
+      setSelectedUserDetail(updatedUser);
+    }
+    if (blockingToolsUser?.id === userId) {
+      setBlockingToolsUser(updatedUser);
+    }
+    masterDiscoveredMapRef.current.set(user.email ? user.email.toLowerCase().trim() : userId, updatedUser);
+
+    try {
+      await setDoc(doc(db, 'users', userId), { 
+        allToolsDisabled,
+        toolOverrides: overrides,
+        blockedTools: updatedBlocked,
+        allowedTools: updatedAllowed
+      }, { merge: true });
+      showToast("Accès aux outils mis à jour en masse avec succès.", "success");
+    } catch (error) {
+      console.warn("Error batch updating user tools:", error);
+      showToast("Mis à jour en local.", "info");
+    }
+  };
+
+  const handleToggleUserAllTools = async (userId: string) => {
+    const user = users.find(u => u.id === userId);
+    if (!user) return;
+    const newDisabledState = !user.allToolsDisabled;
+
+    const updatedUser = { ...user, allToolsDisabled: newDisabledState };
+    setUsers(prev => prev.map(u => u.id === userId ? updatedUser : u));
+    if (selectedUserDetail?.id === userId) {
+      setSelectedUserDetail(updatedUser);
+    }
+    if (blockingToolsUser?.id === userId) {
+      setBlockingToolsUser(updatedUser);
+    }
+    masterDiscoveredMapRef.current.set(user.email ? user.email.toLowerCase().trim() : userId, updatedUser);
+
+    try {
+      await setDoc(doc(db, 'users', userId), { allToolsDisabled: newDisabledState }, { merge: true });
+      showToast(newDisabledState ? "Tous les outils sont désormais bloqués pour cet utilisateur." : "Blocage total des outils désactivé.", "success");
+    } catch (error) {
+      console.warn("Error updating allToolsDisabled:", error);
     }
   };
 
@@ -2515,7 +2665,7 @@ export const AdminDashboard: React.FC = () => {
           ))}
         </div>
 
-        {/* Recharts Analytics Section */}
+        {/* Analytics & Charts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* DAU Trend Chart */}
           <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
@@ -2528,24 +2678,8 @@ export const AdminDashboard: React.FC = () => {
                 +18% cette semaine
               </span>
             </div>
-            <div className="h-64 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={dauData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorDau" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10B981" stopOpacity={0.4}/>
-                      <stop offset="95%" stopColor="#10B981" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
-                  <XAxis dataKey="day" stroke="#9CA3AF" fontSize={11} tickLine={false} />
-                  <YAxis stroke="#9CA3AF" fontSize={11} tickLine={false} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#1F2937', borderColor: '#374151', borderRadius: '12px', color: '#FFF' }} 
-                  />
-                  <Area type="monotone" dataKey="dau" name="Actifs (DAU)" stroke="#10B981" strokeWidth={3} fillOpacity={1} fill="url(#colorDau)" />
-                </AreaChart>
-              </ResponsiveContainer>
+            <div className="w-full">
+              <DauAreaChart data={dauData} />
             </div>
           </div>
 
@@ -2560,22 +2694,8 @@ export const AdminDashboard: React.FC = () => {
                 Popularité %
               </span>
             </div>
-            <div className="h-64 w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={toolUsageData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
-                  <XAxis dataKey="tool" stroke="#9CA3AF" fontSize={11} tickLine={false} />
-                  <YAxis stroke="#9CA3AF" fontSize={11} tickLine={false} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#1F2937', borderColor: '#374151', borderRadius: '12px', color: '#FFF' }} 
-                  />
-                  <Bar dataKey="usage" name="Score d'utilisation (%)" radius={[6, 6, 0, 0]}>
-                    {toolUsageData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.fill} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+            <div className="w-full">
+              <ToolUsageBarChart data={toolUsageData} />
             </div>
           </div>
         </div>
@@ -2587,33 +2707,8 @@ export const AdminDashboard: React.FC = () => {
               <h3 className="font-bold text-gray-900 dark:text-white mb-2 text-base">Répartition des Comptes Utilisateurs</h3>
               <p className="text-xs text-gray-500 mb-4">Statuts des comptes enregistrés sur Firestore</p>
             </div>
-            <div className="h-52 w-full flex items-center justify-center">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={userStatusPie}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={80}
-                    paddingAngle={5}
-                    dataKey="value"
-                  >
-                    {userStatusPie.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip contentStyle={{ backgroundColor: '#1F2937', borderColor: '#374151', borderRadius: '12px', color: '#FFF' }} />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-            <div className="flex justify-center gap-4 text-xs font-semibold pt-2 border-t border-gray-100 dark:border-gray-750">
-              {userStatusPie.map((item, idx) => (
-                <div key={idx} className="flex items-center gap-1.5">
-                  <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
-                  <span className="text-gray-700 dark:text-gray-300">{item.name}: <strong>{item.value}</strong></span>
-                </div>
-              ))}
+            <div className="w-full flex items-center justify-center py-2">
+              <UserDistributionDonut data={userStatusPie} />
             </div>
           </div>
 
@@ -3515,7 +3610,11 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
-  const handleToggleFeature = async (featureId: string, currentValue: boolean | string | number) => {
+  const handleToggleFeature = async (
+    featureId: string, 
+    currentValue: boolean | string | number,
+    toolLabel?: string
+  ) => {
     const newValue = currentValue;
     const updated = { ...featureToggles, [featureId]: newValue };
     setFeatureToggles(updated);
@@ -3532,6 +3631,34 @@ export const AdminDashboard: React.FC = () => {
       }, { merge: true });
     } catch (error) {
       console.warn("Firestore sync note (applied locally):", error);
+    }
+
+    // Format descriptive toast message for tool status changes
+    const statusLabels: Record<string, string> = {
+      active: 'Actif (Accessible à tous)',
+      premium: 'Premium (VIP Uniquement)',
+      maintenance: 'En Maintenance',
+      inactive: 'Inactif (Désactivé)',
+      disabled: 'Bloqué / Désactivé'
+    };
+
+    let displayName = toolLabel;
+    if (!displayName) {
+      const cleanId = featureId.startsWith('tool_') ? featureId.replace('tool_', '') : featureId;
+      const foundTool = ALL_USER_TOOLS.find(t => t.id === cleanId);
+      if (foundTool) displayName = foundTool.label;
+    }
+
+    if (typeof newValue === 'string' && statusLabels[newValue]) {
+      const statusText = statusLabels[newValue];
+      if (displayName) {
+        showToast(`Statut mis à jour : "${displayName}" est désormais ${statusText}`, 'success');
+      } else {
+        showToast(`Statut de l'outil mis à jour : ${statusText}`, 'success');
+      }
+    } else if (featureId.startsWith('download_')) {
+      const isAllowed = newValue === 'active' || newValue === true;
+      showToast(`Téléchargement ${isAllowed ? 'Autorisé' : 'Bloqué'} pour ${displayName || 'l\'outil'}.`, isAllowed ? 'success' : 'info');
     }
   };
 
@@ -3621,64 +3748,113 @@ export const AdminDashboard: React.FC = () => {
   };
 
   const ALL_USER_TOOLS = [
-    { id: 'inspector', label: 'Inspecteur de diagnostic', desc: 'Active ou désactive le bouton rouge Inspecteur / Débogueur de mise en page dans le coin inférieur droit' },
-    { id: 'quick_widget', label: 'Widget Rapide AsrarHub (AsrarQuickWidget)', desc: 'Widget de recherche rapide, favoris et raccourcis d\'exploration sur le tableau de bord (désactivé par défaut)' },
-    { id: 'explore', label: 'Explore', desc: 'Dashboard explorer (Secrets, Lexique, etc)' },
-    { id: 'store', label: 'Store (Boutique)', desc: 'Boutique en ligne' },
-    { id: 'community', label: 'Communauté', desc: 'Forum communautaire' },
-    { id: 'journal', label: 'Journal Intime', desc: 'Notes personnelles' },
-    { id: 'faq', label: 'FAQ / Assistant', desc: 'Assistant IA spirituel' },
-    { id: 'quizz', label: 'Quiz', desc: 'Test de connaissances' },
-    { id: 'lexique', label: 'Lexique', desc: 'Lexique des termes' },
-    { id: 'calendar', label: 'Calendrier Mystique (Hégirien)', desc: 'Contrôler l\'accès global : Actif, Premium, Maintenance, Inactif (Désactiver/Bloquer)' },
-    { id: 'ruqyah', label: 'Module Ruqyah', desc: 'Accès aux versets de protection et guérison' },
-    { id: 'abjad', label: 'Calculateur Abjad', desc: 'Outil de numérologie arabe' },
-    { id: 'custom-dua', label: 'Générateur de Du\'a Custom', desc: 'Invocations sur-mesure personnalisées selon l\'intention et le poids Abjad' },
-    { id: 'dreams', label: 'Journal des Rêves', desc: 'Fonctionnalité de suivi et interprétation' },
-    { id: 'zakat', label: 'Calculateur Zakat', desc: 'Module de calcul des aumônes' },
-    { id: 'asma', label: 'Noms Divins Personnels', desc: 'Découvrez vos noms divins correspondants au poids mystique' },
-    { id: '99names', label: 'Les 99 Noms d\'Allah', desc: 'Les Noms Sublimes (Asma al-Husna)' },
-    { id: 'awfaq', label: 'Awfaq Advanced', desc: 'Générateur de carrés magiques' },
-    { id: 'daily-dhikr', label: 'Daily Dhikr Tracker', desc: 'Suivi quotidien des invocations' },
-    { id: 'elemental', label: 'Elemental Analyzer', desc: 'Analyse des 4 éléments' },
-    { id: 'faraid', label: 'Faraid Calculator', desc: 'Calcul de l\'héritage islamique' },
-    { id: 'geomancy', label: 'Geomancy', desc: 'Outil de géomancie (Ilm al-Raml)' },
-    { id: 'grand-oaths', label: 'Grand Oaths', desc: 'Grands serments spirituels' },
-    { id: 'ilm-jafar', label: 'Ilm Jafar', desc: 'Science des lettres et des nombres' },
-    { id: 'istikhara', label: 'Istikhara', desc: 'Outil de consultation' },
-    { id: 'khatim', label: 'Khatim Generator', desc: 'Générateur de sceaux' },
-    { id: 'khouddam', label: 'Khouddam Extractor', desc: 'Extraction des serviteurs spirituels' },
-    { id: 'lunar-mansions', label: 'Lunar Mansions', desc: 'Les demeures lunaires' },
-    { id: 'personal-wird', label: 'Personal Wird', desc: 'Générateur de Wird personnel' },
-    { id: 'planetary', label: 'Planetary Hours', desc: 'Heures planétaires' },
-    { id: 'quran', label: 'Quran Full', desc: 'Explorateur du Coran' },
-    { id: 'quranic-faal', label: 'Quranic Faal', desc: 'Tirage de sorts coraniques' },
-    { id: 'rouhaniyya', label: 'Rouhaniyya Extractor', desc: 'Extraction spirituelle' },
-    { id: 'letters', label: 'Science of Letters', desc: 'Science des lettres (Ilm al-Huruf)' },
-    { id: 'sirr', label: 'Sirr Al Asrar', desc: 'Le secret des secrets' },
-    { id: 'spiritual-compatibility', label: 'Spiritual Compatibility', desc: 'Compatibilité spirituelle' },
-    { id: 'taksir', label: 'Taksir', desc: 'Brisement des lettres' },
-    { id: 'talsam', label: 'Talsam', desc: 'Générateur de talismans' },
-    { id: 'tasbih', label: 'Tasbih', desc: 'Chapelet virtuel' },
-    { id: 'zairja', label: 'Zairja', desc: 'Machine divinatoire' },
-    { id: 'halaqat', label: 'Halaqat', desc: 'Cercles d\'étude' },
-    { id: 'daira-as-sirr', label: 'Dā\'ira As-Sirr', desc: 'Générateur de sceaux circulaires mystiques' },
-    { id: 'saah-ijabah', label: 'Sā\'ah Al-Ijābah', desc: 'Alignements célestes et heures d\'exaucement' },
-    { id: 'ia-rapprochements', label: 'IA Rapprochements', desc: 'Rapprochement intelligent des rêves, abjad et planètes' },
-    { id: 'combustion-eclipse', label: 'Combustion & Éclipses', desc: 'Analyse des combustions et éclipses planétaires' },
-    { id: 'ring-pendant-talisman', label: 'Bagues & Pendentifs', desc: 'Talismans physiques et gravures métalliques' },
-    { id: 'quran-analogy', label: 'Correspondances Coraniques', desc: 'Analogies spirituelles et correspondances coraniques' },
-    { id: 'seven-kings', label: 'Les 7 Rois Célestes', desc: 'Sceaux et rois célestes/terrestres de la semaine' },
-    { id: 'zikr-levels', label: 'Paliers Spirituels Zikr', desc: 'Paliers et niveaux d\'élévation du Zikr' },
-    { id: 'hijri-full-moon', label: 'Pleine Lune Hégirienne', desc: 'Suivi des nuits blanches et pleines lunes' },
-    { id: 'murid-journal', label: 'Journal du Murid', desc: 'Suivi de la voie et progression spirituelle' }
+    { id: 'anti_screenshot', label: "Protection Anti-Capture d'Écran", desc: "Bloque matériellement et logiciellement les captures d'écran, enregistrements vidéo et impressions sur Android et Web", category: 'system' },
+    { id: 'inspector', label: 'Inspecteur de diagnostic', desc: 'Active ou désactive le bouton rouge Inspecteur / Débogueur de mise en page dans le coin inférieur droit', category: 'system' },
+    { id: 'quick_widget', label: 'Widget Rapide AsrarHub (AsrarQuickWidget)', desc: 'Widget de recherche rapide, favoris et raccourcis d\'exploration sur le tableau de bord (désactivé par défaut)', category: 'system' },
+    { id: 'explore', label: 'Explore', desc: 'Dashboard explorer (Secrets, Lexique, etc)', category: 'system' },
+    { id: 'store', label: 'Store (Boutique)', desc: 'Boutique en ligne', category: 'system' },
+    { id: 'community', label: 'Communauté', desc: 'Forum communautaire', category: 'system' },
+    { id: 'journal', label: 'Journal Intime', desc: 'Notes personnelles', category: 'system' },
+    { id: 'faq', label: 'FAQ / Assistant', desc: 'Assistant IA spirituel', category: 'system' },
+    { id: 'quizz', label: 'Quiz', desc: 'Test de connaissances', category: 'system' },
+    { id: 'lexique', label: 'Lexique', desc: 'Lexique des termes', category: 'system' },
+    { id: 'calendar', label: 'Calendrier Mystique (Hégirien)', desc: 'Contrôler l\'accès global : Actif, Premium, Maintenance, Inactif (Désactiver/Bloquer)', category: 'simple' },
+    { id: 'ruqyah', label: 'Module Ruqyah', desc: 'Accès aux versets de protection et guérison', category: 'simple' },
+    { id: 'abjad', label: 'Calculateur Abjad', desc: 'Outil de numérologie arabe', category: 'simple' },
+    { id: 'custom-dua', label: 'Générateur de Du\'a Custom', desc: 'Invocations sur-mesure personnalisées selon l\'intention et le poids Abjad', category: 'simple' },
+    { id: 'dreams', label: 'Journal des Rêves', desc: 'Fonctionnalité de suivi et interprétation', category: 'simple' },
+    { id: 'zakat', label: 'Calculateur Zakat', desc: 'Module de calcul des aumônes', category: 'simple' },
+    { id: 'asma', label: 'Noms Divins Personnels', desc: 'Découvrez vos noms divins correspondants au poids mystique', category: 'simple' },
+    { id: '99names', label: 'Les 99 Noms d\'Allah', desc: 'Les Noms Sublimes (Asma al-Husna)', category: 'simple' },
+    { id: 'awfaq', label: 'Awfaq Advanced', desc: 'Générateur de carrés magiques', category: 'advanced' },
+    { id: 'daily-dhikr', label: 'Daily Dhikr Tracker', desc: 'Suivi quotidien des invocations', category: 'simple' },
+    { id: 'elemental', label: 'Elemental Analyzer', desc: 'Analyse des 4 éléments', category: 'advanced' },
+    { id: 'faraid', label: 'Faraid Calculator', desc: 'Calcul de l\'héritage islamique', category: 'simple' },
+    { id: 'geomancy', label: 'Geomancy', desc: 'Outil de géomancie (Ilm al-Raml)', category: 'advanced' },
+    { id: 'grand-oaths', label: 'Grand Oaths', desc: 'Grands serments spirituels', category: 'advanced' },
+    { id: 'ilm-jafar', label: 'Ilm Jafar', desc: 'Science des lettres et des nombres', category: 'advanced' },
+    { id: 'istikhara', label: 'Istikhara', desc: 'Outil de consultation', category: 'advanced' },
+    { id: 'khatim', label: 'Khatim Generator', desc: 'Générateur de sceaux', category: 'advanced' },
+    { id: 'khouddam', label: 'Khouddam Extractor', desc: 'Extraction des serviteurs spirituels', category: 'advanced' },
+    { id: 'lunar-mansions', label: 'Lunar Mansions', desc: 'Les demeures lunaires', category: 'advanced' },
+    { id: 'personal-wird', label: 'Personal Wird', desc: 'Générateur de Wird personnel', category: 'advanced' },
+    { id: 'planetary', label: 'Planetary Hours', desc: 'Heures planétaires', category: 'simple' },
+    { id: 'quran', label: 'Quran Full', desc: 'Explorateur du Coran', category: 'simple' },
+    { id: 'quranic-faal', label: 'Quranic Faal', desc: 'Tirage de sorts coraniques', category: 'advanced' },
+    { id: 'rouhaniyya', label: 'Rouhaniyya Extractor', desc: 'Extraction spirituelle', category: 'advanced' },
+    { id: 'letters', label: 'Science of Letters', desc: 'Science des lettres (Ilm al-Huruf)', category: 'advanced' },
+    { id: 'sirr', label: 'Sirr Al Asrar', desc: 'Le secret des secrets', category: 'advanced' },
+    { id: 'spiritual-compatibility', label: 'Spiritual Compatibility', desc: 'Compatibilité spirituelle', category: 'advanced' },
+    { id: 'taksir', label: 'Taksir', desc: 'Brisement des lettres', category: 'advanced' },
+    { id: 'talsam', label: 'Talsam', desc: 'Générateur de talismans', category: 'advanced' },
+    { id: 'tasbih', label: 'Tasbih', desc: 'Chapelet virtuel', category: 'simple' },
+    { id: 'zairja', label: 'Zairja', desc: 'Machine divinatoire', category: 'advanced' },
+    { id: 'halaqat', label: 'Halaqat', desc: 'Cercles d\'étude', category: 'simple' },
+    { id: 'daira-as-sirr', label: 'Dā\'ira As-Sirr', desc: 'Générateur de sceaux circulaires mystiques', category: 'advanced' },
+    { id: 'saah-ijabah', label: 'Sā\'ah Al-Ijābah', desc: 'Alignements célestes et heures d\'exaucement', category: 'advanced' },
+    { id: 'ia-rapprochements', label: 'IA Rapprochements', desc: 'Rapprochement intelligent des rêves, abjad et planètes', category: 'advanced' },
+    { id: 'combustion-eclipse', label: 'Combustion & Éclipses', desc: 'Analyse des combustions et éclipses planétaires', category: 'advanced' },
+    { id: 'ring-pendant-talisman', label: 'Bagues & Pendentifs', desc: 'Talismans physiques et gravures métalliques', category: 'advanced' },
+    { id: 'quran-analogy', label: 'Correspondances Coraniques', desc: 'Analogies spirituelles et correspondances coraniques', category: 'simple' },
+    { id: 'seven-kings', label: 'Les 7 Rois Célestes', desc: 'Sceaux et rois célestes/terrestres de la semaine', category: 'advanced' },
+    { id: 'zikr-levels', label: 'Paliers Spirituels Zikr', desc: 'Paliers et niveaux d\'élévation du Zikr', category: 'simple' },
+    { id: 'hijri-full-moon', label: 'Pleine Lune Hégirienne', desc: 'Suivi des nuits blanches et pleines lunes', category: 'simple' },
+    { id: 'murid-journal', label: 'Journal du Murid', desc: 'Suivi de la voie et progression spirituelle', category: 'simple' }
   ];
 
   const renderFeatures = () => {
-    const filteredTools = ALL_USER_TOOLS.filter(tool => 
-      (tool.label || '').toLowerCase().includes(featureSearch.toLowerCase()) ||
-      (tool.desc || '').toLowerCase().includes(featureSearch.toLowerCase())
-    );
+    const filteredTools = ALL_USER_TOOLS.filter(tool => {
+      const matchesSearch = (tool.label || '').toLowerCase().includes(featureSearch.toLowerCase()) ||
+        (tool.desc || '').toLowerCase().includes(featureSearch.toLowerCase()) ||
+        tool.id.toLowerCase().includes(featureSearch.toLowerCase());
+      
+      const matchesCategory = featureCategoryFilter === 'all' || tool.category === featureCategoryFilter;
+      return matchesSearch && matchesCategory;
+    });
+
+    // Compute stats
+    let countActive = 0;
+    let countPremium = 0;
+    let countMaintenance = 0;
+    let countDisabled = 0;
+
+    ALL_USER_TOOLS.forEach(tool => {
+      const status = featureToggles[`tool_${tool.id}`] || (['inspector', 'quick_widget'].includes(tool.id) ? 'inactive' : 'active');
+      if (status === 'active') countActive++;
+      else if (status === 'premium') countPremium++;
+      else if (status === 'maintenance') countMaintenance++;
+      else countDisabled++;
+    });
+
+    const handleBulkApplyStatus = async (targetStatus: 'active' | 'premium' | 'maintenance' | 'disabled') => {
+      const targetTools = filteredTools.length > 0 ? filteredTools : ALL_USER_TOOLS;
+      const statusLabels: Record<string, string> = {
+        active: '🟢 Actif (Accessible à tous)',
+        premium: '👑 Premium (VIP)',
+        maintenance: '🛠️ En Maintenance',
+        disabled: '🚫 Bloqué / Désactivé'
+      };
+
+      setBulkUpdatingStatus(targetStatus);
+
+      try {
+        const batchPayload: Record<string, any> = {};
+        targetTools.forEach(t => {
+          batchPayload[`tool_${t.id}`] = targetStatus;
+        });
+
+        await handleBatchToggleFeatures(batchPayload);
+        showToast(
+          `Succès : ${targetTools.length} outil(s) basculé(s) en statut "${statusLabels[targetStatus]}" !`, 
+          "success"
+        );
+      } catch (err) {
+        console.error("Error bulk updating tools:", err);
+        showToast("Erreur lors de la mise à jour groupée des outils.", "error");
+      } finally {
+        setTimeout(() => setBulkUpdatingStatus(null), 800);
+      }
+    };
 
     return (
       <div className="space-y-6">
@@ -3711,14 +3887,122 @@ export const AdminDashboard: React.FC = () => {
         {/* 1. GESTION DES OUTILS UTILISATEUR */}
         <CollapsibleAdminCard
           id="feat_user_tools"
-          title="Gestion des Outils Utilisateur"
-          subtitle="Gérez l'accès aux 38+ outils de l'application (Actif, Premium, Maintenance, Inactif, Bloqué)."
-          icon={<ToggleLeft size={22} />}
+          title="Gestion Globale des Outils Utilisateur"
+          subtitle="Gérez l'accès à tous les outils pour tous les utilisateurs (Actif, Premium, Maintenance, Inactif, Bloqué)."
+          icon={<ToggleLeft size={22} className="text-emerald-600 dark:text-emerald-400" />}
+          badge={
+            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">
+              {ALL_USER_TOOLS.length} Outils
+            </span>
+          }
         >
-          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-4">
-            <p className="text-xs text-gray-500">
-              Sélectionnez le statut de chaque outil individuellement :
-            </p>
+          {/* Status Counter Pills */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pb-2">
+            <div className="p-3 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 rounded-xl flex items-center justify-between">
+              <span className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">Actifs</span>
+              <span className="text-sm font-black text-emerald-700 dark:text-emerald-400 bg-emerald-200/50 dark:bg-emerald-900/50 px-2 py-0.5 rounded-lg">{countActive}</span>
+            </div>
+            <div className="p-3 bg-violet-50 dark:bg-violet-950/20 border border-violet-100 dark:border-violet-900/30 rounded-xl flex items-center justify-between">
+              <span className="text-xs font-semibold text-violet-800 dark:text-violet-300">Premium</span>
+              <span className="text-sm font-black text-violet-700 dark:text-violet-400 bg-violet-200/50 dark:bg-violet-900/50 px-2 py-0.5 rounded-lg">{countPremium}</span>
+            </div>
+            <div className="p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/30 rounded-xl flex items-center justify-between">
+              <span className="text-xs font-semibold text-amber-800 dark:text-amber-300">Maintenance</span>
+              <span className="text-sm font-black text-amber-700 dark:text-amber-400 bg-amber-200/50 dark:bg-amber-900/50 px-2 py-0.5 rounded-lg">{countMaintenance}</span>
+            </div>
+            <div className="p-3 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 rounded-xl flex items-center justify-between">
+              <span className="text-xs font-semibold text-red-800 dark:text-red-300">Bloqués / Inactifs</span>
+              <span className="text-sm font-black text-red-700 dark:text-red-400 bg-red-200/50 dark:bg-red-900/50 px-2 py-0.5 rounded-lg">{countDisabled}</span>
+            </div>
+          </div>
+
+          {/* Quick Actions en Masse */}
+          <div className="bg-gray-50 dark:bg-gray-800/80 p-4 rounded-2xl border border-gray-150 dark:border-gray-700/60 space-y-3">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <span className="text-xs font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wider flex items-center gap-1.5">
+                <span className="text-amber-500">⚡</span> Actions Globales en Masse ({filteredTools.length} affichés) :
+              </span>
+              <span className="text-[11px] font-medium text-gray-500 dark:text-gray-400">
+                Applique le statut immédiatement aux {filteredTools.length} outils sélectionnés
+              </span>
+            </div>
+            <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2">
+              <button
+                type="button"
+                disabled={bulkUpdatingStatus !== null}
+                onClick={() => handleBulkApplyStatus('active')}
+                className={`px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer ${
+                  bulkUpdatingStatus === 'active' ? 'ring-2 ring-emerald-400 ring-offset-2 opacity-90 scale-98' : ''
+                }`}
+              >
+                <CheckCircle2 size={15} className={bulkUpdatingStatus === 'active' ? 'animate-spin' : ''} />
+                <span>{bulkUpdatingStatus === 'active' ? 'Application...' : 'Tout Activer'}</span>
+              </button>
+
+              <button
+                type="button"
+                disabled={bulkUpdatingStatus !== null}
+                onClick={() => handleBulkApplyStatus('premium')}
+                className={`px-3.5 py-2 bg-violet-600 hover:bg-violet-700 active:scale-95 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer ${
+                  bulkUpdatingStatus === 'premium' ? 'ring-2 ring-violet-400 ring-offset-2 opacity-90 scale-98' : ''
+                }`}
+              >
+                <Sparkles size={15} className={bulkUpdatingStatus === 'premium' ? 'animate-spin' : ''} />
+                <span>{bulkUpdatingStatus === 'premium' ? 'Application...' : 'Tout en Premium'}</span>
+              </button>
+
+              <button
+                type="button"
+                disabled={bulkUpdatingStatus !== null}
+                onClick={() => handleBulkApplyStatus('maintenance')}
+                className={`px-3.5 py-2 bg-amber-600 hover:bg-amber-700 active:scale-95 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer ${
+                  bulkUpdatingStatus === 'maintenance' ? 'ring-2 ring-amber-400 ring-offset-2 opacity-90 scale-98' : ''
+                }`}
+              >
+                <AlertTriangle size={15} className={bulkUpdatingStatus === 'maintenance' ? 'animate-spin' : ''} />
+                <span>{bulkUpdatingStatus === 'maintenance' ? 'Application...' : 'Tout en Maintenance'}</span>
+              </button>
+
+              <button
+                type="button"
+                disabled={bulkUpdatingStatus !== null}
+                onClick={() => handleBulkApplyStatus('disabled')}
+                className={`px-3.5 py-2 bg-red-600 hover:bg-red-700 active:scale-95 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer ${
+                  bulkUpdatingStatus === 'disabled' ? 'ring-2 ring-red-400 ring-offset-2 opacity-90 scale-98' : ''
+                }`}
+              >
+                <ShieldAlert size={15} className={bulkUpdatingStatus === 'disabled' ? 'animate-spin' : ''} />
+                <span>{bulkUpdatingStatus === 'disabled' ? 'Application...' : 'Tout Bloquer'}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Search & Category Filter */}
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
+            {/* Category Tabs */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+              {[
+                { id: 'all', label: `Tous (${ALL_USER_TOOLS.length})` },
+                { id: 'simple', label: 'Simples' },
+                { id: 'advanced', label: 'Secrets & Avancés' },
+                { id: 'system', label: 'Système' }
+              ].map(cat => (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => setFeatureCategoryFilter(cat.id as any)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-colors cursor-pointer ${
+                    featureCategoryFilter === cat.id
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  {cat.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Search Input */}
             <div className="relative w-full sm:w-64 shrink-0">
               <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
                 <Search size={16} />
@@ -3728,7 +4012,7 @@ export const AdminDashboard: React.FC = () => {
                 value={featureSearch}
                 onChange={(e) => setFeatureSearch(e.target.value)}
                 placeholder="Rechercher un outil..."
-                className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl text-xs text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
+                className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-xs text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
               />
             </div>
           </div>
@@ -3743,28 +4027,42 @@ export const AdminDashboard: React.FC = () => {
               {filteredTools.map((tool) => {
                 const status = featureToggles[`tool_${tool.id}`] || (['inspector', 'quick_widget'].includes(tool.id) ? 'inactive' : 'active');
                 return (
-                  <div key={tool.id} className="flex flex-col p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-3 hover:border-gray-250 dark:hover:border-gray-650 transition-all">
-                    <div>
-                      <h4 className="font-bold text-gray-900 dark:text-white">{tool.label}</h4>
-                      <p className="text-xs text-gray-500 mt-1">{tool.desc}</p>
+                  <div 
+                    key={tool.id} 
+                    className={`flex flex-col p-4 rounded-2xl border transition-all ${
+                      status === 'active' ? 'bg-emerald-50/20 border-emerald-100 dark:bg-gray-800 dark:border-emerald-900/30' :
+                      status === 'premium' ? 'bg-violet-50/20 border-violet-100 dark:bg-gray-800 dark:border-violet-900/30' :
+                      status === 'maintenance' ? 'bg-amber-50/20 border-amber-100 dark:bg-gray-800 dark:border-amber-900/30' :
+                      'bg-red-50/20 border-red-100 dark:bg-gray-800 dark:border-red-900/30'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h4 className="font-bold text-gray-900 dark:text-white text-sm">{tool.label}</h4>
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-wider ${
+                            tool.category === 'advanced' ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300' :
+                            tool.category === 'system' ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' :
+                            'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
+                          }`}>
+                            {tool.category === 'advanced' ? 'Avancé' : tool.category === 'system' ? 'Système' : 'Standard'}
+                          </span>
+                        </div>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{tool.desc}</p>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 mt-auto">
-                      <select
-                        value={status}
-                        onChange={(e) => handleToggleFeature(`tool_${tool.id}`, e.target.value)}
-                        className={`text-xs font-semibold px-3 py-1.5 rounded-lg border-0 cursor-pointer ${
-                          status === 'active' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400' :
-                          status === 'premium' ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-400' :
-                          status === 'maintenance' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400' :
-                          'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400'
-                        }`}
-                      >
-                        <option value="active">Actif</option>
-                        <option value="premium">Premium</option>
-                        <option value="maintenance">Maintenance</option>
-                        <option value="inactive">Inactif</option>
-                        <option value="disabled">Désactivé (Bloqué)</option>
-                      </select>
+                    
+                    <div className="flex items-center justify-between gap-3 mt-4 pt-3 border-t border-gray-150 dark:border-gray-700/60">
+                      <span className="text-[11px] font-medium text-gray-500 dark:text-gray-400">
+                        Statut pour tous :
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <ToolStatusPicker
+                          value={status}
+                          onChange={(newVal) => handleToggleFeature(`tool_${tool.id}`, newVal, tool.label)}
+                          toolName={tool.label}
+                        />
+                      </div>
                     </div>
                   </div>
                 );
@@ -3813,21 +4111,12 @@ export const AdminDashboard: React.FC = () => {
                   <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-gray-200/50 dark:border-gray-700/50">
                     <div className="flex items-center gap-2">
                       <span className="text-[11px] font-bold text-gray-500">Statut:</span>
-                      <select
+                      <ToolStatusPicker
                         value={status}
-                        onChange={(e) => handleToggleFeature(subTool.id, e.target.value)}
-                        className={`text-xs font-semibold px-2.5 py-1 rounded-lg border-0 cursor-pointer ${
-                          status === 'active' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400' :
-                          status === 'premium' ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-400' :
-                          status === 'maintenance' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400' :
-                          'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400'
-                        }`}
-                      >
-                        <option value="active">Actif</option>
-                        <option value="premium">Premium</option>
-                        <option value="maintenance">Maintenance</option>
-                        <option value="inactive">Inactif / Désactivé (Bloqué)</option>
-                      </select>
+                        onChange={(newVal) => handleToggleFeature(subTool.id, newVal, subTool.label)}
+                        toolName={subTool.label}
+                        size="sm"
+                      />
                     </div>
 
                     <label className="flex items-center gap-2 cursor-pointer bg-white dark:bg-gray-800 px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-700">
@@ -3838,7 +4127,7 @@ export const AdminDashboard: React.FC = () => {
                       <input
                         type="checkbox"
                         checked={downloadStatus}
-                        onChange={(e) => handleToggleFeature(`download_${subTool.id}`, e.target.checked ? 'active' : 'inactive')}
+                        onChange={(e) => handleToggleFeature(`download_${subTool.id}`, e.target.checked ? 'active' : 'inactive', subTool.label)}
                         className="sr-only"
                       />
                     </label>
@@ -3887,22 +4176,12 @@ export const AdminDashboard: React.FC = () => {
                   <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-gray-200/50 dark:border-gray-700/50">
                     <div className="flex items-center gap-2">
                       <span className="text-[11px] font-bold text-gray-500">Statut:</span>
-                      <select
+                      <ToolStatusPicker
                         value={status}
-                        onChange={(e) => handleToggleFeature(bookItem.id, e.target.value)}
-                        className={`text-xs font-semibold px-2.5 py-1 rounded-lg border-0 cursor-pointer ${
-                          status === 'active' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400' :
-                          status === 'premium' ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-400' :
-                          status === 'maintenance' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400' :
-                          'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400'
-                        }`}
-                      >
-                        <option value="active">Actif (Accès Tous)</option>
-                        <option value="premium">Premium (Réservé Premium)</option>
-                        <option value="maintenance">Maintenance</option>
-                        <option value="inactive">Inactif / Désactivé</option>
-                        <option value="disabled">Bloqué Absolu</option>
-                      </select>
+                        onChange={(newVal) => handleToggleFeature(bookItem.id, newVal, bookItem.label)}
+                        toolName={bookItem.label}
+                        size="sm"
+                      />
                     </div>
 
                     <label className="flex items-center gap-2 cursor-pointer bg-white dark:bg-gray-800 px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-700">
@@ -3913,7 +4192,7 @@ export const AdminDashboard: React.FC = () => {
                       <input
                         type="checkbox"
                         checked={downloadStatus}
-                        onChange={(e) => handleToggleFeature(`download_${bookItem.id}`, e.target.checked ? 'active' : 'inactive')}
+                        onChange={(e) => handleToggleFeature(`download_${bookItem.id}`, e.target.checked ? 'active' : 'inactive', bookItem.label)}
                         className="sr-only"
                       />
                     </label>
@@ -4080,6 +4359,92 @@ export const AdminDashboard: React.FC = () => {
                 }`}
               />
             </button>
+          </div>
+        </CollapsibleAdminCard>
+
+        {/* 7. PROTECTION ANTI-CAPTURE D'ÉCRAN & SÉCURITÉ MATÉRIELLE (FLAG_SECURE) */}
+        <CollapsibleAdminCard
+          id="feat_anti_screenshot"
+          title="Protection Anti-Capture d'Écran & Sécurité du Contenu"
+          subtitle="Empêche les captures d'écran, enregistrements vidéo, copies et impressions des articles et outils."
+          icon={<Shield size={22} className="text-red-500" />}
+          badge={
+            <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
+              featureToggles.anti_screenshot !== false
+                ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300'
+                : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
+            }`}>
+              {featureToggles.anti_screenshot !== false ? 'Protection Active (FLAG_SECURE)' : 'Protection Désactivée'}
+            </span>
+          }
+        >
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h4 className="font-bold text-gray-950 dark:text-white text-sm">
+                    Activer la Protection Anti-Capture d'Écran Globale
+                  </h4>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 uppercase tracking-wider">
+                    Android + Web + iOS
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 max-w-2xl">
+                  Lorsque cette option est activée (par défaut), l'application applique la directive matérielle <code className="font-mono text-red-600 dark:text-red-400">FLAG_SECURE</code> sur Android, le plugin de confidentialité Capacitor, et bloque les raccourcis d'impression/capture et sélections sur le Web.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const newState = featureToggles.anti_screenshot === false ? true : false;
+                  handleToggleFeature('anti_screenshot', newState);
+                  showToast(
+                    newState 
+                      ? "Protection Anti-Capture d'Écran activée (FLAG_SECURE actif sur tous les appareils)." 
+                      : "Protection Anti-Capture désactivée temporairement.",
+                    "success"
+                  );
+                }}
+                className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors shrink-0 cursor-pointer ${
+                  featureToggles.anti_screenshot !== false ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
+                }`}
+              >
+                <div
+                  className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${
+                    featureToggles.anti_screenshot !== false ? 'translate-x-6' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center gap-2 text-xs font-bold text-gray-800 dark:text-gray-200">
+                  <span>📱</span> Android & Capacitor
+                </div>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+                  Écran noir lors des captures, enregistrements vidéo refusés, masquage dans la liste des applications récentes.
+                </p>
+              </div>
+
+              <div className="p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center gap-2 text-xs font-bold text-gray-800 dark:text-gray-200">
+                  <span>💻</span> Web & Raccourcis
+                </div>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+                  Blocage des touches PrintScreen, Snip (Ctrl+Shift+S), impression (Ctrl+P) et masquage lors de l'export PDF.
+                </p>
+              </div>
+
+              <div className="p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center gap-2 text-xs font-bold text-gray-800 dark:text-gray-200">
+                  <span>⚡</span> Synchronisation Temps Réel
+                </div>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+                  Toute modification ici est propagée immédiatement sans avoir besoin de republier ou recompiler l'APK.
+                </p>
+              </div>
+            </div>
           </div>
         </CollapsibleAdminCard>
       </div>
@@ -8712,79 +9077,274 @@ export const AdminDashboard: React.FC = () => {
     if (!blockingToolsUser) return null;
     const activeUser = users.find(u => u.id === blockingToolsUser.id) || blockingToolsUser;
     const userBlockedList = activeUser.blockedTools || [];
+    const userAllowedList = activeUser.allowedTools || [];
+    const userOverrides = activeUser.toolOverrides || {};
+
+    const filteredTools = ALL_USER_TOOLS.filter(tool => {
+      const matchesSearch = (tool.label || '').toLowerCase().includes(userToolModalSearch.toLowerCase()) ||
+        (tool.desc || '').toLowerCase().includes(userToolModalSearch.toLowerCase()) ||
+        tool.id.toLowerCase().includes(userToolModalSearch.toLowerCase());
+      
+      const matchesCategory = userToolModalCategoryFilter === 'all' || tool.category === userToolModalCategoryFilter;
+      return matchesSearch && matchesCategory;
+    });
 
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-        <div className="bg-white dark:bg-gray-900 rounded-3xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl">
-          <div className="p-4 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center bg-gray-50 dark:bg-gray-800">
-            <div>
-              <h3 className="font-bold text-lg text-gray-900 dark:text-white flex items-center gap-2">
-                <ShieldAlert size={20} className="text-red-500" /> Gérer l'accès aux outils
-              </h3>
-              <p className="text-xs text-gray-500 mt-0.5">Utilisateur : <span className="font-semibold text-gray-700 dark:text-gray-300">{activeUser.name || activeUser.email}</span></p>
+        <div className="bg-white dark:bg-gray-900 rounded-3xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl border border-gray-100 dark:border-gray-800">
+          {/* Modal Header */}
+          <div className="p-4 sm:p-5 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center bg-gray-50 dark:bg-gray-850">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 rounded-2xl">
+                <ShieldAlert size={22} />
+              </div>
+              <div>
+                <h3 className="font-bold text-base sm:text-lg text-gray-900 dark:text-white flex items-center gap-2">
+                  Contrôle d'Accès aux Outils
+                </h3>
+                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+                  <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
+                    {activeUser.name || 'Utilisateur'} ({activeUser.email})
+                  </span>
+                  {activeUser.isPremium && (
+                    <span className="text-[10px] font-bold px-2 py-0.2 rounded-full bg-violet-100 dark:bg-violet-900/50 text-violet-700 dark:text-violet-300">
+                      VIP Premium
+                    </span>
+                  )}
+                  {activeUser.role === 'admin' && (
+                    <span className="text-[10px] font-bold px-2 py-0.2 rounded-full bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300">
+                      Admin
+                    </span>
+                  )}
+                </div>
+              </div>
             </div>
-            <button onClick={() => setBlockingToolsUser(null)} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors text-gray-500">
+            <button 
+              onClick={() => setBlockingToolsUser(null)} 
+              className="p-2 hover:bg-gray-200 dark:hover:bg-gray-750 rounded-full transition-colors text-gray-500 cursor-pointer"
+            >
               <X size={20} />
             </button>
           </div>
           
-          <div className="flex-1 overflow-y-auto p-6 space-y-6">
-            {/* Master block switch */}
-            <div className="bg-red-50 dark:bg-red-950/20 rounded-2xl p-4 border border-red-100 dark:border-red-900/40 flex items-center justify-between gap-4">
-              <div>
-                <h4 className="text-sm font-bold text-red-800 dark:text-red-300">Bloquer TOUS les outils avancés d'un coup</h4>
-                <p className="text-xs text-red-600/80 dark:text-red-400/80 mt-0.5">
-                  Bascule le statut général de blocage des outils avancés (mysteryToolsDisabled).
-                </p>
+          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
+            {/* Master Switches Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {/* 1. Bloquer TOUS les outils d'un coup */}
+              <div className={`p-4 rounded-2xl border flex items-center justify-between gap-3 transition-colors ${
+                activeUser.allToolsDisabled 
+                  ? 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900/40' 
+                  : 'bg-gray-50 dark:bg-gray-800/60 border-gray-200 dark:border-gray-700'
+              }`}>
+                <div>
+                  <h4 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white">
+                    Bloquer TOUS les outils
+                  </h4>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                    Coupe l'accès à tous les modules de l'application.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleToggleUserAllTools(activeUser.id)}
+                  className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors shrink-0 cursor-pointer ${
+                    activeUser.allToolsDisabled ? 'bg-red-500' : 'bg-gray-300 dark:bg-gray-700'
+                  }`}
+                >
+                  <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${activeUser.allToolsDisabled ? 'translate-x-6' : 'translate-x-0'}`} />
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={async () => {
-                  try {
-                    await updateDoc(doc(db, 'users', activeUser.id), { 
-                      mysteryToolsDisabled: !activeUser.mysteryToolsDisabled 
-                    });
-                    showToast("Paramètre général de blocage mis à jour.", "success");
-                  } catch (e) {
-                    console.error(e);
-                  }
-                }}
-                className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors shrink-0 ${
-                  activeUser.mysteryToolsDisabled ? 'bg-red-500' : 'bg-gray-300 dark:bg-gray-750'
-                }`}
-              >
-                <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${activeUser.mysteryToolsDisabled ? 'translate-x-6' : 'translate-x-0'}`} />
-              </button>
+
+              {/* 2. Bloquer les outils avancés / mystiques */}
+              <div className={`p-4 rounded-2xl border flex items-center justify-between gap-3 transition-colors ${
+                activeUser.mysteryToolsDisabled 
+                  ? 'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/40' 
+                  : 'bg-gray-50 dark:bg-gray-800/60 border-gray-200 dark:border-gray-700'
+              }`}>
+                <div>
+                  <h4 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white">
+                    Bloquer outils avancés
+                  </h4>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                    Bloque les secrets, carrés, calculs et sciences.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await updateDoc(doc(db, 'users', activeUser.id), { 
+                        mysteryToolsDisabled: !activeUser.mysteryToolsDisabled 
+                      });
+                      setUsers(prev => prev.map(u => u.id === activeUser.id ? { ...u, mysteryToolsDisabled: !activeUser.mysteryToolsDisabled } : u));
+                      showToast("Statut des outils avancés mis à jour.", "success");
+                    } catch (e) {
+                      console.error(e);
+                    }
+                  }}
+                  className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors shrink-0 cursor-pointer ${
+                    activeUser.mysteryToolsDisabled ? 'bg-amber-500' : 'bg-gray-300 dark:bg-gray-700'
+                  }`}
+                >
+                  <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${activeUser.mysteryToolsDisabled ? 'translate-x-6' : 'translate-x-0'}`} />
+                </button>
+              </div>
             </div>
 
-            {/* Individual Tools Grid */}
-            <div className="space-y-3">
-              <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Liste complète des outils</h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[45vh] overflow-y-auto pr-1">
-                {ALL_USER_TOOLS.map((tool) => {
-                  const isBlocked = userBlockedList.includes(tool.id);
+            {/* Quick User Actions en Masse */}
+            <div className="bg-gray-50 dark:bg-gray-800/80 p-3.5 rounded-2xl border border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <div>
+                <span className="text-xs font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wider block">
+                  ⚡ Actions Rapides pour cet utilisateur :
+                </span>
+                <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                  Appliquer un statut global à toute la liste
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleBatchUpdateUserTools(activeUser.id, 'allow_all')}
+                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1 shadow-xs transition-colors cursor-pointer"
+                >
+                  <CheckCircle2 size={13} /> Tout Autoriser
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleBatchUpdateUserTools(activeUser.id, 'block_all')}
+                  className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold flex items-center gap-1 shadow-xs transition-colors cursor-pointer"
+                >
+                  <ShieldAlert size={13} /> Tout Bloquer
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleBatchUpdateUserTools(activeUser.id, 'reset_default')}
+                  className="px-3 py-1.5 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-xl text-xs font-bold flex items-center gap-1 shadow-xs transition-colors cursor-pointer"
+                >
+                  <RotateCcw size={13} /> Réinitialiser
+                </button>
+              </div>
+            </div>
+
+            {/* Filter Tabs & Search */}
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+                {[
+                  { id: 'all', label: `Tous (${ALL_USER_TOOLS.length})` },
+                  { id: 'simple', label: 'Simples' },
+                  { id: 'advanced', label: 'Secrets & Avancés' },
+                  { id: 'system', label: 'Système' }
+                ].map(cat => (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => setUserToolModalCategoryFilter(cat.id as any)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-colors cursor-pointer ${
+                      userToolModalCategoryFilter === cat.id
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                    }`}
+                  >
+                    {cat.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="relative w-full sm:w-56 shrink-0">
+                <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                  <Search size={15} />
+                </span>
+                <input
+                  type="text"
+                  value={userToolModalSearch}
+                  onChange={(e) => setUserToolModalSearch(e.target.value)}
+                  placeholder="Rechercher un outil..."
+                  className="w-full pl-8 pr-3 py-1.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-xs text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
+                />
+              </div>
+            </div>
+
+            {/* Individual Tools List */}
+            <div className="space-y-2.5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[48vh] overflow-y-auto pr-1">
+                {filteredTools.map((tool) => {
+                  const specificOverride = userOverrides[tool.id];
+                  const isBlockedInLegacyList = userBlockedList.includes(tool.id);
+                  const isAllowedInLegacyList = userAllowedList.includes(tool.id);
+                  
+                  // Compute current selection
+                  let effectiveValue = 'default';
+                  if (specificOverride) {
+                    effectiveValue = specificOverride;
+                  } else if (isBlockedInLegacyList) {
+                    effectiveValue = 'blocked';
+                  } else if (isAllowedInLegacyList) {
+                    effectiveValue = 'active';
+                  }
+
+                  const isCurrentlyBlocked = effectiveValue === 'blocked' || effectiveValue === 'disabled' || effectiveValue === 'inactive' || effectiveValue === 'maintenance';
+
                   return (
                     <div 
                       key={tool.id} 
-                      className={`p-3 rounded-xl border flex items-center justify-between gap-3 transition-colors ${
-                        isBlocked 
-                          ? 'bg-red-50/50 border-red-100 dark:bg-red-950/10 dark:border-red-900/30' 
-                          : 'bg-gray-50 border-gray-100 dark:bg-gray-800/40 dark:border-gray-800'
+                      className={`p-3.5 rounded-2xl border flex flex-col justify-between gap-3 transition-all ${
+                        effectiveValue === 'blocked' || effectiveValue === 'disabled'
+                          ? 'bg-red-50/50 border-red-200 dark:bg-red-950/20 dark:border-red-900/40' 
+                          : effectiveValue === 'active'
+                          ? 'bg-emerald-50/40 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-900/40'
+                          : effectiveValue === 'premium'
+                          ? 'bg-violet-50/40 border-violet-200 dark:bg-violet-950/20 dark:border-violet-900/40'
+                          : effectiveValue === 'maintenance'
+                          ? 'bg-amber-50/40 border-amber-200 dark:bg-amber-950/20 dark:border-amber-900/40'
+                          : 'bg-gray-50/80 border-gray-200 dark:bg-gray-800/40 dark:border-gray-700/80'
                       }`}
                     >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs sm:text-sm font-bold text-gray-800 dark:text-gray-200 truncate">{tool.label}</p>
-                        <p className="text-[10px] text-gray-500 truncate mt-0.5">{tool.desc}</p>
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <p className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white truncate">
+                              {tool.label}
+                            </p>
+                            <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded uppercase ${
+                              tool.category === 'advanced' ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300' :
+                              tool.category === 'system' ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' :
+                              'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
+                            }`}>
+                              {tool.category === 'advanced' ? 'Avancé' : tool.category === 'system' ? 'Système' : 'Standard'}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-gray-500 dark:text-gray-400 line-clamp-1 mt-0.5">{tool.desc}</p>
+                        </div>
+
+                        {/* Quick 1-click toggle */}
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const nextStatus = isCurrentlyBlocked ? 'active' : 'blocked';
+                            handleUpdateUserToolOverride(activeUser.id, tool.id, nextStatus);
+                          }}
+                          className={`w-9 h-5 flex items-center rounded-full p-0.5 transition-colors shrink-0 cursor-pointer ${
+                            isCurrentlyBlocked ? 'bg-red-500' : 'bg-emerald-500'
+                          }`}
+                          title={isCurrentlyBlocked ? 'Débloquer cet outil' : 'Bloquer cet outil'}
+                        >
+                          <div className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ${isCurrentlyBlocked ? 'translate-x-0' : 'translate-x-4'}`} />
+                        </button>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => handleToggleIndividualToolBlock(activeUser.id, tool.id)}
-                        className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors shrink-0 ${
-                          isBlocked ? 'bg-red-500' : 'bg-gray-300 dark:bg-gray-700'
-                        }`}
-                      >
-                        <div className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ${isBlocked ? 'translate-x-5' : 'translate-x-0'}`} />
-                      </button>
+
+                      {/* Dropdown override selector */}
+                      <div className="flex items-center justify-between gap-2 pt-2 border-t border-gray-200/60 dark:border-gray-700/60">
+                        <span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400">
+                          Accès personnalisé :
+                        </span>
+                        <ToolStatusPicker
+                          value={effectiveValue}
+                          onChange={(newVal) => handleUpdateUserToolOverride(activeUser.id, tool.id, newVal)}
+                          toolName={tool.label}
+                          size="sm"
+                          allowDefault={true}
+                        />
+                      </div>
                     </div>
                   );
                 })}
@@ -8792,12 +9352,16 @@ export const AdminDashboard: React.FC = () => {
             </div>
           </div>
           
-          <div className="p-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/60 flex justify-end">
+          {/* Modal Footer */}
+          <div className="p-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-850 flex justify-between items-center">
+            <span className="text-xs text-gray-500 dark:text-gray-400">
+              Modifications enregistrées instantanément dans Firestore.
+            </span>
             <button
               onClick={() => setBlockingToolsUser(null)}
-              className="px-5 py-2 bg-gray-250 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-xl text-xs font-bold transition-all"
+              className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
             >
-              Fermer
+              Terminer
             </button>
           </div>
         </div>
@@ -9591,17 +10155,55 @@ export const AdminDashboard: React.FC = () => {
         </div>
       )}
 
-      {toast && (
-        <div className="fixed bottom-6 right-6 z-[100] animate-in fade-in slide-in-from-bottom-5">
-          <div className={`flex items-center gap-2 px-4 py-3 rounded-xl shadow-lg border ${
-            toast.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-800 dark:bg-emerald-900/30 dark:border-emerald-800 dark:text-emerald-300' :
-            toast.type === 'error' ? 'bg-red-50 border-red-200 text-red-800 dark:bg-red-900/30 dark:border-red-800 dark:text-red-300' :
-            'bg-blue-50 border-blue-200 text-blue-800 dark:bg-blue-900/30 dark:border-blue-800 dark:text-blue-300'
-          }`}>
-            <span className="font-semibold">{toast.message}</span>
-          </div>
-        </div>
-      )}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 15, scale: 0.95 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+            className="fixed bottom-6 right-6 z-[100] max-w-md pointer-events-auto"
+          >
+            <div className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl shadow-2xl border backdrop-blur-md ${
+              toast.type === 'success' 
+                ? 'bg-emerald-50/95 dark:bg-emerald-950/90 border-emerald-300 dark:border-emerald-700/80 text-emerald-950 dark:text-emerald-100 shadow-emerald-500/10' :
+              toast.type === 'error' 
+                ? 'bg-red-50/95 dark:bg-red-950/90 border-red-300 dark:border-red-700/80 text-red-950 dark:text-red-100 shadow-red-500/10' :
+                'bg-blue-50/95 dark:bg-blue-950/90 border-blue-300 dark:border-blue-700/80 text-blue-950 dark:text-blue-100 shadow-blue-500/10'
+            }`}>
+              <div className="shrink-0">
+                {toast.type === 'success' ? (
+                  <div className="w-8 h-8 rounded-xl bg-emerald-500/20 dark:bg-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                    <CheckCircle2 size={18} className="animate-in zoom-in-75 duration-200" />
+                  </div>
+                ) : toast.type === 'error' ? (
+                  <div className="w-8 h-8 rounded-xl bg-red-500/20 dark:bg-red-500/30 flex items-center justify-center text-red-600 dark:text-red-400">
+                    <XCircle size={18} />
+                  </div>
+                ) : (
+                  <div className="w-8 h-8 rounded-xl bg-blue-500/20 dark:bg-blue-500/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
+                    <AlertTriangle size={18} />
+                  </div>
+                )}
+              </div>
+
+              <div className="flex-1 min-w-0 pr-1">
+                <p className="text-xs sm:text-sm font-bold leading-snug break-words">
+                  {toast.message}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setToast(null)}
+                className="shrink-0 p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400 transition-colors"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

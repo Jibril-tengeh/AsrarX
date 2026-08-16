@@ -15,6 +15,9 @@ const config: CapacitorConfig = {
     },
     CapacitorCookies: {
       enabled: false
+    },
+    PrivacyScreen: {
+      enable: true
     }
   }
 };

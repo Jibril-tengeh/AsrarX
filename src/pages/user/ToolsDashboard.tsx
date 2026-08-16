@@ -40,6 +40,7 @@ import { tools } from "../../data/tools";
 import { CelestialRecommendations } from "../../components/CelestialRecommendations";
 import { CalculationHistoryModal } from "../../components/CalculationHistoryModal";
 import { getCalculationHistory } from "../../utils/calculationHistory";
+import { checkFeatureAccess } from "../../utils/featureAccess";
 
 
 import { BannerAd } from "../../components/BannerAd";
@@ -602,24 +603,27 @@ export const ToolsDashboard: React.FC = () => {
         >
           <AnimatePresence mode="popLayout">
             {displayedTools.map((tool, index) => {
-              const status = featureToggles[`tool_${tool.id}`] || "active";
-              const isMaintenance = status === "maintenance";
-              const isPremium = status === "premium";
-              const isBlockedForUser = (user?.mysteryToolsDisabled && tool.level === "advanced") || user?.blockedTools?.includes(tool.id) || status === "disabled";
+              const toolTitle = t(`tools.${tool.id}.title`) !== `tools.${tool.id}.title` ? t(`tools.${tool.id}.title`) : tool.title;
+              const accessResult = checkFeatureAccess(tool.id, toolTitle, featureToggles, user, isAuthPremium);
+              
+              const isMaintenance = accessResult.restrictionType === "maintenance";
+              const isPremium = accessResult.status === "premium";
+              const isBlockedForUser = !accessResult.allowed && (accessResult.restrictionType === "blocked" || accessResult.restrictionType === "phone_blocked");
+              const isAllowed = accessResult.allowed;
 
               const content = (
                 <div
-                  className={`h-full w-full max-w-full min-w-0 rounded-2xl bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 p-4 transition-all duration-300 relative overflow-hidden group ${!tool.comingSoon && !isMaintenance && !isBlockedForUser ? "hover:shadow-md hover:-translate-y-1" : "opacity-75"}`}
+                  className={`h-full w-full max-w-full min-w-0 rounded-2xl bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 p-4 transition-all duration-300 relative overflow-hidden group ${!tool.comingSoon && isAllowed ? "hover:shadow-md hover:-translate-y-1" : "opacity-80"}`}
                 >
                   {/* Background Decoration */}
                   <div
-                    className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${tool.color} rounded-bl-full opacity-10 transition-opacity ${!tool.comingSoon && !isMaintenance && !isBlockedForUser ? "group-hover:opacity-20" : ""}`}
+                    className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${tool.color} rounded-bl-full opacity-10 transition-opacity ${!tool.comingSoon && isAllowed ? "group-hover:opacity-20" : ""}`}
                   ></div>
 
                   <div className="relative z-10 flex flex-col h-full min-w-0">
                     <div className="flex items-center gap-3 mb-2 min-w-0">
                       <div
-                        className={`w-10 h-10 shrink-0 rounded-xl bg-gradient-to-br ${tool.color} text-white flex items-center justify-center shadow-sm ${!tool.comingSoon && !isMaintenance && !isBlockedForUser ? "group-hover:scale-110 transition-transform relative" : "relative"}`}
+                        className={`w-10 h-10 shrink-0 rounded-xl bg-gradient-to-br ${tool.color} text-white flex items-center justify-center shadow-sm ${!tool.comingSoon && isAllowed ? "group-hover:scale-110 transition-transform relative" : "relative"}`}
                       >
                         <tool.icon size={20} />
                         {isPremium && (
@@ -629,9 +633,7 @@ export const ToolsDashboard: React.FC = () => {
                         )}
                       </div>
                       <h3 className="text-[15px] sm:text-base font-bold text-gray-900 dark:text-white flex items-center gap-2 leading-tight min-w-0 break-words flex-wrap">
-                        {t(`tools.${tool.id}.title`) !== `tools.${tool.id}.title`
-                          ? t(`tools.${tool.id}.title`)
-                          : tool.title}
+                        {toolTitle}
                         {tool.comingSoon && (
                           <span className="bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300 text-[9px] px-1.5 py-0.5 rounded-full font-semibold uppercase tracking-widest shrink-0">
                             Bientôt
@@ -697,27 +699,17 @@ export const ToolsDashboard: React.FC = () => {
                         if (isBlockedForUser) {
                           setBlockedModalOpen({
                             isOpen: true,
-                            title: t(`tools.${tool.id}.title`) !== `tools.${tool.id}.title`
-                              ? t(`tools.${tool.id}.title`)
-                              : tool.title,
+                            title: toolTitle,
                           });
                         } else if (isMaintenance) {
                           setMaintenanceModalOpen({
                             isOpen: true,
-                            title: t(`tools.${tool.id}.title`) !== `tools.${tool.id}.title`
-                              ? t(`tools.${tool.id}.title`)
-                              : tool.title,
+                            title: toolTitle,
                           });
-                        } else if (
-                          isPremium &&
-                          !isAuthPremium &&
-                          user?.role !== "admin" &&
-                          user?.subscriptionTier !== "premium" &&
-                          user?.subscriptionTier !== "pro"
-                        ) {
+                        } else if (accessResult.restrictionType === 'premium') {
                           setPremiumModalOpen({
                             isOpen: true,
-                            title: tool.title,
+                            title: toolTitle,
                           });
                         } else {
                           navigate(tool.path);

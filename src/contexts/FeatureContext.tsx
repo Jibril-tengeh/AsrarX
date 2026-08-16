@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { db } from '../lib/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { get, set } from 'idb-keyval';
+import { initAntiScreenshot, setScreenProtection } from '../utils/antiScreenshot';
 
 interface FeatureContextType {
   featureToggles: any;
@@ -105,9 +106,13 @@ export const FeatureProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (localFontSaved) {
         const parsed = JSON.parse(localFontSaved);
         applyTypographyAndSizing(parsed);
+        initAntiScreenshot(parsed.anti_screenshot !== false);
+      } else {
+        initAntiScreenshot(true);
       }
     } catch (e) {
       console.warn("Failed reading local font settings:", e);
+      initAntiScreenshot(true);
     }
   }, []);
 
@@ -115,7 +120,7 @@ export const FeatureProvider: React.FC<{ children: React.ReactNode }> = ({ child
   useEffect(() => {
     const initCachedFeatures = async () => {
       try {
-        let localData = {};
+        let localData: any = {};
         const localSaved = localStorage.getItem('asrar_font_toggles');
         if (localSaved) {
           try { localData = JSON.parse(localSaved); } catch (_) {}
@@ -125,6 +130,7 @@ export const FeatureProvider: React.FC<{ children: React.ReactNode }> = ({ child
         if (Object.keys(merged).length > 0) {
           setFeatureToggles(merged);
           applyTypographyAndSizing(merged);
+          setScreenProtection(merged.anti_screenshot !== false);
         }
       } catch (err) {
         console.warn("[FeatureContext] Error reading feature toggles:", err);
@@ -140,6 +146,7 @@ export const FeatureProvider: React.FC<{ children: React.ReactNode }> = ({ child
           setFeatureToggles((prev: any) => {
             const next = { ...prev, ...parsed };
             applyTypographyAndSizing(next);
+            setScreenProtection(next.anti_screenshot !== false);
             return next;
           });
         }
@@ -159,7 +166,7 @@ export const FeatureProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const unsubscribe = onSnapshot(
       doc(db, "settings", "features"),
       (docSnap) => {
-        let localData = {};
+        let localData: any = {};
         try {
           const stored = localStorage.getItem('asrar_font_toggles');
           if (stored) localData = JSON.parse(stored);
@@ -167,9 +174,10 @@ export const FeatureProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
         if (docSnap.exists()) {
           const data = docSnap.data();
-          const merged = { ...data, ...localData };
+          const merged: any = { ...data, ...localData };
           setFeatureToggles(merged);
           applyTypographyAndSizing(merged);
+          setScreenProtection(merged.anti_screenshot !== false);
           try {
             localStorage.setItem('asrar_font_toggles', JSON.stringify(merged));
           } catch (_) {}
