@@ -4594,19 +4594,19 @@ export const AdminDashboard: React.FC = () => {
             </div>
             <button
               onClick={async () => {
-                if (window.confirm("Voulez-vous définir le statut 'Published' sur tous les articles qui n'ont pas de statut précis ?")) {
-                  try {
-                    let updatedCount = 0;
-                    for (const art of articles) {
-                      if (!art.status || art.status.toLowerCase() === 'draft' || art.status.toLowerCase() === 'brouillon') {
-                        await updateDoc(doc(db, 'articles', art.id), { status: 'Published' });
-                        updatedCount++;
-                      }
+                try {
+                  let updatedCount = 0;
+                  for (const art of articles) {
+                    if (!art.status || art.status.toLowerCase() === 'draft' || art.status.toLowerCase() === 'brouillon' || art.status.toLowerCase() === 'archived') {
+                      await setDoc(doc(db, 'articles', art.id), { status: 'Published' }, { merge: true });
+                      saveLocalCustomArticle({ ...art, status: 'Published' });
+                      updatedCount++;
                     }
-                    showToast(`${updatedCount} article(s) publié(s) avec succès`);
-                  } catch (e: any) {
-                    showToast("Erreur lors de la mise à jour : " + e.message, "error");
                   }
+                  setArticles(prev => prev.map(a => ({ ...a, status: 'Published' })));
+                  showToast(`${updatedCount > 0 ? updatedCount : 'Tous les'} article(s) publié(s) avec succès (visibles publiquement) !`, "success");
+                } catch (e: any) {
+                  showToast("Erreur lors de la mise à jour : " + (e?.message || e), "error");
                 }
               }}
               className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-2 shrink-0 cursor-pointer"
