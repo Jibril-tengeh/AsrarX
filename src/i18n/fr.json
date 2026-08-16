@@ -1040,6 +1040,7 @@
     "promoPercentSuccess": "Code promo appliqué ! Vous bénéficiez de -{val}% sur tous les abonnements.",
     "promoValueSuccess": "Code promo appliqué ! Vous bénéficiez d'une réduction de -{val} {curr}.",
     "promoSubUnlockSuccess": "Code promo valide ! Vous pouvez débloquer directement un abonnement Premium de {months} mois gratuitement.",
+    "promoHoursUnlockSuccess": "Code promo valide ! Vous pouvez débloquer directement un accès Premium de {hours} heures gratuitement.",
     "promoProductUnlockSuccess": "Code promo valide ! Vous pouvez débloquer gratuitement l'article correspondant de la boutique.",
     "promoAppliedSuccess": "Code promo {code} appliqué avec succès !",
     "unlockAndActivateNow": "Débloquer et Activer maintenant",
@@ -1051,7 +1052,12 @@
     "freeWithPromoDesc": "Votre code promo réduit le coût de cet abonnement à 0. Vous pouvez l'activer instantanément sans frais.",
     "activateFreeSub": "Activer mon abonnement gratuitement",
     "methodsDisabled": "Les méthodes de paiement en ligne sont temporairement désactivées par l'administrateur. Veuillez réessayer plus tard.",
-    "errorActivation": "Erreur lors de l'activation."
+    "errorActivation": "Erreur lors de l'activation.",
+    "canvaCelebrationBadge": "★ ACCÈS PREMIUM DÉBLOQUÉ ★",
+    "canvaCelebrationTitle": "Félicitations ! Vous êtes Membre VIP",
+    "canvaCelebrationSubtitle": "Votre code promo a déverrouillé l'intégralité des secrets spirituels, recettes exclusives et fonctionnalités VIP d'AsrarHub.",
+    "canvaCelebrationContinue": "Continuer",
+    "canvaCelebrationAction": "Continuer"
   },
   "ad": {
     "sponsored": "Sponsorisé",

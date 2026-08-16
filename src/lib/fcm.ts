@@ -1,17 +1,35 @@
-import { getMessaging, getToken, onMessage, isSupported } from 'firebase/messaging';
+import { getMessaging, getToken, onMessage, isSupported, Messaging } from 'firebase/messaging';
 import { app, db } from './firebase';
 import { doc, updateDoc, arrayUnion } from 'firebase/firestore';
+
+/**
+ * Safely get the Firebase Messaging instance if supported and available.
+ */
+export const getMessagingInstance = async (): Promise<Messaging | null> => {
+  try {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      return null;
+    }
+    const supported = await isSupported().catch(() => false);
+    if (!supported) {
+      return null;
+    }
+    const messaging = getMessaging(app);
+    return messaging;
+  } catch (err: any) {
+    console.warn("FCM messaging is not available in this environment:", err?.message || err);
+    return null;
+  }
+};
 
 // Request permission and retrieve FCM token
 export const getFCMToken = async (userId: string): Promise<string | null> => {
   try {
-    const supported = await isSupported();
-    if (!supported) {
-      console.warn("FCM is not supported in this browser environment.");
+    const messaging = await getMessagingInstance();
+    if (!messaging) {
+      console.warn("FCM is not supported or available in this browser environment.");
       return null;
     }
-
-    const messaging = getMessaging(app);
 
     // Request permission from the browser with safety checks for sandbox/iframe environments
     if (typeof window !== 'undefined' && 'Notification' in window) {
@@ -34,8 +52,12 @@ export const getFCMToken = async (userId: string): Promise<string | null> => {
 
     // Try to register the service worker if not already registered
     if ('serviceWorker' in navigator) {
-      const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-      console.log('FCM Service Worker registered successfully:', registration);
+      try {
+        const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+        console.log('FCM Service Worker registered successfully:', registration);
+      } catch (swErr) {
+        console.warn('FCM Service Worker registration failed (skipped):', swErr);
+      }
     }
 
     // Retrieve FCM token
@@ -43,18 +65,25 @@ export const getFCMToken = async (userId: string): Promise<string | null> => {
     const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY || undefined;
     const token = await getToken(messaging, { 
       vapidKey 
+    }).catch((tokenErr) => {
+      console.warn("FCM getToken failed:", tokenErr?.message || tokenErr);
+      return null;
     });
 
     if (token) {
       console.log("FCM Token generated successfully:", token);
       
       // Save FCM token in user's document in Firestore
-      const userRef = doc(db, 'users', userId);
-      await updateDoc(userRef, {
-        fcmTokens: arrayUnion(token),
-        lastFCMToken: token,
-        pushNotificationsEnabled: true
-      });
+      try {
+        const userRef = doc(db, 'users', userId);
+        await updateDoc(userRef, {
+          fcmTokens: arrayUnion(token),
+          lastFCMToken: token,
+          pushNotificationsEnabled: true
+        });
+      } catch (dbErr) {
+        console.warn("Could not sync FCM token to Firestore:", dbErr);
+      }
 
       return token;
     } else {
@@ -67,15 +96,17 @@ export const getFCMToken = async (userId: string): Promise<string | null> => {
       console.warn("FCM Notification permission issue handled gracefully:", errorStr);
       return null;
     }
-    console.error("Error in getFCMToken:", error);
-    throw error;
+    console.warn("Handled getFCMToken notice:", error?.message || error);
+    return null;
   }
 };
 
 // Check if notifications are active and supported
 export const checkNotificationSupport = async (): Promise<boolean> => {
   try {
-    return await isSupported() && 'Notification' in window;
+    if (typeof window === 'undefined' || !('Notification' in window)) return false;
+    const supported = await isSupported().catch(() => false);
+    return !!supported;
   } catch {
     return false;
   }
@@ -84,15 +115,15 @@ export const checkNotificationSupport = async (): Promise<boolean> => {
 // Listen to foreground FCM messages
 export const onMessageListener = async (onMessageReceived: (payload: any) => void) => {
   try {
-    const supported = await isSupported();
-    if (!supported) return;
+    const messaging = await getMessagingInstance();
+    if (!messaging) return;
 
-    const messaging = getMessaging(app);
     return onMessage(messaging, (payload) => {
       console.log("FCM Foreground Message received:", payload);
       onMessageReceived(payload);
     });
-  } catch (error) {
-    console.error("Error setting up FCM foreground listener:", error);
+  } catch (error: any) {
+    console.warn("FCM foreground listener note (handled gracefully):", error?.message || error);
   }
 };
+

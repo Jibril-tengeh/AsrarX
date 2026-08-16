@@ -441,7 +441,8 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
       const defaultItems = getDefaultItemsAsAsrarItems();
       const combined = combineWithDefaultArticles(defaultItems, baseItems);
       const merged = mergeWithLocalArticles(combined);
-      setItems(merged);
+      const publicOnly = merged.filter((it: any) => isPublishedArticleStatus(it.status));
+      setItems(publicOnly);
       setIsLoading(false);
 
       // Asynchronously fetch full cached list from IndexedDB (untruncated)
@@ -451,7 +452,8 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
           if (validItems.length > 0) {
             const idbCombined = combineWithDefaultArticles(defaultItems, validItems as AsrarItem[]);
             const idbMerged = mergeWithLocalArticles(idbCombined);
-            setItems(idbMerged);
+            const idbPublic = idbMerged.filter((it: any) => isPublishedArticleStatus(it.status));
+            setItems(idbPublic);
           }
         }
       }).catch(() => {});
@@ -469,11 +471,12 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
         const defaultItems = getDefaultItemsAsAsrarItems();
         const combined = combineWithDefaultArticles(defaultItems, parsed);
         const merged = mergeWithLocalArticles(combined);
-        if (merged.length > 0) {
-          console.log(`[Articles REST - UserDashboard] Successfully loaded ${merged.length} real public articles via REST API!`);
-          setItems(merged);
+        const publicOnly = merged.filter((item: any) => isPublishedArticleStatus(item.status));
+        if (publicOnly.length > 0) {
+          console.log(`[Articles REST - UserDashboard] Successfully loaded ${publicOnly.length} real public articles via REST API!`);
+          setItems(publicOnly);
           setIsLoading(false);
-          saveCachedArticlesList('asrarhub_cached_articles_list', merged);
+          saveCachedArticlesList('asrarhub_cached_articles_list', publicOnly);
         }
       }
     }).catch(err => {
@@ -494,11 +497,12 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
       const defaultItems = getDefaultItemsAsAsrarItems();
       const combined = combineWithDefaultArticles(defaultItems, freshItems);
       const merged = mergeWithLocalArticles(combined);
-      console.log(`[Articles getDocs - UserDashboard] ${merged.length} published articles ready.`);
-      if (merged.length > 0) {
-        setItems(merged);
+      const publicOnly = merged.filter((item: any) => isPublishedArticleStatus(item.status));
+      console.log(`[Articles getDocs - UserDashboard] ${publicOnly.length} published articles ready.`);
+      if (publicOnly.length > 0) {
+        setItems(publicOnly);
         setIsLoading(false);
-        saveCachedArticlesList('asrarhub_cached_articles_list', merged);
+        saveCachedArticlesList('asrarhub_cached_articles_list', publicOnly);
       } else {
         tryRestoreCachedOrDefaults();
       }
@@ -516,10 +520,11 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
       const defaultItems = getDefaultItemsAsAsrarItems();
       const combined = combineWithDefaultArticles(defaultItems, firestoreItems);
       const merged = mergeWithLocalArticles(combined);
-      if (merged.length > 0) {
-        console.log(`[Articles onSnapshot - UserDashboard] ${merged.length} published articles ready to display.`);
-        setItems(merged);
-        saveCachedArticlesList('asrarhub_cached_articles_list', merged);
+      const publicOnly = merged.filter((item: any) => isPublishedArticleStatus(item.status));
+      if (publicOnly.length > 0) {
+        console.log(`[Articles onSnapshot - UserDashboard] ${publicOnly.length} published articles ready to display.`);
+        setItems(publicOnly);
+        saveCachedArticlesList('asrarhub_cached_articles_list', publicOnly);
       } else {
         console.warn("[Articles onSnapshot - UserDashboard] Empty snapshot received (offline or 0 items), restoring cached/default articles.");
         tryRestoreCachedOrDefaults();

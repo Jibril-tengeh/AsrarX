@@ -243,17 +243,19 @@ export const ExploreDashboard: React.FC = () => {
       const defaultItems = getDefaultExploreArticles().filter((art: any) => isPublishedStatus(art.status));
       const combined = combineWithDefaultArticles(defaultItems, base);
       const merged = mergeWithLocalArticles(combined);
-      setArticles(merged);
+      const publicOnly = isAdmin ? merged : merged.filter((art: any) => isPublishedStatus(art.status));
+      setArticles(publicOnly);
       setIsLoading(false);
 
       // Asynchronously fetch full cached list from IndexedDB (untruncated)
       getCachedArticlesListAsync('asrarhub_cached_explore_articles').then(idbItems => {
         if (Array.isArray(idbItems) && idbItems.length > 0) {
-          const valid = idbItems.filter((art: any) => isPublishedStatus(art.status));
+          const valid = idbItems.filter((art: any) => isAdmin || isPublishedStatus(art.status));
           if (valid.length > 0) {
             const idbCombined = combineWithDefaultArticles(defaultItems, valid);
             const idbMerged = mergeWithLocalArticles(idbCombined);
-            setArticles(idbMerged);
+            const idbPublic = isAdmin ? idbMerged : idbMerged.filter((art: any) => isPublishedStatus(art.status));
+            setArticles(idbPublic);
           }
         }
       }).catch(() => {});
@@ -267,15 +269,16 @@ export const ExploreDashboard: React.FC = () => {
       if (Array.isArray(restDocs) && restDocs.length > 0) {
         const fresh = restDocs
           .map(d => processExploreRaw(d, d.id))
-          .filter((art: any) => art !== null && isPublishedStatus(art.status));
+          .filter((art: any) => art !== null && (isAdmin || isPublishedStatus(art.status)));
         const defaultItems = getDefaultExploreArticles().filter((art: any) => isPublishedStatus(art.status));
         const combined = combineWithDefaultArticles(defaultItems, fresh);
         const merged = mergeWithLocalArticles(combined);
-        if (merged.length > 0) {
-          console.log(`[Articles REST - ExploreDashboard] Loaded ${merged.length} articles via REST API!`);
-          setArticles(merged);
+        const publicOnly = isAdmin ? merged : merged.filter((art: any) => isPublishedStatus(art.status));
+        if (publicOnly.length > 0) {
+          console.log(`[Articles REST - ExploreDashboard] Loaded ${publicOnly.length} articles via REST API!`);
+          setArticles(publicOnly);
           setIsLoading(false);
-          saveCachedArticlesList('asrarhub_cached_explore_articles', merged);
+          saveCachedArticlesList('asrarhub_cached_explore_articles', publicOnly);
         }
       }
     }).catch(err => {
@@ -288,16 +291,17 @@ export const ExploreDashboard: React.FC = () => {
       console.log(`[Articles getDocs - ExploreDashboard] Received ${snap.docs.length} raw documents from Firestore server.`);
       const fresh = snap.docs
         .map(d => processExploreDoc(d))
-        .filter((art: any) => art !== null && isPublishedStatus(art.status));
+        .filter((art: any) => art !== null && (isAdmin || isPublishedStatus(art.status)));
 
       const defaultItems = getDefaultExploreArticles().filter((art: any) => isPublishedStatus(art.status));
       const combined = combineWithDefaultArticles(defaultItems, fresh);
       const merged = mergeWithLocalArticles(combined);
-      console.log(`[Articles getDocs - ExploreDashboard] ${merged.length} published articles ready.`);
-      if (merged.length > 0) {
-        setArticles(merged);
+      const publicOnly = isAdmin ? merged : merged.filter((art: any) => isPublishedStatus(art.status));
+      console.log(`[Articles getDocs - ExploreDashboard] ${publicOnly.length} published articles ready.`);
+      if (publicOnly.length > 0) {
+        setArticles(publicOnly);
         setIsLoading(false);
-        saveCachedArticlesList('asrarhub_cached_explore_articles', merged);
+        saveCachedArticlesList('asrarhub_cached_explore_articles', publicOnly);
       } else {
         tryRestoreExploreCacheOrDefaults();
       }
@@ -315,10 +319,11 @@ export const ExploreDashboard: React.FC = () => {
       const defaultItems = getDefaultExploreArticles().filter((art: any) => isPublishedStatus(art.status));
       const combined = combineWithDefaultArticles(defaultItems, allArticles);
       const merged = mergeWithLocalArticles(combined);
-      if (merged.length > 0) {
-        console.log(`[Articles onSnapshot - ExploreDashboard] ${merged.length} published articles ready to display.`);
-        setArticles(merged);
-        saveCachedArticlesList('asrarhub_cached_explore_articles', merged);
+      const publicOnly = isAdmin ? merged : merged.filter((art: any) => isPublishedStatus(art.status));
+      if (publicOnly.length > 0) {
+        console.log(`[Articles onSnapshot - ExploreDashboard] ${publicOnly.length} published articles ready to display.`);
+        setArticles(publicOnly);
+        saveCachedArticlesList('asrarhub_cached_explore_articles', publicOnly);
       } else {
         console.warn("[Articles onSnapshot - ExploreDashboard] Empty snapshot received, restoring cached/default articles.");
         tryRestoreExploreCacheOrDefaults();

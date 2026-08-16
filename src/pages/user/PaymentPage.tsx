@@ -11,9 +11,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import { AuthModal } from '../../components/AuthModal';
 import { db } from '../../lib/firebase';
 import { collection, addDoc, query, where, onSnapshot, orderBy, updateDoc, doc } from 'firebase/firestore';
+import { getPromoHourMessage, getPromoHourLabel, PROMO_HOURLY_OPTIONS, PromoDurationHours } from '../../utils/promoConfig';
+import { PremiumUnlockCelebrationModal } from '../../components/PremiumUnlockCelebrationModal';
 
 export const PaymentPage: React.FC = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { user } = useAuth();
   const { featureToggles } = useFeatures();
   const navigate = useNavigate();
@@ -91,6 +93,16 @@ export const PaymentPage: React.FC = () => {
 
   // Users' manual payment history
   const [manualPayments, setManualPayments] = useState<any[]>([]);
+
+  // Canva Pro-style Video Celebration Modal State
+  const [celebrationModal, setCelebrationModal] = useState<{
+    isOpen: boolean;
+    title?: string;
+    subtitle?: string;
+    promoCode?: string;
+    durationText?: string;
+    redirectTo?: string;
+  } | null>(null);
 
   useEffect(() => {
     setUserLocationInfo({ currency: premiumCurrency });
@@ -271,6 +283,42 @@ export const PaymentPage: React.FC = () => {
         type: 'unlock_subscription',
         subscriptionMonths: 3,
         isActive: true
+      },
+      'PREM2H': {
+        code: 'PREM2H',
+        type: 'unlock_subscription_hours',
+        durationHours: 2,
+        isActive: true
+      },
+      'PREM4H': {
+        code: 'PREM4H',
+        type: 'unlock_subscription_hours',
+        durationHours: 4,
+        isActive: true
+      },
+      'PREM6H': {
+        code: 'PREM6H',
+        type: 'unlock_subscription_hours',
+        durationHours: 6,
+        isActive: true
+      },
+      'PREM8H': {
+        code: 'PREM8H',
+        type: 'unlock_subscription_hours',
+        durationHours: 8,
+        isActive: true
+      },
+      'PREM10H': {
+        code: 'PREM10H',
+        type: 'unlock_subscription_hours',
+        durationHours: 10,
+        isActive: true
+      },
+      'PREM12H': {
+        code: 'PREM12H',
+        type: 'unlock_subscription_hours',
+        durationHours: 12,
+        isActive: true
       }
     };
 
@@ -398,7 +446,10 @@ export const PaymentPage: React.FC = () => {
     setAppliedPromo({ code: promoId, ...promo });
     
     let successMsg = "";
-    if (promo.type === 'discount') {
+    if (promo.type === 'unlock_subscription_hours' || promo.durationHours) {
+      const hours = Number(promo.durationHours) || 2;
+      successMsg = getPromoHourMessage(hours, language as 'fr' | 'en' | 'ha');
+    } else if (promo.type === 'discount') {
       successMsg = promo.discountType === 'percent' 
         ? t('payment.promoPercentSuccess', 'Code promo appliqué ! Vous bénéficiez de -{val}% sur tous les abonnements.').replace('{val}', String(promo.discountValue))
         : t('payment.promoValueSuccess', "Code promo appliqué ! Vous bénéficiez d'une réduction de -{val} {curr}.").replace('{val}', String(promo.discountValue)).replace('{curr}', premiumCurrency);
@@ -425,7 +476,49 @@ export const PaymentPage: React.FC = () => {
     try {
       const { doc, getDoc, updateDoc } = await import('firebase/firestore');
 
-      if (appliedPromo.type === 'unlock_subscription') {
+      if (appliedPromo.type === 'unlock_subscription_hours' || appliedPromo.durationHours) {
+        const hours = Number(appliedPromo.durationHours) || 2;
+        const premiumUntil = new Date(Date.now() + hours * 60 * 60 * 1000);
+
+        try {
+          await updateDoc(doc(db, 'users', user.uid), {
+            subscriptionTier: 'premium',
+            premiumUntil: premiumUntil,
+            freeTrialExpiresAt: premiumUntil.toISOString(),
+            lastPromoCodeUsed: appliedPromo.code,
+            promoDurationHours: hours
+          });
+        } catch (dbErr) {
+          console.warn("Firestore update user error:", dbErr);
+        }
+
+        // Also save to localStorage for local session persistence
+        try {
+          const storedUser = localStorage.getItem('asrarhub_local_user');
+          if (storedUser) {
+            const parsed = JSON.parse(storedUser);
+            parsed.subscriptionTier = 'premium';
+            parsed.premiumUntil = premiumUntil.toISOString();
+            parsed.freeTrialExpiresAt = premiumUntil.toISOString();
+            localStorage.setItem('asrarhub_local_user', JSON.stringify(parsed));
+          }
+        } catch (e) {
+          console.warn("LocalStorage user update warning:", e);
+        }
+
+        await incrementPromoUses(appliedPromo.code);
+        const specificMsg = getPromoHourMessage(hours, language as 'fr' | 'en' | 'ha');
+        setAppliedPromo(null);
+        setPromoCodeInput('');
+        setCelebrationModal({
+          isOpen: true,
+          title: t('payment.canvaCelebrationTitle', 'Félicitations ! Vous êtes Membre VIP'),
+          subtitle: specificMsg,
+          promoCode: appliedPromo.code,
+          durationText: `${hours} ${t('common.hours', 'Heures d\'accès VIP')}`,
+          redirectTo: '/user/dashboard'
+        });
+      } else if (appliedPromo.type === 'unlock_subscription') {
         const months = Number(appliedPromo.subscriptionMonths) || 3;
         const premiumUntil = new Date();
         premiumUntil.setMonth(premiumUntil.getMonth() + months);
@@ -453,10 +546,16 @@ export const PaymentPage: React.FC = () => {
         }
 
         await incrementPromoUses(appliedPromo.code);
-        alert(t('payment.alertSubUnlocked', 'Félicitations! Votre abonnement Premium de {months} mois a été activé gratuitement.').replace('{months}', String(months)));
         setAppliedPromo(null);
         setPromoCodeInput('');
-        navigate('/user/dashboard');
+        setCelebrationModal({
+          isOpen: true,
+          title: t('payment.canvaCelebrationTitle', 'Félicitations ! Vous êtes Membre VIP'),
+          subtitle: t('payment.alertSubUnlocked', 'Félicitations! Votre abonnement Premium de {months} mois a été activé gratuitement.').replace('{months}', String(months)),
+          promoCode: appliedPromo.code,
+          durationText: `${months} ${t('common.months', 'Mois d\'abonnement VIP')}`,
+          redirectTo: '/user/dashboard'
+        });
       } else if (appliedPromo.type === 'unlock_product') {
         const prodId = appliedPromo.productId;
         if (!prodId) {
@@ -515,14 +614,22 @@ export const PaymentPage: React.FC = () => {
         premiumUntil: premiumUntil
       });
 
+      const promoUsed = appliedPromo ? appliedPromo.code : undefined;
       if (appliedPromo) {
         await incrementPromoUses(appliedPromo.code);
       }
 
-      alert(t('payment.success', `Félicitations! Vous êtes maintenant abonné au plan ${selectedPlan.name}.`).replace('{plan}', selectedPlan.name));
       setAppliedPromo(null);
       setSelectedPlan(null);
-      navigate('/user/dashboard');
+
+      setCelebrationModal({
+        isOpen: true,
+        title: t('payment.canvaCelebrationTitle', 'Félicitations ! Vous êtes Membre VIP'),
+        subtitle: t('payment.success', `Félicitations! Vous êtes maintenant abonné au plan ${selectedPlan.name}.`).replace('{plan}', selectedPlan.name),
+        promoCode: promoUsed,
+        durationText: `${months} ${t('common.months', 'Mois d\'abonnement VIP')}`,
+        redirectTo: '/user/dashboard'
+      });
     } catch (dbErr) {
       console.error("Failed to update premium status in DB:", dbErr);
       alert(t('payment.errorActivation', "Erreur lors de l'activation."));
@@ -1097,6 +1204,22 @@ export const PaymentPage: React.FC = () => {
       )}
 
       <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
+
+      {celebrationModal && (
+        <PremiumUnlockCelebrationModal
+          isOpen={celebrationModal.isOpen}
+          onClose={() => setCelebrationModal(null)}
+          title={celebrationModal.title}
+          subtitle={celebrationModal.subtitle}
+          promoCode={celebrationModal.promoCode}
+          durationText={celebrationModal.durationText}
+          onComplete={() => {
+            if (celebrationModal.redirectTo) {
+              navigate(celebrationModal.redirectTo);
+            }
+          }}
+        />
+      )}
     </div>
   );
 };

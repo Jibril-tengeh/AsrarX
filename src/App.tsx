@@ -39,6 +39,7 @@ import { LocalNotifications } from '@capacitor/local-notifications';
 import { pingFirestore, addNetworkLog } from './utils/networkLogger';
 import { revalidatePublishedArticles, getSWRCacheStats, SWRCacheStats } from './lib/swrArticleCache';
 import { checkFeatureAccess } from './utils/featureAccess';
+import { recordUnauthorizedToolAttempt } from './utils/securityAlerts';
 
 function lazyWithRetry<T extends React.ComponentType<any> = React.ComponentType<any>>(
   componentImport: () => Promise<any>
@@ -410,12 +411,27 @@ const ProtectedToolsLayout: React.FC = () => {
   const isInactive = isSubTool && accessResult.restrictionType === 'blocked' && (accessResult.status === 'inactive' || accessResult.status === 'disabled');
   const isPremiumOnly = isSubTool && accessResult.restrictionType === 'premium';
   const isBlocked = isSubTool && accessResult.restrictionType === 'blocked' && !isInactive;
+  const isAdmin = user?.role === 'admin' || user?.email === 'jibriltengeh4@gmail.com' || user?.email === 'sbireino@gmail.com' || user?.email === 'tenibawwal10@gmail.com' || user?.email === 'jibriltengeh57@gmail.com';
 
   React.useEffect(() => {
     if (user && isSubTool && accessResult.allowed && toolId) {
       localStorage.setItem('asrarhub_last_tool', toolId);
     }
   }, [user, location.pathname, isSubTool, accessResult.allowed, toolId]);
+
+  // Log unauthorized access attempts to blocked/restricted tools for admin security alerting
+  React.useEffect(() => {
+    if (user && isSubTool && !accessResult.allowed && toolId && !isAdmin) {
+      const restrictionType = accessResult.restrictionType || (isMaintenance ? 'maintenance' : isPremiumOnly ? 'premium' : 'blocked');
+      recordUnauthorizedToolAttempt({
+        user,
+        toolId,
+        toolName: accessResult.featureName || toolId,
+        restrictionType,
+        featureToggles
+      });
+    }
+  }, [user, isSubTool, accessResult.allowed, toolId, accessResult.restrictionType, isMaintenance, isPremiumOnly, isBlocked, isAdmin, featureToggles]);
 
   if (!user) {
     return (
@@ -452,9 +468,9 @@ const ProtectedToolsLayout: React.FC = () => {
   }
 
   const adminEmails = ['jibriltengeh4@gmail.com', 'sbireino@gmail.com', 'tenibawwal10@gmail.com', 'jibriltengeh57@gmail.com'];
-  const isAdmin = user.role === 'admin' || (user.email && adminEmails.includes(user.email.toLowerCase()));
+  const isUserAdmin = isAdmin || (user.email && adminEmails.includes(user.email.toLowerCase()));
 
-  if (!user.emailVerified && !isAdmin) {
+  if (!user.emailVerified && !isUserAdmin) {
     return <UnverifiedEmailGuard />;
   }
 
@@ -848,8 +864,9 @@ export default function App() {
     }
   }, []);
 
-  // Banned User Intercept
-  if (user && (user as any).isBanned) {
+  // Banned or Suspended User Intercept
+  if (user && ((user as any).isBanned || (user as any).isSuspended)) {
+    const isSuspended = !(user as any).isBanned && (user as any).isSuspended;
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
         <div className="bg-white dark:bg-gray-800 rounded-3xl p-8 max-w-md w-full shadow-2xl border border-red-100 dark:border-red-900/30 text-center">
@@ -857,14 +874,22 @@ export default function App() {
             <ShieldAlert size={32} />
           </div>
           <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-3">
-            {language === 'fr' ? 'Compte Suspendu' : language === 'ha' ? 'An Dakatar da Asusunka' : 'Account Suspended'}
+            {isSuspended 
+              ? (language === 'fr' ? 'Compte Temporairement Suspendu' : language === 'ha' ? 'An Dakatar da Asusunka na Ɗan Lokaci' : 'Account Temporarily Suspended')
+              : (language === 'fr' ? 'Compte Banni Définitivement' : language === 'ha' ? 'An Dakatar da Asusunka' : 'Account Banned')}
           </h2>
           <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed mb-6">
-            {language === 'fr' 
-              ? 'Votre compte a été banni par l\'administrateur. Vous n\'avez plus accès aux contenus, secrets et outils spirituels.' 
-              : language === 'ha'
-              ? 'An dakatar da asusunka ta hannun mai gudanarwa. Ba ka da damar shiga cikin abubuwan asiri da kayan aiki.'
-              : 'Your account has been banned by the administrator. You no longer have access to content, secrets, and spiritual tools.'}
+            {isSuspended
+              ? (language === 'fr' 
+                ? 'Votre compte a été temporairement suspendu par l\'administrateur. L\'accès aux outils et secrets est momentanément restreint.' 
+                : language === 'ha'
+                ? 'An dakatar da asusunka na dan lokaci. Ba ka da damar shiga cikin kayan aiki a yanzu.'
+                : 'Your account has been temporarily suspended by the administrator. Access to tools and secrets is restricted.')
+              : (language === 'fr' 
+                ? 'Votre compte a été banni par l\'administrateur. Vous n\'avez plus accès aux contenus, secrets et outils spirituels.' 
+                : language === 'ha'
+                ? 'An dakatar da asusunka ta hannun mai gudanarwa. Ba ka da damar shiga cikin abubuwan asiri da kayan aiki.'
+                : 'Your account has been banned by the administrator. You no longer have access to content, secrets, and spiritual tools.')}
           </p>
           <div className="text-xs text-red-500 font-semibold border border-red-100 dark:border-red-900/20 bg-red-50/50 dark:bg-red-900/10 rounded-xl p-3 mb-6">
             {language === 'fr'

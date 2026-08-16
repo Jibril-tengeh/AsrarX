@@ -34,7 +34,7 @@ import {
 } from 'firebase/firestore';
 import firebaseConfig from '../../firebase-applet-config.json';
 import { isDisposableEmail, isGmailAddress, hasGmailPlusAlias, normalizeEmail, normalizePhone, validateRegistrationDetails } from './validationUtils';
-import { getTrialDurationHours } from '../utils/trialConfig';
+import { getTrialDurationHours, isNewUserPremiumEnabled } from '../utils/trialConfig';
 
 export const app = initializeApp(firebaseConfig);
 
@@ -137,6 +137,7 @@ export const signInWithGoogle = async () => {
 
         const normEmail = normalizeEmail(user.email || '');
         const now = new Date();
+        const isPremEnabled = isNewUserPremiumEnabled();
         const trialHours = getTrialDurationHours();
         const trialExpiry = new Date(now.getTime() + trialHours * 60 * 60 * 1000);
         await setDoc(userRef, {
@@ -148,11 +149,11 @@ export const signInWithGoogle = async () => {
           mysteryToolsDisabled: false,
           isTrusted: false,
           createdAt: now,
-          subscriptionTier: 'premium',
-          freeTrialActivated: true,
-          freeTrialActivatedAt: now.toISOString(),
-          freeTrialExpiresAt: trialExpiry.toISOString(),
-          premiumUntil: trialExpiry.toISOString(),
+          subscriptionTier: isPremEnabled ? 'premium' : 'free',
+          freeTrialActivated: isPremEnabled,
+          freeTrialActivatedAt: isPremEnabled ? now.toISOString() : null,
+          freeTrialExpiresAt: isPremEnabled ? trialExpiry.toISOString() : null,
+          premiumUntil: isPremEnabled ? trialExpiry.toISOString() : null,
           hasSeenTrialPopup: false
         });
       }
@@ -180,6 +181,7 @@ export const signUpWithEmail = async (email: string, password: string, name: str
     });
 
     const now = new Date();
+    const isPremEnabled = isNewUserPremiumEnabled();
     const trialHours = getTrialDurationHours();
     const trialExpiry = new Date(now.getTime() + trialHours * 60 * 60 * 1000);
 
@@ -199,11 +201,11 @@ export const signUpWithEmail = async (email: string, password: string, name: str
       mysteryToolsDisabled: false,
       isTrusted: false,
       createdAt: now,
-      subscriptionTier: 'premium',
-      freeTrialActivated: true,
-      freeTrialActivatedAt: now.toISOString(),
-      freeTrialExpiresAt: trialExpiry.toISOString(),
-      premiumUntil: trialExpiry.toISOString(),
+      subscriptionTier: isPremEnabled ? 'premium' : 'free',
+      freeTrialActivated: isPremEnabled,
+      freeTrialActivatedAt: isPremEnabled ? now.toISOString() : null,
+      freeTrialExpiresAt: isPremEnabled ? trialExpiry.toISOString() : null,
+      premiumUntil: isPremEnabled ? trialExpiry.toISOString() : null,
       hasSeenTrialPopup: false,
       requiresValidation: true
     });

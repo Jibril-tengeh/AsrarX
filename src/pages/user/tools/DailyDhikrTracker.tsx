@@ -90,14 +90,25 @@ export const DailyDhikrTracker: React.FC = () => {
       setPushStatus(permission);
 
       if (permission === 'granted') {
-        const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-        const { getMessaging, getToken } = await import('firebase/messaging');
-        const messaging = getMessaging(app);
+        let registration: ServiceWorkerRegistration | undefined;
+        try {
+          registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+        } catch (swErr) {
+          console.warn('SW registration skipped:', swErr);
+        }
 
+        const { getMessagingInstance } = await import('../../../lib/fcm');
+        const messaging = await getMessagingInstance();
+        if (!messaging) {
+          setTestError("Le service de messagerie push n'est pas disponible dans ce navigateur.");
+          return;
+        }
+
+        const { getToken } = await import('firebase/messaging');
         const token = await getToken(messaging, {
           serviceWorkerRegistration: registration,
           vapidKey: 'BD2p3w8B9U96b58-eGg55-C1IeD8T6xR_6T6eW7B3vN7H0V1I5-W4T1E9F1U9Y8I_3K9N8T8-E6V6V6T6B9D5V0'
-        });
+        }).catch(() => null);
 
         if (token) {
           setFcmToken(token);
@@ -115,7 +126,7 @@ export const DailyDhikrTracker: React.FC = () => {
         }
       }
     } catch (err: any) {
-      console.error('Error setting up FCM client:', err);
+      console.warn('FCM client setup note:', err?.message || err);
       setTestError(err.message || String(err));
     } finally {
       setRegistering(false);

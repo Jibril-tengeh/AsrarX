@@ -8,7 +8,7 @@ import {
   Eye, Image as ImageIcon, Crop as CropIcon, X, Upload, ShoppingBag, CreditCard,
   Clock, CheckCircle, CheckCircle2, XCircle, Globe, Grid, List, Mail, Phone, Lock, Unlock, Bell, BellOff, Sparkles, Star, Share, ShieldAlert, Download, DownloadCloud, Crown, UserPlus, UserCheck, Award,
   FolderOpen, Copy, Radio, Type, Sliders, Maximize2, Activity, Terminal, RefreshCw, RotateCcw, AlertTriangle, Moon, ChevronDown, ChevronUp, Layout,
-  AlignLeft, AlignCenter, AlignRight, AlignJustify
+  AlignLeft, AlignCenter, AlignRight, AlignJustify, Camera, ShieldBan, Tag, Ticket, Check
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 
@@ -43,6 +43,7 @@ import { DauAreaChart, ToolUsageBarChart, UserDistributionDonut } from '../../co
 
 import { AdminStoreManager } from '../../components/AdminStoreManager';
 import { SACRED_BOOKS } from '../../data/sacredBooksData';
+import { PremiumUnlockCelebrationModal } from '../../components/PremiumUnlockCelebrationModal';
 import { getInitialCalendarScales, saveCalendarScales, subscribeCalendarScales } from '../../lib/calendarScale';
 import { INITIAL_DEFAULT_ARTICLES } from '../../data/defaultArticles';
 import { fetchArticlesFromRest, fetchUsersFromRest, fetchCategoriesFromRest, deleteArticleFromRest, deleteCategoryFromRest } from '../../lib/firestoreRest';
@@ -57,8 +58,25 @@ import { QURAN_RECITERS } from '../../data/reciters';
 import { calculateHijriDate } from '../../utils/hijriDate';
 import { LunarSealVarietiesSection } from '../../components/LunarSealVarietiesSection';
 import { AdminEmailSupportManager } from '../../components/admin/AdminEmailSupportManager';
+import { getTrialDurationHours, isNewUserPremiumEnabled } from '../../utils/trialConfig';
 import { ToolStatusPicker } from '../../components/admin/ToolStatusPicker';
 import { useBackButton } from '../../hooks/useBackButton';
+import { getScreenshotProtectionMode, getTextCopyProtectionMode, type ProtectionMode } from '../../utils/antiScreenshot';
+import { tools as REGISTERED_DATA_TOOLS } from '../../data/tools';
+import { 
+  type SecurityAlert, 
+  subscribeToSecurityAlerts, 
+  isSecurityAlertTrackingEnabled, 
+  dismissSecurityAlert, 
+  clearAllSecurityAlerts 
+} from '../../utils/securityAlerts';
+import { 
+  UserQuickStatusPicker, 
+  type UserStatusType, 
+  getResolvedUserStatus 
+} from '../../components/admin/UserQuickStatusPicker';
+import { AdminSecurityAlertsManager } from '../../components/admin/AdminSecurityAlertsManager';
+import { PROMO_HOURS_OPTIONS, PROMO_HOURLY_OPTIONS, getPromoHourMessage, getPromoHourLabel, PromoDurationHours } from '../../utils/promoConfig';
 
 const LayoutSelector = ({ value, onChange, activeColor = 'emerald' }: { value: string, onChange: (val: string) => void, activeColor?: string }) => {
   const isEmerald = activeColor.includes('emerald');
@@ -132,7 +150,7 @@ const LayoutSelector = ({ value, onChange, activeColor = 'emerald' }: { value: s
   );
 };
 
-type AdminTab = 'overview' | 'support' | 'users' | 'payments' | 'community' | 'features' | 'reciters' | 'ruqyah' | 'content' | 'notifications' | 'settings' | 'articles' | 'store' | 'grand_oaths' | 'categories' | 'seals' | 'book_covers' | 'media_storage';
+type AdminTab = 'overview' | 'promo_codes' | 'security' | 'support' | 'users' | 'payments' | 'community' | 'features' | 'reciters' | 'ruqyah' | 'content' | 'notifications' | 'settings' | 'articles' | 'store' | 'grand_oaths' | 'categories' | 'seals' | 'book_covers' | 'media_storage';
 
 interface Article {
   id: string;
@@ -169,6 +187,7 @@ interface User {
   photoURL?: string;
   role?: string;
   isBanned: boolean;
+  isSuspended?: boolean;
   mysteryToolsDisabled: boolean;
   allToolsDisabled?: boolean;
   isTrusted: boolean;
@@ -207,6 +226,33 @@ interface Notification {
   message: string;
   date: string;
 }
+
+export const SYSTEM_FEATURES = [
+  { id: 'anti_screenshot', label: "Protection Anti-Capture d'Écran", desc: "Bloque matériellement et logiciellement les captures d'écran, enregistrements vidéo et impressions sur Android et Web", category: 'system' },
+  { id: 'text_copy_protection', label: "Protection Anti-Copie de Texte", desc: "Empêche la sélection, le clic droit et la copie de texte non autorisée dans l'application", category: 'system' },
+  { id: 'alert_repeated_tool_access', label: "Alerte Tentatives Répétées d'Accès aux Outils Restreints", desc: "Détecte et alerte l'administrateur en temps réel lorsqu'un utilisateur tente d'accéder à plusieurs reprises à des outils bloqués, en maintenance ou réservés aux membres Premium", category: 'system' },
+  { id: 'inspector', label: 'Inspecteur de diagnostic', desc: 'Active ou désactive le bouton rouge Inspecteur / Débogueur de mise en page dans le coin inférieur droit', category: 'system' },
+  { id: 'quick_widget', label: 'Widget Rapide AsrarHub (AsrarQuickWidget)', desc: 'Widget de recherche rapide, favoris et raccourcis d\'exploration sur le tableau de bord (désactivé par défaut)', category: 'system' },
+  { id: 'explore', label: 'Explore', desc: 'Dashboard explorer (Secrets, Lexique, etc)', category: 'system' },
+  { id: 'store', label: 'Store (Boutique)', desc: 'Boutique en ligne', category: 'system' },
+  { id: 'community', label: 'Communauté', desc: 'Forum communautaire', category: 'system' },
+  { id: 'journal', label: 'Journal Intime', desc: 'Notes personnelles', category: 'system' },
+  { id: 'faq', label: 'FAQ / Assistant', desc: 'Assistant IA spirituel', category: 'system' },
+  { id: 'quizz', label: 'Quiz', desc: 'Test de connaissances', category: 'system' },
+  { id: 'lexique', label: 'Lexique', desc: 'Lexique des termes', category: 'system' },
+  { id: 'calendar', label: 'Calendrier Mystique (Hégirien)', desc: 'Contrôler l\'accès global : Actif, Premium, Maintenance, Inactif (Désactiver/Bloquer)', category: 'simple' },
+  { id: 'ruqyah', label: 'Module Ruqyah', desc: 'Accès aux versets de protection et guérison', category: 'simple' },
+];
+
+export const ALL_USER_TOOLS = [
+  ...SYSTEM_FEATURES,
+  ...REGISTERED_DATA_TOOLS.map(t => ({
+    id: t.id,
+    label: t.title,
+    desc: t.description,
+    category: t.level || 'advanced'
+  }))
+];
 
 export const AdminDashboard: React.FC = () => {
   const { language } = useLanguage();
@@ -385,10 +431,21 @@ export const AdminDashboard: React.FC = () => {
   // Users State
   const [users, setUsers] = useState<User[]>([]);
   const [userSearch, setUserSearch] = useState('');
+  const [userStatusFilter, setUserStatusFilter] = useState<'all' | 'active' | 'suspended' | 'premium' | 'banned' | 'alerted'>('all');
   const [usersLimit, setUsersLimit] = useState(50);
   const [rawDbUsers, setRawDbUsers] = useState<any[]>([]);
   const [restUsers, setRestUsers] = useState<any[]>([]);
   const restUsersRef = useRef<any[]>([]);
+
+  // Security Access Alerts State
+  const [securityAlerts, setSecurityAlerts] = useState<SecurityAlert[]>([]);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToSecurityAlerts((alerts) => {
+      setSecurityAlerts(alerts);
+    });
+    return () => unsubscribe();
+  }, []);
 
   // User Management Modals & Sync State
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
@@ -647,19 +704,36 @@ export const AdminDashboard: React.FC = () => {
   const [paymentsFilter, setPaymentsFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
 
   // Promo Codes State
-  const [promoCodes, setPromoCodes] = useState<any[]>([]);
+  const [promoCodes, setPromoCodes] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem('asrarhub_local_promo_codes');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
   const [storeProducts, setStoreProducts] = useState<any[]>([]);
+  const [selectedPromoForModal, setSelectedPromoForModal] = useState<any | null>(null);
+  const [promoFilter, setPromoFilter] = useState<'all' | 'hourly' | 'monthly' | 'discount' | 'store'>('all');
+  const [promoSearchQuery, setPromoSearchQuery] = useState('');
+  const [copiedPromoCode, setCopiedPromoCode] = useState<string | null>(null);
   const [newPromo, setNewPromo] = useState<any>({
     code: '',
-    type: 'discount',
+    type: 'unlock_subscription_hours',
+    durationHours: 2,
+    subscriptionMonths: 3,
     discountType: 'percent',
     discountValue: 0,
-    subscriptionMonths: 3,
     productId: '',
     maxUses: 100,
     expiryDate: '',
     isActive: true
   });
+  const [previewCelebration, setPreviewCelebration] = useState<{
+    isOpen: boolean;
+    promoCode?: string;
+    durationText?: string;
+  } | null>(null);
 
   // Ruqyah Audio State
   const [ruqyahAudios, setRuqyahAudios] = useState<RuqyahAudio[]>([]);
@@ -1123,7 +1197,13 @@ export const AdminDashboard: React.FC = () => {
       try {
         localStorage.setItem('asrarhub_local_promo_codes', JSON.stringify(list));
       } catch (e) {}
-    }, (error) => console.warn("Admin Promo Codes listener note:", error));
+    }, (error) => {
+      console.warn("Admin Promo Codes listener note (falling back to local):", error);
+      try {
+        const saved = localStorage.getItem('asrarhub_local_promo_codes');
+        if (saved) setPromoCodes(JSON.parse(saved));
+      } catch (e) {}
+    });
 
     const unsubscribeStoreProducts = onSnapshot(collection(db, 'store_products'), (snapshot) => {
       const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -1312,7 +1392,7 @@ export const AdminDashboard: React.FC = () => {
     if (!user) return;
     const newBanState = !user.isBanned;
 
-    const updatedUser = { ...user, isBanned: newBanState };
+    const updatedUser = { ...user, isBanned: newBanState, isSuspended: newBanState ? false : user.isSuspended };
     setUsers(prev => prev.map(u => u.id === id ? updatedUser : u));
     if (selectedUserDetail?.id === id) {
       setSelectedUserDetail(updatedUser);
@@ -1325,6 +1405,66 @@ export const AdminDashboard: React.FC = () => {
     } catch (error) {
       console.warn("Error updating user ban state in Firestore:", error);
       showToast(newBanState ? "Utilisateur banni (local)" : "Utilisateur débanni (local)", "info");
+    }
+  };
+
+  const handleSetUserStatus = async (userId: string, newStatus: UserStatusType) => {
+    const user = users.find(u => u.id === userId);
+    if (!user) return;
+
+    let payload: Record<string, any> = {};
+    if (newStatus === 'active') {
+      payload = {
+        isBanned: false,
+        isSuspended: false,
+        isPremium: false,
+        subscriptionTier: 'free',
+        mysteryToolsDisabled: false,
+        allToolsDisabled: false
+      };
+    } else if (newStatus === 'suspended') {
+      payload = {
+        isBanned: false,
+        isSuspended: true,
+        mysteryToolsDisabled: true,
+        allToolsDisabled: true
+      };
+    } else if (newStatus === 'premium') {
+      payload = {
+        isBanned: false,
+        isSuspended: false,
+        isPremium: true,
+        subscriptionTier: 'premium',
+        mysteryToolsDisabled: false,
+        allToolsDisabled: false
+      };
+    } else if (newStatus === 'banned') {
+      payload = {
+        isBanned: true,
+        isSuspended: false,
+        allToolsDisabled: true
+      };
+    }
+
+    const updatedUser = { ...user, ...payload } as User;
+    setUsers(prev => prev.map(u => u.id === userId ? updatedUser : u));
+    if (selectedUserDetail?.id === userId) {
+      setSelectedUserDetail(updatedUser);
+    }
+    masterDiscoveredMapRef.current.set(user.email ? user.email.toLowerCase().trim() : userId, updatedUser);
+
+    try {
+      await setDoc(doc(db, 'users', userId), payload, { merge: true });
+      const statusLabels: Record<UserStatusType, string> = {
+        active: '🟢 Actif',
+        suspended: '🟡 Suspendu',
+        premium: '👑 Premium',
+        banned: '🔴 Banni'
+      };
+      showToast(`Statut de ${user.name || user.email || 'l\'utilisateur'} mis à jour : ${statusLabels[newStatus]}`);
+    } catch (err) {
+      console.warn("Firestore user status update note:", err);
+      showToast(`Statut mis à jour localement`, "info");
     }
   };
 
@@ -1691,6 +1831,7 @@ export const AdminDashboard: React.FC = () => {
     setIsAddingUsers(true);
     try {
       let addedUsersList: any[] = [];
+      const defaultTier = featureToggles['new_user_premium_enabled'] !== false ? 'premium' : 'free';
       if (addUserMode === 'single') {
         if (!newUserData.email) {
           showToast("Veuillez saisir au moins une adresse email.", "error");
@@ -1710,7 +1851,7 @@ export const AdminDashboard: React.FC = () => {
           normalizedPhone: normPhone,
           country: newUserData.country.trim() || '',
           role: newUserData.role || 'user',
-          subscriptionTier: newUserData.subscriptionTier || 'premium',
+          subscriptionTier: newUserData.subscriptionTier || defaultTier,
           isBanned: false,
           isTrusted: true,
           createdAt: new Date().toISOString(),
@@ -1734,7 +1875,7 @@ export const AdminDashboard: React.FC = () => {
             normalizedEmail: normEmail,
             name: email.split('@')[0],
             role: 'user',
-            subscriptionTier: 'premium',
+            subscriptionTier: newUserData.subscriptionTier || defaultTier,
             isBanned: false,
             isTrusted: true,
             createdAt: new Date().toISOString(),
@@ -2443,6 +2584,8 @@ export const AdminDashboard: React.FC = () => {
   const renderTabNavigation = () => {
     const tabs = [
       { id: 'overview', label: 'Vue d\'ensemble', icon: LayoutDashboard },
+      { id: 'promo_codes', label: 'Gestion des Codes Promo', icon: Tag, badge: promoCodes.length || undefined },
+      { id: 'security', label: 'Sécurité & Alertes', icon: ShieldAlert, badge: securityAlerts.length || undefined },
       { id: 'support', label: 'Support & Emails', icon: Mail },
       { id: 'users', label: 'Utilisateurs', icon: Users },
       { id: 'payments', label: 'Paiements Directs', icon: CreditCard },
@@ -2475,7 +2618,7 @@ export const AdminDashboard: React.FC = () => {
           >
             {tabs.map((tab) => (
               <option key={tab.id} value={tab.id} className="font-medium text-gray-700 dark:text-gray-200">
-                {tab.label}
+                {tab.label} {tab.badge ? `(${tab.badge})` : ''}
               </option>
             ))}
           </select>
@@ -2487,14 +2630,21 @@ export const AdminDashboard: React.FC = () => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as AdminTab)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors ${
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors relative ${
                 activeTab === tab.id
                   ? 'bg-emerald-600 text-white shadow-md'
                   : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700'
               }`}
             >
               <tab.icon size={18} />
-              {tab.label}
+              <span>{tab.label}</span>
+              {tab.badge !== undefined && tab.badge > 0 && (
+                <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-full ${
+                  activeTab === tab.id ? 'bg-red-500 text-white' : 'bg-red-100 text-red-600 dark:bg-red-900/60 dark:text-red-300'
+                }`}>
+                  {tab.badge}
+                </span>
+              )}
             </button>
           ))}
         </div>
@@ -2760,23 +2910,44 @@ export const AdminDashboard: React.FC = () => {
 
   const renderUsers = () => {
     const query = userSearch.toLowerCase().trim();
-    const filteredUsers = users.filter(user => 
-      !query ||
-      (user.name || '').toLowerCase().includes(query) || 
-      (user.email || '').toLowerCase().includes(query) ||
-      (user.phone || '').toLowerCase().includes(query) ||
-      (user.country || '').toLowerCase().includes(query) ||
-      (user.id || '').toLowerCase().includes(query)
-    );
 
-    // When searching, display all matching search results. Otherwise slice by usersLimit.
-    const paginatedUsers = query ? filteredUsers : filteredUsers.slice(0, usersLimit);
+    // 1. Status Filter Calculations
+    const activeCount = users.filter(u => getResolvedUserStatus(u) === 'active').length;
+    const suspendedCount = users.filter(u => getResolvedUserStatus(u) === 'suspended').length;
+    const premiumCount = users.filter(u => getResolvedUserStatus(u) === 'premium').length;
+    const bannedCount = users.filter(u => getResolvedUserStatus(u) === 'banned').length;
+    const alertedCount = users.filter(u => securityAlerts.some(a => a.userId === u.id || a.userEmail === u.email)).length;
+
+    const filteredUsers = users.filter(user => {
+      const matchesQuery = 
+        !query ||
+        (user.name || '').toLowerCase().includes(query) || 
+        (user.email || '').toLowerCase().includes(query) ||
+        (user.phone || '').toLowerCase().includes(query) ||
+        (user.country || '').toLowerCase().includes(query) ||
+        (user.id || '').toLowerCase().includes(query);
+
+      if (!matchesQuery) return false;
+
+      const resolved = getResolvedUserStatus(user);
+      if (userStatusFilter === 'active') return resolved === 'active';
+      if (userStatusFilter === 'suspended') return resolved === 'suspended';
+      if (userStatusFilter === 'premium') return resolved === 'premium';
+      if (userStatusFilter === 'banned') return resolved === 'banned';
+      if (userStatusFilter === 'alerted') {
+        return securityAlerts.some(a => a.userId === user.id || a.userEmail === user.email);
+      }
+      return true;
+    });
+
+    // When searching or filtering, display matching results or slice by usersLimit
+    const paginatedUsers = (query || userStatusFilter !== 'all') ? filteredUsers : filteredUsers.slice(0, usersLimit);
     const isAllPaginatedSelected = paginatedUsers.length > 0 && paginatedUsers.every(u => selectedUserIds.includes(u.id));
 
     return (
       <div className="space-y-6">
-        {/* Résumé des statuts de notifications */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* Résumé des statuts des utilisateurs et configuration globale Premium */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/40 rounded-3xl p-5 flex items-center justify-between shadow-sm">
             <div>
               <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Notifications Activées</p>
@@ -2786,7 +2957,7 @@ export const AdminDashboard: React.FC = () => {
               <p className="text-xs text-emerald-500/80 mt-1">Utilisateurs recevant les rappels et annonces</p>
             </div>
             <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-2xl shrink-0">
-              <Bell size={28} />
+              <Bell size={26} />
             </div>
           </div>
           
@@ -2799,8 +2970,62 @@ export const AdminDashboard: React.FC = () => {
               <p className="text-xs text-amber-500/80 mt-1">Utilisateurs n'ayant pas activé le push</p>
             </div>
             <div className="p-3 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-2xl shrink-0">
-              <BellOff size={28} />
+              <BellOff size={26} />
             </div>
+          </div>
+
+          {/* Statut & Contrôle Rapide Premium Nouveaux Inscrits */}
+          <div className={`border rounded-3xl p-5 flex items-center justify-between shadow-sm transition-all ${
+            featureToggles['new_user_premium_enabled'] !== false
+              ? 'bg-gradient-to-br from-purple-50 to-amber-50 dark:from-purple-950/20 dark:to-amber-950/20 border-amber-200/70 dark:border-amber-900/40'
+              : 'bg-gray-50 dark:bg-gray-900/40 border-gray-200 dark:border-gray-800'
+          }`}>
+            <div className="pr-2 flex-1">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <p className="text-xs font-bold text-purple-700 dark:text-purple-400 uppercase tracking-wider">
+                  Premium Nouveaux Inscrits
+                </p>
+                <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-full ${
+                  featureToggles['new_user_premium_enabled'] !== false
+                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300'
+                    : 'bg-gray-200 text-gray-700 dark:bg-gray-800 dark:text-gray-400'
+                }`}>
+                  {featureToggles['new_user_premium_enabled'] !== false ? 'ACTIVÉ' : 'DÉSACTIVÉ'}
+                </span>
+              </div>
+              <p className="text-sm sm:text-base font-black text-gray-900 dark:text-white mt-1">
+                {featureToggles['new_user_premium_enabled'] !== false 
+                  ? `${featureToggles['trial_duration_hours'] !== undefined ? featureToggles['trial_duration_hours'] : 12}h d'essai VIP` 
+                  : 'Compte Gratuit'}
+              </p>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 line-clamp-1">
+                {featureToggles['new_user_premium_enabled'] !== false 
+                  ? 'Attribution automatique active' 
+                  : 'Nouveaux inscrits en compte standard'}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleToggleFeature('new_user_premium_enabled', featureToggles['new_user_premium_enabled'] === false ? true : false)}
+              className={`px-3 py-2 rounded-xl text-xs font-black shadow-sm transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
+                featureToggles['new_user_premium_enabled'] !== false
+                  ? 'bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 border border-red-200 dark:border-red-800/60'
+                  : 'bg-gradient-to-r from-amber-500 to-purple-600 hover:from-amber-400 hover:to-purple-500 text-white shadow-amber-500/20'
+              }`}
+              title="Cliquer pour activer ou désactiver le Premium pour les nouveaux utilisateurs"
+            >
+              {featureToggles['new_user_premium_enabled'] !== false ? (
+                <>
+                  <Lock size={13} />
+                  <span>Désactiver</span>
+                </>
+              ) : (
+                <>
+                  <Crown size={13} className="fill-white" />
+                  <span>Activer</span>
+                </>
+              )}
+            </button>
           </div>
         </div>
 
@@ -2811,7 +3036,7 @@ export const AdminDashboard: React.FC = () => {
                 <Users className="text-emerald-500" size={22} />
                 <span>Gestion des Utilisateurs & Comptes</span>
               </h3>
-              <p className="text-xs text-gray-500 mt-1">Total: {filteredUsers.length} utilisateur{filteredUsers.length > 1 ? 's' : ''} affiché{filteredUsers.length > 1 ? 's' : ''} sur {users.length} compte(s) agrégé(s) dans l'application</p>
+              <p className="text-xs text-gray-500 mt-1">Total: {filteredUsers.length} utilisateur{filteredUsers.length > 1 ? 's' : ''} affiché{filteredUsers.length > 1 ? 's' : ''} sur {users.length} compte(s) au total</p>
             </div>
 
             <div className="flex flex-wrap items-center gap-2.5">
@@ -2833,6 +3058,36 @@ export const AdminDashboard: React.FC = () => {
                 <span>➕ Inscrire / Ajouter Utilisateur</span>
               </button>
             </div>
+          </div>
+
+          {/* User Status Filter Pills */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-3 mb-4 scrollbar-none">
+            {[
+              { id: 'all', label: 'Tous', count: users.length, color: 'text-gray-700 dark:text-gray-200' },
+              { id: 'active', label: '🟢 Actifs', count: activeCount, color: 'text-emerald-600 dark:text-emerald-400' },
+              { id: 'suspended', label: '🟡 Suspendus', count: suspendedCount, color: 'text-amber-600 dark:text-amber-400' },
+              { id: 'premium', label: '👑 Premium', count: premiumCount, color: 'text-purple-600 dark:text-purple-400' },
+              { id: 'banned', label: '🔴 Bannis', count: bannedCount, color: 'text-red-600 dark:text-red-400' },
+              { id: 'alerted', label: '⚠️ Avec Alertes', count: alertedCount, color: 'text-rose-600 dark:text-rose-400' },
+            ].map(tab => (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => setUserStatusFilter(tab.id as any)}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${
+                  userStatusFilter === tab.id
+                    ? 'bg-emerald-600 text-white shadow-sm ring-2 ring-emerald-400/40'
+                    : 'bg-gray-100 dark:bg-gray-750 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                }`}
+              >
+                <span>{tab.label}</span>
+                <span className={`text-[10px] font-black px-1.5 py-0.2 rounded-full ${
+                  userStatusFilter === tab.id ? 'bg-white/20 text-white' : 'bg-white dark:bg-gray-800 text-gray-500'
+                }`}>
+                  {tab.count}
+                </span>
+              </button>
+            ))}
           </div>
 
           <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
@@ -2997,57 +3252,48 @@ export const AdminDashboard: React.FC = () => {
                     </div>
                   </div>
                 </div>
-                <div className="flex flex-wrap gap-2 shrink-0">
-                    <button
-                      onClick={() => {
-                        setSelectedUserDetail(user);
-                        setEditUserData({ ...user });
-                        setIsEditingUser(false);
-                      }}
-                      className="px-3.5 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 shrink-0 cursor-pointer"
-                      title="Voir tous les détails et gérer le profil de cet utilisateur"
-                    >
-                      <Eye size={14} />
-                      <span>Détails Complet</span>
-                    </button>
-                    <button
-                      onClick={() => handleToggleUserTrusted(user.id)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
-                        user.isTrusted 
-                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'
-                          : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-                      }`}
-                    >
-                      {user.isTrusted ? 'Retirer Confiance' : 'Confiance'}
-                    </button>
-                    <button
-                      onClick={() => handleToggleMysteryTools(user.id)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
-                        user.mysteryToolsDisabled 
-                          ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400'
-                          : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-                      }`}
-                    >
-                      {user.mysteryToolsDisabled ? 'Activer Outils' : 'Bloquer Outils'}
-                    </button>
-                    <button
-                      onClick={() => handleToggleUserBan(user.id)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
-                        user.isBanned 
-                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'
-                          : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400 hover:bg-red-200'
-                      }`}
-                    >
-                      {user.isBanned ? 'Débannir' : 'Bannir'}
-                    </button>
-                    <button
-                      onClick={() => handleDeleteUserAccount(user.id, user.email, user.name)}
-                      className="px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 dark:bg-red-950/30 dark:hover:bg-red-900/40 dark:text-red-400 rounded-xl text-xs font-semibold transition-colors flex items-center gap-1 cursor-pointer"
-                      title="Supprimer définitivement cet utilisateur"
-                    >
-                      <Trash2 size={13} />
-                      <span>Supprimer</span>
-                    </button>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 shrink-0">
+                    <UserQuickStatusPicker
+                      currentStatus={getResolvedUserStatus(user)}
+                      userId={user.id}
+                      userName={user.name || user.email}
+                      onStatusChange={handleSetUserStatus}
+                      size="sm"
+                      layout="segmented"
+                    />
+
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <button
+                        onClick={() => {
+                          setSelectedUserDetail(user);
+                          setEditUserData({ ...user });
+                          setIsEditingUser(false);
+                        }}
+                        className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1 cursor-pointer"
+                        title="Voir tous les détails et gérer le profil de cet utilisateur"
+                      >
+                        <Eye size={13} />
+                        <span>Détails</span>
+                      </button>
+                      <button
+                        onClick={() => handleToggleUserTrusted(user.id)}
+                        className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
+                          user.isTrusted 
+                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'
+                            : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
+                        }`}
+                        title="Basculer statut de confiance"
+                      >
+                        {user.isTrusted ? '⭐ Confiance' : 'Confiance'}
+                      </button>
+                      <button
+                        onClick={() => handleDeleteUserAccount(user.id, user.email, user.name)}
+                        className="p-1.5 bg-red-50 hover:bg-red-100 text-red-600 dark:bg-red-950/30 dark:hover:bg-red-900/40 dark:text-red-400 rounded-xl text-xs transition-colors flex items-center cursor-pointer"
+                        title="Supprimer définitivement cet utilisateur"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               );
@@ -3281,39 +3527,106 @@ export const AdminDashboard: React.FC = () => {
               Générateur & Gestion de Codes Promo
             </h3>
             <p className="text-xs text-gray-500 mt-1">
-              Créez des codes promotionnels pour réduire le coût des abonnements, débloquer directement un abonnement (3, 6, 12 mois), ou débloquer automatiquement un article spécifique de la boutique.
+              Créez des codes promotionnels pour un accès Premium temporaire (2, 4, 6, 8, 10, 12 heures) avec messages traduits (FR, EN, HA), des abonnements complets (3, 6, 12 mois), des réductions de prix ou le déblocage gratuit d'articles de la boutique.
             </p>
           </div>
 
           <form onSubmit={handleCreatePromoCode} className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8 bg-gray-50 dark:bg-gray-750 p-5 rounded-2xl border border-gray-100 dark:border-gray-700">
-            <div className="md:col-span-3">
-              <h4 className="text-xs uppercase font-bold text-gray-500 tracking-wider mb-2">Créer un nouveau code promo</h4>
+            <div className="md:col-span-3 flex items-center justify-between">
+              <h4 className="text-xs uppercase font-bold text-gray-500 tracking-wider">Créer un nouveau code promo</h4>
+              {newPromo.type === 'unlock_subscription_hours' && (
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2.5 py-1 rounded-lg border border-emerald-200/60 dark:border-emerald-800/40">
+                    👑 Premium par Heures (2h à 12h)
+                  </span>
+                </div>
+              )}
             </div>
 
             <div>
               <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Code Promo (Unique) *</label>
-              <input
-                type="text"
-                required
-                placeholder="Ex: ASRAR50, FREE3M"
-                value={newPromo.code}
-                onChange={(e) => setNewPromo({ ...newPromo, code: e.target.value })}
-                className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none"
-              />
+              <div className="relative">
+                <input
+                  type="text"
+                  required
+                  placeholder="Ex: PREM2H, ASRAR6H, VIP12H"
+                  value={newPromo.code}
+                  onChange={(e) => setNewPromo({ ...newPromo, code: e.target.value })}
+                  className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white uppercase font-mono font-bold focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none"
+                />
+              </div>
+              {newPromo.type === 'unlock_subscription_hours' && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  <button
+                    type="button"
+                    onClick={() => setNewPromo({ ...newPromo, code: `PREM${newPromo.durationHours || 2}H` })}
+                    className="text-[10px] font-bold px-2 py-1 bg-gray-200 dark:bg-gray-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 hover:text-emerald-700 dark:hover:text-emerald-300 text-gray-700 dark:text-gray-300 rounded-md transition-colors"
+                  >
+                    + PREM{newPromo.durationHours || 2}H
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const rand = Math.floor(1000 + Math.random() * 9000);
+                      setNewPromo({ ...newPromo, code: `ASRAR${newPromo.durationHours || 2}H-${rand}` });
+                    }}
+                    className="text-[10px] font-bold px-2 py-1 bg-gray-200 dark:bg-gray-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 hover:text-emerald-700 dark:hover:text-emerald-300 text-gray-700 dark:text-gray-300 rounded-md transition-colors"
+                  >
+                    + Code Aléatoire
+                  </button>
+                </div>
+              )}
             </div>
 
             <div>
               <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Type de Promo *</label>
               <select
                 value={newPromo.type}
-                onChange={(e) => setNewPromo({ ...newPromo, type: e.target.value })}
+                onChange={(e) => {
+                  const newType = e.target.value;
+                  let autoCode = newPromo.code;
+                  if (newType === 'unlock_subscription_hours' && !newPromo.code) {
+                    autoCode = `PREM${newPromo.durationHours || 2}H`;
+                  }
+                  setNewPromo({ ...newPromo, type: newType, code: autoCode });
+                }}
                 className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none"
               >
-                <option value="discount">Réduction de prix (Abonnement)</option>
-                <option value="unlock_subscription">Débloquer Inscription (3, 6, 12 mois)</option>
-                <option value="unlock_product">Débloquer un article de la Boutique</option>
+                <option value="unlock_subscription_hours">⏱️ Premium par Heures (2, 4, 6, 8, 10, 12 h)</option>
+                <option value="unlock_subscription">📅 Inscription Complète (3, 6, 12 mois)</option>
+                <option value="discount">💰 Réduction de prix (Abonnement)</option>
+                <option value="unlock_product">🎁 Débloquer un article de la Boutique</option>
               </select>
             </div>
+
+            {newPromo.type === 'unlock_subscription_hours' && (
+              <div className="md:col-span-1">
+                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Durée Premium en Heures *</label>
+                <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
+                  {([2, 4, 6, 8, 10, 12] as const).map((h) => {
+                    const isSelected = (newPromo.durationHours || 2) === h;
+                    return (
+                      <button
+                        key={h}
+                        type="button"
+                        onClick={() => {
+                          const updatedCode = newPromo.code.startsWith('PREM') && newPromo.code.endsWith('H') ? `PREM${h}H` : newPromo.code;
+                          setNewPromo({ ...newPromo, durationHours: h, code: updatedCode });
+                        }}
+                        className={`py-2.5 px-1.5 rounded-xl font-bold text-xs flex flex-col items-center justify-center transition-all border ${
+                          isSelected
+                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-md ring-2 ring-emerald-500/30'
+                            : 'bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-emerald-400'
+                        }`}
+                      >
+                        <span className="text-sm font-black">{h}h</span>
+                        <span className="text-[10px] opacity-80 font-medium">Heures</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             {newPromo.type === 'discount' && (
               <>
@@ -3351,6 +3664,7 @@ export const AdminDashboard: React.FC = () => {
                   onChange={(e) => setNewPromo({ ...newPromo, subscriptionMonths: Number(e.target.value) })}
                   className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none"
                 >
+                  <option value={1}>1 Mois</option>
                   <option value={3}>3 Mois</option>
                   <option value={6}>6 Mois</option>
                   <option value={12}>12 Mois</option>
@@ -3396,20 +3710,74 @@ export const AdminDashboard: React.FC = () => {
               />
             </div>
 
+            {/* Multilingual Message Preview Box for Hourly Promo */}
+            {newPromo.type === 'unlock_subscription_hours' && (
+              <div className="md:col-span-3 mt-2 p-4 bg-emerald-500/10 dark:bg-emerald-950/30 border border-emerald-500/20 dark:border-emerald-800/40 rounded-2xl">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Globe size={16} className="text-emerald-600 dark:text-emerald-400" />
+                    <span className="text-xs font-bold text-emerald-900 dark:text-emerald-300">
+                      Messages spécifiques traduits automatiquement ({newPromo.durationHours || 2} Heures)
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-bold bg-white dark:bg-gray-800 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-200 dark:border-emerald-700">
+                    FR • EN • HA
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="bg-white dark:bg-gray-900 p-3 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex flex-col">
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <span className="text-sm">🇫🇷</span>
+                      <span className="text-[11px] font-black uppercase text-gray-700 dark:text-gray-300">Français</span>
+                    </div>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 italic leading-relaxed flex-1">
+                      "{getPromoHourMessage(newPromo.durationHours || 2, 'fr')}"
+                    </p>
+                  </div>
+
+                  <div className="bg-white dark:bg-gray-900 p-3 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex flex-col">
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <span className="text-sm">🇬🇧</span>
+                      <span className="text-[11px] font-black uppercase text-gray-700 dark:text-gray-300">English</span>
+                    </div>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 italic leading-relaxed flex-1">
+                      "{getPromoHourMessage(newPromo.durationHours || 2, 'en')}"
+                    </p>
+                  </div>
+
+                  <div className="bg-white dark:bg-gray-900 p-3 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex flex-col">
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <span className="text-sm">🇳🇬</span>
+                      <span className="text-[11px] font-black uppercase text-gray-700 dark:text-gray-300">Hausa</span>
+                    </div>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 italic leading-relaxed flex-1">
+                      "{getPromoHourMessage(newPromo.durationHours || 2, 'ha')}"
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="md:col-span-3 flex justify-end pt-2">
               <button
                 type="submit"
-                className="py-3 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition-all flex items-center gap-2"
+                className="py-3 px-6 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition-all flex items-center gap-2 cursor-pointer"
               >
                 <Plus size={16} />
-                Enregistrer le code promo
+                Enregistrer le code promo ({newPromo.type === 'unlock_subscription_hours' ? `${newPromo.durationHours || 2}h` : newPromo.type})
               </button>
             </div>
           </form>
 
           {/* Liste des codes promos actifs */}
           <div className="space-y-4">
-            <h4 className="text-xs uppercase font-bold text-gray-500 tracking-wider">Codes Promos Existants ({promoCodes.length})</h4>
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs uppercase font-bold text-gray-500 tracking-wider">Codes Promos Existants ({promoCodes.length})</h4>
+              <span className="text-[11px] text-gray-500 dark:text-gray-400 font-medium">
+                Cliquez sur l'icône <Eye size={12} className="inline mx-0.5 text-emerald-500" /> pour voir les messages FR/EN/HA
+              </span>
+            </div>
             
             {promoCodes.length === 0 ? (
               <div className="text-center py-8 text-gray-500 border border-dashed rounded-2xl">
@@ -3432,7 +3800,12 @@ export const AdminDashboard: React.FC = () => {
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-750 text-xs sm:text-sm">
                     {promoCodes.map((promo) => {
                       let benefit = '';
-                      if (promo.type === 'discount') {
+                      const isHourly = promo.type === 'unlock_subscription_hours' || !!promo.durationHours;
+
+                      if (isHourly) {
+                        const h = promo.durationHours || 2;
+                        benefit = `👑 Premium ${h} Heures`;
+                      } else if (promo.type === 'discount') {
                         benefit = promo.discountType === 'percent' ? `-${promo.discountValue}%` : `-${promo.discountValue} ${featureToggles?.premium_currency || 'GHS'}`;
                       } else if (promo.type === 'unlock_subscription') {
                         benefit = `Abonnement ${promo.subscriptionMonths} Mois`;
@@ -3444,14 +3817,29 @@ export const AdminDashboard: React.FC = () => {
                       const isExpired = promo.expiryDate && Date.now() > promo.expiryDate;
 
                       return (
-                        <tr key={promo.code} className="text-gray-700 dark:text-gray-300">
-                          <td className="py-3 px-4 font-black text-gray-900 dark:text-white font-mono">{promo.code}</td>
+                        <tr key={promo.code} className="text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
+                          <td className="py-3 px-4 font-black text-gray-900 dark:text-white font-mono flex items-center gap-2">
+                            <span>{promo.code}</span>
+                            {isHourly && (
+                              <span className="text-[10px] font-bold bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300 px-1.5 py-0.5 rounded">
+                                {promo.durationHours || 2}h
+                              </span>
+                            )}
+                          </td>
                           <td className="py-3 px-4">
                             <span className="capitalize text-xs font-semibold px-2 py-1 rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300">
-                              {promo.type === 'discount' ? 'Réduction' : promo.type === 'unlock_subscription' ? 'Abonnement direct' : 'Article gratuit'}
+                              {isHourly 
+                                ? '⏱️ Pass Horaire' 
+                                : promo.type === 'discount' 
+                                  ? 'Réduction' 
+                                  : promo.type === 'unlock_subscription' 
+                                    ? 'Abonnement direct' 
+                                    : 'Article gratuit'}
                             </span>
                           </td>
-                          <td className="py-3 px-4 font-bold text-emerald-600 dark:text-emerald-400">{benefit}</td>
+                          <td className="py-3 px-4 font-bold text-emerald-600 dark:text-emerald-400">
+                            {benefit}
+                          </td>
                           <td className="py-3 px-4 font-mono">{promo.uses || 0} / {promo.maxUses || '∞'}</td>
                           <td className="py-3 px-4 text-xs">
                             {promo.expiryDate ? (
@@ -3473,13 +3861,23 @@ export const AdminDashboard: React.FC = () => {
                             </button>
                           </td>
                           <td className="py-3 px-4 text-right">
-                            <button
-                              onClick={() => handleDeletePromoCode(promo.code)}
-                              className="p-1.5 text-gray-400 hover:text-red-500 transition-colors rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600"
-                              title="Supprimer"
-                            >
-                              <Trash2 size={16} />
-                            </button>
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => setSelectedPromoForModal(promo)}
+                                className="p-1.5 text-emerald-600 hover:text-emerald-700 transition-colors rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
+                                title="Voir les messages traduits (FR, EN, HA)"
+                              >
+                                <Globe size={16} />
+                              </button>
+                              <button
+                                onClick={() => handleDeletePromoCode(promo.code)}
+                                className="p-1.5 text-gray-400 hover:text-red-500 transition-colors rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600"
+                                title="Supprimer"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -3490,6 +3888,854 @@ export const AdminDashboard: React.FC = () => {
             )}
           </div>
         </div>
+
+        {/* Modal Aperçu Messages Traduits Code Promo */}
+        {selectedPromoForModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <div className="bg-white dark:bg-gray-900 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl border border-gray-100 dark:border-gray-800 animate-in fade-in duration-200">
+              <div className="p-5 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center bg-gray-50 dark:bg-gray-800/50">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-xl bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400">
+                    <Sparkles size={20} />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-gray-900 dark:text-white text-base font-mono">
+                      Code : {selectedPromoForModal.code}
+                    </h3>
+                    <p className="text-xs text-gray-500">
+                      {selectedPromoForModal.durationHours 
+                        ? `👑 Pass Premium de ${selectedPromoForModal.durationHours} Heures`
+                        : selectedPromoForModal.type === 'unlock_subscription'
+                          ? `📅 Abonnement direct ${selectedPromoForModal.subscriptionMonths} mois`
+                          : 'Code promotionnel AsrarHub'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedPromoForModal(null)}
+                  className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-500 transition-colors"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+                <div className="p-3 bg-gray-50 dark:bg-gray-800/40 rounded-xl border border-gray-200 dark:border-gray-700 flex items-center justify-between text-xs">
+                  <span className="text-gray-500 font-medium">Type d'avantage</span>
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                    {selectedPromoForModal.durationHours 
+                      ? `Accès Illimité ${selectedPromoForModal.durationHours} Heures`
+                      : selectedPromoForModal.type}
+                  </span>
+                </div>
+
+                <div className="space-y-3">
+                  <h4 className="text-xs uppercase font-bold text-gray-500 tracking-wider">
+                    Messages affichés à l'utilisateur lors de l'activation :
+                  </h4>
+
+                  {/* FR */}
+                  <div className="p-4 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/40 rounded-2xl">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-base">🇫🇷</span>
+                        <span className="text-xs font-bold text-emerald-900 dark:text-emerald-300">Français</span>
+                      </div>
+                      <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/50 px-2 py-0.5 rounded-full">
+                        {getPromoHourLabel(selectedPromoForModal.durationHours || 2, 'fr')}
+                      </span>
+                    </div>
+                    <p className="text-xs text-emerald-950 dark:text-emerald-200 leading-relaxed font-medium">
+                      {getPromoHourMessage(selectedPromoForModal.durationHours || 2, 'fr')}
+                    </p>
+                  </div>
+
+                  {/* EN */}
+                  <div className="p-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/40 rounded-2xl">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-base">🇬🇧</span>
+                        <span className="text-xs font-bold text-blue-900 dark:text-blue-300">English</span>
+                      </div>
+                      <span className="text-[10px] font-bold text-blue-700 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/50 px-2 py-0.5 rounded-full">
+                        {getPromoHourLabel(selectedPromoForModal.durationHours || 2, 'en')}
+                      </span>
+                    </div>
+                    <p className="text-xs text-blue-950 dark:text-blue-200 leading-relaxed font-medium">
+                      {getPromoHourMessage(selectedPromoForModal.durationHours || 2, 'en')}
+                    </p>
+                  </div>
+
+                  {/* HA */}
+                  <div className="p-4 bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 rounded-2xl">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-base">🇳🇬</span>
+                        <span className="text-xs font-bold text-amber-900 dark:text-amber-300">Hausa</span>
+                      </div>
+                      <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/50 px-2 py-0.5 rounded-full">
+                        {getPromoHourLabel(selectedPromoForModal.durationHours || 2, 'ha')}
+                      </span>
+                    </div>
+                    <p className="text-xs text-amber-950 dark:text-amber-200 leading-relaxed font-medium">
+                      {getPromoHourMessage(selectedPromoForModal.durationHours || 2, 'ha')}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setSelectedPromoForModal(null)}
+                  className="px-5 py-2.5 rounded-xl bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 text-xs font-bold transition-colors"
+                >
+                  Fermer
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const renderPromoCodesTab = () => {
+    const isHourly = newPromo.type === 'unlock_subscription_hours';
+    const hourlyCodes = promoCodes.filter(p => p.type === 'unlock_subscription_hours' || p.durationHours);
+    const subscriptionCodes = promoCodes.filter(p => p.type === 'unlock_subscription' && !p.durationHours);
+    const discountCodes = promoCodes.filter(p => p.type === 'discount');
+    const productCodes = promoCodes.filter(p => p.type === 'unlock_product');
+    const totalUses = promoCodes.reduce((sum, p) => sum + (Number(p.uses) || 0), 0);
+
+    const filteredCodes = promoCodes.filter(p => {
+      if (promoFilter === 'hourly' && !(p.type === 'unlock_subscription_hours' || p.durationHours)) return false;
+      if (promoFilter === 'monthly' && !(p.type === 'unlock_subscription' && !p.durationHours)) return false;
+      if (promoFilter === 'discount' && p.type !== 'discount') return false;
+      if (promoFilter === 'store' && p.type !== 'unlock_product') return false;
+
+      if (promoSearchQuery.trim()) {
+        const q = promoSearchQuery.toLowerCase().trim();
+        return (p.code || '').toLowerCase().includes(q) || 
+               (p.type || '').toLowerCase().includes(q) ||
+               (p.durationHours ? `${p.durationHours}h`.includes(q) : false);
+      }
+      return true;
+    });
+
+    const quickSelectHours = (h: number) => {
+      const randSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+      setNewPromo({
+        ...newPromo,
+        type: 'unlock_subscription_hours',
+        durationHours: h,
+        code: `PREM${h}H-${randSuffix}`
+      });
+    };
+
+    const handleCopyCode = (code: string) => {
+      navigator.clipboard.writeText(code);
+      setCopiedPromoCode(code);
+      showToast(`Code ${code} copié dans le presse-papier !`, "success");
+      setTimeout(() => {
+        setCopiedPromoCode(prev => prev === code ? null : prev);
+      }, 2000);
+    };
+
+    return (
+      <div className="space-y-6">
+        {/* Header & Stats */}
+        <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-gray-100 dark:border-gray-700 pb-5 mb-6">
+            <div>
+              <h2 className="font-bold text-gray-900 dark:text-white text-xl sm:text-2xl flex items-center gap-2.5">
+                <div className="p-2.5 bg-amber-500/10 text-amber-500 rounded-2xl">
+                  <Tag size={24} />
+                </div>
+                Gestion des Codes Promo
+              </h2>
+              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
+                Générez des codes pour un accès Premium temporaire (2h, 4h, 6h, 8h, 10h, 12h) avec messages traduits (FR, EN, HA), des abonnements, réductions ou articles gratuits.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/40 text-xs font-bold">
+                <Sparkles size={14} className="text-amber-500" />
+                {promoCodes.length} Codes au total
+              </span>
+            </div>
+          </div>
+
+          {/* Stats Badges */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="p-4 rounded-2xl bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/50 dark:border-amber-900/30">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-amber-800 dark:text-amber-300 uppercase">Pass Horaires (2-12h)</span>
+                <Clock size={16} className="text-amber-600 dark:text-amber-400" />
+              </div>
+              <p className="text-xl sm:text-2xl font-black text-amber-950 dark:text-amber-100 mt-1">{hourlyCodes.length}</p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/50 dark:border-emerald-900/30">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-emerald-800 dark:text-emerald-300 uppercase">Abonnements (Mois)</span>
+                <Crown size={16} className="text-emerald-600 dark:text-emerald-400" />
+              </div>
+              <p className="text-xl sm:text-2xl font-black text-emerald-950 dark:text-emerald-100 mt-1">{subscriptionCodes.length}</p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200/50 dark:border-indigo-900/30">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-indigo-800 dark:text-indigo-300 uppercase">Réductions %</span>
+                <Tag size={16} className="text-indigo-600 dark:text-indigo-400" />
+              </div>
+              <p className="text-xl sm:text-2xl font-black text-indigo-950 dark:text-indigo-100 mt-1">{discountCodes.length}</p>
+            </div>
+
+            <div className="p-4 rounded-2xl bg-purple-50/50 dark:bg-purple-950/20 border border-purple-200/50 dark:border-purple-900/30">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-purple-800 dark:text-purple-300 uppercase">Utilisations Totales</span>
+                <Activity size={16} className="text-purple-600 dark:text-purple-400" />
+              </div>
+              <p className="text-xl sm:text-2xl font-black text-purple-950 dark:text-purple-100 mt-1">{totalUses}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Formulaire de création */}
+        <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 dark:border-gray-700 pb-4 mb-6">
+            <h3 className="font-bold text-gray-900 dark:text-white text-base sm:text-lg flex items-center gap-2">
+              <Plus size={20} className="text-emerald-500" />
+              Créer un nouveau code promo
+            </h3>
+            {/* Quick Generator Buttons */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => setPreviewCelebration({
+                  isOpen: true,
+                  promoCode: 'ASRAR2026',
+                  durationText: '3 Mois d\'accès VIP'
+                })}
+                className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-purple-600 hover:from-amber-400 hover:to-purple-500 text-white font-bold text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <Crown size={14} className="fill-white" />
+                <span>Tester Animation Célébration VIP</span>
+              </button>
+              <div className="h-4 w-px bg-gray-200 dark:bg-gray-700 mx-1 hidden sm:block" />
+              <span className="text-[10px] font-bold uppercase text-gray-400 mr-1">Raccourcis :</span>
+              {PROMO_HOURS_OPTIONS.map(h => (
+                <button
+                  key={h}
+                  type="button"
+                  onClick={() => quickSelectHours(h)}
+                  className="px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/50 border border-amber-200 dark:border-amber-800 text-[11px] font-bold text-amber-800 dark:text-amber-300 transition-colors cursor-pointer"
+                >
+                  ⚡ {h}h
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <form onSubmit={handleCreatePromoCode} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Type de Code */}
+              <div>
+                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
+                  Type d'avantage *
+                </label>
+                <select
+                  value={newPromo.type}
+                  onChange={(e) => {
+                    const newType = e.target.value;
+                    setNewPromo({
+                      ...newPromo,
+                      type: newType,
+                      durationHours: newType === 'unlock_subscription_hours' ? (newPromo.durationHours || 2) : newPromo.durationHours
+                    });
+                  }}
+                  className="w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-3 text-xs font-semibold text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500"
+                >
+                  <option value="unlock_subscription_hours">⏱️ Accès Premium temporaire par Heures (2, 4, 6, 8, 10, 12h)</option>
+                  <option value="unlock_subscription">👑 Abonnement Complet (Mois)</option>
+                  <option value="discount">💰 Réduction sur le Prix</option>
+                  <option value="unlock_product">🎁 Déblocage d'un Article Boutique</option>
+                </select>
+              </div>
+
+              {/* Code Input */}
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300">
+                    Code Promo (Unique) *
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const prefix = isHourly ? `PREM${newPromo.durationHours || 2}H` : 'ASRAR';
+                      const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
+                      setNewPromo({ ...newPromo, code: `${prefix}-${rand}` });
+                    }}
+                    className="text-[11px] text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 font-bold hover:underline"
+                  >
+                    🎲 Générer
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  required
+                  placeholder="Ex: PREM2H, ASRAR6H, VIP12H"
+                  value={newPromo.code}
+                  onChange={(e) => setNewPromo({ ...newPromo, code: e.target.value.toUpperCase() })}
+                  className="w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-3 text-xs font-mono font-bold tracking-wider text-gray-900 dark:text-white uppercase outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              {/* Paramètres selon le type */}
+              {isHourly && (
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
+                    Durée d'accès (Heures) *
+                  </label>
+                  <div className="grid grid-cols-6 gap-1">
+                    {PROMO_HOURS_OPTIONS.map((hours) => (
+                      <button
+                        key={hours}
+                        type="button"
+                        onClick={() => setNewPromo({ ...newPromo, durationHours: hours })}
+                        className={`py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
+                          Number(newPromo.durationHours || 2) === hours
+                            ? 'bg-amber-500 text-white shadow-md scale-105 ring-2 ring-amber-400 ring-offset-1'
+                            : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                        }`}
+                      >
+                        {hours}h
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {newPromo.type === 'unlock_subscription' && (
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
+                    Durée de l'Abonnement *
+                  </label>
+                  <select
+                    value={newPromo.subscriptionMonths}
+                    onChange={(e) => setNewPromo({ ...newPromo, subscriptionMonths: Number(e.target.value) })}
+                    className="w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-3 text-xs font-semibold text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500"
+                  >
+                    <option value={1}>1 Mois d'accès complet</option>
+                    <option value={3}>3 Mois d'accès complet</option>
+                    <option value={6}>6 Mois d'accès complet</option>
+                    <option value={12}>12 Mois d'accès complet (1 An)</option>
+                  </select>
+                </div>
+              )}
+
+              {newPromo.type === 'discount' && (
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
+                    Valeur de la réduction *
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      required
+                      min={1}
+                      max={newPromo.discountType === 'percent' ? 100 : 1000000}
+                      value={newPromo.discountValue}
+                      onChange={(e) => setNewPromo({ ...newPromo, discountValue: Number(e.target.value) })}
+                      className="w-2/3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-3 text-xs font-semibold text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500"
+                    />
+                    <select
+                      value={newPromo.discountType}
+                      onChange={(e) => setNewPromo({ ...newPromo, discountType: e.target.value })}
+                      className="w-1/3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-3 text-xs font-semibold text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500"
+                    >
+                      <option value="percent">%</option>
+                      <option value="fixed">FCFA</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+
+              {newPromo.type === 'unlock_product' && (
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
+                    Article de la boutique *
+                  </label>
+                  <select
+                    value={newPromo.productId}
+                    onChange={(e) => setNewPromo({ ...newPromo, productId: e.target.value })}
+                    required
+                    className="w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-3 text-xs font-semibold text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500"
+                  >
+                    <option value="">Sélectionner un article</option>
+                    {storeProducts.map(p => (
+                      <option key={p.id} value={p.id}>{p.title || p.name} ({p.price} FCFA)</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
+            {/* Trilingual Message Preview (Only if Hourly Pass) */}
+            {isHourly && (
+              <div className="bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-900/40 rounded-2xl p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <Globe size={16} className="text-amber-600 dark:text-amber-400" />
+                    <h5 className="text-xs font-bold uppercase tracking-wider text-amber-900 dark:text-amber-200">
+                      Aperçu des messages de succès traduits ({newPromo.durationHours || 2} heures)
+                    </h5>
+                  </div>
+                  <span className="text-[10px] font-semibold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/50 px-2 py-0.5 rounded-md">
+                    Affichés automatiquement à l'utilisateur selon sa langue
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {/* FR */}
+                  <div className="bg-white dark:bg-gray-800 p-3.5 rounded-xl border border-amber-100 dark:border-amber-900/30">
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <span className="text-sm">🇫🇷</span>
+                      <span className="text-[11px] font-bold text-gray-700 dark:text-gray-300">Français</span>
+                    </div>
+                    <p className="text-[11px] text-gray-600 dark:text-gray-300 leading-relaxed italic">
+                      "{getPromoHourMessage(Number(newPromo.durationHours || 2), 'fr')}"
+                    </p>
+                  </div>
+
+                  {/* EN */}
+                  <div className="bg-white dark:bg-gray-800 p-3.5 rounded-xl border border-amber-100 dark:border-amber-900/30">
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <span className="text-sm">🇬🇧</span>
+                      <span className="text-[11px] font-bold text-gray-700 dark:text-gray-300">English</span>
+                    </div>
+                    <p className="text-[11px] text-gray-600 dark:text-gray-300 leading-relaxed italic">
+                      "{getPromoHourMessage(Number(newPromo.durationHours || 2), 'en')}"
+                    </p>
+                  </div>
+
+                  {/* HA */}
+                  <div className="bg-white dark:bg-gray-800 p-3.5 rounded-xl border border-amber-100 dark:border-amber-900/30">
+                    <div className="flex items-center gap-1.5 mb-1.5">
+                      <span className="text-sm">🇳🇬</span>
+                      <span className="text-[11px] font-bold text-gray-700 dark:text-gray-300">Hausa</span>
+                    </div>
+                    <p className="text-[11px] text-gray-600 dark:text-gray-300 leading-relaxed italic">
+                      "{getPromoHourMessage(Number(newPromo.durationHours || 2), 'ha')}"
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Utilisation max, Expiration & Bouton */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+              <div>
+                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
+                  Utilisations Maximales (Vide = Illimité)
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  placeholder="Ex: 50, 100"
+                  value={newPromo.maxUses || ''}
+                  onChange={(e) => setNewPromo({ ...newPromo, maxUses: e.target.value ? Number(e.target.value) : '' })}
+                  className="w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-3 text-xs font-semibold text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
+                  Date d'expiration (Optionnel)
+                </label>
+                <input
+                  type="date"
+                  value={newPromo.expiryDate}
+                  onChange={(e) => setNewPromo({ ...newPromo, expiryDate: e.target.value })}
+                  className="w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-3 text-xs font-semibold text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              <div className="flex items-end">
+                <button
+                  type="submit"
+                  className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Plus size={16} />
+                  Enregistrer le Code Promo
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+
+        {/* Liste des codes promo existants */}
+        <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-gray-100 dark:border-gray-700 pb-4 mb-6">
+            <div>
+              <h3 className="font-bold text-gray-900 dark:text-white text-base sm:text-lg flex items-center gap-2">
+                <Ticket size={20} className="text-amber-500" />
+                Codes Promo Actifs & Historique ({filteredCodes.length})
+              </h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                Consultez, copiez, activez/désactivez ou supprimez les codes promotionnels existants.
+              </p>
+            </div>
+
+            {/* Search Input */}
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={14} />
+              <input
+                type="text"
+                placeholder="Rechercher un code..."
+                value={promoSearchQuery}
+                onChange={(e) => setPromoSearchQuery(e.target.value)}
+                className="w-full pl-8 pr-4 py-2 bg-gray-50 dark:bg-gray-700/50 border border-gray-200 dark:border-gray-600 rounded-xl text-xs text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+              {promoSearchQuery && (
+                <button
+                  onClick={() => setPromoSearchQuery('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Filter Pills */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-3 mb-4 hide-scrollbar">
+            <button
+              onClick={() => setPromoFilter('all')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-colors ${
+                promoFilter === 'all'
+                  ? 'bg-gray-900 dark:bg-white text-white dark:text-gray-900'
+                  : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`}
+            >
+              Tous ({promoCodes.length})
+            </button>
+            <button
+              onClick={() => setPromoFilter('hourly')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-colors flex items-center gap-1.5 ${
+                promoFilter === 'hourly'
+                  ? 'bg-amber-500 text-white'
+                  : 'bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-300 hover:bg-amber-100'
+              }`}
+            >
+              ⏱️ Pass Horaires (2-12h) ({hourlyCodes.length})
+            </button>
+            <button
+              onClick={() => setPromoFilter('monthly')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-colors flex items-center gap-1.5 ${
+                promoFilter === 'monthly'
+                  ? 'bg-emerald-600 text-white'
+                  : 'bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100'
+              }`}
+            >
+              👑 Abonnements ({subscriptionCodes.length})
+            </button>
+            <button
+              onClick={() => setPromoFilter('discount')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-colors flex items-center gap-1.5 ${
+                promoFilter === 'discount'
+                  ? 'bg-indigo-600 text-white'
+                  : 'bg-indigo-50 dark:bg-indigo-950/30 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100'
+              }`}
+            >
+              💰 Réductions ({discountCodes.length})
+            </button>
+            <button
+              onClick={() => setPromoFilter('store')}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-colors flex items-center gap-1.5 ${
+                promoFilter === 'store'
+                  ? 'bg-purple-600 text-white'
+                  : 'bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-300 hover:bg-purple-100'
+              }`}
+            >
+              🎁 Boutique ({productCodes.length})
+            </button>
+          </div>
+
+          {/* Table / List */}
+          {filteredCodes.length === 0 ? (
+            <div className="text-center py-12 text-gray-400">
+              <Ticket size={40} className="mx-auto mb-3 opacity-30" />
+              <p className="text-sm font-semibold">Aucun code promo trouvé</p>
+              <p className="text-xs text-gray-500 mt-1">Créez votre premier code ci-dessus ou modifiez vos filtres.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-gray-100 dark:border-gray-700 text-[11px] uppercase font-bold text-gray-400">
+                    <th className="pb-3 px-2">Code</th>
+                    <th className="pb-3 px-2">Type / Durée</th>
+                    <th className="pb-3 px-2">Avantage</th>
+                    <th className="pb-3 px-2">Utilisations</th>
+                    <th className="pb-3 px-2">Expiration</th>
+                    <th className="pb-3 px-2">Statut</th>
+                    <th className="pb-3 px-2 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-750">
+                  {filteredCodes.map((promo) => {
+                    const isCodeHourly = promo.type === 'unlock_subscription_hours' || promo.durationHours;
+                    const hoursVal = promo.durationHours || 2;
+                    const isExpired = promo.expiryDate && Date.now() > promo.expiryDate;
+                    const isMaxedOut = promo.maxUses && (Number(promo.uses) || 0) >= Number(promo.maxUses);
+
+                    return (
+                      <tr key={promo.id || promo.code} className="hover:bg-gray-50/60 dark:hover:bg-gray-750/50 transition-colors">
+                        {/* Code */}
+                        <td className="py-3 px-2">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono font-bold text-gray-900 dark:text-white bg-gray-100 dark:bg-gray-700 px-2.5 py-1 rounded-lg border border-gray-200/60 dark:border-gray-600/60">
+                              {promo.code}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleCopyCode(promo.code)}
+                              title="Copier le code"
+                              className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors cursor-pointer"
+                            >
+                              {copiedPromoCode === promo.code ? (
+                                <Check size={14} className="text-emerald-500" />
+                              ) : (
+                                <Copy size={14} />
+                              )}
+                            </button>
+                          </div>
+                        </td>
+
+                        {/* Type / Duration Badge */}
+                        <td className="py-3 px-2">
+                          {isCodeHourly ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-black bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200/60 dark:border-amber-800/40">
+                              <Clock size={12} />
+                              Pass {hoursVal}h
+                            </span>
+                          ) : promo.type === 'unlock_subscription' ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-black bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/40">
+                              <Crown size={12} />
+                              {promo.subscriptionMonths || 3} Mois
+                            </span>
+                          ) : promo.type === 'discount' ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-black bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/40">
+                              <Tag size={12} />
+                              Réduction
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[11px] font-black bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200/60 dark:border-purple-800/40">
+                              <ShoppingBag size={12} />
+                              Boutique
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Avantage */}
+                        <td className="py-3 px-2 font-medium text-gray-700 dark:text-gray-300">
+                          {isCodeHourly ? (
+                            <span className="text-amber-800 dark:text-amber-300 font-semibold">
+                              👑 Accès Premium complet pendant {hoursVal} heures
+                            </span>
+                          ) : promo.type === 'unlock_subscription' ? (
+                            <span className="text-emerald-800 dark:text-emerald-300 font-semibold">
+                              👑 Abonnement Premium {promo.subscriptionMonths || 3} Mois
+                            </span>
+                          ) : promo.type === 'discount' ? (
+                            <span>
+                              {promo.discountType === 'percent' ? `-${promo.discountValue}%` : `-${promo.discountValue} FCFA`} sur le prix
+                            </span>
+                          ) : (
+                            <span>
+                              Article gratuit : {promo.productId || 'Produit'}
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Utilisations */}
+                        <td className="py-3 px-2">
+                          <span className="font-bold text-gray-900 dark:text-white">
+                            {promo.uses || 0}
+                          </span>
+                          <span className="text-gray-400">
+                            /{promo.maxUses ? promo.maxUses : '∞'}
+                          </span>
+                        </td>
+
+                        {/* Expiration */}
+                        <td className="py-3 px-2 text-gray-500">
+                          {promo.expiryDate ? (
+                            <span className={isExpired ? 'text-red-500 font-bold' : ''}>
+                              {new Date(promo.expiryDate).toLocaleDateString('fr-FR')}
+                              {isExpired && ' (Expiré)'}
+                            </span>
+                          ) : (
+                            <span className="text-gray-400">Jamais</span>
+                          )}
+                        </td>
+
+                        {/* Statut Toggle */}
+                        <td className="py-3 px-2">
+                          <button
+                            type="button"
+                            onClick={() => handleTogglePromoCodeActive(promo.code || promo.id, promo.isActive !== false)}
+                            className={`px-2.5 py-1 rounded-full text-[10px] font-bold transition-all cursor-pointer ${
+                              isExpired || isMaxedOut
+                                ? 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400 cursor-not-allowed'
+                                : promo.isActive !== false
+                                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 hover:bg-emerald-200'
+                                : 'bg-red-100 text-red-600 dark:bg-red-950/50 dark:text-red-300 hover:bg-red-200'
+                            }`}
+                          >
+                            {isExpired ? 'Expiré' : isMaxedOut ? 'Épuisé' : promo.isActive !== false ? 'Actif' : 'Inactif'}
+                          </button>
+                        </td>
+
+                        {/* Actions */}
+                        <td className="py-3 px-2 text-right">
+                          <div className="flex items-center justify-end gap-1.5">
+                            {isCodeHourly && (
+                              <button
+                                type="button"
+                                onClick={() => setSelectedPromoForModal(promo)}
+                                title="Voir les messages traduits (FR, EN, HA)"
+                                className="p-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/60 transition-colors cursor-pointer"
+                              >
+                                <Globe size={14} />
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleDeletePromoCode(promo.code || promo.id)}
+                              title="Supprimer ce code promo"
+                              className="p-1.5 rounded-lg bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/60 transition-colors cursor-pointer"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Modal de visualisation des messages traduits */}
+        {selectedPromoForModal && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
+            <div className="bg-white dark:bg-gray-800 rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-gray-100 dark:border-gray-700 space-y-4">
+              <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 bg-amber-500/10 text-amber-500 rounded-xl">
+                    <Globe size={20} />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-gray-900 dark:text-white text-base">
+                      Messages de confirmation traduits
+                    </h4>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Code : <span className="font-mono font-bold text-amber-600">{selectedPromoForModal.code}</span> ({selectedPromoForModal.durationHours || 2} heures)
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedPromoForModal(null)}
+                  className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="space-y-3 pt-1">
+                {/* Français */}
+                <div className="p-3.5 bg-gray-50 dark:bg-gray-750 rounded-2xl border border-gray-100 dark:border-gray-700">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                      <span>🇫🇷</span> Français (FR)
+                    </span>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(getPromoHourMessage(selectedPromoForModal.durationHours || 2, 'fr'));
+                        showToast("Message en Français copié !");
+                      }}
+                      className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold hover:underline"
+                    >
+                      Copier
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-800 dark:text-gray-200 leading-relaxed font-medium">
+                    {getPromoHourMessage(selectedPromoForModal.durationHours || 2, 'fr')}
+                  </p>
+                </div>
+
+                {/* English */}
+                <div className="p-3.5 bg-blue-50/50 dark:bg-blue-950/20 rounded-2xl border border-blue-100 dark:border-blue-900/30">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs font-bold text-blue-900 dark:text-blue-300 flex items-center gap-1.5">
+                      <span>🇬🇧</span> English (EN)
+                    </span>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(getPromoHourMessage(selectedPromoForModal.durationHours || 2, 'en'));
+                        showToast("Message en Anglais copié !");
+                      }}
+                      className="text-[10px] text-blue-600 dark:text-blue-400 font-bold hover:underline"
+                    >
+                      Copier
+                    </button>
+                  </div>
+                  <p className="text-xs text-blue-950 dark:text-blue-200 leading-relaxed font-medium">
+                    {getPromoHourMessage(selectedPromoForModal.durationHours || 2, 'en')}
+                  </p>
+                </div>
+
+                {/* Hausa */}
+                <div className="p-3.5 bg-amber-50/50 dark:bg-amber-950/20 rounded-2xl border border-amber-100 dark:border-amber-900/30">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="text-xs font-bold text-amber-900 dark:text-amber-300 flex items-center gap-1.5">
+                      <span>🇳🇬</span> Hausa (HA)
+                    </span>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(getPromoHourMessage(selectedPromoForModal.durationHours || 2, 'ha'));
+                        showToast("Message en Haoussa copié !");
+                      }}
+                      className="text-[10px] text-amber-600 dark:text-amber-400 font-bold hover:underline"
+                    >
+                      Copier
+                    </button>
+                  </div>
+                  <p className="text-xs text-amber-950 dark:text-amber-200 leading-relaxed font-medium">
+                    {getPromoHourMessage(selectedPromoForModal.durationHours || 2, 'ha')}
+                  </p>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-gray-100 dark:border-gray-800 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => setSelectedPromoForModal(null)}
+                  className="px-5 py-2.5 rounded-xl bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 text-xs font-bold transition-colors cursor-pointer"
+                >
+                  Fermer
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   };
@@ -3677,13 +4923,17 @@ export const AdminDashboard: React.FC = () => {
         const d = new Date(newPromo.expiryDate + 'T23:59:59.999');
         expiryTimestamp = isNaN(d.getTime()) ? new Date(newPromo.expiryDate).getTime() : d.getTime();
       }
+
+      const isHourly = newPromo.type === 'unlock_subscription_hours';
+      const durationHours = isHourly ? Number(newPromo.durationHours || 2) : (newPromo.durationHours ? Number(newPromo.durationHours) : null);
       
       const promoData = {
         code: codeUpper,
         type: newPromo.type,
+        durationHours: durationHours,
+        subscriptionMonths: newPromo.type === 'unlock_subscription' ? Number(newPromo.subscriptionMonths || 3) : null,
         discountType: newPromo.type === 'discount' ? newPromo.discountType : null,
         discountValue: newPromo.type === 'discount' ? Number(newPromo.discountValue) : 0,
-        subscriptionMonths: newPromo.type === 'unlock_subscription' ? Number(newPromo.subscriptionMonths) : null,
         productId: newPromo.type === 'unlock_product' ? newPromo.productId : null,
         maxUses: newPromo.maxUses ? Number(newPromo.maxUses) : null,
         uses: 0,
@@ -3692,13 +4942,17 @@ export const AdminDashboard: React.FC = () => {
         createdAt: Date.now()
       };
 
-      await setDoc(doc(db, 'promo_codes', codeUpper), promoData);
+      // 1. Immediately update local state
+      setPromoCodes(prev => {
+        const filtered = prev.filter((p: any) => (p.code || p.id || '').toUpperCase() !== codeUpper);
+        return [{ id: codeUpper, ...promoData }, ...filtered];
+      });
 
-      // Save locally as immediate cache
+      // 2. Immediately persist to localStorage
       try {
         const existing = JSON.parse(localStorage.getItem('asrarhub_local_promo_codes') || '[]');
         const filtered = existing.filter((p: any) => (p.code || p.id || '').toUpperCase() !== codeUpper);
-        filtered.push({ id: codeUpper, ...promoData });
+        filtered.unshift({ id: codeUpper, ...promoData });
         localStorage.setItem('asrarhub_local_promo_codes', JSON.stringify(filtered));
       } catch (e) {}
 
@@ -3707,7 +4961,8 @@ export const AdminDashboard: React.FC = () => {
       // Reset form
       setNewPromo({
         code: '',
-        type: 'discount',
+        type: 'unlock_subscription_hours',
+        durationHours: 2,
         discountType: 'percent',
         discountValue: 0,
         subscriptionMonths: 3,
@@ -3716,6 +4971,13 @@ export const AdminDashboard: React.FC = () => {
         expiryDate: '',
         isActive: true
       });
+
+      // 3. Sync to Firestore in background safely
+      try {
+        await setDoc(doc(db, 'promo_codes', codeUpper), promoData);
+      } catch (cloudErr) {
+        console.warn("Firestore promo_codes cloud sync note (saved locally & active):", cloudErr);
+      }
     } catch (err) {
       console.error("Error creating promo code:", err);
       showToast("Erreur lors de la création du code promo.", "error");
@@ -3726,81 +4988,63 @@ export const AdminDashboard: React.FC = () => {
     if (!window.confirm(`Voulez-vous vraiment supprimer le code promo ${code} ?`)) {
       return;
     }
+    const codeUpper = (code || '').toUpperCase();
+    
+    // 1. Update state immediately
+    setPromoCodes(prev => prev.filter(p => (p.code || p.id || '').toUpperCase() !== codeUpper));
+    
+    // 2. Update local storage immediately
+    try {
+      const existing = JSON.parse(localStorage.getItem('asrarhub_local_promo_codes') || '[]');
+      const filtered = existing.filter((p: any) => (p.code || p.id || '').toUpperCase() !== codeUpper);
+      localStorage.setItem('asrarhub_local_promo_codes', JSON.stringify(filtered));
+    } catch (e) {}
+
+    showToast(`Code promo ${code} supprimé.`);
+
+    // 3. Sync delete to Firestore safely
     try {
       await deleteDoc(doc(db, 'promo_codes', code));
-      showToast(`Code promo ${code} supprimé.`);
     } catch (err) {
-      console.error("Error deleting promo code:", err);
-      showToast("Erreur lors de la suppression.", "error");
+      console.warn("Firestore promo_codes delete sync note:", err);
     }
   };
 
   const handleTogglePromoCodeActive = async (code: string, currentStatus: boolean) => {
+    const codeUpper = (code || '').toUpperCase();
+    const newStatus = !currentStatus;
+
+    // 1. Update state immediately
+    setPromoCodes(prev => prev.map(p => {
+      if ((p.code || p.id || '').toUpperCase() === codeUpper) {
+        return { ...p, isActive: newStatus };
+      }
+      return p;
+    }));
+
+    // 2. Update local storage immediately
+    try {
+      const existing = JSON.parse(localStorage.getItem('asrarhub_local_promo_codes') || '[]');
+      const updated = existing.map((p: any) => {
+        if ((p.code || p.id || '').toUpperCase() === codeUpper) {
+          return { ...p, isActive: newStatus };
+        }
+        return p;
+      });
+      localStorage.setItem('asrarhub_local_promo_codes', JSON.stringify(updated));
+    } catch (e) {}
+
+    showToast(`Statut du code promo ${code} mis à jour.`);
+
+    // 3. Sync update to Firestore safely
     try {
       await updateDoc(doc(db, 'promo_codes', code), {
-        isActive: !currentStatus
+        isActive: newStatus
       });
-      showToast(`Statut du code promo ${code} mis à jour.`);
     } catch (err) {
-      console.error("Error toggling promo code active status:", err);
-      showToast("Erreur lors de la mise à jour du statut.", "error");
+      console.warn("Firestore promo_codes update sync note:", err);
     }
   };
-
-  const ALL_USER_TOOLS = [
-    { id: 'anti_screenshot', label: "Protection Anti-Capture d'Écran", desc: "Bloque matériellement et logiciellement les captures d'écran, enregistrements vidéo et impressions sur Android et Web", category: 'system' },
-    { id: 'inspector', label: 'Inspecteur de diagnostic', desc: 'Active ou désactive le bouton rouge Inspecteur / Débogueur de mise en page dans le coin inférieur droit', category: 'system' },
-    { id: 'quick_widget', label: 'Widget Rapide AsrarHub (AsrarQuickWidget)', desc: 'Widget de recherche rapide, favoris et raccourcis d\'exploration sur le tableau de bord (désactivé par défaut)', category: 'system' },
-    { id: 'explore', label: 'Explore', desc: 'Dashboard explorer (Secrets, Lexique, etc)', category: 'system' },
-    { id: 'store', label: 'Store (Boutique)', desc: 'Boutique en ligne', category: 'system' },
-    { id: 'community', label: 'Communauté', desc: 'Forum communautaire', category: 'system' },
-    { id: 'journal', label: 'Journal Intime', desc: 'Notes personnelles', category: 'system' },
-    { id: 'faq', label: 'FAQ / Assistant', desc: 'Assistant IA spirituel', category: 'system' },
-    { id: 'quizz', label: 'Quiz', desc: 'Test de connaissances', category: 'system' },
-    { id: 'lexique', label: 'Lexique', desc: 'Lexique des termes', category: 'system' },
-    { id: 'calendar', label: 'Calendrier Mystique (Hégirien)', desc: 'Contrôler l\'accès global : Actif, Premium, Maintenance, Inactif (Désactiver/Bloquer)', category: 'simple' },
-    { id: 'ruqyah', label: 'Module Ruqyah', desc: 'Accès aux versets de protection et guérison', category: 'simple' },
-    { id: 'abjad', label: 'Calculateur Abjad', desc: 'Outil de numérologie arabe', category: 'simple' },
-    { id: 'custom-dua', label: 'Générateur de Du\'a Custom', desc: 'Invocations sur-mesure personnalisées selon l\'intention et le poids Abjad', category: 'simple' },
-    { id: 'dreams', label: 'Journal des Rêves', desc: 'Fonctionnalité de suivi et interprétation', category: 'simple' },
-    { id: 'zakat', label: 'Calculateur Zakat', desc: 'Module de calcul des aumônes', category: 'simple' },
-    { id: 'asma', label: 'Noms Divins Personnels', desc: 'Découvrez vos noms divins correspondants au poids mystique', category: 'simple' },
-    { id: '99names', label: 'Les 99 Noms d\'Allah', desc: 'Les Noms Sublimes (Asma al-Husna)', category: 'simple' },
-    { id: 'awfaq', label: 'Awfaq Advanced', desc: 'Générateur de carrés magiques', category: 'advanced' },
-    { id: 'daily-dhikr', label: 'Daily Dhikr Tracker', desc: 'Suivi quotidien des invocations', category: 'simple' },
-    { id: 'elemental', label: 'Elemental Analyzer', desc: 'Analyse des 4 éléments', category: 'advanced' },
-    { id: 'faraid', label: 'Faraid Calculator', desc: 'Calcul de l\'héritage islamique', category: 'simple' },
-    { id: 'geomancy', label: 'Geomancy', desc: 'Outil de géomancie (Ilm al-Raml)', category: 'advanced' },
-    { id: 'grand-oaths', label: 'Grand Oaths', desc: 'Grands serments spirituels', category: 'advanced' },
-    { id: 'ilm-jafar', label: 'Ilm Jafar', desc: 'Science des lettres et des nombres', category: 'advanced' },
-    { id: 'istikhara', label: 'Istikhara', desc: 'Outil de consultation', category: 'advanced' },
-    { id: 'khatim', label: 'Khatim Generator', desc: 'Générateur de sceaux', category: 'advanced' },
-    { id: 'khouddam', label: 'Khouddam Extractor', desc: 'Extraction des serviteurs spirituels', category: 'advanced' },
-    { id: 'lunar-mansions', label: 'Lunar Mansions', desc: 'Les demeures lunaires', category: 'advanced' },
-    { id: 'personal-wird', label: 'Personal Wird', desc: 'Générateur de Wird personnel', category: 'advanced' },
-    { id: 'planetary', label: 'Planetary Hours', desc: 'Heures planétaires', category: 'simple' },
-    { id: 'quran', label: 'Quran Full', desc: 'Explorateur du Coran', category: 'simple' },
-    { id: 'quranic-faal', label: 'Quranic Faal', desc: 'Tirage de sorts coraniques', category: 'advanced' },
-    { id: 'rouhaniyya', label: 'Rouhaniyya Extractor', desc: 'Extraction spirituelle', category: 'advanced' },
-    { id: 'letters', label: 'Science of Letters', desc: 'Science des lettres (Ilm al-Huruf)', category: 'advanced' },
-    { id: 'sirr', label: 'Sirr Al Asrar', desc: 'Le secret des secrets', category: 'advanced' },
-    { id: 'spiritual-compatibility', label: 'Spiritual Compatibility', desc: 'Compatibilité spirituelle', category: 'advanced' },
-    { id: 'taksir', label: 'Taksir', desc: 'Brisement des lettres', category: 'advanced' },
-    { id: 'talsam', label: 'Talsam', desc: 'Générateur de talismans', category: 'advanced' },
-    { id: 'tasbih', label: 'Tasbih', desc: 'Chapelet virtuel', category: 'simple' },
-    { id: 'zairja', label: 'Zairja', desc: 'Machine divinatoire', category: 'advanced' },
-    { id: 'halaqat', label: 'Halaqat', desc: 'Cercles d\'étude', category: 'simple' },
-    { id: 'daira-as-sirr', label: 'Dā\'ira As-Sirr', desc: 'Générateur de sceaux circulaires mystiques', category: 'advanced' },
-    { id: 'saah-ijabah', label: 'Sā\'ah Al-Ijābah', desc: 'Alignements célestes et heures d\'exaucement', category: 'advanced' },
-    { id: 'ia-rapprochements', label: 'IA Rapprochements', desc: 'Rapprochement intelligent des rêves, abjad et planètes', category: 'advanced' },
-    { id: 'combustion-eclipse', label: 'Combustion & Éclipses', desc: 'Analyse des combustions et éclipses planétaires', category: 'advanced' },
-    { id: 'ring-pendant-talisman', label: 'Bagues & Pendentifs', desc: 'Talismans physiques et gravures métalliques', category: 'advanced' },
-    { id: 'quran-analogy', label: 'Correspondances Coraniques', desc: 'Analogies spirituelles et correspondances coraniques', category: 'simple' },
-    { id: 'seven-kings', label: 'Les 7 Rois Célestes', desc: 'Sceaux et rois célestes/terrestres de la semaine', category: 'advanced' },
-    { id: 'zikr-levels', label: 'Paliers Spirituels Zikr', desc: 'Paliers et niveaux d\'élévation du Zikr', category: 'simple' },
-    { id: 'hijri-full-moon', label: 'Pleine Lune Hégirienne', desc: 'Suivi des nuits blanches et pleines lunes', category: 'simple' },
-    { id: 'murid-journal', label: 'Journal du Murid', desc: 'Suivi de la voie et progression spirituelle', category: 'simple' }
-  ];
 
   const renderFeatures = () => {
     const filteredTools = ALL_USER_TOOLS.filter(tool => {
@@ -4363,90 +5607,275 @@ export const AdminDashboard: React.FC = () => {
         </CollapsibleAdminCard>
 
         {/* 7. PROTECTION ANTI-CAPTURE D'ÉCRAN & SÉCURITÉ MATÉRIELLE (FLAG_SECURE) */}
-        <CollapsibleAdminCard
-          id="feat_anti_screenshot"
-          title="Protection Anti-Capture d'Écran & Sécurité du Contenu"
-          subtitle="Empêche les captures d'écran, enregistrements vidéo, copies et impressions des articles et outils."
-          icon={<Shield size={22} className="text-red-500" />}
-          badge={
-            <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
-              featureToggles.anti_screenshot !== false
-                ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300'
-                : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
-            }`}>
-              {featureToggles.anti_screenshot !== false ? 'Protection Active (FLAG_SECURE)' : 'Protection Désactivée'}
-            </span>
-          }
-        >
-          <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h4 className="font-bold text-gray-950 dark:text-white text-sm">
-                    Activer la Protection Anti-Capture d'Écran Globale
-                  </h4>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 uppercase tracking-wider">
-                    Android + Web + iOS
+        {(() => {
+          const screenMode = getScreenshotProtectionMode(featureToggles);
+          const copyMode = getTextCopyProtectionMode(featureToggles);
+
+          const handleSetScreenMode = (mode: ProtectionMode) => {
+            handleToggleFeature('screenshot_protection_mode', mode);
+            handleToggleFeature('anti_screenshot', mode === 'all_allowed' ? false : (mode === 'all_blocked' ? 'all_blocked' : 'premium_only'));
+            showToast(
+              mode === 'all_allowed' 
+                ? "Captures d'écran : Autorisées pour TOUS les utilisateurs." 
+                : mode === 'premium_only' 
+                ? "Captures d'écran : Autorisées UNIQUEMENT pour les membres Premium." 
+                : "Captures d'écran : Bloquées STRICTEMENT pour tous les utilisateurs.",
+              "success"
+            );
+          };
+
+          const handleSetCopyMode = (mode: ProtectionMode) => {
+            handleToggleFeature('text_copy_protection_mode', mode);
+            handleToggleFeature('text_copy_protection', mode);
+            handleToggleFeature('disable_dua_copy', mode === 'all_blocked');
+            showToast(
+              mode === 'all_allowed' 
+                ? "Copie des textes : Autorisée pour TOUS les utilisateurs." 
+                : mode === 'premium_only' 
+                ? "Copie des textes : Autorisée UNIQUEMENT pour les membres Premium." 
+                : "Copie des textes : Bloquée STRICTEMENT pour tous les utilisateurs.",
+              "success"
+            );
+          };
+
+          return (
+            <>
+              <CollapsibleAdminCard
+                id="feat_anti_screenshot"
+                title="Protection Anti-Capture d'Écran (FLAG_SECURE & PrivacyScreen)"
+                subtitle="Contrôlez les captures d'écran, enregistrements vidéo et impressions sur Android, iOS et Web."
+                icon={<Camera size={22} className="text-red-500" />}
+                badge={
+                  <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 ${
+                    screenMode === 'all_allowed'
+                      ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300'
+                      : screenMode === 'premium_only'
+                      ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300'
+                      : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
+                  }`}>
+                    {screenMode === 'all_allowed' && <Unlock size={11} />}
+                    {screenMode === 'premium_only' && <Crown size={11} />}
+                    {screenMode === 'all_blocked' && <Lock size={11} />}
+                    {screenMode === 'all_allowed' 
+                      ? 'Autorisé pour Tous' 
+                      : screenMode === 'premium_only' 
+                      ? 'Réservé aux Premium' 
+                      : 'Bloqué pour Tous'}
                   </span>
-                </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 max-w-2xl">
-                  Lorsque cette option est activée (par défaut), l'application applique la directive matérielle <code className="font-mono text-red-600 dark:text-red-400">FLAG_SECURE</code> sur Android, le plugin de confidentialité Capacitor, et bloque les raccourcis d'impression/capture et sélections sur le Web.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  const newState = featureToggles.anti_screenshot === false ? true : false;
-                  handleToggleFeature('anti_screenshot', newState);
-                  showToast(
-                    newState 
-                      ? "Protection Anti-Capture d'Écran activée (FLAG_SECURE actif sur tous les appareils)." 
-                      : "Protection Anti-Capture désactivée temporairement.",
-                    "success"
-                  );
-                }}
-                className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors shrink-0 cursor-pointer ${
-                  featureToggles.anti_screenshot !== false ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
-                }`}
+                }
               >
-                <div
-                  className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${
-                    featureToggles.anti_screenshot !== false ? 'translate-x-6' : 'translate-x-0'
-                  }`}
-                />
-              </button>
-            </div>
+                <div className="space-y-4">
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                    Définissez la politique d'autorisation des captures d'écran, enregistrements vidéo (FLAG_SECURE Android) et impressions de documents.
+                  </p>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div className="p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-                <div className="flex items-center gap-2 text-xs font-bold text-gray-800 dark:text-gray-200">
-                  <span>📱</span> Android & Capacitor
-                </div>
-                <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
-                  Écran noir lors des captures, enregistrements vidéo refusés, masquage dans la liste des applications récentes.
-                </p>
-              </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {/* Option 1: Autorisé pour Tous */}
+                    <button
+                      type="button"
+                      onClick={() => handleSetScreenMode('all_allowed')}
+                      className={`p-4 rounded-2xl border text-left transition-all flex flex-col justify-between gap-2 cursor-pointer ${
+                        screenMode === 'all_allowed'
+                          ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 ring-2 ring-emerald-500/20 shadow-sm'
+                          : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-emerald-300 dark:hover:border-emerald-700'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                          <Unlock size={15} /> Autorisé pour Tous
+                        </span>
+                        {screenMode === 'all_allowed' && (
+                          <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
+                        )}
+                      </div>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-snug">
+                        Aucun blocage. Tous les utilisateurs peuvent prendre des captures d'écran et imprimer.
+                      </p>
+                    </button>
 
-              <div className="p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-                <div className="flex items-center gap-2 text-xs font-bold text-gray-800 dark:text-gray-200">
-                  <span>💻</span> Web & Raccourcis
-                </div>
-                <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
-                  Blocage des touches PrintScreen, Snip (Ctrl+Shift+S), impression (Ctrl+P) et masquage lors de l'export PDF.
-                </p>
-              </div>
+                    {/* Option 2: Uniquement Premium */}
+                    <button
+                      type="button"
+                      onClick={() => handleSetScreenMode('premium_only')}
+                      className={`p-4 rounded-2xl border text-left transition-all flex flex-col justify-between gap-2 cursor-pointer ${
+                        screenMode === 'premium_only'
+                          ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-500 ring-2 ring-amber-500/20 shadow-sm'
+                          : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-amber-300 dark:hover:border-amber-700'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <span className="text-xs font-black text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                          <Crown size={15} /> Uniquement Premium
+                        </span>
+                        {screenMode === 'premium_only' && (
+                          <CheckCircle2 size={16} className="text-amber-500 shrink-0" />
+                        )}
+                      </div>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-snug">
+                        Bloqué pour les comptes gratuits (écran noir). Débloqué et autorisé pour les membres VIP / Premium.
+                      </p>
+                    </button>
 
-              <div className="p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700">
-                <div className="flex items-center gap-2 text-xs font-bold text-gray-800 dark:text-gray-200">
-                  <span>⚡</span> Synchronisation Temps Réel
+                    {/* Option 3: Bloqué pour Tous */}
+                    <button
+                      type="button"
+                      onClick={() => handleSetScreenMode('all_blocked')}
+                      className={`p-4 rounded-2xl border text-left transition-all flex flex-col justify-between gap-2 cursor-pointer ${
+                        screenMode === 'all_blocked'
+                          ? 'bg-red-50 dark:bg-red-950/40 border-red-500 ring-2 ring-red-500/20 shadow-sm'
+                          : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-red-300 dark:hover:border-red-700'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <span className="text-xs font-black text-red-600 dark:text-red-400 flex items-center gap-1.5">
+                          <Lock size={15} /> Bloqué pour Tous
+                        </span>
+                        {screenMode === 'all_blocked' && (
+                          <CheckCircle2 size={16} className="text-red-500 shrink-0" />
+                        )}
+                      </div>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-snug">
+                        Verrouillage strict (FLAG_SECURE actif pour tous les utilisateurs, y compris Premium).
+                      </p>
+                    </button>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+                    <div className="p-3 bg-gray-50 dark:bg-gray-750 rounded-xl border border-gray-200/70 dark:border-gray-700">
+                      <div className="flex items-center gap-2 text-xs font-bold text-gray-800 dark:text-gray-200">
+                        <span>📱</span> Android FLAG_SECURE
+                      </div>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+                        Empêche les captures d'écran natives et masque l'aperçu dans le multitâche.
+                      </p>
+                    </div>
+
+                    <div className="p-3 bg-gray-50 dark:bg-gray-750 rounded-xl border border-gray-200/70 dark:border-gray-700">
+                      <div className="flex items-center gap-2 text-xs font-bold text-gray-800 dark:text-gray-200">
+                        <span>💻</span> Web & Raccourcis
+                      </div>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+                        Intercepte la touche PrintScreen, la capture d'écran Windows/Mac et l'impression Ctrl+P.
+                      </p>
+                    </div>
+
+                    <div className="p-3 bg-gray-50 dark:bg-gray-750 rounded-xl border border-gray-200/70 dark:border-gray-700">
+                      <div className="flex items-center gap-2 text-xs font-bold text-gray-800 dark:text-gray-200">
+                        <span>⚡</span> Application Instantanée
+                      </div>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+                        Pris en compte en temps réel sans besoin de recompiler ou redémarrer l'application.
+                      </p>
+                    </div>
+                  </div>
                 </div>
-                <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
-                  Toute modification ici est propagée immédiatement sans avoir besoin de republier ou recompiler l'APK.
-                </p>
-              </div>
-            </div>
-          </div>
-        </CollapsibleAdminCard>
+              </CollapsibleAdminCard>
+
+              {/* 8. PROTECTION CONTRE LA COPIE DE TEXTE & SÉLECTION */}
+              <CollapsibleAdminCard
+                id="feat_text_copy_protection"
+                title="Protection contre la Copie de Texte & Sélections"
+                subtitle="Gérez le copier-coller, la sélection de texte, le clic droit et les boutons de copie des outils."
+                icon={<Copy size={22} className="text-emerald-500" />}
+                badge={
+                  <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 ${
+                    copyMode === 'all_allowed'
+                      ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300'
+                      : copyMode === 'premium_only'
+                      ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300'
+                      : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
+                  }`}>
+                    {copyMode === 'all_allowed' && <Unlock size={11} />}
+                    {copyMode === 'premium_only' && <Crown size={11} />}
+                    {copyMode === 'all_blocked' && <Lock size={11} />}
+                    {copyMode === 'all_allowed' 
+                      ? 'Autorisé pour Tous' 
+                      : copyMode === 'premium_only' 
+                      ? 'Réservé aux Premium' 
+                      : 'Bloqué pour Tous'}
+                  </span>
+                }
+              >
+                <div className="space-y-4">
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                    Choisissez qui est autorisé à copier les invocations, douas, versets, tables de calcul et textes sacrés.
+                  </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    {/* Option 1: Autorisé pour Tous */}
+                    <button
+                      type="button"
+                      onClick={() => handleSetCopyMode('all_allowed')}
+                      className={`p-4 rounded-2xl border text-left transition-all flex flex-col justify-between gap-2 cursor-pointer ${
+                        copyMode === 'all_allowed'
+                          ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 ring-2 ring-emerald-500/20 shadow-sm'
+                          : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-emerald-300 dark:hover:border-emerald-700'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                          <Unlock size={15} /> Autorisé pour Tous
+                        </span>
+                        {copyMode === 'all_allowed' && (
+                          <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
+                        )}
+                      </div>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-snug">
+                        Sélection libre et boutons de copie débloqués pour tous les visiteurs et utilisateurs.
+                      </p>
+                    </button>
+
+                    {/* Option 2: Uniquement Premium */}
+                    <button
+                      type="button"
+                      onClick={() => handleSetCopyMode('premium_only')}
+                      className={`p-4 rounded-2xl border text-left transition-all flex flex-col justify-between gap-2 cursor-pointer ${
+                        copyMode === 'premium_only'
+                          ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-500 ring-2 ring-amber-500/20 shadow-sm'
+                          : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-amber-300 dark:hover:border-amber-700'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <span className="text-xs font-black text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                          <Crown size={15} /> Uniquement Premium
+                        </span>
+                        {copyMode === 'premium_only' && (
+                          <CheckCircle2 size={16} className="text-amber-500 shrink-0" />
+                        )}
+                      </div>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-snug">
+                        Copie bloquée pour les comptes gratuits (incitation Premium). Débloquée pour les abonnés VIP.
+                      </p>
+                    </button>
+
+                    {/* Option 3: Bloqué pour Tous */}
+                    <button
+                      type="button"
+                      onClick={() => handleSetCopyMode('all_blocked')}
+                      className={`p-4 rounded-2xl border text-left transition-all flex flex-col justify-between gap-2 cursor-pointer ${
+                        copyMode === 'all_blocked'
+                          ? 'bg-red-50 dark:bg-red-950/40 border-red-500 ring-2 ring-red-500/20 shadow-sm'
+                          : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-red-300 dark:hover:border-red-700'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <span className="text-xs font-black text-red-600 dark:text-red-400 flex items-center gap-1.5">
+                          <Lock size={15} /> Bloqué pour Tous
+                        </span>
+                        {copyMode === 'all_blocked' && (
+                          <CheckCircle2 size={16} className="text-red-500 shrink-0" />
+                        )}
+                      </div>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-snug">
+                        Copie, clic droit et sélection de texte désactivés pour tout le monde sans exception.
+                      </p>
+                    </button>
+                  </div>
+                </div>
+              </CollapsibleAdminCard>
+            </>
+          );
+        })()}
       </div>
     );
   };
@@ -4688,7 +6117,28 @@ export const AdminDashboard: React.FC = () => {
                           )}
                         </td>
                         <td className="p-2.5">
-                          {art.isPremium ? <span className="text-amber-400 font-bold">★ Premium</span> : <span className="text-indigo-400">Standard</span>}
+                          <button
+                            onClick={async () => {
+                              const newPrem = !art.isPremium;
+                              try {
+                                await setDoc(doc(db, 'articles', art.id), { isPremium: newPrem }, { merge: true });
+                                setArticles(prev => prev.map(a => a.id === art.id ? { ...a, isPremium: newPrem } : a));
+                                saveLocalCustomArticle({ ...art, isPremium: newPrem });
+                                clearArticleCaches();
+                                showToast(newPrem ? "Article passé en PREMIUM ★" : "Article passé en STANDARD (Gratuit)");
+                              } catch (e: any) {
+                                showToast("Erreur : " + e.message, "error");
+                              }
+                            }}
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold border transition-colors cursor-pointer ${
+                              art.isPremium 
+                                ? 'bg-purple-500/25 text-amber-300 border-purple-400/50 hover:bg-purple-500/40' 
+                                : 'bg-slate-800 text-indigo-300 border-slate-700 hover:bg-slate-700'
+                            }`}
+                            title="Cliquer pour changer Standard / Premium"
+                          >
+                            {art.isPremium ? '★ Premium' : '☆ Standard'}
+                          </button>
                         </td>
                         <td className="p-2.5 font-mono text-[10px] text-indigo-300 truncate max-w-[100px]">
                           {art.createdAt ? String(art.createdAt) : 'N/A'}
@@ -5114,8 +6564,47 @@ export const AdminDashboard: React.FC = () => {
                   <button onClick={() => setNewArticle(prev => ({ ...prev, thumbnail: '' }))} className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600">
                     <X size={12} />
                   </button>
+                  <div className={`absolute bottom-0 inset-x-0 text-[9px] font-black text-center py-0.5 ${newArticle.isPremium ? 'bg-purple-600 text-white' : 'bg-black/70 text-gray-200'}`}>
+                    {newArticle.isPremium ? '★ PREMIUM' : '☆ STANDARD'}
+                  </div>
                 </div>
               )}
+            </div>
+
+            {/* Quick Premium Access Selector in Image Section */}
+            <div className="mt-3 p-3 rounded-2xl bg-purple-50/70 dark:bg-purple-950/20 border border-purple-200/60 dark:border-purple-800/40 flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-2">
+                <Star size={18} className={newArticle.isPremium ? "text-amber-500 fill-amber-400" : "text-purple-400"} />
+                <div>
+                  <div className="text-xs font-bold text-gray-900 dark:text-white">Option d'accès à l'article & à l'image</div>
+                  <div className="text-[11px] text-gray-500 dark:text-gray-400">Définissez si cet article est accessible gratuitement ou réservé aux abonnés VIP</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setNewArticle(prev => ({ ...prev, isPremium: false }))}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    !newArticle.isPremium
+                      ? 'bg-gray-800 text-white dark:bg-white dark:text-gray-900 shadow-sm'
+                      : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700'
+                  }`}
+                >
+                  ☆ STANDARD (Gratuit)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setNewArticle(prev => ({ ...prev, isPremium: true }))}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                    newArticle.isPremium
+                      ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-600/30'
+                      : 'bg-white dark:bg-gray-800 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800'
+                  }`}
+                >
+                  <Star size={12} className="fill-amber-300 text-amber-300" />
+                  ★ PREMIUM (VIP)
+                </button>
+              </div>
             </div>
             {imgSrc && (
               <div className="mt-4 p-4 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900">
@@ -5471,11 +6960,46 @@ export const AdminDashboard: React.FC = () => {
         }`}>
           {articles.map((article) => (
             <div key={article.id} className="p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl flex gap-4">
-              {article.thumbnail && (
-                <div className="w-20 h-20 rounded-xl overflow-hidden shrink-0">
-                  <img src={article.thumbnail} alt={article.title} className="w-full h-full object-cover" />
+              <div 
+                onClick={async () => {
+                  const newIsPremium = !article.isPremium;
+                  setArticles(prev => prev.map(a => a.id === article.id ? { ...a, isPremium: newIsPremium } : a));
+                  saveLocalCustomArticle({ ...article, isPremium: newIsPremium });
+                  try {
+                    await setDoc(doc(db, 'articles', article.id), { isPremium: newIsPremium }, { merge: true });
+                    showToast(newIsPremium ? "Article passé en PREMIUM ★" : "Article passé en STANDARD (Gratuit)");
+                  } catch (err) {
+                    console.warn("Firestore update premium note:", err);
+                    showToast(newIsPremium ? "Article passé en PREMIUM ★" : "Article passé en STANDARD (Gratuit)");
+                  }
+                }}
+                className="relative w-20 h-20 rounded-xl overflow-hidden shrink-0 group cursor-pointer border border-gray-200 dark:border-gray-700 bg-gray-200 dark:bg-gray-800 select-none"
+                title="Cliquer sur l'image pour changer le statut Premium"
+              >
+                {article.thumbnail ? (
+                  <img src={article.thumbnail} alt={article.title} className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gray-100 dark:bg-gray-800">
+                    <FileText size={24} />
+                  </div>
+                )}
+                
+                {/* Premium badge overlay right ON the image */}
+                <div className={`absolute top-1 left-1 px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider flex items-center gap-0.5 shadow-md backdrop-blur-sm transition-all ${
+                  article.isPremium 
+                    ? 'bg-purple-600 text-white border border-purple-400/60 shadow-purple-900/40' 
+                    : 'bg-black/65 text-gray-200 group-hover:bg-purple-900/80 group-hover:text-white border border-white/20'
+                }`}>
+                  <Star size={9} className={article.isPremium ? "fill-amber-300 text-amber-300" : "text-gray-300"} />
+                  <span>{article.isPremium ? 'PREMIUM' : 'STANDARD'}</span>
                 </div>
-              )}
+                
+                {/* Hover overlay hint */}
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-[9px] text-white font-bold text-center p-1">
+                  Changer
+                </div>
+              </div>
+
               <div className="flex-1 flex flex-col justify-between">
                 <div>
                   <h4 className="font-bold text-sm text-gray-900 dark:text-white">{article.title}</h4>
@@ -5507,6 +7031,30 @@ export const AdminDashboard: React.FC = () => {
                       <option value="Draft">Brouillon</option>
                       <option value="Archived">Archivé</option>
                     </select>
+
+                    <select
+                      value={article.isPremium ? "premium" : "standard"}
+                      onChange={async (e) => {
+                        const newIsPremium = e.target.value === "premium";
+                        setArticles(prev => prev.map(a => a.id === article.id ? { ...a, isPremium: newIsPremium } : a));
+                        saveLocalCustomArticle({ ...article, isPremium: newIsPremium });
+                        try {
+                          await setDoc(doc(db, 'articles', article.id), { isPremium: newIsPremium }, { merge: true });
+                          showToast(newIsPremium ? "Article passé en PREMIUM ★" : "Article passé en STANDARD (Gratuit)");
+                        } catch (err) {
+                          console.warn("Firestore update premium note:", err);
+                          showToast(newIsPremium ? "Article passé en PREMIUM ★" : "Article passé en STANDARD (Gratuit)");
+                        }
+                      }}
+                      className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border-0 cursor-pointer transition-colors ${
+                        article.isPremium 
+                          ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 font-extrabold' 
+                          : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
+                      }`}
+                    >
+                      <option value="standard">☆ STANDARD (Gratuit)</option>
+                      <option value="premium">★ PREMIUM (VIP)</option>
+                    </select>
                     
                     <button
                       onClick={async () => {
@@ -5515,17 +7063,18 @@ export const AdminDashboard: React.FC = () => {
                         saveLocalCustomArticle({ ...article, isPremium: newIsPremium });
                         try {
                           await setDoc(doc(db, 'articles', article.id), { isPremium: newIsPremium }, { merge: true });
-                          showToast("Statut Premium mis à jour");
+                          showToast(newIsPremium ? "Article passé en PREMIUM ★" : "Article passé en STANDARD (Gratuit)");
                         } catch (err) {
                           console.warn("Firestore update premium note:", err);
-                          showToast("Statut Premium mis à jour");
+                          showToast(newIsPremium ? "Article passé en PREMIUM ★" : "Article passé en STANDARD (Gratuit)");
                         }
                       }}
-                      className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border border-violet-200 dark:border-violet-800 transition-colors ${
+                      className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border border-violet-200 dark:border-violet-800 transition-colors cursor-pointer ${
                         article.isPremium 
-                          ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400' 
+                          ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400 font-black' 
                           : 'bg-transparent text-gray-400 hover:text-violet-500 hover:border-violet-300'
                       }`}
+                      title="Changer rapidement Standard / Premium"
                     >
                       {article.isPremium ? '★ Premium' : '☆ Standard'}
                     </button>
@@ -6490,6 +8039,110 @@ export const AdminDashboard: React.FC = () => {
             </div>
           </CollapsibleAdminCard>
 
+          {/* Admin Configurable New User Premium Automatic Activation */}
+          <CollapsibleAdminCard
+            id="set_new_user_premium"
+            title="Attribution Automatique du Premium aux Nouveaux Inscrits"
+            description="Activez ou désactivez l'octroi automatique du statut Premium (essai gratuit) lors de toute nouvelle inscription d'un utilisateur."
+            icon={<Crown size={18} className="text-amber-500 shrink-0" />}
+          >
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-gray-50 dark:bg-gray-750/50 border border-gray-100 dark:border-gray-700">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                      Statut actuel des nouvelles inscriptions :
+                    </span>
+                    <span className={`text-xs font-black px-2.5 py-0.5 rounded-full ${
+                      featureToggles['new_user_premium_enabled'] !== false
+                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300'
+                        : 'bg-red-100 text-red-800 dark:bg-red-900/60 dark:text-red-300'
+                    }`}>
+                      {featureToggles['new_user_premium_enabled'] !== false ? '✓ Premium Activé' : '✕ Premium Désactivé'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {featureToggles['new_user_premium_enabled'] !== false
+                      ? `Chaque nouvel utilisateur bénéficie automatiquement de ${featureToggles['trial_duration_hours'] !== undefined ? featureToggles['trial_duration_hours'] : 12} heures d'accès Premium VIP lors de son inscription.`
+                      : "Les nouveaux inscrits démarrent avec un compte Gratuit standard sans accès Premium d'office."}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleToggleFeature('new_user_premium_enabled', featureToggles['new_user_premium_enabled'] === false ? true : false)}
+                  className={`px-5 py-2.5 rounded-xl font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0 ${
+                    featureToggles['new_user_premium_enabled'] !== false
+                      ? 'bg-red-600 hover:bg-red-700 text-white'
+                      : 'bg-gradient-to-r from-amber-500 to-purple-600 hover:from-amber-400 hover:to-purple-500 text-white shadow-amber-500/30'
+                  }`}
+                >
+                  {featureToggles['new_user_premium_enabled'] !== false ? (
+                    <>
+                      <Lock size={15} />
+                      <span>Désactiver le Premium aux Nouveaux Inscrits</span>
+                    </>
+                  ) : (
+                    <>
+                      <Crown size={15} className="fill-white" />
+                      <span>Activer le Premium aux Nouveaux Inscrits</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                <div 
+                  onClick={() => handleToggleFeature('new_user_premium_enabled', true)}
+                  className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-start gap-3 ${
+                    featureToggles['new_user_premium_enabled'] !== false
+                      ? 'border-amber-500 bg-amber-50/50 dark:bg-amber-950/20 ring-2 ring-amber-500/20'
+                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 opacity-60'
+                  }`}
+                >
+                  <div className="p-2 bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-300 rounded-xl shrink-0 mt-0.5">
+                    <Crown size={18} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-black text-gray-900 dark:text-white">Option 1 : Premium Actif</span>
+                      {featureToggles['new_user_premium_enabled'] !== false && (
+                        <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/50 px-1.5 py-0.2 rounded-md">Sélectionné</span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+                      Les nouveaux comptes découvrent immédiatement l'ensemble des fonctionnalités Premium d'AsrarHub (période d'essai).
+                    </p>
+                  </div>
+                </div>
+
+                <div 
+                  onClick={() => handleToggleFeature('new_user_premium_enabled', false)}
+                  className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-start gap-3 ${
+                    featureToggles['new_user_premium_enabled'] === false
+                      ? 'border-red-500 bg-red-50/50 dark:bg-red-950/20 ring-2 ring-red-500/20'
+                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 opacity-60'
+                  }`}
+                >
+                  <div className="p-2 bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-300 rounded-xl shrink-0 mt-0.5">
+                    <Lock size={18} />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-black text-gray-900 dark:text-white">Option 2 : Compte Gratuit Standard</span>
+                      {featureToggles['new_user_premium_enabled'] === false && (
+                        <span className="text-[10px] font-bold text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/50 px-1.5 py-0.2 rounded-md">Sélectionné</span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+                      Les nouveaux comptes s'inscrivent en mode Gratuit sans période d'essai et doivent souscrire pour débloquer le Premium.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CollapsibleAdminCard>
+
           {/* Admin Configurable Premium Free Trial Duration */}
           <CollapsibleAdminCard
             id="set_trial_duration"
@@ -7160,29 +8813,160 @@ export const AdminDashboard: React.FC = () => {
             </div>
           </CollapsibleAdminCard>
 
-          {/* Protection & Désactivation de Copie des Douas / Wirds */}
-          <CollapsibleAdminCard
-            id="set_dua_copy"
-            title="Désactiver la Copie & Sélection des Douas / Wirds"
-            description="Masque l'icône de copie (presse-papier) et bloque la sélection ainsi que le copier-coller des textes de Douas, Wirds et formules sacrifiques pour les utilisateurs."
-            icon={<Copy size={18} className="text-emerald-500 shrink-0" />}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Bloquer la copie :</span>
-              <button
-                onClick={() => handleToggleFeature('disable_dua_copy', !featureToggles['disable_dua_copy'])}
-                className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors ${
-                  featureToggles['disable_dua_copy'] ? 'bg-red-500' : 'bg-gray-300 dark:bg-gray-600'
-                }`}
-              >
-                <div
-                  className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${
-                    featureToggles['disable_dua_copy'] ? 'translate-x-6' : 'translate-x-0'
-                  }`}
-                />
-              </button>
-            </div>
-          </CollapsibleAdminCard>
+          {/* Protection & Contrôle des Captures d'Écran et Copies de Textes */}
+          {(() => {
+            const screenMode = getScreenshotProtectionMode(featureToggles);
+            const copyMode = getTextCopyProtectionMode(featureToggles);
+
+            const handleSetScreenMode = (mode: ProtectionMode) => {
+              handleToggleFeature('screenshot_protection_mode', mode);
+              handleToggleFeature('anti_screenshot', mode === 'all_allowed' ? false : (mode === 'all_blocked' ? 'all_blocked' : 'premium_only'));
+              showToast(
+                mode === 'all_allowed' 
+                  ? "Captures d'écran : Autorisées pour TOUS les utilisateurs." 
+                  : mode === 'premium_only' 
+                  ? "Captures d'écran : Autorisées UNIQUEMENT pour les membres Premium." 
+                  : "Captures d'écran : Bloquées STRICTEMENT pour tous les utilisateurs.",
+                "success"
+              );
+            };
+
+            const handleSetCopyMode = (mode: ProtectionMode) => {
+              handleToggleFeature('text_copy_protection_mode', mode);
+              handleToggleFeature('text_copy_protection', mode);
+              handleToggleFeature('disable_dua_copy', mode === 'all_blocked');
+              showToast(
+                mode === 'all_allowed' 
+                  ? "Copie des textes : Autorisée pour TOUS les utilisateurs." 
+                  : mode === 'premium_only' 
+                  ? "Copie des textes : Autorisée UNIQUEMENT pour les membres Premium." 
+                  : "Copie des textes : Bloquée STRICTEMENT pour tous les utilisateurs.",
+                "success"
+              );
+            };
+
+            return (
+              <>
+                <CollapsibleAdminCard
+                  id="set_screenshot_protection"
+                  title="Sécurité des Captures d'Écran & Impressions"
+                  description="Définissez l'autorisation des captures d'écran, enregistrements vidéo (Android FLAG_SECURE) et impressions de contenu."
+                  icon={<Camera size={18} className="text-red-500 shrink-0" />}
+                >
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleSetScreenMode('all_allowed')}
+                        className={`p-3 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
+                          screenMode === 'all_allowed'
+                            ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 font-bold text-emerald-700 dark:text-emerald-300'
+                            : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-emerald-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 text-xs">
+                          <Unlock size={14} className="text-emerald-500" />
+                          <span>Autorisé pour Tous</span>
+                        </div>
+                        {screenMode === 'all_allowed' && <CheckCircle2 size={14} className="text-emerald-500" />}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleSetScreenMode('premium_only')}
+                        className={`p-3 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
+                          screenMode === 'premium_only'
+                            ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-500 font-bold text-amber-700 dark:text-amber-300'
+                            : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-amber-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 text-xs">
+                          <Crown size={14} className="text-amber-500" />
+                          <span>Uniquement Premium</span>
+                        </div>
+                        {screenMode === 'premium_only' && <CheckCircle2 size={14} className="text-amber-500" />}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleSetScreenMode('all_blocked')}
+                        className={`p-3 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
+                          screenMode === 'all_blocked'
+                            ? 'bg-red-50 dark:bg-red-950/40 border-red-500 font-bold text-red-700 dark:text-red-300'
+                            : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-red-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 text-xs">
+                          <Lock size={14} className="text-red-500" />
+                          <span>Bloqué pour Tous</span>
+                        </div>
+                        {screenMode === 'all_blocked' && <CheckCircle2 size={14} className="text-red-500" />}
+                      </button>
+                    </div>
+                  </div>
+                </CollapsibleAdminCard>
+
+                <CollapsibleAdminCard
+                  id="set_dua_copy"
+                  title="Sécurité de la Copie des Textes & Sélections"
+                  description="Contrôlez le copier-coller, la sélection de texte et les boutons de copie des Douas, Wirds et formules sacrifiques."
+                  icon={<Copy size={18} className="text-emerald-500 shrink-0" />}
+                >
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleSetCopyMode('all_allowed')}
+                        className={`p-3 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
+                          copyMode === 'all_allowed'
+                            ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 font-bold text-emerald-700 dark:text-emerald-300'
+                            : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-emerald-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 text-xs">
+                          <Unlock size={14} className="text-emerald-500" />
+                          <span>Autorisé pour Tous</span>
+                        </div>
+                        {copyMode === 'all_allowed' && <CheckCircle2 size={14} className="text-emerald-500" />}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleSetCopyMode('premium_only')}
+                        className={`p-3 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
+                          copyMode === 'premium_only'
+                            ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-500 font-bold text-amber-700 dark:text-amber-300'
+                            : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-amber-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 text-xs">
+                          <Crown size={14} className="text-amber-500" />
+                          <span>Uniquement Premium</span>
+                        </div>
+                        {copyMode === 'premium_only' && <CheckCircle2 size={14} className="text-amber-500" />}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => handleSetCopyMode('all_blocked')}
+                        className={`p-3 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
+                          copyMode === 'all_blocked'
+                            ? 'bg-red-50 dark:bg-red-950/40 border-red-500 font-bold text-red-700 dark:text-red-300'
+                            : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-red-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 text-xs">
+                          <Lock size={14} className="text-red-500" />
+                          <span>Bloqué pour Tous</span>
+                        </div>
+                        {copyMode === 'all_blocked' && <CheckCircle2 size={14} className="text-red-500" />}
+                      </button>
+                    </div>
+                  </div>
+                </CollapsibleAdminCard>
+              </>
+            );
+          })()}
 
           {/* URL de l'API Backend */}
           <CollapsibleAdminCard
@@ -9521,9 +11305,25 @@ export const AdminDashboard: React.FC = () => {
         transition={{ duration: 0.2 }}
       >
         {activeTab === 'overview' && renderOverview()}
+        {activeTab === 'security' && (
+          <AdminSecurityAlertsManager
+            alerts={securityAlerts}
+            isTrackingEnabled={isSecurityAlertTrackingEnabled(featureToggles)}
+            onToggleTracking={(enabled) => handleToggleFeature('alert_repeated_tool_access', enabled)}
+            onOpenUserDetail={(user) => {
+              setSelectedUserDetail(user);
+              setEditUserData({ ...user });
+              setIsEditingUser(false);
+            }}
+            onSetUserStatus={handleSetUserStatus}
+            users={users}
+            showToast={showToast}
+          />
+        )}
         {activeTab === 'support' && <AdminEmailSupportManager />}
         {activeTab === 'users' && renderUsers()}
         {activeTab === 'payments' && renderPayments()}
+        {activeTab === 'promo_codes' && renderPromoCodesTab()}
         {activeTab === 'articles' && renderArticles()}
         {activeTab === 'media_storage' && <AdminMediaStorageManager />}
         {activeTab === 'categories' && renderCategories()}
@@ -9705,21 +11505,38 @@ export const AdminDashboard: React.FC = () => {
                     </div>
                   </>
                 ) : (
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1.5">
-                      Adresses Email à inscrire (1 par ligne ou séparées par des virgules)
-                    </label>
-                    <textarea
-                      rows={6}
-                      required
-                      value={batchEmailsText}
-                      onChange={(e) => setBatchEmailsText(e.target.value)}
-                      placeholder={`jibriltengeh4@gmail.com\nsbireino@gmail.com\ntenibawwal10@gmail.com\njibriltengeh57@gmail.com`}
-                      className="w-full p-4 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl text-xs font-mono text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
-                    />
-                    <p className="text-[11px] text-gray-500 mt-1.5">
-                      Chaque email sera automatiquement converti en compte membre enregistré dans Firestore.
-                    </p>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1.5">
+                        Adresses Email à inscrire (1 par ligne ou séparées par des virgules)
+                      </label>
+                      <textarea
+                        rows={6}
+                        required
+                        value={batchEmailsText}
+                        onChange={(e) => setBatchEmailsText(e.target.value)}
+                        placeholder={`jibriltengeh4@gmail.com\nsbireino@gmail.com\ntenibawwal10@gmail.com\njibriltengeh57@gmail.com`}
+                        className="w-full p-4 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl text-xs font-mono text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
+                      />
+                      <p className="text-[11px] text-gray-500 mt-1.5">
+                        Chaque email sera automatiquement converti en compte membre enregistré dans Firestore.
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1.5">
+                        Statut d'Abonnement attribué au lot
+                      </label>
+                      <select
+                        value={newUserData.subscriptionTier}
+                        onChange={(e) => setNewUserData({ ...newUserData, subscriptionTier: e.target.value })}
+                        className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl text-xs font-medium text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
+                      >
+                        <option value="free">Gratuit</option>
+                        <option value="premium">Premium</option>
+                        <option value="pro">Pro</option>
+                      </select>
+                    </div>
                   </div>
                 )}
 
@@ -9843,6 +11660,39 @@ export const AdminDashboard: React.FC = () => {
                         <span className="font-bold text-gray-900 dark:text-white font-mono bg-gray-200 dark:bg-gray-800 px-2 py-0.5 rounded">{selectedUserDetail.id}</span>
                       </div>
                     </div>
+                  </div>
+
+                  {/* Quick Status Selector in Modal */}
+                  <div className="bg-emerald-50/60 dark:bg-emerald-950/20 rounded-2xl p-5 border border-emerald-100 dark:border-emerald-900/40 space-y-3">
+                    <h4 className="font-bold text-xs uppercase tracking-wider text-emerald-700 dark:text-emerald-300 flex items-center gap-2">
+                      <Shield size={16} />
+                      <span>Gestion Rapide du Statut & Privilèges</span>
+                    </h4>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Changez le statut de l'utilisateur instantanément. Les modifications sont appliquées immédiatement.
+                    </p>
+                    <UserQuickStatusPicker
+                      currentStatus={getResolvedUserStatus(selectedUserDetail)}
+                      userId={selectedUserDetail.id}
+                      userName={selectedUserDetail.name || selectedUserDetail.email}
+                      onStatusChange={async (userId, newStatus) => {
+                        await handleSetUserStatus(userId, newStatus);
+                        // Also update modal view
+                        setSelectedUserDetail(prev => {
+                          if (!prev) return prev;
+                          return {
+                            ...prev,
+                            accountStatus: newStatus,
+                            isBanned: newStatus === 'banned',
+                            mysteryToolsDisabled: newStatus === 'suspended',
+                            allToolsDisabled: newStatus === 'suspended',
+                            subscriptionTier: newStatus === 'premium' ? 'premium' : (prev as any).subscriptionTier,
+                          };
+                        });
+                      }}
+                      layout="expanded"
+                      size="md"
+                    />
                   </div>
 
                   {/* Security & Authentication */}
@@ -10204,6 +12054,16 @@ export const AdminDashboard: React.FC = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {previewCelebration && (
+        <PremiumUnlockCelebrationModal
+          isOpen={previewCelebration.isOpen}
+          onClose={() => setPreviewCelebration(null)}
+          promoCode={previewCelebration.promoCode}
+          durationText={previewCelebration.durationText}
+          onComplete={() => setPreviewCelebration(null)}
+        />
+      )}
     </div>
   );
 };

@@ -3,7 +3,7 @@ import { onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { doc, getDoc, onSnapshot, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { auth, db, signOut, sendVerificationEmail } from '../lib/firebase';
 import { AsrarHubLoader } from '../components/AsrarHubLoader';
-import { getTrialDurationHours } from '../utils/trialConfig';
+import { getTrialDurationHours, isNewUserPremiumEnabled } from '../utils/trialConfig';
 
 const parseUserAgent = (ua: string) => {
   let os = 'Inconnu';
@@ -175,6 +175,7 @@ export const setLocalUserSession = (email: string, name?: string, country?: stri
   } catch (e) {}
 
   const now = new Date();
+  const isPremEnabled = isNewUserPremiumEnabled();
   const trialHours = getTrialDurationHours();
   const trialExpiry = new Date(now.getTime() + trialHours * 60 * 60 * 1000);
 
@@ -187,12 +188,20 @@ export const setLocalUserSession = (email: string, name?: string, country?: stri
   if (isAdmin) {
     subTier = 'premium';
   } else if (isSignUp) {
-    // Only NEW users receive temporary free trial premium access on sign up
-    subTier = 'premium';
-    trialActivated = true;
-    trialActivatedAt = now.toISOString();
-    trialExpiresAt = trialExpiry.toISOString();
-    premUntil = trialExpiry.toISOString();
+    // Only NEW users receive temporary free trial premium access on sign up IF enabled by admin
+    if (isPremEnabled) {
+      subTier = 'premium';
+      trialActivated = true;
+      trialActivatedAt = now.toISOString();
+      trialExpiresAt = trialExpiry.toISOString();
+      premUntil = trialExpiry.toISOString();
+    } else {
+      subTier = 'free';
+      trialActivated = false;
+      trialActivatedAt = null;
+      trialExpiresAt = null;
+      premUntil = null;
+    }
   } else if (existingUser) {
     subTier = (existingUser.subscriptionTier as 'free' | 'premium') || 'free';
     trialActivated = existingUser.freeTrialActivated || false;
@@ -404,6 +413,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             };
           } else {
             const now = new Date();
+            const isPremEnabled = isNewUserPremiumEnabled();
             const trialHours = getTrialDurationHours();
             const trialExpiry = new Date(now.getTime() + trialHours * 60 * 60 * 1000);
 
@@ -420,11 +430,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               photoURL: firebaseUser.photoURL || null,
               coverPhotoURL: null,
               spiritualPoints: 100,
-              subscriptionTier: 'premium',
-              premiumUntil: trialExpiry.toISOString(),
-              freeTrialActivated: true,
-              freeTrialActivatedAt: now.toISOString(),
-              freeTrialExpiresAt: trialExpiry.toISOString(),
+              subscriptionTier: isPremEnabled ? 'premium' : 'free',
+              premiumUntil: isPremEnabled ? trialExpiry.toISOString() : null,
+              freeTrialActivated: isPremEnabled,
+              freeTrialActivatedAt: isPremEnabled ? now.toISOString() : null,
+              freeTrialExpiresAt: isPremEnabled ? trialExpiry.toISOString() : null,
               hasSeenTrialPopup: false,
               hideAds: false,
               streakDays: 1,
@@ -443,11 +453,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               mysteryToolsDisabled: false,
               isTrusted: true,
               createdAt: now.toISOString(),
-              subscriptionTier: 'premium',
-              freeTrialActivated: true,
-              freeTrialActivatedAt: now.toISOString(),
-              freeTrialExpiresAt: trialExpiry.toISOString(),
-              premiumUntil: trialExpiry.toISOString(),
+              subscriptionTier: isPremEnabled ? 'premium' : 'free',
+              freeTrialActivated: isPremEnabled,
+              freeTrialActivatedAt: isPremEnabled ? now.toISOString() : null,
+              freeTrialExpiresAt: isPremEnabled ? trialExpiry.toISOString() : null,
+              premiumUntil: isPremEnabled ? trialExpiry.toISOString() : null,
               hasSeenTrialPopup: false,
               requiresValidation: false
             }, { merge: true }).catch(err => console.warn("Auto-persist missing user doc note:", err));

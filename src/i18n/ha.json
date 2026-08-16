@@ -1040,6 +1040,7 @@
     "promoPercentSuccess": "An yi amfani da lambar promo! Kuna samun ragi na -{val}% akan duk rajista.",
     "promoValueSuccess": "An yi amfani da lambar promo! Kuna samun rangwame na -{val} {curr}.",
     "promoSubUnlockSuccess": "Ingantacciyar lambar promo! Kuna iya buɗe rajistar Premium ta wata {months} kyauta kai tsaye.",
+    "promoHoursUnlockSuccess": "Ingantacciyar lambar promo! Kuna iya buɗe damar Premium ta Awowi {hours} kyauta kai tsaye.",
     "promoProductUnlockSuccess": "Ingantacciyar lambar promo! Kuna iya buɗe abu na shago kyauta.",
     "promoAppliedSuccess": "An yi amfani da lambar promo {code} cikin nasara!",
     "unlockAndActivateNow": "Buɗe kuma Kunna yanzu",
@@ -1051,7 +1052,12 @@
     "freeWithPromoDesc": "Lambar promo din ku ta rage kudin wannan rajistar zuwa 0. Kuna iya kunna ta nan take ba tare da kudi ba.",
     "activateFreeSub": "Kunna rajista ta kyauta",
     "methodsDisabled": "Gudanarwa ya dakatar da hanyoyin biyan kudi ta yanar gizo na dan lokaci. Da fatan za a sake gwadawa daga baya.",
-    "errorActivation": "An samu kuskure lokacin kunna rajista."
+    "errorActivation": "An samu kuskure lokacin kunna rajista.",
+    "canvaCelebrationBadge": "★ AN BUƊE DAMAR PREMIUM ★",
+    "canvaCelebrationTitle": "Taya murna! Yanzu Kuna Memba Na VIP",
+    "canvaCelebrationSubtitle": "Lambar promo dinku ta bude dukkan asirai, girke-girke na musamman da ayyukan VIP na AsrarHub.",
+    "canvaCelebrationContinue": "Ci gaba",
+    "canvaCelebrationAction": "Ci gaba"
   },
   "ad": {
     "sponsored": "Tallafi",
