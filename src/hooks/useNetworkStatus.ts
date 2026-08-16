@@ -1,105 +1,131 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Network } from '@capacitor/network';
 import { Capacitor } from '@capacitor/core';
 
-export function useNetworkStatus() {
-  const [isOnline, setIsOnline] = useState<boolean>(() => {
-    if (typeof navigator !== 'undefined') {
-      // In native apps, assume true by default until verified to avoid false offline banners on cold start
-      if (Capacitor.isNativePlatform()) {
-        return true;
-      }
-      return navigator.onLine;
-    }
-    return true;
-  });
+/**
+ * Perform a fast active ping test to verify actual HTTP connectivity.
+ * Works even when navigator.onLine or Capacitor Network falsely report offline on mobile data.
+ */
+async function probeHttpConnectivity(): Promise<boolean> {
+  const probes = [
+    'https://www.google.com/generate_204',
+    'https://firestore.googleapis.com',
+    'https://www.gstatic.com/generate_204'
+  ];
 
-  useEffect(() => {
-    let isMounted = true;
-
-    const updateStatus = (connected: boolean) => {
-      if (isMounted) {
-        setIsOnline(connected);
-      }
-    };
-
-    // 1. Native Capacitor Detection
-    if (Capacitor.isNativePlatform()) {
-      Network.getStatus()
-        .then(status => {
-          updateStatus(status.connected);
-        })
-        .catch(() => {});
-
-      const listenerPromise = Network.addListener('networkStatusChange', status => {
-        updateStatus(status.connected);
-      });
-
-      return () => {
-        isMounted = false;
-        listenerPromise.then(l => l.remove()).catch(() => {});
-      };
-    }
-
-    // 2. Web / Standard WebView Fallback
-    const handleOnline = () => updateStatus(true);
-    const handleOffline = () => updateStatus(false);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    // If navigator.onLine is false, do an active probe to avoid false negatives in Android WebView
-    if (!navigator.onLine) {
-      const probeOnline = async () => {
-        try {
-          // Simple lightweight probe
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 3000);
-          await fetch('https://www.google.com/favicon.ico', {
-            method: 'HEAD',
-            mode: 'no-cors',
-            cache: 'no-store',
-            signal: controller.signal,
-          });
-          clearTimeout(timeoutId);
-          updateStatus(true);
-        } catch {
-          // If probe fails, maintain current state
-        }
-      };
-      probeOnline();
-    }
-
-    return () => {
-      isMounted = false;
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
-
-  const recheckNetwork = async (): Promise<boolean> => {
+  for (const url of probes) {
     try {
-      if (Capacitor.isNativePlatform()) {
-        const status = await Network.getStatus();
-        setIsOnline(status.connected);
-        return status.connected;
-      }
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000);
-      await fetch('https://www.google.com/favicon.ico', {
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
+      await fetch(url, {
         method: 'HEAD',
         mode: 'no-cors',
         cache: 'no-store',
         signal: controller.signal,
       });
       clearTimeout(timeoutId);
-      setIsOnline(true);
       return true;
     } catch {
-      const fallback = typeof navigator !== 'undefined' ? navigator.onLine : false;
-      setIsOnline(fallback);
-      return fallback;
+      // Continue to next probe candidate
     }
+  }
+  return false;
+}
+
+export function useNetworkStatus() {
+  const [isOnline, setIsOnline] = useState<boolean>(true);
+
+  const performCheck = useCallback(async (): Promise<boolean> => {
+    // 1. Check Capacitor Network plugin first if on native platform
+    let capacitorConnected = true;
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const status = await Network.getStatus();
+        capacitorConnected = status.connected;
+      } catch (e) {
+        capacitorConnected = true;
+      }
+    }
+
+    // 2. If Capacitor says connected or navigator says online, verify with HTTP probe if needed
+    if (capacitorConnected && (typeof navigator === 'undefined' || navigator.onLine)) {
+      setIsOnline(true);
+      return true;
+    }
+
+    // 3. If either reported false, do an active HTTP probe because Android WebView often gives false negatives
+    const actuallyReachable = await probeHttpConnectivity();
+    setIsOnline(actuallyReachable);
+    return actuallyReachable;
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    // Run initial connectivity check on startup
+    performCheck().then((connected) => {
+      if (isMounted) setIsOnline(connected);
+    });
+
+    // 1. Native Capacitor listener
+    let removeCapacitorListener: (() => void) | null = null;
+    if (Capacitor.isNativePlatform()) {
+      Network.addListener('networkStatusChange', async (status) => {
+        if (!isMounted) return;
+        if (status.connected) {
+          setIsOnline(true);
+        } else {
+          // Verify with active probe before declaring offline
+          const reachable = await probeHttpConnectivity();
+          if (isMounted) setIsOnline(reachable);
+        }
+      }).then(handle => {
+        removeCapacitorListener = () => handle.remove();
+      }).catch(() => {});
+    }
+
+    // 2. Standard Web & WebView events
+    const handleOnline = () => {
+      if (isMounted) setIsOnline(true);
+    };
+
+    const handleOffline = async () => {
+      // Double-check with active HTTP probe to avoid false negatives in WebView
+      const reachable = await probeHttpConnectivity();
+      if (isMounted) setIsOnline(reachable);
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    // Periodic safety check every 30s when app is active to automatically restore connection state
+    const intervalId = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        performCheck();
+      }
+    }, 30000);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        performCheck();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      clearInterval(intervalId);
+      if (removeCapacitorListener) {
+        removeCapacitorListener();
+      }
+    };
+  }, [performCheck]);
+
+  const recheckNetwork = async (): Promise<boolean> => {
+    return await performCheck();
   };
 
   return {

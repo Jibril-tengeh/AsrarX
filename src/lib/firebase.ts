@@ -20,6 +20,7 @@ import {
   persistentLocalCache, 
   persistentMultipleTabManager, 
   memoryLocalCache,
+  enableNetwork,
   doc, 
   getDoc, 
   setDoc, 
@@ -103,11 +104,23 @@ export const db = initFirestore();
 
 // Auto-run diagnostics on startup in Capacitor or mobile environments to isolate network/CORS issues
 if (typeof window !== 'undefined') {
+  const reconnectFirestore = () => {
+    try {
+      enableNetwork(db).catch(() => {});
+    } catch (e) {}
+  };
+
   window.addEventListener('online', () => {
     console.log('[Network Monitor] Device status changed: ONLINE. Syncing Firestore cache...');
+    reconnectFirestore();
   });
   window.addEventListener('offline', () => {
     console.warn('[Network Monitor] Device status changed: OFFLINE. Using Firestore local persistent cache...');
+  });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      reconnectFirestore();
+    }
   });
 
   if (isCapacitor || process.env.NODE_ENV === 'development') {

@@ -187,38 +187,28 @@ export const SyncStatusBadge: React.FC = () => {
   }, []);
 
   const handleForceSync = async () => {
-    if (!user) return;
-    
     setIsForcingSync(true);
     setShowSuccessMsg(false);
     setTestResult(null);
 
     try {
-      if (!isOnline) {
-        // Run ping check
-        const reachable = await recheckNetwork();
-        if (reachable) {
-          await revalidatePublishedArticles('badge_retry');
-          await refreshCacheStats();
-          setLastSyncTime(new Date());
-          setShowSuccessMsg(true);
-          setTimeout(() => setShowSuccessMsg(false), 3000);
-        } else {
-          setTestResult(tStr.stillOffline);
-          setTimeout(() => setTestResult(null), 4000);
-        }
-        return;
-      }
-
-      // Test the Firebase connection explicitly as recommended in guidelines
-      await getDocFromServer(doc(db, 'users', user.uid));
+      // 1. Actively check connectivity
+      const reachable = await recheckNetwork();
+      
+      // 2. Fetch fresh articles (runs both Firestore SDK & REST API fallback)
       await revalidatePublishedArticles('badge_force_sync');
       await refreshCacheStats();
-      
-      // Artificial delay to give the user visual feedback of the sync running
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      
+
+      if (user) {
+        try {
+          await getDocFromServer(doc(db, 'users', user.uid));
+        } catch (e) {
+          // Non-blocking: user doc ping error should not block article sync
+        }
+      }
+
       setLastSyncTime(new Date());
+      setSyncState(user ? 'synced' : 'guest');
       setShowSuccessMsg(true);
       
       // Auto-hide success message after 3 seconds

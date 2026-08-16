@@ -68,11 +68,6 @@ export async function getStalePublishedArticles(): Promise<any[]> {
  * updates IndexedDB persistent storage, updates details cache, and dispatches an update event.
  */
 export async function revalidatePublishedArticles(sourceTag = 'manual'): Promise<any[]> {
-  if (typeof window !== 'undefined' && !navigator.onLine) {
-    console.log('[SWR] Device is offline, skipping network revalidation.');
-    return getStalePublishedArticles();
-  }
-
   // Deduplicate concurrent revalidation requests
   if (activeRevalidationPromise) {
     return activeRevalidationPromise;
