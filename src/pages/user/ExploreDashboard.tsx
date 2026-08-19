@@ -16,11 +16,13 @@ import { UnverifiedEmailGuard } from '../../components/UnverifiedEmailGuard';
 import { AuthModal } from '../../components/AuthModal';
 import { INITIAL_DEFAULT_ARTICLES } from '../../data/defaultArticles';
 import { fetchArticlesFromRest } from '../../lib/firestoreRest';
-import { isPubliclyVisibleArticle, getTranslatedArticleTitle, getTranslatedArticleHook } from '../../lib/articleUtils';
+import { isPubliclyVisibleArticle, getTranslatedArticleTitle, getTranslatedArticleHook, sortArticlesInOrder } from '../../lib/articleUtils';
 import { mergeWithLocalArticles, saveCachedArticlesList, combineWithDefaultArticles, getCachedArticlesListAsync } from '../../lib/localArticles';
 import { SWR_EVENT_NAME } from '../../lib/swrArticleCache';
 import { useBackButton } from '../../hooks/useBackButton';
 import { getArticleImageUrl } from '../../utils/articleImageUtils';
+import { useNetworkStatus } from '../../hooks/useNetworkStatus';
+import { OfflineArticlesPopup } from '../../components/OfflineArticlesPopup';
 
 export const ExploreDashboard: React.FC = () => {
   const { t, language } = useLanguage();
@@ -90,22 +92,16 @@ export const ExploreDashboard: React.FC = () => {
       const cached = localStorage.getItem('asrarhub_cached_explore_articles') || localStorage.getItem('asrarhub_cached_articles_list');
       if (cached) {
         const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const valid = parsed.filter((art: any) => art && art.id && !String(art.id).startsWith('default_art_') && isPubliclyVisibleArticle(art.status));
+          if (valid.length > 0) return mergeWithLocalArticles(valid);
+        }
       }
     } catch (e) {}
-    return mergeWithLocalArticles(INITIAL_DEFAULT_ARTICLES.map(art => ({
-      id: art.id,
-      title: art.title,
-      hook: art.hook,
-      category: art.category,
-      status: art.status || 'Published',
-      content: art.content,
-      benefits: art.benefits || [],
-      imageUrl: art.thumbnail,
-      isPremium: art.isPremium || false,
-      createdAt: art.createdAt
-    })));
+    return mergeWithLocalArticles([]);
   });
+  const { isOffline, isOnline } = useNetworkStatus();
+  const [showOfflineModal, setShowOfflineModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [visibleCount, setVisibleCount] = useState(3);
   const [bookmarks, setBookmarks] = useState<string[]>([]);
@@ -169,9 +165,31 @@ export const ExploreDashboard: React.FC = () => {
 
     const q = collection(db, 'articles');
 
+    // Master in-memory accumulator to prevent any flicker or disappearances
+    const exploreArticleMap = new Map<string, any>();
+
+    const applyAccumulatedExploreArticles = (incoming: any[]) => {
+      if (!Array.isArray(incoming)) return;
+      for (const it of incoming) {
+        if (it && it.id && (isAdmin || isPublishedStatus(it.status))) {
+          const existing = exploreArticleMap.get(it.id);
+          exploreArticleMap.set(it.id, { ...existing, ...it });
+        }
+      }
+      const allAccumulated = Array.from(exploreArticleMap.values());
+      const merged = mergeWithLocalArticles(allAccumulated);
+      const publicOnly = isAdmin ? merged : merged.filter((art: any) => isPublishedStatus(art.status));
+      const sorted = sortArticlesInOrder(publicOnly, true);
+      if (sorted.length > 0) {
+        setArticles(sorted);
+        setIsLoading(false);
+        saveCachedArticlesList('asrarhub_cached_explore_articles', sorted);
+      }
+    };
+
     const processExploreRaw = (data: any, docId: string) => {
       if (!data) return null;
-      if (!isPublishedStatus(data.status)) return null;
+      if (!isAdmin && !isPublishedStatus(data.status)) return null;
       const activeTitle = getTranslatedArticleTitle(data, language) || 'Sans titre';
       const activeContent = language === 'fr' ? data.content : data[`content_${language}`] || data.content || '';
       let activeHook = getTranslatedArticleHook(data, language);
@@ -201,152 +219,93 @@ export const ExploreDashboard: React.FC = () => {
       }
     };
 
-    const getDefaultExploreArticles = () => {
-      return INITIAL_DEFAULT_ARTICLES.map(art => {
-        let activeContent = art.content || '';
-        if (language === 'en' && art.content_en) activeContent = art.content_en;
-        if (language === 'ha' && art.content_ha) activeContent = art.content_ha;
-
-        let hookText = getTranslatedArticleHook(art, language);
-        let titleText = getTranslatedArticleTitle(art, language);
-
-        return {
-          id: art.id,
-          title: titleText,
-          hook: hookText,
-          category: art.category,
-          status: art.status || 'Published',
-          content: activeContent,
-          benefits: art.benefits || [],
-          imageUrl: art.thumbnail,
-          thumbnail: art.thumbnail,
-          isPremium: art.isPremium || false,
-          createdAt: art.createdAt
-        };
-      });
-    };
-
-    const tryRestoreExploreCacheOrDefaults = () => {
+    // 1. Instant cache restoration
+    const restoreCachedExploreArticles = () => {
       let base: any[] = [];
       try {
-        const cached = localStorage.getItem('asrarhub_cached_explore_articles');
+        const cached = localStorage.getItem('asrarhub_cached_explore_articles') || localStorage.getItem('asrarhub_cached_articles_list');
         if (cached) {
           const parsed = JSON.parse(cached);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            const valid = parsed.filter((art: any) => isPublishedStatus(art.status));
+            const valid = parsed.filter((art: any) => art && art.id && !String(art.id).startsWith('default_art_') && (isAdmin || isPublishedStatus(art.status)));
             if (valid.length > 0) {
               base = valid;
             }
           }
         }
       } catch (e) {}
-      const defaultItems = getDefaultExploreArticles().filter((art: any) => isPublishedStatus(art.status));
-      const combined = combineWithDefaultArticles(defaultItems, base);
-      const merged = mergeWithLocalArticles(combined);
-      const publicOnly = isAdmin ? merged : merged.filter((art: any) => isPublishedStatus(art.status));
-      setArticles(publicOnly);
-      setIsLoading(false);
 
-      // Asynchronously fetch full cached list from IndexedDB (untruncated)
+      applyAccumulatedExploreArticles(base);
+
       getCachedArticlesListAsync('asrarhub_cached_explore_articles').then(idbItems => {
         if (Array.isArray(idbItems) && idbItems.length > 0) {
-          const valid = idbItems.filter((art: any) => isAdmin || isPublishedStatus(art.status));
+          const valid = idbItems.filter((art: any) => art && art.id && !String(art.id).startsWith('default_art_') && (isAdmin || isPublishedStatus(art.status)));
           if (valid.length > 0) {
-            const idbCombined = combineWithDefaultArticles(defaultItems, valid);
-            const idbMerged = mergeWithLocalArticles(idbCombined);
-            const idbPublic = isAdmin ? idbMerged : idbMerged.filter((art: any) => isPublishedStatus(art.status));
-            setArticles(idbPublic);
+            applyAccumulatedExploreArticles(valid);
           }
         }
       }).catch(() => {});
     };
 
-    // Restore cached/local articles immediately so articles are available offline with zero latency
-    tryRestoreExploreCacheOrDefaults();
+    restoreCachedExploreArticles();
 
-    // Direct REST API fetch to guarantee real articles load on Capacitor/mobile WebView
+    // 2. Direct REST API fetch
     fetchArticlesFromRest().then(restDocs => {
       if (Array.isArray(restDocs) && restDocs.length > 0) {
         const fresh = restDocs
           .map(d => processExploreRaw(d, d.id))
           .filter((art: any) => art !== null && (isAdmin || isPublishedStatus(art.status)));
-        const defaultItems = getDefaultExploreArticles().filter((art: any) => isPublishedStatus(art.status));
-        const combined = combineWithDefaultArticles(defaultItems, fresh);
-        const merged = mergeWithLocalArticles(combined);
-        const publicOnly = isAdmin ? merged : merged.filter((art: any) => isPublishedStatus(art.status));
-        if (publicOnly.length > 0) {
-          console.log(`[Articles REST - ExploreDashboard] Loaded ${publicOnly.length} articles via REST API!`);
-          setArticles(publicOnly);
-          setIsLoading(false);
-          saveCachedArticlesList('asrarhub_cached_explore_articles', publicOnly);
+        if (fresh.length > 0) {
+          console.log(`[Articles REST - ExploreDashboard] Loaded ${fresh.length} articles via REST API`);
+          applyAccumulatedExploreArticles(fresh);
         }
       }
     }).catch(err => {
-      console.warn("[Articles REST - ExploreDashboard] REST fetch warning:", err);
+      console.warn("[Articles REST - ExploreDashboard] REST fetch note:", err);
     });
 
-    // Standard getDocs fallback for reliable loading on native mobile/Capacitor builds
-    console.log(`[Articles Query - ExploreDashboard] Querying collection 'articles'. User role: "${user?.role || 'user'}".`);
+    // 3. Firestore getDocs query
     getDocs(q).then((snap) => {
-      console.log(`[Articles getDocs - ExploreDashboard] Received ${snap.docs.length} raw documents from Firestore server.`);
       const fresh = snap.docs
         .map(d => processExploreDoc(d))
         .filter((art: any) => art !== null && (isAdmin || isPublishedStatus(art.status)));
-
-      const defaultItems = getDefaultExploreArticles().filter((art: any) => isPublishedStatus(art.status));
-      const combined = combineWithDefaultArticles(defaultItems, fresh);
-      const merged = mergeWithLocalArticles(combined);
-      const publicOnly = isAdmin ? merged : merged.filter((art: any) => isPublishedStatus(art.status));
-      console.log(`[Articles getDocs - ExploreDashboard] ${publicOnly.length} published articles ready.`);
-      if (publicOnly.length > 0) {
-        setArticles(publicOnly);
-        setIsLoading(false);
-        saveCachedArticlesList('asrarhub_cached_explore_articles', publicOnly);
-      } else {
-        tryRestoreExploreCacheOrDefaults();
+      if (fresh.length > 0) {
+        console.log(`[Articles getDocs - ExploreDashboard] Loaded ${fresh.length} articles via getDocs`);
+        applyAccumulatedExploreArticles(fresh);
       }
     }).catch(err => {
-      console.warn("[Articles getDocs - ExploreDashboard] Error during getDocs query:", err?.code || err?.message || err);
-      tryRestoreExploreCacheOrDefaults();
+      console.warn("[Articles getDocs - ExploreDashboard] Firestore getDocs note:", err?.code || err?.message || err);
     });
 
+    // 4. Firestore real-time onSnapshot listener
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      console.log(`[Articles onSnapshot - ExploreDashboard] Listener update received (${snapshot.docs.length} raw docs, fromCache: ${snapshot.metadata?.fromCache}).`);
       const allArticles = snapshot.docs
         .map(d => processExploreDoc(d))
         .filter((art: any) => art !== null && (isAdmin || isPublishedStatus(art.status)));
-
-      const defaultItems = getDefaultExploreArticles().filter((art: any) => isPublishedStatus(art.status));
-      const combined = combineWithDefaultArticles(defaultItems, allArticles);
-      const merged = mergeWithLocalArticles(combined);
-      const publicOnly = isAdmin ? merged : merged.filter((art: any) => isPublishedStatus(art.status));
-      if (publicOnly.length > 0) {
-        console.log(`[Articles onSnapshot - ExploreDashboard] ${publicOnly.length} published articles ready to display.`);
-        setArticles(publicOnly);
-        saveCachedArticlesList('asrarhub_cached_explore_articles', publicOnly);
-      } else {
-        console.warn("[Articles onSnapshot - ExploreDashboard] Empty snapshot received, restoring cached/default articles.");
-        tryRestoreExploreCacheOrDefaults();
+      if (allArticles.length > 0) {
+        console.log(`[Articles onSnapshot - ExploreDashboard] Realtime update: ${allArticles.length} articles`);
+        applyAccumulatedExploreArticles(allArticles);
       }
       setIsLoading(false);
     }, (error) => {
-      console.error("[Articles onSnapshot - ExploreDashboard] Firestore permission or network error:", error.code, error.message, error);
-      tryRestoreExploreCacheOrDefaults();
+      console.warn("[Articles onSnapshot - ExploreDashboard] Firestore listener note:", error?.code || error?.message || error);
+      setIsLoading(false);
     });
 
     const handleSWRUpdate = (e: Event) => {
       const customEvent = e as CustomEvent;
       if (customEvent.detail?.articles && Array.isArray(customEvent.detail.articles)) {
-        console.log(`[SWR Event - ExploreDashboard] Article list updated via SWR (${customEvent.detail.articles.length} items).`);
-        setArticles(customEvent.detail.articles);
-        setIsLoading(false);
+        console.log(`[SWR Event - ExploreDashboard] SWR updated with ${customEvent.detail.articles.length} items`);
+        applyAccumulatedExploreArticles(customEvent.detail.articles);
       }
     };
     window.addEventListener(SWR_EVENT_NAME, handleSWRUpdate);
+    window.addEventListener('asrarhub_swr_articles_updated', handleSWRUpdate);
 
     return () => {
       unsubscribe();
       window.removeEventListener(SWR_EVENT_NAME, handleSWRUpdate);
+      window.removeEventListener('asrarhub_swr_articles_updated', handleSWRUpdate);
     };
   }, [language]);
 
@@ -772,6 +731,36 @@ export const ExploreDashboard: React.FC = () => {
             );
           })()}
 
+          {articles.length === 0 && (
+            <div className="p-8 text-center rounded-3xl bg-gray-50 dark:bg-gray-800/50 border border-dashed border-gray-200 dark:border-gray-700/60 my-6">
+              {isOffline ? (
+                <div className="space-y-3 max-w-md mx-auto">
+                  <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-500 mx-auto flex items-center justify-center">
+                    <Sparkles className="w-6 h-6 animate-pulse" />
+                  </div>
+                  <h4 className="text-base font-bold text-gray-900 dark:text-white">
+                    {language === 'fr' ? 'Mode Hors Ligne' : 'Offline Mode'}
+                  </h4>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {language === 'fr' 
+                      ? 'Les articles seront automatiquement synchronisés et affichés dès que votre connexion Internet sera rétablie.' 
+                      : 'Articles will be automatically synchronized and displayed once your internet connection is active.'}
+                  </p>
+                  <button
+                    onClick={() => setShowOfflineModal(true)}
+                    className="mt-2 px-4 py-2 bg-amber-500 text-white rounded-xl text-xs font-bold shadow-md shadow-amber-500/20 hover:bg-amber-600 transition-all cursor-pointer inline-flex items-center gap-1.5"
+                  >
+                    <span>{language === 'fr' ? 'Détails de synchronisation' : 'Sync details'}</span>
+                  </button>
+                </div>
+              ) : (
+                <p className="text-xs text-gray-400">
+                  {language === 'fr' ? 'Chargement des articles officiels...' : 'Loading official articles...'}
+                </p>
+              )}
+            </div>
+          )}
+
           {articles.length > visibleCount && (
             <div className="mt-8 flex justify-center">
               <button 
@@ -942,6 +931,17 @@ export const ExploreDashboard: React.FC = () => {
           </div>
         </div>
       )}
+      {/* Offline sync notification popup */}
+      <OfflineArticlesPopup
+        isOpen={showOfflineModal || (isOffline && articles.length === 0)}
+        onClose={() => setShowOfflineModal(false)}
+        onConnectedAndSynced={(synced) => {
+          if (Array.isArray(synced) && synced.length > 0) {
+            setArticles(synced);
+          }
+        }}
+        articleCount={articles.length}
+      />
     </div>
   );
 };

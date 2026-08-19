@@ -32,6 +32,9 @@ const PLANETARY_DETAILS: Record<number, {
   elementIcon: string;
   angel: string;
   zikr: string;
+  zikrName: string;
+  zikrArabic: string;
+  zikrCount: number;
   recommendedWorks: { fr: string; en: string; ha: string };
   color: string;
   accentBg: string;
@@ -41,6 +44,9 @@ const PLANETARY_DETAILS: Record<number, {
     elementIcon: 'fire',
     angel: 'Rūqyā’īl (روقيائيل)',
     zikr: 'Yā Hayyu Yā Qayyūm (يا حي يا قيوم) - 174 fois',
+    zikrName: 'Yā Hayyu Yā Qayyūm',
+    zikrArabic: 'يَا حَيُّ يَا قَيُّومُ',
+    zikrCount: 174,
     recommendedWorks: {
       fr: 'Rayonnement, prestige, autorité, charisme et réussite auprès des gouvernants.',
       en: 'Radiance, authority, prestige, charisma, and success with leaders.',
@@ -53,7 +59,10 @@ const PLANETARY_DETAILS: Record<number, {
     element: { fr: 'Air Harmonieux', en: 'Harmonious Air', ha: 'Iska Mai Dadi' },
     elementIcon: 'air',
     angel: '‘Anyā’īl (عنيائيل)',
-    zikr: 'Yā Wadūd Yā Jāmi‘ (يا ودود يا جامع) - 114 fois',
+    zikr: 'Yā Wadūd Yā Jāmi‘ (يا ودod يا جامع) - 114 fois',
+    zikrName: 'Yā Wadūd Yā Jāmi‘',
+    zikrArabic: 'يَا وَدُودُ يَا جَامِعُ',
+    zikrCount: 114,
     recommendedWorks: {
       fr: 'Amour, réconciliation, attraction, paix familiale, mariage et bien-être.',
       en: 'Love, reconciliation, attraction, family peace, marriage, and well-being.',
@@ -67,6 +76,9 @@ const PLANETARY_DETAILS: Record<number, {
     elementIcon: 'wind',
     angel: 'Mīkhā’īl (ميخائيل)',
     zikr: 'Yā ‘Alīm Yā Hakīm (يا عليم يا حكيم) - 150 fois',
+    zikrName: 'Yā ‘Alīm Yā Hakīm',
+    zikrArabic: 'يَا عَلِيمُ يَا حَكِيمُ',
+    zikrCount: 150,
     recommendedWorks: {
       fr: 'Étude des sciences mystiques, commerce, rédaction de traités, diplomatie et sagesse.',
       en: 'Mystical studies, commerce, talismanic writing, diplomacy, and wisdom.',
@@ -80,6 +92,9 @@ const PLANETARY_DETAILS: Record<number, {
     elementIcon: 'water',
     angel: 'Jibrā’īl (جبرائيل)',
     zikr: 'Yā Salām Yā Latīf (يا سلام يا لطيف) - 129 fois',
+    zikrName: 'Yā Salām Yā Latīf',
+    zikrArabic: 'يَا سَلَامُ يَا لَطِيفُ',
+    zikrCount: 129,
     recommendedWorks: {
       fr: 'Voyages, purification, rêves prémonitoires, protection nocturne et apaisement.',
       en: 'Journeys, spiritual purification, prophetic dreams, and emotional peace.',
@@ -93,6 +108,9 @@ const PLANETARY_DETAILS: Record<number, {
     elementIcon: 'earth',
     angel: 'Kasfiyā’īl (كسفيائيل)',
     zikr: 'Yā Qahhār Yā Mumīt (يا قهار يا مميت) - 306 fois',
+    zikrName: 'Yā Qahhār Yā Mumīt',
+    zikrArabic: 'يَا قَهَّارُ يَا مُمِيتُ',
+    zikrCount: 306,
     recommendedWorks: {
       fr: 'Bannissement des énergies négatives, clôtures de protection, endurance et patience.',
       en: 'Banishing negative energies, spiritual shields, discipline, and perseverance.',
@@ -106,6 +124,9 @@ const PLANETARY_DETAILS: Record<number, {
     elementIcon: 'fire',
     angel: 'Tsadqiyā’īl (صدقيائيل)',
     zikr: 'Yā Bāsit Yā Fattāh Yā Razzāq (يا باسط يا فتاح يا رزاق) - 308 fois',
+    zikrName: 'Yā Bāsit Yā Fattāh Yā Razzāq',
+    zikrArabic: 'يَا بَاسِطُ يَا فَتَّاحُ يَا رَزَّاقُ',
+    zikrCount: 308,
     recommendedWorks: {
       fr: 'Richesse abondante, ouverture des portes fermées, victoire juridique et bienveillance.',
       en: 'Abundance, wealth, opening locked gates, divine victory, and fortune.',
@@ -119,6 +140,9 @@ const PLANETARY_DETAILS: Record<number, {
     elementIcon: 'fire',
     angel: 'Samsamā’īl (سمسمائيل)',
     zikr: 'Yā Qawiyyu Yā Matīn (يا قوي يا متين) - 116 fois',
+    zikrName: 'Yā Qawiyyu Yā Matīn',
+    zikrArabic: 'يَا قَوِيُّ يَا مَتِينُ',
+    zikrCount: 116,
     recommendedWorks: {
       fr: 'Courage, neutralisation des ennemis, défense énergétique et détermination absolue.',
       en: 'Courage, overcoming obstacles, energetic defense, and heroic resolve.',
@@ -177,7 +201,26 @@ export const PlanetaryHourDetailModal: React.FC<PlanetaryHourDetailModalProps> =
 
   const handleOpenTasbihWithZikr = () => {
     onClose();
-    navigate('/tools/tasbih');
+    const zikrName = details.zikrName || 'Yā Salām Yā Latīf';
+    const zikrArabic = details.zikrArabic || 'يَا سَلَامُ يَا لَطِيفُ';
+    const zikrTarget = details.zikrCount || 129;
+    const categoryName = language === 'fr' ? `Heure de ${planetName}` : language === 'ha' ? `Sa'ar ${planetName}` : `${planetName} Hour`;
+
+    try {
+      localStorage.setItem('asrar_tasbih_preset', JSON.stringify({
+        id: `planetary_${currentPlanetIndex}_${Date.now()}`,
+        text: zikrName,
+        arabic: zikrArabic,
+        target: zikrTarget,
+        category: categoryName
+      }));
+    } catch (e) {
+      console.warn("Could not set asrar_tasbih_preset:", e);
+    }
+
+    const nameEnc = encodeURIComponent(zikrName);
+    const arabicEnc = encodeURIComponent(zikrArabic);
+    navigate(`/tools/tasbih?name=${nameEnc}&arabic=${arabicEnc}&target=${zikrTarget}`);
   };
 
   return (

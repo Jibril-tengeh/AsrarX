@@ -5,7 +5,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { X, Mail, Lock, User as UserIcon, AlertCircle, Eye, EyeOff, KeyRound, CheckCircle, Globe, Phone, Search, ExternalLink, Sparkles, ShieldAlert, Zap } from 'lucide-react';
 import { signInWithGoogle, signInWithEmail, signUpWithEmail, sendVerificationEmail, auth, db, signOut } from '../lib/firebase';
 import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
-import { useAuth, setLocalUserSession } from '../contexts/AuthContext';
+import { useAuth } from '../contexts/AuthContext';
 import { isDisposableEmail, isGmailAddress, hasGmailPlusAlias, hasEmailAlias, normalizeEmail, normalizePhone, validateRegistrationDetails } from '../lib/validationUtils';
 import { useNavigate } from 'react-router-dom';
 import { sendPasswordResetEmail } from 'firebase/auth';
@@ -339,31 +339,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
     return () => clearTimeout(timer);
   }, [email, phone, isLogin, t]);
 
-  const handleLocalFallback = async () => {
-    const targetEmail = email || 'utilisateur@asrarhub.com';
-    if (!isLogin) {
-      if (isDisposableEmail(targetEmail)) {
-        setError("Les adresses email temporaires ou jetables (temp mail) ne sont pas autorisées. Veuillez utiliser une adresse email permanente.");
-        return;
-      }
-      const val = await validateRegistrationDetails(targetEmail, phone, db);
-      if (!val.valid) {
-        setError(val.error || "Informations d'inscription invalides.");
-        return;
-      }
-    }
-
-    const userSession = setLocalUserSession(targetEmail, name, country, phone, !isLogin);
-    if (adminOnly && userSession.role !== 'admin') {
-      setError(t('auth.accessDenied', "Accès refusé. Vous n'êtes pas administrateur."));
-      return;
-    }
-    onClose();
-    if (adminOnly && userSession.role === 'admin') {
-      navigate('/admin');
-    }
-  };
-
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -511,7 +486,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
       } else if (errCode === 'auth/too-many-requests') {
         setError(t('auth.tooManyRequests', 'Trop de tentatives d\'accès. Veuillez patienter un moment avant de reessayer.'));
       } else if (errCode === 'auth/network-request-failed' || errMessage.includes('network')) {
-        setError(t('auth.networkError', "La connexion aux serveurs d'authentification a échoué. Cela peut être dû à un adblocker ou à des restrictions d'iframe. Essayez d'ouvrir l'application dans un nouvel onglet ou utilisez le mode secours."));
+        setError(t('auth.networkError', "La connexion aux serveurs d'authentification a échoué. Vérifiez votre connexion internet ou réessayez dans un nouvel onglet."));
       } else {
         setError(errMessage || t('auth.errorOccurred', 'Une erreur est survenue.'));
       }
@@ -567,7 +542,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
     } catch (err: any) {
       console.error("Google sign in error:", err);
       if (err.code === 'auth/network-request-failed' || err.message?.includes('network')) {
-        setError(t('auth.networkError', "La connexion aux serveurs d'authentification a échoué. Cela peut être dû à un adblocker ou à des restrictions d'iframe. Essayez d'ouvrir l'application dans un nouvel onglet ou utilisez le mode secours."));
+        setError(t('auth.networkError', "La connexion aux serveurs d'authentification a échoué. Vérifiez votre connexion internet ou réessayez dans un nouvel onglet."));
       } else {
         setError(t('auth.googleError', 'Erreur lors de la connexion avec Google.'));
       }
@@ -855,30 +830,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
                 <>
                   <form onSubmit={handleSubmit} className="space-y-4">
                     {error && (
-                      <div className="p-3.5 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800/50 text-red-700 dark:text-red-300 text-sm rounded-xl space-y-2.5">
+                      <div className="p-3.5 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800/50 text-red-700 dark:text-red-300 text-sm rounded-xl space-y-2">
                         <div className="flex items-start gap-2">
                           <AlertCircle size={18} className="mt-0.5 shrink-0 text-red-500" />
                           <p className="flex-1 text-xs sm:text-sm leading-relaxed">{error}</p>
-                        </div>
-
-                        <div className="flex flex-col sm:flex-row gap-2 pt-2 border-t border-red-200/60 dark:border-red-800/40">
-                          <button
-                            type="button"
-                            onClick={() => window.open(window.location.href, '_blank')}
-                            className="flex-1 py-2 px-3 bg-red-100 hover:bg-red-200 dark:bg-red-900/60 dark:hover:bg-red-900 text-red-800 dark:text-red-200 text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-                          >
-                            <ExternalLink size={14} />
-                            {t('auth.openNewTab', "Ouvrir dans un nouvel onglet")}
-                          </button>
-
-                          <button
-                            type="button"
-                            onClick={handleLocalFallback}
-                            className="flex-1 py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
-                          >
-                            <Sparkles size={14} />
-                            {t('auth.continueLocal', "Mode Secours (Connexion locale)")}
-                          </button>
                         </div>
                       </div>
                     )}
@@ -1066,7 +1021,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
                     </button>
 
                     {!adminOnly && (
-                      <div className="text-center mt-4 pt-4 border-t border-gray-100 dark:border-gray-800 space-y-3">
+                      <div className="text-center mt-4 pt-4 border-t border-gray-100 dark:border-gray-800">
                         <p className="text-sm text-gray-600 dark:text-gray-400">
                           {isLogin ? t('auth.noAccount', "Vous n'avez pas de compte ?") : t('auth.hasAccount', "Vous avez déjà un compte ?")}
                           <button
@@ -1080,15 +1035,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
                             {isLogin ? t('auth.register', "S'inscrire") : t('auth.login', "Se connecter")}
                           </button>
                         </p>
-
-                        <button
-                          type="button"
-                          onClick={handleLocalFallback}
-                          className="text-xs text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 font-medium inline-flex items-center gap-1.5 cursor-pointer py-1.5 px-3 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 transition-colors"
-                        >
-                          <ShieldAlert size={14} />
-                          {t('auth.directLocalLogin', 'Problème de connexion ? Mode Secours (Local)')}
-                        </button>
                       </div>
                     )}
                   </form>

@@ -11,7 +11,7 @@ export const getAsrarItems = (): AsrarItem[] => {
       const parsed = JSON.parse(cached);
       if (Array.isArray(parsed) && parsed.length > 0) {
         return parsed
-          .filter(item => isPubliclyVisibleArticle(item.status))
+          .filter(item => item && item.id && !String(item.id).startsWith('default_art_') && isPubliclyVisibleArticle(item.status))
           .map(item => ({
             ...item,
             hook: item.hook || (item.content ? item.content.replace(/<[^>]+>/g, '').substring(0, 120) + '...' : '')
@@ -21,27 +21,7 @@ export const getAsrarItems = (): AsrarItem[] => {
   } catch (e) {
     console.error("Error parsing asrar_items", e);
   }
-  return INITIAL_DEFAULT_ARTICLES
-    .filter(art => isPubliclyVisibleArticle(art.status))
-    .map(art => ({
-      id: art.id,
-      title: art.title,
-      title_en: art.title_en,
-      title_ha: art.title_ha,
-      hook: art.hook,
-      hook_en: art.hook_en,
-      hook_ha: art.hook_ha,
-      category: art.category,
-      subCategory: art.subCategory || '',
-      status: art.status,
-      content: art.content,
-      content_en: art.content_en,
-      content_ha: art.content_ha,
-      benefits: art.benefits,
-      imageUrl: art.thumbnail,
-      isPremium: art.isPremium,
-      createdAt: art.createdAt
-    })) as AsrarItem[];
+  return [];
 };
 
 

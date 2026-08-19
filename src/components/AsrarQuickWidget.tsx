@@ -47,29 +47,22 @@ export const AsrarQuickWidget: React.FC<AsrarQuickWidgetProps> = ({
   // Load actual saved/downloaded articles or default top 5
   useEffect(() => {
     try {
-      const cached = localStorage.getItem('asrarhub_cached_explore_articles');
+      const cached = localStorage.getItem('asrarhub_cached_explore_articles') || localStorage.getItem('asrarhub_cached_articles_list');
       if (cached) {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const valid = parsed.filter((art: any) => isPubliclyVisibleArticle(art.status));
+          const valid = parsed.filter((art: any) => art && art.id && !String(art.id).startsWith('default_art_') && isPubliclyVisibleArticle(art.status));
           if (valid.length > 0) {
             setSavedArticles(valid.slice(0, 5));
-            setSavedCount(valid.length >= 5 ? valid.length : 5);
+            setSavedCount(valid.length);
             return;
           }
         }
       }
     } catch (e) {}
 
-    // Fallback to default articles
-    const defaults = INITIAL_DEFAULT_ARTICLES.slice(0, 5).map((a, idx) => ({
-      id: a.id || `def-${idx}`,
-      title: a.title,
-      category: a.category || 'Secret',
-      hook: a.hook || ''
-    }));
-    setSavedArticles(defaults);
-    setSavedCount(5);
+    setSavedArticles([]);
+    setSavedCount(0);
   }, []);
 
   // Language helper translations

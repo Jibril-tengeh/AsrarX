@@ -12,6 +12,8 @@ export interface AsrarItem {
   content: string;
   benefits: string[];
   imageUrl?: string; // URL for the thumbnail image
+  audioUrl?: string; // Dedicated audio recording or Wird audio
+  audio_url?: string;
   isPremium?: boolean;
   createdAt: string;
   title_en?: string;

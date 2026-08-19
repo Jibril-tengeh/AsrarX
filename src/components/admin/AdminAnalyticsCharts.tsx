@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 
 interface DauItem {
   day: string;
@@ -19,8 +19,6 @@ interface UserStatusItem {
 }
 
 export const DauAreaChart: React.FC<{ data: DauItem[] }> = ({ data }) => {
-  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
-
   if (!data || data.length === 0) return null;
 
   const maxVal = Math.max(...data.map(d => d.dau), 10);
@@ -104,37 +102,27 @@ export const DauAreaChart: React.FC<{ data: DauItem[] }> = ({ data }) => {
 
         {/* Interactive Points */}
         {points.map((p, idx) => (
-          <g key={idx} className="cursor-pointer" onMouseEnter={() => setHoveredIdx(idx)} onMouseLeave={() => setHoveredIdx(null)}>
+          <g key={idx} className="cursor-pointer group/point">
             <circle
               cx={p.x}
               cy={p.y}
-              r={hoveredIdx === idx ? 6 : 4}
-              className="fill-emerald-500 stroke-white dark:stroke-gray-900 transition-all"
+              r={4}
+              className="fill-emerald-500 stroke-white dark:stroke-gray-900 group-hover/point:r-6 group-hover/point:fill-emerald-400 transition-all"
               strokeWidth="2.5"
             />
+            {/* Native SVG tooltip on hover */}
+            <title>{`${p.day}: ${p.dau} utilisateurs actifs`}</title>
             <text
               x={p.x}
               y={height - 6}
               textAnchor="middle"
-              className={`text-[11px] font-semibold transition-colors ${
-                hoveredIdx === idx ? 'fill-emerald-500 font-bold' : 'fill-gray-400'
-              }`}
+              className="text-[11px] font-semibold fill-gray-400 group-hover/point:fill-emerald-500 group-hover/point:font-bold transition-colors"
             >
               {p.day}
             </text>
           </g>
         ))}
       </svg>
-
-      {/* Dynamic Hover Tooltip */}
-      {hoveredIdx !== null && (
-        <div 
-          className="absolute top-2 right-4 bg-gray-900 text-white dark:bg-gray-750 text-xs px-3 py-1.5 rounded-xl shadow-lg border border-gray-700 pointer-events-none flex items-center gap-2"
-        >
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-          <span><strong>{data[hoveredIdx].day}</strong> : {data[hoveredIdx].dau} utilisateurs actifs</span>
-        </div>
-      )}
     </div>
   );
 };
@@ -170,7 +158,6 @@ export const ToolUsageBarChart: React.FC<{ data: ToolUsageItem[] }> = ({ data })
 
 export const UserDistributionDonut: React.FC<{ data: UserStatusItem[] }> = ({ data }) => {
   const total = data.reduce((sum, item) => sum + item.value, 0) || 1;
-  const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
 
   const radius = 65;
   const strokeWidth = 22;
@@ -212,24 +199,24 @@ export const UserDistributionDonut: React.FC<{ data: UserStatusItem[] }> = ({ da
               r={radius}
               fill="transparent"
               stroke={seg.color}
-              strokeWidth={hoveredIdx === seg.idx ? strokeWidth + 4 : strokeWidth}
+              strokeWidth={strokeWidth}
               strokeDasharray={seg.strokeDasharray}
               strokeDashoffset={seg.strokeDashoffset}
               strokeLinecap="round"
-              className="transition-all duration-300 cursor-pointer"
-              onMouseEnter={() => setHoveredIdx(seg.idx)}
-              onMouseLeave={() => setHoveredIdx(null)}
-            />
+              className="transition-all duration-300 hover:stroke-width-[26] cursor-pointer"
+            >
+              <title>{`${seg.name}: ${seg.value} (${Math.round((seg.value / total) * 100)}%)`}</title>
+            </circle>
           ))}
         </svg>
 
         {/* Center label */}
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
           <span className="text-2xl font-black text-gray-900 dark:text-white">
-            {hoveredIdx !== null ? data[hoveredIdx].value : total}
+            {total}
           </span>
           <span className="text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
-            {hoveredIdx !== null ? data[hoveredIdx].name : 'Total'}
+            Total
           </span>
         </div>
       </div>
@@ -239,11 +226,7 @@ export const UserDistributionDonut: React.FC<{ data: UserStatusItem[] }> = ({ da
         {data.map((item, idx) => (
           <div
             key={idx}
-            className={`flex items-center gap-1.5 px-2 py-1 rounded-lg transition-colors cursor-pointer ${
-              hoveredIdx === idx ? 'bg-gray-100 dark:bg-gray-750 font-bold' : ''
-            }`}
-            onMouseEnter={() => setHoveredIdx(idx)}
-            onMouseLeave={() => setHoveredIdx(null)}
+            className="flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-750 transition-colors cursor-pointer"
           >
             <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
             <span className="text-gray-700 dark:text-gray-300">
@@ -255,3 +238,4 @@ export const UserDistributionDonut: React.FC<{ data: UserStatusItem[] }> = ({ da
     </div>
   );
 };
+

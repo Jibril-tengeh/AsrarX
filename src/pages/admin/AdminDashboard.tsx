@@ -33,7 +33,7 @@ import { normalizeEmail, normalizePhone } from '../../lib/validationUtils';
 // import 'prismjs/components/prism-css';
 // import 'prismjs/components/prism-markup';
 // import 'prismjs/themes/prism-tomorrow.css';
-import ReactCrop, { type Crop } from 'react-image-crop';
+import ReactCrop, { type Crop, type PixelCrop, centerCrop, makeAspectCrop, convertToPixelCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { getApiUrl } from '../../lib/api';
 import { getArticleImageUrl } from '../../utils/articleImageUtils';
@@ -48,7 +48,8 @@ import { getInitialCalendarScales, saveCalendarScales, subscribeCalendarScales }
 import { INITIAL_DEFAULT_ARTICLES } from '../../data/defaultArticles';
 import { fetchArticlesFromRest, fetchUsersFromRest, fetchCategoriesFromRest, deleteArticleFromRest, deleteCategoryFromRest } from '../../lib/firestoreRest';
 import { isPubliclyVisibleArticle } from '../../lib/articleUtils';
-import { saveLocalCustomArticle, deleteLocalCustomArticle, clearAllLocalCustomArticles, mergeWithLocalArticles, saveCachedArticlesList, setHideMockArticles, isMockArticlesHidden, CACHED_ADMIN_ARTICLES_KEY, CACHED_ARTICLES_LIST_KEY, CACHED_EXPLORE_ARTICLES_KEY, addDeletedArticleId } from '../../lib/localArticles';
+import { saveLocalCustomArticle, deleteLocalCustomArticle, clearAllLocalCustomArticles, mergeWithLocalArticles, saveCachedArticlesList, setHideMockArticles, isMockArticlesHidden, autoSyncLocalArticlesToFirestore, CACHED_ADMIN_ARTICLES_KEY, CACHED_ARTICLES_LIST_KEY, CACHED_EXPLORE_ARTICLES_KEY, addDeletedArticleId } from '../../lib/localArticles';
+import { revalidatePublishedArticles } from '../../lib/swrArticleCache';
 import { AdminRecitersManager } from '../../components/admin/AdminRecitersManager';
 import { BookCoverStudio } from '../../components/admin/BookCoverStudio';
 import { ArticleMediaGallery } from '../../components/admin/ArticleMediaGallery';
@@ -58,6 +59,7 @@ import { QURAN_RECITERS } from '../../data/reciters';
 import { calculateHijriDate } from '../../utils/hijriDate';
 import { LunarSealVarietiesSection } from '../../components/LunarSealVarietiesSection';
 import { AdminEmailSupportManager } from '../../components/admin/AdminEmailSupportManager';
+import { AdminVersionControlManager } from '../../components/admin/AdminVersionControlManager';
 import { getTrialDurationHours, isNewUserPremiumEnabled } from '../../utils/trialConfig';
 import { ToolStatusPicker } from '../../components/admin/ToolStatusPicker';
 import { useBackButton } from '../../hooks/useBackButton';
@@ -76,6 +78,7 @@ import {
   getResolvedUserStatus 
 } from '../../components/admin/UserQuickStatusPicker';
 import { AdminSecurityAlertsManager } from '../../components/admin/AdminSecurityAlertsManager';
+import { BrandingSettings } from '../../components/admin/BrandingSettings';
 import { PROMO_HOURS_OPTIONS, PROMO_HOURLY_OPTIONS, getPromoHourMessage, getPromoHourLabel, PromoDurationHours } from '../../utils/promoConfig';
 
 const LayoutSelector = ({ value, onChange, activeColor = 'emerald' }: { value: string, onChange: (val: string) => void, activeColor?: string }) => {
@@ -150,7 +153,7 @@ const LayoutSelector = ({ value, onChange, activeColor = 'emerald' }: { value: s
   );
 };
 
-type AdminTab = 'overview' | 'promo_codes' | 'security' | 'support' | 'users' | 'payments' | 'community' | 'features' | 'reciters' | 'ruqyah' | 'content' | 'notifications' | 'settings' | 'articles' | 'store' | 'grand_oaths' | 'categories' | 'seals' | 'book_covers' | 'media_storage';
+type AdminTab = 'overview' | 'branding' | 'version_control' | 'promo_codes' | 'security' | 'support' | 'users' | 'payments' | 'community' | 'features' | 'reciters' | 'ruqyah' | 'content' | 'notifications' | 'settings' | 'articles' | 'store' | 'grand_oaths' | 'categories' | 'seals' | 'book_covers' | 'media_storage';
 
 interface Article {
   id: string;
@@ -171,6 +174,8 @@ interface Article {
   category?: string;
   subCategory?: string;
   author?: string;
+  audioUrl?: string;
+  audio_url?: string;
 }
 
 interface Term {
@@ -255,6 +260,8 @@ export const ALL_USER_TOOLS = [
 ];
 
 export const AdminDashboard: React.FC = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const { language } = useLanguage();
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
   const [showBookCoverStudioModal, setShowBookCoverStudioModal] = useState(false);
@@ -312,7 +319,7 @@ export const AdminDashboard: React.FC = () => {
   const setAllAdminSectionsCollapse = (collapsed: boolean) => {
     const sectionIds = [
       'feat_user_tools', 'feat_shams_buni', 'feat_sacred_books', 'feat_downloads', 'feat_admin_access', 'feat_payment_methods', 'feat_sharing_options',
-      'set_hijri', 'set_calendar_scale', 'set_reciter', 'set_announcement', 'set_premium_promo', 'set_assistant_icon', 'set_sacred_audio', 'set_dua_copy', 'set_backend_url', 'set_global_audio', 'set_global_maintenance', 'set_firestore_diag', 'set_font_sizes', 'set_pricing', 'set_paystack', 'set_layout_articles', 'set_article_mode', 'set_store_layout', 'set_assistant_prompts', 'set_backup_export'
+      'set_branding', 'set_hijri', 'set_calendar_scale', 'set_reciter', 'set_announcement', 'set_premium_promo', 'set_assistant_icon', 'set_sacred_audio', 'set_dua_copy', 'set_backend_url', 'set_global_audio', 'set_global_maintenance', 'set_firestore_diag', 'set_font_sizes', 'set_pricing', 'set_paystack', 'set_layout_articles', 'set_article_mode', 'set_store_layout', 'set_assistant_prompts', 'set_backup_export'
     ];
     const newState: Record<string, boolean> = {};
     sectionIds.forEach(id => {
@@ -790,12 +797,71 @@ export const AdminDashboard: React.FC = () => {
   const [showPreview, setShowPreview] = useState(false);
   const [draftSavedMessage, setDraftSavedMessage] = useState('');
   const [articlesLayoutMode, setArticlesLayoutMode] = useState<'grid' | 'list'>('grid');
+  const [adminArticleSearch, setAdminArticleSearch] = useState('');
+  const [adminArticleFilterCategory, setAdminArticleFilterCategory] = useState('all');
+  const [adminArticleFilterStatus, setAdminArticleFilterStatus] = useState('all');
+  const [adminArticleFilterPremium, setAdminArticleFilterPremium] = useState('all');
+  const [adminArticleFilterAudio, setAdminArticleFilterAudio] = useState('all');
   
   // Crop state
   const [imgSrc, setImgSrc] = useState('');
   const [crop, setCrop] = useState<Crop>();
-  const [completedCrop, setCompletedCrop] = useState<any>(null);
+  const [completedCrop, setCompletedCrop] = useState<PixelCrop | null>(null);
+  const [cropAspect, setCropAspect] = useState<number | undefined>(16 / 9);
   const imageRef = React.useRef<HTMLImageElement>(null);
+
+  const onImageCropLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const { width, height } = e.currentTarget;
+    if (cropAspect) {
+      const initialCrop = centerCrop(
+        makeAspectCrop(
+          {
+            unit: '%',
+            width: 90,
+          },
+          cropAspect,
+          width,
+          height
+        ),
+        width,
+        height
+      );
+      setCrop(initialCrop);
+      setCompletedCrop(convertToPixelCrop(initialCrop, width, height));
+    } else {
+      const initialCrop: Crop = { unit: '%', width: 90, height: 80, x: 5, y: 10 };
+      setCrop(initialCrop);
+      setCompletedCrop(convertToPixelCrop(initialCrop, width, height));
+    }
+  };
+
+  const handleAspectChange = (newAspect: number | undefined) => {
+    setCropAspect(newAspect);
+    if (imageRef.current) {
+      const { width, height } = imageRef.current;
+      if (newAspect) {
+        const newCrop = centerCrop(
+          makeAspectCrop(
+            {
+              unit: '%',
+              width: 90,
+            },
+            newAspect,
+            width,
+            height
+          ),
+          width,
+          height
+        );
+        setCrop(newCrop);
+        setCompletedCrop(convertToPixelCrop(newCrop, width, height));
+      } else {
+        const newCrop: Crop = { unit: '%', width: 90, height: 80, x: 5, y: 10 };
+        setCrop(newCrop);
+        setCompletedCrop(convertToPixelCrop(newCrop, width, height));
+      }
+    }
+  };
 
   useEffect(() => {
     // Load draft on mount
@@ -824,7 +890,8 @@ export const AdminDashboard: React.FC = () => {
       (newArticle as any).content_en ||
       (newArticle as any).content_ha ||
       (newArticle as any).title_en ||
-      (newArticle as any).title_ha
+      (newArticle as any).title_ha ||
+      (newArticle as any).audioUrl
     );
 
     if (activeTab === 'articles' && hasMeaningfulContent && !editingArticle) {
@@ -878,7 +945,7 @@ export const AdminDashboard: React.FC = () => {
           if (ctx) {
             ctx.drawImage(img, 0, 0, width, height);
             const compressed = canvas.toDataURL('image/jpeg', 0.75);
-            setNewArticle(prev => ({ ...prev, thumbnail: compressed }));
+            setNewArticle(prev => ({ ...prev, thumbnail: compressed, imageUrl: compressed }));
           }
         };
         img.src = rawDataUrl;
@@ -888,46 +955,103 @@ export const AdminDashboard: React.FC = () => {
   };
 
   const handleCropComplete = () => {
-    if (imageRef.current && completedCrop?.width && completedCrop?.height) {
-      const canvas = document.createElement('canvas');
-      const scaleX = imageRef.current.naturalWidth / imageRef.current.width;
-      const scaleY = imageRef.current.naturalHeight / imageRef.current.height;
-      
-      const pixelRatio = window.devicePixelRatio || 1;
-      const destWidth = completedCrop.width * scaleX;
-      const destHeight = completedCrop.height * scaleY;
-      
-      // Keep within reasonable limits to avoid Firestore 1MB limit and storage quota
-      const MAX_WIDTH = 800;
-      let finalWidth = destWidth;
-      let finalHeight = destHeight;
-      if (finalWidth > MAX_WIDTH) {
-         finalHeight = (MAX_WIDTH / finalWidth) * finalHeight;
-         finalWidth = MAX_WIDTH;
+    if (!imageRef.current) return;
+    const img = imageRef.current;
+    
+    // Determine effective pixel crop coordinates
+    let effectiveCrop: PixelCrop | null = completedCrop;
+    if (!effectiveCrop || !effectiveCrop.width || !effectiveCrop.height) {
+      if (crop) {
+        effectiveCrop = convertToPixelCrop(crop, img.width, img.height);
       }
+    }
+    
+    // Fallback to full image if no valid crop
+    if (!effectiveCrop || !effectiveCrop.width || !effectiveCrop.height) {
+      effectiveCrop = {
+        unit: 'px',
+        x: 0,
+        y: 0,
+        width: img.width,
+        height: img.height
+      };
+    }
 
-      canvas.width = finalWidth;
-      canvas.height = finalHeight;
-      
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        ctx.imageSmoothingQuality = 'high';
-        ctx.drawImage(
-          imageRef.current,
-          completedCrop.x * scaleX,
-          completedCrop.y * scaleY,
-          completedCrop.width * scaleX,
-          completedCrop.height * scaleY,
-          0,
-          0,
-          finalWidth,
-          finalHeight
-        );
-        const base64Image = canvas.toDataURL('image/jpeg', 0.75);
-        setNewArticle(prev => ({ ...prev, thumbnail: base64Image }));
-        setImgSrc('');
-        setCrop(undefined);
+    const scaleX = img.naturalWidth / img.width;
+    const scaleY = img.naturalHeight / img.height;
+    
+    const cropX = (effectiveCrop.x || 0) * scaleX;
+    const cropY = (effectiveCrop.y || 0) * scaleY;
+    const cropW = (effectiveCrop.width || img.width) * scaleX;
+    const cropH = (effectiveCrop.height || img.height) * scaleY;
+
+    const canvas = document.createElement('canvas');
+    const MAX_WIDTH = 800;
+    let finalWidth = cropW;
+    let finalHeight = cropH;
+    if (finalWidth > MAX_WIDTH) {
+       finalHeight = (MAX_WIDTH / finalWidth) * finalHeight;
+       finalWidth = MAX_WIDTH;
+    }
+
+    canvas.width = Math.max(10, Math.round(finalWidth));
+    canvas.height = Math.max(10, Math.round(finalHeight));
+    
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(
+        img,
+        cropX,
+        cropY,
+        cropW,
+        cropH,
+        0,
+        0,
+        canvas.width,
+        canvas.height
+      );
+      const base64Image = canvas.toDataURL('image/jpeg', 0.85);
+      setNewArticle(prev => ({ 
+        ...prev, 
+        thumbnail: base64Image, 
+        imageUrl: base64Image,
+        image: base64Image,
+        coverImage: base64Image,
+        coverImageUrl: base64Image,
+        coverImageCrop: effectiveCrop,
+        cropData: effectiveCrop,
+        cropAspect: cropAspect
+      }));
+      setImgSrc('');
+      setCrop(undefined);
+      setCompletedCrop(null);
+      showToast("Image de couverture recadrée avec succès !", "success");
+    }
+  };
+
+  const handleAudioFileUploadArticle = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const fileName = file.name;
+      if (file.size > 25 * 1024 * 1024) {
+        showToast("Le fichier audio est trop volumineux (maximum 25 Mo).", "error");
+        return;
       }
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const result = event.target?.result as string;
+        if (result) {
+          setNewArticle(prev => ({ 
+            ...prev, 
+            audioUrl: result, 
+            audio_url: result,
+            audioTitle: fileName 
+          }));
+          showToast("Fichier audio chargé avec succès !", "success");
+        }
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -1028,6 +1152,13 @@ export const AdminDashboard: React.FC = () => {
       setNotifications(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification)));
     }, (error) => console.warn("Admin Notifs listener note:", error));
 
+    // Auto-sync any unsaved or pending local custom articles directly to Firestore
+    autoSyncLocalArticlesToFirestore().then(synced => {
+      if (synced > 0) {
+        revalidatePublishedArticles('admin_autosync_init');
+      }
+    }).catch(() => {});
+
     // Direct REST API fetch to ensure real admin articles are retrieved on mobile WebView/Capacitor
     fetchArticlesFromRest().then(restDocs => {
       if (Array.isArray(restDocs) && restDocs.length > 0) {
@@ -1045,16 +1176,6 @@ export const AdminDashboard: React.FC = () => {
         list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Article));
       }
       let merged = mergeWithLocalArticles(list);
-      if (merged.length === 0 && !isMockArticlesHidden()) {
-        let cachedAdmin: any[] = [];
-        try {
-          cachedAdmin = JSON.parse(localStorage.getItem('asrarhub_cached_admin_articles') || '[]');
-        } catch(e) {}
-        if (cachedAdmin.length === 0 && !isMockArticlesHidden()) {
-          cachedAdmin = INITIAL_DEFAULT_ARTICLES as any[];
-        }
-        merged = mergeWithLocalArticles(cachedAdmin);
-      }
       setArticles(merged as any);
       saveCachedArticlesList('asrarhub_cached_admin_articles', merged);
     }, (error) => {
@@ -1065,9 +1186,6 @@ export const AdminDashboard: React.FC = () => {
           list = restDocs.map(doc => ({ id: doc.id, ...doc } as any));
         }
         let merged = mergeWithLocalArticles(list);
-        if (merged.length === 0 && !isMockArticlesHidden()) {
-          merged = mergeWithLocalArticles(INITIAL_DEFAULT_ARTICLES as any[]);
-        }
         setArticles(merged as any);
       });
     });
@@ -2327,6 +2445,13 @@ export const AdminDashboard: React.FC = () => {
 
       // Synchronously generate or reuse doc ID
       const artId = editingArticle ? editingArticle.id : doc(collection(db, 'articles')).id;
+      const imgResolved = getArticleImageUrl(newArticle);
+      const effectiveCropData = (newArticle as any).coverImageCrop || (newArticle as any).cropData || (completedCrop ? { ...completedCrop } : null);
+      const effectiveCropAspect = cropAspect !== undefined ? cropAspect : ((newArticle as any).cropAspect || null);
+      const effectiveAudioUrl = (newArticle as any).audioUrl || (newArticle as any).audio_url || '';
+      const effectiveAudioTitle = (newArticle as any).audioTitle || '';
+      const effectiveAudioDuration = (newArticle as any).audioDuration || '';
+
       const articlePayload = {
         id: artId,
         title: newArticle.title,
@@ -2335,8 +2460,14 @@ export const AdminDashboard: React.FC = () => {
         hook_ha: (newArticle as any).hook_ha || '',
         title_en: (newArticle as any).title_en || '',
         title_ha: (newArticle as any).title_ha || '',
-        thumbnail: getArticleImageUrl(newArticle),
-        imageUrl: getArticleImageUrl(newArticle),
+        thumbnail: imgResolved,
+        imageUrl: imgResolved,
+        image: imgResolved,
+        coverImage: imgResolved,
+        coverImageUrl: imgResolved,
+        coverImageCrop: effectiveCropData,
+        cropData: effectiveCropData,
+        cropAspect: effectiveCropAspect,
         content: newArticle.content,
         content_en: (newArticle as any).content_en || '',
         content_ha: (newArticle as any).content_ha || '',
@@ -2347,7 +2478,12 @@ export const AdminDashboard: React.FC = () => {
         isPremium: newArticle.isPremium || false,
         category: newArticle.category || 'wird',
         subCategory: (newArticle as any).subCategory || '',
-        createdAt: editingArticle?.createdAt || Date.now()
+        audioUrl: effectiveAudioUrl,
+        audio_url: effectiveAudioUrl,
+        audioTitle: effectiveAudioTitle,
+        audioDuration: effectiveAudioDuration,
+        createdAt: editingArticle?.createdAt || Date.now(),
+        updatedAt: Date.now()
       };
 
       // Auto-translate to EN and HA if not manually provided
@@ -2412,8 +2548,11 @@ export const AdminDashboard: React.FC = () => {
         console.warn("[Admin] Firestore save note (saved locally):", fErr);
       }
 
+      // 4. Trigger immediate SWR broadcast and cache refresh for all user dashboards
+      revalidatePublishedArticles('admin_save_direct').catch(() => {});
+
       setEditingArticle(null);
-      showToast(editingArticle ? "Article mis à jour avec succès !" : "Article publié avec succès !");
+      showToast(editingArticle ? "Article mis à jour avec succès (visible immédiatement) !" : "Article publié avec succès (visible immédiatement pour les utilisateurs) !");
       
       // Fully reset all fields including all language variations, image crop and draft
       setNewArticle({
@@ -2435,6 +2574,8 @@ export const AdminDashboard: React.FC = () => {
         category: '',
         subCategory: '',
         isPremium: false,
+        audioUrl: '',
+        audio_url: '',
       } as any);
       setImgSrc('');
       setCrop(undefined);
@@ -2561,12 +2702,23 @@ export const AdminDashboard: React.FC = () => {
     setCrop(undefined);
     setCompletedCrop(null);
     setArticleFormKey(k => k + 1);
+    if ((article as any).cropAspect !== undefined) {
+      setCropAspect((article as any).cropAspect);
+    }
+    const resolvedImg = getArticleImageUrl(article);
     setNewArticle({ 
       title: article.title, 
       hook: (article as any).hook,
       title_en: (article as any).title_en,
       title_ha: (article as any).title_ha,
-      thumbnail: article.thumbnail, 
+      thumbnail: resolvedImg, 
+      imageUrl: resolvedImg,
+      image: resolvedImg,
+      coverImage: resolvedImg,
+      coverImageUrl: resolvedImg,
+      coverImageCrop: (article as any).coverImageCrop || (article as any).cropData || null,
+      cropData: (article as any).cropData || (article as any).coverImageCrop || null,
+      cropAspect: (article as any).cropAspect || null,
       content: article.content, 
       content_en: (article as any).content_en,
       content_ha: (article as any).content_ha,
@@ -2576,14 +2728,20 @@ export const AdminDashboard: React.FC = () => {
       publishDate: article.publishDate || '',
       isPremium: (article as any).isPremium || false,
       category: (article as any).category || '',
-      subCategory: (article as any).subCategory || ''
-    });
+      subCategory: (article as any).subCategory || '',
+      audioUrl: (article as any).audioUrl || (article as any).audio_url || '',
+      audio_url: (article as any).audioUrl || (article as any).audio_url || '',
+      audioTitle: (article as any).audioTitle || '',
+      audioDuration: (article as any).audioDuration || ''
+    } as any);
     setActiveTab('articles');
   };
 
   const renderTabNavigation = () => {
     const tabs = [
       { id: 'overview', label: 'Vue d\'ensemble', icon: LayoutDashboard },
+      { id: 'branding', label: 'Logo & Chargement', icon: Sparkles },
+      { id: 'version_control', label: 'Versions de l\'App (app_versions)', icon: Sparkles },
       { id: 'promo_codes', label: 'Gestion des Codes Promo', icon: Tag, badge: promoCodes.length || undefined },
       { id: 'security', label: 'Sécurité & Alertes', icon: ShieldAlert, badge: securityAlerts.length || undefined },
       { id: 'support', label: 'Support & Emails', icon: Mail },
@@ -6033,7 +6191,8 @@ export const AdminDashboard: React.FC = () => {
                     }
                   }
                   setArticles(prev => prev.map(a => ({ ...a, status: 'Published' })));
-                  showToast(`${updatedCount > 0 ? updatedCount : 'Tous les'} article(s) publié(s) avec succès (visibles publiquement) !`, "success");
+                  revalidatePublishedArticles('admin_bulk_publish').catch(() => {});
+                  showToast(`${updatedCount > 0 ? updatedCount : 'Tous les'} article(s) publié(s) avec succès (visibles immédiatement) !`, "success");
                 } catch (e: any) {
                   showToast("Erreur lors de la mise à jour : " + (e?.message || e), "error");
                 }
@@ -6559,13 +6718,35 @@ export const AdminDashboard: React.FC = () => {
               </button>
 
               {newArticle.thumbnail && !imgSrc && (
-                <div className="relative w-20 h-20 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700">
-                  <img src={newArticle.thumbnail} alt="Thumbnail preview" className="w-full h-full object-cover" />
-                  <button onClick={() => setNewArticle(prev => ({ ...prev, thumbnail: '' }))} className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600">
-                    <X size={12} />
-                  </button>
-                  <div className={`absolute bottom-0 inset-x-0 text-[9px] font-black text-center py-0.5 ${newArticle.isPremium ? 'bg-purple-600 text-white' : 'bg-black/70 text-gray-200'}`}>
-                    {newArticle.isPremium ? '★ PREMIUM' : '☆ STANDARD'}
+                <div className="flex items-center gap-3 p-2 rounded-2xl bg-gray-50 dark:bg-gray-750 border border-gray-200 dark:border-gray-700">
+                  <div className="relative w-20 h-20 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shrink-0">
+                    <img src={newArticle.thumbnail} alt="Thumbnail preview" className="w-full h-full object-cover" />
+                    <button 
+                      type="button"
+                      onClick={() => setNewArticle(prev => ({ ...prev, thumbnail: '', imageUrl: '' }))} 
+                      className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 shadow-sm"
+                      title="Supprimer l'image"
+                    >
+                      <X size={12} />
+                    </button>
+                    <div className={`absolute bottom-0 inset-x-0 text-[9px] font-black text-center py-0.5 ${newArticle.isPremium ? 'bg-purple-600 text-white' : 'bg-black/70 text-gray-200'}`}>
+                      {newArticle.isPremium ? '★ PREMIUM' : '☆ STANDARD'}
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">Couverture sélectionnée</span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (newArticle.thumbnail) {
+                          setImgSrc(newArticle.thumbnail);
+                        }
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                    >
+                      <CropIcon size={14} />
+                      <span>Recadrer / Ajuster le cadrage</span>
+                    </button>
                   </div>
                 </div>
               )}
@@ -6606,18 +6787,165 @@ export const AdminDashboard: React.FC = () => {
                 </button>
               </div>
             </div>
-            {imgSrc && (
-              <div className="mt-4 p-4 border border-gray-200 dark:border-gray-700 rounded-xl bg-gray-50 dark:bg-gray-900">
-                <p className="text-xs text-gray-500 mb-2">Recadrez votre image puis validez</p>
-                <ReactCrop crop={crop} onChange={(_, percentCrop) => setCrop(percentCrop)} onComplete={(c) => setCompletedCrop(c)}>
-                  <img ref={imageRef} src={imgSrc} alt="Crop preview" style={{ maxHeight: '300px' }} />
-                </ReactCrop>
-                <div className="flex gap-2 mt-4">
-                  <button onClick={handleCropComplete} className="px-4 py-2 bg-emerald-600 text-white rounded-xl text-sm font-semibold flex items-center gap-2">
-                    <CropIcon size={16} /> Valider le recadrage
+
+            {/* Dedicated Audio Track Section */}
+            <div className="mt-3 p-4 rounded-2xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/70 dark:border-amber-900/40 space-y-3">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center text-amber-700 dark:text-amber-300 shrink-0">
+                    <Volume2 size={18} />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                      <span>Fichier Audio / Récitation de l'article</span>
+                      <span className="text-[10px] font-normal text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/40 px-2 py-0.5 rounded-full">Optionnel</span>
+                    </h4>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Attachez un enregistrement audio ou récitation (MP3, WAV) qui restera disponible dans l'article.
+                    </p>
+                  </div>
+                </div>
+                {(newArticle as any).audioUrl && (
+                  <span className="px-2.5 py-1 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 text-xs font-bold rounded-lg flex items-center gap-1">
+                    <CheckCircle2 size={13} /> Audio prêt
+                  </span>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <label className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white dark:bg-gray-800 hover:bg-amber-50 dark:hover:bg-gray-700 border border-amber-200 dark:border-gray-700 rounded-xl cursor-pointer text-xs font-bold text-gray-700 dark:text-gray-200 transition-all shadow-xs">
+                  <Upload size={15} className="text-amber-600 dark:text-amber-400" />
+                  <span>Importer un fichier Audio (MP3, WAV)</span>
+                  <input
+                    type="file"
+                    accept="audio/*"
+                    onChange={handleAudioFileUploadArticle}
+                    className="hidden"
+                  />
+                </label>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="url"
+                    placeholder="Ou lien URL direct (ex: https://...mp3)"
+                    value={(newArticle as any).audioUrl || ''}
+                    onChange={(e) => setNewArticle(prev => ({ ...prev, audioUrl: e.target.value }))}
+                    className="flex-1 px-3 py-2 text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500"
+                  />
+                </div>
+              </div>
+
+              {(newArticle as any).audioUrl && (
+                <div className="p-3 bg-white dark:bg-gray-800 rounded-xl border border-amber-200/60 dark:border-amber-900/30 flex items-center justify-between gap-3">
+                  <audio controls src={(newArticle as any).audioUrl} className="flex-1 h-9 max-w-full" />
+                  <button
+                    type="button"
+                    onClick={() => setNewArticle(prev => ({ ...prev, audioUrl: '' }))}
+                    className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl transition-colors shrink-0"
+                    title="Supprimer cet audio"
+                  >
+                    <Trash2 size={16} />
                   </button>
-                  <button onClick={() => { setImgSrc(''); setCrop(undefined); }} className="px-4 py-2 bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300 rounded-xl text-sm font-semibold">
+                </div>
+              )}
+            </div>
+
+            {/* Interactive Image Cropper Modal/View */}
+            {imgSrc && (
+              <div className="mt-4 p-4 sm:p-5 border-2 border-emerald-500/40 dark:border-emerald-500/40 rounded-2xl bg-white dark:bg-gray-900 shadow-xl space-y-3">
+                <div className="flex items-center justify-between flex-wrap gap-2 border-b border-gray-100 dark:border-gray-800 pb-3">
+                  <div>
+                    <h4 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                      <CropIcon size={16} className="text-emerald-600 dark:text-emerald-400" />
+                      <span>Recadrage & Redimensionnement de l'image</span>
+                    </h4>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Ajustez le cadre de sélection avec les poignées puis validez
+                    </p>
+                  </div>
+
+                  {/* Aspect Ratio Presets */}
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-[11px] font-bold text-gray-400 mr-1">Format :</span>
+                    <button
+                      type="button"
+                      onClick={() => handleAspectChange(16 / 9)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        cropAspect === 16 / 9
+                          ? 'bg-emerald-600 text-white shadow-xs'
+                          : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200'
+                      }`}
+                    >
+                      16:9 (Bannière)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAspectChange(4 / 3)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        cropAspect === 4 / 3
+                          ? 'bg-emerald-600 text-white shadow-xs'
+                          : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200'
+                      }`}
+                    >
+                      4:3 (Photo)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAspectChange(1)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        cropAspect === 1
+                          ? 'bg-emerald-600 text-white shadow-xs'
+                          : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200'
+                      }`}
+                    >
+                      1:1 (Carré)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAspectChange(undefined)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        cropAspect === undefined
+                          ? 'bg-emerald-600 text-white shadow-xs'
+                          : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200'
+                      }`}
+                    >
+                      Libre
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex justify-center bg-gray-950/10 dark:bg-black/40 rounded-xl p-2 max-h-[420px] overflow-auto">
+                  <ReactCrop 
+                    crop={crop} 
+                    onChange={(_, percentCrop) => setCrop(percentCrop)} 
+                    onComplete={(c) => setCompletedCrop(c)}
+                    aspect={cropAspect}
+                    className="max-h-[380px]"
+                  >
+                    <img 
+                      ref={imageRef} 
+                      src={imgSrc} 
+                      alt="Crop preview" 
+                      onLoad={onImageCropLoad}
+                      className="max-h-[380px] w-auto object-contain select-none" 
+                    />
+                  </ReactCrop>
+                </div>
+
+                <div className="flex gap-2 justify-end pt-1">
+                  <button 
+                    type="button"
+                    onClick={() => { setImgSrc(''); setCrop(undefined); setCompletedCrop(null); }} 
+                    className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-300 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                  >
                     Annuler
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={handleCropComplete} 
+                    className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-md shadow-emerald-600/20 transition-all cursor-pointer active:scale-95"
+                  >
+                    <Check size={16} /> Valider et appliquer le recadrage
                   </button>
                 </div>
               </div>
@@ -6901,7 +7229,7 @@ export const AdminDashboard: React.FC = () => {
       </div>
 
       <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 mt-6">
-        <div className="flex justify-between items-center mb-6 flex-wrap gap-4">
+        <div className="flex justify-between items-center mb-4 flex-wrap gap-4">
           <div className="flex items-center gap-4">
             <h3 className="font-bold text-gray-900 dark:text-white">Articles ({articles.length})</h3>
             <div className="flex bg-gray-100 dark:bg-gray-900 p-1 rounded-xl">
@@ -6930,20 +7258,16 @@ export const AdminDashboard: React.FC = () => {
             </div>
           </div>
           <div className="flex items-center gap-3 flex-wrap">
+            <div className="px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-300 rounded-xl text-xs font-bold flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span>Publication Directe & Instantanée Active</span>
+            </div>
             <button
               onClick={handleDeleteMockArticles}
               className="px-4 py-2 bg-amber-100 hover:bg-amber-200 dark:bg-amber-900/30 dark:hover:bg-amber-900/50 text-amber-700 dark:text-amber-300 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 transition-colors cursor-pointer"
               title="Masquer et supprimer définitivement les articles de démonstration"
             >
               <Trash2 size={16} /> Supprimer les Articles Démo
-            </button>
-            <button
-              onClick={handleSeedDefaultArticles}
-              disabled={isSeedingArticles}
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 transition-colors cursor-pointer disabled:opacity-50"
-              title="Importer tous les articles par défaut dans Firebase"
-            >
-              <Sparkles size={16} /> {isSeedingArticles ? "Importation..." : `Importer les Articles par Défaut (${INITIAL_DEFAULT_ARTICLES.length})`}
             </button>
             {articles.length > 0 && (
               <button
@@ -6955,10 +7279,151 @@ export const AdminDashboard: React.FC = () => {
             )}
           </div>
         </div>
+
+        {/* Search and Filters Toolbar for Admin Articles */}
+        <div className="bg-gray-50 dark:bg-gray-750 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 mb-6 space-y-3">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+              <input
+                type="text"
+                placeholder="Rechercher par titre, ID ou extrait..."
+                value={adminArticleSearch}
+                onChange={(e) => setAdminArticleSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs sm:text-sm text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+              {adminArticleSearch && (
+                <button
+                  onClick={() => setAdminArticleSearch('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs font-bold"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+
+            <div className="flex flex-wrap gap-2 items-center">
+              <select
+                value={adminArticleFilterCategory}
+                onChange={(e) => setAdminArticleFilterCategory(e.target.value)}
+                className="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs text-gray-900 dark:text-white font-medium outline-none cursor-pointer"
+              >
+                <option value="all">Toutes Catégories</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+
+              <select
+                value={adminArticleFilterStatus}
+                onChange={(e) => setAdminArticleFilterStatus(e.target.value)}
+                className="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs text-gray-900 dark:text-white font-medium outline-none cursor-pointer"
+              >
+                <option value="all">Tous Statuts</option>
+                <option value="published">Publiés (Visibles)</option>
+                <option value="draft">Brouillons</option>
+                <option value="archived">Archivés</option>
+              </select>
+
+              <select
+                value={adminArticleFilterPremium}
+                onChange={(e) => setAdminArticleFilterPremium(e.target.value)}
+                className="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs text-gray-900 dark:text-white font-medium outline-none cursor-pointer"
+              >
+                <option value="all">Standard & Premium</option>
+                <option value="premium">★ Premium uniquement</option>
+                <option value="standard">☆ Standard (Gratuit)</option>
+              </select>
+
+              <select
+                value={adminArticleFilterAudio}
+                onChange={(e) => setAdminArticleFilterAudio(e.target.value)}
+                className="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs text-gray-900 dark:text-white font-medium outline-none cursor-pointer"
+              >
+                <option value="all">Tous (Audio & Texte)</option>
+                <option value="with_audio">🎧 Avec Fichier Audio</option>
+                <option value="without_audio">Texte Seul</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 pt-1">
+            <span>
+              Affichage de <strong className="text-gray-900 dark:text-white font-bold">{
+                articles.filter(art => {
+                  if (adminArticleSearch.trim()) {
+                    const q = adminArticleSearch.toLowerCase().trim();
+                    const t = (art.title || '').toLowerCase();
+                    const h = (art.hook || '').toLowerCase();
+                    const id = (art.id || '').toLowerCase();
+                    if (!t.includes(q) && !h.includes(q) && !id.includes(q)) return false;
+                  }
+                  if (adminArticleFilterCategory !== 'all' && (art as any).category !== adminArticleFilterCategory) return false;
+                  if (adminArticleFilterStatus !== 'all') {
+                    if (adminArticleFilterStatus === 'published' && !isPublicVisibleStatus(art.status)) return false;
+                    if (adminArticleFilterStatus === 'draft' && (!art.status || !['draft', 'brouillon'].includes(art.status.toString().toLowerCase()))) return false;
+                    if (adminArticleFilterStatus === 'archived' && (!art.status || !['archived', 'archivé'].includes(art.status.toString().toLowerCase()))) return false;
+                  }
+                  if (adminArticleFilterPremium !== 'all') {
+                    if (adminArticleFilterPremium === 'premium' && !art.isPremium) return false;
+                    if (adminArticleFilterPremium === 'standard' && art.isPremium) return false;
+                  }
+                  if (adminArticleFilterAudio !== 'all') {
+                    const hasAudio = !!((art as any).audioUrl || (art as any).audio_url);
+                    if (adminArticleFilterAudio === 'with_audio' && !hasAudio) return false;
+                    if (adminArticleFilterAudio === 'without_audio' && hasAudio) return false;
+                  }
+                  return true;
+                }).length
+              }</strong> sur {articles.length} article(s)
+            </span>
+            {(adminArticleSearch || adminArticleFilterCategory !== 'all' || adminArticleFilterStatus !== 'all' || adminArticleFilterPremium !== 'all' || adminArticleFilterAudio !== 'all') && (
+              <button
+                onClick={() => {
+                  setAdminArticleSearch('');
+                  setAdminArticleFilterCategory('all');
+                  setAdminArticleFilterStatus('all');
+                  setAdminArticleFilterPremium('all');
+                  setAdminArticleFilterAudio('all');
+                }}
+                className="text-emerald-600 dark:text-emerald-400 font-bold hover:underline"
+              >
+                Réinitialiser les filtres
+              </button>
+            )}
+          </div>
+        </div>
+
         <div className={`grid gap-4 ${
           articlesLayoutMode === 'grid' ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'
         }`}>
-          {articles.map((article) => (
+          {articles
+            .filter(art => {
+              if (adminArticleSearch.trim()) {
+                const q = adminArticleSearch.toLowerCase().trim();
+                const t = (art.title || '').toLowerCase();
+                const h = (art.hook || '').toLowerCase();
+                const id = (art.id || '').toLowerCase();
+                if (!t.includes(q) && !h.includes(q) && !id.includes(q)) return false;
+              }
+              if (adminArticleFilterCategory !== 'all' && (art as any).category !== adminArticleFilterCategory) return false;
+              if (adminArticleFilterStatus !== 'all') {
+                if (adminArticleFilterStatus === 'published' && !isPublicVisibleStatus(art.status)) return false;
+                if (adminArticleFilterStatus === 'draft' && (!art.status || !['draft', 'brouillon'].includes(art.status.toString().toLowerCase()))) return false;
+                if (adminArticleFilterStatus === 'archived' && (!art.status || !['archived', 'archivé'].includes(art.status.toString().toLowerCase()))) return false;
+              }
+              if (adminArticleFilterPremium !== 'all') {
+                if (adminArticleFilterPremium === 'premium' && !art.isPremium) return false;
+                if (adminArticleFilterPremium === 'standard' && art.isPremium) return false;
+              }
+              if (adminArticleFilterAudio !== 'all') {
+                const hasAudio = !!((art as any).audioUrl || (art as any).audio_url);
+                if (adminArticleFilterAudio === 'with_audio' && !hasAudio) return false;
+                if (adminArticleFilterAudio === 'without_audio' && hasAudio) return false;
+              }
+              return true;
+            })
+            .map((article) => (
             <div key={article.id} className="p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl flex gap-4">
               <div 
                 onClick={async () => {
@@ -7002,8 +7467,15 @@ export const AdminDashboard: React.FC = () => {
 
               <div className="flex-1 flex flex-col justify-between">
                 <div>
-                  <h4 className="font-bold text-sm text-gray-900 dark:text-white">{article.title}</h4>
-                  <div className="flex flex-wrap items-center gap-2 mt-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <h4 className="font-bold text-sm text-gray-900 dark:text-white leading-tight">{article.title}</h4>
+                    {((article as any).audioUrl || (article as any).audio_url) && (
+                      <span className="shrink-0 px-2 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 rounded-full text-[10px] font-bold flex items-center gap-1" title="Fichier audio attaché">
+                        <Headphones size={11} /> Audio
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 mt-2">
                     <span className="text-[10px] uppercase font-bold text-gray-500 bg-gray-200 dark:bg-gray-600 px-2 py-0.5 rounded-full">
                       {article.type === 'richtext' ? 'Texte' : 'Code'}
                     </span>
@@ -7015,10 +7487,12 @@ export const AdminDashboard: React.FC = () => {
                         saveLocalCustomArticle({ ...article, status: newStatus });
                         try {
                           await setDoc(doc(db, 'articles', article.id), { status: newStatus }, { merge: true });
-                          showToast("Statut mis à jour");
+                          revalidatePublishedArticles('admin_status_change').catch(() => {});
+                          showToast(newStatus === 'Published' ? "Article publié (visible immédiatement pour les utilisateurs)" : `Statut mis à jour : ${newStatus}`);
                         } catch (err) {
                           console.warn("Firestore update status note:", err);
-                          showToast("Statut mis à jour");
+                          revalidatePublishedArticles('admin_status_change').catch(() => {});
+                          showToast(`Statut mis à jour : ${newStatus}`);
                         }
                       }}
                       className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border-0 cursor-pointer ${
@@ -7093,10 +7567,10 @@ export const AdminDashboard: React.FC = () => {
                   )}
                 </div>
                 <div className="flex gap-2 mt-2">
-                  <button onClick={() => editArticle(article)} className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors">
+                  <button onClick={() => editArticle(article)} className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors" title="Éditer">
                     <Edit2 size={16} />
                   </button>
-                  <button onClick={() => handleDeleteArticle(article.id)} className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors">
+                  <button onClick={() => handleDeleteArticle(article.id)} className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors" title="Supprimer">
                     <Trash2 size={16} />
                   </button>
                 </div>
@@ -7781,6 +8255,29 @@ export const AdminDashboard: React.FC = () => {
         <h3 className="font-bold text-gray-900 dark:text-white mb-6">Paramètres Globaux</h3>
         
         <div className="space-y-4 mb-8">
+          {/* Logo & Écran de Chargement */}
+          <CollapsibleAdminCard
+            id="set_branding"
+            title="Personnalisation du Logo & Écran de Chargement"
+            description="Personnalisez le logo de l'application, l'icône favicon et l'écran de chargement (Splash / Loading Screen) avec aperçu en temps réel."
+            icon={<Sparkles size={18} className="text-amber-500 shrink-0" />}
+            headerRight={
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveTab('branding');
+                }}
+                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+              >
+                <Sparkles size={14} />
+                <span>Ouvrir l'Éditeur Dédié</span>
+              </button>
+            }
+          >
+            <BrandingSettings onShowToast={showToast} />
+          </CollapsibleAdminCard>
+
           {/* Admin Configurable Spiritual Points System Settings */}
           <CollapsibleAdminCard
             id="set_spiritual_points"
@@ -10804,9 +11301,6 @@ export const AdminDashboard: React.FC = () => {
     );
   };
 
-  const { user } = useAuth();
-  const navigate = useNavigate();
-  
   const adminBypass = sessionStorage.getItem('admin_bypass') === 'true';
   
   if (!adminBypass && (!user || user.role !== 'admin')) {
@@ -11305,6 +11799,8 @@ export const AdminDashboard: React.FC = () => {
         transition={{ duration: 0.2 }}
       >
         {activeTab === 'overview' && renderOverview()}
+        {activeTab === 'branding' && <BrandingSettings onShowToast={showToast} />}
+        {activeTab === 'version_control' && <AdminVersionControlManager />}
         {activeTab === 'security' && (
           <AdminSecurityAlertsManager
             alerts={securityAlerts}
@@ -11320,6 +11816,7 @@ export const AdminDashboard: React.FC = () => {
             showToast={showToast}
           />
         )}
+        {activeTab === 'version_control' && <AdminVersionControlManager />}
         {activeTab === 'support' && <AdminEmailSupportManager />}
         {activeTab === 'users' && renderUsers()}
         {activeTab === 'payments' && renderPayments()}

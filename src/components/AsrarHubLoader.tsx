@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { AsrarLogo } from './AsrarLogo';
+import { useAppBranding } from '../contexts/BrandingContext';
 
 interface AsrarHubLoaderProps {
   size?: 'sm' | 'md' | 'lg' | 'fullscreen';
@@ -11,6 +12,8 @@ export const AsrarHubLoader: React.FC<AsrarHubLoaderProps> = ({
   size = 'md',
   text
 }) => {
+  const { branding } = useAppBranding();
+
   const sizeClasses = {
     sm: 'w-16 h-16',
     md: 'w-36 h-36',
@@ -19,25 +22,86 @@ export const AsrarHubLoader: React.FC<AsrarHubLoaderProps> = ({
   };
 
   const logoSize = size === 'fullscreen' ? 'fullscreen' : size;
+  const displayText = text || (size === 'fullscreen' ? branding.loadingText : undefined);
+
+  // Custom animation styles for custom branding loading screen
+  const getCustomAnimation = () => {
+    switch (branding.loadingAnimationType) {
+      case 'spin':
+        return {
+          animate: { rotate: 360 },
+          transition: { duration: 2, repeat: Infinity, ease: "linear" as const }
+        };
+      case 'bounce':
+        return {
+          animate: { y: [-6, 6, -6] },
+          transition: { duration: 1.2, repeat: Infinity, ease: "easeInOut" as const }
+        };
+      case 'glow':
+        return {
+          animate: { 
+            scale: [0.96, 1.04, 0.96],
+            filter: [
+              'drop-shadow(0 0 10px rgba(245,158,11,0.4))',
+              'drop-shadow(0 0 30px rgba(245,158,11,0.9))',
+              'drop-shadow(0 0 10px rgba(245,158,11,0.4))'
+            ]
+          },
+          transition: { duration: 1.8, repeat: Infinity, ease: "easeInOut" as const }
+        };
+      case 'fade':
+        return {
+          animate: { opacity: [0.3, 1, 0.3] },
+          transition: { duration: 1.6, repeat: Infinity, ease: "easeInOut" as const }
+        };
+      case 'pulse':
+      default:
+        return {
+          animate: { opacity: [0.6, 1, 0.6], scale: [0.97, 1.03, 0.97] },
+          transition: { duration: 1.5, repeat: Infinity, ease: "easeInOut" as const }
+        };
+    }
+  };
+
+  const anim = getCustomAnimation();
 
   const loaderContent = (
-    <motion.div
-      initial={{ opacity: 0.6 }}
-      animate={{ 
-        opacity: [0.6, 1, 0.6]
-      }}
-      transition={{ 
-        duration: 1.5, 
-        repeat: Infinity, 
-        ease: "easeInOut" 
-      }}
-      className="flex flex-col items-center justify-center select-none gap-6"
-    >
-      <AsrarLogo variant="stacked" size={logoSize} hideSymbol={size !== 'fullscreen'} />
-      {text && (
-        <span className="text-sm font-semibold text-amber-500 animate-pulse tracking-wide mt-2">{text}</span>
+    <div className="flex flex-col items-center justify-center select-none gap-5">
+      {branding.isEnabled && branding.loadingScreenImage ? (
+        <motion.div
+          initial={{ opacity: 0.6 }}
+          animate={anim.animate}
+          transition={anim.transition}
+          className="flex items-center justify-center"
+        >
+          <img
+            src={branding.loadingScreenImage}
+            alt="Loading..."
+            className={`object-contain max-w-full ${
+              size === 'sm' ? 'max-h-12' :
+              size === 'md' ? 'max-h-24' :
+              size === 'lg' ? 'max-h-36' :
+              'max-h-48'
+            }`}
+          />
+        </motion.div>
+      ) : (
+        <motion.div
+          initial={{ opacity: 0.6 }}
+          animate={{ opacity: [0.6, 1, 0.6] }}
+          transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+          className="flex items-center justify-center"
+        >
+          <AsrarLogo variant="stacked" size={logoSize} hideSymbol={size !== 'fullscreen'} />
+        </motion.div>
       )}
-    </motion.div>
+
+      {displayText && (
+        <span className="text-sm font-semibold text-amber-500 animate-pulse tracking-wide mt-1 text-center max-w-xs">
+          {displayText}
+        </span>
+      )}
+    </div>
   );
 
   if (size === 'fullscreen') {
@@ -60,3 +124,4 @@ export const AsrarHubLoader: React.FC<AsrarHubLoaderProps> = ({
     </div>
   );
 };
+

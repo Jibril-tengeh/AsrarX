@@ -33,8 +33,9 @@ async function startServer() {
     return getFirestore();
   };
 
-  // General body parsing for other endpoints
-  app.use(express.json());
+  // General body parsing for all endpoints - support heavy payloads, base64 images and large articles
+  app.use(express.json({ limit: "50mb" }));
+  app.use(express.urlencoded({ limit: "50mb", extended: true }));
   app.use(cors());
 
   // Proxy for Quran audio files to avoid browser CORS restrictions during Web Audio decoding
@@ -106,51 +107,61 @@ async function startServer() {
   };
 
   // Helper for retrying Gemini API calls with model fallbacks and exponential backoff
-  const generateWithRetry = async (ai: GoogleGenAI, params: any, retries = 3) => {
-    const fallbackModels = ["gemini-3.7-flash", "gemini-flash-latest", "gemini-3.1-flash-lite"];
+  const generateWithRetry = async (ai: GoogleGenAI, params: any, retries = 5) => {
+    // Model fallback sequence: if flash experiences 503 high-demand spike, switch to ultra-fast flash-lite, then pro/latest
+    const fallbackModels = ["gemini-3.7-flash", "gemini-3.1-flash-lite", "gemini-flash-latest", "gemini-3.1-pro-preview"];
     let currentModelIndex = 0;
     
-    // If the caller provided a model, ensure it's first or replace outdated models
-    if (params.model && !fallbackModels.includes(params.model)) {
-      params.model = "gemini-3.7-flash";
+    // If the caller provided a model, ensure it's in the fallbackModels list or default to gemini-3.7-flash
+    if (params.model) {
+      const idx = fallbackModels.indexOf(params.model);
+      if (idx !== -1) {
+        currentModelIndex = idx;
+      }
     }
 
+    let lastError: any = null;
+
     for (let i = 0; i < retries; i++) {
+      const modelToUse = fallbackModels[currentModelIndex % fallbackModels.length];
+      const currentParams = { ...params, model: modelToUse };
+
       try {
-        const modelToUse = fallbackModels[currentModelIndex] || "gemini-3.7-flash";
-        const currentParams = { ...params, model: modelToUse };
         return await ai.models.generateContent(currentParams);
       } catch (error: any) {
+        lastError = error;
         const errMsg = error?.message || "";
-        const isRateLimit = error?.status === 429 || errMsg.includes("429") || errMsg.includes("RESOURCE_EXHAUSTED") || errMsg.includes("quota");
-        const isTransient = isRateLimit || error?.status === 503 || errMsg.includes("503") || errMsg.includes("Overloaded");
+        const errStatus = error?.status;
+        const isRateLimit = errStatus === 429 || errMsg.includes("429") || errMsg.includes("RESOURCE_EXHAUSTED") || errMsg.includes("quota");
+        const isUnavailable = errStatus === 503 || errMsg.includes("503") || errMsg.includes("Overloaded") || errMsg.includes("UNAVAILABLE") || errMsg.includes("high demand") || errMsg.includes("temporarily");
+        const isTransient = isRateLimit || isUnavailable || errStatus === 500 || errStatus === 504 || errMsg.includes("504") || errMsg.includes("deadline") || errMsg.includes("ECONNRESET");
         
-        console.warn(`[Gemini API] Call attempt ${i + 1}/${retries} failed on model '${fallbackModels[currentModelIndex]}':`, errMsg.slice(0, 150));
+        console.warn(`[Gemini API] Call attempt ${i + 1}/${retries} failed on model '${modelToUse}':`, errMsg.slice(0, 180));
 
-        if (isRateLimit && currentModelIndex < fallbackModels.length - 1) {
-          // Try next fallback model immediately if quota exhausted
-          currentModelIndex++;
-          console.info(`[Gemini API] Switching to fallback model '${fallbackModels[currentModelIndex]}' due to rate limit/quota.`);
-          continue;
+        // Switch to the next available fallback model immediately on 503 (high demand) or 429 (rate limit) or general transient failure
+        if (isRateLimit || isUnavailable || isTransient) {
+          currentModelIndex = (currentModelIndex + 1) % fallbackModels.length;
+          console.info(`[Gemini API] Switching to next fallback model '${fallbackModels[currentModelIndex]}' for next attempt.`);
         }
 
         if (i === retries - 1 || !isTransient) {
           throw error;
         }
 
-        // Try extracting retry delay from error if specified
-        let waitMs = (1000 * Math.pow(2, i)) + Math.floor(Math.random() * 500);
+        // Delay between retries with exponential backoff and jitter (shorter on 503 when switching models)
+        let waitMs = isUnavailable ? 300 + Math.floor(Math.random() * 250) : (600 * Math.pow(1.4, i)) + Math.floor(Math.random() * 300);
         const retryMatch = errMsg.match(/retry in ([0-9.]+)s/i);
         if (retryMatch && retryMatch[1]) {
           const seconds = parseFloat(retryMatch[1]);
-          if (!isNaN(seconds) && seconds > 0 && seconds < 10) {
-            waitMs = Math.min(seconds * 1000, 8000);
+          if (!isNaN(seconds) && seconds > 0 && seconds < 8) {
+            waitMs = Math.min(seconds * 1000, 5000);
           }
         }
 
         await new Promise(resolve => setTimeout(resolve, waitMs));
       }
     }
+    throw lastError || new Error("All Gemini API retry attempts failed");
   };
 
   // AI Quran Tafsir & Spiritual Secrets (Asrar)
@@ -647,6 +658,19 @@ Format de réponse attendu : Un objet JSON valide respectant cette structure exa
       });
 
       const languageName = targetLanguage === 'ha' ? 'Hausa' : 'English';
+
+      // Extract and safely shield all media tags (<audio...>, <video...>, <iframe...>, <img...>) from being stripped
+      const mediaMap = new Map<string, string>();
+      let sanitizedContent = content || "";
+      let mediaIndex = 0;
+
+      const mediaRegex = /<(audio|video|iframe)[^>]*>[\s\S]*?<\/\1>|<(audio|video|iframe|img)[^>]*\/?>/gi;
+      sanitizedContent = sanitizedContent.replace(mediaRegex, (match) => {
+        const placeholder = `___MEDIA_EMBED_TAG_${mediaIndex}___`;
+        mediaMap.set(placeholder, match);
+        mediaIndex++;
+        return placeholder;
+      });
       
       const prompt = `
 You are an expert translator specializing in spiritual, Islamic, and esoteric literature.
@@ -657,7 +681,7 @@ Strict translation mandates:
 2. TRANSLATE EVERYTHING ELSE: Every single French word, phrase, and sentence in the title, hook, content, and benefits MUST be translated into elegant, professional ${languageName}.
 3. NO TRANSLITERATION: You MUST NOT generate or use Latin/Roman transliterations of Arabic words or verses (e.g., do not write Arabic words like 'Bismillah', 'Alhamdulillah', or entire Quranic verses using the Latin alphabet).
 4. COMPLETE CONTENT BODY: You MUST translate the ENTIRE "content" body. Do NOT summarize it, do NOT leave any sections in French, and do NOT skip any paragraphs.
-5. HTML PRESERVATION: The "content" body contains HTML tags (like <p>, <strong>, <br>, <li>, <ul>, etc.). You must keep all these tags exactly in their original positions and structure, while translating the French text inside or between them.
+5. HTML & MEDIA PLACEHOLDERS PRESERVATION: The "content" body contains HTML tags (<p>, <strong>, <br>, <li>, <ul>, etc.) and media tokens (like ___MEDIA_EMBED_TAG_0___). You MUST keep all HTML tags and exact media tokens in their original relative positions!
 6. PROTECTED WORDS (CRITICAL): The words "arabe", "verset", "douas" (or "doua") MUST remain completely intact and untranslated (do not translate "arabe" to "Arabic" or "verset" to "verse" or "douas" to "prayers"/"supplications"). Keep these specific terms exactly as "arabe", "verset", "doua" or "douas" in the final output.
 7. JSON OUTPUT: Your output must match the requested JSON schema.
 
@@ -667,8 +691,8 @@ Title: ${title || ""}
 ---
 Hook: ${hook || ""}
 ---
-Content (Body to translate while keeping HTML tags): 
-${content || ""}
+Content (Body to translate while preserving HTML tags and media tokens): 
+${sanitizedContent}
 ---
 Benefits: ${JSON.stringify(benefits || [])}
 ---
@@ -684,7 +708,7 @@ Benefits: ${JSON.stringify(benefits || [])}
             properties: {
               title: { type: "STRING", description: "The translated title" },
               hook: { type: "STRING", description: "The translated hook" },
-              content: { type: "STRING", description: "The translated content keeping all HTML tags" },
+              content: { type: "STRING", description: "The translated content keeping all HTML tags and media tokens" },
               benefits: {
                 type: "ARRAY",
                 items: { type: "STRING" },
@@ -698,11 +722,32 @@ Benefits: ${JSON.stringify(benefits || [])}
 
       const resultText = response?.text?.trim() || "{}";
       const translatedData = JSON.parse(resultText);
+
+      // Restore all preserved media tags into translated content
+      let finalTranslatedContent = translatedData.content || "";
+      mediaMap.forEach((originalTag, placeholder) => {
+        finalTranslatedContent = finalTranslatedContent.split(placeholder).join(originalTag);
+      });
+      // Fallback safeguard: if model omitted any media placeholder, re-append the missing media tag
+      mediaMap.forEach((originalTag, placeholder) => {
+        if (!finalTranslatedContent.includes(originalTag)) {
+          finalTranslatedContent += `\n${originalTag}`;
+        }
+      });
+      translatedData.content = finalTranslatedContent;
+
       setCachedTranslation(cacheKey, translatedData);
       res.json(translatedData);
     } catch (error: any) {
-      console.error("AI Article Translation error:", error);
-      res.status(500).json({ error: "Failed to translate article" });
+      console.warn("AI Article Translation error (using fallback):", error?.message || error);
+      // Graceful fallback to original content so the UI does not break
+      const fallbackData = {
+        title: req.body?.title || "",
+        hook: req.body?.hook || "",
+        content: req.body?.content || "",
+        benefits: req.body?.benefits || []
+      };
+      res.json(fallbackData);
     }
   });
 
@@ -791,8 +836,15 @@ ${JSON.stringify(textArray)}
       setCachedTranslation(cacheKey, translatedData);
       res.json(translatedData);
     } catch (error: any) {
-      console.error("AI Text Translation error:", error);
-      res.status(500).json({ error: "Failed to translate text" });
+      console.warn("AI Text Translation error (using original text fallback):", error?.message || error);
+      // Graceful fallback mapping each requested key back to original text so client UI never breaks
+      const fallbackData: Record<string, string> = {};
+      if (req.body?.texts && typeof req.body.texts === 'object') {
+        Object.entries(req.body.texts).forEach(([k, v]) => {
+          fallbackData[k] = String(v || '');
+        });
+      }
+      res.json(fallbackData);
     }
   });
 

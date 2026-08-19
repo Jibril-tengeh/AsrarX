@@ -1,7 +1,7 @@
 import { db } from './firebase';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { fetchArticlesFromRest } from './firestoreRest';
-import { isPubliclyVisibleArticle } from './articleUtils';
+import { isPubliclyVisibleArticle, getTranslatedArticleTitle, getTranslatedArticleHook } from './articleUtils';
 import { 
   CACHED_ARTICLES_LIST_KEY, 
   CACHED_EXPLORE_ARTICLES_KEY, 
@@ -13,7 +13,7 @@ import {
 } from './localArticles';
 import { getOfflineData, setOfflineData } from './offlineStorage';
 import { INITIAL_DEFAULT_ARTICLES } from '../data/defaultArticles';
-import { dispatchSystemNotification } from '../utils/notificationLocalization';
+import { dispatchSystemNotification, getLocalizedNotificationText } from '../utils/notificationLocalization';
 
 export const SWR_LAST_SYNC_KEY = 'asrarhub_swr_last_sync_timestamp';
 export const SWR_EVENT_NAME = 'asrarhub_articles_revalidated';
@@ -39,9 +39,9 @@ export async function getStalePublishedArticles(): Promise<any[]> {
   try {
     const idbItems = await getOfflineData<any[]>(CACHED_ARTICLES_LIST_KEY);
     if (Array.isArray(idbItems) && idbItems.length > 0) {
-      const valid = idbItems.filter(a => a && a.id && !deletedIds.has(a.id) && isPubliclyVisibleArticle(a.status));
+      const valid = idbItems.filter(a => a && a.id && !String(a.id).startsWith('default_art_') && !deletedIds.has(a.id) && isPubliclyVisibleArticle(a.status));
       if (valid.length > 0) {
-        return mergeWithLocalArticles(combineWithDefaultArticles(INITIAL_DEFAULT_ARTICLES, valid));
+        return mergeWithLocalArticles(valid);
       }
     }
   } catch (err) {
@@ -54,13 +54,13 @@ export async function getStalePublishedArticles(): Promise<any[]> {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        const valid = parsed.filter((a: any) => a && a.id && !deletedIds.has(a.id) && isPubliclyVisibleArticle(a.status));
-        return mergeWithLocalArticles(combineWithDefaultArticles(INITIAL_DEFAULT_ARTICLES, valid));
+        const valid = parsed.filter((a: any) => a && a.id && !String(a.id).startsWith('default_art_') && !deletedIds.has(a.id) && isPubliclyVisibleArticle(a.status));
+        return mergeWithLocalArticles(valid);
       }
     }
   } catch (e) {}
 
-  return mergeWithLocalArticles(INITIAL_DEFAULT_ARTICLES);
+  return mergeWithLocalArticles([]);
 }
 
 /**
@@ -139,15 +139,15 @@ export async function revalidatePublishedArticles(sourceTag = 'manual'): Promise
         await setOfflineData(SWR_LAST_SYNC_KEY, syncTime);
       } catch (e) {}
 
-      // Combine with defaults & custom local articles for UI
-      const combined = mergeWithLocalArticles(combineWithDefaultArticles(INITIAL_DEFAULT_ARTICLES, validPublished));
+      // Merge with custom local articles for UI
+      const combined = mergeWithLocalArticles(validPublished);
 
       // 5. Background pre-fetch and pin embedded media assets for zero-latency offline access
       prefetchAndPinArticleAssets(combined).catch((err) => {
         console.warn('[SWR] Background asset prefetching warning:', err);
       });
 
-      // Check for new articles and dispatch system tray notification
+      // Check for new articles and dispatch system tray notification with article title and mode
       try {
         const prevKnownCountStr = localStorage.getItem('asrarhub_last_known_article_count');
         const currentCount = validPublished.length;
@@ -156,21 +156,30 @@ export async function revalidatePublishedArticles(sourceTag = 'manual'): Promise
           if (!isNaN(prevCount) && currentCount > prevCount) {
             const diff = currentCount - prevCount;
             const lang = (localStorage.getItem('language') || 'fr') as 'fr' | 'en' | 'ha';
-            let notifTitle = 'Nouveaux Articles 📚';
-            let notifBody = `${diff} nouveau(x) article(s) et secret(s) disponible(s).`;
-            if (lang === 'ha') {
-              notifTitle = 'Sabbin Makalu 📚';
-              notifBody = `An kaddamar da sabbin makalu ${diff} a cikin AsrarHub.`;
-            } else if (lang === 'en') {
-              notifTitle = 'New Articles Available 📚';
-              notifBody = `${diff} new spiritual article(s) and secret(s) synchronized.`;
-            }
+            
+            // Latest newly added article
             const latestArticle = validPublished[0];
+            const isPrem = Boolean(latestArticle?.isPremium);
+            const articleTitle = getTranslatedArticleTitle(latestArticle, lang) || latestArticle?.title || 'Nouveau Secret';
+            const articleHook = getTranslatedArticleHook(latestArticle, lang) || latestArticle?.hook || '';
+
+            const { title: notifTitle, body: notifBody } = getLocalizedNotificationText('articleNew', lang, {
+              articleTitle,
+              isPremium: isPrem,
+              hook: articleHook,
+              count: diff,
+              articleId: latestArticle?.id
+            });
+
             const targetUrl = latestArticle?.id ? `/secret/${latestArticle.id}` : '/user/dashboard';
+            
+            console.log(`[SWR] Dispatching rich article notification: "${notifTitle}" -> Target: ${targetUrl} (Premium: ${isPrem})`);
+
             dispatchSystemNotification(notifTitle, notifBody, {
               type: 'article',
               articleId: latestArticle?.id,
-              articleTitle: latestArticle?.title,
+              articleTitle,
+              isPremium: isPrem,
               targetUrl,
             });
           }
@@ -341,4 +350,22 @@ export async function getCachedAssetUrl(originalUrl: string): Promise<string> {
   } catch (e) {}
   return originalUrl;
 }
+
+/**
+ * Clears all local SWR article cache records from IndexedDB and localStorage
+ */
+export async function clearAllArticlesCache(): Promise<void> {
+  try {
+    localStorage.removeItem(CACHED_ARTICLES_LIST_KEY);
+    localStorage.removeItem(CACHED_EXPLORE_ARTICLES_KEY);
+    localStorage.removeItem(CACHED_ARTICLE_DETAILS_KEY);
+    localStorage.removeItem(SWR_LAST_SYNC_KEY);
+    await setOfflineData(CACHED_ARTICLES_LIST_KEY, []);
+    await setOfflineData(CACHED_EXPLORE_ARTICLES_KEY, []);
+    await setOfflineData(CACHED_ARTICLE_DETAILS_KEY, {});
+  } catch (e) {
+    console.warn('[SWR] Error clearing article cache:', e);
+  }
+}
+
 

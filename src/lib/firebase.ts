@@ -18,7 +18,6 @@ import {
   getFirestore, 
   initializeFirestore, 
   persistentLocalCache, 
-  persistentMultipleTabManager, 
   memoryLocalCache,
   enableNetwork,
   doc, 
@@ -42,14 +41,15 @@ export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 if (typeof window !== 'undefined') {
   setPersistence(auth, browserLocalPersistence).catch((err) => {
-    console.warn('[Auth Persistence] Failed to set browserLocalPersistence:', err);
+    console.warn('[Auth Persistence] Defaulting persistence:', err);
   });
 }
 export const storage = getStorage(app);
 
 // Initialize Firestore safely with offline persistence:
 // Persistent local cache (IndexedDB) stores queries offline so data remains accessible on intermittent mobile connections.
-// If multi-tab locks or iframe constraints fail, we fallback gracefully to persistent single-tab cache or memoryLocalCache.
+// In iframe sandboxes (like AI Studio preview) or multi-frame environments, persistentLocalCache() without multi-tab lease locking
+// prevents internal assertion failures (ID: c050) while preserving full offline functionality.
 const isInIframe = typeof window !== 'undefined' && window.self !== window.top;
 const isCapacitor = typeof window !== 'undefined' && (
   !!(window as any).Capacitor ||
@@ -59,68 +59,52 @@ const isCapacitor = typeof window !== 'undefined' && (
   navigator.userAgent.includes('wv')
 );
 
-// Safely clean up any stale or bloated firestore localStorage keys that cause QuotaExceededError
-if (typeof window !== 'undefined' && window.localStorage) {
-  try {
-    Object.keys(localStorage).forEach((key) => {
-      if (key.startsWith('firestore_') || key.startsWith('firebase:')) {
-        localStorage.removeItem(key);
-      }
-    });
-  } catch (e) {
-    // Ignore storage access issues
-  }
-}
-
 const initFirestore = () => {
+  if (typeof window === 'undefined') {
+    return getFirestore(app);
+  }
+
   try {
-    console.log('[Firestore Init] Attempting Firestore setup with persistent local cache (IndexedDB)...');
+    console.log('[Firestore Init] Initializing Firestore with persistent local cache...');
     return initializeFirestore(app, {
       experimentalAutoDetectLongPolling: true,
-      localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
+      localCache: persistentLocalCache()
     });
   } catch (err1) {
     try {
-      console.warn('[Firestore Init] Multi-tab persistent cache failed, trying single-tab persistent cache:', err1);
+      console.warn('[Firestore Init] Persistent localCache init failed, falling back to memoryLocalCache:', err1);
       return initializeFirestore(app, {
         experimentalAutoDetectLongPolling: true,
-        localCache: persistentLocalCache()
+        localCache: memoryLocalCache()
       });
     } catch (err2) {
-      console.warn('[Firestore Init] Persistent localCache init failed, falling back to memoryLocalCache:', err2);
-      try {
-        return initializeFirestore(app, {
-          experimentalAutoDetectLongPolling: true,
-          localCache: memoryLocalCache()
-        });
-      } catch (err3) {
-        return getFirestore(app);
-      }
+      console.warn('[Firestore Init] Defaulting to getFirestore:', err2);
+      return getFirestore(app);
     }
   }
 };
 
 export const db = initFirestore();
 
-// Auto-run diagnostics on startup in Capacitor or mobile environments to isolate network/CORS issues
+// Auto-run diagnostics and network listeners safely
 if (typeof window !== 'undefined') {
-  const reconnectFirestore = () => {
-    try {
-      enableNetwork(db).catch(() => {});
-    } catch (e) {}
+  let reconnectTimeout: any = null;
+  const safeReconnectFirestore = () => {
+    if (reconnectTimeout) clearTimeout(reconnectTimeout);
+    reconnectTimeout = setTimeout(() => {
+      try {
+        enableNetwork(db).catch(() => {});
+      } catch (e) {}
+    }, 1000);
   };
 
   window.addEventListener('online', () => {
-    console.log('[Network Monitor] Device status changed: ONLINE. Syncing Firestore cache...');
-    reconnectFirestore();
+    console.log('[Network Monitor] Device status changed: ONLINE. Syncing Firestore...');
+    safeReconnectFirestore();
   });
+
   window.addEventListener('offline', () => {
     console.warn('[Network Monitor] Device status changed: OFFLINE. Using Firestore local persistent cache...');
-  });
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') {
-      reconnectFirestore();
-    }
   });
 
   if (isCapacitor || process.env.NODE_ENV === 'development') {
@@ -185,7 +169,18 @@ export const signUpWithEmail = async (email: string, password: string, name: str
     throw new Error(validation.error || 'Informations d\'inscription invalides.');
   }
 
-  const result = await createUserWithEmailAndPassword(auth, email, password);
+  let result;
+  try {
+    result = await createUserWithEmailAndPassword(auth, email, password);
+  } catch (err: any) {
+    if (err?.code === 'auth/network-request-failed' || err?.message?.includes('network')) {
+      // Retry once after brief pause
+      await new Promise(r => setTimeout(r, 600));
+      result = await createUserWithEmailAndPassword(auth, email, password);
+    } else {
+      throw err;
+    }
+  }
   
   if (result.user) {
     // ⚡ Trigger verification email INSTANTLY without blocking UI or doc creation
@@ -230,7 +225,16 @@ export const signUpWithEmail = async (email: string, password: string, name: str
 };
 
 export const signInWithEmail = async (email: string, password: string) => {
-  return await signInWithEmailAndPassword(auth, email, password);
+  try {
+    return await signInWithEmailAndPassword(auth, email, password);
+  } catch (err: any) {
+    if (err?.code === 'auth/network-request-failed' || err?.message?.includes('network')) {
+      // Retry once after brief pause
+      await new Promise(r => setTimeout(r, 600));
+      return await signInWithEmailAndPassword(auth, email, password);
+    }
+    throw err;
+  }
 };
 
 export const sendVerificationEmail = async (user: User) => {

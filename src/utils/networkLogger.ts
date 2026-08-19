@@ -1,5 +1,5 @@
 import { db } from '../lib/firebase';
-import { doc, getDocFromServer, enableNetwork, disableNetwork } from 'firebase/firestore';
+import { doc, getDocFromServer, enableNetwork } from 'firebase/firestore';
 
 export interface NetworkLog {
   id: string;
@@ -195,11 +195,8 @@ export const triggerBackgroundReconnect = async () => {
 
   const attemptReconnect = async () => {
     try {
-      addNetworkLog('info', 'firestore', 'Forçage de la reconnexion réseau de Firestore...');
-      // Cycle network to flush pending connections
-      await disableNetwork(db);
-      await new Promise((resolve) => setTimeout(resolve, 500));
-      await enableNetwork(db);
+      addNetworkLog('info', 'firestore', 'Vérification et réactivation du réseau Firestore...');
+      await enableNetwork(db).catch(() => {});
 
       // Verify if connected
       const check = await pingFirestore();
@@ -213,7 +210,7 @@ export const triggerBackgroundReconnect = async () => {
         addNetworkLog(
           'retry',
           'firestore',
-          `Reconnexion échouée. Nouvelle tentative dans ${retryDelay}ms.`
+          `Reconnexion en attente. Prochaine tentative dans ${retryDelay}ms.`
         );
         setTimeout(attemptReconnect, retryDelay);
       }

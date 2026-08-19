@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
 import { Clock, Sparkles, Crown, ShieldCheck, ArrowRight, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useFeatures } from '../contexts/FeatureContext';
@@ -255,11 +254,9 @@ export const Premium12hCountdownWidget: React.FC<Premium12hCountdownWidgetProps>
               </span>
             </div>
             <div className="w-full h-2.5 bg-gray-200 dark:bg-gray-800 rounded-full overflow-hidden p-0.5 border border-amber-500/20">
-              <motion.div
-                className="h-full bg-gradient-to-r from-emerald-500 via-amber-400 to-amber-500 rounded-full"
-                initial={{ width: `${progressPercent}%` }}
-                animate={{ width: `${progressPercent}%` }}
-                transition={{ duration: 0.5 }}
+              <div
+                className="h-full bg-gradient-to-r from-emerald-500 via-amber-400 to-amber-500 rounded-full transition-all duration-500"
+                style={{ width: `${progressPercent}%` }}
               />
             </div>
           </div>

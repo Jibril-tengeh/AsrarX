@@ -14,7 +14,8 @@ self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
   const action = event.action;
-  const urlToOpen = new URL(event.notification.data?.url || '/', self.location.origin).href;
+  const targetPath = event.notification.data?.targetUrl || event.notification.data?.url || (event.notification.data?.articleId ? `/secret/${event.notification.data.articleId}` : '/');
+  const urlToOpen = new URL(targetPath, self.location.origin).href;
 
   if (action === 'increment_zikr') {
     let currentZikr = (event.notification.data?.zikrCount || 0) + 1;

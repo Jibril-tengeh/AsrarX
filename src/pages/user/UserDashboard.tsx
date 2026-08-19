@@ -17,11 +17,13 @@ import { AsrarQuickWidget } from '../../components/AsrarQuickWidget';
 
 import { INITIAL_DEFAULT_ARTICLES, DefaultArticle } from '../../data/defaultArticles';
 import { fetchArticlesFromRest } from '../../lib/firestoreRest';
-import { isPubliclyVisibleArticle, getTranslatedArticleTitle, getTranslatedArticleHook } from '../../lib/articleUtils';
+import { isPubliclyVisibleArticle, getTranslatedArticleTitle, getTranslatedArticleHook, sortArticlesInOrder } from '../../lib/articleUtils';
 import { mergeWithLocalArticles, saveCachedArticlesList, combineWithDefaultArticles, setHideMockArticles, isMockArticlesHidden, getCachedArticlesListAsync } from '../../lib/localArticles';
 import { SWR_EVENT_NAME } from '../../lib/swrArticleCache';
 import { useBackButton } from '../../hooks/useBackButton';
 import { getArticleImageUrl } from '../../utils/articleImageUtils';
+import { useNetworkStatus } from '../../hooks/useNetworkStatus';
+import { OfflineArticlesPopup } from '../../components/OfflineArticlesPopup';
 
 const LucideIcon = ({ name, className, size }: { name: string; className?: string; size?: number }) => {
   const IconComponent = (Icons as any)[name];
@@ -55,34 +57,16 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
       const cached = localStorage.getItem('asrarhub_cached_articles_list') || localStorage.getItem('asrarhub_cached_explore_articles');
       if (cached) {
         const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const valid = parsed.filter((art: any) => art && art.id && !String(art.id).startsWith('default_art_') && isPubliclyVisibleArticle(art.status));
+          if (valid.length > 0) return mergeWithLocalArticles(valid);
+        }
       }
     } catch (e) {}
-    const defaults = INITIAL_DEFAULT_ARTICLES.map(art => ({
-      id: art.id,
-      title: art.title,
-      hook: art.hook,
-      category: art.category,
-      subCategory: art.subCategory || '',
-      status: art.status || 'Published',
-      content: art.content,
-      benefits: art.benefits || [],
-      imageUrl: art.thumbnail,
-      isPremium: art.isPremium || false,
-      createdAt: art.createdAt,
-      title_en: art.title_en,
-      content_en: art.content_en,
-      hook_en: art.hook_en,
-      title_ha: art.title_ha,
-      content_ha: art.content_ha,
-      hook_ha: art.hook_ha,
-      title_fr: art.title,
-      content_fr: art.content,
-      hook_fr: art.hook,
-      hasManualTranslation: false
-    } as AsrarItem));
-    return mergeWithLocalArticles(defaults);
+    return mergeWithLocalArticles([]);
   });
+  const { isOffline, isOnline } = useNetworkStatus();
+  const [showOfflineModal, setShowOfflineModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filter, setFilter] = useState<Category | 'all' | 'favoris'>(initialFilter);
@@ -311,24 +295,27 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
       return isPubliclyVisibleArticle(st);
     };
 
-    // Pre-load from local offline cache for instant consultation even without connection
-    let hasLocalCache = false;
-    try {
-      const cached = localStorage.getItem('asrarhub_cached_articles_list');
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          const validItems = parsed.filter((it: any) => isPublishedArticleStatus(it.status));
-          if (validItems.length > 0) {
-            setItems(validItems);
-            setIsLoading(false);
-            hasLocalCache = true;
-          }
+    // Master in-memory accumulator to prevent any flicker or disappearances
+    const articleMap = new Map<string, AsrarItem>();
+
+    const applyAccumulatedArticles = (incoming: AsrarItem[]) => {
+      if (!Array.isArray(incoming)) return;
+      for (const it of incoming) {
+        if (it && it.id && isPublishedArticleStatus(it.status)) {
+          const existing = articleMap.get(it.id);
+          articleMap.set(it.id, { ...existing, ...it });
         }
       }
-    } catch (e) {
-      console.error("Error pre-loading articles from offline cache", e);
-    }
+      const allAccumulated = Array.from(articleMap.values());
+      const merged = mergeWithLocalArticles(allAccumulated);
+      const publicOnly = merged.filter((it: any) => isPublishedArticleStatus(it.status));
+      const sorted = sortArticlesInOrder(publicOnly, true);
+      if (sorted.length > 0) {
+        setItems(sorted);
+        setIsLoading(false);
+        saveCachedArticlesList('asrarhub_cached_articles_list', sorted);
+      }
+    };
 
     const processDocData = (docSnap: any) => {
       try {
@@ -343,7 +330,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
     const processRawObject = (data: any, docId: string) => {
       if (!data) return null;
 
-      // User Dashboard feed ONLY displays published/public articles (drafts & archived belong in Admin Panel)
+      // User Dashboard feed displays all articles EXCEPT Draft and Archive
       if (!isPublishedArticleStatus(data.status)) {
         return null;
       }
@@ -373,7 +360,11 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
         imageUrl: img,
         thumbnail: img,
         isPremium: data.isPremium || false,
+        order: data.order,
+        orderIndex: data.orderIndex,
+        isPinned: data.isPinned || data.pinned || false,
         createdAt: formatCreatedAt(data.createdAt),
+        publishDate: data.publishDate,
         title_en: data.title_en,
         content_en: data.content_en,
         hook_en: data.hook_en,
@@ -387,153 +378,78 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
       } as AsrarItem;
     };
 
-    const getDefaultItemsAsAsrarItems = (): AsrarItem[] => {
-      return INITIAL_DEFAULT_ARTICLES.map(art => {
-        let activeContent = art.content || '';
-        if (language === 'en' && art.content_en) activeContent = art.content_en;
-        if (language === 'ha' && art.content_ha) activeContent = art.content_ha;
-
-        let hookText = getTranslatedArticleHook(art, language);
-        let titleText = getTranslatedArticleTitle(art, language);
-
-        return {
-          id: art.id,
-          title: titleText,
-          hook: hookText,
-          category: art.category,
-          subCategory: art.subCategory || '',
-          status: art.status || 'Published',
-          content: activeContent,
-          benefits: art.benefits || [],
-          imageUrl: art.thumbnail,
-          thumbnail: art.thumbnail,
-          isPremium: art.isPremium || false,
-          createdAt: art.createdAt,
-          title_en: art.title_en,
-          content_en: art.content_en,
-          hook_en: art.hook_en,
-          title_ha: art.title_ha,
-          content_ha: art.content_ha,
-          hook_ha: art.hook_ha,
-          title_fr: art.title,
-          content_fr: art.content,
-          hook_fr: art.hook,
-          hasManualTranslation: language !== 'fr'
-        } as AsrarItem;
-      });
-    };
-
-    // Helper to attempt restoring real articles from IndexedDB / local storage cache before defaulting
-    const tryRestoreCachedOrDefaults = () => {
+    // 1. Instant cache restoration (IndexedDB + localStorage)
+    const restoreCachedArticles = () => {
       let baseItems: AsrarItem[] = [];
       try {
-        const cached = localStorage.getItem('asrarhub_cached_articles_list');
+        const cached = localStorage.getItem('asrarhub_cached_articles_list') || localStorage.getItem('asrarhub_cached_explore_articles');
         if (cached) {
           const parsed = JSON.parse(cached);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            const validItems = parsed.filter((it: any) => isPublishedArticleStatus(it.status));
+            const validItems = parsed.filter((it: any) => it && it.id && !String(it.id).startsWith('default_art_') && isPublishedArticleStatus(it.status));
             if (validItems.length > 0) {
               baseItems = validItems;
             }
           }
         }
       } catch (e) {}
-      const defaultItems = getDefaultItemsAsAsrarItems();
-      const combined = combineWithDefaultArticles(defaultItems, baseItems);
-      const merged = mergeWithLocalArticles(combined);
-      const publicOnly = merged.filter((it: any) => isPublishedArticleStatus(it.status));
-      setItems(publicOnly);
-      setIsLoading(false);
 
-      // Asynchronously fetch full cached list from IndexedDB (untruncated)
+      applyAccumulatedArticles(baseItems);
+
       getCachedArticlesListAsync('asrarhub_cached_articles_list').then(idbItems => {
         if (Array.isArray(idbItems) && idbItems.length > 0) {
-          const validItems = idbItems.filter((it: any) => isPublishedArticleStatus(it.status));
+          const validItems = idbItems.filter((it: any) => it && it.id && !String(it.id).startsWith('default_art_') && isPublishedArticleStatus(it.status));
           if (validItems.length > 0) {
-            const idbCombined = combineWithDefaultArticles(defaultItems, validItems as AsrarItem[]);
-            const idbMerged = mergeWithLocalArticles(idbCombined);
-            const idbPublic = idbMerged.filter((it: any) => isPublishedArticleStatus(it.status));
-            setItems(idbPublic);
+            applyAccumulatedArticles(validItems as AsrarItem[]);
           }
         }
       }).catch(() => {});
     };
 
-    // Restore cached articles immediately for zero latency offline access
-    tryRestoreCachedOrDefaults();
+    restoreCachedArticles();
 
-    // Direct REST API fetch to guarantee real articles load on Capacitor/mobile WebView
+    // 2. Direct REST API fetch to ensure all articles load instantly on mobile / Capacitor WebViews
     fetchArticlesFromRest().then(restDocs => {
       if (Array.isArray(restDocs) && restDocs.length > 0) {
         const parsed = restDocs
           .map(d => processRawObject(d, d.id))
           .filter((item): item is AsrarItem => item !== null);
-        const defaultItems = getDefaultItemsAsAsrarItems();
-        const combined = combineWithDefaultArticles(defaultItems, parsed);
-        const merged = mergeWithLocalArticles(combined);
-        const publicOnly = merged.filter((item: any) => isPublishedArticleStatus(item.status));
-        if (publicOnly.length > 0) {
-          console.log(`[Articles REST - UserDashboard] Successfully loaded ${publicOnly.length} real public articles via REST API!`);
-          setItems(publicOnly);
-          setIsLoading(false);
-          saveCachedArticlesList('asrarhub_cached_articles_list', publicOnly);
+        if (parsed.length > 0) {
+          console.log(`[Articles REST - UserDashboard] Loaded ${parsed.length} public articles via REST API`);
+          applyAccumulatedArticles(parsed);
         }
       }
     }).catch(err => {
-      console.warn("[Articles REST - UserDashboard] REST fetch warning:", err);
+      console.warn("[Articles REST - UserDashboard] REST fetch note:", err);
     });
 
-    // Query entire collection so articles with missing or custom status values are NEVER excluded
+    // 3. Firestore getDocs query
     const q = collection(db, 'articles');
-    console.log(`[Articles Query - UserDashboard] Querying collection 'articles'. User role: "${user?.role || 'user'}".`);
-
-    // Standard getDocs fallback for reliable loading on native mobile/Capacitor builds
     getDocs(q).then((snap) => {
-      console.log(`[Articles getDocs - UserDashboard] Received ${snap.docs.length} raw documents from Firestore server.`);
       const freshItems = snap.docs
         .map(d => processDocData(d))
         .filter((item): item is AsrarItem => item !== null);
-
-      const defaultItems = getDefaultItemsAsAsrarItems();
-      const combined = combineWithDefaultArticles(defaultItems, freshItems);
-      const merged = mergeWithLocalArticles(combined);
-      const publicOnly = merged.filter((item: any) => isPublishedArticleStatus(item.status));
-      console.log(`[Articles getDocs - UserDashboard] ${publicOnly.length} published articles ready.`);
-      if (publicOnly.length > 0) {
-        setItems(publicOnly);
-        setIsLoading(false);
-        saveCachedArticlesList('asrarhub_cached_articles_list', publicOnly);
-      } else {
-        tryRestoreCachedOrDefaults();
+      if (freshItems.length > 0) {
+        console.log(`[Articles getDocs - UserDashboard] Loaded ${freshItems.length} public articles via getDocs`);
+        applyAccumulatedArticles(freshItems);
       }
     }).catch(err => {
-      console.warn("[Articles getDocs - UserDashboard] Error during getDocs query:", err?.code || err?.message || err);
-      tryRestoreCachedOrDefaults();
+      console.warn("[Articles getDocs - UserDashboard] Firestore getDocs note:", err?.code || err?.message || err);
     });
 
+    // 4. Firestore real-time onSnapshot listener
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      console.log(`[Articles onSnapshot - UserDashboard] Listener update received (${snapshot.docs.length} raw docs, fromCache: ${snapshot.metadata?.fromCache}).`);
       const firestoreItems = snapshot.docs
         .map(d => processDocData(d))
         .filter((item): item is AsrarItem => item !== null);
-
-      const defaultItems = getDefaultItemsAsAsrarItems();
-      const combined = combineWithDefaultArticles(defaultItems, firestoreItems);
-      const merged = mergeWithLocalArticles(combined);
-      const publicOnly = merged.filter((item: any) => isPublishedArticleStatus(item.status));
-      if (publicOnly.length > 0) {
-        console.log(`[Articles onSnapshot - UserDashboard] ${publicOnly.length} published articles ready to display.`);
-        setItems(publicOnly);
-        saveCachedArticlesList('asrarhub_cached_articles_list', publicOnly);
-      } else {
-        console.warn("[Articles onSnapshot - UserDashboard] Empty snapshot received (offline or 0 items), restoring cached/default articles.");
-        tryRestoreCachedOrDefaults();
+      if (firestoreItems.length > 0) {
+        console.log(`[Articles onSnapshot - UserDashboard] Realtime update: ${firestoreItems.length} public articles`);
+        applyAccumulatedArticles(firestoreItems);
       }
       setIsLoading(false);
     }, (error) => {
-      console.error("[Articles onSnapshot - UserDashboard] Firestore permission or network error:", error.code, error.message, error);
+      console.warn("[Articles onSnapshot - UserDashboard] Firestore listener note:", error?.code || error?.message || error);
       setIsLoading(false);
-      tryRestoreCachedOrDefaults();
     });
 
     try {
@@ -582,11 +498,9 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
         const d = new Date();
         d.setDate(today.getDate() - i);
         const dateStr = d.toISOString().split('T')[0];
-        // randomize some activity, or use real stats if available
         const randomFactor = Math.random();
         data[dateStr] = Math.floor(randomFactor * 10) * (randomFactor > 0.5 ? 1 : 0);
       }
-      // Guarantee today has activity if they logged in
       const todayStr = today.toISOString().split('T')[0];
       data[todayStr] = Math.max(1, data[todayStr]);
       setActivityData(data);
@@ -595,16 +509,17 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
     const handleSWRUpdate = (e: Event) => {
       const customEvent = e as CustomEvent;
       if (customEvent.detail?.articles && Array.isArray(customEvent.detail.articles)) {
-        console.log(`[SWR Event - UserDashboard] Article list updated via SWR (${customEvent.detail.articles.length} items).`);
-        setItems(customEvent.detail.articles);
-        setIsLoading(false);
+        console.log(`[SWR Event - UserDashboard] SWR updated with ${customEvent.detail.articles.length} items`);
+        applyAccumulatedArticles(customEvent.detail.articles);
       }
     };
     window.addEventListener(SWR_EVENT_NAME, handleSWRUpdate);
+    window.addEventListener('asrarhub_swr_articles_updated', handleSWRUpdate);
 
     return () => {
       unsubscribe();
       window.removeEventListener(SWR_EVENT_NAME, handleSWRUpdate);
+      window.removeEventListener('asrarhub_swr_articles_updated', handleSWRUpdate);
     };
   }, [language]);
 
@@ -758,57 +673,61 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
     return () => unsubscribe();
   }, []);
 
-  const filteredItems = items.filter(item => {
-    let matchesSearch = true;
-    
-    if (aiSearchResults) {
-      matchesSearch = aiSearchResults.includes(item.id);
-    } else {
-      const q = searchQuery.toLowerCase().trim();
-      matchesSearch = !q || [
-        item.title,
-        item.content,
-        item.hook,
-        item.verse,
-        item.reference,
-        ...(item.benefits || [])
-      ].some(field => field?.toLowerCase().includes(q));
-    }
-    
-    let matchesFilter = false;
-    if (filter === 'all') {
-      matchesFilter = true;
-    } else if (filter === 'favoris') {
-      if (activeFolder) {
-        const folder = bookmarkFolders.find(f => f.id === activeFolder);
-        matchesFilter = folder ? folder.items.includes(item.id) : false;
-      } else {
-        matchesFilter = bookmarks.includes(item.id);
-      }
-    } else {
-      const itemCat = (item.category || '').toString().toLowerCase().trim();
-      const filterCat = (filter || '').toString().toLowerCase().trim();
+  const filteredItems = React.useMemo(() => {
+    const raw = items.filter(item => {
+      let matchesSearch = true;
       
-      const categoryObj = categories.find(c => c.id === filter || c.id?.toLowerCase() === filterCat);
-      const categoryName = categoryObj ? (categoryObj.name || '').toLowerCase().trim() : '';
+      if (aiSearchResults) {
+        matchesSearch = aiSearchResults.includes(item.id);
+      } else {
+        const q = searchQuery.toLowerCase().trim();
+        matchesSearch = !q || [
+          item.title,
+          item.content,
+          item.hook,
+          item.verse,
+          item.reference,
+          ...(item.benefits || [])
+        ].some(field => field?.toLowerCase().includes(q));
+      }
+      
+      let matchesFilter = false;
+      if (filter === 'all') {
+        matchesFilter = true;
+      } else if (filter === 'favoris') {
+        if (activeFolder) {
+          const folder = bookmarkFolders.find(f => f.id === activeFolder);
+          matchesFilter = folder ? folder.items.includes(item.id) : false;
+        } else {
+          matchesFilter = bookmarks.includes(item.id);
+        }
+      } else {
+        const itemCat = (item.category || '').toString().toLowerCase().trim();
+        const filterCat = (filter || '').toString().toLowerCase().trim();
+        
+        const categoryObj = categories.find(c => c.id === filter || c.id?.toLowerCase() === filterCat);
+        const categoryName = categoryObj ? (categoryObj.name || '').toLowerCase().trim() : '';
 
-      const isRecette = (filterCat === 'recette' || filterCat === 'recipes') && (itemCat.includes('recette') || itemCat.includes('recipe'));
-      const isWird = (filterCat === 'wird' || filterCat === 'wirds' || filterCat === 'zikr') && (itemCat.includes('wird') || itemCat.includes('zikr'));
-      const isSecret = (filterCat === 'secret' || filterCat === 'secrets' || filterCat === 'sirr') && (itemCat.includes('secret') || itemCat.includes('sirr'));
-      const isRouqyah = (filterCat === 'rouqyah' || filterCat === 'ruqyah') && (itemCat.includes('rouqyah') || itemCat.includes('ruqyah'));
-      const isMuraqabah = (filterCat === 'muraqabah' || filterCat === 'meditation') && (itemCat.includes('muraqabah') || itemCat.includes('meditation'));
+        const isRecette = (filterCat === 'recette' || filterCat === 'recipes') && (itemCat.includes('recette') || itemCat.includes('recipe'));
+        const isWird = (filterCat === 'wird' || filterCat === 'wirds' || filterCat === 'zikr') && (itemCat.includes('wird') || itemCat.includes('zikr'));
+        const isSecret = (filterCat === 'secret' || filterCat === 'secrets' || filterCat === 'sirr') && (itemCat.includes('secret') || itemCat.includes('sirr'));
+        const isRouqyah = (filterCat === 'rouqyah' || filterCat === 'ruqyah') && (itemCat.includes('rouqyah') || itemCat.includes('ruqyah'));
+        const isMuraqabah = (filterCat === 'muraqabah' || filterCat === 'meditation') && (itemCat.includes('muraqabah') || itemCat.includes('meditation'));
 
-      const matchesCategory = itemCat === filterCat 
-        || (categoryName && (itemCat === categoryName || itemCat.includes(categoryName) || categoryName.includes(itemCat)))
-        || isRecette || isWird || isSecret || isRouqyah || isMuraqabah;
-      const itemSubCat = (item as any).subCategory || '';
-      const matchesSubCat = !selectedSubCategory || itemSubCat === selectedSubCategory;
+        const matchesCategory = itemCat === filterCat 
+          || (categoryName && (itemCat === categoryName || itemCat.includes(categoryName) || categoryName.includes(itemCat)))
+          || isRecette || isWird || isSecret || isRouqyah || isMuraqabah;
+        const itemSubCat = (item as any).subCategory || '';
+        const matchesSubCat = !selectedSubCategory || itemSubCat === selectedSubCategory;
 
-      matchesFilter = matchesCategory && matchesSubCat;
-    }
+        matchesFilter = matchesCategory && matchesSubCat;
+      }
 
-    return matchesSearch && matchesFilter;
-  });
+      return matchesSearch && matchesFilter;
+    });
+
+    return sortArticlesInOrder(raw, true);
+  }, [items, aiSearchResults, searchQuery, filter, activeFolder, bookmarkFolders, bookmarks, categories, selectedSubCategory]);
 
   // Force Vite HMR invalidation
   // console.log("UserDashboard loaded");
@@ -1817,6 +1736,16 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
                 </button>
               )}
 
+              {isOffline && items.length === 0 && (
+                <button
+                  onClick={() => setShowOfflineModal(true)}
+                  className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs shadow-md shadow-amber-500/20 transition-all flex items-center gap-2 cursor-pointer"
+                >
+                  <Sparkles size={15} />
+                  <span>{language === 'fr' ? 'Notification Hors Ligne' : 'Offline Notification'}</span>
+                </button>
+              )}
+
               {user?.role === 'admin' && (
                 <Link
                   to="/admin"
@@ -1832,6 +1761,18 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
       </div>
       <GlobalSearchModal isOpen={isGlobalSearchOpen} onClose={() => setIsGlobalSearchOpen(false)} />
       <MysticCalendarModal isOpen={isCalendarOpen} onClose={() => setIsCalendarOpen(false)} />
+      
+      {/* Offline sync notification popup */}
+      <OfflineArticlesPopup
+        isOpen={showOfflineModal || (isOffline && items.length === 0)}
+        onClose={() => setShowOfflineModal(false)}
+        onConnectedAndSynced={(synced) => {
+          if (Array.isArray(synced) && synced.length > 0) {
+            setItems(synced);
+          }
+        }}
+        articleCount={items.length}
+      />
     </div>
   );
 };

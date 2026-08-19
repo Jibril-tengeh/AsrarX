@@ -18,6 +18,7 @@ import {
   Link as LinkIcon,
   Unlink,
   Image as ImageIcon,
+  Crop,
   Music,
   Video,
   Code,
@@ -37,8 +38,10 @@ import {
   CheckCircle2,
   AlertTriangle,
   Check,
-  Info
+  Info,
+  SlidersHorizontal
 } from 'lucide-react';
+import { ImageCropperModal, ImageCropResult } from './common/ImageCropperModal';
 
 export interface UrlValidationResult {
   isValid: boolean;
@@ -234,7 +237,16 @@ const MenuBar = ({ editor, isFullScreen, onToggleFullScreen }: { editor: any; is
   const [imageTab, setImageTab] = useState<'url' | 'upload'>('url');
   const [imageUrl, setImageUrl] = useState('');
   const [imageAlt, setImageAlt] = useState('');
+  const [uploadedImagePreview, setUploadedImagePreview] = useState<{ src: string; name: string } | null>(null);
   const imageFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Cropper state
+  const [isCropperOpen, setIsCropperOpen] = useState(false);
+  const [cropperSrc, setCropperSrc] = useState('');
+  const [cropperAlt, setCropperAlt] = useState('');
+  const [cropMode, setCropMode] = useState<'insert' | 'replace'>('insert');
+  const [selectedImageToReplace, setSelectedImageToReplace] = useState<{ src: string; alt?: string } | null>(null);
+  const [showImagePickerModal, setShowImagePickerModal] = useState(false);
 
   // Audio state
   const [audioTab, setAudioTab] = useState<'url' | 'upload'>('url');
@@ -257,6 +269,22 @@ const MenuBar = ({ editor, isFullScreen, onToggleFullScreen }: { editor: any; is
   if (!editor) {
     return null;
   }
+
+  // Helper to extract all images currently in editor
+  const getAllEditorImages = (): { src: string; alt?: string }[] => {
+    const images: { src: string; alt?: string }[] = [];
+    if (!editor) return images;
+    
+    editor.state.doc.descendants((node: any) => {
+      if (node.type.name === 'image') {
+        images.push({
+          src: node.attrs.src,
+          alt: node.attrs.alt || 'Image du texte',
+        });
+      }
+    });
+    return images;
+  };
 
   // --- HANDLERS ---
   const handleOpenLinkModal = () => {
@@ -313,6 +341,7 @@ const MenuBar = ({ editor, isFullScreen, onToggleFullScreen }: { editor: any; is
       editor.chain().focus().setImage({ src: imageUrl.trim(), alt: imageAlt.trim() || 'Image' }).run();
       setImageUrl('');
       setImageAlt('');
+      setUploadedImagePreview(null);
       setActiveModal(null);
     }
   };
@@ -324,12 +353,80 @@ const MenuBar = ({ editor, isFullScreen, onToggleFullScreen }: { editor: any; is
       reader.onload = (event) => {
         const result = event.target?.result as string;
         if (result) {
-          editor.chain().focus().setImage({ src: result, alt: file.name }).run();
-          setActiveModal(null);
+          setUploadedImagePreview({ src: result, name: file.name });
+          setImageAlt(file.name.replace(/\.[^/.]+$/, ''));
         }
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleInsertUploadedDirectly = () => {
+    if (uploadedImagePreview) {
+      editor.chain().focus().setImage({ src: uploadedImagePreview.src, alt: imageAlt.trim() || uploadedImagePreview.name }).run();
+      setUploadedImagePreview(null);
+      setImageAlt('');
+      setActiveModal(null);
+    }
+  };
+
+  const handleOpenCropperForNewImage = (src: string, alt?: string) => {
+    setCropperSrc(src);
+    setCropperAlt(alt || imageAlt || 'Image');
+    setCropMode('insert');
+    setActiveModal(null);
+    setIsCropperOpen(true);
+  };
+
+  const handleOpenCropperForExistingImage = (targetImg: { src: string; alt?: string }) => {
+    setSelectedImageToReplace(targetImg);
+    setCropperSrc(targetImg.src);
+    setCropperAlt(targetImg.alt || 'Image');
+    setCropMode('replace');
+    setShowImagePickerModal(false);
+    setIsCropperOpen(true);
+  };
+
+  const handleCropToolbarClick = () => {
+    // 1. Check if an image is currently active / selected in editor
+    if (editor.isActive('image')) {
+      const attrs = editor.getAttributes('image');
+      if (attrs.src) {
+        handleOpenCropperForExistingImage({ src: attrs.src, alt: attrs.alt });
+        return;
+      }
+    }
+
+    // 2. Otherwise get all images in doc
+    const docImages = getAllEditorImages();
+    if (docImages.length === 0) {
+      // No images in text yet -> prompt to insert or crop an image
+      setActiveModal('image');
+    } else if (docImages.length === 1) {
+      // Exactly 1 image -> crop it directly
+      handleOpenCropperForExistingImage(docImages[0]);
+    } else {
+      // Multiple images -> show image picker dialog
+      setShowImagePickerModal(true);
+    }
+  };
+
+  const handleCropComplete = (result: ImageCropResult) => {
+    if (cropMode === 'replace' && selectedImageToReplace) {
+      const currentHtml = editor.getHTML();
+      // Replace target image src in the document content
+      const updatedHtml = currentHtml.replace(selectedImageToReplace.src, result.dataUrl);
+      editor.commands.setContent(updatedHtml);
+      setSelectedImageToReplace(null);
+    } else {
+      // Insert new image
+      editor.chain().focus().setImage({ src: result.dataUrl, alt: cropperAlt || 'Image recadrée' }).run();
+      setImageUrl('');
+      setImageAlt('');
+      setUploadedImagePreview(null);
+      setActiveModal(null);
+    }
+    setIsCropperOpen(false);
   };
 
   // Audio insertion
@@ -598,6 +695,21 @@ const MenuBar = ({ editor, isFullScreen, onToggleFullScreen }: { editor: any; is
             <span className="hidden sm:inline">Image</span>
           </button>
 
+          {/* Recadrer Image Button */}
+          <button
+            type="button"
+            onClick={handleCropToolbarClick}
+            className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-semibold shadow-xs transition-colors ${
+              editor.isActive('image')
+                ? 'bg-emerald-600 text-white animate-pulse'
+                : 'bg-white dark:bg-gray-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/60'
+            }`}
+            title={editor.isActive('image') ? 'Recadrer l\'image sélectionnée' : 'Recadrer une image du texte'}
+          >
+            <Crop size={14} />
+            <span className="hidden sm:inline">Recadrer</span>
+          </button>
+
           {/* Audio Button */}
           <button
             type="button"
@@ -738,13 +850,19 @@ const MenuBar = ({ editor, isFullScreen, onToggleFullScreen }: { editor: any; is
       {/* 2. IMAGE MODAL */}
       {activeModal === 'image' && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 max-w-md w-full border border-gray-200 dark:border-gray-800 shadow-2xl">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 max-w-lg w-full border border-gray-200 dark:border-gray-800 shadow-2xl">
             <div className="flex items-center justify-between mb-4">
               <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
                 <ImageIcon size={18} className="text-blue-600" />
-                <span>Insérer une image</span>
+                <span>Insérer & Recadrer une image</span>
               </h3>
-              <button onClick={() => setActiveModal(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+              <button 
+                onClick={() => {
+                  setActiveModal(null);
+                  setUploadedImagePreview(null);
+                }} 
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+              >
                 <X size={18} />
               </button>
             </div>
@@ -790,16 +908,56 @@ const MenuBar = ({ editor, isFullScreen, onToggleFullScreen }: { editor: any; is
                     className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
                   />
                 </div>
-                <button
-                  type="submit"
-                  disabled={!imageUrl.trim()}
-                  className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl text-sm font-bold transition-colors"
-                >
-                  Insérer l'image
-                </button>
+
+                {/* URL Image Live Preview & Crop Option */}
+                {imageUrl.trim() && (
+                  <div className="p-3 bg-blue-50 dark:bg-blue-950/30 rounded-2xl border border-blue-200 dark:border-blue-800 flex items-center gap-3">
+                    <div className="w-16 h-16 rounded-xl bg-gray-950 overflow-hidden shrink-0 border border-black/20 flex items-center justify-center">
+                      <img
+                        src={imageUrl.trim()}
+                        alt="Aperçu"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = 'none';
+                        }}
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-gray-800 dark:text-gray-200 truncate">Image détectée</p>
+                      <p className="text-[11px] text-gray-500 truncate">{imageUrl.trim()}</p>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenCropperForNewImage(imageUrl.trim(), imageAlt)}
+                        className="mt-1.5 px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+                      >
+                        <Crop size={13} />
+                        <span>Recadrer cette image</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex gap-2 pt-1">
+                  <button
+                    type="button"
+                    disabled={!imageUrl.trim()}
+                    onClick={() => handleOpenCropperForNewImage(imageUrl.trim(), imageAlt)}
+                    className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                  >
+                    <Crop size={14} />
+                    <span>Recadrer & Insérer</span>
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={!imageUrl.trim()}
+                    className="py-2.5 px-4 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    Insérer Directement
+                  </button>
+                </div>
               </form>
             ) : (
-              <div className="space-y-4 text-center py-4">
+              <div className="space-y-4">
                 <input
                   type="file"
                   accept="image/*"
@@ -807,15 +965,70 @@ const MenuBar = ({ editor, isFullScreen, onToggleFullScreen }: { editor: any; is
                   onChange={handleImageFileUpload}
                   className="hidden"
                 />
-                <button
-                  type="button"
-                  onClick={() => imageFileInputRef.current?.click()}
-                  className="w-full border-2 border-dashed border-blue-300 dark:border-blue-700 hover:border-blue-500 bg-blue-50/50 dark:bg-blue-900/20 p-8 rounded-2xl flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors"
-                >
-                  <Upload size={32} className="text-blue-600" />
-                  <span className="text-sm font-bold text-gray-800 dark:text-gray-200">Cliquez pour sélectionner une image</span>
-                  <span className="text-xs text-gray-500">Formats supportés: PNG, JPG, WEBP, GIF</span>
-                </button>
+
+                {!uploadedImagePreview ? (
+                  <button
+                    type="button"
+                    onClick={() => imageFileInputRef.current?.click()}
+                    className="w-full border-2 border-dashed border-blue-300 dark:border-blue-700 hover:border-blue-500 bg-blue-50/50 dark:bg-blue-900/20 p-8 rounded-2xl flex flex-col items-center justify-center gap-2 cursor-pointer transition-colors"
+                  >
+                    <Upload size={32} className="text-blue-600" />
+                    <span className="text-sm font-bold text-gray-800 dark:text-gray-200">Cliquez pour sélectionner une image</span>
+                    <span className="text-xs text-gray-500">Formats supportés: PNG, JPG, WEBP, GIF</span>
+                  </button>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="p-3 bg-gray-100 dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 flex items-center gap-3">
+                      <div className="w-20 h-20 rounded-xl bg-gray-950 overflow-hidden shrink-0 border border-black/20 flex items-center justify-center">
+                        <img
+                          src={uploadedImagePreview.src}
+                          alt={uploadedImagePreview.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-gray-900 dark:text-white truncate">{uploadedImagePreview.name}</p>
+                        <button
+                          type="button"
+                          onClick={() => imageFileInputRef.current?.click()}
+                          className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline font-semibold mt-0.5 block"
+                        >
+                          Changer d'image
+                        </button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Légende / Description</label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Image rituelle"
+                        value={imageAlt}
+                        onChange={(e) => setImageAlt(e.target.value)}
+                        className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500"
+                      />
+                    </div>
+
+                    <div className="flex gap-2 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenCropperForNewImage(uploadedImagePreview.src, imageAlt || uploadedImagePreview.name)}
+                        className="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-md cursor-pointer"
+                      >
+                        <Crop size={15} />
+                        <span>Recadrer & Insérer</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleInsertUploadedDirectly}
+                        className="py-2.5 px-4 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-xl text-xs font-bold transition-colors cursor-pointer"
+                      >
+                        Insérer Directement
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1170,6 +1383,80 @@ const MenuBar = ({ editor, isFullScreen, onToggleFullScreen }: { editor: any; is
           </div>
         </div>
       )}
+
+      {/* 7. DOCUMENT IMAGE PICKER MODAL (Choose which existing image in text to crop) */}
+      {showImagePickerModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl p-6 max-w-lg w-full border border-gray-200 dark:border-gray-800 shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                <Crop size={20} className="text-emerald-600" />
+                <span>Sélectionnez l'image du texte à recadrer</span>
+              </h3>
+              <button 
+                onClick={() => setShowImagePickerModal(false)}
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <p className="text-xs text-gray-600 dark:text-gray-400 mb-4">
+              Plusieurs images ont été trouvées dans votre article. Choisissez celle que vous souhaitez recadrer :
+            </p>
+
+            <div className="grid grid-cols-2 gap-3 max-h-80 overflow-y-auto p-1">
+              {getAllEditorImages().map((img, idx) => (
+                <div
+                  key={idx}
+                  onClick={() => handleOpenCropperForExistingImage(img)}
+                  className="group relative rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 overflow-hidden hover:border-emerald-500 hover:ring-2 hover:ring-emerald-500/30 transition-all cursor-pointer flex flex-col"
+                >
+                  <div className="aspect-video w-full bg-gray-950 flex items-center justify-center overflow-hidden">
+                    <img
+                      src={img.src}
+                      alt={img.alt || `Image ${idx + 1}`}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                  </div>
+                  <div className="p-2.5 flex-1 flex flex-col justify-between">
+                    <span className="text-[11px] font-bold text-gray-800 dark:text-gray-200 truncate block">
+                      {img.alt || `Image #${idx + 1}`}
+                    </span>
+                    <button
+                      type="button"
+                      className="mt-2 w-full py-1.5 bg-emerald-600 group-hover:bg-emerald-700 text-white rounded-lg text-xs font-bold flex items-center justify-center gap-1 transition-colors shadow-xs"
+                    >
+                      <Crop size={12} />
+                      <span>Recadrer</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-800 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowImagePickerModal(false)}
+                className="px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl text-xs font-bold transition-colors"
+              >
+                Fermer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 8. IMAGE CROPPER MODAL */}
+      <ImageCropperModal
+        isOpen={isCropperOpen}
+        onClose={() => setIsCropperOpen(false)}
+        imageSrc={cropperSrc}
+        imageAlt={cropperAlt}
+        onCropComplete={handleCropComplete}
+        title={cropMode === 'replace' ? 'Recadrer l\'image du texte' : 'Recadrer l\'image'}
+      />
     </>
   );
 };

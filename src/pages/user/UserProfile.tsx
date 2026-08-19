@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { User, Bell, Clock, Save, Shield, Moon, Sun, Smartphone, Laptop, Tablet, Globe, Trash2, Award, Medal, Star, Target, LogOut, Camera, Image as ImageIcon, RefreshCw, Sparkles, LogIn, ChevronDown, Plus, XCircle, CheckCircle, FileText, BookOpen, ScrollText, Heart, X, Share2, Wifi, Database, HardDrive, Mic, MapPin, FolderCheck, Mail, MessageSquare } from 'lucide-react';
+import { User, Bell, Clock, Save, Shield, Moon, Sun, Smartphone, Laptop, Tablet, Globe, Trash2, Award, Medal, Star, Target, LogOut, Camera, Image as ImageIcon, RefreshCw, Sparkles, LogIn, ChevronDown, Plus, XCircle, CheckCircle, FileText, BookOpen, ScrollText, Heart, X, Share2, Wifi, Database, HardDrive, Mic, MapPin, FolderCheck, Mail, MessageSquare, Info, Tag, ExternalLink, Check } from 'lucide-react';
 import { FloatingSupportContact } from '../../components/FloatingSupportContact';
 import { requestStoragePermission, requestMicrophonePermission, requestGeolocationPermission, requestNotificationPermission, requestAllPermissions } from '../../utils/planetaryNotifications';
 import { motion, AnimatePresence } from 'motion/react';
@@ -18,6 +18,10 @@ import { getAsrarItems } from '../../data/store';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { getFCMToken, checkNotificationSupport, onMessageListener } from '../../lib/fcm';
 import { getApiUrl } from '../../lib/api';
+import { APP_VERSION_CONFIG, VersionRelease, getAppVersion, getFullVersionDisplay, getLocalizedReleaseDate } from '../../config/appVersion';
+import { appVersionService } from '../../services/appVersionService';
+import { ChangelogModal } from '../../components/ChangelogModal';
+import { ChangelogView } from '../../components/ChangelogView';
 
 interface Reminder {
   id: string;
@@ -280,6 +284,21 @@ export const UserProfile: React.FC = () => {
   const [isSyncingNotifs, setIsSyncingNotifs] = useState(false);
   const [storagePermissionGranted, setStoragePermissionGranted] = useState<boolean>(true);
   const [isRequestingStorage, setIsRequestingStorage] = useState(false);
+
+  // App Version & Changelog State
+  const [showChangelogModal, setShowChangelogModal] = useState(false);
+  const [firestoreReleases, setFirestoreReleases] = useState<VersionRelease[]>(APP_VERSION_CONFIG.releases);
+  const [isFlushingVersionCache, setIsFlushingVersionCache] = useState(false);
+  const [versionFlushStatus, setVersionFlushStatus] = useState<string | null>(null);
+  const [isSyncingReleases, setIsSyncingReleases] = useState(false);
+  const [releasesSyncSuccess, setReleasesSyncSuccess] = useState(false);
+
+  useEffect(() => {
+    const unsub = appVersionService.subscribeReleases((releases) => {
+      setFirestoreReleases(releases);
+    });
+    return () => unsub();
+  }, []);
 
   const [appPermissions, setAppPermissions] = useState<{
     storage?: boolean;
@@ -840,7 +859,7 @@ export const UserProfile: React.FC = () => {
   };
 
   return (
-    <div className="max-w-2xl mx-auto p-4 sm:p-6 lg:p-8 safe-area-pt pb-24 border-none">
+    <div className="max-w-2xl mx-auto p-4 sm:p-6 lg:p-8 safe-area-pt pb-36 border-none">
       
       {/* Profil Header with Cover */}
       <div className="bg-white dark:bg-gray-800 rounded-3xl overflow-hidden shadow-sm border border-gray-100 dark:border-gray-700 mb-8 relative">
@@ -1942,6 +1961,144 @@ export const UserProfile: React.FC = () => {
           </div>
         </div>
       </CollapsibleSection>
+
+      {/* Version de l'application & Journal des Nouveautés */}
+      <CollapsibleSection
+        title={t('profile.version.title', `Version de l'application (v${appVersionService.getCurrentVersion()})`, { version: appVersionService.getCurrentVersion() })}
+        icon={<Info className="text-emerald-500" size={20} />}
+        defaultOpen={false}
+      >
+        <div className="space-y-5">
+          {/* Active Version Card */}
+          <div className="bg-gradient-to-br from-emerald-50 via-teal-50/50 to-white dark:from-emerald-950/30 dark:via-gray-800 dark:to-gray-800 p-5 rounded-2xl border border-emerald-200/80 dark:border-emerald-800/50 shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-black shadow-md">
+                  <Tag size={22} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="text-lg font-black text-gray-900 dark:text-white">
+                      {t('profile.version.appTitle', `AsrarHub v${appVersionService.getCurrentVersion()}`, { version: appVersionService.getCurrentVersion() })}
+                    </h3>
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300">
+                      {t('profile.version.build', `Build ${APP_VERSION_CONFIG.currentVersionCode}`, { code: APP_VERSION_CONFIG.currentVersionCode })}
+                    </span>
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">
+                      {t('profile.version.upToDate', 'À jour')}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    {t('profile.version.package', 'Package :')} <code className="font-mono text-emerald-600 dark:text-emerald-400">{APP_VERSION_CONFIG.bundleId}</code> • {t('profile.version.publishedOn', `Publié le ${getLocalizedReleaseDate(language)}`, { date: getLocalizedReleaseDate(language) || APP_VERSION_CONFIG.releaseDate })}
+                  </p>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => setShowChangelogModal(true)}
+                  className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Sparkles size={14} />
+                  <span>{t('profile.version.changelogBtn', 'Journal des versions')}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={async () => {
+                    setIsFlushingVersionCache(true);
+                    setVersionFlushStatus(t('profile.version.cleaningStatus', 'Nettoyage du cache SWR...'));
+                    try {
+                      await appVersionService.flushAndUpgradeCaches((step) => {
+                        setVersionFlushStatus(step);
+                      });
+                      setTimeout(() => {
+                        setIsFlushingVersionCache(false);
+                        setVersionFlushStatus(null);
+                        window.location.reload();
+                      }, 1000);
+                    } catch (e) {
+                      setIsFlushingVersionCache(false);
+                      setVersionFlushStatus(null);
+                    }
+                  }}
+                  disabled={isFlushingVersionCache}
+                  className="px-3.5 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  title="Vider les caches locaux (IndexedDB, ServiceWorker, SWR) et recharger"
+                >
+                  <RefreshCw size={14} className={isFlushingVersionCache ? 'animate-spin' : ''} />
+                  <span>{isFlushingVersionCache ? t('profile.version.cleaning', 'Nettoyage...') : t('profile.version.clearCacheBtn', 'Vider le cache SWR')}</span>
+                </button>
+              </div>
+            </div>
+
+            {versionFlushStatus && (
+              <div className="mt-3 p-2.5 bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 rounded-xl text-xs font-semibold flex items-center gap-2">
+                <RefreshCw size={12} className="animate-spin" />
+                <span>{versionFlushStatus}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Admin Sync Firebase app_versions Collection Button */}
+          {user?.role === 'admin' && (
+            <div className="p-3.5 bg-amber-50 dark:bg-amber-950/30 rounded-2xl border border-amber-200 dark:border-amber-900/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+              <div>
+                <span className="font-bold text-amber-900 dark:text-amber-300 block">
+                  {t('profile.version.adminSyncTitle', 'Administration : Collection Firebase `app_versions`')}
+                </span>
+                <span className="text-amber-700 dark:text-amber-400 text-[11px]">
+                  {t('profile.version.adminSyncDesc', "Synchronisez l'historique des versions vers la base de données Firestore pour tous les utilisateurs.")}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  setIsSyncingReleases(true);
+                  try {
+                    await appVersionService.seedFirestoreVersions();
+                    setReleasesSyncSuccess(true);
+                    setTimeout(() => setReleasesSyncSuccess(false), 3000);
+                  } catch (e) {
+                    console.warn("Firestore sync error:", e);
+                  } finally {
+                    setIsSyncingReleases(false);
+                  }
+                }}
+                disabled={isSyncingReleases}
+                className="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+              >
+                {releasesSyncSuccess ? (
+                  <>
+                    <Check size={14} />
+                    <span>{t('profile.version.synced', 'Synchronisé !')}</span>
+                  </>
+                ) : (
+                  <>
+                    <Database size={14} className={isSyncingReleases ? 'animate-bounce' : ''} />
+                    <span>{t('profile.version.syncFirestore', 'Sync Firestore app_versions')}</span>
+                  </>
+                )}
+              </button>
+            </div>
+          )}
+
+          {/* Release History & What's New using ChangelogView */}
+          <ChangelogView
+            embedded={true}
+            showHeader={false}
+            onOpenModal={() => setShowChangelogModal(true)}
+          />
+        </div>
+      </CollapsibleSection>
+
+      {/* Full Changelog Modal */}
+      <ChangelogModal
+        isOpen={showChangelogModal}
+        onClose={() => setShowChangelogModal(false)}
+      />
 
       {/* Floating support contact widget */}
       <FloatingSupportContact isUserProfile={true} />

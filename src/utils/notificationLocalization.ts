@@ -9,7 +9,8 @@ export type NotificationType =
   | 'prayerTime'
   | 'customReminder'
   | 'widgetNotice'
-  | 'meditationReminder';
+  | 'meditationReminder'
+  | 'articleNew';
 
 export interface NotificationPayloadParams {
   planetName?: string;
@@ -19,6 +20,11 @@ export interface NotificationPayloadParams {
   label?: string;
   prayerName?: string;
   time?: string;
+  articleTitle?: string;
+  isPremium?: boolean;
+  hook?: string;
+  count?: number;
+  articleId?: string;
   [key: string]: any;
 }
 
@@ -168,6 +174,58 @@ export function getLocalizedNotificationText(
       };
     }
 
+    case 'articleNew': {
+      const { articleTitle = 'Nouveau Secret', isPremium = false, hook = '', count = 1 } = params;
+      const modeBadge = isPremium ? '⭐ [PREMIUM]' : '📖 [PUBLIC]';
+
+      if (currentLang === 'en') {
+        const title = `${modeBadge} ${articleTitle}`;
+        let body = isPremium
+          ? 'New spiritual secret available for Premium members.'
+          : 'New spiritual secret available to everyone.';
+        if (hook && hook.trim().length > 0) {
+          const cleanHook = hook.replace(/<[^>]+>/g, '').trim();
+          body = `${cleanHook.length > 90 ? cleanHook.substring(0, 90) + '...' : cleanHook} — Tap to read ➔`;
+        } else if (count > 1) {
+          body = `${articleTitle} (+${count - 1} other new secret(s)). Tap to open immediately ➔`;
+        } else {
+          body = `${body} Tap to open immediately ➔`;
+        }
+        return { title, body };
+      }
+
+      if (currentLang === 'ha') {
+        const title = `${modeBadge} ${articleTitle}`;
+        let body = isPremium
+          ? 'Sabon sirri na musamman ga membobin Premium.'
+          : 'Sabon sirri na ruhaniyya ga kowa da kowa.';
+        if (hook && hook.trim().length > 0) {
+          const cleanHook = hook.replace(/<[^>]+>/g, '').trim();
+          body = `${cleanHook.length > 90 ? cleanHook.substring(0, 90) + '...' : cleanHook} — Danna nan don karantawa ➔`;
+        } else if (count > 1) {
+          body = `${articleTitle} (+${count - 1} sabbin sirruka). Danna nan don budewa ➔`;
+        } else {
+          body = `${body} Danna nan don budewa nan da nan ➔`;
+        }
+        return { title, body };
+      }
+
+      // Default: French (fr)
+      const title = `${modeBadge} ${articleTitle}`;
+      let body = isPremium
+        ? 'Nouveau secret spirituel réservé aux membres Premium.'
+        : 'Nouveau secret spirituel disponible pour tous les membres.';
+      if (hook && hook.trim().length > 0) {
+        const cleanHook = hook.replace(/<[^>]+>/g, '').trim();
+        body = `${cleanHook.length > 90 ? cleanHook.substring(0, 90) + '...' : cleanHook} — Touchez pour lire ➔`;
+      } else if (count > 1) {
+        body = `${articleTitle} (+${count - 1} autre(s) nouveau(x) secret(s)). Touchez pour ouvrir immédiatement ➔`;
+      } else {
+        body = `${body} Touchez pour ouvrir immédiatement ➔`;
+      }
+      return { title, body };
+    }
+
     default:
       return {
         title: 'AsrarHub',
@@ -186,12 +244,25 @@ export async function dispatchSystemNotification(
 ) {
   try {
     if (Capacitor.isNativePlatform()) {
+      try {
+        await LocalNotifications.createChannel({
+          id: 'asrarhub_alerts',
+          name: 'AsrarHub Alerts & Secrets',
+          description: 'Notifications pour les nouveaux articles, secrets et rappels spirituels',
+          importance: 5,
+          visibility: 1,
+          vibration: true,
+        });
+      } catch (channelErr) {
+        // Channel may already exist
+      }
+
       await LocalNotifications.schedule({
         notifications: [
           {
             title,
             body,
-            id: Math.floor(Math.random() * 10000) + 1,
+            id: Math.floor(Math.random() * 100000) + 1,
             schedule: { at: new Date(Date.now() + 100) },
             channelId: 'asrarhub_alerts',
             extra,
@@ -209,7 +280,7 @@ export async function dispatchSystemNotification(
             body,
             icon: '/icon-192.png',
             badge: '/icon-192.png',
-            tag: 'asrarhub-alert',
+            tag: extra.articleId ? `article-${extra.articleId}` : 'asrarhub-alert',
             data: extra,
           } as any);
           return;

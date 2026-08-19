@@ -23,16 +23,54 @@ type NotificationActionSubscriber = (action: NotificationRouterAction) => void;
 
 const actionSubscribers = new Set<NotificationActionSubscriber>();
 let isInitialized = false;
+let pendingAction: NotificationRouterAction | null = null;
 
 /**
  * Subscribe to notification router actions (used by the Global Notification Provider/Modal Container)
  */
 export function subscribeNotificationRouter(callback: NotificationActionSubscriber): () => void {
   actionSubscribers.add(callback);
+
+  // Deliver any buffered pending action immediately
+  if (pendingAction) {
+    const act = pendingAction;
+    pendingAction = null;
+    try {
+      console.log('[NotificationRouter] Executing buffered pending action upon subscription:', act);
+      callback(act);
+    } catch (e) {
+      console.error('[NotificationRouter] Subscriber error on pending action:', e);
+    }
+  }
+
+  // Also check if there's any pending route stored in sessionStorage
+  try {
+    const storedRoute = sessionStorage.getItem('asrarhub_pending_notification_route');
+    if (storedRoute) {
+      sessionStorage.removeItem('asrarhub_pending_notification_route');
+      console.log('[NotificationRouter] Restoring stored route from sessionStorage:', storedRoute);
+      callback({
+        type: 'NAVIGATE',
+        path: storedRoute,
+      });
+    }
+  } catch (e) {}
+
   return () => actionSubscribers.delete(callback);
 }
 
 export function emitNotificationRouterAction(action: NotificationRouterAction) {
+  if (actionSubscribers.size === 0) {
+    console.log('[NotificationRouter] No active subscribers yet, buffering pending action:', action);
+    pendingAction = action;
+    if (action.type === 'NAVIGATE' && action.path) {
+      try {
+        sessionStorage.setItem('asrarhub_pending_notification_route', action.path);
+      } catch (e) {}
+    }
+    return;
+  }
+
   actionSubscribers.forEach((sub) => {
     try {
       sub(action);
@@ -49,8 +87,8 @@ export async function handleNotificationClickPayload(extraData: any, rawNotifica
   console.log('[NotificationRouter] Handling notification payload:', extraData, rawNotification);
 
   const extra = extraData || {};
-  const notifTitle = rawNotification?.title || '';
-  const notifBody = rawNotification?.body || '';
+  const notifTitle = String(rawNotification?.title || extra.title || '');
+  const notifBody = String(rawNotification?.body || extra.body || '');
 
   // 1. Download notification (Téléchargement Terminé / Image sauvegardée)
   if (
@@ -125,17 +163,36 @@ export async function handleNotificationClickPayload(extraData: any, rawNotifica
     return;
   }
 
-  // 3. New Article / Secret notification
+  // 3. New Article / Secret notification (Instant redirection to the article)
+  const resolvedArticleId = extra.articleId || extra.data?.articleId || rawNotification?.extra?.articleId || rawNotification?.data?.articleId;
+  const resolvedTargetUrl = extra.targetUrl || extra.data?.targetUrl || extra.url || rawNotification?.extra?.targetUrl || rawNotification?.data?.targetUrl;
+
   if (
     extra.type === 'article' ||
+    extra.type === 'articleNew' ||
+    resolvedArticleId ||
+    (resolvedTargetUrl && resolvedTargetUrl.includes('/secret/')) ||
+    notifTitle.includes('PREMIUM') ||
+    notifTitle.includes('PUBLIC') ||
     notifTitle.includes('Article') ||
     notifTitle.includes('Makalu') ||
-    notifBody.includes('article')
+    notifTitle.includes('Secret') ||
+    notifBody.includes('article') ||
+    notifBody.includes('secret')
   ) {
-    if (extra.articleId) {
+    if (resolvedArticleId) {
+      console.log('[NotificationRouter] Direct navigation to secret:', resolvedArticleId);
       emitNotificationRouterAction({
         type: 'NAVIGATE',
-        path: `/secret/${extra.articleId}`,
+        path: `/secret/${resolvedArticleId}`,
+      });
+      return;
+    }
+    if (resolvedTargetUrl) {
+      console.log('[NotificationRouter] Direct navigation to targetUrl:', resolvedTargetUrl);
+      emitNotificationRouterAction({
+        type: 'NAVIGATE',
+        path: resolvedTargetUrl,
       });
       return;
     }

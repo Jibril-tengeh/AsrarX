@@ -4,6 +4,7 @@ import { Moon, Sun, Languages, User, Users, Shield, LogOut, LogIn, Bell, BellOff
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useFeatures } from '../contexts/FeatureContext';
+import { useAppBranding } from '../contexts/BrandingContext';
 import { signOut, db } from '../lib/firebase';
 import { collection, query, orderBy, onSnapshot, limit, doc, updateDoc } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
@@ -24,6 +25,7 @@ export const Header: React.FC = () => {
   const { theme, actualTheme, toggleTheme } = useTheme();
   const { user } = useAuth();
   const { featureToggles } = useFeatures();
+  const { branding } = useAppBranding();
    const [scrolled, setScrolled] = useState(false);
   const [langMenuOpen, setLangMenuOpen] = useState(false);
   const [notifMenuOpen, setNotifMenuOpen] = useState(false);
@@ -219,7 +221,15 @@ export const Header: React.FC = () => {
       >
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <Link to="/" className="flex items-center group">
-            <AsrarLogo variant="horizontal" size="md" className="text-white hover:opacity-90 transition-opacity" hideSymbol={true} />
+            {branding.isEnabled && branding.appLogo ? (
+              <img 
+                src={branding.appLogo} 
+                alt="Logo AsrarHub" 
+                className="h-8 sm:h-9 max-w-[170px] sm:max-w-[210px] object-contain hover:opacity-90 transition-opacity drop-shadow-sm" 
+              />
+            ) : (
+              <AsrarLogo variant="horizontal" size="md" className="text-white hover:opacity-90 transition-opacity" hideSymbol={true} />
+            )}
           </Link>
           
           <div className="flex items-center gap-0.5 min-[375px]:gap-1.5 sm:gap-3">

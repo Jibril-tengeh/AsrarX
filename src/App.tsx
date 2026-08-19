@@ -40,6 +40,58 @@ import { pingFirestore, addNetworkLog } from './utils/networkLogger';
 import { revalidatePublishedArticles, getSWRCacheStats, SWRCacheStats } from './lib/swrArticleCache';
 import { checkFeatureAccess } from './utils/featureAccess';
 import { recordUnauthorizedToolAttempt } from './utils/securityAlerts';
+import { appVersionService } from './services/appVersionService';
+import { NewVersionBannerModal } from './components/NewVersionBannerModal';
+import { clear as clearIdbKeyval } from 'idb-keyval';
+
+declare const __APP_VERSION__: string;
+
+/**
+ * Utility function that compares current __APP_VERSION__ with localStorage 'app_version'.
+ * If different, purges IndexedDB cache via idb-keyval cleanly to prevent cache conflicts.
+ */
+export async function checkVersionAndPurgeCache(): Promise<boolean> {
+  try {
+    const currentVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : appVersionService.getCurrentVersion();
+    let storedVersion: string | null = null;
+    try {
+      storedVersion = localStorage.getItem('app_version');
+    } catch (e) {
+      console.warn('[VersionSync] Could not read app_version from localStorage', e);
+    }
+
+    if (storedVersion && storedVersion !== currentVersion) {
+      console.log(`[VersionSync] Version upgrade detected: ${storedVersion} -> ${currentVersion}. Purging IndexedDB cache via idb-keyval...`);
+      try {
+        await clearIdbKeyval();
+      } catch (idbErr) {
+        console.warn('[VersionSync] Error clearing IndexedDB via idb-keyval:', idbErr);
+      }
+
+      // Update stored versions in localStorage immediately
+      try {
+        localStorage.setItem('app_version', currentVersion);
+        localStorage.setItem('asrarhub_installed_version', currentVersion);
+      } catch (e) {
+        // Safe fallback
+      }
+
+      // Note: We do NOT call window.location.reload() inside iframes or on initial mount
+      // to avoid blank screen loops and render disruptions in preview frames.
+      return true;
+    } else if (!storedVersion) {
+      try {
+        localStorage.setItem('app_version', currentVersion);
+        localStorage.setItem('asrarhub_installed_version', currentVersion);
+      } catch (e) {
+        // Safe fallback
+      }
+    }
+  } catch (error) {
+    console.warn('[VersionSync] Error executing checkVersionAndPurgeCache:', error);
+  }
+  return false;
+}
 
 function lazyWithRetry<T extends React.ComponentType<any> = React.ComponentType<any>>(
   componentImport: () => Promise<any>
@@ -636,6 +688,35 @@ export default function App() {
   const [backExitToast, setBackExitToast] = React.useState(false);
   const lastBackPressTimeRef = React.useRef<number>(0);
 
+  // App version check and upgrade prompt
+  const [showVersionUpgradeModal, setShowVersionUpgradeModal] = React.useState(false);
+  const [versionUpgradeData, setVersionUpgradeData] = React.useState<{
+    currentVersion: string;
+    previousVersion: string | null;
+  }>({
+    currentVersion: appVersionService.getCurrentVersion(),
+    previousVersion: null
+  });
+
+  React.useEffect(() => {
+    // Check version and purge IndexedDB cache if upgrade detected
+    checkVersionAndPurgeCache();
+
+    // Check if new version detected compared to local storage
+    const check = appVersionService.checkVersionUpgrade();
+    if (check.isNewVersion) {
+      const notifiedKey = `asrarhub_version_notified_${check.currentVersion}`;
+      if (!sessionStorage.getItem(notifiedKey)) {
+        setVersionUpgradeData({
+          currentVersion: check.currentVersion,
+          previousVersion: check.previousVersion
+        });
+        setShowVersionUpgradeModal(true);
+        sessionStorage.setItem(notifiedKey, 'true');
+      }
+    }
+  }, []);
+
   React.useEffect(() => {
     if (user && !sessionStorage.getItem('asrarhub_welcome_shown')) {
       const name = user.name || user.email || (language === 'fr' ? 'Utilisateur' : language === 'ha' ? 'Mai amfani' : 'User');
@@ -1172,6 +1253,14 @@ export default function App() {
         </AnimatePresence>
         {/* 24-Hour Free Premium Trial Modal */}
         <FreeTrial24hModal isOpen={showTrialPopup} onClose={markTrialPopupSeen} />
+
+        {/* App Version Upgrade / Cache Refresh Modal */}
+        <NewVersionBannerModal
+          isOpen={showVersionUpgradeModal}
+          currentVersion={versionUpgradeData.currentVersion}
+          previousVersion={versionUpgradeData.previousVersion}
+          onDismiss={() => setShowVersionUpgradeModal(false)}
+        />
       </div>
     </MaintenanceOverlay>
   );

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
-import { BookOpen, Sparkles, ScrollText, Crown } from 'lucide-react';
+import { BookOpen, Sparkles, ScrollText, Crown, Headphones } from 'lucide-react';
 import { AsrarItem } from '../types';
 import { getApiUrl } from '../lib/api';
 import { getArticleImageUrl, getArticleFallbackImage, getThematicSvgPlaceholder, sanitizeImageSource } from '../utils/articleImageUtils';
@@ -218,7 +218,7 @@ export const SecretCard: React.FC<SecretCardProps> = ({ item, layoutMode = 'grid
             />
             
             {/* Badge */}
-            <div className="absolute top-2 left-2 flex gap-1 z-10 max-w-[calc(100%-16px)]">
+            <div className="absolute top-2 left-2 flex gap-1 z-10 max-w-[calc(100%-16px)] flex-wrap">
               {item.isPremium && (
                 <div className="bg-gradient-to-r from-amber-400 to-orange-500 text-white px-1.5 py-0.5 rounded-full flex items-center shadow-sm">
                   <Crown size={12} className="shrink-0" />
@@ -227,6 +227,11 @@ export const SecretCard: React.FC<SecretCardProps> = ({ item, layoutMode = 'grid
               <div className="bg-black/60 backdrop-blur-md text-white px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide truncate">
                 <span className="capitalize">{categoryLabel}</span>
               </div>
+              {(item.audioUrl || item.audio_url) && (
+                <div className="bg-amber-600/90 backdrop-blur-md text-white px-1.5 py-0.5 rounded-full text-[10px] font-semibold flex items-center gap-1 shadow-sm" title="Audio disponible">
+                  <Headphones size={11} className="shrink-0" />
+                </div>
+              )}
             </div>
           </div>
           
@@ -263,7 +268,7 @@ export const SecretCard: React.FC<SecretCardProps> = ({ item, layoutMode = 'grid
              />
              
              {/* Badge Over Image */}
-             <div className="absolute top-2.5 sm:top-3 left-2.5 sm:left-3 flex gap-1.5 z-10 transition-colors max-w-[calc(100%-20px)]">
+             <div className="absolute top-2.5 sm:top-3 left-2.5 sm:left-3 flex gap-1.5 z-10 transition-colors max-w-[calc(100%-20px)] flex-wrap items-center">
                {item.isPremium && (
                  <div className="bg-gradient-to-r from-amber-400 to-orange-500 text-white px-2 py-1 rounded-full flex items-center shadow-md">
                    <Crown size={14} className="shrink-0" />
@@ -272,6 +277,12 @@ export const SecretCard: React.FC<SecretCardProps> = ({ item, layoutMode = 'grid
                <div className="bg-black/65 backdrop-blur-md text-white px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-semibold tracking-wide truncate whitespace-nowrap shadow-sm">
                  <span className="capitalize">{categoryLabel}</span>
                </div>
+               {(item.audioUrl || item.audio_url) && (
+                 <div className="bg-amber-600/90 backdrop-blur-md text-white px-2 py-1 rounded-full text-[10px] sm:text-xs font-bold tracking-wide flex items-center gap-1 shadow-md" title="Audio disponible">
+                   <Headphones size={12} className="shrink-0" />
+                   <span className="hidden xs:inline text-[9px] uppercase">Audio</span>
+                 </div>
+               )}
              </div>
 
              {/* Enhanced high-contrast gradient overlay so full multiline titles are always legible */}

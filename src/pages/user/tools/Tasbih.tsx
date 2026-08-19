@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Activity, ArrowLeft, RefreshCw, Volume2, VolumeX, Settings, Target, Save, History as HistoryIcon, Plus, Trash2, Check, ChevronDown, ChevronRight, BarChart2, Fingerprint, Users, Globe, MapPin, X, Play, Music } from 'lucide-react';
+import { Activity, ArrowLeft, RefreshCw, Volume2, VolumeX, Settings, Target, Save, History as HistoryIcon, Plus, Trash2, Check, ChevronDown, ChevronRight, BarChart2, Fingerprint, Users, Globe, MapPin, X, Play, Music, Sparkles, Smartphone, CircleDot } from 'lucide-react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { motion, AnimatePresence } from 'motion/react';
@@ -7,6 +7,8 @@ import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { db } from '../../../lib/firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { getZikrCache, setZikrCache, syncTasbihSessionOffline } from '../../../utils/zikrSyncEngine';
+import { RealisticDigitalCounter } from '../../../components/tasbih/RealisticDigitalCounter';
+import { COUNTER_SKINS } from '../../../components/tasbih/counterSkins';
 
 interface Zikr {
   id: string;
@@ -160,6 +162,26 @@ export const TASBIH_SOUNDS: SoundOption[] = [
       gain.connect(ctx.destination);
       osc.start(now);
       osc.stop(now + 0.02);
+    }
+  },
+  {
+    id: 'tally_click',
+    name: { fr: 'Clic Digital Tally', en: 'Digital Tally Click', ha: 'Kanna na Tally' },
+    desc: { fr: 'Déclic mécanique précis d\'un compteur digital physique', en: 'Precise mechanical microswitch click', ha: 'Ainihin sautin danna maɓallin' },
+    icon: '📟',
+    play: (ctx) => {
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(1600, now);
+      osc.frequency.exponentialRampToValueAtTime(320, now + 0.015);
+      gain.gain.setValueAtTime(0.3, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.02);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.025);
     }
   },
   {
@@ -429,6 +451,21 @@ export const Tasbih: React.FC = () => {
   const [vibrationEnabled, setVibrationEnabled] = useState(true);
   
   const [activeTab, setActiveTab] = useState<'main' | 'settings' | 'history' | 'stats'>('main');
+
+  const [counterDisplayMode, setCounterDisplayMode] = useState<'realistic' | 'modern'>(() => {
+    try {
+      return (localStorage.getItem('tasbih_display_mode') as 'realistic' | 'modern') || 'realistic';
+    } catch {
+      return 'realistic';
+    }
+  });
+
+  const handleToggleDisplayMode = (mode: 'realistic' | 'modern') => {
+    setCounterDisplayMode(mode);
+    try {
+      localStorage.setItem('tasbih_display_mode', mode);
+    } catch (e) {}
+  };
 
   const [totalLifetime, setTotalLifetime] = useState(0);
   const [dailyTotal, setDailyTotal] = useState(0);
@@ -840,148 +877,199 @@ export const Tasbih: React.FC = () => {
         </div>
       </div>
 
+      {/* Mode Switcher */}
+      {activeTab === 'main' && (
+        <div className="flex items-center justify-center mb-4">
+          <div className="bg-gray-200/80 dark:bg-gray-800/80 p-1 rounded-2xl flex items-center gap-1 shadow-inner border border-gray-300/40 dark:border-gray-700/60">
+            <button
+              onClick={() => handleToggleDisplayMode('realistic')}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                counterDisplayMode === 'realistic'
+                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-xs'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+              }`}
+            >
+              <Smartphone size={14} className="text-amber-500" />
+              <span>{lang === 'fr' ? 'Compteur Réaliste' : lang === 'ha' ? 'Carbi na Gaske' : 'Realistic Tally'}</span>
+            </button>
+            <button
+              onClick={() => handleToggleDisplayMode('modern')}
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                counterDisplayMode === 'modern'
+                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-xs'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'
+              }`}
+            >
+              <CircleDot size={14} className="text-emerald-500" />
+              <span>{lang === 'fr' ? 'Mode Minimaliste' : lang === 'ha' ? 'Sauƙaƙe' : 'Minimalist'}</span>
+            </button>
+          </div>
+        </div>
+      )}
+
       {activeTab === 'main' && (
         <motion.div 
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           className="flex-1 flex flex-col items-center justify-center relative pb-10"
         >
-          {/* Active Zikr Info */}
-          <div className="flex flex-col items-center w-full max-w-[320px] mb-8">
-            {soundEnabled && (
-              <button
-                onClick={() => setActiveTab('settings')}
-                className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 rounded-full text-xs font-semibold hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors border border-emerald-200/60 dark:border-emerald-800/60 mb-2.5 shadow-2xs"
-              >
-                <span>{TASBIH_SOUNDS.find(s => s.id === soundStyle)?.icon || '🎵'}</span>
-                <span>{TASBIH_SOUNDS.find(s => s.id === soundStyle)?.name[lang] || TASBIH_SOUNDS.find(s => s.id === soundStyle)?.name['fr']}</span>
-                <span className="text-[10px] opacity-75 font-normal ml-0.5">
-                  ({soundTriggerMode === 'target' ? (lang === 'fr' ? 'À l\'objectif' : lang === 'ha' ? 'Adadi' : 'Target') : (lang === 'fr' ? 'Chaque grain' : lang === 'ha' ? 'Kowace' : 'Every')})
-                </span>
-              </button>
-            )}
-            <button 
-              onClick={() => setActiveTab('settings')}
-              className="text-center group px-6 py-4 rounded-3xl bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 w-full transition-transform hover:scale-[1.02] active:scale-[0.98]"
-            >
-              {activeZikr.arabic && (
-                <h2 className="text-2xl sm:text-3xl font-arabic text-emerald-800 dark:text-emerald-400 mb-3" dir="rtl">{activeZikr.arabic}</h2>
-              )}
-              <div className="flex items-center justify-center gap-2">
-                <p className="text-gray-700 dark:text-gray-300 font-bold">{activeZikr.text}</p>
-                <ChevronDown size={16} className="text-gray-400 group-hover:text-emerald-500 transition-colors" />
+          {counterDisplayMode === 'realistic' ? (
+            /* REALISTIC 3D TALLY COUNTER WITH TOP SKINS SELECTOR */
+            <RealisticDigitalCounter
+              count={count}
+              target={target}
+              activeZikr={activeZikr}
+              onIncrement={handleIncrement}
+              onReset={handleReset}
+              onSelectZikrModal={() => setActiveTab('settings')}
+              soundEnabled={soundEnabled}
+              onToggleSound={toggleSound}
+              vibrationEnabled={vibrationEnabled}
+              onToggleVibration={toggleVibration}
+              isAutoIncrementing={isAutoIncrementing}
+              onToggleAutoIncrement={() => setIsAutoIncrementing(!isAutoIncrementing)}
+              autoIncrementSpeed={autoIncrementSpeed}
+              onChangeAutoIncrementSpeed={(speed) => setAutoIncrementSpeed(speed)}
+              lang={lang}
+            />
+          ) : (
+            /* MINIMALIST MODERN COUNTER */
+            <>
+              {/* Active Zikr Info */}
+              <div className="flex flex-col items-center w-full max-w-[320px] mb-8">
+                {soundEnabled && (
+                  <button
+                    onClick={() => setActiveTab('settings')}
+                    className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 rounded-full text-xs font-semibold hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors border border-emerald-200/60 dark:border-emerald-800/60 mb-2.5 shadow-2xs cursor-pointer"
+                  >
+                    <span>{TASBIH_SOUNDS.find(s => s.id === soundStyle)?.icon || '🎵'}</span>
+                    <span>{TASBIH_SOUNDS.find(s => s.id === soundStyle)?.name[lang] || TASBIH_SOUNDS.find(s => s.id === soundStyle)?.name['fr']}</span>
+                    <span className="text-[10px] opacity-75 font-normal ml-0.5">
+                      ({soundTriggerMode === 'target' ? (lang === 'fr' ? 'À l\'objectif' : lang === 'ha' ? 'Adadi' : 'Target') : (lang === 'fr' ? 'Chaque grain' : lang === 'ha' ? 'Kowace' : 'Every')})
+                    </span>
+                  </button>
+                )}
+                <button 
+                  onClick={() => setActiveTab('settings')}
+                  className="text-center group px-6 py-4 rounded-3xl bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 w-full transition-transform hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
+                >
+                  {activeZikr.arabic && (
+                    <h2 className="text-2xl sm:text-3xl font-arabic text-emerald-800 dark:text-emerald-400 mb-3" dir="rtl">{activeZikr.arabic}</h2>
+                  )}
+                  <div className="flex items-center justify-center gap-2">
+                    <p className="text-gray-700 dark:text-gray-300 font-bold">{activeZikr.text}</p>
+                    <ChevronDown size={16} className="text-gray-400 group-hover:text-emerald-500 transition-colors" />
+                  </div>
+                  {target > 0 && <p className="text-xs text-gray-500 mt-1 uppercase tracking-widest font-medium">Objectif: {target}</p>}
+                </button>
               </div>
-              {target > 0 && <p className="text-xs text-gray-500 mt-1 uppercase tracking-widest font-medium">Objectif: {target}</p>}
-            </button>
-          </div>
 
-          {/* Progress Ring and Counter */}
-          <div className="relative w-64 h-64 sm:w-[320px] sm:h-[320px] flex items-center justify-center mb-8">
-            <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
-              <circle 
-                cx="50" cy="50" r="46" 
-                className="stroke-gray-100 dark:stroke-gray-800" 
-                strokeWidth="4" 
-                fill="none" 
-              />
-              {target > 0 && (
-                <motion.circle 
-                  cx="50" cy="50" r="46" 
-                  className="stroke-gray-200 dark:stroke-gray-700" 
-                  strokeWidth="4" 
-                  strokeLinecap="round"
-                  fill="none" 
-                  strokeDasharray="289.02" // 2 * PI * 46
-                  strokeDashoffset={289.02 - (289.02 * progress) / 100}
-                  initial={{ strokeDashoffset: 289.02 }}
-                  animate={{ strokeDashoffset: 289.02 - (289.02 * progress) / 100 }}
-                  transition={{ duration: 0.4, ease: "easeOut" }}
-                />
-              )}
-            </svg>
-
-            {/* Content inside the circle - matching Image 1 */}
-            <div className="flex flex-col items-center justify-center z-10 text-center gap-2">
-              {/* Count Number */}
-              <span className="text-[72px] sm:text-[84px] font-bold tracking-tighter tabular-nums leading-none text-gray-900 dark:text-white">
-                {count}
-              </span>
-              
-              {/* Target / Goal - Concentric Bullseye target icon + Target value */}
-              <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-300 font-medium">
-                <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <circle cx="12" cy="12" r="8" />
-                  <circle cx="12" cy="12" r="3.5" fill="currentColor" />
+              {/* Progress Ring and Counter */}
+              <div className="relative w-64 h-64 sm:w-[320px] sm:h-[320px] flex items-center justify-center mb-8">
+                <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
+                  <circle 
+                    cx="50" cy="50" r="46" 
+                    className="stroke-gray-100 dark:stroke-gray-800" 
+                    strokeWidth="4" 
+                    fill="none" 
+                  />
+                  {target > 0 && (
+                    <motion.circle 
+                      cx="50" cy="50" r="46" 
+                      className="stroke-gray-200 dark:stroke-gray-700" 
+                      strokeWidth="4" 
+                      strokeLinecap="round" 
+                      fill="none" 
+                      strokeDasharray="289.02" // 2 * PI * 46
+                      strokeDashoffset={289.02 - (289.02 * progress) / 100}
+                      initial={{ strokeDashoffset: 289.02 }}
+                      animate={{ strokeDashoffset: 289.02 - (289.02 * progress) / 100 }}
+                      transition={{ duration: 0.4, ease: "easeOut" }}
+                    />
+                  )}
                 </svg>
-                <span className="text-lg sm:text-xl font-semibold">{target}</span>
+
+                {/* Content inside the circle */}
+                <div className="flex flex-col items-center justify-center z-10 text-center gap-2">
+                  <span className="text-[72px] sm:text-[84px] font-bold tracking-tighter tabular-nums leading-none text-gray-900 dark:text-white">
+                    {count}
+                  </span>
+                  
+                  <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-300 font-medium">
+                    <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <circle cx="12" cy="12" r="8" />
+                      <circle cx="12" cy="12" r="3.5" fill="currentColor" />
+                    </svg>
+                    <span className="text-lg sm:text-xl font-semibold">{target}</span>
+                  </div>
+
+                  <button
+                    onClick={handleReset}
+                    className="mt-2 p-2.5 rounded-full bg-red-50 hover:bg-red-100 dark:bg-red-950/30 text-red-500 hover:text-red-600 dark:hover:text-red-400 flex items-center justify-center shadow-sm active:scale-90 transition-all cursor-pointer"
+                    title="Reset"
+                  >
+                    <RefreshCw size={18} className="animate-hover" />
+                  </button>
+                </div>
               </div>
 
-              {/* Red Reset Button - circular matching Image 1 */}
-              <button
-                onClick={handleReset}
-                className="mt-2 p-2.5 rounded-full bg-red-50 hover:bg-red-100 dark:bg-red-950/30 text-red-500 hover:text-red-600 dark:hover:text-red-400 flex items-center justify-center shadow-sm active:scale-90 transition-all cursor-pointer"
-                title="Reset"
-              >
-                <RefreshCw size={18} className="animate-hover" />
-              </button>
-            </div>
-          </div>
-
-          {/* Large Tap Card matching Image 1 */}
-          <div className="w-full max-w-[320px] flex justify-center mb-4">
-            <button
-              onClick={handleIncrement}
-              className="w-full h-[180px] rounded-[2.5rem] bg-[#00c283] dark:bg-[#00b274] shadow-[0_15px_40px_-10px_rgba(0,194,131,0.4)] flex flex-col items-center justify-center gap-3 text-white active:scale-95 active:translate-y-1 transition-all relative overflow-hidden group hover:brightness-105"
-            >
-              <div className="absolute inset-0 bg-white opacity-0 group-active:opacity-10 transition-opacity"></div>
-              <Fingerprint size={64} className="text-white drop-shadow-sm" />
-              <span className="text-lg sm:text-xl font-bold tracking-[0.2em] uppercase relative z-10 drop-shadow-sm">TAP</span>
-            </button>
-          </div>
-
-          {/* Auto-increment Controls */}
-          <div className="w-full max-w-[320px] mt-6 bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-750 flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                Incrément Auto
-              </span>
-              <button
-                onClick={() => setIsAutoIncrementing(!isAutoIncrementing)}
-                className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm ${
-                  isAutoIncrementing 
-                    ? 'bg-amber-500 text-white hover:bg-amber-600 animate-pulse' 
-                    : 'bg-emerald-500 text-white hover:bg-emerald-600'
-                }`}
-              >
-                {isAutoIncrementing ? 'Désactiver' : 'Activer'}
-              </button>
-            </div>
-            <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-300">
-              <span>Intervalle de temps</span>
-              <div className="flex items-center gap-2">
+              {/* Large Tap Card */}
+              <div className="w-full max-w-[320px] flex justify-center mb-4">
                 <button
-                  onClick={() => setAutoIncrementSpeed(prev => Math.max(250, prev - 250))}
-                  className="w-6 h-6 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700 flex items-center justify-center font-bold text-sm hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-90 transition-all text-gray-700 dark:text-gray-300"
-                  disabled={isAutoIncrementing}
+                  onClick={handleIncrement}
+                  className="w-full h-[180px] rounded-[2.5rem] bg-[#00c283] dark:bg-[#00b274] shadow-[0_15px_40px_-10px_rgba(0,194,131,0.4)] flex flex-col items-center justify-center gap-3 text-white active:scale-95 active:translate-y-1 transition-all relative overflow-hidden group hover:brightness-105 cursor-pointer"
                 >
-                  -
-                </button>
-                <span className="font-mono font-bold text-gray-700 dark:text-gray-300 w-12 text-center">
-                  {(autoIncrementSpeed / 1000).toFixed(2)}s
-                </span>
-                <button
-                  onClick={() => setAutoIncrementSpeed(prev => Math.min(5000, prev + 250))}
-                  className="w-6 h-6 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700 flex items-center justify-center font-bold text-sm hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-90 transition-all text-gray-700 dark:text-gray-300"
-                  disabled={isAutoIncrementing}
-                >
-                  +
+                  <div className="absolute inset-0 bg-white opacity-0 group-active:opacity-10 transition-opacity"></div>
+                  <Fingerprint size={64} className="text-white drop-shadow-sm" />
+                  <span className="text-lg sm:text-xl font-bold tracking-[0.2em] uppercase relative z-10 drop-shadow-sm">TAP</span>
                 </button>
               </div>
-            </div>
-            <div className="text-[10px] text-gray-400 dark:text-gray-300 text-center italic mt-1">
-              Vibration haptique toutes les 100 répétitions
-            </div>
-          </div>
+
+              {/* Auto-increment Controls */}
+              <div className="w-full max-w-[320px] mt-6 bg-white dark:bg-gray-800 rounded-2xl p-4 shadow-sm border border-gray-100 dark:border-gray-750 flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Incrément Auto
+                  </span>
+                  <button
+                    onClick={() => setIsAutoIncrementing(!isAutoIncrementing)}
+                    className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer ${
+                      isAutoIncrementing 
+                        ? 'bg-amber-500 text-white hover:bg-amber-600 animate-pulse' 
+                        : 'bg-emerald-500 text-white hover:bg-emerald-600'
+                    }`}
+                  >
+                    {isAutoIncrementing ? 'Désactiver' : 'Activer'}
+                  </button>
+                </div>
+                <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-300">
+                  <span>Intervalle de temps</span>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setAutoIncrementSpeed(prev => Math.max(250, prev - 250))}
+                      className="w-6 h-6 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700 flex items-center justify-center font-bold text-sm hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-90 transition-all text-gray-700 dark:text-gray-300 cursor-pointer"
+                      disabled={isAutoIncrementing}
+                    >
+                      -
+                    </button>
+                    <span className="font-mono font-bold text-gray-700 dark:text-gray-300 w-12 text-center">
+                      {(autoIncrementSpeed / 1000).toFixed(2)}s
+                    </span>
+                    <button
+                      onClick={() => setAutoIncrementSpeed(prev => Math.min(5000, prev + 250))}
+                      className="w-6 h-6 rounded-lg bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-700 flex items-center justify-center font-bold text-sm hover:bg-gray-100 dark:hover:bg-gray-800 active:scale-90 transition-all text-gray-700 dark:text-gray-300 cursor-pointer"
+                      disabled={isAutoIncrementing}
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+                <div className="text-[10px] text-gray-400 dark:text-gray-300 text-center italic mt-1">
+                  Vibration haptique toutes les 100 répétitions
+                </div>
+              </div>
+            </>
+          )}
         </motion.div>
       )}
 
@@ -1066,6 +1154,84 @@ export const Tasbih: React.FC = () => {
                   {tLocal('soundTriggerEveryDesc')}
                 </p>
               </button>
+            </div>
+          </div>
+
+          {/* Counter Skins and Themes Selector */}
+          <div className="bg-white dark:bg-gray-800 rounded-3xl p-5 border border-gray-100 dark:border-gray-700 shadow-sm space-y-4">
+            <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-700/80 pb-3">
+              <div className="flex items-center gap-2">
+                <Sparkles className="text-amber-500 shrink-0" size={20} />
+                <div>
+                  <h3 className="font-bold text-gray-900 dark:text-white text-base">
+                    {lang === 'fr' ? 'Modèles & Thèmes de Tasbih' : lang === 'ha' ? 'Nau\'in Carbi' : 'Counter Models & Skins'}
+                  </h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-300">
+                    {lang === 'fr' ? 'Personnalisez l\'aspect visuel du compteur électronique' : 'Customize electronic tally counter visual theme'}
+                  </p>
+                </div>
+              </div>
+              <span className="text-[10px] font-bold px-2.5 py-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-full shrink-0">
+                {COUNTER_SKINS.length} {lang === 'fr' ? 'modèles' : 'skins'}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 max-h-[320px] overflow-y-auto pr-1">
+              {COUNTER_SKINS.map((skin) => {
+                const currentSkinId = (() => {
+                  try {
+                    return localStorage.getItem('tasbih_counter_skin') || 'brick_terracotta';
+                  } catch {
+                    return 'brick_terracotta';
+                  }
+                })();
+                const isSelected = currentSkinId === skin.id;
+
+                return (
+                  <button
+                    key={skin.id}
+                    type="button"
+                    onClick={() => {
+                      try {
+                        localStorage.setItem('tasbih_counter_skin', skin.id);
+                        // Trigger custom storage event so active counter updates immediately
+                        window.dispatchEvent(new Event('storage'));
+                      } catch (e) {}
+                      setCounterDisplayMode('realistic');
+                    }}
+                    className={`p-2.5 rounded-2xl border text-left transition-all cursor-pointer flex flex-col items-center gap-2 ${
+                      isSelected 
+                        ? 'border-amber-500 ring-2 ring-amber-500/40 bg-amber-50/50 dark:bg-amber-950/20' 
+                        : 'border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/40 hover:bg-gray-100'
+                    }`}
+                  >
+                    {/* Miniature preview */}
+                    <div 
+                      className="w-12 h-14 rounded-t-xl rounded-b-lg relative overflow-hidden shadow-sm border border-black/30 flex flex-col items-center justify-between p-1"
+                      style={{ background: skin.previewBg }}
+                    >
+                      <div 
+                        className="w-8 h-3.5 rounded-xs border border-black/50 flex items-center justify-end px-1 shadow-inner"
+                        style={{ backgroundColor: skin.lcdBg }}
+                      >
+                        <span className="text-[7px] font-mono font-bold" style={{ color: skin.digitColor }}>
+                          99
+                        </span>
+                      </div>
+                      <div className="w-4 h-4 rounded-full bg-gradient-to-br from-white to-gray-400 border border-gray-500/80 shadow-xs" />
+                    </div>
+
+                    <div className="text-center w-full">
+                      <p className={`text-xs font-bold truncate ${isSelected ? 'text-amber-700 dark:text-amber-400' : 'text-gray-900 dark:text-white'}`}>
+                        {skin.name[lang as 'fr' | 'en' | 'ha'] || skin.name.fr}
+                      </p>
+                      <span className="text-[9px] text-gray-400 font-medium">
+                        {skin.category}
+                      </span>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
 

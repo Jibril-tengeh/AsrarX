@@ -10,6 +10,7 @@ import { AuthProvider } from './contexts/AuthContext';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { TextScaleProvider } from './contexts/TextScaleContext';
 import { FeatureProvider } from './contexts/FeatureContext';
+import { BrandingProvider } from './contexts/BrandingContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
 // Detect Capacitor / Native Mobile environment
@@ -73,7 +74,9 @@ if (rootElement) {
                 <TextScaleProvider>
                   <AudioProvider>
                     <FeatureProvider>
-                      <App />
+                      <BrandingProvider>
+                        <App />
+                      </BrandingProvider>
                     </FeatureProvider>
                   </AudioProvider>
                 </TextScaleProvider>

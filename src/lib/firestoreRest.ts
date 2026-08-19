@@ -53,6 +53,7 @@ export const parseFirestoreRestDoc = (doc: FirestoreRestDoc) => {
 /**
  * Direct HTTPS REST API fetcher for Firestore collection 'articles'.
  * Bypasses WebSockets, long polling streams, and WebView connection blocks in Capacitor/Android builds.
+ * Automatically traverses all pagination pages (nextPageToken) to guarantee 100% of articles are retrieved.
  */
 export const fetchArticlesFromRest = async (): Promise<any[]> => {
   try {
@@ -61,21 +62,38 @@ export const fetchArticlesFromRest = async (): Promise<any[]> => {
       console.warn('[Firestore REST] Missing firebase config.');
       return [];
     }
-    const url = `https://firestore.googleapis.com/v1/projects/${config.projectId}/databases/(default)/documents/articles?key=${config.apiKey}&pageSize=500`;
-    console.log(`[Firestore REST] Fetching real public articles directly via REST API from: ${url}`);
-    
-    const res = await fetch(url, { method: 'GET', cache: 'no-store' });
-    if (!res.ok) {
-      console.warn(`[Firestore REST] Fetch failed with status ${res.status}`);
-      return [];
-    }
-    const json = await res.json();
-    if (!json.documents || !Array.isArray(json.documents)) {
+
+    const allDocuments: any[] = [];
+    let pageToken: string | null = null;
+    let iterations = 0;
+    const maxIterations = 30; // Supports up to 30 * 300 = 9000 articles
+
+    do {
+      let url = `https://firestore.googleapis.com/v1/projects/${config.projectId}/databases/(default)/documents/articles?key=${config.apiKey}&pageSize=300`;
+      if (pageToken) {
+        url += `&pageToken=${encodeURIComponent(pageToken)}`;
+      }
+      
+      const res = await fetch(url, { method: 'GET', cache: 'no-store' });
+      if (!res.ok) {
+        console.warn(`[Firestore REST] Page fetch returned status ${res.status}`);
+        break;
+      }
+      const json = await res.json();
+      if (json.documents && Array.isArray(json.documents)) {
+        allDocuments.push(...json.documents);
+      }
+      pageToken = json.nextPageToken || null;
+      iterations++;
+    } while (pageToken && iterations < maxIterations);
+
+    if (allDocuments.length === 0) {
       console.log(`[Firestore REST] No documents array returned from REST API.`);
       return [];
     }
-    const items = json.documents.map(parseFirestoreRestDoc);
-    console.log(`[Firestore REST] Successfully fetched ${items.length} real public articles directly via REST!`);
+
+    const items = allDocuments.map(parseFirestoreRestDoc);
+    console.log(`[Firestore REST] Successfully fetched ${items.length} real public articles directly via REST (across ${iterations} page(s))!`);
     return items;
   } catch (err) {
     console.warn(`[Firestore REST] Note: could not fetch articles via REST (device offline or network unavailable):`, (err as any)?.message || err);
@@ -105,24 +123,44 @@ export const fetchSingleArticleFromRest = async (id: string): Promise<any | null
 
 /**
  * Direct HTTPS REST API fetcher for Firestore collection 'users'.
+ * Traverses pagination pages if user collection exceeds single page.
  */
 export const fetchUsersFromRest = async (idToken?: string): Promise<any[]> => {
   try {
     const config = firebaseConfig;
     if (!config || !config.projectId || !config.apiKey) return [];
-    const url = `https://firestore.googleapis.com/v1/projects/${config.projectId}/databases/(default)/documents/users?key=${config.apiKey}&pageSize=500`;
+
+    const allDocuments: any[] = [];
+    let pageToken: string | null = null;
+    let iterations = 0;
+    const maxIterations = 20;
+
     const headers: Record<string, string> = {};
     if (idToken) {
       headers['Authorization'] = `Bearer ${idToken}`;
     }
-    const res = await fetch(url, { method: 'GET', headers, cache: 'no-store' });
-    if (!res.ok) {
-      console.warn(`[Firestore REST Users] Fetch failed with status ${res.status}`);
-      return [];
-    }
-    const json = await res.json();
-    if (!json.documents || !Array.isArray(json.documents)) return [];
-    return json.documents.map(parseFirestoreRestDoc);
+
+    do {
+      let url = `https://firestore.googleapis.com/v1/projects/${config.projectId}/databases/(default)/documents/users?key=${config.apiKey}&pageSize=300`;
+      if (pageToken) {
+        url += `&pageToken=${encodeURIComponent(pageToken)}`;
+      }
+
+      const res = await fetch(url, { method: 'GET', headers, cache: 'no-store' });
+      if (!res.ok) {
+        console.warn(`[Firestore REST Users] Fetch failed with status ${res.status}`);
+        break;
+      }
+      const json = await res.json();
+      if (json.documents && Array.isArray(json.documents)) {
+        allDocuments.push(...json.documents);
+      }
+      pageToken = json.nextPageToken || null;
+      iterations++;
+    } while (pageToken && iterations < maxIterations);
+
+    if (allDocuments.length === 0) return [];
+    return allDocuments.map(parseFirestoreRestDoc);
   } catch (err) {
     console.warn(`[Firestore REST Users] Note: could not fetch users via REST:`, err);
     return [];
@@ -136,12 +174,29 @@ export const fetchCategoriesFromRest = async (): Promise<any[]> => {
   try {
     const config = firebaseConfig;
     if (!config || !config.projectId || !config.apiKey) return [];
-    const url = `https://firestore.googleapis.com/v1/projects/${config.projectId}/databases/(default)/documents/categories?key=${config.apiKey}`;
-    const res = await fetch(url, { method: 'GET', cache: 'no-store' });
-    if (!res.ok) return [];
-    const json = await res.json();
-    if (!json.documents || !Array.isArray(json.documents)) return [];
-    return json.documents.map(parseFirestoreRestDoc);
+
+    const allDocuments: any[] = [];
+    let pageToken: string | null = null;
+    let iterations = 0;
+
+    do {
+      let url = `https://firestore.googleapis.com/v1/projects/${config.projectId}/databases/(default)/documents/categories?key=${config.apiKey}&pageSize=300`;
+      if (pageToken) {
+        url += `&pageToken=${encodeURIComponent(pageToken)}`;
+      }
+
+      const res = await fetch(url, { method: 'GET', cache: 'no-store' });
+      if (!res.ok) break;
+      const json = await res.json();
+      if (json.documents && Array.isArray(json.documents)) {
+        allDocuments.push(...json.documents);
+      }
+      pageToken = json.nextPageToken || null;
+      iterations++;
+    } while (pageToken && iterations < 10);
+
+    if (allDocuments.length === 0) return [];
+    return allDocuments.map(parseFirestoreRestDoc);
   } catch (err) {
     console.warn(`[Firestore REST Categories] Note: could not fetch categories via REST:`, err);
     return [];

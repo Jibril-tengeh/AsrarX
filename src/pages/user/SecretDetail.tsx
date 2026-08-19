@@ -33,6 +33,8 @@ import {
   Sliders,
   Volume2,
   VolumeX,
+  Headphones,
+  Music,
   Folder
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
@@ -743,11 +745,18 @@ export const SecretDetail: React.FC = () => {
       getOfflineData<Record<string, any>>('asrarhub_cached_article_details').then(idbDetails => {
         if (idbDetails && idbDetails[id]) {
           const cachedItem = idbDetails[id];
-          setItem(prev => prev || {
+          const resolved = {
             ...cachedItem,
             title_fr: cachedItem.title_fr || cachedItem.title,
             content_fr: cachedItem.content_fr || cachedItem.content,
             hook_fr: cachedItem.hook_fr || cachedItem.hook,
+          };
+          setItem(prev => {
+            if (!prev) return resolved;
+            if ((resolved.content?.length || 0) >= (prev.content?.length || 0)) {
+              return { ...prev, ...resolved };
+            }
+            return prev;
           });
         } else {
           Promise.all([
@@ -757,11 +766,18 @@ export const SecretDetail: React.FC = () => {
             const listCombined = [...(dashList || []), ...(expList || [])];
             const foundIdb = listCombined.find((art: any) => art && art.id === id);
             if (foundIdb) {
-              setItem(prev => prev || {
+              const resolved = {
                 ...foundIdb,
                 title_fr: foundIdb.title_fr || foundIdb.title,
                 content_fr: foundIdb.content_fr || foundIdb.content,
                 hook_fr: foundIdb.hook_fr || foundIdb.hook,
+              };
+              setItem(prev => {
+                if (!prev) return resolved;
+                if ((resolved.content?.length || 0) >= (prev.content?.length || 0)) {
+                  return { ...prev, ...resolved };
+                }
+                return prev;
               });
             }
           }).catch(() => {});
@@ -824,6 +840,8 @@ export const SecretDetail: React.FC = () => {
               content: activeContent,
               benefits: data.benefits || [],
               imageUrl: data.thumbnail,
+              audioUrl: data.audioUrl || data.audio_url || '',
+              audio_url: data.audioUrl || data.audio_url || '',
               isPremium: data.isPremium || false,
               createdAt: formatCreatedAt(data.createdAt),
               title_en: data.title_en,
@@ -897,6 +915,8 @@ export const SecretDetail: React.FC = () => {
                   content: activeContent,
                   benefits: restItem.benefits || [],
                   imageUrl: restItem.thumbnail || restItem.imageUrl || '',
+                  audioUrl: restItem.audioUrl || restItem.audio_url || '',
+                  audio_url: restItem.audioUrl || restItem.audio_url || '',
                   isPremium: restItem.isPremium || false,
                   createdAt: restItem.createdAt || new Date().toISOString()
                 } as AsrarItem;
@@ -1431,6 +1451,38 @@ export const SecretDetail: React.FC = () => {
                   ></div>
                 </div>
               )}
+            </div>
+          )}
+
+          {/* Dedicated Audio Recording for the Article */}
+          {(item.audioUrl || item.audio_url) && (
+            <div className={`my-6 p-4 sm:p-5 rounded-2xl border shadow-sm transition-all ${
+              readingMode
+                ? "bg-[#f4ebd0]/70 dark:bg-[#383120]/50 border-[#e8dcb5] dark:border-[#524830]"
+                : "bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/20 border-amber-200/80 dark:border-amber-900/40"
+            }`}>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shadow-md shadow-amber-500/20 shrink-0">
+                  <Headphones size={20} />
+                </div>
+                <div>
+                  <h3 className="text-sm sm:text-base font-bold text-gray-900 dark:text-white flex items-center gap-2">
+                    <span>{t("secretDetail.articleAudioTitle", "Enregistrement Audio / Récitation")}</span>
+                    <span className="px-2 py-0.5 text-[10px] font-bold bg-amber-200 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 rounded-full">Audio HD</span>
+                  </h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {t("secretDetail.articleAudioDesc", "Écoutez la récitation audio complète associée à cet article.")}
+                  </p>
+                </div>
+              </div>
+              <div className="bg-white/80 dark:bg-gray-900/80 p-2 rounded-xl border border-amber-200/50 dark:border-amber-900/30">
+                <audio 
+                  controls 
+                  src={item.audioUrl || item.audio_url} 
+                  className="w-full h-10 outline-none"
+                  preload="metadata"
+                />
+              </div>
             </div>
           )}
 

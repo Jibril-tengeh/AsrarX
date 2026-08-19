@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import {
   ImageIcon,
+  Crop,
   Film,
   Music,
   Youtube,
@@ -16,6 +17,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { checkMediaUrlValidity } from '../TipTapEditor';
+import { ImageCropperModal, ImageCropResult } from '../common/ImageCropperModal';
 
 interface MediaItem {
   id: string;
@@ -35,6 +37,21 @@ export const ArticleMediaGallery: React.FC<ArticleMediaGalleryProps> = ({ conten
   const [activeFilter, setActiveFilter] = useState<'all' | 'image' | 'video' | 'audio' | 'embed'>('all');
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [selectedPreviewMedia, setSelectedPreviewMedia] = useState<MediaItem | null>(null);
+  const [cropperMedia, setCropperMedia] = useState<MediaItem | null>(null);
+
+  const handleCropComplete = (result: ImageCropResult) => {
+    if (!cropperMedia) return;
+    const oldSrc = cropperMedia.src;
+    const newHtml = content.replace(oldSrc, result.dataUrl);
+    onChangeContent(newHtml);
+    if (selectedPreviewMedia && selectedPreviewMedia.id === cropperMedia.id) {
+      setSelectedPreviewMedia({
+        ...selectedPreviewMedia,
+        src: result.dataUrl
+      });
+    }
+    setCropperMedia(null);
+  };
 
   // Extract all media items from the HTML content string
   const extractMediaFromContent = (html: string): MediaItem[] => {
@@ -314,6 +331,18 @@ export const ArticleMediaGallery: React.FC<ArticleMediaGalleryProps> = ({ conten
                       <span>Aperçu</span>
                     </button>
 
+                    {item.type === 'image' && (
+                      <button
+                        type="button"
+                        onClick={() => setCropperMedia(item)}
+                        className="py-1.5 px-2.5 bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors shadow-xs"
+                        title="Recadrer cette image"
+                      >
+                        <Crop size={13} />
+                        <span className="hidden sm:inline">Recadrer</span>
+                      </button>
+                    )}
+
                     <button
                       type="button"
                       onClick={() => handleCopy(item.src, item.id)}
@@ -407,6 +436,17 @@ export const ArticleMediaGallery: React.FC<ArticleMediaGalleryProps> = ({ conten
               </a>
 
               <div className="flex gap-2">
+                {selectedPreviewMedia.type === 'image' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCropperMedia(selectedPreviewMedia);
+                    }}
+                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors shadow-xs"
+                  >
+                    <Crop size={14} /> Recadrer l'image
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => {
@@ -428,6 +468,18 @@ export const ArticleMediaGallery: React.FC<ArticleMediaGalleryProps> = ({ conten
             </div>
           </div>
         </div>
+      )}
+
+      {/* Image Cropper Modal */}
+      {cropperMedia && (
+        <ImageCropperModal
+          isOpen={!!cropperMedia}
+          onClose={() => setCropperMedia(null)}
+          imageSrc={cropperMedia.src}
+          imageAlt={cropperMedia.alt || 'Image de l\'article'}
+          onCropComplete={handleCropComplete}
+          title="Recadrer l'image de l'article"
+        />
       )}
     </div>
   );

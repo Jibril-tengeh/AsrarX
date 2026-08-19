@@ -140,7 +140,7 @@ export const FloatingSupportContact: React.FC<FloatingSupportContactProps> = ({
   return (
     <>
       {/* Floating Action Button */}
-      <div className={`fixed z-40 ${isUserProfile ? 'bottom-6 right-6 sm:bottom-8 sm:right-8' : 'bottom-20 right-4 sm:bottom-6 sm:right-6'}`}>
+      <div className={`fixed z-40 ${isUserProfile ? 'bottom-32 right-4 sm:bottom-8 sm:right-28' : 'bottom-32 right-4 sm:bottom-8 sm:right-28'}`}>
         <motion.button
           id="btn-floating-support-contact"
           whileHover={{ scale: 1.05 }}

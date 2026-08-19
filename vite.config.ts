@@ -3,6 +3,7 @@ import react from "@vitejs/plugin-react";
 import path from "path";
 import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
+import pkg from "./package.json";
 
 export default defineConfig(() => {
   return {
@@ -167,12 +168,23 @@ export default defineConfig(() => {
     ],
     resolve: {
       alias: {
-        "@": path.resolve(__dirname, "."),
+        "@": path.resolve(__dirname, "./src"),
+        "react": path.resolve(__dirname, "./node_modules/react"),
+        "react-dom": path.resolve(__dirname, "./node_modules/react-dom"),
       },
-      dedupe: ['react', 'react-dom'],
+      dedupe: ['react', 'react-dom', 'react-router', 'react-router-dom'],
+    },
+    optimizeDeps: {
+      include: [
+        'react',
+        'react-dom',
+        'react-router-dom',
+      ],
     },
     define: {
-      __APP_URL__: JSON.stringify(process.env.APP_URL || '')
+      __APP_URL__: JSON.stringify(process.env.APP_URL || ''),
+      __APP_VERSION__: JSON.stringify(pkg.version || '1.1.0'),
+      __APP_BUILD_TIME__: JSON.stringify(new Date().toISOString())
     },
     server: {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.

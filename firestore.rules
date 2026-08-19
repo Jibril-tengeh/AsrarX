@@ -119,6 +119,11 @@ service cloud.firestore {
       allow write: if request.auth != null;
     }
 
+    match /app_versions/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     match /assistant_prompts/{document=**} {
       allow read: if true;
       allow write: if isAdmin();

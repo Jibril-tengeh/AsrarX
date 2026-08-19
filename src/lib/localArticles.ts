@@ -1,6 +1,7 @@
 import { INITIAL_DEFAULT_ARTICLES } from '../data/defaultArticles';
 import { setOfflineData, getOfflineData, removeOfflineData } from './offlineStorage';
 import { getArticleImageUrl } from '../utils/articleImageUtils';
+import { sortArticlesInOrder, isPubliclyVisibleArticle } from './articleUtils';
 
 export const LOCAL_CUSTOM_ARTICLES_KEY = 'asrarhub_custom_local_articles';
 export const CACHED_ADMIN_ARTICLES_KEY = 'asrarhub_cached_admin_articles';
@@ -70,6 +71,8 @@ export interface LocalArticle {
   title_ha?: string;
   content_ha?: string;
   hook_ha?: string;
+  audioUrl?: string;
+  audio_url?: string;
   createdAt?: number;
   [key: string]: any;
 }
@@ -101,8 +104,9 @@ const safeSetItem = (key: string, value: string) => {
 };
 
 /**
- * Strips heavy payload fields (like huge body text or oversized base64 images)
- * from article objects for list caching to keep localStorage payload compact.
+ * Strips heavy payload fields (like huge base64 images)
+ * from article objects for localStorage caching to keep payload compact,
+ * while strictly PRESERVING 100% of text content, audio, and metadata.
  */
 export const stripArticleForListCache = (art: any): any => {
   if (!art || typeof art !== 'object') return art;
@@ -112,17 +116,23 @@ export const stripArticleForListCache = (art: any): any => {
   const img = getArticleImageUrl(copy);
   copy.thumbnail = img;
   copy.imageUrl = img;
+  copy.image = copy.image || img;
+  copy.coverImage = copy.coverImage || img;
+  copy.coverImageUrl = copy.coverImageUrl || img;
 
-  // Truncate long content text for list previews
-  if (typeof copy.content === 'string' && copy.content.length > 300) {
-    copy.content = copy.content.slice(0, 300);
-  }
-  if (typeof copy.content_en === 'string' && copy.content_en.length > 300) {
-    copy.content_en = copy.content_en.slice(0, 300);
-  }
-  if (typeof copy.content_ha === 'string' && copy.content_ha.length > 300) {
-    copy.content_ha = copy.content_ha.slice(0, 300);
-  }
+  // Preserve audio and cropping metadata
+  copy.audioUrl = copy.audioUrl || copy.audio_url || '';
+  copy.audio_url = copy.audioUrl || copy.audio_url || '';
+  if (copy.coverImageCrop) copy.coverImageCrop = copy.coverImageCrop;
+  if (copy.cropData) copy.cropData = copy.cropData;
+  if (copy.cropAspect) copy.cropAspect = copy.cropAspect;
+  if (copy.audioTitle) copy.audioTitle = copy.audioTitle;
+  if (copy.audioDuration) copy.audioDuration = copy.audioDuration;
+
+  // Strictly preserve full content text for offline and Capacitor viewing without truncation
+  copy.content = copy.content || '';
+  copy.content_en = copy.content_en || '';
+  copy.content_ha = copy.content_ha || '';
 
   return copy;
 };
@@ -157,33 +167,17 @@ export const setHideMockArticles = (hide: boolean = true): void => {
 
 /**
  * Combines default articles with remote articles (from Firestore/REST).
- * If real database/remote articles exist, returns ONLY real database articles so mock articles never contaminate real content.
+ * Never injects mock articles by default; only real database articles and user content are returned.
  */
 export const combineWithDefaultArticles = <T extends { id: string }>(defaultArticles: T[], remoteArticles: T[]): T[] => {
   const deletedIds = getDeletedArticleIds();
   const hideMock = isMockArticlesHidden();
 
   let cleanedRemote = Array.isArray(remoteArticles) ? remoteArticles : [];
-  if (deletedIds.size > 0) {
-    cleanedRemote = cleanedRemote.filter(a => a && a.id && !deletedIds.has(a.id));
-  }
+  // Strip out any legacy default mock items
+  cleanedRemote = cleanedRemote.filter(a => a && a.id && !String(a.id).startsWith('default_art_') && !deletedIds.has(a.id));
 
-  if (hideMock) {
-    return cleanedRemote;
-  }
-
-  // If there are real database/remote articles, return ONLY real database articles!
-  if (cleanedRemote.length > 0) {
-    return cleanedRemote;
-  }
-
-  // Only fallback to default mock articles if database list is completely empty
-  let cleanedDefaults = Array.isArray(defaultArticles) ? defaultArticles : [];
-  if (deletedIds.size > 0) {
-    cleanedDefaults = cleanedDefaults.filter(a => a && a.id && !deletedIds.has(a.id));
-  }
-
-  return cleanedDefaults;
+  return cleanedRemote;
 };
 
 /**
@@ -208,20 +202,23 @@ export const saveCachedArticlesList = (key: string, articles: any[]): void => {
     console.warn(`[Storage] IndexedDB setOfflineData error for ${key}:`, err);
   });
 
-  // 2. Also save lightweight preview list in localStorage for instant synchronous initial render
-  const lightweightList = validArticles.map(stripArticleForListCache);
+  // 2. Also save clean preview list in localStorage for instant synchronous initial render
+  const cleanList = validArticles.map(stripArticleForListCache);
 
   try {
-    localStorage.setItem(key, JSON.stringify(lightweightList));
+    localStorage.setItem(key, JSON.stringify(cleanList));
   } catch (err) {
-    console.warn(`[Storage] Primary localStorage cache setItem failed for ${key}, attempting cleanup...`);
+    console.warn(`[Storage] Primary localStorage cache setItem failed for ${key}, falling back to compact representation...`);
     try {
       localStorage.removeItem(CACHED_ARTICLE_DETAILS_KEY);
-      const trimmedList = lightweightList.slice(0, 30).map(a => ({
+      // Remove inline base64 image strings if storage quota is constrained, but preserve all text
+      const compactList = cleanList.map(a => ({
         ...a,
-        content: typeof a.content === 'string' ? a.content.slice(0, 80) : '',
+        thumbnail: typeof a.thumbnail === 'string' && a.thumbnail.startsWith('data:') ? '' : a.thumbnail,
+        imageUrl: typeof a.imageUrl === 'string' && a.imageUrl.startsWith('data:') ? '' : a.imageUrl,
+        image: typeof a.image === 'string' && a.image.startsWith('data:') ? '' : a.image,
       }));
-      localStorage.setItem(key, JSON.stringify(trimmedList));
+      localStorage.setItem(key, JSON.stringify(compactList));
     } catch (fallbackErr) {
       console.warn(`[Storage] Storage quota exceeded for localStorage ${key}. IndexedDB holds full cache.`);
     }
@@ -261,7 +258,8 @@ export const getCachedArticlesListAsync = async (key: string): Promise<any[]> =>
 
 /**
  * Saves or updates an article in local persistent storage so it is NEVER lost,
- * even when offline on Capacitor or when Firestore cache resets.
+ * even when offline on Capacitor or when Firestore cache resets, and
+ * automatically syncs it to Firestore in the background and broadcasts the update.
  */
 export const saveLocalCustomArticle = (article: LocalArticle): LocalArticle[] => {
   try {
@@ -282,6 +280,42 @@ export const saveLocalCustomArticle = (article: LocalArticle): LocalArticle[] =>
     // Also update cached lists
     updateCachedArticleLists(article);
 
+    // Automatically push directly to Firestore in the background
+    if (typeof window !== 'undefined' && article && article.id) {
+      import('./firebase').then(({ db }) => {
+        import('firebase/firestore').then(({ doc, setDoc }) => {
+          if (db) {
+            setDoc(doc(db, 'articles', article.id), article, { merge: true }).catch(err => {
+              console.warn('[AutoSync] Background Firestore setDoc warning:', err);
+            });
+          }
+        }).catch(() => {});
+      }).catch(() => {});
+
+      // Broadcast live update event so user dashboards update immediately without refresh
+      try {
+        const mergedAll = mergeWithLocalArticles(updated);
+        const customEvent = new CustomEvent('asrarhub_swr_articles_updated', {
+          detail: {
+            articles: mergedAll,
+            count: mergedAll.length,
+            timestamp: Date.now(),
+            source: 'save_local_auto'
+          }
+        });
+        window.dispatchEvent(customEvent);
+        window.dispatchEvent(new CustomEvent('asrarhub_articles_revalidated', {
+          detail: {
+            articles: mergedAll,
+            count: mergedAll.length,
+            timestamp: Date.now(),
+            source: 'save_local_auto'
+          }
+        }));
+        window.dispatchEvent(new CustomEvent('asrarhub_articles_updated', { detail: { article } }));
+      } catch (e) {}
+    }
+
     return updated;
   } catch (e) {
     console.error("Error saving local custom article:", e);
@@ -290,7 +324,8 @@ export const saveLocalCustomArticle = (article: LocalArticle): LocalArticle[] =>
 };
 
 /**
- * Removes an article from local custom storage and cached lists.
+ * Removes an article from local custom storage and cached lists,
+ * and automatically deletes it from Firestore in the background.
  */
 export const deleteLocalCustomArticle = (articleId: string): void => {
   try {
@@ -303,8 +338,76 @@ export const deleteLocalCustomArticle = (articleId: string): void => {
 
     // Remove from cached lists
     removeFromCachedLists(articleId);
+
+    // Automatically delete from Firestore in the background
+    if (typeof window !== 'undefined' && articleId) {
+      import('./firebase').then(({ db }) => {
+        import('firebase/firestore').then(({ doc, deleteDoc }) => {
+          if (db) {
+            deleteDoc(doc(db, 'articles', articleId)).catch(err => {
+              console.warn('[AutoSync] Background Firestore deleteDoc warning:', err);
+            });
+          }
+        }).catch(() => {});
+      }).catch(() => {});
+
+      // Broadcast removal event
+      try {
+        const mergedAll = mergeWithLocalArticles(filtered);
+        window.dispatchEvent(new CustomEvent('asrarhub_swr_articles_updated', {
+          detail: {
+            articles: mergedAll,
+            count: mergedAll.length,
+            timestamp: Date.now(),
+            source: 'delete_local_auto'
+          }
+        }));
+        window.dispatchEvent(new CustomEvent('asrarhub_articles_revalidated', {
+          detail: {
+            articles: mergedAll,
+            count: mergedAll.length,
+            timestamp: Date.now(),
+            source: 'delete_local_auto'
+          }
+        }));
+        window.dispatchEvent(new CustomEvent('asrarhub_articles_updated', { detail: { deletedId: articleId } }));
+      } catch (e) {}
+    }
   } catch (e) {
     console.error("Error deleting local custom article:", e);
+  }
+};
+
+/**
+ * Automatically synchronizes all local custom articles to Firestore in the background.
+ * Ensures that published articles are immediately persisted without needing manual action.
+ */
+export const autoSyncLocalArticlesToFirestore = async (): Promise<number> => {
+  try {
+    if (typeof window === 'undefined') return 0;
+    const { db } = await import('./firebase');
+    const { doc, setDoc } = await import('firebase/firestore');
+    if (!db) return 0;
+
+    const locals = getLocalCustomArticles();
+    if (!Array.isArray(locals) || locals.length === 0) return 0;
+
+    let syncedCount = 0;
+    for (const art of locals) {
+      if (art && art.id && !String(art.id).startsWith('default_art_')) {
+        await setDoc(doc(db, 'articles', art.id), art, { merge: true }).catch(err => {
+          console.warn(`[AutoSync] Error syncing article ${art.id} to Firestore:`, err);
+        });
+        syncedCount++;
+      }
+    }
+    if (syncedCount > 0) {
+      console.log(`[AutoSync] Automatically synced ${syncedCount} articles to Firestore.`);
+    }
+    return syncedCount;
+  } catch (err) {
+    console.warn('[AutoSync] Error during autoSyncLocalArticlesToFirestore:', err);
+    return 0;
   }
 };
 
@@ -434,6 +537,5 @@ export const mergeWithLocalArticles = <T extends { id: string }>(remoteArticles:
   }
 
   const merged = Array.from(resultMap.values());
-  merged.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-  return merged;
+  return sortArticlesInOrder(merged, true) as T[];
 };
