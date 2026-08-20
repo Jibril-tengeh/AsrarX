@@ -7,6 +7,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { collection, query, where, onSnapshot, setDoc, deleteDoc, doc, updateDoc } from 'firebase/firestore';
 import { getApiUrl } from '../../../lib/api';
 import { getZikrCache, setZikrCache, syncDhikrGoalOffline } from '../../../utils/zikrSyncEngine';
+import { RitualDhikrCalculator } from '../../../components/RitualDhikrCalculator';
 
 interface DhikrGoal {
   id: string;
@@ -735,6 +736,10 @@ export const DailyDhikrTracker: React.FC = () => {
           })
         )}
       </div>
+      </div>
+
+      <div className="mt-10">
+        <RitualDhikrCalculator />
       </div>
     </div>
   );

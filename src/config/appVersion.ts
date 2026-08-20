@@ -10,6 +10,10 @@ export interface VersionRelease {
   titleHa?: string;
   isCurrent?: boolean;
   disabled?: boolean;
+  forceUpdate?: boolean; // Bloquer l'application si l'utilisateur est sur une version antérieure
+  minSupportedVersionCode?: number; // Code de version minimum obligatoire
+  downloadUrl?: string; // Lien de mise à jour (Play Store, Téléchargement APK direct, ou Web)
+  apkDownloadUrl?: string; // Lien direct de téléchargement du fichier APK
   highlights: string[];
   highlightsEn?: string[];
   highlightsHa?: string[];
@@ -36,32 +40,32 @@ export const APP_VERSION_CONFIG = {
       releaseDate: '17 Août 2026',
       releaseDateEn: 'August 17, 2026',
       releaseDateHa: '17 ga Agusta, 2026',
-      title: `Mise à jour v${dynamicVersion} : Signature Android, Versioning & Recadrage Média`,
-      titleEn: `Update v${dynamicVersion}: Android Signature, Versioning & Media Cropping`,
-      titleHa: `Sabuntawa v${dynamicVersion}: Sa hannu na Android, Sarrafa Siga & Gyaran Hotuna`,
+      title: `Mise à jour v${dynamicVersion} : Versioning & Recadrage Média`,
+      titleEn: `Update v${dynamicVersion}: Versioning & Media Cropping`,
+      titleHa: `Sabuntawa v${dynamicVersion}: Sarrafa Siga & Gyaran Hotuna`,
       isCurrent: true,
       type: 'minor',
       highlights: [
-        'Signature cryptographique permanente Android (Mises à jour sans désinstallation)',
+        'Mises à jour fluides et simplifiées sans désinstallation',
         'Système dynamique de gestion et affichage des versions d\'application',
         'Contrôle automatique du cache SWR et purge lors du changement de version',
-        'Journal des modifications (Changelog) interactif synchronisé avec Firebase app_versions',
+        'Journal des modifications (Changelog) interactif et synchronisé',
         'Outil interactif de recadrage d’images multi-ratios (16:9, 4:3, 1:1, 9:16) dans l’éditeur',
         'Gestionnaire de médias enrichi avec recadrage et remplacement en place'
       ],
       highlightsEn: [
-        'Permanent Android cryptographic signature (Seamless updates without uninstallation)',
+        'Seamless updates without uninstallation',
         'Dynamic application version management and display system',
         'Automatic SWR cache validation and purge on version changes',
-        'Interactive Changelog synchronized with Firebase app_versions collection',
+        'Interactive synchronized Changelog',
         'Interactive multi-aspect image cropping tool (16:9, 4:3, 1:1, 9:16) in the editor',
         'Enriched media manager with integrated cropping and instant replacement'
       ],
       highlightsHa: [
-        'Tabbatar da sa hannun tsaro na dindindin a Android (Sabuntawa ba tare da goge manhaja ba)',
+        'Sabuntawa cikin sauki ba tare da goge manhaja ba',
         'Tsarin sarrafawa da nuna sabbin sigogin manhaja mai aiki kai tsaye',
         'Kula da share cache na SWR ta atomatik yayin canjin siga',
-        'Tarihin sauye-sauye (Changelog) mai alaka da Firebase app_versions',
+        'Tarihin sauye-sauye (Changelog) mai aiki kai tsaye',
         'Kayan aikin gyara da yanka hotuna da ma\'auni daban-daban (16:9, 4:3, 1:1, 9:16) a cikin edita',
         'Ingantaccen manajan fayilolin labarai tare da yankan hoto da sauya shi kai tsaye'
       ]
@@ -81,21 +85,21 @@ export const APP_VERSION_CONFIG = {
         'Sanctuaire spirituel complet avec 6 grands Wirds et secrets sacrés',
         'Corpus Shams al-Ma\'arif & calculs ésotériques (Abjad, Asma al-Husna, Raml)',
         'Moteur audio des récitateurs et Ruqyah Shariah avec cache hors-ligne',
-        'Sauvegarde Cloud Firebase et synchronisation multi-appareils',
+        'Sauvegarde Cloud sécurisée et synchronisation multi-appareils',
         'Mode sombre / clair et support multilingue (Français, Anglais, Hausa)'
       ],
       highlightsEn: [
         'Complete spiritual sanctuary with 6 major Wirds and sacred secrets',
         'Shams al-Ma\'arif corpus & esoteric calculations (Abjad, Asma al-Husna, Raml)',
         'Audio engine of reciters and Ruqyah Shariah with offline caching',
-        'Firebase Cloud backup and multi-device synchronization',
+        'Secure Cloud backup and multi-device synchronization',
         'Dark / Light mode and multilingual support (French, English, Hausa)'
       ],
       highlightsHa: [
         'Cikakken dakin ibada na ruhi tare da manyan Wirdodi 6 da asirai masu tsarki',
         'Ilimin Shams al-Ma\'arif da lissafin asiri (Abjad, Asma al-Husna, Raml)',
         'Sautin makaranta da Ruqyah Shariah tare da ajiya ba tare da intanet ba',
-        'Ajiye bayanai a Firebase Cloud da daidaita na\'urori da yawa',
+        'Ajiye bayanai a Cloud da daidaita na\'urori da yawa',
         'Yanayin duhu / haske da goyon bayan yaruka da dama (Faransanci, Turanci, Hausa)'
       ]
     }

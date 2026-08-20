@@ -3,7 +3,8 @@ import { db } from '../lib/firebase';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 
 export interface AppBranding {
-  appLogo?: string; // base64 or url
+  appLogo?: string; // base64 or url (horizontal header logo)
+  appIcon?: string; // base64 or url (square 1:1 icon for PWA, mobile home screen, app badge)
   loadingScreenImage?: string; // base64 or url
   loadingText?: string;
   loadingAnimationType?: 'pulse' | 'spin' | 'bounce' | 'glow' | 'fade';
@@ -24,6 +25,7 @@ const LOCAL_STORAGE_KEY = 'asrarhub_custom_branding';
 
 const defaultBranding: AppBranding = {
   appLogo: '',
+  appIcon: '',
   loadingScreenImage: '',
   loadingText: 'AsrarHub',
   loadingAnimationType: 'pulse',
@@ -80,15 +82,15 @@ export const BrandingProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const [branding, setBranding] = useState<AppBranding>(getInitialBranding);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Synchronize dynamic favicon whenever branding updates
+  // Synchronize dynamic favicon & PWA icon whenever branding updates
   useEffect(() => {
     if (branding.isEnabled) {
-      const activeIcon = branding.faviconUrl || branding.appLogo;
+      const activeIcon = branding.appIcon || branding.faviconUrl || branding.appLogo;
       if (activeIcon) {
         updateDocumentFavicon(activeIcon);
       }
     }
-  }, [branding.faviconUrl, branding.appLogo, branding.isEnabled]);
+  }, [branding.appIcon, branding.faviconUrl, branding.appLogo, branding.isEnabled]);
 
   // Firestore Real-time Listener on settings/branding
   useEffect(() => {
@@ -163,6 +165,7 @@ export const BrandingProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   const resetBranding = useCallback(async () => {
     const resetData: AppBranding = {
       appLogo: '',
+      appIcon: '',
       loadingScreenImage: '',
       loadingText: 'AsrarHub',
       loadingAnimationType: 'pulse',

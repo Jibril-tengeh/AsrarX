@@ -1,6 +1,6 @@
 import { AsrarItem } from '../types';
 import { INITIAL_DEFAULT_ARTICLES } from './defaultArticles';
-import { isPubliclyVisibleArticle } from '../lib/articleUtils';
+import { ArticleService } from '../services/ArticleService';
 
 export const initialData: AsrarItem[] = [];
 
@@ -11,7 +11,7 @@ export const getAsrarItems = (): AsrarItem[] => {
       const parsed = JSON.parse(cached);
       if (Array.isArray(parsed) && parsed.length > 0) {
         return parsed
-          .filter(item => item && item.id && !String(item.id).startsWith('default_art_') && isPubliclyVisibleArticle(item.status))
+          .filter(item => item && item.id && !String(item.id).startsWith('default_art_') && ArticleService.isPublished(item))
           .map(item => ({
             ...item,
             hook: item.hook || (item.content ? item.content.replace(/<[^>]+>/g, '').substring(0, 120) + '...' : '')

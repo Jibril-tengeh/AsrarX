@@ -331,7 +331,7 @@ export const ChangelogModal: React.FC<ChangelogModalProps> = ({
                   </div>
                   <div className="flex items-center gap-2">
                     <ShieldCheck size={16} className="text-emerald-500" />
-                    <span>{t('changelog.permanentSignature', 'Signature V1/V2 permanente activée')}</span>
+                    <span>{t('changelog.permanentSignature', 'Mises à jour optimisées et sécurisées')}</span>
                   </div>
                 </div>
               </div>

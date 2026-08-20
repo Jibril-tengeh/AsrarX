@@ -1,13 +1,22 @@
 /**
- * Utility function to determine if an article status string is publicly visible to non-admin users.
- * Strictly excludes only "Draft" (Brouillon) and "Archive" (Archivé/Archived).
+ * Utility function to determine if an article or its status string is publicly visible to non-admin users.
+ * Strictly excludes "Draft" (Brouillon) and "Archive" (Archivé/Archived).
  * All other articles (Published, Publié, Public, or un-statused) are immediately visible.
  */
-export const isPubliclyVisibleArticle = (status: any): boolean => {
-  if (status === null || status === undefined) {
+export const isPubliclyVisibleArticle = (statusOrArticle: any): boolean => {
+  if (statusOrArticle === null || statusOrArticle === undefined) {
     return true; // Default to true if un-statused
   }
-  const s = String(status).trim().toLowerCase();
+
+  // If passed an entire article object
+  if (typeof statusOrArticle === 'object') {
+    if (statusOrArticle.isDraft === true || statusOrArticle.isArchived === true) {
+      return false;
+    }
+    return isPubliclyVisibleArticle(statusOrArticle.status);
+  }
+
+  const s = String(statusOrArticle).trim().toLowerCase();
   if (!s) return true;
 
   // Forbidden keywords: only drafts and archives

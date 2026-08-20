@@ -51,7 +51,11 @@ import {
   Info,
   Calendar,
   Sparkle,
-  FileText
+  FileText,
+  ShieldAlert,
+  Film,
+  Video,
+  Play
 } from 'lucide-react';
 import {
   Branch,
@@ -65,6 +69,8 @@ import {
 import { versionControlService } from '../../lib/versionControlService';
 import { appVersionService } from '../../services/appVersionService';
 import { APP_VERSION_CONFIG, VersionRelease, getLocalizedRelease } from '../../config/appVersion';
+import { VIDEO_CARD_PRESETS, getPresetById, VideoCardThemeId } from '../../types/updateCards';
+import { UpdateVideoCard } from '../videoCards/UpdateVideoCard';
 
 export const AdminVersionControlManager: React.FC = () => {
   const [vcsState, setVcsState] = useState<VersionControlState>(versionControlService.getState());
@@ -88,6 +94,10 @@ export const AdminVersionControlManager: React.FC = () => {
   const [isSavingAppRelease, setIsSavingAppRelease] = useState<boolean>(false);
   const [isSyncingDefaults, setIsSyncingDefaults] = useState<boolean>(false);
   const [isPurgingCache, setIsPurgingCache] = useState<boolean>(false);
+  const [showVideoStudioModal, setShowVideoStudioModal] = useState<boolean>(false);
+  const [studioSelectedPresetId, setStudioSelectedPresetId] = useState<VideoCardThemeId>('cosmic-nebula');
+  const [studioIsForceUpdateTest, setStudioIsForceUpdateTest] = useState<boolean>(true);
+  const [studioActiveLang, setStudioActiveLang] = useState<'fr' | 'en' | 'ha'>('fr');
   const [newAppReleaseForm, setNewAppReleaseForm] = useState<{
     version: string;
     versionCode: number;
@@ -100,6 +110,10 @@ export const AdminVersionControlManager: React.FC = () => {
     type: 'major' | 'minor' | 'patch';
     isCurrent: boolean;
     disabled: boolean;
+    forceUpdate: boolean;
+    minSupportedVersionCode: number;
+    downloadUrl: string;
+    apkDownloadUrl: string;
     highlights: string[];
     highlightsEn: string[];
     highlightsHa: string[];
@@ -115,6 +129,10 @@ export const AdminVersionControlManager: React.FC = () => {
     type: 'minor',
     isCurrent: false,
     disabled: false,
+    forceUpdate: false,
+    minSupportedVersionCode: 1,
+    downloadUrl: '',
+    apkDownloadUrl: '',
     highlights: [''],
     highlightsEn: [''],
     highlightsHa: ['']
@@ -516,6 +534,10 @@ export const AdminVersionControlManager: React.FC = () => {
       type: 'minor',
       isCurrent: false,
       disabled: false,
+      forceUpdate: false,
+      minSupportedVersionCode: (appReleases[0]?.versionCode || 1),
+      downloadUrl: '',
+      apkDownloadUrl: '',
       highlights: [''],
       highlightsEn: [''],
       highlightsHa: ['']
@@ -558,6 +580,10 @@ export const AdminVersionControlManager: React.FC = () => {
         type: newAppReleaseForm.type,
         isCurrent: newAppReleaseForm.isCurrent,
         disabled: newAppReleaseForm.disabled,
+        forceUpdate: newAppReleaseForm.forceUpdate,
+        minSupportedVersionCode: newAppReleaseForm.forceUpdate ? Number(newAppReleaseForm.minSupportedVersionCode) : undefined,
+        downloadUrl: newAppReleaseForm.downloadUrl.trim() || undefined,
+        apkDownloadUrl: newAppReleaseForm.apkDownloadUrl.trim() || undefined,
         highlights: finalFr.length > 0 ? finalFr : ['Mise à jour et améliorations des performances'],
         highlightsEn: finalEn.length > 0 ? finalEn : ['General updates and performance improvements'],
         highlightsHa: finalHa.length > 0 ? finalHa : ['Sabuntawa da inganta sauri'],
@@ -1302,6 +1328,15 @@ export const AdminVersionControlManager: React.FC = () => {
               </button>
 
               <button
+                onClick={() => setShowVideoStudioModal(true)}
+                className="flex items-center gap-2 bg-gradient-to-r from-amber-500 via-rose-500 to-purple-600 hover:from-amber-400 hover:via-rose-400 hover:to-purple-500 text-white font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-md transition-all active:scale-95 cursor-pointer"
+                title="Visualiser et tester les 10 modèles de cartes vidéo pour popups de mise à jour"
+              >
+                <Film size={16} />
+                <span>Studio 10 Cartes Vidéo</span>
+              </button>
+
+              <button
                 onClick={handleOpenCreateAppReleaseModal}
                 className="flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs sm:text-sm px-5 py-2.5 rounded-xl shadow-md transition-all active:scale-95"
               >
@@ -1489,6 +1524,13 @@ export const AdminVersionControlManager: React.FC = () => {
                                 <span className="flex items-center gap-1 text-[10px] font-black bg-emerald-500 text-white px-2.5 py-0.5 rounded-full uppercase shadow-sm">
                                   <Star size={10} className="fill-white" />
                                   Actuelle (Production)
+                                </span>
+                              )}
+
+                              {rel.forceUpdate && (
+                                <span className="flex items-center gap-1 text-[10px] font-black bg-amber-500 text-slate-950 px-2.5 py-0.5 rounded-full uppercase shadow-sm animate-pulse">
+                                  <ShieldAlert size={11} />
+                                  Mise à Jour Forcée (Min #{rel.minSupportedVersionCode || rel.versionCode})
                                 </span>
                               )}
                             </div>
@@ -2347,7 +2389,66 @@ export const AdminVersionControlManager: React.FC = () => {
                       </span>
                     </div>
                   </label>
+
+                  {/* Force Update Toggle */}
+                  <label className="flex items-center gap-2.5 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={!!editingAppRelease.forceUpdate}
+                      onChange={e => setEditingAppRelease({ ...editingAppRelease, forceUpdate: e.target.checked })}
+                      className="w-4 h-4 text-amber-600 rounded focus:ring-amber-500"
+                    />
+                    <div>
+                      <span className="font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+                        <ShieldAlert size={14} />
+                        Mise à jour obligatoire (Forcer les APKs & anciens clients)
+                      </span>
+                      <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                        Bloque l'accès aux versions antérieures jusqu'à installation de la mise à jour
+                      </span>
+                    </div>
+                  </label>
                 </div>
+
+                {/* Force update configuration inputs */}
+                {editingAppRelease.forceUpdate && (
+                  <div className="p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 rounded-2xl space-y-3 animate-fadeIn">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block font-bold text-amber-900 dark:text-amber-300 text-xs mb-1">
+                          Version Code Minimum Requis (minSupportedVersionCode)
+                        </label>
+                        <input
+                          type="number"
+                          min={1}
+                          value={editingAppRelease.minSupportedVersionCode ?? editingAppRelease.versionCode}
+                          onChange={e => setEditingAppRelease({ ...editingAppRelease, minSupportedVersionCode: Number(e.target.value) || 1 })}
+                          placeholder="Ex: 5"
+                          className="w-full bg-white dark:bg-gray-900 border border-amber-300 dark:border-amber-700 rounded-xl px-3 py-2 text-xs font-mono font-bold text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-amber-500"
+                        />
+                        <p className="text-[10px] text-amber-700 dark:text-amber-400 mt-1">
+                          Tout utilisateur dont le build code est strictement inférieur à ce chiffre sera bloqué et invité à mettre à jour.
+                        </p>
+                      </div>
+
+                      <div>
+                        <label className="block font-bold text-amber-900 dark:text-amber-300 text-xs mb-1">
+                          Lien de Téléchargement Direct APK (Google Drive / GitHub / Serveur)
+                        </label>
+                        <input
+                          type="url"
+                          value={editingAppRelease.apkDownloadUrl || ''}
+                          onChange={e => setEditingAppRelease({ ...editingAppRelease, apkDownloadUrl: e.target.value })}
+                          placeholder="https://example.com/AsrarHub-latest.apk"
+                          className="w-full bg-white dark:bg-gray-900 border border-amber-300 dark:border-amber-700 rounded-xl px-3 py-2 text-xs font-mono text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-amber-500"
+                        />
+                        <p className="text-[10px] text-amber-700 dark:text-amber-400 mt-1">
+                          L'utilisateur cliquera sur ce lien pour télécharger le nouvel APK directement.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Multilingual Editor Area */}
@@ -2904,7 +3005,53 @@ export const AdminVersionControlManager: React.FC = () => {
                     Définir comme version actuelle
                   </span>
                 </label>
+
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={newAppReleaseForm.forceUpdate}
+                    onChange={e => setNewAppReleaseForm({ ...newAppReleaseForm, forceUpdate: e.target.checked })}
+                    className="w-4 h-4 text-amber-600 rounded"
+                  />
+                  <span className="font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
+                    <ShieldAlert size={14} />
+                    Mise à jour obligatoire (Bloquer les versions antérieures)
+                  </span>
+                </label>
               </div>
+
+              {/* Force update inputs if enabled */}
+              {newAppReleaseForm.forceUpdate && (
+                <div className="p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 rounded-2xl space-y-3 animate-fadeIn">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block font-bold text-amber-900 dark:text-amber-300 text-xs mb-1">
+                        Build Code Minimal Requis
+                      </label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={newAppReleaseForm.minSupportedVersionCode}
+                        onChange={e => setNewAppReleaseForm({ ...newAppReleaseForm, minSupportedVersionCode: Number(e.target.value) || 1 })}
+                        className="w-full bg-white dark:bg-gray-900 border border-amber-300 dark:border-amber-700 rounded-xl px-3 py-2 text-xs font-mono font-bold text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-amber-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block font-bold text-amber-900 dark:text-amber-300 text-xs mb-1">
+                        Lien APK de téléchargement
+                      </label>
+                      <input
+                        type="url"
+                        value={newAppReleaseForm.apkDownloadUrl}
+                        onChange={e => setNewAppReleaseForm({ ...newAppReleaseForm, apkDownloadUrl: e.target.value })}
+                        placeholder="https://.../AsrarHub.apk"
+                        className="w-full bg-white dark:bg-gray-900 border border-amber-300 dark:border-amber-700 rounded-xl px-3 py-2 text-xs font-mono text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-amber-500"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Footer */}
@@ -2964,6 +3111,167 @@ export const AdminVersionControlManager: React.FC = () => {
                 {isSavingAppRelease ? 'Suppression...' : 'Supprimer Définitivement'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* MODAL 10: STUDIO 10 CARTES VIDÉO DE MISE À JOUR (PREVIEW & TESTEUR)       */}
+      {/* ========================================================================= */}
+      {showVideoStudioModal && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 overflow-y-auto">
+          <div className="bg-gray-900 border border-gray-800 w-full max-w-5xl rounded-3xl shadow-2xl overflow-hidden my-auto flex flex-col max-h-[92vh]">
+            
+            {/* Header */}
+            <div className="p-4 sm:p-5 bg-gradient-to-r from-purple-900/80 via-gray-900 to-indigo-900/80 border-b border-gray-800 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-purple-500/20 text-purple-400 rounded-2xl border border-purple-500/30">
+                  <Film size={22} className="animate-pulse" />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-black text-white flex items-center gap-2">
+                    <span>Studio des 10 Cartes Vidéo Spéciales</span>
+                    <span className="text-[10px] bg-purple-500 text-white font-bold px-2 py-0.5 rounded-full uppercase">
+                      Live Preview
+                    </span>
+                  </h3>
+                  <p className="text-xs text-gray-400">
+                    Testez en direct les 10 rendus vidéo, particules, boutons dynamiques et liens APK
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowVideoStudioModal(false)}
+                className="p-2 text-gray-400 hover:text-white rounded-full hover:bg-white/10 transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Studio Workspace Layout */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 p-4 sm:p-6 overflow-y-auto">
+              
+              {/* Left Column: 10 Presets List Selector */}
+              <div className="lg:col-span-5 space-y-3">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-bold uppercase tracking-wider text-gray-400">
+                    Sélectionner un Modèle (10 Disponibles)
+                  </span>
+                  <span className="text-xs font-mono font-bold text-amber-400">
+                    {VIDEO_CARD_PRESETS.find(p => p.id === studioSelectedPresetId)?.index}/10
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-2 max-h-[50vh] lg:max-h-[55vh] overflow-y-auto pr-1">
+                  {VIDEO_CARD_PRESETS.map((preset) => {
+                    const isSelected = preset.id === studioSelectedPresetId;
+                    return (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        onClick={() => setStudioSelectedPresetId(preset.id)}
+                        className={`w-full text-left p-3 rounded-2xl border transition-all flex items-center justify-between gap-3 cursor-pointer ${
+                          isSelected
+                            ? 'bg-purple-950/40 border-purple-500 shadow-md ring-1 ring-purple-500 text-white'
+                            : 'bg-gray-800/60 border-gray-700/60 hover:bg-gray-800 text-gray-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <span 
+                            className="w-3.5 h-3.5 rounded-full shrink-0 shadow-sm"
+                            style={{ backgroundColor: preset.accentColor }}
+                          />
+                          <div>
+                            <div className="text-xs font-bold">
+                              {preset.index}. {preset.titleFr}
+                            </div>
+                            <div className="text-[10px] text-gray-400 font-mono">
+                              {preset.particleType} • {preset.badgeFr}
+                            </div>
+                          </div>
+                        </div>
+
+                        {isSelected && (
+                          <span className="text-[10px] font-bold text-purple-400 bg-purple-500/20 px-2 py-0.5 rounded-md">
+                            Actif
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Studio Parameters */}
+                <div className="bg-gray-800/70 p-3.5 rounded-2xl border border-gray-700 space-y-2.5 mt-3">
+                  <span className="text-[11px] font-bold text-gray-300 uppercase tracking-wider block">
+                    Paramètres de Test :
+                  </span>
+
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs text-gray-400">Langue d'affichage :</span>
+                    <div className="flex items-center gap-1">
+                      {(['fr', 'en', 'ha'] as const).map(l => (
+                        <button
+                          key={l}
+                          type="button"
+                          onClick={() => setStudioActiveLang(l)}
+                          className={`px-2 py-0.5 rounded-lg text-xs font-bold ${
+                            studioActiveLang === l ? 'bg-purple-600 text-white' : 'bg-gray-700 text-gray-300'
+                          }`}
+                        >
+                          {l.toUpperCase()}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-xs text-gray-400">Mode Forcé :</span>
+                    <button
+                      type="button"
+                      onClick={() => setStudioIsForceUpdateTest(!studioIsForceUpdateTest)}
+                      className={`px-2.5 py-1 rounded-lg text-xs font-bold ${
+                        studioIsForceUpdateTest ? 'bg-amber-600 text-white' : 'bg-gray-700 text-gray-300'
+                      }`}
+                    >
+                      {studioIsForceUpdateTest ? 'Mise à jour Forcée' : 'Notification Simple'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: Live Dynamic Video Card Canvas Render */}
+              <div className="lg:col-span-7 flex flex-col items-center justify-center bg-gray-950 p-3 sm:p-5 rounded-3xl border border-gray-800">
+                <div className="w-full max-w-md">
+                  <UpdateVideoCard
+                    preset={getPresetById(studioSelectedPresetId)}
+                    targetRelease={appReleases[0] || APP_VERSION_CONFIG.releases[0]}
+                    currentInstalledVersion="1.1.1"
+                    isForceUpdate={studioIsForceUpdateTest}
+                    secondaryActionLabel="Test Purge Cache & Relance"
+                    onSecondaryAction={() => alert("Simulation : Purge de cache SWR effectuée !")}
+                  />
+                </div>
+              </div>
+
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 bg-gray-900 border-t border-gray-800 flex items-center justify-between">
+              <span className="text-xs text-gray-400 font-mono">
+                ✨ 10 Modèles Vidéo optimisés pour WebView Android APK et Desktop
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowVideoStudioModal(false)}
+                className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition-all"
+              >
+                Fermer le Studio
+              </button>
+            </div>
+
           </div>
         </div>
       )}

@@ -1,18 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { motion, AnimatePresence } from 'motion/react';
-import { ArrowLeft } from 'lucide-react';
+import { AnimatePresence } from 'motion/react';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useFeatures } from '../contexts/FeatureContext';
 import { executeStepByStepBack, getCurrentRoutePath } from '../utils/backNavigation';
+import { getFloatingBackButtonConfig } from '../utils/floatingBackButtonConfig';
+import { FloatingBackButtonRenderer } from './FloatingBackButtonRenderer';
 
 export const FloatingBackButton: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useLanguage();
+  const { featureToggles } = useFeatures();
   const [hasActiveOverlay, setHasActiveOverlay] = useState(false);
   const lastBackPressTimeRef = useRef<number>(0);
 
   const activePath = getCurrentRoutePath();
+  const config = getFloatingBackButtonConfig(featureToggles);
 
   // Track internal route stack in sessionStorage step-by-step
   useEffect(() => {
@@ -52,6 +56,10 @@ export const FloatingBackButton: React.FC = () => {
     return () => observer.disconnect();
   }, []);
 
+  if (config.enabled === false) {
+    return null;
+  }
+
   const isMainPageName = activePath === '/' || activePath === '/user/dashboard';
   const isVisible = !isMainPageName || hasActiveOverlay || Boolean(location.search) || Boolean(location.hash);
 
@@ -62,20 +70,14 @@ export const FloatingBackButton: React.FC = () => {
   return (
     <AnimatePresence>
       {isVisible && (
-        <motion.button
-          initial={{ opacity: 0, x: -20, scale: 0.8 }}
-          animate={{ opacity: 1, x: 0, scale: 1 }}
-          exit={{ opacity: 0, x: -20, scale: 0.8 }}
-          whileHover={{ scale: 1.1, x: 5 }}
-          whileTap={{ scale: 0.9 }}
+        <FloatingBackButtonRenderer
+          config={config}
           onClick={handleBack}
-          className="fixed left-4 bottom-24 z-[100] w-14 h-14 flex items-center justify-center bg-black/30 dark:bg-black/50 backdrop-blur-md border border-white/30 dark:border-white/20 rounded-full shadow-2xl text-white transition-all hover:bg-black/40 dark:hover:bg-black/70 hover:scale-110 active:scale-95"
-          aria-label={t('back', 'Retour')}
-        >
-          <ArrowLeft size={28} className="text-yellow-400 drop-shadow-md animate-pulse" />
-        </motion.button>
+          ariaLabel={t('back', 'Retour')}
+        />
       )}
     </AnimatePresence>
   );
 };
+
 

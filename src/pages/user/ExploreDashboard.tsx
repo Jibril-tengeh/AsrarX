@@ -17,6 +17,7 @@ import { AuthModal } from '../../components/AuthModal';
 import { INITIAL_DEFAULT_ARTICLES } from '../../data/defaultArticles';
 import { fetchArticlesFromRest } from '../../lib/firestoreRest';
 import { isPubliclyVisibleArticle, getTranslatedArticleTitle, getTranslatedArticleHook, sortArticlesInOrder } from '../../lib/articleUtils';
+import { ArticleService } from '../../services/ArticleService';
 import { mergeWithLocalArticles, saveCachedArticlesList, combineWithDefaultArticles, getCachedArticlesListAsync } from '../../lib/localArticles';
 import { SWR_EVENT_NAME } from '../../lib/swrArticleCache';
 import { useBackButton } from '../../hooks/useBackButton';
@@ -93,12 +94,12 @@ export const ExploreDashboard: React.FC = () => {
       if (cached) {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const valid = parsed.filter((art: any) => art && art.id && !String(art.id).startsWith('default_art_') && isPubliclyVisibleArticle(art.status));
-          if (valid.length > 0) return mergeWithLocalArticles(valid);
+          const valid = parsed.filter((art: any) => art && art.id && !String(art.id).startsWith('default_art_') && ArticleService.isPublished(art));
+          if (valid.length > 0) return mergeWithLocalArticles(valid, false);
         }
       }
     } catch (e) {}
-    return mergeWithLocalArticles([]);
+    return mergeWithLocalArticles([], false);
   });
   const { isOffline, isOnline } = useNetworkStatus();
   const [showOfflineModal, setShowOfflineModal] = useState(false);
@@ -177,8 +178,8 @@ export const ExploreDashboard: React.FC = () => {
         }
       }
       const allAccumulated = Array.from(exploreArticleMap.values());
-      const merged = mergeWithLocalArticles(allAccumulated);
-      const publicOnly = isAdmin ? merged : merged.filter((art: any) => isPublishedStatus(art.status));
+      const merged = mergeWithLocalArticles(allAccumulated, isAdmin);
+      const publicOnly = isAdmin ? merged : merged.filter((art: any) => ArticleService.isPublished(art));
       const sorted = sortArticlesInOrder(publicOnly, true);
       if (sorted.length > 0) {
         setArticles(sorted);

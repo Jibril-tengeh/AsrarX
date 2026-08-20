@@ -292,13 +292,13 @@ export const saveLocalCustomArticle = (article: LocalArticle): LocalArticle[] =>
         }).catch(() => {});
       }).catch(() => {});
 
-      // Broadcast live update event so user dashboards update immediately without refresh
+      // Broadcast live update event so user dashboards update immediately without refresh (strictly public published articles only)
       try {
-        const mergedAll = mergeWithLocalArticles(updated);
+        const mergedPublic = mergeWithLocalArticles(updated, false);
         const customEvent = new CustomEvent('asrarhub_swr_articles_updated', {
           detail: {
-            articles: mergedAll,
-            count: mergedAll.length,
+            articles: mergedPublic,
+            count: mergedPublic.length,
             timestamp: Date.now(),
             source: 'save_local_auto'
           }
@@ -306,8 +306,8 @@ export const saveLocalCustomArticle = (article: LocalArticle): LocalArticle[] =>
         window.dispatchEvent(customEvent);
         window.dispatchEvent(new CustomEvent('asrarhub_articles_revalidated', {
           detail: {
-            articles: mergedAll,
-            count: mergedAll.length,
+            articles: mergedPublic,
+            count: mergedPublic.length,
             timestamp: Date.now(),
             source: 'save_local_auto'
           }
@@ -353,19 +353,19 @@ export const deleteLocalCustomArticle = (articleId: string): void => {
 
       // Broadcast removal event
       try {
-        const mergedAll = mergeWithLocalArticles(filtered);
+        const mergedPublic = mergeWithLocalArticles(filtered, false);
         window.dispatchEvent(new CustomEvent('asrarhub_swr_articles_updated', {
           detail: {
-            articles: mergedAll,
-            count: mergedAll.length,
+            articles: mergedPublic,
+            count: mergedPublic.length,
             timestamp: Date.now(),
             source: 'delete_local_auto'
           }
         }));
         window.dispatchEvent(new CustomEvent('asrarhub_articles_revalidated', {
           detail: {
-            articles: mergedAll,
-            count: mergedAll.length,
+            articles: mergedPublic,
+            count: mergedPublic.length,
             timestamp: Date.now(),
             source: 'delete_local_auto'
           }
@@ -426,29 +426,60 @@ export const clearAllLocalCustomArticles = (): void => {
 
 /**
  * Updates all cached article lists with the modified/new article.
+ * Admin cache keeps all (including Drafts and Archives).
+ * Public caches only include strictly published articles.
  */
 export const updateCachedArticleLists = (article: LocalArticle): void => {
   if (article && article.id) {
     removeDeletedArticleId(article.id);
   }
-  const keys = [CACHED_ADMIN_ARTICLES_KEY, CACHED_ARTICLES_LIST_KEY, CACHED_EXPLORE_ARTICLES_KEY];
-  keys.forEach(key => {
+  const isPublic = isPubliclyVisibleArticle(article);
+
+  // 1. Admin cache (contains Drafts, Archives, and Published)
+  try {
+    const raw = localStorage.getItem(CACHED_ADMIN_ARTICLES_KEY);
+    if (raw) {
+      const list: any[] = JSON.parse(raw);
+      if (Array.isArray(list)) {
+        const idx = list.findIndex(item => item.id === article.id);
+        let nextList: any[];
+        if (idx >= 0) {
+          nextList = [...list];
+          nextList[idx] = { ...nextList[idx], ...article };
+        } else {
+          nextList = [article, ...list];
+        }
+        saveCachedArticlesList(CACHED_ADMIN_ARTICLES_KEY, nextList);
+      }
+    } else {
+      saveCachedArticlesList(CACHED_ADMIN_ARTICLES_KEY, [article]);
+    }
+  } catch (e) {}
+
+  // 2. Public caches (User Dashboard & Explore Feed):
+  // If not published (Draft or Archived), remove it immediately from public caches
+  const publicKeys = [CACHED_ARTICLES_LIST_KEY, CACHED_EXPLORE_ARTICLES_KEY];
+  publicKeys.forEach(key => {
     try {
       const raw = localStorage.getItem(key);
       if (raw) {
         const list: any[] = JSON.parse(raw);
         if (Array.isArray(list)) {
-          const idx = list.findIndex(item => item.id === article.id);
           let nextList: any[];
-          if (idx >= 0) {
-            nextList = [...list];
-            nextList[idx] = { ...nextList[idx], ...article };
+          if (!isPublic) {
+            nextList = list.filter(item => item && item.id !== article.id);
           } else {
-            nextList = [article, ...list];
+            const idx = list.findIndex(item => item.id === article.id);
+            if (idx >= 0) {
+              nextList = [...list];
+              nextList[idx] = { ...nextList[idx], ...article };
+            } else {
+              nextList = [article, ...list];
+            }
           }
-          saveCachedArticlesList(key, nextList);
+          saveCachedArticlesList(key, nextList.filter(it => isPubliclyVisibleArticle(it)));
         }
-      } else {
+      } else if (isPublic) {
         saveCachedArticlesList(key, [article]);
       }
     } catch (e) {}
@@ -496,9 +527,12 @@ export const removeFromCachedLists = (articleId: string): void => {
 
 /**
  * Merges remote articles (from Firestore or REST or defaults) with local custom articles.
- * Local custom articles take precedence if updated or if not present in remote list.
+ * @param allowNonPublished When false (default for public app views), strictly filters out Drafts and Archives.
  */
-export const mergeWithLocalArticles = <T extends { id: string }>(remoteArticles: T[]): T[] => {
+export const mergeWithLocalArticles = <T extends { id: string }>(
+  remoteArticles: T[],
+  allowNonPublished: boolean = false
+): T[] => {
   const localCustom = getLocalCustomArticles();
   const hideMock = isMockArticlesHidden();
   const deletedIds = getDeletedArticleIds();
@@ -510,6 +544,9 @@ export const mergeWithLocalArticles = <T extends { id: string }>(remoteArticles:
   if (deletedIds.size > 0) {
     filteredRemote = filteredRemote.filter(a => a && a.id && !deletedIds.has(a.id));
   }
+  if (!allowNonPublished) {
+    filteredRemote = filteredRemote.filter(a => isPubliclyVisibleArticle(a));
+  }
 
   const resultMap = new Map<string, any>();
 
@@ -518,6 +555,7 @@ export const mergeWithLocalArticles = <T extends { id: string }>(remoteArticles:
     if (art && art.id) {
       if (hideMock && String(art.id).startsWith('default_art_')) continue;
       if (deletedIds.has(art.id)) continue;
+      if (!allowNonPublished && !isPubliclyVisibleArticle(art)) continue;
       resultMap.set(art.id, art);
     }
   }
@@ -527,6 +565,7 @@ export const mergeWithLocalArticles = <T extends { id: string }>(remoteArticles:
     if (localArt && localArt.id) {
       if (hideMock && String(localArt.id).startsWith('default_art_')) continue;
       if (deletedIds.has(localArt.id)) continue;
+      if (!allowNonPublished && !isPubliclyVisibleArticle(localArt)) continue;
       if (!resultMap.has(localArt.id)) {
         resultMap.set(localArt.id, localArt);
       } else {
@@ -536,6 +575,9 @@ export const mergeWithLocalArticles = <T extends { id: string }>(remoteArticles:
     }
   }
 
-  const merged = Array.from(resultMap.values());
+  let merged = Array.from(resultMap.values());
+  if (!allowNonPublished) {
+    merged = merged.filter(a => isPubliclyVisibleArticle(a));
+  }
   return sortArticlesInOrder(merged, true) as T[];
 };

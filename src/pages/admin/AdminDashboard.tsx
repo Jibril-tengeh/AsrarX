@@ -8,7 +8,7 @@ import {
   Eye, Image as ImageIcon, Crop as CropIcon, X, Upload, ShoppingBag, CreditCard,
   Clock, CheckCircle, CheckCircle2, XCircle, Globe, Grid, List, Mail, Phone, Lock, Unlock, Bell, BellOff, Sparkles, Star, Share, ShieldAlert, Download, DownloadCloud, Crown, UserPlus, UserCheck, Award,
   FolderOpen, Copy, Radio, Type, Sliders, Maximize2, Activity, Terminal, RefreshCw, RotateCcw, AlertTriangle, Moon, ChevronDown, ChevronUp, Layout,
-  AlignLeft, AlignCenter, AlignRight, AlignJustify, Camera, ShieldBan, Tag, Ticket, Check
+  AlignLeft, AlignCenter, AlignRight, AlignJustify, Camera, ShieldBan, Tag, Ticket, Check, ArrowLeft, Calculator
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 
@@ -79,6 +79,7 @@ import {
 } from '../../components/admin/UserQuickStatusPicker';
 import { AdminSecurityAlertsManager } from '../../components/admin/AdminSecurityAlertsManager';
 import { BrandingSettings } from '../../components/admin/BrandingSettings';
+import { FloatingBackButtonSettings } from '../../components/admin/FloatingBackButtonSettings';
 import { PROMO_HOURS_OPTIONS, PROMO_HOURLY_OPTIONS, getPromoHourMessage, getPromoHourLabel, PromoDurationHours } from '../../utils/promoConfig';
 
 const LayoutSelector = ({ value, onChange, activeColor = 'emerald' }: { value: string, onChange: (val: string) => void, activeColor?: string }) => {
@@ -153,7 +154,7 @@ const LayoutSelector = ({ value, onChange, activeColor = 'emerald' }: { value: s
   );
 };
 
-type AdminTab = 'overview' | 'branding' | 'version_control' | 'promo_codes' | 'security' | 'support' | 'users' | 'payments' | 'community' | 'features' | 'reciters' | 'ruqyah' | 'content' | 'notifications' | 'settings' | 'articles' | 'store' | 'grand_oaths' | 'categories' | 'seals' | 'book_covers' | 'media_storage';
+type AdminTab = 'overview' | 'branding' | 'floating_button' | 'version_control' | 'promo_codes' | 'security' | 'support' | 'users' | 'payments' | 'community' | 'features' | 'reciters' | 'ruqyah' | 'content' | 'notifications' | 'settings' | 'articles' | 'store' | 'grand_oaths' | 'categories' | 'seals' | 'book_covers' | 'media_storage';
 
 interface Article {
   id: string;
@@ -238,6 +239,7 @@ export const SYSTEM_FEATURES = [
   { id: 'alert_repeated_tool_access', label: "Alerte Tentatives Répétées d'Accès aux Outils Restreints", desc: "Détecte et alerte l'administrateur en temps réel lorsqu'un utilisateur tente d'accéder à plusieurs reprises à des outils bloqués, en maintenance ou réservés aux membres Premium", category: 'system' },
   { id: 'inspector', label: 'Inspecteur de diagnostic', desc: 'Active ou désactive le bouton rouge Inspecteur / Débogueur de mise en page dans le coin inférieur droit', category: 'system' },
   { id: 'quick_widget', label: 'Widget Rapide AsrarHub (AsrarQuickWidget)', desc: 'Widget de recherche rapide, favoris et raccourcis d\'exploration sur le tableau de bord (désactivé par défaut)', category: 'system' },
+  { id: 'direct_abjad_widget', label: 'Widget Calculateur Abjad Direct', desc: 'Widget interactif de calcul Abjad direct et décomposition élémentaire sur le Tableau de bord des Outils', category: 'system' },
   { id: 'explore', label: 'Explore', desc: 'Dashboard explorer (Secrets, Lexique, etc)', category: 'system' },
   { id: 'store', label: 'Store (Boutique)', desc: 'Boutique en ligne', category: 'system' },
   { id: 'community', label: 'Communauté', desc: 'Forum communautaire', category: 'system' },
@@ -258,6 +260,86 @@ export const ALL_USER_TOOLS = [
     category: t.level || 'advanced'
   }))
 ];
+
+const AdminSectionCollapseContext = React.createContext<{
+  collapsedSections: Record<string, boolean>;
+  toggleCollapse: (id: string) => void;
+}>({
+  collapsedSections: {},
+  toggleCollapse: () => {}
+});
+
+const CollapsibleAdminCard: React.FC<{
+  id: string;
+  title: string;
+  subtitle?: string;
+  description?: string;
+  icon?: React.ReactNode;
+  badge?: React.ReactNode;
+  children: React.ReactNode;
+  headerRight?: React.ReactNode;
+}> = ({
+  id,
+  title,
+  subtitle,
+  description,
+  icon,
+  badge,
+  children,
+  headerRight
+}) => {
+  const { collapsedSections, toggleCollapse } = React.useContext(AdminSectionCollapseContext);
+  const isCollapsed = collapsedSections[id] !== false; // Default is true (closed)
+  const cardSubtitle = subtitle || description;
+
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden transition-all">
+      <div
+        onClick={() => toggleCollapse(id)}
+        className="w-full p-5 sm:p-6 text-left flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-gray-50/80 dark:hover:bg-gray-750 transition-colors cursor-pointer select-none"
+      >
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          {icon && <div className="shrink-0 text-emerald-600 dark:text-emerald-400">{icon}</div>}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h3 className="font-bold text-gray-900 dark:text-white text-base sm:text-lg truncate">
+                {title}
+              </h3>
+              {badge}
+            </div>
+            {cardSubtitle && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-1">
+                {cardSubtitle}
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 shrink-0 self-end sm:self-auto">
+          {headerRight}
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs font-bold hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+            <span>{isCollapsed ? 'Déplier' : 'Replier'}</span>
+            {isCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+          </div>
+        </div>
+      </div>
+
+      {!isCollapsed && (
+        <AnimatePresence>
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="p-5 sm:p-6 border-t border-gray-100 dark:border-gray-700 space-y-6"
+          >
+            {children}
+          </motion.div>
+        </AnimatePresence>
+      )}
+    </div>
+  );
+};
 
 export const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -312,10 +394,6 @@ export const AdminDashboard: React.FC = () => {
     }));
   };
 
-  const isAdminSectionCollapsed = (sectionId: string) => {
-    return collapsedAdminSections[sectionId] !== false; // Default is true (closed)
-  };
-
   const setAllAdminSectionsCollapse = (collapsed: boolean) => {
     const sectionIds = [
       'feat_user_tools', 'feat_shams_buni', 'feat_sacred_books', 'feat_downloads', 'feat_admin_access', 'feat_payment_methods', 'feat_sharing_options',
@@ -326,77 +404,6 @@ export const AdminDashboard: React.FC = () => {
       newState[id] = collapsed;
     });
     setCollapsedAdminSections(newState);
-  };
-
-  const CollapsibleAdminCard = ({
-    id,
-    title,
-    subtitle,
-    description,
-    icon,
-    badge,
-    children,
-    headerRight
-  }: {
-    id: string;
-    title: string;
-    subtitle?: string;
-    description?: string;
-    icon?: React.ReactNode;
-    badge?: React.ReactNode;
-    children: React.ReactNode;
-    headerRight?: React.ReactNode;
-  }) => {
-    const isCollapsed = isAdminSectionCollapsed(id);
-    const cardSubtitle = subtitle || description;
-
-    return (
-      <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden transition-all">
-        <div
-          onClick={() => toggleAdminSectionCollapse(id)}
-          className="w-full p-5 sm:p-6 text-left flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-gray-50/80 dark:hover:bg-gray-750 transition-colors cursor-pointer select-none"
-        >
-          <div className="flex items-center gap-3 min-w-0 flex-1">
-            {icon && <div className="shrink-0 text-emerald-600 dark:text-emerald-400">{icon}</div>}
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="font-bold text-gray-900 dark:text-white text-base sm:text-lg truncate">
-                  {title}
-                </h3>
-                {badge}
-              </div>
-              {cardSubtitle && (
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-1">
-                  {cardSubtitle}
-                </p>
-              )}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 shrink-0 self-end sm:self-auto">
-            {headerRight}
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs font-bold hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
-              <span>{isCollapsed ? 'Déplier' : 'Replier'}</span>
-              {isCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
-            </div>
-          </div>
-        </div>
-
-        {!isCollapsed && (
-          <AnimatePresence>
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="p-5 sm:p-6 border-t border-gray-100 dark:border-gray-700 space-y-6"
-            >
-              {children}
-            </motion.div>
-          </AnimatePresence>
-        )}
-      </div>
-    );
   };
 
   // Assistant Prompts State
@@ -791,6 +798,7 @@ export const AdminDashboard: React.FC = () => {
   const [articles, setArticles] = useState<Article[]>([]);
   const [editingArticle, setEditingArticle] = useState<Article | null>(null);
   const [articleFormKey, setArticleFormKey] = useState(0);
+  const [isSeedingArticles, setIsSeedingArticles] = useState(false);
   const [newArticle, setNewArticle] = useState<Partial<Article>>({
     title: '', hook: '', thumbnail: '', content: '', type: 'richtext', status: 'Published', category: '', subCategory: ''
   });
@@ -1163,7 +1171,7 @@ export const AdminDashboard: React.FC = () => {
     fetchArticlesFromRest().then(restDocs => {
       if (Array.isArray(restDocs) && restDocs.length > 0) {
         const list = restDocs.map(doc => ({ id: doc.id, ...doc } as any));
-        const merged = mergeWithLocalArticles(list);
+        const merged = mergeWithLocalArticles(list, true);
         console.log(`[Admin REST Articles] Loaded ${merged.length} articles via REST API!`);
         setArticles(merged as any);
         saveCachedArticlesList('asrarhub_cached_admin_articles', merged);
@@ -1175,7 +1183,7 @@ export const AdminDashboard: React.FC = () => {
       if (!snapshot.empty) {
         list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Article));
       }
-      let merged = mergeWithLocalArticles(list);
+      let merged = mergeWithLocalArticles(list, true);
       setArticles(merged as any);
       saveCachedArticlesList('asrarhub_cached_admin_articles', merged);
     }, (error) => {
@@ -1185,7 +1193,7 @@ export const AdminDashboard: React.FC = () => {
         if (restDocs && restDocs.length > 0) {
           list = restDocs.map(doc => ({ id: doc.id, ...doc } as any));
         }
-        let merged = mergeWithLocalArticles(list);
+        let merged = mergeWithLocalArticles(list, true);
         setArticles(merged as any);
       });
     });
@@ -2539,7 +2547,7 @@ export const AdminDashboard: React.FC = () => {
       saveLocalCustomArticle(articlePayload as any);
 
       // 2. Instantly update React state
-      setArticles(prev => mergeWithLocalArticles([articlePayload as any, ...prev]));
+      setArticles(prev => mergeWithLocalArticles([articlePayload as any, ...prev], true));
 
       // 3. Persist to Firestore asynchronously
       try {
@@ -2657,8 +2665,6 @@ export const AdminDashboard: React.FC = () => {
     showToast("Les articles de démonstration ont été masqués et supprimés.");
   };
 
-  const [isSeedingArticles, setIsSeedingArticles] = useState(false);
-
   const handleSeedDefaultArticles = async () => {
     if (isSeedingArticles) return;
     setIsSeedingArticles(true);
@@ -2740,7 +2746,8 @@ export const AdminDashboard: React.FC = () => {
   const renderTabNavigation = () => {
     const tabs = [
       { id: 'overview', label: 'Vue d\'ensemble', icon: LayoutDashboard },
-      { id: 'branding', label: 'Logo & Chargement', icon: Sparkles },
+      { id: 'branding', label: 'Logo, Icône & Chargement', icon: Sparkles },
+      { id: 'floating_button', label: 'Bouton Retour Flottant', icon: ArrowLeft },
       { id: 'version_control', label: 'Versions de l\'App (app_versions)', icon: Sparkles },
       { id: 'promo_codes', label: 'Gestion des Codes Promo', icon: Tag, badge: promoCodes.length || undefined },
       { id: 'security', label: 'Sécurité & Alertes', icon: ShieldAlert, badge: securityAlerts.length || undefined },
@@ -5764,6 +5771,74 @@ export const AdminDashboard: React.FC = () => {
           </div>
         </CollapsibleAdminCard>
 
+        {/* 6.5. WIDGETS & MODULES DU TABLEAU DE BORD DES OUTILS */}
+        <CollapsibleAdminCard
+          id="feat_dashboard_widgets"
+          title="Widgets & Modules du Tableau de Bord des Outils"
+          subtitle="Activez ou désactivez les widgets interactifs intégrés sur le tableau de bord des outils."
+          icon={<Calculator size={22} className="text-emerald-500" />}
+          badge={
+            <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
+              featureToggles.direct_abjad_widget !== false && featureToggles.tool_direct_abjad_widget !== 'inactive' && featureToggles.tool_direct_abjad_widget !== 'disabled'
+                ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300'
+                : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
+            }`}>
+              {featureToggles.direct_abjad_widget !== false && featureToggles.tool_direct_abjad_widget !== 'inactive' && featureToggles.tool_direct_abjad_widget !== 'disabled'
+                ? 'Widget Abjad : ACTIF'
+                : 'Widget Abjad : DÉSACTIVÉ'}
+            </span>
+          }
+        >
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h4 className="font-bold text-gray-950 dark:text-white text-sm">Widget Calculateur Abjad Direct</h4>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    featureToggles.direct_abjad_widget !== false && featureToggles.tool_direct_abjad_widget !== 'inactive' && featureToggles.tool_direct_abjad_widget !== 'disabled'
+                      ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300'
+                      : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
+                  }`}>
+                    {featureToggles.direct_abjad_widget !== false && featureToggles.tool_direct_abjad_widget !== 'inactive' && featureToggles.tool_direct_abjad_widget !== 'disabled' ? 'ACTIVÉ' : 'DÉSACTIVÉ'}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Affiche le widget interactif de calcul Abjad (Wasat, Kabir, Saghir) et résonance élémentaire au sommet de la page des Outils Utilisateur.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const isCurrentlyEnabled = featureToggles.direct_abjad_widget !== false && featureToggles.tool_direct_abjad_widget !== 'inactive' && featureToggles.tool_direct_abjad_widget !== 'disabled';
+                  const nextValue = !isCurrentlyEnabled;
+                  const nextStatus = nextValue ? 'active' : 'inactive';
+                  handleToggleFeature('direct_abjad_widget', nextValue, 'Widget Calculateur Abjad Direct');
+                  handleToggleFeature('tool_direct_abjad_widget', nextStatus, 'Widget Calculateur Abjad Direct');
+                  showToast(
+                    nextValue 
+                      ? 'Widget Abjad Direct ACTIVÉ sur le tableau de bord des outils' 
+                      : 'Widget Abjad Direct DÉSACTIVÉ sur le tableau de bord des outils',
+                    nextValue ? 'success' : 'info'
+                  );
+                }}
+                className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors shrink-0 cursor-pointer ${
+                  featureToggles.direct_abjad_widget !== false && featureToggles.tool_direct_abjad_widget !== 'inactive' && featureToggles.tool_direct_abjad_widget !== 'disabled'
+                    ? 'bg-emerald-500' 
+                    : 'bg-gray-300 dark:bg-gray-600'
+                }`}
+              >
+                <div
+                  className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${
+                    featureToggles.direct_abjad_widget !== false && featureToggles.tool_direct_abjad_widget !== 'inactive' && featureToggles.tool_direct_abjad_widget !== 'disabled'
+                      ? 'translate-x-6' 
+                      : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+          </div>
+        </CollapsibleAdminCard>
+
         {/* 7. PROTECTION ANTI-CAPTURE D'ÉCRAN & SÉCURITÉ MATÉRIELLE (FLAG_SECURE) */}
         {(() => {
           const screenMode = getScreenshotProtectionMode(featureToggles);
@@ -8255,11 +8330,11 @@ export const AdminDashboard: React.FC = () => {
         <h3 className="font-bold text-gray-900 dark:text-white mb-6">Paramètres Globaux</h3>
         
         <div className="space-y-4 mb-8">
-          {/* Logo & Écran de Chargement */}
+          {/* Logo, Icône & Écran de Chargement */}
           <CollapsibleAdminCard
             id="set_branding"
-            title="Personnalisation du Logo & Écran de Chargement"
-            description="Personnalisez le logo de l'application, l'icône favicon et l'écran de chargement (Splash / Loading Screen) avec aperçu en temps réel."
+            title="Personnalisation du Logo, de l'Icône & de l'Écran de Chargement"
+            description="Personnalisez le logo principal, l'icône de l'application (PWA, mobile & favicon) et l'écran de chargement avec aperçu en temps réel."
             icon={<Sparkles size={18} className="text-amber-500 shrink-0" />}
             headerRight={
               <button
@@ -8276,6 +8351,29 @@ export const AdminDashboard: React.FC = () => {
             }
           >
             <BrandingSettings onShowToast={showToast} />
+          </CollapsibleAdminCard>
+
+          {/* Bouton Retour Flottant (Activation, 22 Couleurs Translucides, 21 Formes & Modes) */}
+          <CollapsibleAdminCard
+            id="set_floating_back_button"
+            title="Bouton Retour Flottant (Activation, 22 Couleurs Translucides, 21 Formes & Modes)"
+            description="Activez ou désactivez l'icône de retour flottante à l'écran. Personnalisez parmi 22 couleurs de verre dépoli, 21 formes géométriques et spirituelles, et les modes d'animation."
+            icon={<ArrowLeft size={18} className="text-emerald-500 shrink-0" />}
+            headerRight={
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveTab('floating_button');
+                }}
+                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+              >
+                <ArrowLeft size={14} />
+                <span>Ouvrir l'Éditeur Dédié</span>
+              </button>
+            }
+          >
+            <FloatingBackButtonSettings featureToggles={featureToggles} onShowToast={showToast} />
           </CollapsibleAdminCard>
 
           {/* Admin Configurable Spiritual Points System Settings */}
@@ -11648,7 +11746,8 @@ export const AdminDashboard: React.FC = () => {
   };
 
   return (
-    <div className="admin-dashboard admin-ui w-full max-w-5xl mx-auto p-4 sm:p-6 lg:p-8 safe-area-pt pb-24 border-none min-h-screen overflow-x-hidden">
+    <AdminSectionCollapseContext.Provider value={{ collapsedSections: collapsedAdminSections, toggleCollapse: toggleAdminSectionCollapse }}>
+      <div className="admin-dashboard admin-ui w-full max-w-5xl mx-auto p-4 sm:p-6 lg:p-8 safe-area-pt pb-24 border-none min-h-screen overflow-x-hidden">
       {renderArticlePreviewModal()}
       {renderBlockingToolsModal()}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
@@ -11800,6 +11899,7 @@ export const AdminDashboard: React.FC = () => {
       >
         {activeTab === 'overview' && renderOverview()}
         {activeTab === 'branding' && <BrandingSettings onShowToast={showToast} />}
+        {activeTab === 'floating_button' && <FloatingBackButtonSettings featureToggles={featureToggles} onShowToast={showToast} />}
         {activeTab === 'version_control' && <AdminVersionControlManager />}
         {activeTab === 'security' && (
           <AdminSecurityAlertsManager
@@ -12562,6 +12662,7 @@ export const AdminDashboard: React.FC = () => {
         />
       )}
     </div>
+    </AdminSectionCollapseContext.Provider>
   );
 };
 

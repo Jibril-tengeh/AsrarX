@@ -69,7 +69,11 @@ export const ZikrLevelsCalculator: React.FC = () => {
       <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm mb-6 space-y-4">
         <div>
           <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300 mb-2">
-            {language === 'fr' ? 'Nom Divin, Verset ou Intention' : 'Divine Name or Phrase'}
+            {language === 'fr'
+              ? 'Nom Divin, Verset ou Intention (en arabe)'
+              : language === 'ha'
+              ? 'Sunan Allah, Aya ko Niyya (da Larabci)'
+              : 'Divine Name, Verse or Intention (in Arabic)'}
           </label>
           <input
             type="text"
@@ -82,11 +86,15 @@ export const ZikrLevelsCalculator: React.FC = () => {
 
         <div className="grid grid-cols-2 gap-3 text-xs">
           <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 flex justify-between">
-            <span className="text-gray-500">Nombre de Lettres (Hurūf):</span>
+            <span className="text-gray-500">
+              {language === 'fr' ? 'Nombre de Lettres (Hurūf):' : language === 'ha' ? 'Yawan Haruffa (Huruf):' : 'Letter Count (Hurūf):'}
+            </span>
             <span className="font-bold text-gray-900 dark:text-white font-mono">{letterCount}</span>
           </div>
           <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 flex justify-between">
-            <span className="text-gray-500">Poids Zimām (Adad):</span>
+            <span className="text-gray-500">
+              {language === 'fr' ? 'Poids Zimām (Adad):' : language === 'ha' ? 'Nauyin Zimam (Adad):' : 'Zimam Weight (Adad):'}
+            </span>
             <span className="font-bold text-indigo-600 dark:text-indigo-400 font-mono">{wasatVal}</span>
           </div>
         </div>
@@ -104,7 +112,13 @@ export const ZikrLevelsCalculator: React.FC = () => {
               {kabirVal}
             </h3>
             <p className="text-xs text-gray-600 dark:text-gray-300 mt-2">
-              <strong>Grand Mode Multiplicatif</strong> ({wasatVal} × {letterCount} lettres). Recommandé pour les grands besoins et intentions majeures.
+              {language === 'fr' ? (
+                <><strong>Grand Mode Multiplicatif</strong> ({wasatVal} × {letterCount} lettres). Recommandé pour les grands besoins et intentions majeures.</>
+              ) : language === 'ha' ? (
+                <><strong>Babban Tsarin Ninkawa</strong> ({wasatVal} × haruffa {letterCount}). Don manyan bukatun ruhi da nasara.</>
+              ) : (
+                <><strong>Grand Multiplicative Mode</strong> ({wasatVal} × {letterCount} letters). Recommended for major needs and high intentions.</>
+              )}
             </p>
           </div>
           <button
@@ -112,7 +126,9 @@ export const ZikrLevelsCalculator: React.FC = () => {
             className="w-full py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-md"
           >
             <Activity className="w-3.5 h-3.5" />
-            <span>Lancer sur Tasbih ({kabirVal})</span>
+            <span>
+              {language === 'fr' ? `Lancer sur Tasbih (${kabirVal})` : language === 'ha' ? `Aika zuwa Carbi (${kabirVal})` : `Launch on Tasbih (${kabirVal})`}
+            </span>
           </button>
         </div>
 
@@ -126,7 +142,13 @@ export const ZikrLevelsCalculator: React.FC = () => {
               {wasatVal}
             </h3>
             <p className="text-xs text-gray-600 dark:text-gray-300 mt-2">
-              <strong>Mode Standard Intermédiaire</strong> (Valeur Abjad directe). Équilibre parfait pour la pratique hebdomadaire.
+              {language === 'fr' ? (
+                <><strong>Mode Standard Intermédiaire</strong> (Valeur Abjad directe). Équilibre parfait pour la pratique hebdomadaire.</>
+              ) : language === 'ha' ? (
+                <><strong>Tsarin Tsaka-tsaki</strong> (Lissafin Abjad kai tsaye). Daidaito don aikin mako.</>
+              ) : (
+                <><strong>Standard Intermediate Mode</strong> (Direct Abjad value). Perfect balance for weekly practice.</>
+              )}
             </p>
           </div>
           <button
@@ -134,7 +156,9 @@ export const ZikrLevelsCalculator: React.FC = () => {
             className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-md"
           >
             <Activity className="w-3.5 h-3.5" />
-            <span>Lancer sur Tasbih ({wasatVal})</span>
+            <span>
+              {language === 'fr' ? `Lancer sur Tasbih (${wasatVal})` : language === 'ha' ? `Aika zuwa Carbi (${wasatVal})` : `Launch on Tasbih (${wasatVal})`}
+            </span>
           </button>
         </div>
 
@@ -148,7 +172,13 @@ export const ZikrLevelsCalculator: React.FC = () => {
               {saghirVal}
             </h3>
             <p className="text-xs text-gray-600 dark:text-gray-300 mt-2">
-              <strong>Mode Réduit / Racine Spirituelle</strong> (Somme numérique unique). Idéal pour le zikr quotidien rapide après la prière.
+              {language === 'fr' ? (
+                <><strong>Mode Réduit / Racine Spirituelle</strong> (Somme numérique unique). Idéal pour le zikr quotidien rapide après la prière.</>
+              ) : language === 'ha' ? (
+                <><strong>Gajeren Tsari / Tushen Ruhi</strong> (Hadakar lambobi guda). Don gajeren zikiri bayan kowace sallah.</>
+              ) : (
+                <><strong>Reduced Mode / Spiritual Root</strong> (Single-digit digital root). Ideal for quick daily dhikr after prayer.</>
+              )}
             </p>
           </div>
           <button
@@ -156,7 +186,9 @@ export const ZikrLevelsCalculator: React.FC = () => {
             className="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-md"
           >
             <Activity className="w-3.5 h-3.5" />
-            <span>Lancer sur Tasbih ({saghirVal})</span>
+            <span>
+              {language === 'fr' ? `Lancer sur Tasbih (${saghirVal})` : language === 'ha' ? `Aika zuwa Carbi (${saghirVal})` : `Launch on Tasbih (${saghirVal})`}
+            </span>
           </button>
         </div>
       </div>

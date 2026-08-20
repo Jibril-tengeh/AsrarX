@@ -42,6 +42,7 @@ import { checkFeatureAccess } from './utils/featureAccess';
 import { recordUnauthorizedToolAttempt } from './utils/securityAlerts';
 import { appVersionService } from './services/appVersionService';
 import { NewVersionBannerModal } from './components/NewVersionBannerModal';
+import { ForceUpdateModal } from './components/ForceUpdateModal';
 import { clear as clearIdbKeyval } from 'idb-keyval';
 
 declare const __APP_VERSION__: string;
@@ -226,6 +227,8 @@ const AdvancedRamlProcessing = lazyWithRetry(() => import('./pages/user/tools/Ad
 const TraditionalDivinationQurah = lazyWithRetry(() => import('./pages/user/tools/TraditionalDivinationQurah'));
 const IbnArabiSeals = lazyWithRetry(() => import('./pages/user/tools/IbnArabiSeals').then(m => ({ default: m.IbnArabiSeals })));
 const AdvancedGeomancy = lazyWithRetry(() => import('./pages/user/tools/AdvancedGeomancy').then(m => ({ default: m.AdvancedGeomancy })));
+const ComparativeTraditionsHub = lazyWithRetry(() => import('./pages/user/tools/ComparativeTraditionsHub').then(m => ({ default: m.ComparativeTraditionsHub })));
+const LunarCyclesCalculator = lazyWithRetry(() => import('./pages/user/tools/LunarCyclesCalculator').then(m => ({ default: m.LunarCyclesCalculator })));
 const Store = lazyWithRetry(() => import('./pages/user/Store'));
 const FaqPage = lazyWithRetry(() => import('./pages/FaqPage'));
 
@@ -1054,6 +1057,7 @@ export default function App() {
                   <Route path="/tools/elemental" element={<ElementalAnalyzer />} />
                   <Route path="/tools/geomancy" element={<Geomancy />} />
                   <Route path="/tools/letters" element={<ScienceOfLetters />} />
+                  <Route path="/tools/science-of-letters" element={<ScienceOfLetters />} />
                   <Route path="/tools/personal-wird" element={<PersonalWird />} />
                   <Route path="/tools/daily-dhikr" element={<DailyDhikrTracker />} />
                   <Route path="/tools/lunar-mansions" element={<LunarMansions />} />
@@ -1134,6 +1138,22 @@ export default function App() {
                   <Route path="/tools/geomancie-avancee" element={<AdvancedGeomancy />} />
                   <Route path="/tools/ifa" element={<AdvancedGeomancy />} />
                   <Route path="/tools/sikidy" element={<AdvancedGeomancy />} />
+                  
+                  {/* Comparative Traditions & Advanced Astroscience */}
+                  <Route path="/tools/comparative-traditions" element={<ComparativeTraditionsHub />} />
+                  <Route path="/tools/comparative" element={<ComparativeTraditionsHub />} />
+                  <Route path="/tools/traditions-comparees" element={<ComparativeTraditionsHub />} />
+                  <Route path="/tools/nakshatras" element={<ComparativeTraditionsHub />} />
+                  <Route path="/tools/feng-shui" element={<ComparativeTraditionsHub />} />
+                  <Route path="/tools/tasyir" element={<ComparativeTraditionsHub />} />
+                  <Route path="/tools/synastry" element={<ComparativeTraditionsHub />} />
+                  <Route path="/tools/sacred-plants" element={<ComparativeTraditionsHub />} />
+                  
+                  {/* Lunar Cycles & Moon Phases Calculator */}
+                  <Route path="/tools/lunar-cycles" element={<LunarCyclesCalculator />} />
+                  <Route path="/tools/lunar-phases" element={<LunarCyclesCalculator />} />
+                  <Route path="/tools/cycles-lunaires" element={<LunarCyclesCalculator />} />
+                  <Route path="/tools/moon-phases" element={<LunarCyclesCalculator />} />
                   
                   {/* Additional Protected Routes */}
                   <Route path="/explore" element={<ExploreDashboard />} />
@@ -1260,6 +1280,12 @@ export default function App() {
           currentVersion={versionUpgradeData.currentVersion}
           previousVersion={versionUpgradeData.previousVersion}
           onDismiss={() => setShowVersionUpgradeModal(false)}
+        />
+
+        {/* Mandatory / Force Update Modal for APK & Web users */}
+        <ForceUpdateModal
+          currentInstalledVersion={versionUpgradeData.currentVersion}
+          currentInstalledVersionCode={appVersionService.getCurrentVersionCode()}
         />
       </div>
     </MaintenanceOverlay>

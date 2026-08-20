@@ -1,11 +1,9 @@
-import React, { useEffect, useState } from 'react';
-import { db } from '../lib/firebase';
-import { doc, onSnapshot } from 'firebase/firestore';
+import React from 'react';
 import { Settings, ShieldAlert } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useFeatures } from '../contexts/FeatureContext';
 import { motion } from 'motion/react';
-import { useLocation, Navigate, useNavigate } from 'react-router-dom';
-import { AsrarHubLoader } from './AsrarHubLoader';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 
 const toolNames: { [key: string]: string } = {
@@ -67,60 +65,10 @@ export const MaintenanceOverlay: React.FC<{ children: React.ReactNode }> = ({ ch
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
+  const { featureToggles } = useFeatures();
 
-  const [isMaintenance, setIsMaintenance] = useState(() => {
-    try {
-      return localStorage.getItem('asrarhub_global_maintenance') === 'true';
-    } catch {
-      return false;
-    }
-  });
-
-  const [features, setFeatures] = useState<any>(() => {
-    try {
-      const saved = localStorage.getItem('asrarhub_feature_toggles');
-      return saved ? JSON.parse(saved) : {};
-    } catch {
-      return {};
-    }
-  });
-
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    // Timeout to prevent infinite loading state if Firestore is unreachable or offline
-    const timeoutId = setTimeout(() => {
-      setLoading(false);
-    }, 1500);
-
-    const unsub = onSnapshot(doc(db, 'settings', 'features'), (docSnap) => {
-      clearTimeout(timeoutId);
-      if (docSnap.exists()) {
-        const data = docSnap.data() || {};
-        setFeatures(data);
-        const isMaint = data?.globalMaintenanceMode === true;
-        setIsMaintenance(isMaint);
-        try {
-          localStorage.setItem('asrarhub_global_maintenance', isMaint ? 'true' : 'false');
-          localStorage.setItem('asrarhub_feature_toggles', JSON.stringify(data));
-        } catch {}
-      }
-      setLoading(false);
-    }, (error) => {
-      clearTimeout(timeoutId);
-      console.error("Error reading maintenance mode", error);
-      setLoading(false);
-    });
-
-    return () => {
-      clearTimeout(timeoutId);
-      unsub();
-    };
-  }, []);
-
-  if (loading && isMaintenance) {
-    return <AsrarHubLoader size="fullscreen" />;
-  }
+  const features = featureToggles || {};
+  const isMaintenance = features?.globalMaintenanceMode === true;
 
   const isAdmin = user?.role === 'admin' || user?.email === 'sbireino@gmail.com' || sessionStorage.getItem('admin_bypass') === 'true';
 

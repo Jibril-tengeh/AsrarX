@@ -38,6 +38,7 @@ import { doc, onSnapshot } from "firebase/firestore";
 import { db, isAutoSaveEnabled } from "../../lib/firebase";
 import { tools } from "../../data/tools";
 import { CelestialRecommendations } from "../../components/CelestialRecommendations";
+import { DirectAbjadWidget } from "../../components/DirectAbjadWidget";
 import { CalculationHistoryModal } from "../../components/CalculationHistoryModal";
 import { getCalculationHistory } from "../../utils/calculationHistory";
 import { checkFeatureAccess } from "../../utils/featureAccess";
@@ -455,6 +456,15 @@ export const ToolsDashboard: React.FC = () => {
           </div>
         );
       })()}
+
+      {/* Direct Abjad Calculator Widget (Admin controllable) */}
+      {featureToggles.direct_abjad_widget !== false &&
+        featureToggles.tool_direct_abjad_widget !== 'inactive' &&
+        featureToggles.tool_direct_abjad_widget !== 'disabled' && (
+          <div className="mb-8">
+            <DirectAbjadWidget />
+          </div>
+      )}
 
       <div className="mb-8">
         <CelestialRecommendations />

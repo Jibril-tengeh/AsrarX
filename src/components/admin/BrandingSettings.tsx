@@ -3,7 +3,8 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   Upload, Image as ImageIcon, Sparkles, RefreshCw, CheckCircle2, 
   AlertTriangle, Trash2, Eye, ShieldCheck, Download, Smartphone, 
-  Monitor, Play, Maximize2, X, Sun, Moon, Info, Layout, Check
+  Monitor, Play, Maximize2, X, Sun, Moon, Info, Layout, Check,
+  AppWindow, Globe, Layers, Bell, MessageSquare, Compass, Settings
 } from 'lucide-react';
 import { useAppBranding, AppBranding } from '../../contexts/BrandingContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -27,16 +28,19 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
   // Local editing state for Live Preview before saving
   const [draftBranding, setDraftBranding] = useState<AppBranding>(branding);
   const [logoDimensions, setLogoDimensions] = useState<{ width: number; height: number } | null>(null);
+  const [iconDimensions, setIconDimensions] = useState<{ width: number; height: number } | null>(null);
   const [loadingImgDimensions, setLoadingImgDimensions] = useState<{ width: number; height: number } | null>(null);
 
   const [isSaving, setIsSaving] = useState(false);
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
   const [fullscreenLoaderPreview, setFullscreenLoaderPreview] = useState(false);
   const [previewThemeMode, setPreviewThemeMode] = useState<'light' | 'dark'>('dark');
-  const [useLogoAsFavicon, setUseLogoAsFavicon] = useState(true);
+  const [previewActiveTab, setPreviewActiveTab] = useState<'all' | 'header' | 'appIcon' | 'splash' | 'browser'>('all');
+  const [useIconAsFavicon, setUseIconAsFavicon] = useState(true);
 
   // File input refs
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const iconInputRef = useRef<HTMLInputElement>(null);
   const loadingImgInputRef = useRef<HTMLInputElement>(null);
   const faviconInputRef = useRef<HTMLInputElement>(null);
 
@@ -46,12 +50,15 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
     if (branding.appLogo) {
       getImageDimensions(branding.appLogo).then(setLogoDimensions);
     }
+    if (branding.appIcon) {
+      getImageDimensions(branding.appIcon).then(setIconDimensions);
+    }
     if (branding.loadingScreenImage) {
       getImageDimensions(branding.loadingScreenImage).then(setLoadingImgDimensions);
     }
   }, [branding]);
 
-  // Handle Logo Upload
+  // Handle Logo Upload (Horizontal / Header)
   const handleLogoUpload = async (file: File) => {
     const validation = validateBrandingFile(file);
     if (!validation.isValid) {
@@ -66,13 +73,37 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
 
       setDraftBranding(prev => ({
         ...prev,
-        appLogo: base64,
-        faviconUrl: useLogoAsFavicon ? base64 : prev.faviconUrl
+        appLogo: base64
       }));
 
-      onShowToast?.(`Logo "${file.name}" (${validation.fileDetails?.sizeFormatted}) prêt pour l'aperçu !`, 'success');
+      onShowToast?.(`Logo principal "${file.name}" (${validation.fileDetails?.sizeFormatted}) prêt pour l'aperçu !`, 'success');
     } catch (err: any) {
-      onShowToast?.(err?.message || "Erreur de traitement de l'image", 'error');
+      onShowToast?.(err?.message || "Erreur de traitement du logo", 'error');
+    }
+  };
+
+  // Handle App Icon Upload (Square 1:1, PWA, Mobile & Favicon)
+  const handleIconUpload = async (file: File) => {
+    const validation = validateBrandingFile(file);
+    if (!validation.isValid) {
+      onShowToast?.(validation.error || 'Fichier invalide', 'error');
+      return;
+    }
+
+    try {
+      const base64 = await convertFileToBase64(file);
+      const dims = await getImageDimensions(base64);
+      setIconDimensions(dims);
+
+      setDraftBranding(prev => ({
+        ...prev,
+        appIcon: base64,
+        faviconUrl: useIconAsFavicon ? base64 : prev.faviconUrl
+      }));
+
+      onShowToast?.(`Icône d'application "${file.name}" (${validation.fileDetails?.sizeFormatted}) prête pour l'aperçu !`, 'success');
+    } catch (err: any) {
+      onShowToast?.(err?.message || "Erreur de traitement de l'icône", 'error');
     }
   };
 
@@ -100,7 +131,7 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
     }
   };
 
-  // Handle Favicon Upload
+  // Handle Custom Favicon Upload
   const handleFaviconUpload = async (file: File) => {
     const validation = validateBrandingFile(file);
     if (!validation.isValid) {
@@ -114,8 +145,8 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
         ...prev,
         faviconUrl: base64
       }));
-      setUseLogoAsFavicon(false);
-      onShowToast?.(`Favicon "${file.name}" importée avec succès !`, 'success');
+      setUseIconAsFavicon(false);
+      onShowToast?.(`Favicon spécifique "${file.name}" importée avec succès !`, 'success');
     } catch (err: any) {
       onShowToast?.(err?.message || "Erreur lors de l'import de la favicon", 'error');
     }
@@ -132,6 +163,14 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
     e.stopPropagation();
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       handleLogoUpload(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleDropIcon = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleIconUpload(e.dataTransfer.files[0]);
     }
   };
 
@@ -152,7 +191,7 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
         isEnabled: draftBranding.isEnabled !== undefined ? draftBranding.isEnabled : true
       }, user?.email || 'admin@asrarhub.com');
 
-      onShowToast?.("Apparence & Branding mis à jour et déployés en temps réel avec succès !", 'success');
+      onShowToast?.("Apparence, Logo & Icône déployés en temps réel avec succès !", 'success');
     } catch (error: any) {
       console.error("Save branding error:", error);
       onShowToast?.(`Erreur de sauvegarde : ${error?.message || "Erreur inconnue"}`, 'error');
@@ -167,6 +206,7 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
       await resetBranding();
       setDraftBranding({
         appLogo: '',
+        appIcon: '',
         loadingScreenImage: '',
         loadingText: 'AsrarHub',
         loadingAnimationType: 'pulse',
@@ -174,10 +214,11 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
         isEnabled: true
       });
       setLogoDimensions(null);
+      setIconDimensions(null);
       setLoadingImgDimensions(null);
       setIsResetConfirmOpen(false);
-      onShowToast?.("Les logos et l'écran de chargement ont été réinitialisés aux valeurs par défaut !", 'success');
-    } catch (error: any) {
+      onShowToast?.("Tous les logos, icônes et le loader ont été réinitialisés aux valeurs par défaut !", 'success');
+    } catch (error) {
       onShowToast?.("Erreur lors de la réinitialisation.", 'error');
     }
   };
@@ -209,10 +250,14 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
 
   const hasUnsavedChanges = 
     draftBranding.appLogo !== (branding.appLogo || '') ||
+    draftBranding.appIcon !== (branding.appIcon || '') ||
     draftBranding.loadingScreenImage !== (branding.loadingScreenImage || '') ||
     draftBranding.loadingText !== (branding.loadingText || 'AsrarHub') ||
     draftBranding.loadingAnimationType !== (branding.loadingAnimationType || 'pulse') ||
     draftBranding.faviconUrl !== (branding.faviconUrl || '');
+
+  // Current active icon to display
+  const activeIconSrc = draftBranding.appIcon || draftBranding.faviconUrl || draftBranding.appLogo;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
@@ -227,11 +272,11 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
               <span>Personnalisation Dynamique en Temps Réel</span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-              Logo & Écran de Chargement
+              Logo, Icône & Écran de Chargement
             </h2>
             <p className="text-sm text-emerald-100/80 mt-1.5 max-w-2xl leading-relaxed">
-              Modifiez le logo principal de l'application et l'image d'animation du Loading Screen. 
-              Les images importées sont optimisées en Base64, synchronisées sur Firestore et reflétées instantanément sur le Web, PWA et mobile sans recompiler l'application.
+              Personnalisez le logo principal, l'icône officielle de l'application (PWA, mobile et favicon) et l'animation du Loading Screen. 
+              Les images importées sont synchronisées instantanément via Firestore et reflétées sur tous les appareils sans recompiler l'application.
             </p>
           </div>
 
@@ -261,7 +306,7 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
             <div className="flex items-center gap-1.5">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
               <span className="font-semibold text-white">Statut : </span>
-              <span>{branding.appLogo || branding.loadingScreenImage ? 'Logo personnalisé actif' : 'Logos AsrarHub par défaut'}</span>
+              <span>{branding.appLogo || branding.appIcon || branding.loadingScreenImage ? 'Branding personnalisé actif' : 'Branding AsrarHub officiel'}</span>
             </div>
             {branding.updatedAt ? (
               <div>
@@ -287,7 +332,7 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
         {/* LEFT COLUMN: Upload & Configuration Form (7 cols) */}
         <div className="lg:col-span-7 space-y-6">
 
-          {/* 1. App Logo Upload Card */}
+          {/* 1. App Logo Upload Card (Horizontal Banner / Header) */}
           <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
             <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-4 mb-5">
               <div className="flex items-center gap-3">
@@ -299,7 +344,7 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
                     1. Logo Principal de l'Application
                   </h3>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                    Affiché dans la barre de navigation, le header et les en-têtes officiels
+                    Affiché dans la barre de navigation supérieure, le header et les en-têtes officiels
                   </p>
                 </div>
               </div>
@@ -308,7 +353,7 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
                 <button
                   type="button"
                   onClick={() => {
-                    setDraftBranding(prev => ({ ...prev, appLogo: '', faviconUrl: useLogoAsFavicon ? '' : prev.faviconUrl }));
+                    setDraftBranding(prev => ({ ...prev, appLogo: '' }));
                     setLogoDimensions(null);
                     onShowToast?.("Logo personnalisé supprimé du brouillon.", "info");
                   }}
@@ -321,7 +366,7 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
               )}
             </div>
 
-            {/* Drag & Drop Area */}
+            {/* Drag & Drop Area for Logo */}
             <div
               onDragOver={handleDragOver}
               onDrop={handleDropLogo}
@@ -378,37 +423,141 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
                       Cliquez pour sélectionner le logo ou glissez-déposez le fichier ici
                     </p>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      Formats recommandés : <strong>SVG, PNG transparent, WebP</strong> (Max {MAX_BRANDING_FILE_SIZE_MB} Mo)
+                      Formats recommandés : <strong>SVG, PNG transparent, WebP</strong> (Format horizontal, Max {MAX_BRANDING_FILE_SIZE_MB} Mo)
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 2. App Icon Upload Card (Square 1:1, PWA, Favicon & Mobile) */}
+          <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+            <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-4 mb-5">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 rounded-2xl border border-blue-200/50 dark:border-blue-800/40">
+                  <Smartphone size={20} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-gray-900 dark:text-white text-base">
+                      2. Icône de l'Application (App Icon, PWA & Favicon)
+                    </h3>
+                    <span className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 text-[10px] font-extrabold uppercase">
+                      Format 1:1 Carré
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    Utilisée pour l'icône de l'application sur smartphone (PWA / iOS / Android), la favicon du navigateur et les badges
+                  </p>
+                </div>
+              </div>
+
+              {draftBranding.appIcon && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDraftBranding(prev => ({ ...prev, appIcon: '', faviconUrl: useIconAsFavicon ? '' : prev.faviconUrl }));
+                    setIconDimensions(null);
+                    onShowToast?.("Icône personnalisée supprimée du brouillon.", "info");
+                  }}
+                  className="p-2 hover:bg-red-50 dark:hover:bg-red-950/30 text-red-500 rounded-xl transition-colors text-xs font-bold flex items-center gap-1 cursor-pointer"
+                  title="Supprimer cette icône et revenir à l'icône par défaut"
+                >
+                  <Trash2 size={15} />
+                  <span>Effacer</span>
+                </button>
+              )}
+            </div>
+
+            {/* Drag & Drop Area for Icon */}
+            <div
+              onDragOver={handleDragOver}
+              onDrop={handleDropIcon}
+              onClick={() => iconInputRef.current?.click()}
+              className={`border-2 border-dashed rounded-3xl p-6 text-center cursor-pointer transition-all ${
+                draftBranding.appIcon
+                  ? 'border-blue-300 dark:border-blue-700/60 bg-blue-50/20 dark:bg-blue-950/10 hover:border-blue-500'
+                  : 'border-gray-200 dark:border-gray-700 hover:border-blue-500 bg-gray-50/50 dark:bg-gray-850 hover:bg-blue-50/10'
+              }`}
+            >
+              <input
+                type="file"
+                ref={iconInputRef}
+                accept="image/png,image/svg+xml,image/jpeg,image/webp,image/x-icon"
+                className="hidden"
+                onChange={(e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    handleIconUpload(e.target.files[0]);
+                  }
+                }}
+              />
+
+              {draftBranding.appIcon ? (
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-6 py-2">
+                  <div className="w-20 h-20 p-2 bg-slate-900 rounded-2xl shadow-md border border-gray-700 flex items-center justify-center overflow-hidden">
+                    <img
+                      src={draftBranding.appIcon}
+                      alt="Icône Aperçu"
+                      className="w-full h-full object-contain rounded-xl"
+                    />
+                  </div>
+                  <div className="text-left space-y-1">
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/60 text-blue-800 dark:text-blue-300 text-[11px] font-bold">
+                      <CheckCircle2 size={12} />
+                      <span>Icône d'application personnalisée chargée</span>
+                    </div>
+                    {iconDimensions && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+                        Dimensions : {iconDimensions.width} x {iconDimensions.height} px
+                      </p>
+                    )}
+                    <p className="text-[11px] text-blue-600 dark:text-blue-400 font-semibold">
+                      Cliquez ou glissez une autre image carrée pour remplacer
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="py-4 space-y-3">
+                  <div className="w-14 h-14 mx-auto rounded-2xl bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 flex items-center justify-center shadow-inner">
+                    <AppWindow size={26} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-gray-800 dark:text-gray-200">
+                      Cliquez pour sélectionner l'icône carrée ou glissez-déposez le fichier ici
+                    </p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      Idéal : <strong>Format Carré 1:1</strong> (Ex: 512x512 ou 192x192 px, PNG transparent, SVG, WebP)
                     </p>
                   </div>
                 </div>
               )}
             </div>
 
-            {/* Favicon option checkbox */}
-            <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700/60 flex items-center justify-between">
+            {/* Favicon Sync Checkbox & Separate Upload */}
+            <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
               <label className="flex items-center gap-2.5 cursor-pointer text-xs font-semibold text-gray-700 dark:text-gray-300 select-none">
                 <input
                   type="checkbox"
-                  checked={useLogoAsFavicon}
+                  checked={useIconAsFavicon}
                   onChange={(e) => {
-                    setUseLogoAsFavicon(e.target.checked);
-                    if (e.target.checked && draftBranding.appLogo) {
-                      setDraftBranding(prev => ({ ...prev, faviconUrl: prev.appLogo }));
+                    setUseIconAsFavicon(e.target.checked);
+                    if (e.target.checked && draftBranding.appIcon) {
+                      setDraftBranding(prev => ({ ...prev, faviconUrl: prev.appIcon }));
                     }
                   }}
-                  className="rounded text-emerald-600 focus:ring-emerald-500 w-4 h-4"
+                  className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4"
                 />
-                <span>Utiliser automatiquement ce logo comme icône d'onglet de navigateur (Favicon)</span>
+                <span>Utiliser automatiquement cette icône comme Favicon de l'onglet de navigateur</span>
               </label>
 
-              {!useLogoAsFavicon && (
+              {!useIconAsFavicon && (
                 <button
                   type="button"
                   onClick={() => faviconInputRef.current?.click()}
-                  className="text-xs text-emerald-600 hover:text-emerald-700 font-bold underline cursor-pointer"
+                  className="text-xs text-blue-600 hover:text-blue-700 font-bold underline cursor-pointer"
                 >
-                  Uploader une favicon spécifique
+                  Uploader un fichier .ico spécifique
                 </button>
               )}
               <input
@@ -425,16 +574,16 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
             </div>
           </div>
 
-          {/* 2. Loading Screen & Animation Card */}
+          {/* 3. Loading Screen & Animation Card */}
           <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
             <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-4 mb-5">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 rounded-2xl border border-amber-200/50 dark:border-amber-800/40">
-                  <Smartphone size={20} />
+                  <Sparkles size={20} />
                 </div>
                 <div>
                   <h3 className="font-bold text-gray-900 dark:text-white text-base">
-                    2. Image & Animation du Loading Screen (Splash)
+                    3. Image & Animation du Loading Screen (Splash)
                   </h3>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
                     Écran d'attente lors du démarrage de l'app, chargement de modules ou transitions
@@ -561,7 +710,7 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-5 bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700">
             <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
               <ShieldCheck size={16} className="text-emerald-500 shrink-0" />
-              <span>La publication met à jour Firestore et l'ensemble des appareils connectés.</span>
+              <span>La publication synchronise Firestore et met à jour tous les appareils connectés.</span>
             </div>
 
             <div className="flex items-center gap-3 w-full sm:w-auto">
@@ -614,7 +763,7 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
                   <h3 className="font-bold text-gray-900 dark:text-white text-base">
                     Aperçu en Direct (Live Preview)
                   </h3>
-                  <p className="text-[11px] text-gray-500">Rendu instantané des modifications</p>
+                  <p className="text-[11px] text-gray-500">Rendu instantané multi-supports</p>
                 </div>
               </div>
 
@@ -644,7 +793,10 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
               {/* Preview 1: Header Bar Simulation */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs font-bold text-gray-600 dark:text-gray-300">
-                  <span>Aperçu Barre de Navigation (Header)</span>
+                  <span className="flex items-center gap-1.5">
+                    <Layout size={13} className="text-emerald-500" />
+                    <span>Barre de Navigation (Header)</span>
+                  </span>
                   <span className="text-[10px] text-emerald-600 font-normal">Mode {previewThemeMode === 'dark' ? 'Sombre' : 'Clair'}</span>
                 </div>
 
@@ -677,10 +829,116 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
                 </div>
               </div>
 
-              {/* Preview 2: Mobile Loading Screen Simulation */}
+              {/* Preview 2: Mobile Home Screen / PWA App Icon Simulation */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-xs font-bold text-gray-600 dark:text-gray-300">
-                  <span>Aperçu Écran de Chargement (Splash Screen)</span>
+                  <span className="flex items-center gap-1.5">
+                    <Smartphone size={13} className="text-blue-500" />
+                    <span>Écran d'Accueil Mobile (Icône PWA)</span>
+                  </span>
+                  <span className="text-[10px] text-blue-500 font-medium">iOS & Android</span>
+                </div>
+
+                <div className="w-full bg-gradient-to-b from-slate-900 via-slate-850 to-indigo-950 rounded-2xl p-4 border border-slate-750 shadow-inner relative overflow-hidden">
+                  {/* Subtle simulated phone status bar */}
+                  <div className="flex items-center justify-between text-[10px] text-white/60 mb-4 px-1 font-mono">
+                    <span>9:41</span>
+                    <div className="flex items-center gap-1">
+                      <span>5G</span>
+                      <span>100%</span>
+                    </div>
+                  </div>
+
+                  {/* App Icon Grid simulation */}
+                  <div className="grid grid-cols-4 gap-3 text-center">
+                    {/* Simulated system icon 1 */}
+                    <div className="flex flex-col items-center gap-1 opacity-40">
+                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-green-400 to-green-600 flex items-center justify-center shadow-md text-white">
+                        <MessageSquare size={20} />
+                      </div>
+                      <span className="text-[9px] text-white/80 font-medium truncate w-full">Messages</span>
+                    </div>
+
+                    {/* TARGET ASRARHUB APP ICON */}
+                    <div className="flex flex-col items-center gap-1 relative group cursor-pointer">
+                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-600 via-teal-700 to-slate-900 p-1 flex items-center justify-center shadow-lg border border-emerald-400/40 relative overflow-hidden transition-transform group-hover:scale-105">
+                        {activeIconSrc ? (
+                          <img 
+                            src={activeIconSrc} 
+                            alt="App Icon Preview" 
+                            className="w-full h-full object-cover rounded-xl"
+                          />
+                        ) : (
+                          <div className="w-full h-full rounded-xl bg-gradient-to-br from-amber-400 to-emerald-600 flex items-center justify-center text-white font-extrabold text-lg shadow-inner">
+                            A
+                          </div>
+                        )}
+                        {/* Notification badge */}
+                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white rounded-full text-[9px] font-bold flex items-center justify-center border-2 border-slate-900 shadow">
+                          1
+                        </div>
+                      </div>
+                      <span className="text-[10px] text-white font-bold tracking-tight truncate w-full drop-shadow">
+                        AsrarHub
+                      </span>
+                    </div>
+
+                    {/* Simulated system icon 2 */}
+                    <div className="flex flex-col items-center gap-1 opacity-40">
+                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center shadow-md text-white">
+                        <Compass size={20} />
+                      </div>
+                      <span className="text-[9px] text-white/80 font-medium truncate w-full">Safari</span>
+                    </div>
+
+                    {/* Simulated system icon 3 */}
+                    <div className="flex flex-col items-center gap-1 opacity-40">
+                      <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-slate-600 to-slate-800 flex items-center justify-center shadow-md text-white">
+                        <Settings size={20} />
+                      </div>
+                      <span className="text-[9px] text-white/80 font-medium truncate w-full">Réglages</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Preview 3: Browser Tab & Favicon Simulation */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs font-bold text-gray-600 dark:text-gray-300">
+                  <span className="flex items-center gap-1.5">
+                    <Globe size={13} className="text-teal-500" />
+                    <span>Onglet Navigateur (Favicon)</span>
+                  </span>
+                </div>
+                
+                <div className="bg-gray-100 dark:bg-gray-900 rounded-xl p-2 border border-gray-200 dark:border-gray-750">
+                  <div className="inline-flex items-center gap-2 bg-white dark:bg-gray-800 px-3 py-1.5 rounded-lg border border-gray-200/80 dark:border-gray-700 shadow-xs max-w-full">
+                    {activeIconSrc ? (
+                      <img
+                        src={activeIconSrc}
+                        alt="Favicon"
+                        className="w-4 h-4 object-contain rounded-xs shrink-0"
+                      />
+                    ) : (
+                      <div className="w-4 h-4 rounded-full bg-amber-500 flex items-center justify-center text-[9px] text-white font-bold shrink-0">
+                        A
+                      </div>
+                    )}
+                    <span className="text-[11px] font-semibold text-gray-700 dark:text-gray-200 truncate">
+                      AsrarHub - Connaissance & Sagesse
+                    </span>
+                    <X size={12} className="text-gray-400 ml-1 shrink-0" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Preview 4: Mobile Loading Screen Simulation */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-xs font-bold text-gray-600 dark:text-gray-300">
+                  <span className="flex items-center gap-1.5">
+                    <Play size={13} className="text-amber-500" />
+                    <span>Écran de Chargement (Splash Screen)</span>
+                  </span>
                   <button
                     type="button"
                     onClick={triggerFullscreenPreview}
@@ -691,18 +949,18 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
                   </button>
                 </div>
 
-                <div className="w-full bg-slate-950 rounded-2xl p-6 flex flex-col items-center justify-center min-h-[220px] relative border border-slate-800 shadow-inner overflow-hidden select-none">
+                <div className="w-full bg-slate-950 rounded-2xl p-6 flex flex-col items-center justify-center min-h-[190px] relative border border-slate-800 shadow-inner overflow-hidden select-none">
                   {/* Subtle ambient glow */}
                   <div className="absolute inset-0 bg-radial from-emerald-500/10 via-transparent to-transparent pointer-events-none" />
 
                   {/* Loading Content */}
-                  <div className="relative z-10 flex flex-col items-center text-center gap-4">
+                  <div className="relative z-10 flex flex-col items-center text-center gap-3">
                     {draftBranding.loadingScreenImage ? (
-                      <div className="max-w-[140px] max-h-[100px] flex items-center justify-center">
+                      <div className="max-w-[140px] max-h-[90px] flex items-center justify-center">
                         <img
                           src={draftBranding.loadingScreenImage}
                           alt="Loading Preview"
-                          className={`max-h-24 max-w-full object-contain ${getAnimationClass(draftBranding.loadingAnimationType)}`}
+                          className={`max-h-20 max-w-full object-contain ${getAnimationClass(draftBranding.loadingAnimationType)}`}
                         />
                       </div>
                     ) : (
@@ -721,33 +979,6 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
                     <div className="w-32 h-1 bg-slate-800 rounded-full overflow-hidden mt-1">
                       <div className="w-full h-full bg-gradient-to-r from-emerald-500 to-amber-400 animate-[pulse_1.2s_infinite]" />
                     </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Preview 3: Browser Tab & Favicon Simulation */}
-              <div className="space-y-2">
-                <span className="text-xs font-bold text-gray-600 dark:text-gray-300">
-                  Aperçu Onglet Navigateur (Favicon)
-                </span>
-                
-                <div className="bg-gray-100 dark:bg-gray-900 rounded-xl p-2 border border-gray-200 dark:border-gray-750">
-                  <div className="inline-flex items-center gap-2 bg-white dark:bg-gray-800 px-3 py-1.5 rounded-lg border border-gray-200/80 dark:border-gray-700 shadow-xs max-w-full">
-                    {draftBranding.faviconUrl || draftBranding.appLogo ? (
-                      <img
-                        src={draftBranding.faviconUrl || draftBranding.appLogo}
-                        alt="Favicon"
-                        className="w-4 h-4 object-contain rounded-xs shrink-0"
-                      />
-                    ) : (
-                      <div className="w-4 h-4 rounded-full bg-amber-500 flex items-center justify-center text-[9px] text-white font-bold shrink-0">
-                        A
-                      </div>
-                    )}
-                    <span className="text-[11px] font-semibold text-gray-700 dark:text-gray-200 truncate">
-                      AsrarHub - Connaissance & Sagesse
-                    </span>
-                    <X size={12} className="text-gray-400 ml-1 shrink-0" />
                   </div>
                 </div>
               </div>
@@ -824,16 +1055,16 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
               </div>
               <div>
                 <h3 className="font-extrabold text-lg text-gray-900 dark:text-white">
-                  Réinitialiser les logos ?
+                  Réinitialiser les logos et icônes ?
                 </h3>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Cette action rétablira le logo vectoriel et le loader officiel par défaut.
+                  Cette action rétablira le logo vectoriel, l'icône officielle et le loader par défaut.
                 </p>
               </div>
             </div>
 
             <p className="text-xs text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-900/60 p-4 rounded-2xl border border-gray-200/60 dark:border-gray-700/60 mb-6">
-              Tous les utilisateurs retrouveront immédiatement les logos et animations par défaut d'AsrarHub.
+              Tous les utilisateurs retrouveront immédiatement les logos, icônes et animations par défaut d'AsrarHub.
             </p>
 
             <div className="flex items-center justify-end gap-3">

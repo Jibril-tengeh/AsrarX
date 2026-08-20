@@ -18,6 +18,10 @@ export interface FirestoreVersionDoc {
   titleHa?: string;
   isCurrent?: boolean;
   disabled?: boolean;
+  forceUpdate?: boolean;
+  minSupportedVersionCode?: number;
+  downloadUrl?: string;
+  apkDownloadUrl?: string;
   highlights: string[];
   highlightsEn?: string[];
   highlightsHa?: string[];
@@ -152,6 +156,10 @@ class AppVersionService {
       titleHa: data.titleHa || data.title,
       isCurrent: data.isCurrent ?? (data.version === this.getCurrentVersion()),
       disabled: data.disabled === true,
+      forceUpdate: !!data.forceUpdate,
+      minSupportedVersionCode: data.minSupportedVersionCode ? Number(data.minSupportedVersionCode) : undefined,
+      downloadUrl: data.downloadUrl || undefined,
+      apkDownloadUrl: data.apkDownloadUrl || undefined,
       highlights: Array.isArray(data.highlights) ? data.highlights : [],
       highlightsEn: Array.isArray(data.highlightsEn) ? data.highlightsEn : undefined,
       highlightsHa: Array.isArray(data.highlightsHa) ? data.highlightsHa : undefined,
@@ -253,9 +261,13 @@ class AppVersionService {
         highlights: Array.isArray(release.highlights) ? release.highlights : [],
         disabled: !!release.disabled,
         isCurrent: !!release.isCurrent,
+        forceUpdate: !!release.forceUpdate,
         updatedAt: new Date().toISOString()
       };
 
+      if (release.minSupportedVersionCode !== undefined) payload.minSupportedVersionCode = Number(release.minSupportedVersionCode);
+      if (release.downloadUrl) payload.downloadUrl = release.downloadUrl;
+      if (release.apkDownloadUrl) payload.apkDownloadUrl = release.apkDownloadUrl;
       if (release.releaseDateEn) payload.releaseDateEn = release.releaseDateEn;
       if (release.releaseDateHa) payload.releaseDateHa = release.releaseDateHa;
       if (release.titleEn) payload.titleEn = release.titleEn;

@@ -18,6 +18,7 @@ import {
   getFirestore, 
   initializeFirestore, 
   persistentLocalCache, 
+  persistentSingleTabManager,
   memoryLocalCache,
   enableNetwork,
   doc, 
@@ -64,21 +65,33 @@ const initFirestore = () => {
     return getFirestore(app);
   }
 
+  // In iframe sandboxes (like AI Studio preview), memoryLocalCache prevents
+  // IndexedDB multi-tab lease assertion failures (e.g. ID: da08 / c050).
+  if (isInIframe) {
+    try {
+      return initializeFirestore(app, {
+        experimentalAutoDetectLongPolling: true,
+        localCache: memoryLocalCache()
+      });
+    } catch {
+      return getFirestore(app);
+    }
+  }
+
   try {
-    console.log('[Firestore Init] Initializing Firestore with persistent local cache...');
     return initializeFirestore(app, {
       experimentalAutoDetectLongPolling: true,
-      localCache: persistentLocalCache()
+      localCache: persistentLocalCache({
+        tabManager: persistentSingleTabManager({ forceOwnership: true })
+      })
     });
   } catch (err1) {
     try {
-      console.warn('[Firestore Init] Persistent localCache init failed, falling back to memoryLocalCache:', err1);
       return initializeFirestore(app, {
         experimentalAutoDetectLongPolling: true,
         localCache: memoryLocalCache()
       });
     } catch (err2) {
-      console.warn('[Firestore Init] Defaulting to getFirestore:', err2);
       return getFirestore(app);
     }
   }

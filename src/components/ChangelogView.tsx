@@ -121,7 +121,7 @@ export const ChangelogView: React.FC<ChangelogViewProps> = ({
                 </span>
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                {t('changelog.subtitle', 'Historique synchronisé depuis la collection Firestore app_versions')}
+                {t('changelog.subtitle', 'Historique synchronisé et à jour des versions de l\'application')}
               </p>
             </div>
           </div>

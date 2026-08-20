@@ -3,7 +3,7 @@ import {
   Type, ArrowLeft, Moon, Star, Wind, Flame, Droplets, Mountain, Key, Shield, Sparkles, 
   BookOpen, Compass, Search, Filter, Volume2, CheckCircle2, ChevronRight, Copy, Check, Calculator, Clock, Layers, Heart, Grid
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { useAuth } from '../../../contexts/AuthContext';
 import { triggerProtectionModal } from '../../../components/ContentProtectionManager';
@@ -1374,6 +1374,8 @@ const scienceDict = {
 };
 
 export const ScienceOfLetters: React.FC = () => {
+  const [searchParams] = useSearchParams();
+  const initialQuery = searchParams.get('q') || '';
   const { t, language } = useLanguage();
   const dict = scienceDict[(language as 'fr' | 'en' | 'ha') || 'fr'] || scienceDict.fr;
   const { isPremium } = useAuth();
@@ -1382,10 +1384,10 @@ export const ScienceOfLetters: React.FC = () => {
   const [filterElement, setFilterElement] = useState<string>('Tous');
   const [filterNature, setFilterNature] = useState<string>('Tous');
   const [selectedMasterFilter, setSelectedMasterFilter] = useState<string>('Tous');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(initialQuery);
   
   // Custom Name Abjad Extractor State
-  const [inputName, setInputName] = useState('');
+  const [inputName, setInputName] = useState(initialQuery);
   const [extractedResult, setExtractedResult] = useState<any | null>(null);
 
   // Copy indicator & feature flag

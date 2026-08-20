@@ -609,4 +609,22 @@ export const tools: ToolItem[] = [
     path: "/tools/advanced-geomancy",
     level: "advanced",
   },
+  {
+    id: "comparative-traditions",
+    title: "Traditions Comparées & Astrologie Avancée",
+    description: "Nakshatras védiques vs Manazil, Dashas (120 ans), Comparateur 4 Zodiaques, Astrologie Chinoise & Wu Xing, Nombre Kua Feng Shui, Ba Gua 3x3, Progression Tasyir, Synastrie, Chakras vs Latâ'if et Plantes Sacrées.",
+    icon: Compass,
+    color: "from-amber-500 via-purple-600 to-indigo-900",
+    path: "/tools/comparative-traditions",
+    level: "advanced",
+  },
+  {
+    id: "lunar-cycles",
+    title: "Calculateur de Cycles Lunaires",
+    description: "Phases de la lune pour toute date, illumination, Manazil al-Qamar, position zodiacale et prescriptions spirituelles (Jalb, Kashf, Tathir).",
+    icon: Moon,
+    color: "from-indigo-600 via-purple-600 to-amber-500",
+    path: "/tools/lunar-cycles",
+    level: "simple",
+  },
 ];

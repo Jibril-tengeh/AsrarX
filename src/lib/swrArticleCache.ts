@@ -1,7 +1,8 @@
 import { db } from './firebase';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 import { fetchArticlesFromRest } from './firestoreRest';
 import { isPubliclyVisibleArticle, getTranslatedArticleTitle, getTranslatedArticleHook } from './articleUtils';
+import { ArticleService } from '../services/ArticleService';
 import { 
   CACHED_ARTICLES_LIST_KEY, 
   CACHED_EXPLORE_ARTICLES_KEY, 
@@ -30,7 +31,7 @@ let activeRevalidationPromise: Promise<any[]> | null = null;
 
 /**
  * 1. STALE PHASE: Instantly retrieves cached published articles from IndexedDB / localStorage.
- * Does not block on network.
+ * Does not block on network. Enforces strict published-only filter.
  */
 export async function getStalePublishedArticles(): Promise<any[]> {
   const deletedIds = getDeletedArticleIds();
@@ -39,9 +40,9 @@ export async function getStalePublishedArticles(): Promise<any[]> {
   try {
     const idbItems = await getOfflineData<any[]>(CACHED_ARTICLES_LIST_KEY);
     if (Array.isArray(idbItems) && idbItems.length > 0) {
-      const valid = idbItems.filter(a => a && a.id && !String(a.id).startsWith('default_art_') && !deletedIds.has(a.id) && isPubliclyVisibleArticle(a.status));
+      const valid = idbItems.filter(a => a && a.id && !String(a.id).startsWith('default_art_') && !deletedIds.has(a.id) && ArticleService.isPublished(a));
       if (valid.length > 0) {
-        return mergeWithLocalArticles(valid);
+        return mergeWithLocalArticles(valid, false);
       }
     }
   } catch (err) {
@@ -54,18 +55,19 @@ export async function getStalePublishedArticles(): Promise<any[]> {
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        const valid = parsed.filter((a: any) => a && a.id && !String(a.id).startsWith('default_art_') && !deletedIds.has(a.id) && isPubliclyVisibleArticle(a.status));
-        return mergeWithLocalArticles(valid);
+        const valid = parsed.filter((a: any) => a && a.id && !String(a.id).startsWith('default_art_') && !deletedIds.has(a.id) && ArticleService.isPublished(a));
+        return mergeWithLocalArticles(valid, false);
       }
     }
   } catch (e) {}
 
-  return mergeWithLocalArticles([]);
+  return mergeWithLocalArticles([], false);
 }
 
 /**
  * 2. REVALIDATE PHASE: Fetches fresh articles from network (Firestore SDK or REST API fallback),
  * updates IndexedDB persistent storage, updates details cache, and dispatches an update event.
+ * Strictly guarantees that drafts and archives are excluded at data and query level.
  */
 export async function revalidatePublishedArticles(sourceTag = 'manual'): Promise<any[]> {
   // Deduplicate concurrent revalidation requests
@@ -107,20 +109,34 @@ export async function revalidatePublishedArticles(sourceTag = 'manual'): Promise
       }
     }
 
-    // Filter publicly visible items
-    const deletedIds = getDeletedArticleIds();
-    const validPublished = fetchedItems.filter((art: any) => art && art.id && !deletedIds.has(art.id) && isPubliclyVisibleArticle(art.status));
+    // 3. Strict data-level validation: filter only truly published items
+    const validPublished = ArticleService.filterPublishedArticles(fetchedItems);
+
+    // Evict any non-published or draft items from public caches if returned
+    const nonPublicIds = new Set(
+      fetchedItems
+        .filter((art: any) => art && art.id && !ArticleService.isPublished(art))
+        .map((art: any) => art.id)
+    );
 
     if (validPublished.length > 0) {
-      // 3. Save to IndexedDB via saveCachedArticlesList and setOfflineData
+      // 4. Save to IndexedDB via saveCachedArticlesList and setOfflineData
       saveCachedArticlesList(CACHED_ARTICLES_LIST_KEY, validPublished);
       saveCachedArticlesList(CACHED_EXPLORE_ARTICLES_KEY, validPublished);
       await setOfflineData(CACHED_ARTICLES_LIST_KEY, validPublished);
 
-      // 4. Populate article details store in IndexedDB
+      // 5. Populate article details store in IndexedDB (and remove non-published items)
       try {
         const existingDetails = (await getOfflineData<Record<string, any>>(CACHED_ARTICLE_DETAILS_KEY)) || {};
         const now = Date.now();
+        
+        // Remove non-public articles
+        if (nonPublicIds.size > 0) {
+          nonPublicIds.forEach(id => {
+            delete existingDetails[id];
+          });
+        }
+
         validPublished.forEach((art) => {
           existingDetails[art.id] = {
             ...art,
@@ -139,8 +155,8 @@ export async function revalidatePublishedArticles(sourceTag = 'manual'): Promise
         await setOfflineData(SWR_LAST_SYNC_KEY, syncTime);
       } catch (e) {}
 
-      // Merge with custom local articles for UI
-      const combined = mergeWithLocalArticles(validPublished);
+      // Merge with custom local articles for UI (strictly public articles only)
+      const combined = mergeWithLocalArticles(validPublished, false);
 
       // 5. Background pre-fetch and pin embedded media assets for zero-latency offline access
       prefetchAndPinArticleAssets(combined).catch((err) => {

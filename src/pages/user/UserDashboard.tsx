@@ -18,6 +18,7 @@ import { AsrarQuickWidget } from '../../components/AsrarQuickWidget';
 import { INITIAL_DEFAULT_ARTICLES, DefaultArticle } from '../../data/defaultArticles';
 import { fetchArticlesFromRest } from '../../lib/firestoreRest';
 import { isPubliclyVisibleArticle, getTranslatedArticleTitle, getTranslatedArticleHook, sortArticlesInOrder } from '../../lib/articleUtils';
+import { ArticleService } from '../../services/ArticleService';
 import { mergeWithLocalArticles, saveCachedArticlesList, combineWithDefaultArticles, setHideMockArticles, isMockArticlesHidden, getCachedArticlesListAsync } from '../../lib/localArticles';
 import { SWR_EVENT_NAME } from '../../lib/swrArticleCache';
 import { useBackButton } from '../../hooks/useBackButton';
@@ -58,12 +59,12 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
       if (cached) {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const valid = parsed.filter((art: any) => art && art.id && !String(art.id).startsWith('default_art_') && isPubliclyVisibleArticle(art.status));
-          if (valid.length > 0) return mergeWithLocalArticles(valid);
+          const valid = parsed.filter((art: any) => art && art.id && !String(art.id).startsWith('default_art_') && ArticleService.isPublished(art));
+          if (valid.length > 0) return mergeWithLocalArticles(valid, false);
         }
       }
     } catch (e) {}
-    return mergeWithLocalArticles([]);
+    return mergeWithLocalArticles([], false);
   });
   const { isOffline, isOnline } = useNetworkStatus();
   const [showOfflineModal, setShowOfflineModal] = useState(false);
@@ -301,14 +302,14 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
     const applyAccumulatedArticles = (incoming: AsrarItem[]) => {
       if (!Array.isArray(incoming)) return;
       for (const it of incoming) {
-        if (it && it.id && isPublishedArticleStatus(it.status)) {
+        if (it && it.id && ArticleService.isPublished(it)) {
           const existing = articleMap.get(it.id);
           articleMap.set(it.id, { ...existing, ...it });
         }
       }
       const allAccumulated = Array.from(articleMap.values());
-      const merged = mergeWithLocalArticles(allAccumulated);
-      const publicOnly = merged.filter((it: any) => isPublishedArticleStatus(it.status));
+      const merged = mergeWithLocalArticles(allAccumulated, false);
+      const publicOnly = merged.filter((it: any) => ArticleService.isPublished(it));
       const sorted = sortArticlesInOrder(publicOnly, true);
       if (sorted.length > 0) {
         setItems(sorted);

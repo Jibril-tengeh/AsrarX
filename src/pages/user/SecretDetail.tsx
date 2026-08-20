@@ -82,6 +82,108 @@ const AccordionSection: React.FC<{ title: string, htmlContent: string, readingMo
   );
 };
 
+const getTeaserContent = (htmlContent: string) => {
+  if (!htmlContent) return { html: "", isTruncated: false };
+  
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlContent, 'text/html');
+    const teaserNodes: string[] = [];
+    let isTruncated = false;
+    
+    const normalize = (str: string) => 
+      str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+    const lockedKeywords = [
+      // French
+      'secret', 'recette', 'pratique', 'methode', 'wird', 'zikr', 'dhikr', 
+      'ingredient', 'etape', 'preparation', 'utilisation', 'application', 
+      'activation', 'rituel', 'formule', 'confection', 'recitation',
+      // English
+      'recipe', 'practice', 'method', 'ingredient', 'step', 'use', 
+      'ritual', 'formula', 'making', 'procedure',
+      // Hausa
+      'sirri', 'hanya', 'yadda ake', 'wirdi', 'zikiri', 'sinadaran', 
+      'mataki', 'shirye-shirye', 'shiri', 'amfani', 'kunna', 'bayanai', 'rubutu'
+    ];
+
+    const allowedKeywords = [
+      // French
+      'objectif', 'exemple', 'introduction', 'intro', 'definition',
+      // English
+      'objective', 'example',
+      // Hausa
+      'manufa', 'manufar', 'manufofi', 'manufofin',
+      'burin', 'burins',
+      'nufi', 'nufin', 'abun nufi', 'abin nufi', 'abinda ake nufa', 'abin da ake nufa',
+      'niyya', 'niyyar', 'niyyoyin', 'niyyoyins',
+      'kudiri', 'kudurin',
+      'makasudi', 'makasudin', 'maqasudi', 'maqasudin',
+      'fa\'ida', 'fa\'idar', 'faida', 'faidar',
+      'misali', 'misalan', 'misali na', 'misalai',
+      'darasi', 'darasin', 'darasai',
+      'gabatarwa', 'gabatarwar', 'farko', 'farkon', 'bayanin farko', 'bayan fage',
+      'ma\'ana', 'ma\'anar', 'maana', 'maanar'
+    ];
+
+    for (let i = 0; i < doc.body.childNodes.length; i++) {
+      const node = doc.body.childNodes[i] as HTMLElement;
+      
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        const isHeader = /^H[1-6]$/i.test(node.nodeName);
+        const hasStrong = node.querySelector && (node.querySelector('strong') || node.querySelector('b'));
+        
+        let shouldStop = false;
+        
+        let headingText = '';
+        if (isHeader) {
+          headingText = normalize(node.textContent || '');
+        } else if (hasStrong) {
+          const strongEl = node.querySelector('strong') || node.querySelector('b');
+          if (strongEl) {
+            const nodeText = (node.textContent || '').trim();
+            const strongText = (strongEl.textContent || '').trim();
+            // Only treat as a heading if the strong tag represents the whole paragraph text
+            if (nodeText === strongText && nodeText.length > 0) {
+              headingText = normalize(strongText);
+            }
+          }
+        }
+        
+        if (headingText) {
+          const hasLockedWord = lockedKeywords.some(kw => headingText.includes(kw));
+          const hasAllowedWord = allowedKeywords.some(kw => headingText.includes(kw));
+          
+          // If the heading contains an allowed word (like "manufa" or "misali"), we do NOT stop, 
+          // even if it also contains a locked word (like "sirri" in "manufar sirrin").
+          if (!hasAllowedWord && (hasLockedWord || headingText.length > 2)) {
+            shouldStop = true;
+          }
+        }
+        
+        if (shouldStop) {
+          isTruncated = true;
+          break;
+        }
+      }
+      
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        teaserNodes.push(node.outerHTML);
+      } else if (node.nodeType === Node.TEXT_NODE) {
+        teaserNodes.push(node.textContent || '');
+      }
+    }
+    
+    return {
+      html: teaserNodes.join(''),
+      isTruncated: isTruncated || teaserNodes.length < doc.body.childNodes.length
+    };
+  } catch (e) {
+    console.error("Error generating teaser content", e);
+    return { html: htmlContent, isTruncated: false };
+  }
+};
+
 export const SecretDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -89,116 +191,10 @@ export const SecretDetail: React.FC = () => {
   const { t, language } = useLanguage();
   const { user, loading: authLoading, isPremium } = useAuth();
   const { featureToggles } = useFeatures();
+
   const [item, setItem] = useState<AsrarItem | null>(null);
   const [notFound, setNotFound] = useState(false);
-
-  const getTeaserContent = (htmlContent: string) => {
-    if (!htmlContent) return { html: "", isTruncated: false };
-    
-    try {
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(htmlContent, 'text/html');
-      const teaserNodes: string[] = [];
-      let isTruncated = false;
-      
-      const normalize = (str: string) => 
-        str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-
-      const lockedKeywords = [
-        // French
-        'secret', 'recette', 'pratique', 'methode', 'wird', 'zikr', 'dhikr', 
-        'ingredient', 'etape', 'preparation', 'utilisation', 'application', 
-        'activation', 'rituel', 'formule', 'confection', 'recitation',
-        // English
-        'recipe', 'practice', 'method', 'ingredient', 'step', 'use', 
-        'ritual', 'formula', 'making', 'procedure',
-        // Hausa
-        'sirri', 'hanya', 'yadda ake', 'wirdi', 'zikiri', 'sinadaran', 
-        'mataki', 'shirye-shirye', 'shiri', 'amfani', 'kunna', 'bayanai', 'rubutu'
-      ];
-
-      const allowedKeywords = [
-        // French
-        'objectif', 'exemple', 'introduction', 'intro', 'definition',
-        // English
-        'objective', 'example',
-        // Hausa
-        'manufa', 'manufar', 'manufofi', 'manufofin',
-        'burin', 'burins',
-        'nufi', 'nufin', 'abun nufi', 'abin nufi', 'abinda ake nufa', 'abin da ake nufa',
-        'niyya', 'niyyar', 'niyyoyin', 'niyyoyins',
-        'kudiri', 'kudurin',
-        'makasudi', 'makasudin', 'maqasudi', 'maqasudin',
-        'fa\'ida', 'fa\'idar', 'faida', 'faidar',
-        'misali', 'misalan', 'misali na', 'misalai',
-        'darasi', 'darasin', 'darasai',
-        'gabatarwa', 'gabatarwar', 'farko', 'farkon', 'bayanin farko', 'bayan fage',
-        'ma\'ana', 'ma\'anar', 'maana', 'maanar'
-      ];
-
-      for (let i = 0; i < doc.body.childNodes.length; i++) {
-        const node = doc.body.childNodes[i] as HTMLElement;
-        
-        if (node.nodeType === Node.ELEMENT_NODE) {
-          const text = normalize(node.textContent || '');
-          const isHeader = /^H[1-6]$/i.test(node.nodeName);
-          const hasStrong = node.querySelector && (node.querySelector('strong') || node.querySelector('b'));
-          
-          let shouldStop = false;
-          
-          let headingText = '';
-          if (isHeader) {
-            headingText = normalize(node.textContent || '');
-          } else if (hasStrong) {
-            const strongEl = node.querySelector('strong') || node.querySelector('b');
-            if (strongEl) {
-              const nodeText = (node.textContent || '').trim();
-              const strongText = (strongEl.textContent || '').trim();
-              // Only treat as a heading if the strong tag represents the whole paragraph text
-              if (nodeText === strongText && nodeText.length > 0) {
-                headingText = normalize(strongText);
-              }
-            }
-          }
-          
-          if (headingText) {
-            const hasLockedWord = lockedKeywords.some(kw => headingText.includes(kw));
-            const hasAllowedWord = allowedKeywords.some(kw => headingText.includes(kw));
-            
-            // If the heading contains an allowed word (like "manufa" or "misali"), we do NOT stop, 
-            // even if it also contains a locked word (like "sirri" in "manufar sirrin").
-            if (!hasAllowedWord && (hasLockedWord || headingText.length > 2)) {
-              shouldStop = true;
-            }
-          }
-          
-          if (shouldStop) {
-            isTruncated = true;
-            break;
-          }
-        }
-        
-        if (node.nodeType === Node.ELEMENT_NODE) {
-          teaserNodes.push(node.outerHTML);
-        } else if (node.nodeType === Node.TEXT_NODE) {
-          teaserNodes.push(node.textContent || '');
-        }
-      }
-      
-      return {
-        html: teaserNodes.join(''),
-        isTruncated: isTruncated || teaserNodes.length < doc.body.childNodes.length
-      };
-    } catch (e) {
-      console.error("Error generating teaser content", e);
-      return { html: htmlContent, isTruncated: false };
-    }
-  };
-
-  const isUserPremium = isPremium || user?.role === 'admin' || user?.subscriptionTier === 'premium' || user?.subscriptionTier === 'pro';
-  const isShowingTeaserOnly = !!item?.isPremium && !isUserPremium;
-  const displayContent = (item && isShowingTeaserOnly) ? getTeaserContent(item.content).html : (item?.content || '');
-
+  const [isCheckingPremium, setIsCheckingPremium] = useState(true);
   const [readingMode, setReadingMode] = useState(false);
   const [zenMode, setZenMode] = useState(false);
   const [zenFontSize, setZenFontSize] = useState<'sm' | 'md' | 'lg' | 'xl'>('lg');
@@ -210,29 +206,39 @@ export const SecretDetail: React.FC = () => {
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [bookmarkFolders, setBookmarkFolders] = useState<any[]>([]);
   const [viewMode, setViewMode] = useState<'full' | 'accordion'>('full');
-
-  useEffect(() => {
-    if (featureToggles?.lockArticleViewmode && featureToggles?.defaultArticleViewmode) {
-      setViewMode(featureToggles.defaultArticleViewmode);
-    }
-  }, [featureToggles?.lockArticleViewmode, featureToggles?.defaultArticleViewmode]);
   const [articleFontSize, setArticleFontSize] = useState<number>(() => {
     const isAndroid = /Android/i.test(navigator.userAgent);
     return isAndroid ? 12 : 18;
   });
   const [rating, setRating] = useState(0);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [speakingWordIndex, setSpeakingWordIndex] = useState<number | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const backupIntervalRef = useRef<any>(null);
+  const [isTranslating, setIsTranslating] = useState(false);
+
+  const isUserPremium = isPremium || user?.role === 'admin' || user?.subscriptionTier === 'premium' || user?.subscriptionTier === 'pro';
+  const isShowingTeaserOnly = !!item?.isPremium && !isUserPremium;
+  const displayContent = (item && isShowingTeaserOnly) ? getTeaserContent(item.content).html : (item?.content || '');
+
+  useEffect(() => {
+    if (item) {
+      setIsCheckingPremium(authLoading);
+    }
+  }, [item, authLoading]);
+
+  useEffect(() => {
+    if (featureToggles?.lockArticleViewmode && featureToggles?.defaultArticleViewmode) {
+      setViewMode(featureToggles.defaultArticleViewmode);
+    }
+  }, [featureToggles?.lockArticleViewmode, featureToggles?.defaultArticleViewmode]);
 
   useEffect(() => {
     if (!user && !authLoading) {
       setShowAuthModal(true);
     }
   }, [user, authLoading]);
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [speakingWordIndex, setSpeakingWordIndex] = useState<number | null>(null);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const backupIntervalRef = useRef<any>(null);
-  const [isTranslating, setIsTranslating] = useState(false);
 
   useEffect(() => {
     if (!item) {
@@ -1042,14 +1048,6 @@ export const SecretDetail: React.FC = () => {
       setNotFound(true);
     }
   }, [id, language]);
-
-  const [isCheckingPremium, setIsCheckingPremium] = useState(true);
-
-  useEffect(() => {
-    if (item) {
-      setIsCheckingPremium(authLoading);
-    }
-  }, [item, authLoading]);
 
   // Log to reading history when viewed
   useEffect(() => {
