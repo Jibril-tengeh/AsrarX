@@ -41,6 +41,9 @@ jobs:
       run: |
         cd android
         mkdir -p gradle/wrapper
+        # Télécharger un script de lancement gradlew officiel et propre
+        curl -fLo gradlew https://raw.githubusercontent.com/gradle/gradle/v8.2.0/gradlew
+        # Télécharger le jar binaire propre
         curl -fLo gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/gradle/gradle/v8.2.0/gradle/wrapper/gradle-wrapper.jar
         chmod +x gradlew
         ./gradlew assembleDebug
