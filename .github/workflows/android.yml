@@ -32,7 +32,7 @@ jobs:
         java-version: '21'
 
     - name: Add Android Platform
-      run: npx cap add android || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..." || echo "Already exists, skipping..."
+      run: npx cap add android || echo "Already exists, skipping..."
 
     - name: Sync Capacitor
       run: npx cap sync android
@@ -40,6 +40,8 @@ jobs:
     - name: Build APK
       run: |
         cd android
+        mkdir -p gradle/wrapper
+        curl -fLo gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/gradle/gradle/v8.2.0/gradle/wrapper/gradle-wrapper.jar
         chmod +x gradlew
         ./gradlew assembleDebug
 
