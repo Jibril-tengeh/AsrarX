@@ -67,7 +67,14 @@ export const Premium12hCountdownWidget: React.FC<Premium12hCountdownWidgetProps>
     const updateTimer = () => {
       const expiry = getExpiryDate();
       if (!expiry) {
-        setTimeLeft(prev => ({ ...prev, isExpired: false }));
+        setTimeLeft({
+          hours: 0,
+          minutes: 0,
+          seconds: 0,
+          totalMs: 0,
+          isExpired: true,
+          formattedEndTime: ''
+        });
         return;
       }
 

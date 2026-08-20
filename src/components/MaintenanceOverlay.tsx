@@ -68,9 +68,18 @@ export const MaintenanceOverlay: React.FC<{ children: React.ReactNode }> = ({ ch
   const { featureToggles } = useFeatures();
 
   const features = featureToggles || {};
-  const isMaintenance = features?.globalMaintenanceMode === true;
+  const isMaintenance = features?.globalMaintenanceMode === true || 
+    features?.maintenanceMode === true || 
+    features?.maintenance === true || 
+    features?.globalMaintenance === true ||
+    features?.isMaintenance === true;
 
-  const isAdmin = user?.role === 'admin' || user?.email === 'sbireino@gmail.com' || sessionStorage.getItem('admin_bypass') === 'true';
+  const isAdmin = user?.role === 'admin' || 
+    user?.email === 'sbireino@gmail.com' || 
+    user?.email === 'jibriltengeh4@gmail.com' || 
+    user?.email === 'jibriltengeh57@gmail.com' || 
+    user?.email === 'tenibawwal10@gmail.com' || 
+    sessionStorage.getItem('admin_bypass') === 'true';
 
   // Always allow admin to pass through
   if (isAdmin) {

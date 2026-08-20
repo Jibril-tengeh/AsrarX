@@ -172,13 +172,17 @@ export default defineConfig(() => {
         "react": path.resolve(__dirname, "./node_modules/react"),
         "react-dom": path.resolve(__dirname, "./node_modules/react-dom"),
       },
-      dedupe: ['react', 'react-dom', 'react-router', 'react-router-dom'],
+      dedupe: ['react', 'react-dom', 'react-router', 'react-router-dom', 'motion', 'motion/react'],
     },
     optimizeDeps: {
       include: [
         'react',
         'react-dom',
+        'react/jsx-runtime',
+        'react/jsx-dev-runtime',
+        'react-router',
         'react-router-dom',
+        'motion/react',
       ],
     },
     define: {

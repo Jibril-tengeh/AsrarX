@@ -159,31 +159,48 @@ export async function requestNotificationPermission(): Promise<boolean> {
           vibration: true,
         });
       } catch (e) {
-        console.warn('Channel creation error:', e);
+        console.warn('Channel creation warning:', e);
       }
 
-      const localPerm = await LocalNotifications.requestPermissions();
-      const pushPerm = await PushNotifications.requestPermissions();
+      let localGranted = false;
+      try {
+        const localPerm = await LocalNotifications.requestPermissions();
+        localGranted = localPerm.display === 'granted';
+      } catch (e) {
+        console.warn('LocalNotifications permission warning:', e);
+      }
 
-      if (localPerm.display === 'granted' || pushPerm.receive === 'granted') {
+      let pushGranted = false;
+      try {
+        // Only attempt push notifications if registered in native environment
+        const pushPerm = await PushNotifications.requestPermissions();
+        pushGranted = pushPerm.receive === 'granted';
+      } catch (e) {
+        // Expected when Firebase google-services.json is not configured natively
+        console.warn('PushNotifications permission warning (safe fallback to LocalNotifications):', e);
+      }
+
+      if (localGranted || pushGranted) {
         return true;
       }
     } catch (e) {
-      console.warn('Capacitor Notifications permission request error:', e);
+      console.warn('Capacitor Notifications permission request safe error:', e);
     }
   }
 
   // Web Notifications API
-  if (!('Notification' in window)) {
-    console.warn('Browser does not support Web notifications.');
-    return false;
-  }
-  if (Notification.permission === 'granted') {
-    return true;
-  }
-  if (Notification.permission !== 'denied') {
-    const permission = await Notification.requestPermission();
-    return permission === 'granted';
+  if (typeof window !== 'undefined' && 'Notification' in window) {
+    try {
+      if (Notification.permission === 'granted') {
+        return true;
+      }
+      if (Notification.permission !== 'denied') {
+        const permission = await Notification.requestPermission();
+        return permission === 'granted';
+      }
+    } catch (e) {
+      console.warn('Web notification request error:', e);
+    }
   }
   return false;
 }
@@ -279,22 +296,32 @@ export async function requestCameraPermission(): Promise<boolean> {
 }
 
 /**
- * Force authorization of all essential permissions (Notifications + Microphone + Storage + Geolocation + Camera)
+ * Force authorization of all essential permissions (Notifications + Storage + Geolocation)
+ * Handled gracefully without blocking or throwing exceptions at startup.
  */
 export async function requestAllPermissions() {
-  const notifGranted = await requestNotificationPermission();
-  const micGranted = await requestMicrophonePermission();
-  const storageGranted = await requestStoragePermission();
-  const geoGranted = await requestGeolocationPermission();
-  const cameraGranted = await requestCameraPermission();
-  console.log('[AsrarHub] Permissions granted:', {
-    notifications: notifGranted,
-    microphone: micGranted,
-    storage: storageGranted,
-    geolocation: geoGranted,
-    camera: cameraGranted
-  });
-  return { notifications: notifGranted, microphone: micGranted, storage: storageGranted, geolocation: geoGranted, camera: cameraGranted };
+  try {
+    const notifGranted = await requestNotificationPermission().catch(() => false);
+    const storageGranted = await requestStoragePermission().catch(() => false);
+    const micGranted = await requestMicrophonePermission().catch(() => false);
+    const geoGranted = await requestGeolocationPermission().catch(() => false);
+    
+    console.log('[AsrarHub] Startup permissions status:', {
+      notifications: notifGranted,
+      storage: storageGranted,
+      microphone: micGranted,
+      geolocation: geoGranted
+    });
+    return { 
+      notifications: notifGranted, 
+      storage: storageGranted,
+      microphone: micGranted,
+      geolocation: geoGranted
+    };
+  } catch (err) {
+    console.warn('[AsrarHub] Startup permissions safely handled:', err);
+    return { notifications: false, storage: false, microphone: false, geolocation: false };
+  }
 }
 
 export function getCurrentPlanetaryHour() {

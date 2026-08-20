@@ -75,6 +75,7 @@ interface UserData {
   country?: string;
   phone?: string;
   pushNotificationsEnabled?: boolean;
+  createdAt?: any;
 }
 
 interface AuthContextType {
@@ -98,12 +99,26 @@ export const checkIsPremium = (user: UserData | null): boolean => {
   if (user.email && adminEmails.includes(user.email.toLowerCase())) return true;
   
   if (user.subscriptionTier === 'premium' || user.subscriptionTier === 'pro') {
-    if (user.premiumUntil) {
+    const rawExpiry = user.premiumUntil || user.freeTrialExpiresAt;
+    if (rawExpiry) {
       const now = new Date();
-      const expiry = typeof user.premiumUntil === 'object' && user.premiumUntil.toDate 
-        ? user.premiumUntil.toDate() 
-        : new Date(user.premiumUntil);
-      if (now > expiry) {
+      const expiry = typeof rawExpiry === 'object' && rawExpiry.toDate 
+        ? rawExpiry.toDate() 
+        : new Date(rawExpiry);
+      if (!isNaN(expiry.getTime()) && now > expiry) {
+        return false;
+      }
+    } else if (user.freeTrialActivated) {
+      if (user.freeTrialActivatedAt) {
+        const start = new Date(user.freeTrialActivatedAt);
+        if (!isNaN(start.getTime())) {
+          const trialHours = getTrialDurationHours();
+          const expiry = new Date(start.getTime() + trialHours * 60 * 60 * 1000);
+          if (new Date() > expiry) return false;
+        } else {
+          return false;
+        }
+      } else {
         return false;
       }
     }
@@ -370,14 +385,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (docSnap.exists()) {
             const data = docSnap.data();
             let subTier = data.subscriptionTier || 'free';
-            let premUntil = data.premiumUntil || null;
+            let premUntil = data.premiumUntil || data.freeTrialExpiresAt || null;
 
-            if (subTier === 'premium' && premUntil) {
+            if (subTier === 'premium' || subTier === 'pro') {
               const now = new Date();
-              const expiry = premUntil.toDate ? premUntil.toDate() : new Date(premUntil);
-              if (now > expiry) {
-                subTier = 'free';
-                updateDoc(userRef, { subscriptionTier: 'free' }).catch(() => {});
+              if (premUntil) {
+                const expiry = typeof premUntil === 'object' && premUntil.toDate ? premUntil.toDate() : new Date(premUntil);
+                if (!isNaN(expiry.getTime()) && now > expiry) {
+                  subTier = 'free';
+                  updateDoc(userRef, { subscriptionTier: 'free' }).catch(() => {});
+                }
+              } else if (data.freeTrialActivated) {
+                if (data.freeTrialActivatedAt) {
+                  const start = new Date(data.freeTrialActivatedAt);
+                  if (!isNaN(start.getTime())) {
+                    const trialHours = getTrialDurationHours();
+                    const expiry = new Date(start.getTime() + trialHours * 60 * 60 * 1000);
+                    if (now > expiry) {
+                      subTier = 'free';
+                      updateDoc(userRef, { subscriptionTier: 'free' }).catch(() => {});
+                    }
+                  } else {
+                    subTier = 'free';
+                    updateDoc(userRef, { subscriptionTier: 'free' }).catch(() => {});
+                  }
+                } else {
+                  subTier = 'free';
+                  updateDoc(userRef, { subscriptionTier: 'free' }).catch(() => {});
+                }
               }
             }
 
@@ -413,7 +448,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             };
           } else {
             const now = new Date();
-            const isPremEnabled = isNewUserPremiumEnabled();
+            // ONLY grant free trial to brand-new accounts (created in Firebase Auth within the last 5 minutes)
+            const creationTime = firebaseUser.metadata?.creationTime ? new Date(firebaseUser.metadata.creationTime).getTime() : 0;
+            const isTrulyNewAccount = creationTime > 0 && (now.getTime() - creationTime < 5 * 60 * 1000);
+            const isPremEnabled = isTrulyNewAccount && isNewUserPremiumEnabled();
             const trialHours = getTrialDurationHours();
             const trialExpiry = new Date(now.getTime() + trialHours * 60 * 60 * 1000);
 
@@ -435,7 +473,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               freeTrialActivated: isPremEnabled,
               freeTrialActivatedAt: isPremEnabled ? now.toISOString() : null,
               freeTrialExpiresAt: isPremEnabled ? trialExpiry.toISOString() : null,
-              hasSeenTrialPopup: false,
+              hasSeenTrialPopup: !isPremEnabled,
               hideAds: false,
               streakDays: 1,
               purchasedItems: [],
@@ -452,13 +490,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               isBanned: false,
               mysteryToolsDisabled: false,
               isTrusted: true,
-              createdAt: now.toISOString(),
+              createdAt: firebaseUser.metadata?.creationTime || now.toISOString(),
               subscriptionTier: isPremEnabled ? 'premium' : 'free',
               freeTrialActivated: isPremEnabled,
               freeTrialActivatedAt: isPremEnabled ? now.toISOString() : null,
               freeTrialExpiresAt: isPremEnabled ? trialExpiry.toISOString() : null,
               premiumUntil: isPremEnabled ? trialExpiry.toISOString() : null,
-              hasSeenTrialPopup: false,
+              hasSeenTrialPopup: !isPremEnabled,
               requiresValidation: false
             }, { merge: true }).catch(err => console.warn("Auto-persist missing user doc note:", err));
           }
@@ -505,6 +543,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const activate24hTrial = async () => {
     if (!user) return;
+    
+    // Prevent reactivation if trial was already used or activated before
+    if (user.freeTrialActivated || user.freeTrialActivatedAt || user.freeTrialExpiresAt) {
+      console.warn("Free trial has already been used on this account.");
+      return;
+    }
+    
+    // Check if account is too old for trial activation (> 24 hours)
+    if (user.createdAt) {
+      const created = new Date(user.createdAt).getTime();
+      if (!isNaN(created) && (Date.now() - created > 24 * 60 * 60 * 1000)) {
+        console.warn("Existing accounts older than 24 hours cannot activate the new user trial.");
+        return;
+      }
+    }
+
     const now = new Date();
     const trialHours = getTrialDurationHours();
     const trialExpiry = new Date(now.getTime() + trialHours * 60 * 60 * 1000);
@@ -557,7 +611,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  // Show trial popup for newly registered users who haven't seen it yet
+  // Show trial popup for newly registered users who haven't seen it yet and whose trial is still active
   useEffect(() => {
     if (!user) {
       setShowTrialPopup(false);
@@ -566,13 +620,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (user.role === 'admin') return;
 
-    if (user.freeTrialActivated && !user.hasSeenTrialPopup) {
+    if (user.freeTrialActivated && !user.hasSeenTrialPopup && user.subscriptionTier === 'premium') {
+      const rawExpiry = user.premiumUntil || user.freeTrialExpiresAt;
+      if (rawExpiry) {
+        const expiry = typeof rawExpiry === 'object' && (rawExpiry as any).toDate ? (rawExpiry as any).toDate() : new Date(rawExpiry);
+        if (!isNaN(expiry.getTime()) && Date.now() >= expiry.getTime()) {
+          return;
+        }
+      }
       const seenLocally = localStorage.getItem(`asrarhub_trial_popup_seen_${user.uid}`);
       if (!seenLocally) {
         setShowTrialPopup(true);
       }
     }
-  }, [user?.uid, user?.freeTrialActivated, user?.hasSeenTrialPopup]);
+  }, [user?.uid, user?.freeTrialActivated, user?.hasSeenTrialPopup, user?.subscriptionTier, user?.premiumUntil, user?.freeTrialExpiresAt]);
 
   const getTrialExpiryDate = (): Date | null => {
     if (!user || !user.premiumUntil) return null;

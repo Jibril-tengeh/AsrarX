@@ -17,7 +17,7 @@ const config: CapacitorConfig = {
       enabled: false
     },
     PrivacyScreen: {
-      enable: true
+      enable: false
     }
   }
 };

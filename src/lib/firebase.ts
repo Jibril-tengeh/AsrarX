@@ -18,7 +18,7 @@ import {
   getFirestore, 
   initializeFirestore, 
   persistentLocalCache, 
-  persistentSingleTabManager,
+  persistentMultipleTabManager,
   memoryLocalCache,
   enableNetwork,
   doc, 
@@ -65,30 +65,16 @@ const initFirestore = () => {
     return getFirestore(app);
   }
 
-  // In iframe sandboxes (like AI Studio preview), memoryLocalCache prevents
-  // IndexedDB multi-tab lease assertion failures (e.g. ID: da08 / c050).
-  if (isInIframe) {
-    try {
-      return initializeFirestore(app, {
-        experimentalAutoDetectLongPolling: true,
-        localCache: memoryLocalCache()
-      });
-    } catch {
-      return getFirestore(app);
-    }
-  }
-
+  // Attempt persistent local cache with multi-tab support
   try {
     return initializeFirestore(app, {
-      experimentalAutoDetectLongPolling: true,
       localCache: persistentLocalCache({
-        tabManager: persistentSingleTabManager({ forceOwnership: true })
+        tabManager: persistentMultipleTabManager()
       })
     });
   } catch (err1) {
     try {
       return initializeFirestore(app, {
-        experimentalAutoDetectLongPolling: true,
         localCache: memoryLocalCache()
       });
     } catch (err2) {
@@ -147,7 +133,9 @@ export const signInWithGoogle = async () => {
 
         const normEmail = normalizeEmail(user.email || '');
         const now = new Date();
-        const isPremEnabled = isNewUserPremiumEnabled();
+        const creationTime = user.metadata?.creationTime ? new Date(user.metadata.creationTime).getTime() : 0;
+        const isTrulyNewAccount = creationTime > 0 && (now.getTime() - creationTime < 5 * 60 * 1000);
+        const isPremEnabled = isTrulyNewAccount && isNewUserPremiumEnabled();
         const trialHours = getTrialDurationHours();
         const trialExpiry = new Date(now.getTime() + trialHours * 60 * 60 * 1000);
         await setDoc(userRef, {
@@ -158,13 +146,13 @@ export const signInWithGoogle = async () => {
           isBanned: false,
           mysteryToolsDisabled: false,
           isTrusted: false,
-          createdAt: now,
+          createdAt: user.metadata?.creationTime || now.toISOString(),
           subscriptionTier: isPremEnabled ? 'premium' : 'free',
           freeTrialActivated: isPremEnabled,
           freeTrialActivatedAt: isPremEnabled ? now.toISOString() : null,
           freeTrialExpiresAt: isPremEnabled ? trialExpiry.toISOString() : null,
           premiumUntil: isPremEnabled ? trialExpiry.toISOString() : null,
-          hasSeenTrialPopup: false
+          hasSeenTrialPopup: !isPremEnabled
         });
       }
     }

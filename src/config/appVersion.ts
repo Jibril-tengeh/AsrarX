@@ -26,7 +26,7 @@ const dynamicVersion = (typeof __APP_VERSION__ !== 'undefined' && __APP_VERSION_
 
 export const APP_VERSION_CONFIG = {
   currentVersion: dynamicVersion,
-  currentVersionCode: 4,
+  currentVersionCode: 1,
   buildNumber: '2026.08.17.02',
   releaseDate: '17 Août 2026',
   releaseDateEn: 'August 17, 2026',

@@ -1542,33 +1542,52 @@ export const AdminDashboard: React.FC = () => {
     if (newStatus === 'active') {
       payload = {
         isBanned: false,
+        banned: false,
         isSuspended: false,
+        suspended: false,
         isPremium: false,
         subscriptionTier: 'free',
+        plan: 'free',
+        role: user.role === 'admin' ? 'admin' : 'user',
         mysteryToolsDisabled: false,
-        allToolsDisabled: false
+        allToolsDisabled: false,
+        status: 'active',
+        accountStatus: 'active'
       };
     } else if (newStatus === 'suspended') {
       payload = {
         isBanned: false,
+        banned: false,
         isSuspended: true,
+        suspended: true,
         mysteryToolsDisabled: true,
-        allToolsDisabled: true
+        allToolsDisabled: true,
+        status: 'suspended',
+        accountStatus: 'suspended'
       };
     } else if (newStatus === 'premium') {
       payload = {
         isBanned: false,
+        banned: false,
         isSuspended: false,
+        suspended: false,
         isPremium: true,
         subscriptionTier: 'premium',
+        plan: 'premium',
         mysteryToolsDisabled: false,
-        allToolsDisabled: false
+        allToolsDisabled: false,
+        status: 'premium',
+        accountStatus: 'premium'
       };
     } else if (newStatus === 'banned') {
       payload = {
         isBanned: true,
+        banned: true,
         isSuspended: false,
-        allToolsDisabled: true
+        suspended: false,
+        allToolsDisabled: true,
+        status: 'banned',
+        accountStatus: 'banned'
       };
     }
 
@@ -1597,16 +1616,25 @@ export const AdminDashboard: React.FC = () => {
   const handleSaveUserDetail = async () => {
     if (!selectedUserDetail) return;
     const userRef = doc(db, 'users', selectedUserDetail.id);
+    const isPrem = (editUserData as any).subscriptionTier === 'premium' || (editUserData as any).subscriptionTier === 'pro' || (editUserData as any).isPremium === true;
+    const tier = (editUserData as any).subscriptionTier || (isPrem ? 'premium' : 'free');
+    const isBan = editUserData.isBanned !== undefined ? editUserData.isBanned : selectedUserDetail.isBanned;
+
     const payload = {
       name: editUserData.name !== undefined ? editUserData.name : selectedUserDetail.name,
       email: editUserData.email !== undefined ? editUserData.email : selectedUserDetail.email,
       phone: editUserData.phone !== undefined ? editUserData.phone : (selectedUserDetail.phone || ''),
       country: editUserData.country !== undefined ? editUserData.country : (selectedUserDetail.country || ''),
       role: (editUserData as any).role || (selectedUserDetail as any).role || 'user',
-      isBanned: editUserData.isBanned !== undefined ? editUserData.isBanned : selectedUserDetail.isBanned,
+      isBanned: isBan,
+      banned: isBan,
       isTrusted: editUserData.isTrusted !== undefined ? editUserData.isTrusted : selectedUserDetail.isTrusted,
       mysteryToolsDisabled: editUserData.mysteryToolsDisabled !== undefined ? editUserData.mysteryToolsDisabled : selectedUserDetail.mysteryToolsDisabled,
-      subscriptionTier: (editUserData as any).subscriptionTier || (selectedUserDetail as any).subscriptionTier || 'premium',
+      isPremium: isPrem,
+      subscriptionTier: tier,
+      plan: tier,
+      status: isBan ? 'banned' : (isPrem ? 'premium' : 'active'),
+      accountStatus: isBan ? 'banned' : (isPrem ? 'premium' : 'active'),
       spiritualPoints: (editUserData as any).spiritualPoints !== undefined ? Number((editUserData as any).spiritualPoints) : (selectedUserDetail.spiritualPoints || 0),
       blockedTools: editUserData.blockedTools || selectedUserDetail.blockedTools || []
     };
@@ -1968,6 +1996,8 @@ export const AdminDashboard: React.FC = () => {
         const normEmail = normalizeEmail(cleanEmail);
         const normPhone = normalizePhone(newUserData.phone || '');
         const uid = `usr_${cleanEmail.replace(/[^a-zA-Z0-9]/g, '_')}`;
+        const tier = newUserData.subscriptionTier || defaultTier;
+        const isPrem = tier === 'premium' || tier === 'pro';
         addedUsersList.push({
           id: uid,
           email: cleanEmail,
@@ -1977,8 +2007,13 @@ export const AdminDashboard: React.FC = () => {
           normalizedPhone: normPhone,
           country: newUserData.country.trim() || '',
           role: newUserData.role || 'user',
-          subscriptionTier: newUserData.subscriptionTier || defaultTier,
+          isPremium: isPrem,
+          subscriptionTier: tier,
+          plan: tier,
+          accountStatus: isPrem ? 'premium' : 'active',
+          status: 'active',
           isBanned: false,
+          banned: false,
           isTrusted: true,
           createdAt: new Date().toISOString(),
           requiresValidation: false
@@ -1992,6 +2027,9 @@ export const AdminDashboard: React.FC = () => {
           return;
         }
 
+        const tier = newUserData.subscriptionTier || defaultTier;
+        const isPrem = tier === 'premium' || tier === 'pro';
+
         for (const email of uniqueEmails) {
           const normEmail = normalizeEmail(email);
           const uid = `usr_${email.replace(/[^a-zA-Z0-9]/g, '_')}`;
@@ -2001,8 +2039,13 @@ export const AdminDashboard: React.FC = () => {
             normalizedEmail: normEmail,
             name: email.split('@')[0],
             role: 'user',
-            subscriptionTier: newUserData.subscriptionTier || defaultTier,
+            isPremium: isPrem,
+            subscriptionTier: tier,
+            plan: tier,
+            accountStatus: isPrem ? 'premium' : 'active',
+            status: 'active',
             isBanned: false,
+            banned: false,
             isTrusted: true,
             createdAt: new Date().toISOString(),
             requiresValidation: false
@@ -2058,7 +2101,11 @@ export const AdminDashboard: React.FC = () => {
       // 1. Update user to premium
       try {
         await setDoc(doc(db, 'users', payment.userId), {
+          isPremium: true,
           subscriptionTier: 'premium',
+          plan: 'premium',
+          accountStatus: 'premium',
+          status: 'active',
           premiumUntil: premiumUntil
         }, { merge: true });
       } catch (uErr) {
@@ -5005,7 +5052,23 @@ export const AdminDashboard: React.FC = () => {
   );
 
   const handleBatchToggleFeatures = async (batch: Record<string, any>) => {
-    const updated = { ...featureToggles, ...batch };
+    // Generate compatible aliases for each key so older and diverse versions can read them
+    const fullBatch: Record<string, any> = { ...batch };
+    Object.keys(batch).forEach(key => {
+      const val = batch[key];
+      if (key.startsWith('tool_')) {
+        const cleanId = key.replace('tool_', '');
+        fullBatch[`status_${cleanId}`] = val;
+        fullBatch[cleanId] = val;
+      } else if (key === 'globalMaintenanceMode') {
+        fullBatch['maintenanceMode'] = val;
+        fullBatch['maintenance'] = val;
+        fullBatch['globalMaintenance'] = val;
+        fullBatch['isMaintenance'] = val;
+      }
+    });
+
+    const updated = { ...featureToggles, ...fullBatch };
     setFeatureToggles(updated);
 
     try {
@@ -5015,7 +5078,24 @@ export const AdminDashboard: React.FC = () => {
     } catch (_) {}
 
     try {
-      await setDoc(doc(db, 'settings', 'features'), batch, { merge: true });
+      await setDoc(doc(db, 'settings', 'features'), fullBatch, { merge: true });
+      if (batch['globalMaintenanceMode'] !== undefined) {
+        const isMaint = batch['globalMaintenanceMode'];
+        const maintPayload = {
+          enabled: isMaint,
+          active: isMaint,
+          isMaintenance: isMaint,
+          maintenanceMode: isMaint,
+          globalMaintenanceMode: isMaint,
+          updatedAt: Date.now()
+        };
+        await Promise.allSettled([
+          setDoc(doc(db, 'settings', 'maintenance'), maintPayload, { merge: true }),
+          setDoc(doc(db, 'admin_settings', 'features'), fullBatch, { merge: true }),
+          setDoc(doc(db, 'system_config', 'maintenance'), maintPayload, { merge: true }),
+          setDoc(doc(db, 'app_config', 'global'), maintPayload, { merge: true })
+        ]);
+      }
     } catch (error) {
       console.warn("Firestore sync note (applied locally):", error);
     }
@@ -5027,7 +5107,20 @@ export const AdminDashboard: React.FC = () => {
     toolLabel?: string
   ) => {
     const newValue = currentValue;
-    const updated = { ...featureToggles, [featureId]: newValue };
+    const extraFields: Record<string, any> = {};
+    if (featureId.startsWith('tool_')) {
+      const cleanId = featureId.replace('tool_', '');
+      extraFields[`status_${cleanId}`] = newValue;
+      extraFields[cleanId] = newValue;
+    } else if (featureId === 'globalMaintenanceMode') {
+      extraFields['maintenanceMode'] = newValue;
+      extraFields['maintenance'] = newValue;
+      extraFields['globalMaintenance'] = newValue;
+      extraFields['isMaintenance'] = newValue;
+    }
+
+    const fullPayload = { [featureId]: newValue, ...extraFields };
+    const updated = { ...featureToggles, ...fullPayload };
     setFeatureToggles(updated);
 
     try {
@@ -5037,9 +5130,24 @@ export const AdminDashboard: React.FC = () => {
     } catch (_) {}
 
     try {
-      await setDoc(doc(db, 'settings', 'features'), {
-        [featureId]: newValue
-      }, { merge: true });
+      await setDoc(doc(db, 'settings', 'features'), fullPayload, { merge: true });
+      
+      if (featureId === 'globalMaintenanceMode') {
+        const maintPayload = {
+          enabled: newValue,
+          active: newValue,
+          isMaintenance: newValue,
+          maintenanceMode: newValue,
+          globalMaintenanceMode: newValue,
+          updatedAt: Date.now()
+        };
+        await Promise.allSettled([
+          setDoc(doc(db, 'settings', 'maintenance'), maintPayload, { merge: true }),
+          setDoc(doc(db, 'admin_settings', 'features'), fullPayload, { merge: true }),
+          setDoc(doc(db, 'system_config', 'maintenance'), maintPayload, { merge: true }),
+          setDoc(doc(db, 'app_config', 'global'), maintPayload, { merge: true })
+        ]);
+      }
     } catch (error) {
       console.warn("Firestore sync note (applied locally):", error);
     }
