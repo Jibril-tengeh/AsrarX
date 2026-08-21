@@ -1,0 +1,65 @@
+name: Build and Sign AsrarHub
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: ./AsrarX
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+          cache-dependency-path: ./AsrarX/package-lock.json
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Web Project
+        run: npm run build
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      - name: Install Capacitor Android
+        run: npx cap sync android
+
+      - name: Build Android Release (APK)
+        run: |
+          cd android
+          ./gradlew assembleRelease
+
+      - name: Sign APK
+        uses: r0adkll/sign-android-release@v1
+        id: sign_app
+        with:
+          releaseDirectory: AsrarX/android/app/build/outputs/apk/release
+          signingKeyBase64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          alias: ${{ secrets.ANDROID_RELEASE_ALIAS }}
+          keyStorePassword: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          keyPassword: ${{ secrets.ANDROID_KEY_PASSWORD }}
+
+      - name: Rename Signed APK
+        run: |
+          mv ../AsrarX/android/app/build/outputs/apk/release/app-release-unsigned-signed.apk ../AsrarX/android/app/build/outputs/apk/release/AsrarHub-signed.apk
+
+      - name: Upload AsrarHub APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: AsrarHub-Release-APK
+          path: AsrarX/android/app/build/outputs/apk/release/AsrarHub-signed.apk
