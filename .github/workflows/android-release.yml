@@ -35,6 +35,10 @@ jobs:
       - name: Install Capacitor Android
         run: npx cap sync android
 
+      - name: Fix Gradle Wrapper JAR
+        run: |
+          wget -O android/gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/gradle/gradle/v8.14.3/gradle/wrapper/gradle-wrapper.jar
+
       - name: Build Android Release (APK)
         run: |
           cd android
