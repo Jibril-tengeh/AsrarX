@@ -20,7 +20,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20 # Passage à Node.js 20 pour supporter Tailwind v4
+          node-version: 22 # Passage à Node.js 22 requis par Capacitor CLI
 
       - name: Install Dependencies
         run: |
