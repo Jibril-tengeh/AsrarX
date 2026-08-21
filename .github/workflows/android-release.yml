@@ -9,10 +9,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    defaults:
-      run:
-        working-directory: ./AsrarX
-
     steps:
       - name: Checkout Source Code
         uses: actions/checkout@v4
@@ -20,7 +16,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 22 # Passage à Node.js 22 requis par Capacitor CLI
+          node-version: 22
 
       - name: Install Dependencies
         run: |
@@ -48,7 +44,7 @@ jobs:
         uses: r0adkll/sign-android-release@v1
         id: sign_app
         with:
-          releaseDirectory: AsrarX/android/app/build/outputs/apk/release
+          releaseDirectory: android/app/build/outputs/apk/release
           signingKeyBase64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           alias: ${{ secrets.ANDROID_RELEASE_ALIAS }}
           keyStorePassword: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -56,10 +52,10 @@ jobs:
 
       - name: Rename Signed APK
         run: |
-          mv ../AsrarX/android/app/build/outputs/apk/release/app-release-unsigned-signed.apk ../AsrarX/android/app/build/outputs/apk/release/AsrarHub-signed.apk
+          mv android/app/build/outputs/apk/release/app-release-unsigned-signed.apk android/app/build/outputs/apk/release/AsrarHub-signed.apk
 
       - name: Upload AsrarHub APK
         uses: actions/upload-artifact@v4
         with:
           name: AsrarHub-Release-APK
-          path: AsrarX/android/app/build/outputs/apk/release/AsrarHub-signed.apk
+          path: android/app/build/outputs/apk/release/AsrarHub-signed.apk
