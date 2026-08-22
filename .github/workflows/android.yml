@@ -3,8 +3,7 @@ name: Android Build
 on:
   push:
     branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   build:
@@ -17,7 +16,7 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '22'
+        node-version: '20'
 
     - name: Install Dependencies
       run: npm install
@@ -25,31 +24,35 @@ jobs:
     - name: Build Web App
       run: npm run build
 
-    - name: Setup Java
+    - name: Setup Java JDK
       uses: actions/setup-java@v4
       with:
         distribution: 'zulu'
-        java-version: '21'
-
-    - name: Add Android Platform
-      run: npx cap add android || echo "Already exists, skipping..." || echo "Already exists, skipping..."
+        java-version: '17'
 
     - name: Sync Capacitor
       run: npx cap sync android
 
-    - name: Build APK
+    - name: Build APKs & AAB Bundle
       run: |
         cd android
-        mkdir -p gradle/wrapper
-        # Télécharger un script de lancement gradlew officiel et propre
-        curl -fLo gradlew https://raw.githubusercontent.com/gradle/gradle/v8.2.0/gradlew
-        # Télécharger le jar binaire propre
-        curl -fLo gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/gradle/gradle/v8.2.0/gradle/wrapper/gradle-wrapper.jar
         chmod +x gradlew
-        ./gradlew assembleDebug
+        ./gradlew assembleDebug assembleRelease bundleRelease --stacktrace
 
-    - name: Upload APK
+    - name: Upload Play Store App Bundle (AAB)
       uses: actions/upload-artifact@v4
       with:
-        name: app-debug
-        path: android/app/build/outputs/apk/debug/app-debug.apk
+        name: AsrarHub-PlayStore-AAB
+        path: android/app/build/outputs/bundle/release/*.aab
+
+    - name: Upload Release APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: AsrarHub-Release-APK
+        path: android/app/build/outputs/apk/release/*.apk
+
+    - name: Upload Debug APK
+      uses: actions/upload-artifact@v4
+      with:
+        name: AsrarHub-Debug-APK
+        path: android/app/build/outputs/apk/debug/*.apk
