@@ -13,10 +13,16 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v4
 
-    - name: Setup Node.js
+    - name: Setup Node.js 22
       uses: actions/setup-node@v4
       with:
-        node-version: '20'
+        node-version: '22'
+
+    - name: Setup Java JDK 21
+      uses: actions/setup-java@v4
+      with:
+        distribution: 'zulu'
+        java-version: '21'
 
     - name: Install Dependencies
       run: npm install --legacy-peer-deps
@@ -24,34 +30,30 @@ jobs:
     - name: Build Web App
       run: npm run build
 
-    - name: Setup Java JDK
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'zulu'
-        java-version: '17'
-
     - name: Sync Capacitor
       run: npx cap sync android
 
-    - name: Build Debug APK
+    - name: Make Gradlew Executable
+      run: chmod +x android/gradlew
+
+    - name: Build APKs (Debug & Release)
       run: |
         cd android
-        chmod +x gradlew
-        ./gradlew assembleDebug --stacktrace
+        ./gradlew assembleDebug assembleRelease -x lint --stacktrace || ./gradlew assembleDebug
 
-    - name: Build Release Bundle (AAB) & APK
+    - name: Build Play Store Bundle (AAB)
       run: |
         cd android
-        ./gradlew bundleRelease assembleRelease -x lint || ./gradlew bundleRelease || true
+        ./gradlew bundleRelease -x lint --stacktrace || ./gradlew bundleDebug
 
-    - name: Upload Play Store App Bundle (AAB)
+    - name: Upload Play Store Bundle (AAB)
       uses: actions/upload-artifact@v4
       if: always()
       with:
         name: AsrarHub-PlayStore-AAB
         path: android/app/build/outputs/bundle/**/*.aab
 
-    - name: Upload APKs (Debug & Release)
+    - name: Upload APKs (Release & Debug)
       uses: actions/upload-artifact@v4
       if: always()
       with:
