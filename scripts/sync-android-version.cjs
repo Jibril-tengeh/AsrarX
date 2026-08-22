@@ -31,7 +31,7 @@ function syncAndroidVersion() {
   let currentVersionCode = 1;
   let currentVersionName = '1.0';
 
-  const codeMatch = gradleContent.match(/versionCode\s+(\d+)/);
+  const codeMatch = gradleContent.match(/versionCode\s+(?:project\.hasProperty\([^)]+\)\s*\?[^:]+:\s*)?(\d+)/);
   if (codeMatch) {
     currentVersionCode = parseInt(codeMatch[1], 10);
   }
@@ -42,7 +42,7 @@ function syncAndroidVersion() {
   }
 
   // Determine target versionName (e.g. "1.1" or full "1.1.1")
-  const targetVersionName = pkgVersion.split('.').slice(0, 2).join('.'); // e.g. "1.1"
+  const targetVersionName = pkgVersion;
   
   // Check if --bump flag is passed
   const shouldBump = process.argv.includes('--bump');
@@ -54,7 +54,7 @@ function syncAndroidVersion() {
 
   // Update gradle content
   const updatedGradle = gradleContent
-    .replace(/versionCode\s+\d+/, `versionCode ${targetVersionCode}`)
+    .replace(/versionCode\s+(?:project\.hasProperty\([^)]+\)\s*\?[^:]+:\s*)?\d+/, `versionCode project.hasProperty('versionCode') ? project.property('versionCode').toInteger() : ${targetVersionCode}`)
     .replace(/versionName\s+["'][^"']+["']/, `versionName "${targetVersionName}"`);
 
   if (updatedGradle !== gradleContent) {

@@ -114,6 +114,7 @@ export const AdminVersionControlManager: React.FC = () => {
     minSupportedVersionCode: number;
     downloadUrl: string;
     apkDownloadUrl: string;
+    videoCardTheme: VideoCardThemeId;
     highlights: string[];
     highlightsEn: string[];
     highlightsHa: string[];
@@ -133,6 +134,7 @@ export const AdminVersionControlManager: React.FC = () => {
     minSupportedVersionCode: 1,
     downloadUrl: '',
     apkDownloadUrl: '',
+    videoCardTheme: 'cyber-emerald',
     highlights: [''],
     highlightsEn: [''],
     highlightsHa: ['']
@@ -462,6 +464,7 @@ export const AdminVersionControlManager: React.FC = () => {
   const handleOpenEditModal = (rel: VersionRelease) => {
     setEditingAppRelease({
       ...rel,
+      videoCardTheme: rel.videoCardTheme || 'cyber-emerald',
       highlights: [...(rel.highlights || [])],
       highlightsEn: [...(rel.highlightsEn || [])],
       highlightsHa: [...(rel.highlightsHa || [])]
@@ -538,6 +541,7 @@ export const AdminVersionControlManager: React.FC = () => {
       minSupportedVersionCode: (appReleases[0]?.versionCode || 1),
       downloadUrl: '',
       apkDownloadUrl: '',
+      videoCardTheme: 'cyber-emerald',
       highlights: [''],
       highlightsEn: [''],
       highlightsHa: ['']
@@ -546,6 +550,28 @@ export const AdminVersionControlManager: React.FC = () => {
     setActiveEditorLangTab('fr');
     setEditorRawMode(false);
     setShowCreateAppReleaseModal(true);
+  };
+
+  // Helper to apply studio selected theme directly to active release in Firestore
+  const handleApplyStudioThemeToActiveRelease = async (themeId: VideoCardThemeId) => {
+    const targetRel = appReleases[0] || APP_VERSION_CONFIG.releases[0];
+    if (!targetRel) return;
+
+    try {
+      setIsSavingAppRelease(true);
+      const updatedRel: VersionRelease = {
+        ...targetRel,
+        videoCardTheme: themeId,
+        updatedAt: new Date().toISOString()
+      };
+      await appVersionService.saveVersion(updatedRel);
+      const preset = getPresetById(themeId);
+      showFeedback(`✨ Thème vidéo "${preset.titleFr}" appliqué à la version active v${updatedRel.version} avec succès !`);
+    } catch (err: any) {
+      showFeedback(`Erreur : ${err.message || 'Impossible d\'appliquer le thème vidéo.'}`, true);
+    } finally {
+      setIsSavingAppRelease(false);
+    }
   };
 
   // 6. Submit Create App Release
@@ -584,6 +610,7 @@ export const AdminVersionControlManager: React.FC = () => {
         minSupportedVersionCode: newAppReleaseForm.forceUpdate ? Number(newAppReleaseForm.minSupportedVersionCode) : undefined,
         downloadUrl: newAppReleaseForm.downloadUrl.trim() || undefined,
         apkDownloadUrl: newAppReleaseForm.apkDownloadUrl.trim() || undefined,
+        videoCardTheme: newAppReleaseForm.videoCardTheme || 'cyber-emerald',
         highlights: finalFr.length > 0 ? finalFr : ['Mise à jour et améliorations des performances'],
         highlightsEn: finalEn.length > 0 ? finalEn : ['General updates and performance improvements'],
         highlightsHa: finalHa.length > 0 ? finalHa : ['Sabuntawa da inganta sauri'],
@@ -1533,6 +1560,13 @@ export const AdminVersionControlManager: React.FC = () => {
                                   Mise à Jour Forcée (Min #{rel.minSupportedVersionCode || rel.versionCode})
                                 </span>
                               )}
+
+                              {rel.videoCardTheme && (
+                                <span className="flex items-center gap-1 text-[10px] font-bold bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300 px-2.5 py-0.5 rounded-full border border-purple-200 dark:border-purple-800/60">
+                                  <Film size={10} className="text-purple-600 dark:text-purple-400" />
+                                  Style : {getPresetById(rel.videoCardTheme).titleFr}
+                                </span>
+                              )}
                             </div>
 
                             <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-2">
@@ -2449,6 +2483,52 @@ export const AdminVersionControlManager: React.FC = () => {
                     </div>
                   </div>
                 )}
+
+                {/* Video Card Theme Selector */}
+                <div className="bg-gray-100/70 dark:bg-gray-800/80 p-4 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Film size={16} className="text-purple-500" />
+                      <span className="font-bold text-gray-800 dark:text-gray-200">
+                        Style Vidéo de Mise à Jour (Carte Unique Utilisateur)
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-purple-600 dark:text-purple-400 font-bold">
+                      {getPresetById(editingAppRelease.videoCardTheme || 'cyber-emerald').titleFr}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Sélectionnez le modèle visuel et vidéo unique qui sera affiché à l'utilisateur pour cette version.
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-1">
+                    {VIDEO_CARD_PRESETS.map((p) => {
+                      const isSelected = (editingAppRelease.videoCardTheme || 'cyber-emerald') === p.id;
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => setEditingAppRelease({ ...editingAppRelease, videoCardTheme: p.id })}
+                          className={`p-2.5 rounded-xl border text-left transition-all flex flex-col gap-1 relative overflow-hidden cursor-pointer ${
+                            isSelected
+                              ? 'border-purple-500 bg-purple-50 dark:bg-purple-950/40 ring-2 ring-purple-500/30'
+                              : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between w-full">
+                            <span className="text-[10px] font-mono font-bold text-gray-400">#{p.index}</span>
+                            {isSelected && <Check size={12} className="text-purple-600 dark:text-purple-400 font-bold" />}
+                          </div>
+                          <span className="text-xs font-bold text-gray-900 dark:text-gray-100 truncate w-full">
+                            {p.titleFr.split(' ')[0]} {p.titleFr.split(' ')[1] || ''}
+                          </span>
+                          <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate w-full">
+                            {p.badgeFr}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
 
               {/* Multilingual Editor Area */}
@@ -3052,6 +3132,52 @@ export const AdminVersionControlManager: React.FC = () => {
                   </div>
                 </div>
               )}
+
+              {/* Video Card Theme Selector */}
+              <div className="bg-gray-100/70 dark:bg-gray-800/80 p-4 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Film size={16} className="text-purple-500" />
+                    <span className="font-bold text-gray-800 dark:text-gray-200">
+                      Style Vidéo de Mise à Jour (Carte Unique Utilisateur)
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-purple-600 dark:text-purple-400 font-bold">
+                    {getPresetById(newAppReleaseForm.videoCardTheme || 'cyber-emerald').titleFr}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Sélectionnez le modèle visuel et vidéo unique qui sera affiché à l'utilisateur pour cette version.
+                </p>
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-1">
+                  {VIDEO_CARD_PRESETS.map((p) => {
+                    const isSelected = (newAppReleaseForm.videoCardTheme || 'cyber-emerald') === p.id;
+                    return (
+                      <button
+                        key={p.id}
+                        type="button"
+                        onClick={() => setNewAppReleaseForm({ ...newAppReleaseForm, videoCardTheme: p.id })}
+                        className={`p-2.5 rounded-xl border text-left transition-all flex flex-col gap-1 relative overflow-hidden cursor-pointer ${
+                          isSelected
+                            ? 'border-purple-500 bg-purple-50 dark:bg-purple-950/40 ring-2 ring-purple-500/30'
+                            : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between w-full">
+                          <span className="text-[10px] font-mono font-bold text-gray-400">#{p.index}</span>
+                          {isSelected && <Check size={12} className="text-purple-600 dark:text-purple-400 font-bold" />}
+                        </div>
+                        <span className="text-xs font-bold text-gray-900 dark:text-gray-100 truncate w-full">
+                          {p.titleFr.split(' ')[0]} {p.titleFr.split(' ')[1] || ''}
+                        </span>
+                        <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate w-full">
+                          {p.badgeFr}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
 
             {/* Footer */}
@@ -3259,17 +3385,34 @@ export const AdminVersionControlManager: React.FC = () => {
             </div>
 
             {/* Footer */}
-            <div className="p-4 bg-gray-900 border-t border-gray-800 flex items-center justify-between">
+            <div className="p-4 bg-gray-900 border-t border-gray-800 flex flex-col sm:flex-row items-center justify-between gap-3">
               <span className="text-xs text-gray-400 font-mono">
                 ✨ 10 Modèles Vidéo optimisés pour WebView Android APK et Desktop
               </span>
-              <button
-                type="button"
-                onClick={() => setShowVideoStudioModal(false)}
-                className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition-all"
-              >
-                Fermer le Studio
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={isSavingAppRelease}
+                  onClick={() => handleApplyStudioThemeToActiveRelease(studioSelectedPresetId)}
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold transition-all shadow-md flex items-center gap-1.5 active:scale-95 disabled:opacity-50 cursor-pointer"
+                >
+                  <Sparkles size={14} />
+                  <span>
+                    {isSavingAppRelease 
+                      ? 'Application...' 
+                      : `Appliquer ce Thème à la Version Active (v${appReleases[0]?.version || APP_VERSION_CONFIG.currentVersion})`
+                    }
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowVideoStudioModal(false)}
+                  className="px-5 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold transition-all cursor-pointer"
+                >
+                  Fermer le Studio
+                </button>
+              </div>
             </div>
 
           </div>

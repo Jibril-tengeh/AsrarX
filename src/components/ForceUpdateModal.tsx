@@ -11,15 +11,12 @@ import {
   CheckCircle2,
   Lock,
   ArrowRight,
-  Info,
-  ChevronLeft,
-  ChevronRight,
-  Layers
+  Info
 } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { VersionRelease, APP_VERSION_CONFIG, getLocalizedRelease } from '../config/appVersion';
 import { appVersionService } from '../services/appVersionService';
-import { VIDEO_CARD_PRESETS, getPresetById, VideoCardThemeId } from '../types/updateCards';
+import { getPresetById, VideoCardThemeId } from '../types/updateCards';
 import { UpdateVideoCard } from './videoCards/UpdateVideoCard';
 
 interface ForceUpdateModalProps {
@@ -35,7 +32,6 @@ export const ForceUpdateModal: React.FC<ForceUpdateModalProps> = ({
   const [activeReleases, setActiveReleases] = useState<VersionRelease[]>(APP_VERSION_CONFIG.releases);
   const [isUpdatingCache, setIsUpdatingCache] = useState(false);
   const [updateStatusStep, setUpdateStatusStep] = useState<string | null>(null);
-  const [selectedThemeId, setSelectedThemeId] = useState<VideoCardThemeId>('cyber-emerald');
 
   // Subscribe to real-time version releases from Firestore
   useEffect(() => {
@@ -60,18 +56,9 @@ export const ForceUpdateModal: React.FC<ForceUpdateModalProps> = ({
     return null;
   }
 
+  // Selected theme is strictly defined by Admin in forcedRelease or fallback to default
+  const selectedThemeId: VideoCardThemeId = forcedRelease.videoCardTheme || 'cyber-emerald';
   const currentPreset = getPresetById(selectedThemeId);
-  const currentIndex = VIDEO_CARD_PRESETS.findIndex(p => p.id === selectedThemeId);
-
-  const handlePrevTheme = () => {
-    const nextIdx = (currentIndex - 1 + VIDEO_CARD_PRESETS.length) % VIDEO_CARD_PRESETS.length;
-    setSelectedThemeId(VIDEO_CARD_PRESETS[nextIdx].id);
-  };
-
-  const handleNextTheme = () => {
-    const nextIdx = (currentIndex + 1) % VIDEO_CARD_PRESETS.length;
-    setSelectedThemeId(VIDEO_CARD_PRESETS[nextIdx].id);
-  };
 
   const handleClearCacheAndReload = async () => {
     setIsUpdatingCache(true);
@@ -110,7 +97,7 @@ export const ForceUpdateModal: React.FC<ForceUpdateModalProps> = ({
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
           className="relative w-full max-w-lg my-auto flex flex-col items-center"
         >
-          {/* Top Bar with Security Badge & 10 Video Themes Selector */}
+          {/* Top Bar with Security Badge */}
           <div className="w-full flex items-center justify-between gap-2 mb-3 bg-gray-900/90 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-amber-500/30 shadow-lg text-white">
             <div className="flex items-center gap-2">
               <ShieldAlert size={16} className="text-amber-400 animate-pulse" />
@@ -118,32 +105,12 @@ export const ForceUpdateModal: React.FC<ForceUpdateModalProps> = ({
                 {language === 'fr' ? 'Mise à jour obligatoire' : language === 'ha' ? 'Sabuntawa ta Dole' : 'Mandatory Update'}
               </span>
             </div>
-
-            {/* Carousel theme switcher */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-[11px] font-mono text-gray-300 hidden sm:inline">
-                Style {currentPreset.index}/10
-              </span>
-              <button
-                type="button"
-                onClick={handlePrevTheme}
-                className="p-1 rounded-lg bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white transition-colors cursor-pointer"
-                title="Style précédent"
-              >
-                <ChevronLeft size={15} />
-              </button>
-              <button
-                type="button"
-                onClick={handleNextTheme}
-                className="p-1 rounded-lg bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white transition-colors cursor-pointer"
-                title="Style suivant"
-              >
-                <ChevronRight size={15} />
-              </button>
-            </div>
+            <span className="text-[11px] font-mono text-gray-400">
+              v{forcedRelease.version}
+            </span>
           </div>
 
-          {/* Master Dynamic Video Card */}
+          {/* Master Dynamic Video Card (Single Admin-Defined Theme) */}
           <UpdateVideoCard
             preset={currentPreset}
             targetRelease={forcedRelease}

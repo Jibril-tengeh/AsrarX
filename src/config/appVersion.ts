@@ -1,3 +1,5 @@
+import { VideoCardThemeId } from '../types/updateCards';
+
 export interface VersionRelease {
   id?: string;
   version: string; // e.g. "1.1.0"
@@ -14,6 +16,7 @@ export interface VersionRelease {
   minSupportedVersionCode?: number; // Code de version minimum obligatoire
   downloadUrl?: string; // Lien de mise à jour (Play Store, Téléchargement APK direct, ou Web)
   apkDownloadUrl?: string; // Lien direct de téléchargement du fichier APK
+  videoCardTheme?: VideoCardThemeId; // Modèle de style vidéo défini par l'administrateur
   highlights: string[];
   highlightsEn?: string[];
   highlightsHa?: string[];
@@ -26,8 +29,8 @@ const dynamicVersion = (typeof __APP_VERSION__ !== 'undefined' && __APP_VERSION_
 
 export const APP_VERSION_CONFIG = {
   currentVersion: dynamicVersion,
-  currentVersionCode: 1,
-  buildNumber: '2026.08.17.02',
+  currentVersionCode: 10,
+  buildNumber: '2026.08.20.10',
   releaseDate: '17 Août 2026',
   releaseDateEn: 'August 17, 2026',
   releaseDateHa: '17 ga Agusta, 2026',

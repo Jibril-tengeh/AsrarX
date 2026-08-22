@@ -118,9 +118,15 @@ export const Header: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    if (user) {
+    if (!user?.uid) return;
+    
+    let isMounted = true;
+    let unsubscribe: (() => void) | null = null;
+
+    try {
       const q = query(collection(db, 'notifications'), orderBy('createdAt', 'desc'), limit(5));
-      const unsubscribe = onSnapshot(q, (snapshot) => {
+      unsubscribe = onSnapshot(q, (snapshot) => {
+        if (!isMounted) return;
         const notifs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Notification));
         setNotifications(notifs);
         
@@ -138,36 +144,62 @@ export const Header: React.FC = () => {
             return docTime > initialLoadTime.current;
           });
 
-          if (hasNewNotif && Notification.permission !== 'granted') {
+          if (hasNewNotif && typeof window !== 'undefined' && 'Notification' in window && Notification.permission !== 'granted') {
             setShowEnableNotifPopup(true);
           }
         }
       }, (error) => {
-        console.error("Header notifications onSnapshot error:", error);
+        console.warn("Header notifications onSnapshot note:", error?.code || error?.message || error);
       });
-      return () => unsubscribe();
+    } catch (err: any) {
+      console.warn("Header notifications subscription setup error:", err?.message || err);
     }
-  }, [user]);
+
+    return () => {
+      isMounted = false;
+      if (unsubscribe) {
+        try {
+          unsubscribe();
+        } catch (e) {}
+      }
+    };
+  }, [user?.uid]);
 
   useEffect(() => {
-    if (user) {
-      const q = query(collection(db, 'articles'), limit(1));
-      const unsubscribe = onSnapshot(q, (snapshot) => {
+    if (!user?.uid) return;
+
+    let isMounted = true;
+    let unsubscribe: (() => void) | null = null;
+
+    try {
+      const q = query(collection(db, 'articles'), orderBy('createdAt', 'desc'), limit(1));
+      unsubscribe = onSnapshot(q, (snapshot) => {
+        if (!isMounted) return;
         if (!snapshot.empty) {
           const firstDoc = snapshot.docs[0];
           const data = firstDoc.data();
           const docTime = data.createdAt || 0;
           
-          if (docTime > initialLoadTime.current && Notification.permission !== 'granted') {
+          if (docTime > initialLoadTime.current && typeof window !== 'undefined' && 'Notification' in window && Notification.permission !== 'granted') {
             setShowEnableNotifPopup(true);
           }
         }
       }, (error) => {
-        console.error("Header articles onSnapshot error:", error);
+        console.warn("Header articles onSnapshot note:", error?.code || error?.message || error);
       });
-      return () => unsubscribe();
+    } catch (err: any) {
+      console.warn("Header articles subscription setup error:", err?.message || err);
     }
-  }, [user]);
+
+    return () => {
+      isMounted = false;
+      if (unsubscribe) {
+        try {
+          unsubscribe();
+        } catch (e) {}
+      }
+    };
+  }, [user?.uid]);
 
   const handleOpenNotifs = () => {
     setNotifMenuOpen(!notifMenuOpen);

@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { appVersionService } from '../services/appVersionService';
-import { APP_VERSION_CONFIG } from '../config/appVersion';
+import { APP_VERSION_CONFIG, VersionRelease } from '../config/appVersion';
 import { ChangelogModal } from './ChangelogModal';
 import { UpdateVideoCardModal } from './videoCards/UpdateVideoCardModal';
 
@@ -18,6 +18,16 @@ export const NewVersionBannerModal: React.FC<NewVersionBannerModalProps> = ({
   onDismiss
 }) => {
   const [showChangelog, setShowChangelog] = useState(false);
+  const [activeReleases, setActiveReleases] = useState<VersionRelease[]>(APP_VERSION_CONFIG.releases);
+
+  useEffect(() => {
+    const unsub = appVersionService.subscribeReleases((releases) => {
+      if (releases && releases.length > 0) {
+        setActiveReleases(releases);
+      }
+    }, false);
+    return () => unsub();
+  }, []);
 
   if (!isOpen) return null;
 
@@ -26,16 +36,16 @@ export const NewVersionBannerModal: React.FC<NewVersionBannerModalProps> = ({
     onDismiss();
   };
 
-  const latestReleaseRaw = APP_VERSION_CONFIG.releases.find((r) => r.version === currentVersion) || APP_VERSION_CONFIG.releases[0];
+  const targetRelease = activeReleases.find((r) => r.version === currentVersion) || activeReleases[0] || APP_VERSION_CONFIG.releases[0];
 
   return (
     <>
       <UpdateVideoCardModal
         isOpen={isOpen && !showChangelog}
-        targetRelease={latestReleaseRaw}
+        targetRelease={targetRelease}
         currentInstalledVersion={previousVersion || currentVersion}
         isForceUpdate={false}
-        initialThemeId="cosmic-nebula"
+        initialThemeId={targetRelease.videoCardTheme || 'cyber-emerald'}
         onDismiss={handleDismissOnly}
       />
 

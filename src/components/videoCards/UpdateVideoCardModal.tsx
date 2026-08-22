@@ -3,15 +3,12 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   X, 
   Sparkles, 
-  ChevronLeft, 
-  ChevronRight, 
   RefreshCw, 
   Share2, 
   Check, 
-  Download,
-  Layers
+  Download
 } from 'lucide-react';
-import { VIDEO_CARD_PRESETS, getPresetById, VideoCardThemeId } from '../../types/updateCards';
+import { getPresetById, VideoCardThemeId } from '../../types/updateCards';
 import { UpdateVideoCard } from './UpdateVideoCard';
 import { VersionRelease } from '../../config/appVersion';
 import { useLanguage } from '../../contexts/LanguageContext';
@@ -37,25 +34,15 @@ export const UpdateVideoCardModal: React.FC<UpdateVideoCardModalProps> = ({
   onRefreshCache
 }) => {
   const { language } = useLanguage();
-  const [selectedThemeId, setSelectedThemeId] = useState<VideoCardThemeId>(initialThemeId);
   const [copiedLink, setCopiedLink] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshStep, setRefreshStep] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
+  // Selected theme is strictly defined by Admin in targetRelease or fallback to default
+  const selectedThemeId: VideoCardThemeId = targetRelease.videoCardTheme || initialThemeId || 'cyber-emerald';
   const currentPreset = getPresetById(selectedThemeId);
-  const currentIndex = VIDEO_CARD_PRESETS.findIndex(p => p.id === selectedThemeId);
-
-  const handlePrevPreset = () => {
-    const nextIdx = (currentIndex - 1 + VIDEO_CARD_PRESETS.length) % VIDEO_CARD_PRESETS.length;
-    setSelectedThemeId(VIDEO_CARD_PRESETS[nextIdx].id);
-  };
-
-  const handleNextPreset = () => {
-    const nextIdx = (currentIndex + 1) % VIDEO_CARD_PRESETS.length;
-    setSelectedThemeId(VIDEO_CARD_PRESETS[nextIdx].id);
-  };
 
   const handleCopyApkLink = () => {
     const url = targetRelease.apkDownloadUrl || targetRelease.downloadUrl || window.location.href;
@@ -96,69 +83,22 @@ export const UpdateVideoCardModal: React.FC<UpdateVideoCardModalProps> = ({
           transition={{ type: 'spring', damping: 26, stiffness: 280 }}
           className="relative w-full max-w-xl my-auto flex flex-col items-center"
         >
-          {/* Top Control Bar & Theme Carousel Selector */}
-          <div className="w-full flex items-center justify-between gap-2 mb-3 bg-gray-900/80 backdrop-blur-md px-4 py-2.5 rounded-2xl border border-white/10 shadow-lg text-white">
-            <div className="flex items-center gap-2">
-              <Layers size={16} className="text-emerald-400" />
-              <span className="text-xs font-bold text-gray-200">
-                {language === 'fr' ? 'Style Vidéo :' : 'Video Style:'}
-              </span>
-              <span className="text-xs font-black text-amber-300 font-mono">
-                {currentPreset.index}/10
-              </span>
-            </div>
-
-            {/* Carousel navigation buttons */}
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={handlePrevPreset}
-                className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white transition-colors cursor-pointer"
-                title="Style vidéo précédent"
-              >
-                <ChevronLeft size={16} />
-              </button>
-
-              <div className="hidden sm:flex items-center gap-1">
-                {VIDEO_CARD_PRESETS.map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => setSelectedThemeId(p.id)}
-                    className={`w-2.5 h-2.5 rounded-full transition-all cursor-pointer ${
-                      p.id === selectedThemeId
-                        ? 'w-6 bg-white shadow-sm'
-                        : 'bg-white/30 hover:bg-white/60'
-                    }`}
-                    title={p.titleFr}
-                  />
-                ))}
-              </div>
-
-              <button
-                type="button"
-                onClick={handleNextPreset}
-                className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white transition-colors cursor-pointer"
-                title="Style vidéo suivant"
-              >
-                <ChevronRight size={16} />
-              </button>
-            </div>
-
-            {/* Close modal if not forced */}
-            {!isForceUpdate && (
+          {/* Top Bar with Close button if not forced */}
+          {!isForceUpdate && (
+            <div className="w-full flex items-center justify-end mb-2">
               <button
                 type="button"
                 onClick={onDismiss}
-                className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white transition-colors cursor-pointer ml-1"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white transition-all text-xs font-semibold backdrop-blur-md cursor-pointer border border-white/10"
                 title="Fermer la fenêtre"
               >
-                <X size={16} />
+                <X size={15} />
+                <span>{language === 'fr' ? 'Fermer' : 'Close'}</span>
               </button>
-            )}
-          </div>
+            </div>
+          )}
 
-          {/* Master Video Card */}
+          {/* Master Video Card (Single Admin-Defined Theme) */}
           <UpdateVideoCard
             preset={currentPreset}
             targetRelease={targetRelease}

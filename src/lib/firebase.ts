@@ -19,6 +19,7 @@ import {
   initializeFirestore, 
   persistentLocalCache, 
   persistentMultipleTabManager,
+  persistentSingleTabManager,
   memoryLocalCache,
   enableNetwork,
   doc, 
@@ -65,11 +66,11 @@ const initFirestore = () => {
     return getFirestore(app);
   }
 
-  // Attempt persistent local cache with multi-tab support
+  // Attempt persistent local cache with multi-tab or single-tab in iframes
   try {
     return initializeFirestore(app, {
       localCache: persistentLocalCache({
-        tabManager: persistentMultipleTabManager()
+        tabManager: isInIframe ? persistentSingleTabManager({}) : persistentMultipleTabManager()
       })
     });
   } catch (err1) {
