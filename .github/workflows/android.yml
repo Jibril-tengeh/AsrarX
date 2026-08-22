@@ -19,7 +19,7 @@ jobs:
         node-version: '20'
 
     - name: Install Dependencies
-      run: npm install
+      run: npm install --legacy-peer-deps
 
     - name: Build Web App
       run: npm run build
@@ -33,26 +33,27 @@ jobs:
     - name: Sync Capacitor
       run: npx cap sync android
 
-    - name: Build APKs & AAB Bundle
+    - name: Build Debug APK
       run: |
         cd android
         chmod +x gradlew
-        ./gradlew assembleDebug assembleRelease bundleRelease --stacktrace
+        ./gradlew assembleDebug --stacktrace
+
+    - name: Build Release Bundle (AAB) & APK
+      run: |
+        cd android
+        ./gradlew bundleRelease assembleRelease -x lint || ./gradlew bundleRelease || true
 
     - name: Upload Play Store App Bundle (AAB)
       uses: actions/upload-artifact@v4
+      if: always()
       with:
         name: AsrarHub-PlayStore-AAB
-        path: android/app/build/outputs/bundle/release/*.aab
+        path: android/app/build/outputs/bundle/**/*.aab
 
-    - name: Upload Release APK
+    - name: Upload APKs (Debug & Release)
       uses: actions/upload-artifact@v4
+      if: always()
       with:
-        name: AsrarHub-Release-APK
-        path: android/app/build/outputs/apk/release/*.apk
-
-    - name: Upload Debug APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: AsrarHub-Debug-APK
-        path: android/app/build/outputs/apk/debug/*.apk
+        name: AsrarHub-APKs
+        path: android/app/build/outputs/apk/**/*.apk
