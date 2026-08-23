@@ -5,45 +5,7 @@ import { useFeatures } from '../contexts/FeatureContext';
 import { motion } from 'motion/react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
-
-const toolNames: { [key: string]: string } = {
-  abjad: 'Calculateur Abjad',
-  planetary: 'Heures Planétaires',
-  tasbih: 'Tasbih (Chapelet)',
-  khatim: 'Générateur Khatim',
-  asma: 'Asma al-Husna',
-  talsam: 'Talsam',
-  istikhara: 'Istikhara',
-  sirr: 'Sirr Al Asrar',
-  zairja: 'Zairja',
-  zakat: 'Calculateur Zakat',
-  faraid: 'Calculateur Faraid',
-  dreams: 'Journal des Rêves',
-  halaqat: 'Halaqat',
-  elemental: 'Analyse Élémentale',
-  geomancy: 'Géomancie',
-  letters: 'Science des Lettres',
-  'personal-wird': 'Wird Personnel',
-  'daily-dhikr': 'Dhikr Quotidien',
-  'lunar-mansions': 'Demeures Lunaires',
-  'spiritual-compatibility': 'Compatibilité Spirituelle',
-  'ilm-jafar': 'Ilm Jafar',
-  'grand-oaths': 'Grands Serments',
-  '99names': "99 Noms d'Allah",
-  rouhaniyya: 'Extracteur Rouhaniyya',
-  taksir: 'Taksir',
-  quran: 'Coran Complet',
-  khouddam: 'Extracteur Khouddam',
-  awfaq: 'Awfaq',
-  'quranic-faal': 'Tirage Coranique',
-  store: 'Boutique (Store)',
-  community: 'Communauté',
-  journal: 'Journal Intime',
-  quizz: 'Quiz Spirituel',
-  lexique: 'Lexique',
-  calendar: 'Calendrier Hégirien',
-  faq: 'Assistant FAQ'
-};
+import { getToolDisplayName } from '../utils/toolNames';
 
 const getFeatureKeyForPath = (pathname: string): string | null => {
   if (pathname.startsWith('/tools/')) {
@@ -61,7 +23,7 @@ const getFeatureKeyForPath = (pathname: string): string | null => {
 };
 
 export const MaintenanceOverlay: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
@@ -119,7 +81,7 @@ export const MaintenanceOverlay: React.FC<{ children: React.ReactNode }> = ({ ch
 
   if (featureStatus === 'maintenance' || featureStatus === 'inactive') {
     const toolId = featureKey ? featureKey.replace('tool_', '') : '';
-    const toolName = toolNames[toolId] || toolId || t('maintenance.feature', 'Fonctionnalité');
+    const toolName = getToolDisplayName(toolId, language) || toolId || t('maintenance.feature', 'Fonctionnalité');
 
     return (
       <div className="fixed inset-0 z-[100] bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-6 text-center">

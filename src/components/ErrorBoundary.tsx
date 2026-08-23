@@ -48,13 +48,27 @@ export class ErrorBoundary extends React.Component<Props, State> {
   public render() {
     if (this.state.hasError) {
       return (
-        <div style={{ padding: '20px', backgroundColor: '#fee2e2', color: '#991b1b', fontFamily: 'sans-serif' }}>
-          <h2>Something went wrong.</h2>
-          <details style={{ whiteSpace: 'pre-wrap' }}>
-            {this.state.error && this.state.error.toString()}
-            <br />
-            {this.state.errorInfo && this.state.errorInfo.componentStack}
-          </details>
+        <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 font-sans">
+          <div className="max-w-md w-full bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 text-center space-y-4">
+            <div className="w-12 h-12 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto text-xl font-bold">
+              ✦
+            </div>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">AsrarHub</h2>
+            <p className="text-sm text-gray-600 dark:text-gray-300">
+              Une mise à jour ou un rechargement est nécessaire pour synchroniser l'affichage.
+            </p>
+            <div className="pt-2 flex flex-col sm:flex-row gap-2 justify-center">
+              <button
+                onClick={() => {
+                  this.setState({ hasError: false, error: null, errorInfo: null });
+                  window.location.reload();
+                }}
+                className="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white rounded-xl font-medium transition-all text-sm shadow-sm shadow-emerald-600/20"
+              >
+                Recharger l'application
+              </button>
+            </div>
+          </div>
         </div>
       );
     }

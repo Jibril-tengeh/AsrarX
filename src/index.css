@@ -54,17 +54,51 @@ html {
   }
 }
 
-html, body {
-  max-width: 100vw;
-  overflow-x: clip;
+html {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100%;
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+  overscroll-behavior-y: none;
+  scroll-behavior: smooth;
 }
 
 body {
-  font-family: var(--font-sans);
+  margin: 0 !important;
+  padding: 0 !important;
   width: 100%;
   min-height: 100vh;
+  font-family: var(--font-sans);
+  overflow-x: hidden;
+  overscroll-behavior-y: none;
+  -webkit-font-smoothing: antialiased;
+  scroll-behavior: smooth;
+}
+
+#root, .main-scroll-container, .smooth-scroll {
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  scroll-behavior: smooth;
+}
+
+/* Zen Mode (Lecture apaisante) transitions */
+.zen-mode-hidden {
+  transform: translateY(120%) !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease-out !important;
+}
+
+.zen-header-hidden {
+  transform: translateY(-120%) !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease-out !important;
 }
 
 /* Ensure flex child inputs and buttons don't blow out mobile layout bounds */
@@ -137,12 +171,12 @@ input, textarea, select {
 
 /* Clear fixed header across all screens and prevent overlap */
 .safe-area-pt {
-  padding-top: 1.5rem;
+  padding-top: 0;
 }
 
 @media (min-width: 640px) {
   .safe-area-pt {
-    padding-top: 2rem;
+    padding-top: 0;
   }
 }
 

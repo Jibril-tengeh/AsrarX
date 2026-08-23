@@ -213,26 +213,27 @@ export const FirstOpenPermissionsModal: React.FC = () => {
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9, y: 15 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.9, y: 15 }}
-          transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-sm sm:max-w-md w-full shadow-2xl overflow-hidden relative"
-        >
-          {/* View Mode Toggle */}
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full">
-              {t.stepHeader} ({currentStepIndex + 1}/4)
-            </span>
-            <button
-              onClick={() => setViewMode(prev => (prev === 'step' ? 'list' : 'step'))}
-              className="text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-medium cursor-pointer"
-            >
-              {viewMode === 'step' ? t.viewAllBtn : 'Guide pas à pas'}
-            </button>
-          </div>
+      {isOpen && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-md">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: 15 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 15 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-sm sm:max-w-md w-full shadow-2xl overflow-hidden relative"
+          >
+            {/* View Mode Toggle */}
+            <div className="flex items-center justify-between mb-4">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full">
+                {t.stepHeader} ({currentStepIndex + 1}/4)
+              </span>
+              <button
+                onClick={() => setViewMode(prev => (prev === 'step' ? 'list' : 'step'))}
+                className="text-xs text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 font-medium cursor-pointer"
+              >
+                {viewMode === 'step' ? t.viewAllBtn : 'Guide pas à pas'}
+              </button>
+            </div>
 
           {viewMode === 'step' ? (
             /* Native System Dialog Card UI */
@@ -359,6 +360,7 @@ export const FirstOpenPermissionsModal: React.FC = () => {
           </div>
         </motion.div>
       </div>
+      )}
     </AnimatePresence>
   );
 };

@@ -1,5 +1,11 @@
 {
   "welcome": "Barka da zuwa AsrarHub",
+  "pullToRefresh": {
+    "pull": "Jawo ƙasa don sabuntawa",
+    "release": "Saki don sabuntawa",
+    "refreshing": "Ana sabuntawa...",
+    "success": "An sabunta"
+  },
   "translating": "Fassarar AI tana nan gudanarwa...",
   "translated": "Fassarar ta atomatik ta hanyar AI",
   "selectRole": "Da fatan za a zaɓi rawar ku (USER ko ADMIN).",

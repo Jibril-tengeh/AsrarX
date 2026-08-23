@@ -4,11 +4,13 @@ import {
   initNotificationRouter, 
   subscribeNotificationRouter, 
   NotificationRouterAction,
-  PlanetaryModalData
+  PlanetaryModalData,
+  DhikrModalData
 } from '../../utils/notificationRouter';
 import { DownloadRecord } from '../../utils/downloadStorage';
 import { DownloadedItemModal } from './DownloadedItemModal';
 import { PlanetaryHourDetailModal } from './PlanetaryHourDetailModal';
+import { DhikrReminderModal } from './DhikrReminderModal';
 
 export const NotificationModalManager: React.FC = () => {
   const navigate = useNavigate();
@@ -18,6 +20,9 @@ export const NotificationModalManager: React.FC = () => {
 
   const [planetaryModalOpen, setPlanetaryModalOpen] = useState<boolean>(false);
   const [currentPlanetaryData, setCurrentPlanetaryData] = useState<PlanetaryModalData | null>(null);
+
+  const [dhikrModalOpen, setDhikrModalOpen] = useState<boolean>(false);
+  const [currentDhikrData, setCurrentDhikrData] = useState<DhikrModalData | null>(null);
 
   useEffect(() => {
     // Initialize Capacitor and Web listeners
@@ -31,6 +36,9 @@ export const NotificationModalManager: React.FC = () => {
       } else if (action.type === 'OPEN_PLANETARY') {
         setCurrentPlanetaryData(action.payload);
         setPlanetaryModalOpen(true);
+      } else if (action.type === 'OPEN_DHIKR') {
+        setCurrentDhikrData(action.payload);
+        setDhikrModalOpen(true);
       } else if (action.type === 'NAVIGATE') {
         if (action.path) {
           navigate(action.path, { state: action.state });
@@ -55,6 +63,12 @@ export const NotificationModalManager: React.FC = () => {
         isOpen={planetaryModalOpen}
         onClose={() => setPlanetaryModalOpen(false)}
         initialData={currentPlanetaryData}
+      />
+
+      <DhikrReminderModal
+        isOpen={dhikrModalOpen}
+        onClose={() => setDhikrModalOpen(false)}
+        data={currentDhikrData}
       />
     </>
   );

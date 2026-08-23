@@ -23,11 +23,21 @@ export interface SWRCacheStats {
   count: number;
   lastSyncTime: number | null;
   lastSyncFormatted: string;
-  status: 'idle' | 'revalidating' | 'success' | 'offline' | 'error';
+  status: 'idle' | 'revalidating' | 'success' | 'offline' | 'error' | 'cache';
   errorMessage?: string;
+  isServingFromCache?: boolean;
+  cacheSource?: 'indexeddb' | 'localstorage' | 'network';
 }
 
 let activeRevalidationPromise: Promise<any[]> | null = null;
+let lastKnownCacheState: { isServingFromCache: boolean; lastError: string | null } = {
+  isServingFromCache: false,
+  lastError: null,
+};
+
+export function getLastKnownCacheState() {
+  return lastKnownCacheState;
+}
 
 /**
  * 1. STALE PHASE: Instantly retrieves cached published articles from IndexedDB / localStorage.
@@ -78,6 +88,28 @@ export async function revalidatePublishedArticles(sourceTag = 'manual'): Promise
   activeRevalidationPromise = (async () => {
     console.log(`[SWR Revalidate] Starting background article sync (Trigger: ${sourceTag})...`);
     let fetchedItems: any[] = [];
+    let networkErrorMessage: string | null = null;
+
+    // Check if definitely offline beforehand
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      console.log('[SWR Revalidate] Device is offline; maintaining existing cached data.');
+      lastKnownCacheState = { isServingFromCache: true, lastError: 'Hors ligne' };
+      const cached = await getStalePublishedArticles();
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent(SWR_EVENT_NAME, {
+          detail: {
+            articles: cached,
+            rawPublished: cached,
+            count: cached.length,
+            timestamp: Date.now(),
+            source: 'offline_cache',
+            isServingFromCache: true,
+            isOffline: true
+          }
+        }));
+      }
+      return cached;
+    }
 
     // 1. Attempt Firestore SDK fetch with timeout
     try {
@@ -93,6 +125,7 @@ export async function revalidatePublishedArticles(sourceTag = 'manual'): Promise
       console.log(`[SWR Revalidate] Firestore SDK returned ${fetchedItems.length} articles.`);
     } catch (sdkErr: any) {
       console.warn(`[SWR Revalidate] Firestore SDK fetch skipped/failed (${sdkErr?.message}), trying HTTPS REST fallback...`);
+      networkErrorMessage = sdkErr?.message || 'Firestore unreachable';
       fetchedItems = [];
     }
 
@@ -102,10 +135,12 @@ export async function revalidatePublishedArticles(sourceTag = 'manual'): Promise
         const restItems = await fetchArticlesFromRest();
         if (Array.isArray(restItems) && restItems.length > 0) {
           fetchedItems = restItems;
+          networkErrorMessage = null;
           console.log(`[SWR Revalidate] HTTPS REST API returned ${fetchedItems.length} articles.`);
         }
-      } catch (restErr) {
+      } catch (restErr: any) {
         console.warn('[SWR Revalidate] REST API fallback error:', restErr);
+        networkErrorMessage = restErr?.message || 'REST API unreachable';
       }
     }
 
@@ -120,6 +155,8 @@ export async function revalidatePublishedArticles(sourceTag = 'manual'): Promise
     );
 
     if (validPublished.length > 0) {
+      lastKnownCacheState = { isServingFromCache: false, lastError: null };
+
       // 4. Save to IndexedDB via saveCachedArticlesList and setOfflineData
       saveCachedArticlesList(CACHED_ARTICLES_LIST_KEY, validPublished);
       saveCachedArticlesList(CACHED_EXPLORE_ARTICLES_KEY, validPublished);
@@ -213,7 +250,9 @@ export async function revalidatePublishedArticles(sourceTag = 'manual'): Promise
             rawPublished: validPublished,
             count: validPublished.length,
             timestamp: syncTime,
-            source: sourceTag
+            source: sourceTag,
+            isServingFromCache: false,
+            isOnline: true
           }
         });
         window.dispatchEvent(customEvent);
@@ -222,10 +261,45 @@ export async function revalidatePublishedArticles(sourceTag = 'manual'): Promise
       console.log(`[SWR Revalidate] Successfully revalidated ${validPublished.length} articles and updated IndexedDB cache.`);
       return combined;
     } else {
-      console.log('[SWR Revalidate] Revalidation yielded no new articles, keeping current cache.');
-      return getStalePublishedArticles();
+      console.log('[SWR Revalidate] Network revalidation yielded no response or failed; gracefully preserving cached data on screen.');
+      lastKnownCacheState = { isServingFromCache: true, lastError: networkErrorMessage || 'Serveur injoignable' };
+      const staleArticles = await getStalePublishedArticles();
+      
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent(SWR_EVENT_NAME, {
+          detail: {
+            articles: staleArticles,
+            rawPublished: staleArticles,
+            count: staleArticles.length,
+            timestamp: Date.now(),
+            source: 'cache_fallback',
+            isServingFromCache: true,
+            isOffline: typeof navigator !== 'undefined' && !navigator.onLine,
+            errorMessage: networkErrorMessage
+          }
+        }));
+      }
+      return staleArticles;
     }
-  })().finally(() => {
+  })().catch(async (err) => {
+    console.warn('[SWR Revalidate] Unhandled error during revalidation; falling back to cache:', err);
+    lastKnownCacheState = { isServingFromCache: true, lastError: err?.message || 'Erreur réseau' };
+    const fallbackArticles = await getStalePublishedArticles();
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent(SWR_EVENT_NAME, {
+        detail: {
+          articles: fallbackArticles,
+          rawPublished: fallbackArticles,
+          count: fallbackArticles.length,
+          timestamp: Date.now(),
+          source: 'cache_error_recovery',
+          isServingFromCache: true,
+          errorMessage: err?.message
+        }
+      }));
+    }
+    return fallbackArticles;
+  }).finally(() => {
     activeRevalidationPromise = null;
   });
 
@@ -271,11 +345,16 @@ export async function getSWRCacheStats(): Promise<SWRCacheStats> {
     lastSyncFormatted = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   }
 
+  const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+  const isServingCache = isOffline || lastKnownCacheState.isServingFromCache || count > 0;
+
   return {
     count,
     lastSyncTime,
     lastSyncFormatted,
-    status: typeof navigator !== 'undefined' && !navigator.onLine ? 'offline' : 'idle'
+    status: isOffline ? 'offline' : lastKnownCacheState.isServingFromCache ? 'cache' : 'idle',
+    isServingFromCache: isServingCache,
+    errorMessage: lastKnownCacheState.lastError || undefined
   };
 }
 

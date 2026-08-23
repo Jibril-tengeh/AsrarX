@@ -39,10 +39,13 @@ import { LocalNotifications } from '@capacitor/local-notifications';
 import { pingFirestore, addNetworkLog } from './utils/networkLogger';
 import { revalidatePublishedArticles, getSWRCacheStats, SWRCacheStats } from './lib/swrArticleCache';
 import { checkFeatureAccess } from './utils/featureAccess';
+import { getToolDisplayName } from './utils/toolNames';
 import { recordUnauthorizedToolAttempt } from './utils/securityAlerts';
 import { appVersionService } from './services/appVersionService';
 import { NewVersionBannerModal } from './components/NewVersionBannerModal';
 import { ForceUpdateModal } from './components/ForceUpdateModal';
+import { PremiumLockScreen } from './components/PremiumLockScreen';
+import { NavigationProgressBar } from './components/NavigationProgressBar';
 import { clear as clearIdbKeyval } from 'idb-keyval';
 
 declare const __APP_VERSION__: string;
@@ -281,16 +284,16 @@ const NetworkStatus = () => {
     setIsSwrSyncing(true);
 
     if (!isSilent) {
-      setStatusFeedback("SWR : Synchronisation IndexedDB des articles en cours...");
+      setStatusFeedback("Synchronisation locale des articles en cours...");
     } else {
-      setBgSyncMessage("Synchronisation IndexedDB des articles en arrière-plan...");
+      setBgSyncMessage("Synchronisation des articles en arrière-plan...");
     }
 
     try {
       const articles = await revalidatePublishedArticles(triggerSource);
       await loadSwrStats();
       if (!isSilent) {
-        setStatusFeedback(`Cache IndexedDB à jour : ${articles.length} articles révalidés.`);
+        setStatusFeedback(`Articles à jour : ${articles.length} articles synchronisés.`);
       } else {
         setBgSyncMessage(`Synchro arrière-plan terminée (${articles.length} articles)`);
         setTimeout(() => setBgSyncMessage(null), 4000);
@@ -298,7 +301,7 @@ const NetworkStatus = () => {
     } catch (err: any) {
       console.warn('[NetworkStatus] SWR revalidation error:', err);
       if (!isSilent) {
-        setStatusFeedback(`Mode Hors Ligne : Articles servis depuis IndexedDB.`);
+        setStatusFeedback(`Mode Hors Ligne : Articles disponibles depuis la mémoire locale.`);
       } else {
         setBgSyncMessage(`Synchro arrière-plan : Mode hors ligne.`);
         setTimeout(() => setBgSyncMessage(null), 4000);
@@ -457,10 +460,11 @@ const ProtectedToolsLayout: React.FC = () => {
   const isSubTool = location.pathname.startsWith('/tools/') && location.pathname !== '/tools';
   const pathParts = isSubTool ? location.pathname.split('/') : [];
   const toolId = isSubTool ? pathParts[pathParts.length - 1] : "";
+  const toolDisplayName = toolId ? getToolDisplayName(toolId, language) : "";
   
   const accessResult = isSubTool && toolId
-    ? checkFeatureAccess(toolId, toolId, featureToggles, user, isPremium)
-    : { allowed: true, restrictionType: null, featureName: toolId, status: 'active' as const };
+    ? checkFeatureAccess(toolId, toolDisplayName, featureToggles, user, isPremium)
+    : { allowed: true, restrictionType: null, featureName: toolDisplayName, status: 'active' as const };
 
   const isMaintenance = isSubTool && accessResult.restrictionType === 'maintenance';
   const isInactive = isSubTool && accessResult.restrictionType === 'blocked' && (accessResult.status === 'inactive' || accessResult.status === 'disabled');
@@ -634,42 +638,9 @@ const ProtectedToolsLayout: React.FC = () => {
 
     if (isPremiumOnly) {
       return (
-        <div className="max-w-md mx-auto p-6 sm:p-8 text-center flex flex-col items-center justify-center min-h-[70vh]">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-gradient-to-br from-purple-900/30 to-indigo-900/30 bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-xl border border-purple-200 dark:border-purple-800/40 w-full"
-          >
-            <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/40 rounded-full flex items-center justify-center text-amber-500 mb-6 mx-auto">
-              <Sparkles size={32} />
-            </div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
-              {language === 'fr' ? 'Réservé au Membres Premium' : language === 'ha' ? 'Na Mambobin Premium Ne Kawai' : 'Reserved for Premium Members'}
-            </h2>
-            <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed mb-8">
-              {language === 'fr' 
-                ? 'Cet outil fait partie des privilèges exclusifs réservés aux abonnés Premium d\'AsrarHub.' 
-                : language === 'ha'
-                ? 'Wannan kayan aiki na mambobin Premium ne kadai a AsrarHub.'
-                : 'This tool is exclusively available for AsrarHub Premium subscribers.'}
-            </p>
-            <div className="flex flex-col gap-3">
-              <Link
-                to="/store"
-                className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold py-3 px-6 rounded-2xl shadow-md transition-all"
-              >
-                <Sparkles size={18} />
-                {language === 'fr' ? 'Devenir Premium' : language === 'ha' ? 'Zama Mamba Premium' : 'Upgrade to Premium'}
-              </Link>
-              <Link
-                to="/tools"
-                className="w-full flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-bold py-3 px-6 rounded-2xl transition-all"
-              >
-                {language === 'fr' ? 'Retour aux Outils' : language === 'ha' ? 'Koma ga Kayan Aiki' : 'Back to Tools'}
-              </Link>
-            </div>
-          </motion.div>
-        </div>
+        <PremiumLockScreen
+          toolName={accessResult.featureName || undefined}
+        />
       );
     }
   }
@@ -1010,15 +981,16 @@ export default function App() {
 
   return (
     <MaintenanceOverlay>
+      <NavigationProgressBar />
       <FirstOpenPermissionsModal />
       <ContentProtectionManager />
       <NetworkStatus />
       <ErrorToastContainer />
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors flex flex-col font-sans mb-16 sm:mb-0 w-full max-w-full">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors flex flex-col font-sans mb-16 sm:mb-0 w-full max-w-full m-0 p-0 pt-0">
         <FloatingBackButton />
         <Header />
         <DailyRewardHandler />
-        <main className="flex flex-col min-h-screen w-full max-w-full flex-1 text-gray-900 dark:text-gray-100 pb-20 mt-[15px]">
+        <main className="flex flex-col flex-1 w-full max-w-full text-gray-900 dark:text-gray-100 pb-20 m-0 p-0 pt-[48px] sm:pt-[54px]">
           <React.Suspense fallback={
             <div className="flex items-center justify-center min-h-[60vh] w-full">
               <div className="w-10 h-10 border-4 border-emerald-500/10 border-t-emerald-600 rounded-full animate-spin" />

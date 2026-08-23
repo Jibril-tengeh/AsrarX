@@ -26,7 +26,6 @@ export const Header: React.FC = () => {
   const { user } = useAuth();
   const { featureToggles } = useFeatures();
   const { branding } = useAppBranding();
-   const [scrolled, setScrolled] = useState(false);
   const [langMenuOpen, setLangMenuOpen] = useState(false);
   const [notifMenuOpen, setNotifMenuOpen] = useState(false);
   const [announcementOpen, setAnnouncementOpen] = useState(false);
@@ -67,14 +66,6 @@ export const Header: React.FC = () => {
       window.addEventListener('focus', handleFocus);
       return () => window.removeEventListener('focus', handleFocus);
     }
-  }, []);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 10);
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   useEffect(() => {
@@ -240,15 +231,8 @@ export const Header: React.FC = () => {
 
   return (
     <>
-      <motion.header 
-        initial={{ y: -100 }}
-        animate={{ y: 0 }}
-        transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        className={`sticky top-0 left-0 right-0 z-50 transition-all duration-300 ${
-          scrolled 
-            ? 'py-2.5 bg-emerald-600 dark:bg-emerald-800 shadow-md' 
-            : 'py-3 bg-emerald-600 dark:bg-emerald-800 shadow-sm'
-        } px-1.5 min-[375px]:px-3 sm:px-6`}
+      <header 
+        className="fixed top-0 left-0 right-0 z-[100] w-full m-0 h-[48px] sm:h-[54px] py-2 sm:py-2.5 bg-emerald-600 dark:bg-emerald-800 shadow-sm px-1.5 min-[375px]:px-3 sm:px-6 flex items-center"
         onClick={handleSecretClick}
       >
         <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -629,7 +613,7 @@ export const Header: React.FC = () => {
             </Link>
           </div>
         </div>
-      </motion.header>
+      </header>
 
       <AnimatePresence>
         {announcementOpen && (

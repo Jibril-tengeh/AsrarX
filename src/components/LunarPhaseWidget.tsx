@@ -415,7 +415,7 @@ export const LunarPhaseWidget: React.FC<{ compact?: boolean }> = ({ compact = fa
             </div>
             <p className="text-xs text-indigo-200/80 mt-0.5 flex items-center gap-2">
               <span>Lumière Lunaire : <strong className="text-amber-400 font-mono">{lunarData.illumination}%</strong></span>
-              {isOfflineLoaded && <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full flex items-center gap-1"><CheckCircle2 size={10} /> IndexedDB Hors-ligne</span>}
+              {isOfflineLoaded && <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded-full flex items-center gap-1"><CheckCircle2 size={10} /> Mode Hors-ligne</span>}
             </p>
           </div>
         </div>

@@ -1,5 +1,11 @@
 {
   "welcome": "Welcome to AsrarHub",
+  "pullToRefresh": {
+    "pull": "Pull down to refresh",
+    "release": "Release to refresh",
+    "refreshing": "Refreshing feed...",
+    "success": "Updated"
+  },
   "translating": "AI Translation in progress...",
   "translated": "Automatically translated by AI",
   "selectRole": "Please select your role (USER or ADMIN) by prompting to generate the rest.",

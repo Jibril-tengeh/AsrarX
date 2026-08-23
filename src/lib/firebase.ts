@@ -48,17 +48,14 @@ if (typeof window !== 'undefined') {
 }
 export const storage = getStorage(app);
 
-// Initialize Firestore safely with offline persistence:
-// Persistent local cache (IndexedDB) stores queries offline so data remains accessible on intermittent mobile connections.
-// In iframe sandboxes (like AI Studio preview) or multi-frame environments, persistentLocalCache() without multi-tab lease locking
-// prevents internal assertion failures (ID: c050) while preserving full offline functionality.
+// Initialize Firestore safely with robust caching:
+// In web browsers and iframe preview environments, memoryLocalCache avoids internal Firestore assertion crashes
+// (such as ID: c050 / b815 / ca9 TargetState stream target mismatches) caused by stale IndexedDB multi-tab locks.
+// In native Capacitor mobile apps (Android APK/AAB), persistentMultipleTabManager provides stable offline caching.
 const isInIframe = typeof window !== 'undefined' && window.self !== window.top;
-const isCapacitor = typeof window !== 'undefined' && (
-  !!(window as any).Capacitor ||
-  window.location.protocol === 'capacitor:' ||
-  window.location.protocol === 'file:' ||
-  navigator.userAgent.includes('Capacitor') ||
-  navigator.userAgent.includes('wv')
+const isCapacitorNative = typeof window !== 'undefined' && (
+  !!(window as any)?.Capacitor?.isNativePlatform?.() ||
+  window.location.protocol === 'capacitor:'
 );
 
 const initFirestore = () => {
@@ -66,20 +63,37 @@ const initFirestore = () => {
     return getFirestore(app);
   }
 
-  // Attempt persistent local cache with multi-tab or single-tab in iframes
+  // In true native mobile app (Capacitor native platform), use persistent multi-tab cache
+  if (isCapacitorNative && !isInIframe) {
+    try {
+      return initializeFirestore(app, {
+        localCache: persistentLocalCache({
+          tabManager: persistentMultipleTabManager()
+        })
+      });
+    } catch (err1) {
+      console.warn('[Firestore] Falling back to memoryLocalCache in Capacitor:', err1);
+    }
+  }
+
+  // In web browsers / iframe sandboxes / mobile browsers, use memoryLocalCache and force long polling to eliminate internal assertion errors (c050, b815)
   try {
     return initializeFirestore(app, {
-      localCache: persistentLocalCache({
-        tabManager: isInIframe ? persistentSingleTabManager({}) : persistentMultipleTabManager()
-      })
+      localCache: memoryLocalCache(),
+      experimentalForceLongPolling: true
     });
-  } catch (err1) {
+  } catch (err2) {
     try {
       return initializeFirestore(app, {
         localCache: memoryLocalCache()
       });
-    } catch (err2) {
-      return getFirestore(app);
+    } catch (err3) {
+      try {
+        return getFirestore(app);
+      } catch (err4) {
+        console.warn('[Firestore] Initialization fallback note:', err4);
+        return getFirestore(app);
+      }
     }
   }
 };
@@ -107,7 +121,7 @@ if (typeof window !== 'undefined') {
     console.warn('[Network Monitor] Device status changed: OFFLINE. Using Firestore local persistent cache...');
   });
 
-  if (isCapacitor || process.env.NODE_ENV === 'development') {
+  if (isCapacitorNative || process.env.NODE_ENV === 'development') {
     setTimeout(() => {
       import('./firestoreDiagnostics').then(m => m.runFirestoreDiagnostics()).catch(() => {});
     }, 2000);

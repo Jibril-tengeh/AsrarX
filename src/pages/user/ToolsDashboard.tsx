@@ -42,6 +42,7 @@ import { DirectAbjadWidget } from "../../components/DirectAbjadWidget";
 import { CalculationHistoryModal } from "../../components/CalculationHistoryModal";
 import { getCalculationHistory } from "../../utils/calculationHistory";
 import { checkFeatureAccess } from "../../utils/featureAccess";
+import { PremiumLockScreen } from "../../components/PremiumLockScreen";
 
 
 import { BannerAd } from "../../components/BannerAd";
@@ -314,53 +315,50 @@ export const ToolsDashboard: React.FC = () => {
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
-      className="max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 safe-area-pt pb-24 w-full max-w-full overflow-x-hidden min-w-0 touch-pan-y"
+      className="max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 pt-1 sm:pt-2 pb-24 w-full max-w-full overflow-x-hidden min-w-0 touch-pan-y"
     >
-      <BannerAd />
-      <div className="mb-8">
-        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-3">
-          <Compass className="text-emerald-500" />
-          {t("toolsDashboard.title")}
-        </h1>
-        <p className="text-gray-500 dark:text-gray-400 mt-2 mb-4">
-          {t("toolsDashboard.description")}
-        </p>
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 w-full">
-          <div className="relative flex-1 w-full">
-            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
-              <Search size={18} className="text-gray-400" />
-            </div>
-            <input
-              type="text"
-              placeholder={t("toolsDashboard.searchPlaceholder", "Rechercher un outil mystique (Abjad, Wafq, Noms...)")}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-10 py-2.5 sm:py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm text-gray-900 dark:text-white shadow-xs transition-all outline-none"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery("")}
-                className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer"
-                title="Effacer"
-              >
-                <X size={16} />
-              </button>
-            )}
-          </div>
+      <div className="mb-3">
+        <div className="flex items-center justify-between gap-3 mb-2">
+          <h1 className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2.5">
+            <Compass className="text-emerald-500 w-5 h-5 sm:w-6 sm:h-6" />
+            <span>{t("toolsDashboard.title")}</span>
+          </h1>
 
           <button
             onClick={() => setIsHistoryOpen(true)}
-            className="w-full sm:w-auto px-4 py-2.5 sm:py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer shadow-xs whitespace-nowrap shrink-0"
+            className="px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-xs whitespace-nowrap shrink-0"
           >
-            <History size={18} />
-            <span>{language === 'ha' ? 'Tarihin Hisabi' : language === 'en' ? 'Calculation History' : 'Historique des Calculs'}</span>
+            <History size={15} />
+            <span className="hidden xs:inline">{language === 'ha' ? 'Tarihi' : language === 'en' ? 'History' : 'Historique'}</span>
             {historyCount > 0 && (
-              <span className="px-2 py-0.5 text-[10px] font-black rounded-full bg-emerald-600 text-white">
+              <span className="px-1.5 py-0.2 text-[10px] font-black rounded-full bg-emerald-600 text-white">
                 {historyCount}
               </span>
             )}
           </button>
+        </div>
+
+        <div className="relative w-full mb-2.5">
+          <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+            <Search size={16} className="text-gray-400" />
+          </div>
+          <input
+            type="text"
+            placeholder={t("toolsDashboard.searchPlaceholder", "Rechercher un outil mystique (Abjad, Wafq, Noms...)")}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-9 pr-9 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-emerald-500 text-xs sm:text-sm text-gray-900 dark:text-white shadow-xs transition-all outline-none"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery("")}
+              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 cursor-pointer"
+              title="Effacer"
+            >
+              <X size={15} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -419,57 +417,6 @@ export const ToolsDashboard: React.FC = () => {
         </span>
         <span className="text-emerald-500 font-bold animate-pulse">👉</span>
       </div>
-
-      {(() => {
-        const lastTool = lastToolId ? tools.find(t => t.id === lastToolId) : null;
-        if (!lastTool) return null;
-        return (
-          <div className="mb-8 p-5 bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-transparent border border-emerald-500/20 dark:border-emerald-500/30 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-emerald-500/10 to-teal-500/10 rounded-full blur-xl pointer-events-none" />
-            <div className="flex items-center gap-4 relative z-10">
-              <div className={`w-12 h-12 shrink-0 rounded-2xl bg-gradient-to-br ${lastTool.color} text-white flex items-center justify-center shadow-md shadow-emerald-500/10 group-hover:scale-105 transition-transform`}>
-                {React.createElement(lastTool.icon, { size: 24 })}
-              </div>
-              <div>
-                <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                  {t("tools.lastConsulted", "Dernier outil consulté")}
-                </span>
-                <h3 className="font-bold text-gray-900 dark:text-white text-base sm:text-lg mt-0.5">
-                  {t(`tools.${lastTool.id}.title`) !== `tools.${lastTool.id}.title`
-                    ? t(`tools.${lastTool.id}.title`)
-                    : lastTool.title}
-                </h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-1">
-                  {t(`tools.${lastTool.id}.description`) !== `tools.${lastTool.id}.description`
-                    ? t(`tools.${lastTool.id}.description`)
-                    : lastTool.description}
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={() => navigate(lastTool.path)}
-              className="shrink-0 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm rounded-xl shadow-md shadow-emerald-600/10 hover:shadow-lg transition-all flex items-center gap-1.5 cursor-pointer self-stretch sm:self-auto justify-center"
-            >
-              <span>{t("tools.resumePractice", "Reprendre la pratique")}</span>
-              <ChevronRight size={16} />
-            </button>
-          </div>
-        );
-      })()}
-
-      {/* Direct Abjad Calculator Widget (Admin controllable) */}
-      {featureToggles.direct_abjad_widget !== false &&
-        featureToggles.tool_direct_abjad_widget !== 'inactive' &&
-        featureToggles.tool_direct_abjad_widget !== 'disabled' && (
-          <div className="mb-8">
-            <DirectAbjadWidget />
-          </div>
-      )}
-
-      <div className="mb-8">
-        <CelestialRecommendations />
-      </div>
-
 
       <AnimatePresence>
         {showGuide && (
@@ -582,193 +529,228 @@ export const ToolsDashboard: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {isLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-          {Array.from({ length: 6 }).map((_, idx) => (
-            <div key={idx} className="h-[180px] rounded-2xl bg-white dark:bg-gray-800 shadow-sm border border-gray-150 dark:border-gray-700 p-5 flex flex-col justify-between">
-              <div>
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-10 h-10 rounded-xl bg-gray-200 dark:bg-gray-700 animate-pulse shrink-0"></div>
-                  <div className="h-5 w-32 bg-gray-200 dark:bg-gray-700 animate-pulse rounded-lg"></div>
-                </div>
-                <div className="space-y-2.5">
-                  <div className="h-3.5 w-full bg-gray-200 dark:bg-gray-700 animate-pulse rounded-md"></div>
-                  <div className="h-3.5 w-5/6 bg-gray-200 dark:bg-gray-700 animate-pulse rounded-md"></div>
-                </div>
-              </div>
-              <div className="flex justify-between items-center mt-4 pt-2">
-                <div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 animate-pulse rounded"></div>
-                <div className="h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse"></div>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <motion.div
-          key={activeTab}
-          initial={{ opacity: 0, x: activeTab === "advanced" ? 25 : -25 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.25, ease: "easeOut" }}
-          className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6"
-        >
-          <AnimatePresence mode="popLayout">
-            {displayedTools.map((tool, index) => {
-              const toolTitle = t(`tools.${tool.id}.title`) !== `tools.${tool.id}.title` ? t(`tools.${tool.id}.title`) : tool.title;
-              const accessResult = checkFeatureAccess(tool.id, toolTitle, featureToggles, user, isAuthPremium);
-              
-              const isMaintenance = accessResult.restrictionType === "maintenance";
-              const isPremium = accessResult.status === "premium";
-              const isBlockedForUser = !accessResult.allowed && (accessResult.restrictionType === "blocked" || accessResult.restrictionType === "phone_blocked");
-              const isAllowed = accessResult.allowed;
-
-              const content = (
-                <div
-                  className={`h-full w-full max-w-full min-w-0 rounded-2xl bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 p-4 transition-all duration-300 relative overflow-hidden group ${!tool.comingSoon && isAllowed ? "hover:shadow-md hover:-translate-y-1" : "opacity-80"}`}
-                >
-                  {/* Background Decoration */}
-                  <div
-                    className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${tool.color} rounded-bl-full opacity-10 transition-opacity ${!tool.comingSoon && isAllowed ? "group-hover:opacity-20" : ""}`}
-                  ></div>
-
-                  <div className="relative z-10 flex flex-col h-full min-w-0">
-                    <div className="flex items-center gap-3 mb-2 min-w-0">
-                      <div
-                        className={`w-10 h-10 shrink-0 rounded-xl bg-gradient-to-br ${tool.color} text-white flex items-center justify-center shadow-sm ${!tool.comingSoon && isAllowed ? "group-hover:scale-110 transition-transform relative" : "relative"}`}
-                      >
-                        <tool.icon size={20} />
-                        {isPremium && (
-                          <div className="absolute -top-1 -right-1 bg-violet-500 text-white p-0.5 rounded-full shadow border border-white dark:border-gray-800">
-                            <Sparkles size={10} />
-                          </div>
-                        )}
-                      </div>
-                      <h3 className="text-[15px] sm:text-base font-bold text-gray-900 dark:text-white flex items-center gap-2 leading-tight min-w-0 break-words flex-wrap">
-                        {toolTitle}
-                        {tool.comingSoon && (
-                          <span className="bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300 text-[9px] px-1.5 py-0.5 rounded-full font-semibold uppercase tracking-widest shrink-0">
-                            Bientôt
-                          </span>
-                        )}
-                        {isMaintenance && !tool.comingSoon && (
-                          <span className="bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 text-[9px] px-1.5 py-0.5 rounded-full font-semibold uppercase tracking-widest shrink-0">
-                            Maintenance
-                          </span>
-                        )}
-                        {isBlockedForUser && !tool.comingSoon && (
-                          <span className="bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 text-[9px] px-1.5 py-0.5 rounded-full font-semibold uppercase tracking-widest shrink-0">
-                            {language === 'fr' ? 'Bloqué' : language === 'ha' ? 'Kulle' : 'Blocked'}
-                          </span>
-                        )}
-                        {isPremium && !tool.comingSoon && !isMaintenance && !isBlockedForUser && (
-                          <span className="bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-400 text-[9px] px-1.5 py-0.5 rounded-full font-semibold uppercase tracking-widest shrink-0">
-                            Premium
-                          </span>
-                        )}
-                      </h3>
-                    </div>
-
-                    <p className="text-[13px] text-gray-500 dark:text-gray-400 leading-relaxed group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors line-clamp-3">
-                      {t(`tools.${tool.id}.description`) !==
-                      `tools.${tool.id}.description`
-                        ? t(`tools.${tool.id}.description`)
-                        : tool.description}
-                    </p>
-                    
-                    <div className="mt-auto pt-4 flex justify-between items-center relative z-20">
-                      <span className="text-emerald-600 dark:text-emerald-400 font-bold text-sm">
-                        {t("tools.access", "Accéder")} →
-                      </span>
-                      {featureToggles.share_tools_enabled !== false && (
-                        <button
-                          onClick={(e) => handleShareTool(e, tool)}
-                          className="p-2 text-gray-400 hover:text-blue-500 transition-colors rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
-                          title="Partager l'outil"
-                        >
-                          <Share2 size={16} />
-                        </button>
-                      )}
-                    </div>
+      {/* Tools Grid Flow */}
+      <div className="mb-8">
+        {isLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+            {Array.from({ length: 6 }).map((_, idx) => (
+              <div key={idx} className="h-[180px] rounded-2xl bg-white dark:bg-gray-800 shadow-sm border border-gray-150 dark:border-gray-700 p-5 flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-xl bg-gray-200 dark:bg-gray-700 animate-pulse shrink-0"></div>
+                    <div className="h-5 w-32 bg-gray-200 dark:bg-gray-700 animate-pulse rounded-lg"></div>
+                  </div>
+                  <div className="space-y-2.5">
+                    <div className="h-3.5 w-full bg-gray-200 dark:bg-gray-700 animate-pulse rounded-md"></div>
+                    <div className="h-3.5 w-5/6 bg-gray-200 dark:bg-gray-700 animate-pulse rounded-md"></div>
                   </div>
                 </div>
-              );
+                <div className="flex justify-between items-center mt-4 pt-2">
+                  <div className="h-4 w-16 bg-gray-200 dark:bg-gray-700 animate-pulse rounded"></div>
+                  <div className="h-8 w-8 rounded-full bg-gray-200 dark:bg-gray-700 animate-pulse"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, x: activeTab === "advanced" ? 25 : -25 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.25, ease: "easeOut" }}
+            className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6"
+          >
+            <AnimatePresence mode="popLayout">
+              {displayedTools.map((tool, index) => {
+                const toolTitle = t(`tools.${tool.id}.title`) !== `tools.${tool.id}.title` ? t(`tools.${tool.id}.title`) : tool.title;
+                const accessResult = checkFeatureAccess(tool.id, toolTitle, featureToggles, user, isAuthPremium);
+                
+                const isMaintenance = accessResult.restrictionType === "maintenance";
+                const isPremium = accessResult.status === "premium";
+                const isBlockedForUser = !accessResult.allowed && (accessResult.restrictionType === "blocked" || accessResult.restrictionType === "phone_blocked");
+                const isAllowed = accessResult.allowed;
 
-              return (
-                <motion.div
-                  layout
-                  key={tool.id}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  transition={{ duration: 0.2, delay: index * 0.05 }}
-                >
-                  {tool.comingSoon ? (
-                    <div className="cursor-not-allowed">{content}</div>
-                  ) : (
+                const content = (
+                  <div
+                    className={`h-full w-full max-w-full min-w-0 rounded-2xl bg-white dark:bg-gray-800 shadow-sm border border-gray-100 dark:border-gray-700 p-4 transition-all duration-300 relative overflow-hidden group ${!tool.comingSoon && isAllowed ? "hover:shadow-md hover:-translate-y-1" : "opacity-80"}`}
+                  >
+                    {/* Background Decoration */}
                     <div
-                      onClick={() => {
-                        if (isBlockedForUser) {
-                          setBlockedModalOpen({
-                            isOpen: true,
-                            title: toolTitle,
-                          });
-                        } else if (isMaintenance) {
-                          setMaintenanceModalOpen({
-                            isOpen: true,
-                            title: toolTitle,
-                          });
-                        } else if (accessResult.restrictionType === 'premium') {
-                          setPremiumModalOpen({
-                            isOpen: true,
-                            title: toolTitle,
-                          });
-                        } else {
-                          navigate(tool.path);
-                        }
-                      }}
-                      className="block h-full cursor-pointer"
-                    >
-                      {content}
+                      className={`absolute top-0 right-0 w-32 h-32 bg-gradient-to-br ${tool.color} rounded-bl-full opacity-10 transition-opacity ${!tool.comingSoon && isAllowed ? "group-hover:opacity-20" : ""}`}
+                    ></div>
+
+                    <div className="relative z-10 flex flex-col h-full min-w-0">
+                      <div className="flex items-center gap-3 mb-2 min-w-0">
+                        <div
+                          className={`w-10 h-10 shrink-0 rounded-xl bg-gradient-to-br ${tool.color} text-white flex items-center justify-center shadow-sm ${!tool.comingSoon && isAllowed ? "group-hover:scale-110 transition-transform relative" : "relative"}`}
+                        >
+                          <tool.icon size={20} />
+                          {isPremium && (
+                            <div className="absolute -top-1 -right-1 bg-violet-500 text-white p-0.5 rounded-full shadow border border-white dark:border-gray-800">
+                              <Sparkles size={10} />
+                            </div>
+                          )}
+                        </div>
+                        <h3 className="text-[15px] sm:text-base font-bold text-gray-900 dark:text-white flex items-center gap-2 leading-tight min-w-0 break-words flex-wrap">
+                          {toolTitle}
+                          {tool.comingSoon && (
+                            <span className="bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-300 text-[9px] px-1.5 py-0.5 rounded-full font-semibold uppercase tracking-widest shrink-0">
+                              Bientôt
+                            </span>
+                          )}
+                          {isMaintenance && !tool.comingSoon && (
+                            <span className="bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 text-[9px] px-1.5 py-0.5 rounded-full font-semibold uppercase tracking-widest shrink-0">
+                              Maintenance
+                            </span>
+                          )}
+                          {isBlockedForUser && !tool.comingSoon && (
+                            <span className="bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 text-[9px] px-1.5 py-0.5 rounded-full font-semibold uppercase tracking-widest shrink-0">
+                              {language === 'fr' ? 'Bloqué' : language === 'ha' ? 'Kulle' : 'Blocked'}
+                            </span>
+                          )}
+                          {isPremium && !tool.comingSoon && !isMaintenance && !isBlockedForUser && (
+                            <span className="bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-400 text-[9px] px-1.5 py-0.5 rounded-full font-semibold uppercase tracking-widest shrink-0">
+                              Premium
+                            </span>
+                          )}
+                        </h3>
+                      </div>
+
+                      <p className="text-[13px] text-gray-500 dark:text-gray-400 leading-relaxed group-hover:text-gray-600 dark:group-hover:text-gray-300 transition-colors line-clamp-3">
+                        {t(`tools.${tool.id}.description`) !==
+                        `tools.${tool.id}.description`
+                          ? t(`tools.${tool.id}.description`)
+                          : tool.description}
+                      </p>
+                      
+                      <div className="mt-auto pt-4 flex justify-between items-center relative z-20">
+                        <span className="text-emerald-600 dark:text-emerald-400 font-bold text-sm">
+                          {t("tools.access", "Accéder")} →
+                        </span>
+                        {featureToggles.share_tools_enabled !== false && (
+                          <button
+                            onClick={(e) => handleShareTool(e, tool)}
+                            className="p-2 text-gray-400 hover:text-blue-500 transition-colors rounded-full hover:bg-gray-100 dark:hover:bg-gray-700"
+                            title="Partager l'outil"
+                          >
+                            <Share2 size={16} />
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  )}
-                </motion.div>
-              );
-            })}
-          </AnimatePresence>
-        </motion.div>
+                  </div>
+                );
+
+                return (
+                  <motion.div
+                    layout
+                    key={tool.id}
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    transition={{ duration: 0.2, delay: index * 0.05 }}
+                  >
+                    {tool.comingSoon ? (
+                      <div className="cursor-not-allowed">{content}</div>
+                    ) : (
+                      <div
+                        onClick={() => {
+                          if (isBlockedForUser) {
+                            setBlockedModalOpen({
+                              isOpen: true,
+                              title: toolTitle,
+                            });
+                          } else if (isMaintenance) {
+                            setMaintenanceModalOpen({
+                              isOpen: true,
+                              title: toolTitle,
+                            });
+                          } else if (accessResult.restrictionType === 'premium') {
+                            setPremiumModalOpen({
+                              isOpen: true,
+                              title: toolTitle,
+                            });
+                          } else {
+                            navigate(tool.path);
+                          }
+                        }}
+                        className="block h-full cursor-pointer"
+                      >
+                        {content}
+                      </div>
+                    )}
+                  </motion.div>
+                );
+              })}
+            </AnimatePresence>
+          </motion.div>
+        )}
+      </div>
+
+      {/* Last Consulted Tool */}
+      {(() => {
+        const lastTool = lastToolId ? tools.find(t => t.id === lastToolId) : null;
+        if (!lastTool) return null;
+        return (
+          <div className="mb-6 p-4 sm:p-5 bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-transparent border border-emerald-500/20 dark:border-emerald-500/30 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3.5 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-emerald-500/10 to-teal-500/10 rounded-full blur-xl pointer-events-none" />
+            <div className="flex items-center gap-3.5 relative z-10">
+              <div className={`w-11 h-11 shrink-0 rounded-2xl bg-gradient-to-br ${lastTool.color} text-white flex items-center justify-center shadow-md shadow-emerald-500/10 group-hover:scale-105 transition-transform`}>
+                {React.createElement(lastTool.icon, { size: 22 })}
+              </div>
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                  {t("tools.lastConsulted", "Dernier outil consulté")}
+                </span>
+                <h3 className="font-bold text-gray-900 dark:text-white text-sm sm:text-base mt-0.5">
+                  {t(`tools.${lastTool.id}.title`) !== `tools.${lastTool.id}.title`
+                    ? t(`tools.${lastTool.id}.title`)
+                    : lastTool.title}
+                </h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">
+                  {t(`tools.${lastTool.id}.description`) !== `tools.${lastTool.id}.description`
+                    ? t(`tools.${lastTool.id}.description`)
+                    : lastTool.description}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => navigate(lastTool.path)}
+              className="shrink-0 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer self-stretch sm:self-auto justify-center"
+            >
+              <span>{t("tools.resumePractice", "Reprendre la pratique")}</span>
+              <ChevronRight size={15} />
+            </button>
+          </div>
+        );
+      })()}
+
+      {/* Direct Abjad Calculator Widget (Admin controllable) */}
+      {featureToggles.direct_abjad_widget !== false &&
+        featureToggles.tool_direct_abjad_widget !== 'inactive' &&
+        featureToggles.tool_direct_abjad_widget !== 'disabled' && (
+          <div className="mb-6">
+            <DirectAbjadWidget />
+          </div>
       )}
+
+      {/* Celestial Recommendations */}
+      <div className="mb-6">
+        <CelestialRecommendations />
+      </div>
+
+      {/* Sponsored Banner Ad */}
+      <div className="mt-4 mb-4">
+        <BannerAd />
+      </div>
 
       {/* Premium Access Modal */}
       {premiumModalOpen.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white dark:bg-gray-900 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl flex flex-col items-center text-center">
-            <div className="w-20 h-20 bg-gradient-to-br from-violet-500 to-fuchsia-600 rounded-full flex items-center justify-center shadow-lg mb-6 shadow-violet-500/30">
-              <Sparkles size={32} className="text-white" />
-            </div>
-            <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-2">
-              {premiumModalOpen.title}
-            </h2>
-            <p className="text-gray-600 dark:text-gray-300 mb-8 leading-relaxed">
-              Cet outil est réservé aux membres Premium. Débloquez-le pour y
-              accéder.
-            </p>
-            <div className="flex gap-4 w-full">
-              <button
-                onClick={() =>
-                  setPremiumModalOpen({ isOpen: false, title: "" })
-                }
-                className="flex-1 py-3 rounded-xl border-2 border-gray-200 dark:border-gray-700 font-bold hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-gray-900 dark:text-white cursor-pointer"
-              >
-                Annuler
-              </button>
-              <button
-                onClick={() => navigate("/payment")}
-                className="flex-1 py-3 rounded-xl bg-gradient-to-r from-amber-400 to-orange-500 text-white font-bold hover:from-amber-500 hover:to-orange-600 transition-colors shadow-md flex items-center justify-center gap-2 cursor-pointer"
-              >
-                Débloquer
-              </button>
-            </div>
-          </div>
-        </div>
+        <PremiumLockScreen
+          variant="modal"
+          toolName={premiumModalOpen.title}
+          onClose={() => setPremiumModalOpen({ isOpen: false, title: "" })}
+        />
       )}
 
       {/* Maintenance Modal */}

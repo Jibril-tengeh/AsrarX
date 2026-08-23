@@ -53,7 +53,11 @@ console.error = function (...args) {
       msg.includes('Could not reach Cloud Firestore backend') ||
       msg.includes('@firebase/firestore:') ||
       msg.includes('FirebaseError: [code=unavailable]') ||
-      msg.includes('firestore-backend')
+      msg.includes('firestore-backend') ||
+      msg.includes('INTERNAL ASSERTION FAILED') ||
+      msg.includes('FIRESTORE') ||
+      msg.includes('c050') ||
+      msg.includes('b815')
     ) {
       console.warn("[Filtered Firestore Log]", ...args);
       return;

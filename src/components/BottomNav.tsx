@@ -1,5 +1,5 @@
-import React from 'react';
-import { NavLink } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { Home, Wrench, Compass, Bookmark, Book } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -8,6 +8,24 @@ import { useFeatures } from '../contexts/FeatureContext';
 export const BottomNav: React.FC = () => {
   const { t } = useLanguage();
   const { featureToggles } = useFeatures();
+  const location = useLocation();
+  const [isHidden, setIsHidden] = useState(false);
+
+  useEffect(() => {
+    const handleZenVisibility = (e: any) => {
+      if (typeof e?.detail?.hidden === 'boolean') {
+        setIsHidden(e.detail.hidden);
+      }
+    };
+
+    window.addEventListener('zen_nav_visibility', handleZenVisibility);
+    return () => window.removeEventListener('zen_nav_visibility', handleZenVisibility);
+  }, []);
+
+  // Reset visibility when route changes
+  useEffect(() => {
+    setIsHidden(false);
+  }, [location.pathname]);
 
   const navItems = [
     { to: '/user/dashboard', icon: Home, label: t('nav.home'), id: 'tour-nav-home' },
@@ -18,7 +36,9 @@ export const BottomNav: React.FC = () => {
   ].filter(item => !item.featureId || featureToggles[item.featureId] !== 'inactive');
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-emerald-600 dark:bg-emerald-800 border-t border-emerald-700 dark:border-emerald-900 pb-safe shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.1)] z-50">
+    <div className={`fixed bottom-0 left-0 right-0 bg-emerald-600 dark:bg-emerald-800 border-t border-emerald-700 dark:border-emerald-900 pb-safe shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.1)] z-50 transition-transform duration-300 ease-in-out ${
+      isHidden ? 'translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'
+    }`}>
       <nav className="flex justify-around items-center px-1 h-16 max-w-md mx-auto">
         {navItems.map((item) => (
           <NavLink

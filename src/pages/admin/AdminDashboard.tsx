@@ -234,6 +234,7 @@ interface Notification {
 }
 
 export const SYSTEM_FEATURES = [
+  { id: 'tools_video_slider', label: 'Slider Vidéo des Outils (Tableau de Bord)', desc: 'Carrousel animé avec vidéos de fond présentant tous les outils spirituels avec boutons d\'accès direct', category: 'system' },
   { id: 'anti_screenshot', label: "Protection Anti-Capture d'Écran", desc: "Bloque matériellement et logiciellement les captures d'écran, enregistrements vidéo et impressions sur Android et Web", category: 'system' },
   { id: 'text_copy_protection', label: "Protection Anti-Copie de Texte", desc: "Empêche la sélection, le clic droit et la copie de texte non autorisée dans l'application", category: 'system' },
   { id: 'alert_repeated_tool_access', label: "Alerte Tentatives Répétées d'Accès aux Outils Restreints", desc: "Détecte et alerte l'administrateur en temps réel lorsqu'un utilisateur tente d'accéder à plusieurs reprises à des outils bloqués, en maintenance ou réservés aux membres Premium", category: 'system' },
@@ -5943,6 +5944,192 @@ export const AdminDashboard: React.FC = () => {
                   }`}
                 />
               </button>
+            </div>
+          </div>
+        </CollapsibleAdminCard>
+
+        {/* 6.6. SLIDER VIDÉO DES OUTILS DU TABLEAU DE BORD */}
+        <CollapsibleAdminCard
+          id="feat_tools_video_slider"
+          title="Slider Vidéo des Outils Spirituels (Tableau de Bord)"
+          subtitle="Personnalisez et contrôlez le carrousel animé avec vidéos de fond présentant tous les outils spirituels."
+          icon={<Sparkles size={22} className="text-amber-500" />}
+          badge={
+            <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
+              featureToggles.tools_video_slider_enabled !== false
+                ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300'
+                : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
+            }`}>
+              {featureToggles.tools_video_slider_enabled !== false ? 'SLIDER ACTIF' : 'SLIDER DÉSACTIVÉ'}
+            </span>
+          }
+        >
+          <div className="space-y-4">
+            {/* Activer / Désactiver le Slider */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h4 className="font-bold text-gray-950 dark:text-white text-sm">Affichage du Slider Vidéo</h4>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    featureToggles.tools_video_slider_enabled !== false
+                      ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300'
+                      : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
+                  }`}>
+                    {featureToggles.tools_video_slider_enabled !== false ? 'ACTIVÉ' : 'DÉSACTIVÉ'}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Affiche la carte de slider vidéo interactive sur le tableau de bord avec boutons d'accès direct pour chaque outil.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const currentVal = featureToggles.tools_video_slider_enabled !== false;
+                  handleToggleFeature('tools_video_slider_enabled', !currentVal, 'Slider Vidéo des Outils');
+                  showToast(!currentVal ? 'Slider Vidéo ACTIVÉ' : 'Slider Vidéo DÉSACTIVÉ', !currentVal ? 'success' : 'info');
+                }}
+                className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors shrink-0 cursor-pointer ${
+                  featureToggles.tools_video_slider_enabled !== false ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
+                }`}
+              >
+                <div
+                  className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${
+                    featureToggles.tools_video_slider_enabled !== false ? 'translate-x-6' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Activer / Désactiver les Arrière-plans Vidéos Animées */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4">
+              <div>
+                <h4 className="font-bold text-gray-950 dark:text-white text-sm">Arrière-plans en Vraie Vidéo Boucle</h4>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Joue des vidéos célestes et cosmiques HD en fond de chaque carte du slider avec effet nébuleuse et lumières sacrées.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const currentVal = featureToggles.tools_slider_video_bg !== false;
+                  handleToggleFeature('tools_slider_video_bg', !currentVal, 'Vidéos de Fond du Slider');
+                  showToast(!currentVal ? 'Vidéos de fond ACTIVÉES' : 'Vidéos de fond DÉSACTIVÉES', 'info');
+                }}
+                className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors shrink-0 cursor-pointer ${
+                  featureToggles.tools_slider_video_bg !== false ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
+                }`}
+              >
+                <div
+                  className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${
+                    featureToggles.tools_slider_video_bg !== false ? 'translate-x-6' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Vitesse de défilement automatique */}
+            <div className="p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl space-y-2">
+              <label className="block font-bold text-gray-950 dark:text-white text-sm">
+                Vitesse de rotation automatique (Auto-play)
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {[
+                  { label: '3 secondes (Rapide)', val: 3000 },
+                  { label: '6 secondes (Standard)', val: 6000 },
+                  { label: '10 secondes (Doux)', val: 10000 },
+                  { label: 'Manuel (Désactivé)', val: 0 },
+                ].map((speed) => {
+                  const currentSpeed = typeof featureToggles.tools_slider_autoplay_speed === 'number'
+                    ? featureToggles.tools_slider_autoplay_speed
+                    : 6000;
+                  const isSelected = currentSpeed === speed.val;
+                  return (
+                    <button
+                      key={speed.val}
+                      type="button"
+                      onClick={() => {
+                        handleToggleFeature('tools_slider_autoplay_speed', speed.val, 'Vitesse Auto-play');
+                        showToast(`Vitesse réglée à : ${speed.label}`, 'success');
+                      }}
+                      className={`p-2.5 rounded-xl text-xs font-bold transition-all border text-center cursor-pointer ${
+                        isSelected
+                          ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
+                          : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      {speed.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Filtrage des outils affichés */}
+            <div className="p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl space-y-2">
+              <label className="block font-bold text-gray-950 dark:text-white text-sm">
+                Sélection des Outils dans le Slider
+              </label>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {[
+                  { id: 'all', label: 'Tous les Outils' },
+                  { id: 'popular', label: 'Populaires & Vedettes' },
+                  { id: 'simple', label: 'Essentiels (Simples)' },
+                  { id: 'advanced', label: 'Khassa (Avancés)' },
+                ].map((filt) => {
+                  const currentFilter = featureToggles.tools_slider_filter || 'all';
+                  const isSelected = currentFilter === filt.id;
+                  return (
+                    <button
+                      key={filt.id}
+                      type="button"
+                      onClick={() => {
+                        handleToggleFeature('tools_slider_filter', filt.id, 'Filtre du Slider');
+                        showToast(`Filtre sélectionné : ${filt.label}`, 'success');
+                      }}
+                      className={`p-2.5 rounded-xl text-xs font-bold transition-all border text-center cursor-pointer ${
+                        isSelected
+                          ? 'bg-amber-500 text-white border-amber-400 shadow-sm'
+                          : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700'
+                      }`}
+                    >
+                      {filt.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Titre Personnalisé du Slider */}
+            <div className="p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl space-y-2">
+              <label className="block font-bold text-gray-950 dark:text-white text-sm">
+                Titre Personnalisé du Slider (Optionnel)
+              </label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="ex: Outils Spirituels, Kayan Aiki na Asrar..."
+                  value={featureToggles.tools_slider_title || ''}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFeatureToggles((prev: any) => ({ ...prev, tools_slider_title: val }));
+                  }}
+                  onBlur={() => {
+                    handleToggleFeature('tools_slider_title', featureToggles.tools_slider_title || '', 'Titre du Slider');
+                  }}
+                  className="flex-1 px-3 py-2 text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleToggleFeature('tools_slider_title', featureToggles.tools_slider_title || '', 'Titre du Slider');
+                    showToast('Titre du slider sauvegardé', 'success');
+                  }}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
+                >
+                  Enregistrer
+                </button>
+              </div>
             </div>
           </div>
         </CollapsibleAdminCard>

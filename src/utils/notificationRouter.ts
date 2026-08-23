@@ -14,9 +14,16 @@ export interface PlanetaryModalData {
   isDaytime?: boolean;
 }
 
+export interface DhikrModalData {
+  type: 'dhikrDaily' | 'dhikrRecurring';
+  label?: string;
+  targetUrl?: string;
+}
+
 export type NotificationRouterAction =
   | { type: 'OPEN_DOWNLOAD'; payload: DownloadRecord }
   | { type: 'OPEN_PLANETARY'; payload: PlanetaryModalData }
+  | { type: 'OPEN_DHIKR'; payload: DhikrModalData }
   | { type: 'NAVIGATE'; path: string; state?: any };
 
 type NotificationActionSubscriber = (action: NotificationRouterAction) => void;
@@ -212,16 +219,21 @@ export async function handleNotificationClickPayload(extraData: any, rawNotifica
     return;
   }
 
-  // 5. Dhikr notification
+  // 5. Dhikr notification (Opens reminder modal with 15-minute Snooze option)
   if (
     extra.type === 'dhikrDaily' ||
     extra.type === 'dhikrRecurring' ||
     notifTitle.includes('Dhikr') ||
-    notifTitle.includes('Tasbih')
+    notifTitle.includes('Tasbih') ||
+    notifTitle.includes('Zikr')
   ) {
     emitNotificationRouterAction({
-      type: 'NAVIGATE',
-      path: extra.type === 'dhikrDaily' ? '/tools/daily-dhikr' : '/tools/tasbih',
+      type: 'OPEN_DHIKR',
+      payload: {
+        type: extra.type === 'dhikrDaily' ? 'dhikrDaily' : 'dhikrRecurring',
+        label: extra.label || rawNotification?.extra?.label,
+        targetUrl: extra.targetUrl || (extra.type === 'dhikrDaily' ? '/tools/daily-dhikr' : '/tools/tasbih'),
+      },
     });
     return;
   }

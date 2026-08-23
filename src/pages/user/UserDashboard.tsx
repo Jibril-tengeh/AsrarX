@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth, handleFirestoreError, OperationType } from '../../contexts/AuthContext';
 import { useFeatures } from '../../contexts/FeatureContext';
@@ -14,6 +14,8 @@ import { OnboardingTour } from '../../components/OnboardingTour';
 import { GlobalSearchModal } from '../../components/GlobalSearchModal';
 import { MysticCalendarModal } from '../../components/MysticCalendarModal';
 import { AsrarQuickWidget } from '../../components/AsrarQuickWidget';
+import { ToolsVideoSlider } from '../../components/ToolsVideoSlider';
+import { PullToRefresh } from '../../components/PullToRefresh';
 
 import { INITIAL_DEFAULT_ARTICLES, DefaultArticle } from '../../data/defaultArticles';
 import { fetchArticlesFromRest } from '../../lib/firestoreRest';
@@ -136,7 +138,6 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
   const [isPremiumPromoDismissed, setIsPremiumPromoDismissed] = useState(false);
 
   const [affirmation, setAffirmation] = useState({ verse: '', reference: '' });
-  const [scrolled, setScrolled] = useState(false);
   const [isGlobalSearchOpen, setIsGlobalSearchOpen] = useState(false);
 
   useBackButton(() => setIsSearchOpen(false), isSearchOpen);
@@ -154,14 +155,6 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
       setIsSearchOpen(true);
     }
   }, [location.search]);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 10);
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
 
   useEffect(() => {
     const affirmations = [
@@ -220,59 +213,8 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
     }
   }, [categoryId, initialFilter, location.pathname]);
 
-  // Pull to refresh logic
-  const [isRefreshing, setIsRefreshing] = useState(false);
-  const [pullProgress, setPullProgress] = useState(0);
-  const startY = useRef(0);
-  const currentY = useRef(0);
+  // Sync category filter from URL params
 
-  useEffect(() => {
-    // Only register and handle pull-to-refresh on actual dashboard/home routes
-    const isDashboardRoute = window.location.pathname === '/user/dashboard' || window.location.pathname === '/';
-    if (!isDashboardRoute) return;
-
-    const handleTouchStart = (e: TouchEvent) => {
-      if (window.scrollY === 0) {
-        startY.current = e.touches[0].clientY;
-      }
-    };
-
-    const handleTouchMove = (e: TouchEvent) => {
-      if (window.scrollY === 0 && startY.current > 0) {
-        currentY.current = e.touches[0].clientY;
-        const diff = currentY.current - startY.current;
-        if (diff > 0) {
-          e.preventDefault(); // prevent scroll bounce
-          setPullProgress(Math.min(diff / 100, 1)); // 100px threshold
-        }
-      }
-    };
-
-    const handleTouchEnd = () => {
-      if (pullProgress > 0.6) {
-        setIsRefreshing(true);
-        setTimeout(() => {
-          window.location.reload();
-        }, 500);
-      } else {
-        setPullProgress(0);
-        startY.current = 0;
-        currentY.current = 0;
-      }
-    };
-
-    document.addEventListener('touchstart', handleTouchStart, { passive: true });
-    document.addEventListener('touchmove', handleTouchMove, { passive: false });
-    document.addEventListener('touchend', handleTouchEnd);
-
-    return () => {
-      document.removeEventListener('touchstart', handleTouchStart);
-      document.removeEventListener('touchmove', handleTouchMove);
-      document.removeEventListener('touchend', handleTouchEnd);
-    };
-  }, [pullProgress]);
-
-  useEffect(() => {
     const formatCreatedAt = (val: any): string => {
       if (!val) return new Date().toISOString();
       try {
@@ -297,17 +239,17 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
     };
 
     // Master in-memory accumulator to prevent any flicker or disappearances
-    const articleMap = new Map<string, AsrarItem>();
+    const articleMapRef = useRef<Map<string, AsrarItem>>(new Map());
 
-    const applyAccumulatedArticles = (incoming: AsrarItem[]) => {
+    const applyAccumulatedArticles = useCallback((incoming: AsrarItem[]) => {
       if (!Array.isArray(incoming)) return;
       for (const it of incoming) {
         if (it && it.id && ArticleService.isPublished(it)) {
-          const existing = articleMap.get(it.id);
-          articleMap.set(it.id, { ...existing, ...it });
+          const existing = articleMapRef.current.get(it.id);
+          articleMapRef.current.set(it.id, { ...existing, ...it });
         }
       }
-      const allAccumulated = Array.from(articleMap.values());
+      const allAccumulated = Array.from(articleMapRef.current.values());
       const merged = mergeWithLocalArticles(allAccumulated, false);
       const publicOnly = merged.filter((it: any) => ArticleService.isPublished(it));
       const sorted = sortArticlesInOrder(publicOnly, true);
@@ -316,19 +258,9 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
         setIsLoading(false);
         saveCachedArticlesList('asrarhub_cached_articles_list', sorted);
       }
-    };
+    }, []);
 
-    const processDocData = (docSnap: any) => {
-      try {
-        const data = docSnap.data();
-        return processRawObject(data, docSnap.id);
-      } catch (err) {
-        console.error("Error parsing article document:", docSnap.id, err);
-        return null;
-      }
-    };
-
-    const processRawObject = (data: any, docId: string) => {
+    const processRawObject = useCallback((data: any, docId: string) => {
       if (!data) return null;
 
       // User Dashboard feed displays all articles EXCEPT Draft and Archive
@@ -377,8 +309,93 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
         hook_fr: data.hook,
         hasManualTranslation: hasManual
       } as AsrarItem;
+    }, [language]);
+
+    const processDocData = useCallback((docSnap: any) => {
+      try {
+        const data = docSnap.data();
+        return processRawObject(data, docSnap.id);
+      } catch (err) {
+        console.error("Error parsing article document:", docSnap.id, err);
+        return null;
+      }
+    }, [processRawObject]);
+
+    // Pull-to-refresh data revalidation handler
+    const revalidateDashboardData = async () => {
+      try {
+        console.log('[UserDashboard] Manual pull-to-refresh: revalidating articles & categories...');
+        
+        const fetchTasks: Promise<any>[] = [];
+
+        // 1. Re-fetch fresh articles via REST
+        fetchTasks.push(
+          fetchArticlesFromRest().then(restDocs => {
+            if (Array.isArray(restDocs) && restDocs.length > 0) {
+              const parsed = restDocs
+                .map(d => processRawObject(d, d.id))
+                .filter((item): item is AsrarItem => item !== null);
+              if (parsed.length > 0) {
+                applyAccumulatedArticles(parsed);
+              }
+            }
+          }).catch(e => console.warn('[PullToRefresh] REST fetch note:', e))
+        );
+
+        // 2. Re-fetch fresh articles via Firestore SDK
+        fetchTasks.push(
+          getDocs(collection(db, 'articles')).then(snap => {
+            const freshItems = snap.docs
+              .map(d => processDocData(d))
+              .filter((item): item is AsrarItem => item !== null);
+            if (freshItems.length > 0) {
+              applyAccumulatedArticles(freshItems);
+            }
+          }).catch(e => console.warn('[PullToRefresh] Firestore getDocs note:', e))
+        );
+
+        // 3. Re-fetch categories
+        fetchTasks.push(
+          getDocs(collection(db, 'categories')).then(snapshot => {
+            if (!snapshot.empty) {
+              let deletedIds: string[] = [];
+              try { deletedIds = JSON.parse(localStorage.getItem('asrarhub_deleted_categories') || '[]'); } catch (e) {}
+              const list = snapshot.docs
+                .map(doc => ({ ...doc.data(), id: doc.id }))
+                .filter((cat: any) => !deletedIds.includes(cat.id));
+              list.sort((a: any, b: any) => (a.createdAt || 0) - (b.createdAt || 0));
+              setCategories(list);
+              try { localStorage.setItem('asrarhub_cached_categories', JSON.stringify(list)); } catch (e) {}
+            }
+          }).catch(e => console.warn('[PullToRefresh] Categories getDocs note:', e))
+        );
+
+        // 4. Reload local bookmarks & history
+        try {
+          const parsed = JSON.parse(localStorage.getItem('asrar_bookmarks') || '[]');
+          setBookmarks(Array.isArray(parsed) ? parsed : []);
+        } catch (e) {}
+        try {
+          const rawHistory = localStorage.getItem('asrar_reading_history');
+          if (rawHistory) setReadingHistory(JSON.parse(rawHistory));
+        } catch (e) {}
+
+        // 5. Broadcast SWR synchronization
+        window.dispatchEvent(new CustomEvent('asrarhub_swr_articles_updated', {
+          detail: { articles: Array.from(articleMapRef.current.values()) }
+        }));
+
+        // Fluid delay for UX
+        await Promise.all([
+          ...fetchTasks,
+          new Promise(resolve => setTimeout(resolve, 450))
+        ]);
+      } catch (err) {
+        console.error('[UserDashboard] Revalidation error:', err);
+      }
     };
 
+  useEffect(() => {
     // 1. Instant cache restoration (IndexedDB + localStorage)
     const restoreCachedArticles = () => {
       let baseItems: AsrarItem[] = [];
@@ -734,19 +751,10 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
   // console.log("UserDashboard loaded");
 
   return (
-    <div className="max-w-5xl mx-auto p-4 sm:p-6 lg:p-8 safe-area-pt pb-24 relative w-full max-w-full overflow-x-hidden min-w-0">
-      {pullProgress > 0 && (
-        <div 
-          className="fixed top-16 left-1/2 -translate-x-1/2 z-50 flex items-center justify-center bg-white dark:bg-gray-800 rounded-full shadow-lg h-10 w-10 transition-all duration-200"
-          style={{ transform: `translate(-50%, ${Math.min(pullProgress * 100, 60)}px) rotate(${pullProgress * 360}deg)` }}
-        >
-          <RefreshCw size={20} className={isRefreshing ? "animate-spin text-emerald-500" : "text-gray-400"} />
-        </div>
-      )}
-
-      {/* Toolbar as a second header */}
-      <div className={`fixed left-0 right-0 z-40 py-2 sm:py-3 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 transition-all duration-300 ${scrolled ? 'top-[52px]' : 'top-[60px]'}`}>
-        <div className="max-w-5xl mx-auto flex w-full justify-between sm:justify-center items-center gap-1.5 sm:gap-3 px-2 sm:px-6 lg:px-8 overflow-x-auto hide-scrollbar">
+    <div className="max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 pt-0 pb-24 relative w-full max-w-full overflow-x-clip min-w-0">
+      {/* Toolbar - Locked Fixed Second Header flush below main Header */}
+      <div className="fixed top-[48px] sm:top-[54px] left-0 right-0 z-40 h-[44px] sm:h-[48px] bg-white dark:bg-gray-900 border-b border-gray-200/80 dark:border-gray-800 px-3 sm:px-6 lg:px-8 shadow-xs flex items-center transition-colors">
+        <div className="max-w-5xl mx-auto flex w-full justify-between sm:justify-center items-center gap-1.5 sm:gap-3 px-0 overflow-x-auto hide-scrollbar">
         <AnimatePresence>
           {isSearchOpen && (
             <motion.div
@@ -1182,19 +1190,33 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
         </div>
       </div>
 
-      {/* Onboarding Tour */}
-      <OnboardingTour />
+      {/* Spacer for fixed second toolbar with scroll-margin compensation */}
+      <div className="h-[40px] sm:h-[44px]" aria-hidden="true" />
 
-      {/* Spacer to compensate for fixed toolbar */}
-      <div className="h-[44px] w-full" />
+      {/* Pull To Refresh for live view revalidation */}
+      <PullToRefresh
+        onRefresh={revalidateDashboardData}
+        className="scroll-mt-[88px] pt-0"
+        pullText={t('pullToRefresh.pull', 'Tirer pour actualiser')}
+        releaseText={t('pullToRefresh.release', 'Relâcher pour actualiser')}
+        refreshingText={t('pullToRefresh.refreshing', 'Actualisation...')}
+        successText={t('pullToRefresh.success', 'À jour')}
+      >
+        {/* Onboarding Tour */}
+        <OnboardingTour />
+
+      {/* Tools Video Animated Slider */}
+      <div className="scroll-mt-[88px] snap-start mb-1.5">
+        <ToolsVideoSlider />
+      </div>
 
       {/* Interactive Quick Favorites Widget (Exact design & translation as requested) */}
-      <div className="mb-4">
+      <div className="mb-2.5 sm:mb-3">
         <AsrarQuickWidget variant="inline" />
       </div>
 
       {/* Banner Section */}
-      <div className="mb-4 grid grid-cols-1 gap-4">
+      <div className="mb-2.5 sm:mb-3 grid grid-cols-1 gap-3">
         {/* Annonce Board */}
         {announcement && announcement.visible && !isAnnouncementDismissed && (
           <div className="bg-gradient-to-br from-emerald-500 to-teal-600 dark:from-emerald-900 dark:to-teal-900 rounded-3xl p-5 sm:p-6 shadow-sm relative overflow-hidden text-white flex flex-col justify-between">
@@ -1290,12 +1312,12 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
       </div>
 
       {/* Hijri Calendar Widget */}
-      <div className="mb-4">
+      <div className="mb-2.5 sm:mb-3">
         <HijriCalendarWidget />
       </div>
 
       {/* Daily Goals Tracking */}
-      <div className="mb-4">
+      <div className="mb-2.5 sm:mb-3">
         <DailyGoalsTracker />
       </div>
 
@@ -1304,7 +1326,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
         const lastTool = lastToolId ? tools.find(t => t.id === lastToolId) : null;
         if (!lastTool) return null;
         return (
-          <div className="mb-4 bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+          <div className="mb-2.5 sm:mb-3 bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div className="flex items-center gap-3">
                 <div className={`w-10 h-10 shrink-0 rounded-xl bg-gradient-to-br ${lastTool.color} text-white flex items-center justify-center shadow-sm`}>
@@ -1760,6 +1782,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
           </div>
         )}
       </div>
+      </PullToRefresh>
       <GlobalSearchModal isOpen={isGlobalSearchOpen} onClose={() => setIsGlobalSearchOpen(false)} />
       <MysticCalendarModal isOpen={isCalendarOpen} onClose={() => setIsCalendarOpen(false)} />
       

@@ -221,6 +221,36 @@ export const SecretDetail: React.FC = () => {
   const isUserPremium = isPremium || user?.role === 'admin' || user?.subscriptionTier === 'premium' || user?.subscriptionTier === 'pro';
   const isShowingTeaserOnly = !!item?.isPremium && !isUserPremium;
   const displayContent = (item && isShowingTeaserOnly) ? getTeaserContent(item.content).html : (item?.content || '');
+  const [isZenScrollHidden, setIsZenScrollHidden] = useState(false);
+  const lastScrollYRef = useRef(0);
+
+  // Zen Mode (Lecture apaisante) scroll listener:
+  // Hides bottom navigation & non-essential UI elements when scrolling down, restores them when scrolling up or at top
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY || document.documentElement.scrollTop;
+      const scrollDifference = currentScrollY - lastScrollYRef.current;
+
+      if (Math.abs(scrollDifference) > 12) {
+        if (currentScrollY > 100 && scrollDifference > 0) {
+          // Scrolling down: enter zen immersive view
+          setIsZenScrollHidden(true);
+          window.dispatchEvent(new CustomEvent('zen_nav_visibility', { detail: { hidden: true } }));
+        } else if (scrollDifference < 0 || currentScrollY <= 60) {
+          // Scrolling up or back at top: restore navigation
+          setIsZenScrollHidden(false);
+          window.dispatchEvent(new CustomEvent('zen_nav_visibility', { detail: { hidden: false } }));
+        }
+        lastScrollYRef.current = currentScrollY;
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.dispatchEvent(new CustomEvent('zen_nav_visibility', { detail: { hidden: false } }));
+    };
+  }, []);
 
   useEffect(() => {
     if (item) {
@@ -988,8 +1018,8 @@ export const SecretDetail: React.FC = () => {
               }
             }
           }
-        } catch (error) {
-          console.error("Error fetching article from Firestore", error);
+        } catch (error: any) {
+          console.warn("[SecretDetail] Note: Firestore fetch unavailable or offline, using fallback mechanisms:", error?.message || error);
           if (!initialItem) {
             // Try fetching via REST API
             try {
@@ -1220,58 +1250,58 @@ export const SecretDetail: React.FC = () => {
   return (
     <PremiumWrapper enabled={false} requiredTier="premium" fallbackTitle="Lecture Secrète Premium">
       <div
-        className={`w-full max-w-3xl mx-auto px-4 pt-0 sm:px-6 sm:pt-2 lg:px-8 pb-24 transition-colors duration-500 ${readingMode ? "bg-[#fdfbf7] dark:bg-[#1a1917] min-h-screen" : ""}`}
+        className={`w-full max-w-3xl mx-auto px-3 sm:px-6 pt-[2px] lg:px-8 pb-24 transition-colors duration-500 ${readingMode ? "bg-[#fdfbf7] dark:bg-[#1a1917] min-h-screen" : ""}`}
       >
       <div
-        className={`flex items-center justify-between mb-6 ${readingMode ? "max-w-3xl mx-auto" : ""}`}
+        className={`flex items-center justify-between mb-1.5 py-0.5 ${readingMode ? "max-w-3xl mx-auto" : ""}`}
       >
         <button
           onClick={() => {
             const backPath = sessionStorage.getItem('last_active_main_path') || '/user/dashboard';
             navigate(backPath);
           }}
-          className={`flex items-center space-x-2 px-3 py-2 -ml-3 rounded-lg transition-colors ${readingMode ? "text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800" : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
+          className={`flex items-center space-x-1.5 px-2.5 py-1.5 -ml-2 rounded-lg transition-colors ${readingMode ? "text-stone-600 dark:text-stone-400 hover:bg-stone-100 dark:hover:bg-stone-800" : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"}`}
         >
-          <ArrowLeft size={20} />
-          <span className="font-medium hidden sm:inline">{t("back")}</span>
+          <ArrowLeft size={18} />
+          <span className="font-medium text-sm hidden sm:inline">{t("back")}</span>
         </button>
 
-        <div className="flex items-center gap-1.5 sm:gap-2">
+        <div className="flex items-center gap-1 sm:gap-1.5">
           {!featureToggles?.lockArticleViewmode && (
-            <div className="flex items-center bg-gray-100 dark:bg-gray-800 p-1 rounded-full mr-1 sm:mr-2">
+            <div className="flex items-center bg-gray-100 dark:bg-gray-800 p-0.5 rounded-full mr-1">
               <button
                 onClick={() => setViewMode('full')}
                 className={`p-1.5 rounded-full transition-colors ${viewMode === 'full' ? 'bg-white dark:bg-gray-700 shadow-sm text-emerald-600 dark:text-emerald-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
                 title="Vue complète"
               >
-                <AlignLeft size={18} />
+                <AlignLeft size={16} />
               </button>
               <button
                 onClick={() => setViewMode('accordion')}
                 className={`p-1.5 rounded-full transition-colors ${viewMode === 'accordion' ? 'bg-white dark:bg-gray-700 shadow-sm text-emerald-600 dark:text-emerald-400' : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'}`}
                 title="Vue par sections"
               >
-                <ListTree size={18} />
+                <ListTree size={16} />
               </button>
             </div>
           )}
           <button
             onClick={() => setReadingMode(!readingMode)}
-            className={`p-2 rounded-full transition-colors flex items-center gap-2 ${readingMode ? "bg-[#f4ebd0] text-[#8b6e3f] dark:bg-[#383120] dark:text-[#d4c39c]" : "hover:bg-emerald-50 dark:hover:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"}`}
+            className={`p-1.5 rounded-full transition-colors flex items-center gap-1.5 ${readingMode ? "bg-[#f4ebd0] text-[#8b6e3f] dark:bg-[#383120] dark:text-[#d4c39c]" : "hover:bg-emerald-50 dark:hover:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"}`}
             title={t("readingMode", "Mode Lecture")}
           >
-            <BookType size={22} />
+            <BookType size={18} />
           </button>
           
           {/* Lecture Vocale (Text-To-Speech) Button */}
           <button
             onClick={handleLectureVocale}
-            className={`p-2 rounded-full transition-all flex items-center gap-1.5 ${
+            className={`p-1.5 rounded-full transition-all flex items-center gap-1 ${
               isSpeaking 
-                ? "bg-red-500 hover:bg-red-600 text-white shadow-md animate-pulse font-bold px-3 py-1.5" 
+                ? "bg-red-500 hover:bg-red-600 text-white shadow-md animate-pulse font-bold px-2.5 py-1" 
                 : readingMode
-                  ? "bg-[#f4ebd0] text-[#8b6e3f] hover:bg-[#e8dcb5] dark:bg-[#383120] dark:text-[#d4c39c] dark:hover:bg-[#4a3f35] font-bold px-3 py-1.5"
-                  : "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-100/50 dark:border-emerald-800/30 font-bold px-3 py-1.5 hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
+                  ? "bg-[#f4ebd0] text-[#8b6e3f] hover:bg-[#e8dcb5] dark:bg-[#383120] dark:text-[#d4c39c] dark:hover:bg-[#4a3f35] font-bold px-2.5 py-1"
+                  : "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-100/50 dark:border-emerald-800/30 font-bold px-2.5 py-1 hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
             }`}
             title={isSpeaking ? t("secretDetail.lectureVocaleStop", "Arrêter la lecture") : t("secretDetail.lectureVocalePlay", "Lecture Vocale")}
           >
@@ -1281,7 +1311,7 @@ export const SecretDetail: React.FC = () => {
 
           <button
             onClick={() => setZenMode(true)}
-            className="p-2 rounded-full transition-all flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-100/50 dark:border-emerald-800/30 font-bold px-3 py-1.5 hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
+            className="p-1.5 rounded-full transition-all flex items-center gap-1 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-100/50 dark:border-emerald-800/30 font-bold px-2.5 py-1 hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
             title={t("secretDetail.zenModeTitle", "Mode Zen (Plein Écran)")}
           >
             <Maximize2 size={15} />
@@ -1289,15 +1319,15 @@ export const SecretDetail: React.FC = () => {
           </button>
           <button
             onClick={toggleBookmark}
-            className={`p-2 rounded-full transition-colors ${isBookmarked ? "text-amber-500 bg-amber-50 dark:bg-amber-900/20" : "hover:bg-emerald-50 dark:hover:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"}`}
+            className={`p-1.5 rounded-full transition-colors ${isBookmarked ? "text-amber-500 bg-amber-50 dark:bg-amber-900/20" : "hover:bg-emerald-50 dark:hover:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"}`}
           >
-            <Bookmark size={22} fill={isBookmarked ? "currentColor" : "none"} />
+            <Bookmark size={18} fill={isBookmarked ? "currentColor" : "none"} />
           </button>
         </div>
       </div>
 
       {isBookmarked && item && (
-        <div className={`mb-6 p-4 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${readingMode ? "max-w-3xl mx-auto bg-[#f4ebd0]/40 dark:bg-[#383120]/40 border border-[#e8dcb5] dark:border-[#524830]/30" : "bg-emerald-50/50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-800/30"}`}>
+        <div className={`mb-2 p-3 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 ${readingMode ? "max-w-3xl mx-auto bg-[#f4ebd0]/40 dark:bg-[#383120]/40 border border-[#e8dcb5] dark:border-[#524830]/30" : "bg-emerald-50/50 dark:bg-emerald-900/10 border border-emerald-100 dark:border-emerald-800/30"}`}>
           <div className="flex items-center gap-2">
             <span className="p-1.5 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 rounded-lg">
               <Folder size={16} />
