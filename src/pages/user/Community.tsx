@@ -1603,7 +1603,12 @@ export const Community: React.FC = () => {
   const pinnedPost = posts.find(p => p.isPinned);
 
   return (
-    <div className="w-full max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 py-4 safe-area-pt pb-28">
+    <div 
+      style={{
+        paddingTop: `max(0px, calc(16px + var(--feed-community-offset, 0px) + var(--feed-global-offset, 0px)))`
+      }}
+      className="w-full max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 pb-28 safe-area-pt transition-all duration-300"
+    >
       
       {/* Telegram-specific styles */}
       <style>{`

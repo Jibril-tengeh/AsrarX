@@ -32,9 +32,9 @@ import {
 import { motion, AnimatePresence } from "motion/react";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { useAuth } from "../../contexts/AuthContext";
+import { useFeatures } from "../../contexts/FeatureContext";
 import { useNavigate } from "react-router-dom";
 
-import { doc, onSnapshot } from "firebase/firestore";
 import { db, isAutoSaveEnabled } from "../../lib/firebase";
 import { tools } from "../../data/tools";
 import { CelestialRecommendations } from "../../components/CelestialRecommendations";
@@ -131,9 +131,9 @@ export const ToolsDashboard: React.FC = () => {
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+  const { featureToggles } = useFeatures();
   const [searchQuery, setSearchQuery] = useState("");
-  const [featureToggles, setFeatureToggles] = useState<any>({});
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [lastToolId, setLastToolId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -164,24 +164,6 @@ export const ToolsDashboard: React.FC = () => {
     if (!hasSeenGuide) {
       setShowGuide(true);
     }
-
-    const unsubscribeFeatures = onSnapshot(
-      doc(db, "settings", "features"),
-      (docSnap) => {
-        if (docSnap.exists()) {
-          setFeatureToggles(docSnap.data());
-        } else {
-          setFeatureToggles({});
-        }
-        setIsLoading(false);
-      },
-      (error) => {
-        console.warn("ToolsDashboard features onSnapshot error (operating offline):", error);
-        setIsLoading(false);
-      }
-    );
-
-    return () => unsubscribeFeatures();
   }, [user]);
 
   const closeGuide = () => {
@@ -315,7 +297,10 @@ export const ToolsDashboard: React.FC = () => {
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
-      className="max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 pt-1 sm:pt-2 pb-24 w-full max-w-full overflow-x-hidden min-w-0 touch-pan-y"
+      style={{
+        paddingTop: `max(0px, calc(4px + var(--feed-tools-offset, 0px) + var(--feed-global-offset, 0px)))`
+      }}
+      className="max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 pb-24 w-full max-w-full overflow-x-hidden min-w-0 touch-pan-y transition-all"
     >
       <div className="mb-3">
         <div className="flex items-center justify-between gap-3 mb-2">

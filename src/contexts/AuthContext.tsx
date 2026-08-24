@@ -75,6 +75,8 @@ interface UserData {
   country?: string;
   phone?: string;
   pushNotificationsEnabled?: boolean;
+  usedPromoCodes?: string[];
+  lastPromoCodeUsed?: string;
   createdAt?: any;
 }
 
@@ -444,7 +446,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               purchasedItems: data.purchasedItems || [],
               country: data.country || '',
               phone: data.phone || '',
-              pushNotificationsEnabled: data.pushNotificationsEnabled !== undefined ? data.pushNotificationsEnabled : true
+              pushNotificationsEnabled: data.pushNotificationsEnabled !== undefined ? data.pushNotificationsEnabled : true,
+              usedPromoCodes: data.usedPromoCodes || [],
+              lastPromoCodeUsed: data.lastPromoCodeUsed || null
             };
           } else {
             const now = new Date();

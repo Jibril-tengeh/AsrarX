@@ -76,24 +76,17 @@ const initFirestore = () => {
     }
   }
 
-  // In web browsers / iframe sandboxes / mobile browsers, use memoryLocalCache and force long polling to eliminate internal assertion errors (c050, b815)
+  // In web browsers / iframe sandboxes / mobile browsers, use memoryLocalCache for reliable session performance
   try {
     return initializeFirestore(app, {
-      localCache: memoryLocalCache(),
-      experimentalForceLongPolling: true
+      localCache: memoryLocalCache()
     });
   } catch (err2) {
     try {
-      return initializeFirestore(app, {
-        localCache: memoryLocalCache()
-      });
+      return getFirestore(app);
     } catch (err3) {
-      try {
-        return getFirestore(app);
-      } catch (err4) {
-        console.warn('[Firestore] Initialization fallback note:', err4);
-        return getFirestore(app);
-      }
+      console.warn('[Firestore] Initialization fallback note:', err3);
+      return getFirestore(app);
     }
   }
 };
@@ -102,23 +95,12 @@ export const db = initFirestore();
 
 // Auto-run diagnostics and network listeners safely
 if (typeof window !== 'undefined') {
-  let reconnectTimeout: any = null;
-  const safeReconnectFirestore = () => {
-    if (reconnectTimeout) clearTimeout(reconnectTimeout);
-    reconnectTimeout = setTimeout(() => {
-      try {
-        enableNetwork(db).catch(() => {});
-      } catch (e) {}
-    }, 1000);
-  };
-
   window.addEventListener('online', () => {
-    console.log('[Network Monitor] Device status changed: ONLINE. Syncing Firestore...');
-    safeReconnectFirestore();
+    console.log('[Network Monitor] Device status changed: ONLINE.');
   });
 
   window.addEventListener('offline', () => {
-    console.warn('[Network Monitor] Device status changed: OFFLINE. Using Firestore local persistent cache...');
+    console.warn('[Network Monitor] Device status changed: OFFLINE.');
   });
 
   if (isCapacitorNative || process.env.NODE_ENV === 'development') {

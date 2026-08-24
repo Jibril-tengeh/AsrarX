@@ -8,7 +8,8 @@ import {
   Eye, Image as ImageIcon, Crop as CropIcon, X, Upload, ShoppingBag, CreditCard,
   Clock, CheckCircle, CheckCircle2, XCircle, Globe, Grid, List, Mail, Phone, Lock, Unlock, Bell, BellOff, Sparkles, Star, Share, ShieldAlert, Download, DownloadCloud, Crown, UserPlus, UserCheck, Award,
   FolderOpen, Copy, Radio, Type, Sliders, Maximize2, Activity, Terminal, RefreshCw, RotateCcw, AlertTriangle, Moon, ChevronDown, ChevronUp, Layout,
-  AlignLeft, AlignCenter, AlignRight, AlignJustify, Camera, ShieldBan, Tag, Ticket, Check, ArrowLeft, Calculator
+  AlignLeft, AlignCenter, AlignRight, AlignJustify, Camera, ShieldBan, Tag, Ticket, Check, ArrowLeft, Calculator,
+  ArrowUp, ArrowDown, MoveVertical, Compass
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 
@@ -398,7 +399,7 @@ export const AdminDashboard: React.FC = () => {
   const setAllAdminSectionsCollapse = (collapsed: boolean) => {
     const sectionIds = [
       'feat_user_tools', 'feat_shams_buni', 'feat_sacred_books', 'feat_downloads', 'feat_admin_access', 'feat_payment_methods', 'feat_sharing_options',
-      'set_branding', 'set_hijri', 'set_calendar_scale', 'set_reciter', 'set_announcement', 'set_premium_promo', 'set_assistant_icon', 'set_sacred_audio', 'set_dua_copy', 'set_backend_url', 'set_global_audio', 'set_global_maintenance', 'set_firestore_diag', 'set_font_sizes', 'set_pricing', 'set_paystack', 'set_layout_articles', 'set_article_mode', 'set_store_layout', 'set_assistant_prompts', 'set_backup_export'
+      'set_feed_offsets', 'set_branding', 'set_hijri', 'set_calendar_scale', 'set_reciter', 'set_announcement', 'set_premium_promo', 'set_assistant_icon', 'set_sacred_audio', 'set_dua_copy', 'set_backend_url', 'set_global_audio', 'set_global_maintenance', 'set_firestore_diag', 'set_font_sizes', 'set_pricing', 'set_paystack', 'set_layout_articles', 'set_article_mode', 'set_store_layout', 'set_assistant_prompts', 'set_backup_export'
     ];
     const newState: Record<string, boolean> = {};
     sectionIds.forEach(id => {
@@ -1301,7 +1302,7 @@ export const AdminDashboard: React.FC = () => {
       } catch (_) {}
 
       if (docSnap.exists()) {
-        const merged = { ...docSnap.data(), ...localData };
+        const merged = { ...localData, ...docSnap.data() };
         setFeatureToggles(merged);
       } else if (Object.keys(localData).length > 0) {
         setFeatureToggles(localData);
@@ -2118,13 +2119,23 @@ export const AdminDashboard: React.FC = () => {
         status: 'approved'
       });
 
-      // 3. Increment promo code uses if applicable
+      // 3. Increment promo code uses if applicable and bind to user
       if (payment.appliedPromoCode) {
         try {
-          const { increment } = await import('firebase/firestore');
-          await updateDoc(doc(db, 'promo_codes', payment.appliedPromoCode.toUpperCase()), {
-            uses: increment(1)
+          const { increment, arrayUnion } = await import('firebase/firestore');
+          const upperPromo = payment.appliedPromoCode.toUpperCase();
+          await updateDoc(doc(db, 'promo_codes', upperPromo), {
+            uses: increment(1),
+            usedByUsers: arrayUnion(payment.userId),
+            ...(payment.userEmail ? { usedByEmails: arrayUnion(payment.userEmail.toLowerCase()) } : {})
           });
+          if (payment.userId) {
+            await updateDoc(doc(db, 'users', payment.userId), {
+              usedPromoCodes: arrayUnion(upperPromo),
+              lastPromoCodeUsed: upperPromo,
+              lastPromoCodeUsedAt: new Date().toISOString()
+            });
+          }
         } catch (promoErr) {
           console.warn("Failed to increment promo uses upon approval:", promoErr);
         }
@@ -10159,6 +10170,838 @@ export const AdminDashboard: React.FC = () => {
             </div>
           </div>
         </CollapsibleAdminCard>
+
+          {/* CONTRÔLE TOTAL DES FLUX & ALIGNEMENTS VERTICAUX (MONTER / DESCENDRE) */}
+          <CollapsibleAdminCard
+            id="set_feed_offsets"
+            title="Contrôle Total des Flux & Alignements Verticaux (Monter / Descendre)"
+            description="Faites monter ou descendre le flux de contenu d'accueil, le flux des outils spirituels, la lecture des articles et tous les flux de l'application."
+            icon={<MoveVertical size={18} className="text-emerald-500 shrink-0" />}
+          >
+            <div className="flex flex-col gap-6">
+              {/* Header & Description */}
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-emerald-100 dark:border-emerald-900/50">
+                <div>
+                  <h4 className="font-extrabold text-gray-900 dark:text-white flex items-center gap-2 text-base sm:text-lg">
+                    <MoveVertical size={20} className="text-emerald-600 dark:text-emerald-400" />
+                    Contrôle Total des Flux & Décalages Verticaux
+                  </h4>
+                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">
+                    Ajustez avec précision la hauteur et la position verticale de chaque flux pour combler les espaces ou aérer l'affichage.
+                  </p>
+                </div>
+
+                {/* Presets Quick Action Buttons */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={!!featureToggles['lockFeedOffsets']}
+                    onClick={() => {
+                      if (featureToggles['lockFeedOffsets']) return;
+                      handleBatchToggleFeatures({
+                        feedGlobalOffset: 0,
+                        feedHomeOffset: -28,
+                        feedToolsOffset: -20,
+                        feedArticleOffset: -16,
+                        feedExploreOffset: -20,
+                        feedCommunityOffset: -16,
+                        feedStoreOffset: -16,
+                        feedJournalOffset: -16,
+                        feedHomeSliderOffset: -10
+                      });
+                      showToast("Preset 'Maxi Remonté' appliqué sur tous les flux ! 🚀");
+                    }}
+                    className={`px-2.5 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-700 dark:text-gray-200 rounded-xl transition-all shadow-xs ${
+                      featureToggles['lockFeedOffsets'] ? "opacity-50 cursor-not-allowed" : "hover:bg-emerald-50 cursor-pointer"
+                    }`}
+                  >
+                    🚀 Maxi Remonté
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={!!featureToggles['lockFeedOffsets']}
+                    onClick={() => {
+                      if (featureToggles['lockFeedOffsets']) return;
+                      handleBatchToggleFeatures({
+                        feedGlobalOffset: 0,
+                        feedHomeOffset: -14,
+                        feedToolsOffset: -10,
+                        feedArticleOffset: -8,
+                        feedExploreOffset: -10,
+                        feedCommunityOffset: -8,
+                        feedStoreOffset: -8,
+                        feedJournalOffset: -8,
+                        feedHomeSliderOffset: -4
+                      });
+                      showToast("Preset 'Compact Haut' appliqué ! ⚡");
+                    }}
+                    className={`px-2.5 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-700 dark:text-gray-200 rounded-xl transition-all shadow-xs ${
+                      featureToggles['lockFeedOffsets'] ? "opacity-50 cursor-not-allowed" : "hover:bg-emerald-50 cursor-pointer"
+                    }`}
+                  >
+                    ⚡ Compact Haut
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={!!featureToggles['lockFeedOffsets']}
+                    onClick={() => {
+                      if (featureToggles['lockFeedOffsets']) return;
+                      handleBatchToggleFeatures({
+                        feedGlobalOffset: 0,
+                        feedHomeOffset: 0,
+                        feedToolsOffset: 0,
+                        feedArticleOffset: 0,
+                        feedExploreOffset: 0,
+                        feedCommunityOffset: 0,
+                        feedStoreOffset: 0,
+                        feedJournalOffset: 0,
+                        feedHomeSliderOffset: 0
+                      });
+                      showToast("Preset 'Standard Équilibré (0px)' rétabli ! 📱");
+                    }}
+                    className={`px-2.5 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-700 dark:text-gray-200 rounded-xl transition-all shadow-xs ${
+                      featureToggles['lockFeedOffsets'] ? "opacity-50 cursor-not-allowed" : "hover:bg-emerald-50 cursor-pointer"
+                    }`}
+                  >
+                    📱 Standard (0px)
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={!!featureToggles['lockFeedOffsets']}
+                    onClick={() => {
+                      if (featureToggles['lockFeedOffsets']) return;
+                      handleBatchToggleFeatures({
+                        feedGlobalOffset: 0,
+                        feedHomeOffset: 16,
+                        feedToolsOffset: 16,
+                        feedArticleOffset: 14,
+                        feedExploreOffset: 16,
+                        feedCommunityOffset: 14,
+                        feedStoreOffset: 14,
+                        feedJournalOffset: 14,
+                        feedHomeSliderOffset: 6
+                      });
+                      showToast("Preset 'Aéré / Descendu' appliqué ! 🍃");
+                    }}
+                    className={`px-2.5 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-700 dark:text-gray-200 rounded-xl transition-all shadow-xs ${
+                      featureToggles['lockFeedOffsets'] ? "opacity-50 cursor-not-allowed" : "hover:bg-emerald-50 cursor-pointer"
+                    }`}
+                  >
+                    🍃 Aéré (+16px)
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={!!featureToggles['lockFeedOffsets']}
+                    onClick={() => {
+                      if (featureToggles['lockFeedOffsets']) return;
+                      handleBatchToggleFeatures({
+                        feedGlobalOffset: 0,
+                        feedHomeOffset: 32,
+                        feedToolsOffset: 30,
+                        feedArticleOffset: 24,
+                        feedExploreOffset: 30,
+                        feedCommunityOffset: 24,
+                        feedStoreOffset: 24,
+                        feedJournalOffset: 24,
+                        feedHomeSliderOffset: 12
+                      });
+                      showToast("Preset 'Très Descendu (+32px)' appliqué ! 🔽");
+                    }}
+                    className={`px-2.5 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-700 dark:text-gray-200 rounded-xl transition-all shadow-xs ${
+                      featureToggles['lockFeedOffsets'] ? "opacity-50 cursor-not-allowed" : "hover:bg-emerald-50 cursor-pointer"
+                    }`}
+                  >
+                    🔽 Bas (+32px)
+                  </button>
+                </div>
+              </div>
+
+              {/* Lock Security Switch Bar */}
+              <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-2xl border transition-all ${
+                featureToggles['lockFeedOffsets']
+                  ? "bg-amber-500/10 dark:bg-amber-500/20 border-amber-300/80 dark:border-amber-700/60"
+                  : "bg-emerald-500/10 dark:bg-emerald-500/20 border-emerald-300/80 dark:border-emerald-700/60"
+              }`}>
+                <div className="flex items-center gap-3">
+                  <div className={`p-2.5 rounded-xl text-white shadow-xs ${
+                    featureToggles['lockFeedOffsets'] ? "bg-amber-600" : "bg-emerald-600"
+                  }`}>
+                    {featureToggles['lockFeedOffsets'] ? <Lock size={20} /> : <Unlock size={20} />}
+                  </div>
+                  <div>
+                    <h5 className="text-xs font-black text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                      Verrouillage des Flux ✋
+                      {featureToggles['lockFeedOffsets'] ? (
+                        <span className="bg-amber-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full uppercase shadow-xs">
+                          🔒 Verrouillé
+                        </span>
+                      ) : (
+                        <span className="bg-emerald-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full uppercase shadow-xs">
+                          🔓 Modifiable
+                        </span>
+                      )}
+                    </h5>
+                    <p className="text-[11px] text-gray-600 dark:text-gray-300 mt-0.5">
+                      {featureToggles['lockFeedOffsets']
+                        ? "Les curseurs et boutons de montée/descente des flux sont bloqués pour éviter tout changement involontaire."
+                        : "Activez le verrou pour sécuriser le positionnement de vos flux une fois ajustés."}
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newState = !featureToggles['lockFeedOffsets'];
+                    handleToggleFeature('lockFeedOffsets', newState);
+                    showToast(newState ? "Réglages des flux VERROUILLÉS 🔒" : "Réglages des flux DÉVERROUILLÉS 🔓");
+                  }}
+                  className={`px-4 py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm ${
+                    featureToggles['lockFeedOffsets']
+                      ? "bg-amber-600 hover:bg-amber-700 text-white"
+                      : "bg-emerald-600 hover:bg-emerald-700 text-white"
+                  }`}
+                >
+                  {featureToggles['lockFeedOffsets'] ? <Unlock size={15} /> : <Lock size={15} />}
+                  <span>{featureToggles['lockFeedOffsets'] ? "Déverrouiller" : "Verrouiller 🔒"}</span>
+                </button>
+              </div>
+
+              {/* Master Global Offset Card */}
+              <div className={`p-4 bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-blue-500/10 dark:from-emerald-950/40 dark:via-teal-950/40 dark:to-blue-950/40 rounded-2xl border border-emerald-200 dark:border-emerald-800/60 space-y-3 transition-all ${
+                featureToggles['lockFeedOffsets'] ? "opacity-60 pointer-events-none select-none" : ""
+              }`}>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 bg-emerald-600 text-white rounded-xl shadow-xs">
+                      <MoveVertical size={16} />
+                    </div>
+                    <div>
+                      <h5 className="font-extrabold text-sm text-gray-900 dark:text-white flex items-center gap-2">
+                        Décalage Global Master (Tous les flux)
+                        <span className={`px-2 py-0.5 text-xs font-black rounded-lg ${
+                          (featureToggles['feedGlobalOffset'] || 0) < 0
+                            ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-300'
+                            : (featureToggles['feedGlobalOffset'] || 0) > 0
+                            ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300'
+                            : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300'
+                        }`}>
+                          {(featureToggles['feedGlobalOffset'] || 0) > 0 ? `+${featureToggles['feedGlobalOffset']} px (Descendu)` : (featureToggles['feedGlobalOffset'] || 0) < 0 ? `${featureToggles['feedGlobalOffset']} px (Remonté)` : `0 px (Neutre)`}
+                        </span>
+                      </h5>
+                      <p className="text-xs text-gray-500">
+                        Applique un décalage vertical universel sur toutes les pages en un seul geste.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <button
+                      type="button"
+                      disabled={!!featureToggles['lockFeedOffsets']}
+                      onClick={() => {
+                        const cur = featureToggles['feedGlobalOffset'] || 0;
+                        handleToggleFeature('feedGlobalOffset', Math.max(-60, cur - 4));
+                      }}
+                      className="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl flex items-center gap-1 shadow-xs transition-all cursor-pointer"
+                      title="Monter tous les flux (-4px)"
+                    >
+                      <ArrowUp size={14} /> Monter (-4px)
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!!featureToggles['lockFeedOffsets']}
+                      onClick={() => {
+                        const cur = featureToggles['feedGlobalOffset'] || 0;
+                        handleToggleFeature('feedGlobalOffset', Math.min(60, cur + 4));
+                      }}
+                      className="px-2.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl flex items-center gap-1 shadow-xs transition-all cursor-pointer"
+                      title="Descendre tous les flux (+4px)"
+                    >
+                      <ArrowDown size={14} /> Descendre (+4px)
+                    </button>
+                    <button
+                      type="button"
+                      disabled={!!featureToggles['lockFeedOffsets']}
+                      onClick={() => handleToggleFeature('feedGlobalOffset', 0)}
+                      className="px-2 py-1.5 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer"
+                      title="Rétablir à 0px"
+                    >
+                      <RotateCcw size={13} />
+                    </button>
+                  </div>
+                </div>
+
+                <input
+                  type="range"
+                  min={-60}
+                  max={60}
+                  step={1}
+                  disabled={!!featureToggles['lockFeedOffsets']}
+                  value={featureToggles['feedGlobalOffset'] ?? 0}
+                  onChange={(e) => handleToggleFeature('feedGlobalOffset', Number(e.target.value))}
+                  className="w-full accent-emerald-600 cursor-pointer h-2.5 bg-gray-200 dark:bg-gray-700 rounded-lg disabled:cursor-not-allowed"
+                />
+                <div className="flex justify-between text-[10px] text-gray-400 font-bold">
+                  <span>-60px (Très Haut)</span>
+                  <span>-30px</span>
+                  <span>0px (Normal)</span>
+                  <span>+30px</span>
+                  <span>+60px (Très Bas)</span>
+                </div>
+              </div>
+
+              {/* Grid of Individual Feed Offsets */}
+              <div className={`grid grid-cols-1 md:grid-cols-2 gap-6 transition-all ${
+                featureToggles['lockFeedOffsets'] ? "opacity-60 pointer-events-none select-none" : ""
+              }`}>
+                {/* 1. Flux Principal (Accueil / UserDashboard) */}
+                <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 space-y-3">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <label className="text-xs font-black uppercase text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                        <LayoutDashboard size={14} className="text-emerald-500" />
+                        Flux Tableau de Bord Principal (Accueil)
+                      </label>
+                      <p className="text-[11px] text-gray-500 mt-0.5">Position verticale du flux sous la barre d'onglets.</p>
+                    </div>
+                    <span className={`px-2.5 py-0.5 text-xs font-extrabold rounded-lg ${
+                      (featureToggles['feedHomeOffset'] || 0) < 0
+                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300'
+                        : (featureToggles['feedHomeOffset'] || 0) > 0
+                        ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300'
+                        : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300'
+                    }`}>
+                      {(featureToggles['feedHomeOffset'] || 0) > 0 ? `+${featureToggles['feedHomeOffset']} px` : `${featureToggles['feedHomeOffset'] || 0} px`}
+                    </span>
+                  </div>
+
+                  <input
+                    type="range"
+                    min={-60}
+                    max={60}
+                    step={1}
+                    disabled={!!featureToggles['lockFeedOffsets']}
+                    value={featureToggles['feedHomeOffset'] ?? 0}
+                    onChange={(e) => handleToggleFeature('feedHomeOffset', Number(e.target.value))}
+                    className="w-full accent-emerald-600 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg disabled:cursor-not-allowed"
+                  />
+                  <div className="flex justify-between items-center text-[10px] text-gray-400 font-bold">
+                    <span>-60px (Remonté)</span>
+                    <div className="flex gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleFeature('feedHomeOffset', Math.max(-60, (featureToggles['feedHomeOffset'] || 0) - 4))}
+                        className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-black hover:bg-emerald-500 hover:text-white cursor-pointer"
+                      >
+                        ▲ Monter
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleFeature('feedHomeOffset', Math.min(60, (featureToggles['feedHomeOffset'] || 0) + 4))}
+                        className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-black hover:bg-amber-500 hover:text-white cursor-pointer"
+                      >
+                        ▼ Descendre
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleFeature('feedHomeOffset', 0)}
+                        className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-black cursor-pointer"
+                        title="Rétablir 0"
+                      >
+                        0
+                      </button>
+                    </div>
+                    <span>+60px (Descendu)</span>
+                  </div>
+                </div>
+
+                {/* 2. Flux des Outils Spirituels (ToolsDashboard) */}
+                <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 space-y-3">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <label className="text-xs font-black uppercase text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                        <Grid size={14} className="text-amber-500" />
+                        Flux des Outils Spirituels (ToolsDashboard)
+                      </label>
+                      <p className="text-[11px] text-gray-500 mt-0.5">Espacement supérieur de la grille et des cartes d'outils.</p>
+                    </div>
+                    <span className={`px-2.5 py-0.5 text-xs font-extrabold rounded-lg ${
+                      (featureToggles['feedToolsOffset'] || 0) < 0
+                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300'
+                        : (featureToggles['feedToolsOffset'] || 0) > 0
+                        ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300'
+                        : 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300'
+                    }`}>
+                      {(featureToggles['feedToolsOffset'] || 0) > 0 ? `+${featureToggles['feedToolsOffset']} px` : `${featureToggles['feedToolsOffset'] || 0} px`}
+                    </span>
+                  </div>
+
+                  <input
+                    type="range"
+                    min={-60}
+                    max={60}
+                    step={1}
+                    disabled={!!featureToggles['lockFeedOffsets']}
+                    value={featureToggles['feedToolsOffset'] ?? 0}
+                    onChange={(e) => handleToggleFeature('feedToolsOffset', Number(e.target.value))}
+                    className="w-full accent-amber-500 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg disabled:cursor-not-allowed"
+                  />
+                  <div className="flex justify-between items-center text-[10px] text-gray-400 font-bold">
+                    <span>-60px (Remonté)</span>
+                    <div className="flex gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleFeature('feedToolsOffset', Math.max(-60, (featureToggles['feedToolsOffset'] || 0) - 4))}
+                        className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-black hover:bg-emerald-500 hover:text-white cursor-pointer"
+                      >
+                        ▲ Monter
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleFeature('feedToolsOffset', Math.min(60, (featureToggles['feedToolsOffset'] || 0) + 4))}
+                        className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-black hover:bg-amber-500 hover:text-white cursor-pointer"
+                      >
+                        ▼ Descendre
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleFeature('feedToolsOffset', 0)}
+                        className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-black cursor-pointer"
+                      >
+                        0
+                      </button>
+                    </div>
+                    <span>+60px (Descendu)</span>
+                  </div>
+                </div>
+
+                {/* 3. Flux de Lecture des Articles & Secrets (SecretDetail) */}
+                <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 space-y-3">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <label className="text-xs font-black uppercase text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                        <BookOpen size={14} className="text-blue-500" />
+                        Flux de Lecture des Articles (SecretDetail)
+                      </label>
+                      <p className="text-[11px] text-gray-500 mt-0.5">Position verticale du contenu de lecture et barre audio.</p>
+                    </div>
+                    <span className={`px-2.5 py-0.5 text-xs font-extrabold rounded-lg ${
+                      (featureToggles['feedArticleOffset'] || 0) < 0
+                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300'
+                        : (featureToggles['feedArticleOffset'] || 0) > 0
+                        ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300'
+                        : 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300'
+                    }`}>
+                      {(featureToggles['feedArticleOffset'] || 0) > 0 ? `+${featureToggles['feedArticleOffset']} px` : `${featureToggles['feedArticleOffset'] || 0} px`}
+                    </span>
+                  </div>
+
+                  <input
+                    type="range"
+                    min={-60}
+                    max={60}
+                    step={1}
+                    disabled={!!featureToggles['lockFeedOffsets']}
+                    value={featureToggles['feedArticleOffset'] ?? 0}
+                    onChange={(e) => handleToggleFeature('feedArticleOffset', Number(e.target.value))}
+                    className="w-full accent-blue-600 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg disabled:cursor-not-allowed"
+                  />
+                  <div className="flex justify-between items-center text-[10px] text-gray-400 font-bold">
+                    <span>-60px (Remonté)</span>
+                    <div className="flex gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleFeature('feedArticleOffset', Math.max(-60, (featureToggles['feedArticleOffset'] || 0) - 4))}
+                        className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-black hover:bg-emerald-500 hover:text-white cursor-pointer"
+                      >
+                        ▲ Monter
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleFeature('feedArticleOffset', Math.min(60, (featureToggles['feedArticleOffset'] || 0) + 4))}
+                        className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-black hover:bg-amber-500 hover:text-white cursor-pointer"
+                      >
+                        ▼ Descendre
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleFeature('feedArticleOffset', 0)}
+                        className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-black cursor-pointer"
+                      >
+                        0
+                      </button>
+                    </div>
+                    <span>+60px (Descendu)</span>
+                  </div>
+                </div>
+
+                {/* 4. Flux Découverte & Exploration (ExploreDashboard) */}
+                <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 space-y-3">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <label className="text-xs font-black uppercase text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                        <Compass size={14} className="text-teal-500" />
+                        Flux Découverte & Catégories (Explorer)
+                      </label>
+                      <p className="text-[11px] text-gray-500 mt-0.5">Espacement du hub d'exploration et des sagesses.</p>
+                    </div>
+                    <span className={`px-2.5 py-0.5 text-xs font-extrabold rounded-lg ${
+                      (featureToggles['feedExploreOffset'] || 0) < 0
+                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300'
+                        : (featureToggles['feedExploreOffset'] || 0) > 0
+                        ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300'
+                        : 'bg-teal-100 text-teal-800 dark:bg-teal-900/50 dark:text-teal-300'
+                    }`}>
+                      {(featureToggles['feedExploreOffset'] || 0) > 0 ? `+${featureToggles['feedExploreOffset']} px` : `${featureToggles['feedExploreOffset'] || 0} px`}
+                    </span>
+                  </div>
+
+                  <input
+                    type="range"
+                    min={-60}
+                    max={60}
+                    step={1}
+                    disabled={!!featureToggles['lockFeedOffsets']}
+                    value={featureToggles['feedExploreOffset'] ?? 0}
+                    onChange={(e) => handleToggleFeature('feedExploreOffset', Number(e.target.value))}
+                    className="w-full accent-teal-600 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg disabled:cursor-not-allowed"
+                  />
+                  <div className="flex justify-between items-center text-[10px] text-gray-400 font-bold">
+                    <span>-60px (Remonté)</span>
+                    <div className="flex gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleFeature('feedExploreOffset', Math.max(-60, (featureToggles['feedExploreOffset'] || 0) - 4))}
+                        className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-black hover:bg-emerald-500 hover:text-white cursor-pointer"
+                      >
+                        ▲ Monter
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleFeature('feedExploreOffset', Math.min(60, (featureToggles['feedExploreOffset'] || 0) + 4))}
+                        className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-black hover:bg-amber-500 hover:text-white cursor-pointer"
+                      >
+                        ▼ Descendre
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleFeature('feedExploreOffset', 0)}
+                        className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-black cursor-pointer"
+                      >
+                        0
+                      </button>
+                    </div>
+                    <span>+60px (Descendu)</span>
+                  </div>
+                </div>
+
+                {/* 5. Flux de la Communauté (Community) */}
+                <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 space-y-3">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <label className="text-xs font-black uppercase text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                        <Users size={14} className="text-purple-500" />
+                        Flux Communauté & Salons de Discussion
+                      </label>
+                      <p className="text-[11px] text-gray-500 mt-0.5">Position verticale du chat et forum communautaire.</p>
+                    </div>
+                    <span className={`px-2.5 py-0.5 text-xs font-extrabold rounded-lg ${
+                      (featureToggles['feedCommunityOffset'] || 0) < 0
+                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300'
+                        : (featureToggles['feedCommunityOffset'] || 0) > 0
+                        ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300'
+                        : 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300'
+                    }`}>
+                      {(featureToggles['feedCommunityOffset'] || 0) > 0 ? `+${featureToggles['feedCommunityOffset']} px` : `${featureToggles['feedCommunityOffset'] || 0} px`}
+                    </span>
+                  </div>
+
+                  <input
+                    type="range"
+                    min={-60}
+                    max={60}
+                    step={1}
+                    disabled={!!featureToggles['lockFeedOffsets']}
+                    value={featureToggles['feedCommunityOffset'] ?? 0}
+                    onChange={(e) => handleToggleFeature('feedCommunityOffset', Number(e.target.value))}
+                    className="w-full accent-purple-600 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg disabled:cursor-not-allowed"
+                  />
+                  <div className="flex justify-between items-center text-[10px] text-gray-400 font-bold">
+                    <span>-60px (Remonté)</span>
+                    <div className="flex gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleFeature('feedCommunityOffset', Math.max(-60, (featureToggles['feedCommunityOffset'] || 0) - 4))}
+                        className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-black hover:bg-emerald-500 hover:text-white cursor-pointer"
+                      >
+                        ▲ Monter
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleFeature('feedCommunityOffset', Math.min(60, (featureToggles['feedCommunityOffset'] || 0) + 4))}
+                        className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-black hover:bg-amber-500 hover:text-white cursor-pointer"
+                      >
+                        ▼ Descendre
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleFeature('feedCommunityOffset', 0)}
+                        className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-black cursor-pointer"
+                      >
+                        0
+                      </button>
+                    </div>
+                    <span>+60px (Descendu)</span>
+                  </div>
+                </div>
+
+                {/* 6. Flux de la Boutique & Bibliothèque (Store) */}
+                <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 space-y-3">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <label className="text-xs font-black uppercase text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                        <ShoppingBag size={14} className="text-rose-500" />
+                        Flux Boutique & Livres Sacrés (Store)
+                      </label>
+                      <p className="text-[11px] text-gray-500 mt-0.5">Position verticale du catalogue et des livres manuscrits.</p>
+                    </div>
+                    <span className={`px-2.5 py-0.5 text-xs font-extrabold rounded-lg ${
+                      (featureToggles['feedStoreOffset'] || 0) < 0
+                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300'
+                        : (featureToggles['feedStoreOffset'] || 0) > 0
+                        ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300'
+                        : 'bg-rose-100 text-rose-800 dark:bg-rose-900/50 dark:text-rose-300'
+                    }`}>
+                      {(featureToggles['feedStoreOffset'] || 0) > 0 ? `+${featureToggles['feedStoreOffset']} px` : `${featureToggles['feedStoreOffset'] || 0} px`}
+                    </span>
+                  </div>
+
+                  <input
+                    type="range"
+                    min={-60}
+                    max={60}
+                    step={1}
+                    disabled={!!featureToggles['lockFeedOffsets']}
+                    value={featureToggles['feedStoreOffset'] ?? 0}
+                    onChange={(e) => handleToggleFeature('feedStoreOffset', Number(e.target.value))}
+                    className="w-full accent-rose-600 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg disabled:cursor-not-allowed"
+                  />
+                  <div className="flex justify-between items-center text-[10px] text-gray-400 font-bold">
+                    <span>-60px (Remonté)</span>
+                    <div className="flex gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleFeature('feedStoreOffset', Math.max(-60, (featureToggles['feedStoreOffset'] || 0) - 4))}
+                        className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-black hover:bg-emerald-500 hover:text-white cursor-pointer"
+                      >
+                        ▲ Monter
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleFeature('feedStoreOffset', Math.min(60, (featureToggles['feedStoreOffset'] || 0) + 4))}
+                        className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-black hover:bg-amber-500 hover:text-white cursor-pointer"
+                      >
+                        ▼ Descendre
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleFeature('feedStoreOffset', 0)}
+                        className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-black cursor-pointer"
+                      >
+                        0
+                      </button>
+                    </div>
+                    <span>+60px (Descendu)</span>
+                  </div>
+                </div>
+
+                {/* 7. Flux du Journal Spirituel (Journal) */}
+                <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 space-y-3">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <label className="text-xs font-black uppercase text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                        <Book size={14} className="text-indigo-500" />
+                        Flux du Journal Spirituel (Journal)
+                      </label>
+                      <p className="text-[11px] text-gray-500 mt-0.5">Espacement du journal intime et suivi des wirds.</p>
+                    </div>
+                    <span className={`px-2.5 py-0.5 text-xs font-extrabold rounded-lg ${
+                      (featureToggles['feedJournalOffset'] || 0) < 0
+                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300'
+                        : (featureToggles['feedJournalOffset'] || 0) > 0
+                        ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300'
+                        : 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300'
+                    }`}>
+                      {(featureToggles['feedJournalOffset'] || 0) > 0 ? `+${featureToggles['feedJournalOffset']} px` : `${featureToggles['feedJournalOffset'] || 0} px`}
+                    </span>
+                  </div>
+
+                  <input
+                    type="range"
+                    min={-60}
+                    max={60}
+                    step={1}
+                    disabled={!!featureToggles['lockFeedOffsets']}
+                    value={featureToggles['feedJournalOffset'] ?? 0}
+                    onChange={(e) => handleToggleFeature('feedJournalOffset', Number(e.target.value))}
+                    className="w-full accent-indigo-600 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg disabled:cursor-not-allowed"
+                  />
+                  <div className="flex justify-between items-center text-[10px] text-gray-400 font-bold">
+                    <span>-60px (Remonté)</span>
+                    <div className="flex gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleFeature('feedJournalOffset', Math.max(-60, (featureToggles['feedJournalOffset'] || 0) - 4))}
+                        className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-black hover:bg-emerald-500 hover:text-white cursor-pointer"
+                      >
+                        ▲ Monter
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleFeature('feedJournalOffset', Math.min(60, (featureToggles['feedJournalOffset'] || 0) + 4))}
+                        className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-black hover:bg-amber-500 hover:text-white cursor-pointer"
+                      >
+                        ▼ Descendre
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleFeature('feedJournalOffset', 0)}
+                        className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-black cursor-pointer"
+                      >
+                        0
+                      </button>
+                    </div>
+                    <span>+60px (Descendu)</span>
+                  </div>
+                </div>
+
+                {/* 8. Slider Vidéo des Outils sur l'Accueil */}
+                <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 space-y-3">
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <label className="text-xs font-black uppercase text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                        <Sparkles size={14} className="text-amber-500" />
+                        Slider Vidéo des Outils (Accueil)
+                      </label>
+                      <p className="text-[11px] text-gray-500 mt-0.5">Position verticale spécifique du carrousel animé.</p>
+                    </div>
+                    <span className={`px-2.5 py-0.5 text-xs font-extrabold rounded-lg ${
+                      (featureToggles['feedHomeSliderOffset'] || 0) < 0
+                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300'
+                        : (featureToggles['feedHomeSliderOffset'] || 0) > 0
+                        ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300'
+                        : 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300'
+                    }`}>
+                      {(featureToggles['feedHomeSliderOffset'] || 0) > 0 ? `+${featureToggles['feedHomeSliderOffset']} px` : `${featureToggles['feedHomeSliderOffset'] || 0} px`}
+                    </span>
+                  </div>
+
+                  <input
+                    type="range"
+                    min={-40}
+                    max={40}
+                    step={1}
+                    disabled={!!featureToggles['lockFeedOffsets']}
+                    value={featureToggles['feedHomeSliderOffset'] ?? 0}
+                    onChange={(e) => handleToggleFeature('feedHomeSliderOffset', Number(e.target.value))}
+                    className="w-full accent-amber-500 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg disabled:cursor-not-allowed"
+                  />
+                  <div className="flex justify-between items-center text-[10px] text-gray-400 font-bold">
+                    <span>-40px (Remonté)</span>
+                    <div className="flex gap-1">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleFeature('feedHomeSliderOffset', Math.max(-40, (featureToggles['feedHomeSliderOffset'] || 0) - 2))}
+                        className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-black hover:bg-emerald-500 hover:text-white cursor-pointer"
+                      >
+                        ▲ Monter
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleFeature('feedHomeSliderOffset', Math.min(40, (featureToggles['feedHomeSliderOffset'] || 0) + 2))}
+                        className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-black hover:bg-amber-500 hover:text-white cursor-pointer"
+                      >
+                        ▼ Descendre
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleFeature('feedHomeSliderOffset', 0)}
+                        className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-black cursor-pointer"
+                      >
+                        0
+                      </button>
+                    </div>
+                    <span>+40px (Descendu)</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Interactive Live Simulator Box */}
+              <div className="p-4 bg-gray-900 text-white rounded-2xl border border-gray-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black uppercase text-emerald-400 flex items-center gap-1.5">
+                    👁️ Simulateur Visuel en Temps Réel du Flux
+                  </span>
+                  <span className="text-[11px] text-gray-400">
+                    Décalage effectif : {(featureToggles['feedHomeOffset'] || 0) + (featureToggles['feedGlobalOffset'] || 0)}px
+                  </span>
+                </div>
+
+                {/* Mini mockup container */}
+                <div className="p-3 bg-gray-950 rounded-xl border border-gray-800 overflow-hidden relative h-48 flex flex-col justify-start">
+                  {/* Mock top navigation bar */}
+                  <div className="h-9 bg-gray-850 border-b border-gray-800 rounded-lg px-3 flex items-center justify-between shrink-0 z-10 shadow-xs">
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 rounded-full bg-emerald-500 flex items-center justify-center text-[9px] font-black text-gray-950">A</div>
+                      <span className="text-[11px] font-bold text-gray-200">AsrarHub Mobile / Web</span>
+                    </div>
+                    <div className="flex gap-1">
+                      <div className="w-10 h-3 bg-gray-700 rounded-full" />
+                      <div className="w-10 h-3 bg-emerald-600 rounded-full" />
+                    </div>
+                  </div>
+
+                  {/* Mock feed moving with live offset */}
+                  <div 
+                    style={{
+                      transform: `translateY(${((featureToggles['feedHomeOffset'] || 0) + (featureToggles['feedGlobalOffset'] || 0)) * 0.75}px)`,
+                      transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
+                    }}
+                    className="mt-2 space-y-2 select-none pointer-events-none"
+                  >
+                    <div className="p-2.5 bg-emerald-950/70 border border-emerald-800/80 rounded-lg flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Sparkles size={14} className="text-yellow-400" />
+                        <span className="text-xs font-bold text-emerald-200">Slider Vidéo & Outils</span>
+                      </div>
+                      <span className="text-[10px] bg-emerald-800 text-emerald-100 px-2 py-0.5 rounded font-black">Actif</span>
+                    </div>
+
+                    <div className="p-2.5 bg-gray-850 border border-gray-750 rounded-lg space-y-1">
+                      <div className="w-3/4 h-3 bg-gray-600 rounded" />
+                      <div className="w-full h-2 bg-gray-700 rounded" />
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="p-2 bg-gray-850 border border-gray-750 rounded-lg h-12 flex flex-col justify-center">
+                        <div className="w-1/2 h-2.5 bg-amber-500/80 rounded mb-1" />
+                        <div className="w-3/4 h-2 bg-gray-700 rounded" />
+                      </div>
+                      <div className="p-2 bg-gray-850 border border-gray-750 rounded-lg h-12 flex flex-col justify-center">
+                        <div className="w-1/2 h-2.5 bg-blue-500/80 rounded mb-1" />
+                        <div className="w-3/4 h-2 bg-gray-700 rounded" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </CollapsibleAdminCard>
 
           {/* Personnalisation des Tailles de Polices et Cartes (10px à 50px) */}
           <CollapsibleAdminCard

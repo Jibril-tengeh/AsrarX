@@ -1059,6 +1059,7 @@
     "promoInactive": "This promo code is no longer active.",
     "promoExpired": "This promo code has expired.",
     "promoLimit": "This promo code has reached its usage limit.",
+    "promoAlreadyUsed": "You have already used this promo code. Each user can only redeem it once.",
     "promoPercentSuccess": "Promo code applied! You get -{val}% off all subscriptions.",
     "promoValueSuccess": "Promo code applied! You get a discount of -{val} {curr}.",
     "promoSubUnlockSuccess": "Valid promo code! You can directly unlock a {months}-month Premium subscription for free.",

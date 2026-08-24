@@ -97,6 +97,26 @@ export const FeatureProvider: React.FC<{ children: React.ReactNode }> = ({ child
       root.style.removeProperty('--app-book-text-align');
       root.classList.remove('has-custom-book-text-align');
     }
+
+    // Dynamic Vertical Feed Offsets (Monter / Descendre le flux)
+    const setOffsetProp = (propName: string, val: any, defaultVal = 0) => {
+      const num = Number(val);
+      if (!isNaN(num) && num >= -100 && num <= 100) {
+        root.style.setProperty(propName, `${num}px`);
+      } else {
+        root.style.setProperty(propName, `${defaultVal}px`);
+      }
+    };
+
+    setOffsetProp('--feed-global-offset', mergedData.feedGlobalOffset, 0);
+    setOffsetProp('--feed-home-offset', mergedData.feedHomeOffset, 0);
+    setOffsetProp('--feed-tools-offset', mergedData.feedToolsOffset, 0);
+    setOffsetProp('--feed-article-offset', mergedData.feedArticleOffset, 0);
+    setOffsetProp('--feed-explore-offset', mergedData.feedExploreOffset, 0);
+    setOffsetProp('--feed-community-offset', mergedData.feedCommunityOffset, 0);
+    setOffsetProp('--feed-store-offset', mergedData.feedStoreOffset, 0);
+    setOffsetProp('--feed-journal-offset', mergedData.feedJournalOffset, 0);
+    setOffsetProp('--feed-home-slider-offset', mergedData.feedHomeSliderOffset, 0);
   };
 
   // Synchronous immediate initialization from localStorage to prevent flash
@@ -174,7 +194,8 @@ export const FeatureProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
         if (docSnap.exists()) {
           const data = docSnap.data();
-          const merged: any = { ...data, ...localData };
+          // Firestore configuration is the authoritative source of truth for all users
+          const merged: any = { ...localData, ...data };
           setFeatureToggles(merged);
           applyTypographyAndSizing(merged);
           setScreenProtection(merged.anti_screenshot !== false);

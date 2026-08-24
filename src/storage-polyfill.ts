@@ -57,7 +57,10 @@ console.error = function (...args) {
       msg.includes('INTERNAL ASSERTION FAILED') ||
       msg.includes('FIRESTORE') ||
       msg.includes('c050') ||
-      msg.includes('b815')
+      msg.includes('b815') ||
+      msg.includes('ca9') ||
+      msg.includes('targetId') ||
+      msg.includes('Unexpected state')
     ) {
       console.warn("[Filtered Firestore Log]", ...args);
       return;
@@ -71,6 +74,23 @@ console.error = function (...args) {
 // Global Unhandled Rejection & Error Trap to prevent Webview/App crashes
 if (typeof window !== 'undefined') {
   window.addEventListener('unhandledrejection', (event) => {
+    const reason = event.reason;
+    const msg = typeof reason === 'string' ? reason : (reason?.message || reason?.stack || String(reason) || '');
+    if (
+      msg.includes('INTERNAL ASSERTION FAILED') ||
+      msg.includes('FIRESTORE') ||
+      msg.includes('ca9') ||
+      msg.includes('b815') ||
+      msg.includes('c050') ||
+      msg.includes('targetId') ||
+      msg.includes('Unexpected state')
+    ) {
+      console.warn('[Filtered Firestore Unhandled Rejection]', msg);
+      if (event.preventDefault) {
+        event.preventDefault();
+      }
+      return;
+    }
     console.warn('[Global Unhandled Rejection Caught Safely]', event.reason);
     if (event.preventDefault) {
       event.preventDefault();
@@ -78,7 +98,24 @@ if (typeof window !== 'undefined') {
   });
 
   window.addEventListener('error', (event) => {
-    const msg = String(event.message || event.error || '');
+    const msg = String(event.message || (event.error && (event.error.message || event.error.stack)) || event.error || '');
+    if (
+      msg.includes('INTERNAL ASSERTION FAILED') ||
+      msg.includes('FIRESTORE') ||
+      msg.includes('ca9') ||
+      msg.includes('b815') ||
+      msg.includes('c050') ||
+      msg.includes('targetId') ||
+      msg.includes('Unexpected state')
+    ) {
+      if (event.preventDefault) {
+        event.preventDefault();
+      }
+      if (event.stopImmediatePropagation) {
+        event.stopImmediatePropagation();
+      }
+      return;
+    }
     if (msg.toLowerCase().includes('script error') || !msg) {
       if (event.preventDefault) {
         event.preventDefault();
@@ -92,7 +129,18 @@ if (typeof window !== 'undefined') {
   });
 
   window.onerror = function (msg, url, lineNo, columnNo, error) {
-    const messageStr = String(msg || '');
+    const messageStr = String(msg || (error && (error.message || error.stack)) || '');
+    if (
+      messageStr.includes('INTERNAL ASSERTION FAILED') ||
+      messageStr.includes('FIRESTORE') ||
+      messageStr.includes('ca9') ||
+      messageStr.includes('b815') ||
+      messageStr.includes('c050') ||
+      messageStr.includes('targetId') ||
+      messageStr.includes('Unexpected state')
+    ) {
+      return true; // Suppress Firestore internal assertion errors from throwing globally
+    }
     if (messageStr.toLowerCase().includes('script error') || !messageStr) {
       return true; // Suppress cross-origin / third-party generic script error
     }
@@ -114,6 +162,17 @@ try {
             ? input.url 
             : String(input);
       
+      // Direct pass-through for Firestore, Firebase, Google APIs to prevent stream corruption
+      if (
+        url.includes('firestore.googleapis.com') ||
+        url.includes('firebase') ||
+        url.includes('googleapis.com') ||
+        url.includes('google.com') ||
+        url.includes('gstatic.com')
+      ) {
+        return originalFetch(input, init);
+      }
+
       const start = performance.now();
       let attempt = 0;
       const maxAttempts = 2;

@@ -372,7 +372,12 @@ export const ExploreDashboard: React.FC = () => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 pt-2 sm:pt-3 pb-24">
+    <div 
+      style={{
+        paddingTop: `max(0px, calc(8px + var(--feed-explore-offset, 0px) + var(--feed-global-offset, 0px)))`
+      }}
+      className="max-w-5xl mx-auto px-3 sm:px-6 lg:px-8 pb-24 transition-all duration-300"
+    >
       <BannerAd />
 
       {/* Interactive Quick Favorites Widget */}

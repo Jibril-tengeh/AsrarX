@@ -1059,6 +1059,7 @@
     "promoInactive": "Ce code promo n'est plus actif.",
     "promoExpired": "Ce code promo a expiré.",
     "promoLimit": "Ce code promo a atteint sa limite d'utilisations.",
+    "promoAlreadyUsed": "Vous avez déjà utilisé ce code promo. Chaque utilisateur ne peut l'utiliser qu'une seule fois.",
     "promoPercentSuccess": "Code promo appliqué ! Vous bénéficiez de -{val}% sur tous les abonnements.",
     "promoValueSuccess": "Code promo appliqué ! Vous bénéficiez d'une réduction de -{val} {curr}.",
     "promoSubUnlockSuccess": "Code promo valide ! Vous pouvez débloquer directement un abonnement Premium de {months} mois gratuitement.",

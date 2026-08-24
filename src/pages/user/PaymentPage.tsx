@@ -187,15 +187,144 @@ export const PaymentPage: React.FC = () => {
     setReceiptFileName('');
   };
 
-  const incrementPromoUses = async (code: string) => {
+  const recordPromoUsage = async (code: string, targetUserId?: string, targetUserEmail?: string) => {
+    const cleanCode = (code || '').toUpperCase().trim();
+    if (!cleanCode) return;
+    const uid = targetUserId || user?.uid;
+    const email = targetUserEmail || user?.email || undefined;
+
     try {
-      const { increment } = await import('firebase/firestore');
-      await updateDoc(doc(db, 'promo_codes', code.toUpperCase()), {
+      const { increment, arrayUnion } = await import('firebase/firestore');
+      
+      // 1. Update Promo Code document in Firestore
+      const promoUpdates: Record<string, any> = {
         uses: increment(1)
-      });
+      };
+      if (uid) {
+        promoUpdates.usedByUsers = arrayUnion(uid);
+      }
+      if (email) {
+        promoUpdates.usedByEmails = arrayUnion(email.toLowerCase());
+      }
+      await updateDoc(doc(db, 'promo_codes', cleanCode), promoUpdates).catch(() => {});
+
+      // 2. Update User document in Firestore
+      if (uid) {
+        await updateDoc(doc(db, 'users', uid), {
+          usedPromoCodes: arrayUnion(cleanCode),
+          lastPromoCodeUsed: cleanCode,
+          lastPromoCodeUsedAt: new Date().toISOString()
+        }).catch(() => {});
+      }
+
+      // 3. Local persistent storage sync
+      try {
+        if (uid) {
+          const userKey = `asrarhub_used_promo_codes_${uid}`;
+          const existingUserCodes: string[] = JSON.parse(localStorage.getItem(userKey) || '[]');
+          if (!existingUserCodes.includes(cleanCode)) {
+            existingUserCodes.push(cleanCode);
+            localStorage.setItem(userKey, JSON.stringify(existingUserCodes));
+          }
+        }
+
+        const globalKey = 'asrarhub_used_promo_codes';
+        const existingGlobalCodes: string[] = JSON.parse(localStorage.getItem(globalKey) || '[]');
+        if (!existingGlobalCodes.includes(cleanCode)) {
+          existingGlobalCodes.push(cleanCode);
+          localStorage.setItem(globalKey, JSON.stringify(existingGlobalCodes));
+        }
+
+        const storedUser = localStorage.getItem('asrarhub_local_user');
+        if (storedUser) {
+          const parsed = JSON.parse(storedUser);
+          if (!Array.isArray(parsed.usedPromoCodes)) parsed.usedPromoCodes = [];
+          if (!parsed.usedPromoCodes.includes(cleanCode)) parsed.usedPromoCodes.push(cleanCode);
+          parsed.lastPromoCodeUsed = cleanCode;
+          localStorage.setItem('asrarhub_local_user', JSON.stringify(parsed));
+        }
+
+        const localList = JSON.parse(localStorage.getItem('asrarhub_local_promo_codes') || '[]');
+        const updatedList = localList.map((p: any) => {
+          if ((p.code || p.id || '').toUpperCase() === cleanCode) {
+            const usedUsers = Array.isArray(p.usedByUsers) ? p.usedByUsers : [];
+            return {
+              ...p,
+              uses: (Number(p.uses) || 0) + 1,
+              usedByUsers: uid && !usedUsers.includes(uid) ? [...usedUsers, uid] : usedUsers
+            };
+          }
+          return p;
+        });
+        localStorage.setItem('asrarhub_local_promo_codes', JSON.stringify(updatedList));
+      } catch (e) {
+        console.warn("Local storage promo update warning:", e);
+      }
     } catch (err) {
-      console.warn("Failed to increment promo uses:", err);
+      console.warn("Failed to record promo usage:", err);
     }
+  };
+
+  const isPromoAlreadyUsedByUser = async (code: string, promoObj?: any): Promise<boolean> => {
+    const upperCode = (code || '').toUpperCase().trim();
+    if (!upperCode) return false;
+
+    // Check 1: User state in context
+    if (user) {
+      const contextUsed: string[] = Array.isArray((user as any)?.usedPromoCodes) ? (user as any).usedPromoCodes : [];
+      if (contextUsed.map(c => String(c).toUpperCase()).includes(upperCode)) {
+        return true;
+      }
+      if ((user as any)?.lastPromoCodeUsed?.toUpperCase() === upperCode) {
+        return true;
+      }
+
+      // Check user-specific localStorage cache
+      const userKey = `asrarhub_used_promo_codes_${user.uid}`;
+      const localUserCodes: string[] = JSON.parse(localStorage.getItem(userKey) || '[]');
+      if (localUserCodes.map(c => String(c).toUpperCase()).includes(upperCode)) {
+        return true;
+      }
+
+      // Check 2: Fresh user document from Firestore
+      try {
+        const { getDoc, doc } = await import('firebase/firestore');
+        const userSnap = await getDoc(doc(db, 'users', user.uid)).catch(() => null);
+        if (userSnap?.exists()) {
+          const uData = userSnap.data();
+          const usedList: string[] = Array.isArray(uData.usedPromoCodes) ? uData.usedPromoCodes : [];
+          if (usedList.map(c => String(c).toUpperCase()).includes(upperCode)) {
+            return true;
+          }
+          if (uData.lastPromoCodeUsed?.toUpperCase() === upperCode) {
+            return true;
+          }
+        }
+      } catch (e) {}
+
+      // Check 3: Check promo object's usedByUsers & usedByEmails arrays
+      if (promoObj) {
+        const usedByUsers: string[] = Array.isArray(promoObj.usedByUsers) ? promoObj.usedByUsers : (Array.isArray(promoObj.usedBy) ? promoObj.usedBy : []);
+        if (usedByUsers.includes(user.uid)) {
+          return true;
+        }
+        if (user.email) {
+          const usedByEmails: string[] = Array.isArray(promoObj.usedByEmails) ? promoObj.usedByEmails : [];
+          if (usedByEmails.map(e => String(e).toLowerCase()).includes(user.email.toLowerCase())) {
+            return true;
+          }
+        }
+      }
+    }
+
+    // Check 4: Anonymous / device localStorage
+    const globalKey = 'asrarhub_used_promo_codes';
+    const localGlobalCodes: string[] = JSON.parse(localStorage.getItem(globalKey) || '[]');
+    if (localGlobalCodes.map(c => String(c).toUpperCase()).includes(upperCode)) {
+      return true;
+    }
+
+    return false;
   };
 
   const handleApplyPromoCode = async () => {
@@ -442,6 +571,15 @@ export const PaymentPage: React.FC = () => {
       return;
     }
 
+    // Single-use per user check: ensure user hasn't already used this code
+    const alreadyUsed = await isPromoAlreadyUsedByUser(promoId, promo);
+    if (alreadyUsed) {
+      setPromoError(t('payment.promoAlreadyUsed', "Vous avez déjà utilisé ce code promo. Chaque utilisateur ne peut l'utiliser qu'une seule fois."));
+      setAppliedPromo(null);
+      setApplyingPromo(false);
+      return;
+    }
+
     // Valid promo!
     setAppliedPromo({ code: promoId, ...promo });
     
@@ -474,6 +612,16 @@ export const PaymentPage: React.FC = () => {
     setLoading(true);
 
     try {
+      // Re-verify single use
+      const alreadyUsed = await isPromoAlreadyUsedByUser(appliedPromo.code, appliedPromo);
+      if (alreadyUsed) {
+        alert(t('payment.promoAlreadyUsed', "Vous avez déjà utilisé ce code promo. Chaque utilisateur ne peut l'utiliser qu'une seule fois."));
+        setAppliedPromo(null);
+        setPromoCodeInput('');
+        setLoading(false);
+        return;
+      }
+
       const { doc, getDoc, updateDoc } = await import('firebase/firestore');
 
       if (appliedPromo.type === 'unlock_subscription_hours' || appliedPromo.durationHours) {
@@ -506,15 +654,16 @@ export const PaymentPage: React.FC = () => {
           console.warn("LocalStorage user update warning:", e);
         }
 
-        await incrementPromoUses(appliedPromo.code);
+        await recordPromoUsage(appliedPromo.code, user.uid, user.email || undefined);
         const specificMsg = getPromoHourMessage(hours, language as 'fr' | 'en' | 'ha');
+        const codeUsed = appliedPromo.code;
         setAppliedPromo(null);
         setPromoCodeInput('');
         setCelebrationModal({
           isOpen: true,
           title: t('payment.canvaCelebrationTitle', 'Félicitations ! Vous êtes Membre VIP'),
           subtitle: specificMsg,
-          promoCode: appliedPromo.code,
+          promoCode: codeUsed,
           durationText: `${hours} ${t('common.hours', 'Heures d\'accès VIP')}`,
           redirectTo: '/user/dashboard'
         });
@@ -545,14 +694,15 @@ export const PaymentPage: React.FC = () => {
           console.warn("LocalStorage user update warning:", e);
         }
 
-        await incrementPromoUses(appliedPromo.code);
+        await recordPromoUsage(appliedPromo.code, user.uid, user.email || undefined);
+        const codeUsed = appliedPromo.code;
         setAppliedPromo(null);
         setPromoCodeInput('');
         setCelebrationModal({
           isOpen: true,
           title: t('payment.canvaCelebrationTitle', 'Félicitations ! Vous êtes Membre VIP'),
           subtitle: t('payment.alertSubUnlocked', 'Félicitations! Votre abonnement Premium de {months} mois a été activé gratuitement.').replace('{months}', String(months)),
-          promoCode: appliedPromo.code,
+          promoCode: codeUsed,
           durationText: `${months} ${t('common.months', 'Mois d\'abonnement VIP')}`,
           redirectTo: '/user/dashboard'
         });
@@ -583,7 +733,7 @@ export const PaymentPage: React.FC = () => {
           console.warn("Purchased items update error:", dbErr);
         }
 
-        await incrementPromoUses(appliedPromo.code);
+        await recordPromoUsage(appliedPromo.code, user.uid, user.email || undefined);
         alert(t('payment.alertProdUnlocked', 'Félicitations! L\'article "{name}" a été débloqué et ajouté à votre compte gratuitement.').replace('{name}', prodName));
         setAppliedPromo(null);
         setPromoCodeInput('');
@@ -602,6 +752,17 @@ export const PaymentPage: React.FC = () => {
     setLoading(true);
 
     try {
+      if (appliedPromo) {
+        const alreadyUsed = await isPromoAlreadyUsedByUser(appliedPromo.code, appliedPromo);
+        if (alreadyUsed) {
+          alert(t('payment.promoAlreadyUsed', "Vous avez déjà utilisé ce code promo. Chaque utilisateur ne peut l'utiliser qu'une seule fois."));
+          setAppliedPromo(null);
+          setPromoCodeInput('');
+          setLoading(false);
+          return;
+        }
+      }
+
       let months = 3;
       if (selectedPlan.id === 'premium_6m') months = 6;
       if (selectedPlan.id === 'premium_12m') months = 12;
@@ -616,7 +777,7 @@ export const PaymentPage: React.FC = () => {
 
       const promoUsed = appliedPromo ? appliedPromo.code : undefined;
       if (appliedPromo) {
-        await incrementPromoUses(appliedPromo.code);
+        await recordPromoUsage(appliedPromo.code, user.uid, user.email || undefined);
       }
 
       setAppliedPromo(null);
@@ -665,7 +826,7 @@ export const PaymentPage: React.FC = () => {
             });
 
             if (appliedPromo) {
-              await incrementPromoUses(appliedPromo.code);
+              await recordPromoUsage(appliedPromo.code, user.uid, user.email || undefined);
             }
           } catch (dbErr) {
             console.error("Failed to update premium status in DB:", dbErr);

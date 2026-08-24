@@ -564,30 +564,22 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
   }, []);
 
   useEffect(() => {
-    const unsubFeatures = onSnapshot(doc(db, 'settings', 'features'), (docSnap) => {
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        if (data.announcementTitle && data.announcementText && data.announcementVisible) {
-           const dismissedText = localStorage.getItem('asrarhub_dismissed_announcement_text');
-           if (dismissedText !== data.announcementText) {
-             setIsAnnouncementDismissed(false);
-           } else {
-             setIsAnnouncementDismissed(true);
-           }
-           setAnnouncement({
-             title: data.announcementTitle,
-             text: data.announcementText,
-             visible: data.announcementVisible
-           });
-        } else {
-           setAnnouncement(null);
-        }
+    if (featureToggles && featureToggles.announcementTitle && featureToggles.announcementText && featureToggles.announcementVisible) {
+      const dismissedText = localStorage.getItem('asrarhub_dismissed_announcement_text');
+      if (dismissedText !== featureToggles.announcementText) {
+        setIsAnnouncementDismissed(false);
+      } else {
+        setIsAnnouncementDismissed(true);
       }
-    }, (error) => {
-      console.warn("UserDashboard features onSnapshot error (operating offline):", error);
-    });
-    return () => unsubFeatures();
-  }, []);
+      setAnnouncement({
+        title: featureToggles.announcementTitle,
+        text: featureToggles.announcementText,
+        visible: featureToggles.announcementVisible
+      });
+    } else {
+      setAnnouncement(null);
+    }
+  }, [featureToggles]);
 
   useEffect(() => {
     if (featureToggles?.premiumPromoText) {
@@ -1190,8 +1182,13 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
         </div>
       </div>
 
-      {/* Spacer for fixed second toolbar with scroll-margin compensation */}
-      <div className="h-[40px] sm:h-[44px]" aria-hidden="true" />
+      {/* Spacer for fixed second toolbar with scroll-margin compensation & Admin Dynamic Feed Offset */}
+      <div 
+        style={{ 
+          height: `max(0px, calc(42px + var(--feed-home-offset, 0px) + var(--feed-global-offset, 0px)))` 
+        }} 
+        aria-hidden="true" 
+      />
 
       {/* Pull To Refresh for live view revalidation */}
       <PullToRefresh
@@ -1206,7 +1203,12 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
         <OnboardingTour />
 
       {/* Tools Video Animated Slider */}
-      <div className="scroll-mt-[88px] snap-start mb-1.5">
+      <div 
+        className="scroll-mt-[88px] snap-start mb-1.5"
+        style={{
+          marginTop: `calc(var(--feed-home-slider-offset, 0px))`
+        }}
+      >
         <ToolsVideoSlider />
       </div>
 

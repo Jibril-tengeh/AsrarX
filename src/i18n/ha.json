@@ -1059,6 +1059,7 @@
     "promoInactive": "Wannan lambar promo ba ta aiki.",
     "promoExpired": "Wannan lambar promo ta ƙare.",
     "promoLimit": "Wannan lambar promo ta kai iyakar amfani.",
+    "promoAlreadyUsed": "Kun riga kun yi amfani da wannan lambar promo. Kowane mai amfani zai iya amfani da ita sau ɗaya kawai.",
     "promoPercentSuccess": "An yi amfani da lambar promo! Kuna samun ragi na -{val}% akan duk rajista.",
     "promoValueSuccess": "An yi amfani da lambar promo! Kuna samun rangwame na -{val} {curr}.",
     "promoSubUnlockSuccess": "Ingantacciyar lambar promo! Kuna iya buɗe rajistar Premium ta wata {months} kyauta kai tsaye.",

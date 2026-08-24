@@ -1250,7 +1250,10 @@ export const SecretDetail: React.FC = () => {
   return (
     <PremiumWrapper enabled={false} requiredTier="premium" fallbackTitle="Lecture Secrète Premium">
       <div
-        className={`w-full max-w-3xl mx-auto px-3 sm:px-6 pt-[2px] lg:px-8 pb-24 transition-colors duration-500 ${readingMode ? "bg-[#fdfbf7] dark:bg-[#1a1917] min-h-screen" : ""}`}
+        style={{
+          paddingTop: `max(0px, calc(2px + var(--feed-article-offset, 0px) + var(--feed-global-offset, 0px)))`
+        }}
+        className={`w-full max-w-3xl mx-auto px-3 sm:px-6 lg:px-8 pb-24 transition-all duration-300 ${readingMode ? "bg-[#fdfbf7] dark:bg-[#1a1917] min-h-screen" : ""}`}
       >
       <div
         className={`flex items-center justify-between mb-1.5 py-0.5 ${readingMode ? "max-w-3xl mx-auto" : ""}`}

@@ -232,11 +232,11 @@ export const Header: React.FC = () => {
   return (
     <>
       <header 
-        className="fixed top-0 left-0 right-0 z-[100] w-full m-0 h-[48px] sm:h-[54px] py-2 sm:py-2.5 bg-emerald-600 dark:bg-emerald-800 shadow-sm px-1.5 min-[375px]:px-3 sm:px-6 flex items-center"
+        className="fixed top-0 left-0 right-0 z-[100] w-full m-0 h-[48px] sm:h-[54px] py-1.5 sm:py-2 bg-emerald-600 dark:bg-emerald-800 shadow-sm px-1 min-[375px]:px-2 sm:px-4 flex items-center"
         onClick={handleSecretClick}
       >
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <Link to="/" className="flex items-center group">
+        <div className="w-full max-w-7xl mx-auto flex items-center justify-between">
+          <Link to="/" className="flex items-center group -ml-0.5 sm:-ml-1">
             {branding.isEnabled && branding.appLogo ? (
               <img 
                 src={branding.appLogo} 
@@ -248,7 +248,7 @@ export const Header: React.FC = () => {
             )}
           </Link>
           
-          <div className="flex items-center gap-0.5 min-[375px]:gap-1.5 sm:gap-3">
+          <div className="flex items-center gap-0.5 min-[375px]:gap-1 sm:gap-2 -mr-0.5 sm:-mr-1">
             
             {featureToggles['tool_community'] !== 'inactive' && (
               <div

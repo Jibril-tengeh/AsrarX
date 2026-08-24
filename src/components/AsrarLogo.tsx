@@ -125,7 +125,7 @@ export const AsrarLogo: React.FC<AsrarLogoProps> = ({
     <div className={`flex items-center justify-center select-none ${sizeClasses} ${className}`}>
       {variant === 'horizontal' && (
         <svg
-          viewBox={hideSymbol ? "0 0 215 70" : "0 0 280 80"}
+          viewBox={hideSymbol ? "0 0 200 70" : "0 0 280 80"}
           className="w-full h-full filter drop-shadow-[0_2px_8px_rgba(245,195,104,0.12)]"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
@@ -140,7 +140,7 @@ export const AsrarLogo: React.FC<AsrarLogoProps> = ({
           )}
 
           {/* Typography Part (Right) */}
-          <g transform={hideSymbol ? "translate(5, 48) scale(1.05)" : "translate(82, 48)"}>
+          <g transform={hideSymbol ? "translate(0, 48) scale(1.05)" : "translate(82, 48)"}>
             <text
               x="0"
               y="0"
