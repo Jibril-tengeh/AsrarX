@@ -9,7 +9,7 @@ import {
   Clock, CheckCircle, CheckCircle2, XCircle, Globe, Grid, List, Mail, Phone, Lock, Unlock, Bell, BellOff, Sparkles, Star, Share, ShieldAlert, Download, DownloadCloud, Crown, UserPlus, UserCheck, Award,
   FolderOpen, Copy, Radio, Type, Sliders, Maximize2, Activity, Terminal, RefreshCw, RotateCcw, AlertTriangle, Moon, ChevronDown, ChevronUp, Layout,
   AlignLeft, AlignCenter, AlignRight, AlignJustify, Camera, ShieldBan, Tag, Ticket, Check, ArrowLeft, Calculator,
-  ArrowUp, ArrowDown, MoveVertical, Compass
+  ArrowUp, ArrowDown, MoveVertical, Compass, Gift
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 
@@ -61,6 +61,7 @@ import { calculateHijriDate } from '../../utils/hijriDate';
 import { LunarSealVarietiesSection } from '../../components/LunarSealVarietiesSection';
 import { AdminEmailSupportManager } from '../../components/admin/AdminEmailSupportManager';
 import { AdminVersionControlManager } from '../../components/admin/AdminVersionControlManager';
+import { AdminReferralManager } from '../../components/admin/AdminReferralManager';
 import { getTrialDurationHours, isNewUserPremiumEnabled } from '../../utils/trialConfig';
 import { ToolStatusPicker } from '../../components/admin/ToolStatusPicker';
 import { useBackButton } from '../../hooks/useBackButton';
@@ -155,7 +156,7 @@ const LayoutSelector = ({ value, onChange, activeColor = 'emerald' }: { value: s
   );
 };
 
-type AdminTab = 'overview' | 'branding' | 'floating_button' | 'version_control' | 'promo_codes' | 'security' | 'support' | 'users' | 'payments' | 'community' | 'features' | 'reciters' | 'ruqyah' | 'content' | 'notifications' | 'settings' | 'articles' | 'store' | 'grand_oaths' | 'categories' | 'seals' | 'book_covers' | 'media_storage';
+type AdminTab = 'overview' | 'branding' | 'floating_button' | 'version_control' | 'referrals' | 'promo_codes' | 'security' | 'support' | 'users' | 'payments' | 'community' | 'features' | 'reciters' | 'ruqyah' | 'content' | 'notifications' | 'settings' | 'articles' | 'store' | 'grand_oaths' | 'categories' | 'seals' | 'book_covers' | 'media_storage';
 
 interface Article {
   id: string;
@@ -2808,6 +2809,7 @@ export const AdminDashboard: React.FC = () => {
       { id: 'branding', label: 'Logo, Icône & Chargement', icon: Sparkles },
       { id: 'floating_button', label: 'Bouton Retour Flottant', icon: ArrowLeft },
       { id: 'version_control', label: 'Versions de l\'App (app_versions)', icon: Sparkles },
+      { id: 'referrals', label: 'Parrainage & Récompenses', icon: Gift },
       { id: 'promo_codes', label: 'Gestion des Codes Promo', icon: Tag, badge: promoCodes.length || undefined },
       { id: 'security', label: 'Sécurité & Alertes', icon: ShieldAlert, badge: securityAlerts.length || undefined },
       { id: 'support', label: 'Support & Emails', icon: Mail },
@@ -13055,6 +13057,7 @@ export const AdminDashboard: React.FC = () => {
           />
         )}
         {activeTab === 'version_control' && <AdminVersionControlManager />}
+        {activeTab === 'referrals' && <AdminReferralManager />}
         {activeTab === 'support' && <AdminEmailSupportManager />}
         {activeTab === 'users' && renderUsers()}
         {activeTab === 'payments' && renderPayments()}

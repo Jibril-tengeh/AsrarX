@@ -234,6 +234,7 @@ const ComparativeTraditionsHub = lazyWithRetry(() => import('./pages/user/tools/
 const LunarCyclesCalculator = lazyWithRetry(() => import('./pages/user/tools/LunarCyclesCalculator').then(m => ({ default: m.LunarCyclesCalculator })));
 const Store = lazyWithRetry(() => import('./pages/user/Store'));
 const FaqPage = lazyWithRetry(() => import('./pages/FaqPage'));
+const ReferralPage = lazyWithRetry(() => import('./pages/user/ReferralPage'));
 
 const PlaceholderPage = ({ title }: { title: string }) => (
   <div className="flex items-center justify-center h-full min-h-[50vh]">
@@ -1138,6 +1139,8 @@ export default function App() {
                   <Route path="/journal" element={<Journal />} />
                   <Route path="/saved" element={<UserDashboard initialFilter="favoris" />} />
                   <Route path="/community" element={<Community />} />
+                  <Route path="/referral" element={<ReferralPage />} />
+                  <Route path="/parrainage" element={<ReferralPage />} />
                 </Route>
                 <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/faq" element={<FaqPage />} />

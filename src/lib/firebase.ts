@@ -160,7 +160,7 @@ export const signInWithGoogle = async () => {
   }
 };
 
-export const signUpWithEmail = async (email: string, password: string, name: string, country?: string, phone?: string) => {
+export const signUpWithEmail = async (email: string, password: string, name: string, country?: string, phone?: string, referralCode?: string) => {
   // Validate registration eligibility first
   const validation = await validateRegistrationDetails(email, phone || '', db);
   if (!validation.valid) {
@@ -193,6 +193,8 @@ export const signUpWithEmail = async (email: string, password: string, name: str
 
     const normEmail = normalizeEmail(result.user.email || email);
     const normPhone = normalizePhone(phone || '');
+    const cleanUid = result.user.uid.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+    const userReferralCode = `ASRAR-${cleanUid.length >= 6 ? cleanUid.substring(0, 6) : cleanUid.padEnd(6, '7')}`;
 
     const userRef = doc(db, 'users', result.user.uid);
     await setDoc(userRef, {
@@ -213,7 +215,10 @@ export const signUpWithEmail = async (email: string, password: string, name: str
       freeTrialExpiresAt: isPremEnabled ? trialExpiry.toISOString() : null,
       premiumUntil: isPremEnabled ? trialExpiry.toISOString() : null,
       hasSeenTrialPopup: false,
-      requiresValidation: true
+      requiresValidation: true,
+      referralCode: userReferralCode,
+      referralCount: 0,
+      spiritualPoints: 100
     });
 
     updateProfile(result.user, { displayName: name }).catch(() => {});

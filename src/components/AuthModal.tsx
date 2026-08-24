@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLanguage } from '../contexts/LanguageContext';
-import { X, Mail, Lock, User as UserIcon, AlertCircle, Eye, EyeOff, KeyRound, CheckCircle, Globe, Phone, Search, ExternalLink, Sparkles, ShieldAlert, Zap } from 'lucide-react';
+import { X, Mail, Lock, User as UserIcon, AlertCircle, Eye, EyeOff, KeyRound, CheckCircle, CheckCircle2, Globe, Phone, Search, ExternalLink, Sparkles, ShieldAlert, Zap, Gift } from 'lucide-react';
 import { signInWithGoogle, signInWithEmail, signUpWithEmail, sendVerificationEmail, auth, db, signOut } from '../lib/firebase';
 import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
 import { useAuth } from '../contexts/AuthContext';
@@ -10,6 +10,8 @@ import { isDisposableEmail, isGmailAddress, hasGmailPlusAlias, hasEmailAlias, no
 import { useNavigate } from 'react-router-dom';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { useBackButton } from '../hooks/useBackButton';
+import { findUserByReferralCode, processReferralRegistration } from '../services/referralService';
+import { ReferralWelcomeModal } from './ReferralWelcomeModal';
 
 const countriesData = [
   { name: 'Afghanistan', code: '+93', flag: '🇦🇫' },
@@ -240,6 +242,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
   const [resetEmailSent, setResetEmailSent] = useState(false);
   const [isSelectingCountry, setIsSelectingCountry] = useState(false);
   const [countrySearch, setCountrySearch] = useState('');
+  const [referralCode, setReferralCode] = useState('');
+  const [referralValidated, setReferralValidated] = useState<{ valid: boolean; sponsorName?: string; checking?: boolean } | null>(null);
+  const [showWelcomeCelebration, setShowWelcomeCelebration] = useState(false);
+  const [welcomeCelebrationData, setWelcomeCelebrationData] = useState<{ referrerName?: string; hoursAwarded?: number } | null>(null);
 
   const backdropRef = React.useRef<HTMLDivElement>(null);
   const modalContentRef = React.useRef<HTMLDivElement>(null);
@@ -253,6 +259,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
     if (isOpen) {
       setIsForgotPassword(false);
       setResetEmailSent(false);
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlRef = urlParams.get('ref') || urlParams.get('invite') || urlParams.get('sponsor');
+      if (urlRef) {
+        setReferralCode(urlRef.toUpperCase());
+        setIsLogin(false);
+      }
       const savedEmail = localStorage.getItem('asrarhub_saved_email');
       const savedPassword = localStorage.getItem('asrarhub_saved_password');
       if (savedEmail) {
@@ -267,6 +279,26 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
       }
     }
   }, [isOpen]);
+
+  // Real-time debounced check of referral code
+  React.useEffect(() => {
+    if (!referralCode || referralCode.trim().length < 3) {
+      setReferralValidated(null);
+      return;
+    }
+
+    setReferralValidated({ valid: false, checking: true });
+    const timer = setTimeout(async () => {
+      const sponsor = await findUserByReferralCode(referralCode.trim());
+      if (sponsor) {
+        setReferralValidated({ valid: true, sponsorName: sponsor.name || 'Parrain AsrarHub', checking: false });
+      } else {
+        setReferralValidated({ valid: false, checking: false });
+      }
+    }, 450);
+
+    return () => clearTimeout(timer);
+  }, [referralCode]);
 
   // Lock background scroll and disable pull-to-refresh when authentication is open
   React.useEffect(() => {
@@ -411,8 +443,28 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
           return;
         }
 
-        result = await signUpWithEmail(email, password, name, country, phone);
+        result = await signUpWithEmail(email, password, name, country, phone, referralCode.trim() || undefined);
         if (result?.user) {
+          // Process referral reward if referral code is provided
+          if (referralCode && referralCode.trim()) {
+            try {
+              const refRes = await processReferralRegistration({
+                newUserId: result.user.uid,
+                newUserName: name,
+                newUserEmail: email,
+                referralCode: referralCode.trim()
+              });
+              if (refRes.success) {
+                setWelcomeCelebrationData({
+                  referrerName: refRes.referrerName,
+                  hoursAwarded: refRes.refereeRewardHours
+                });
+                setShowWelcomeCelebration(true);
+              }
+            } catch (refErr) {
+              console.warn("Referral processing note:", refErr);
+            }
+          }
           // sendVerificationEmail is already dispatched instantly inside signUpWithEmail
           setVerificationSent(true);
           setLoading(false);
@@ -987,6 +1039,51 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
                       </div>
                     </div>
 
+                    {!isLogin && (
+                      <div className="pt-1">
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="block text-xs font-semibold text-gray-700 dark:text-gray-300">
+                            {t('auth.referralCode', 'Code de parrainage')} <span className="text-gray-400 font-normal text-[11px]">({t('common.optional', 'Optionnel')})</span>
+                          </label>
+                          <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500/20 to-emerald-500/20 text-amber-600 dark:text-amber-300 border border-amber-400/30 flex items-center gap-1">
+                            <Sparkles size={11} className="text-amber-500" />
+                            <span>Bonus VIP</span>
+                          </span>
+                        </div>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                            <Gift size={18} className={referralValidated?.valid ? 'text-emerald-500' : ''} />
+                          </div>
+                          <input
+                            type="text"
+                            value={referralCode}
+                            onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                            className={`w-full pl-10 pr-10 py-2.5 bg-gray-50 dark:bg-gray-800 border ${
+                              referralValidated?.valid
+                                ? 'border-emerald-500 ring-2 ring-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-bold'
+                                : 'border-gray-200 dark:border-gray-700 focus:ring-2 focus:ring-emerald-500 text-gray-900 dark:text-white'
+                            } rounded-xl font-mono uppercase focus:border-transparent outline-none transition-all placeholder:normal-case placeholder:font-sans`}
+                            placeholder="Ex: ASRAR-7789AB"
+                          />
+                          {referralValidated?.checking ? (
+                            <div className="absolute inset-y-0 right-0 pr-3 flex items-center">
+                              <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                            </div>
+                          ) : referralValidated?.valid ? (
+                            <div className="absolute inset-y-0 right-0 pr-3 flex items-center text-emerald-500" title="Code validé">
+                              <CheckCircle2 size={18} />
+                            </div>
+                          ) : null}
+                        </div>
+                        {referralValidated?.valid && referralValidated.sponsorName && (
+                          <p className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-1.5 flex items-center gap-1 font-medium bg-emerald-50 dark:bg-emerald-950/30 p-1.5 rounded-lg border border-emerald-500/20">
+                            <CheckCircle2 size={13} className="shrink-0" />
+                            <span>Parrain validé : <strong>{referralValidated.sponsorName}</strong> (+Premium offert !)</span>
+                          </p>
+                        )}
+                      </div>
+                    )}
+
                     <div className="flex items-center justify-between mt-2">
                       <label className="flex items-center text-sm text-gray-600 dark:text-gray-400 cursor-pointer">
                         <input
@@ -1044,6 +1141,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
           </motion.div>
         </div>
       )}
+      <ReferralWelcomeModal
+        isOpen={showWelcomeCelebration}
+        onClose={() => {
+          setShowWelcomeCelebration(false);
+          onClose();
+        }}
+        referrerName={welcomeCelebrationData?.referrerName}
+        hoursAwarded={welcomeCelebrationData?.hoursAwarded}
+      />
     </AnimatePresence>,
     document.body
   );

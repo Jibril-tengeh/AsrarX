@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { User, Bell, Clock, Save, Shield, Moon, Sun, Smartphone, Laptop, Tablet, Globe, Trash2, Award, Medal, Star, Target, LogOut, Camera, Image as ImageIcon, RefreshCw, Sparkles, LogIn, ChevronDown, Plus, XCircle, CheckCircle, FileText, BookOpen, ScrollText, Heart, X, Share2, Wifi, Database, HardDrive, Mic, MapPin, FolderCheck, Mail, MessageSquare, Info, Tag, ExternalLink, Check } from 'lucide-react';
+import { User, Bell, Clock, Save, Shield, Moon, Sun, Smartphone, Laptop, Tablet, Globe, Trash2, Award, Medal, Star, Target, LogOut, Camera, Image as ImageIcon, RefreshCw, Sparkles, LogIn, ChevronDown, Plus, XCircle, CheckCircle, FileText, BookOpen, ScrollText, Heart, X, Share2, Wifi, Database, HardDrive, Mic, MapPin, FolderCheck, Mail, MessageSquare, Info, Tag, ExternalLink, Check, Gift } from 'lucide-react';
 import { FloatingSupportContact } from '../../components/FloatingSupportContact';
+import { ReferralCenter } from '../../components/ReferralCenter';
 import { requestStoragePermission, requestMicrophonePermission, requestGeolocationPermission, requestNotificationPermission, requestAllPermissions } from '../../utils/planetaryNotifications';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -1914,6 +1915,16 @@ export const UserProfile: React.FC = () => {
           <RefreshCw size={18} className={isClearingCache ? 'animate-spin' : ''} />
           {isClearingCache ? t('profile.maintenance.clearing', 'Nettoyage...') : t('profile.maintenance.clearCache', 'Vider le cache')}
         </button>
+      </CollapsibleSection>
+
+      {/* Programme de Parrainage & Récompenses Premium */}
+      <CollapsibleSection
+        title={t('profile.referral.title', 'Programme de Parrainage & Heures Premium')}
+        icon={<Gift className="text-amber-500" size={20} />}
+        defaultOpen={true}
+        id="section-referral"
+      >
+        <ReferralCenter />
       </CollapsibleSection>
 
       {/* Centre d'Assistance & Contact Direct avec l'Administrateur */}

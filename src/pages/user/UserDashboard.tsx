@@ -40,7 +40,6 @@ import { AsrarItem, Category } from '../../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLocation, Link, useParams, useNavigate } from 'react-router-dom';
 import { tools } from '../../data/tools';
-import { CelestialRecommendations } from '../../components/CelestialRecommendations';
 
 import { getApiUrl } from '../../lib/api';
 
@@ -1356,11 +1355,6 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
           </div>
         );
       })()}
-
-      <div className="mb-4">
-        <CelestialRecommendations />
-      </div>
-
 
       {/* Reading History */}
       {readingHistory.length > 0 && (
