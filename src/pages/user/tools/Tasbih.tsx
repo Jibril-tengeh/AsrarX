@@ -1311,14 +1311,14 @@ export const Tasbih: React.FC = () => {
               <p className="text-sm text-gray-500">Sélectionnez un zikr pour commencer</p>
             </div>
             <div className="max-h-[300px] overflow-y-auto">
-              {categories.map(cat => (
-                <div key={cat}>
+              {categories.map((cat, catIdx) => (
+                <div key={`tasbih-cat-${cat || catIdx}`}>
                   <div className="px-5 py-2 bg-gray-50/50 dark:bg-gray-900/50 text-xs font-bold text-gray-400 uppercase tracking-wider sticky top-0 backdrop-blur-md">
                     {cat}
                   </div>
-                  {allZikrs.filter(z => z.category === cat).map(z => (
+                  {allZikrs.filter(z => z.category === cat).map((z, zIdx) => (
                     <div 
-                      key={z.id}
+                      key={z.id ? `zikr-${z.id}-${zIdx}` : `zikr-${zIdx}`}
                       onClick={() => handleZikrChange(z)}
                      className={`flex items-center justify-between p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50 border-b border-gray-50 dark:border-gray-700/50 last:border-0 transition-colors ${activeZikr.id === z.id ? 'bg-emerald-50/50 dark:bg-emerald-900/10' : ''}`}
                     >

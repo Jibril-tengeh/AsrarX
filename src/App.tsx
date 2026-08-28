@@ -44,6 +44,7 @@ import { recordUnauthorizedToolAttempt } from './utils/securityAlerts';
 import { appVersionService } from './services/appVersionService';
 import { NewVersionBannerModal } from './components/NewVersionBannerModal';
 import { ForceUpdateModal } from './components/ForceUpdateModal';
+import { PromoVideoModal } from './components/videoCards/PromoVideoModal';
 import { PremiumLockScreen } from './components/PremiumLockScreen';
 import { NavigationProgressBar } from './components/NavigationProgressBar';
 import { clear as clearIdbKeyval } from 'idb-keyval';
@@ -235,6 +236,7 @@ const LunarCyclesCalculator = lazyWithRetry(() => import('./pages/user/tools/Lun
 const Store = lazyWithRetry(() => import('./pages/user/Store'));
 const FaqPage = lazyWithRetry(() => import('./pages/FaqPage'));
 const ReferralPage = lazyWithRetry(() => import('./pages/user/ReferralPage'));
+const PdfLibraryPage = lazyWithRetry(() => import('./pages/user/PdfLibraryPage').then(m => ({ default: m.PdfLibraryPage })));
 
 const PlaceholderPage = ({ title }: { title: string }) => (
   <div className="flex items-center justify-center h-full min-h-[50vh]">
@@ -458,30 +460,47 @@ const ProtectedToolsLayout: React.FC = () => {
     }
   }, [user]);
 
-  const isSubTool = location.pathname.startsWith('/tools/') && location.pathname !== '/tools';
-  const pathParts = isSubTool ? location.pathname.split('/') : [];
-  const toolId = isSubTool ? pathParts[pathParts.length - 1] : "";
+  const getGuardedFeatureId = (pathname: string): string => {
+    if (pathname.startsWith('/tools/') && pathname !== '/tools') {
+      const parts = pathname.split('/');
+      return parts[parts.length - 1];
+    }
+    if (pathname === '/pdf-library' || pathname === '/pdf' || pathname === '/explore/pdf' || pathname === '/tools/pdf') return 'pdf';
+    if (pathname === '/store') return 'store';
+    if (pathname === '/community') return 'community';
+    if (pathname === '/journal') return 'journal';
+    if (pathname === '/explore/calendar') return 'calendar';
+    if (pathname === '/explore/quizz') return 'quizz';
+    if (pathname === '/explore/lexique') return 'lexique';
+    if (pathname === '/explore') return 'explore';
+    if (pathname === '/referral' || pathname === '/parrainage') return 'referral';
+    return '';
+  };
+
+  const featureId = getGuardedFeatureId(location.pathname);
+  const isGuardedRoute = Boolean(featureId);
+  const toolId = featureId;
   const toolDisplayName = toolId ? getToolDisplayName(toolId, language) : "";
   
-  const accessResult = isSubTool && toolId
+  const accessResult = isGuardedRoute && toolId
     ? checkFeatureAccess(toolId, toolDisplayName, featureToggles, user, isPremium)
     : { allowed: true, restrictionType: null, featureName: toolDisplayName, status: 'active' as const };
 
-  const isMaintenance = isSubTool && accessResult.restrictionType === 'maintenance';
-  const isInactive = isSubTool && accessResult.restrictionType === 'blocked' && (accessResult.status === 'inactive' || accessResult.status === 'disabled');
-  const isPremiumOnly = isSubTool && accessResult.restrictionType === 'premium';
-  const isBlocked = isSubTool && accessResult.restrictionType === 'blocked' && !isInactive;
+  const isMaintenance = isGuardedRoute && accessResult.restrictionType === 'maintenance';
+  const isInactive = isGuardedRoute && accessResult.restrictionType === 'blocked' && (accessResult.status === 'inactive' || accessResult.status === 'disabled');
+  const isPremiumOnly = isGuardedRoute && accessResult.restrictionType === 'premium';
+  const isBlocked = isGuardedRoute && accessResult.restrictionType === 'blocked' && !isInactive;
   const isAdmin = user?.role === 'admin' || user?.email === 'jibriltengeh4@gmail.com' || user?.email === 'sbireino@gmail.com' || user?.email === 'tenibawwal10@gmail.com' || user?.email === 'jibriltengeh57@gmail.com';
 
   React.useEffect(() => {
-    if (user && isSubTool && accessResult.allowed && toolId) {
+    if (user && isGuardedRoute && accessResult.allowed && toolId) {
       localStorage.setItem('asrarhub_last_tool', toolId);
     }
-  }, [user, location.pathname, isSubTool, accessResult.allowed, toolId]);
+  }, [user, location.pathname, isGuardedRoute, accessResult.allowed, toolId]);
 
   // Log unauthorized access attempts to blocked/restricted tools for admin security alerting
   React.useEffect(() => {
-    if (user && isSubTool && !accessResult.allowed && toolId && !isAdmin) {
+    if (user && isGuardedRoute && !accessResult.allowed && toolId && !isAdmin) {
       const restrictionType = accessResult.restrictionType || (isMaintenance ? 'maintenance' : isPremiumOnly ? 'premium' : 'blocked');
       recordUnauthorizedToolAttempt({
         user,
@@ -491,7 +510,7 @@ const ProtectedToolsLayout: React.FC = () => {
         featureToggles
       });
     }
-  }, [user, isSubTool, accessResult.allowed, toolId, accessResult.restrictionType, isMaintenance, isPremiumOnly, isBlocked, isAdmin, featureToggles]);
+  }, [user, isGuardedRoute, accessResult.allowed, toolId, accessResult.restrictionType, isMaintenance, isPremiumOnly, isBlocked, isAdmin, featureToggles]);
 
   if (!user) {
     return (
@@ -534,7 +553,7 @@ const ProtectedToolsLayout: React.FC = () => {
     return <UnverifiedEmailGuard />;
   }
 
-  if (isSubTool) {
+  if (isGuardedRoute) {
     if (isBlocked) {
       return (
         <div className="max-w-md mx-auto p-6 sm:p-8 text-center flex flex-col items-center justify-center min-h-[70vh]">
@@ -987,11 +1006,11 @@ export default function App() {
       <ContentProtectionManager />
       <NetworkStatus />
       <ErrorToastContainer />
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors flex flex-col font-sans mb-16 sm:mb-0 w-full max-w-full m-0 p-0 pt-0">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors flex flex-col font-sans mb-16 sm:mb-0 w-full max-w-full m-0 p-0 pt-0 overflow-x-hidden">
         <FloatingBackButton />
         <Header />
         <DailyRewardHandler />
-        <main className="flex flex-col flex-1 w-full max-w-full text-gray-900 dark:text-gray-100 pb-20 m-0 p-0 pt-[48px] sm:pt-[54px]">
+        <main className="flex flex-col flex-1 w-full max-w-full text-gray-900 dark:text-gray-100 pb-20 m-0 p-0 pt-[48px] sm:pt-[54px] min-w-0 overflow-x-hidden">
           <React.Suspense fallback={
             <div className="flex items-center justify-center min-h-[60vh] w-full">
               <div className="w-10 h-10 border-4 border-emerald-500/10 border-t-emerald-600 rounded-full animate-spin" />
@@ -1004,7 +1023,7 @@ export default function App() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -12 }}
                 transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-                className="w-full max-w-full flex flex-col flex-1 min-h-0"
+                className="w-full max-w-full flex flex-col flex-1 min-h-0 min-w-0 overflow-x-hidden"
               >
                 <Routes location={location}>
                 <Route path="/" element={<Navigate to="/user/dashboard" replace />} />
@@ -1141,6 +1160,10 @@ export default function App() {
                   <Route path="/community" element={<Community />} />
                   <Route path="/referral" element={<ReferralPage />} />
                   <Route path="/parrainage" element={<ReferralPage />} />
+                  <Route path="/pdf-library" element={<PdfLibraryPage />} />
+                  <Route path="/pdf" element={<PdfLibraryPage />} />
+                  <Route path="/explore/pdf" element={<PdfLibraryPage />} />
+                  <Route path="/tools/pdf" element={<PdfLibraryPage />} />
                 </Route>
                 <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/faq" element={<FaqPage />} />
@@ -1185,8 +1208,8 @@ export default function App() {
                   title="Mode Répétition"
                 >
                   <option value={0}>Sans répétition</option>
-                  {[3, 7, 11, 21, 33, 41, 70, 71, 73, 111, 313, 666, 777, 786, 1000, 1111].map(c => (
-                    <option key={c} value={c}>{c} fois</option>
+                  {[3, 7, 11, 21, 33, 41, 70, 71, 73, 111, 313, 666, 777, 786, 1000, 1111].map((c, cIdx) => (
+                    <option key={`repeat-count-opt-${c}-${cIdx}`} value={c}>{c} fois</option>
                   ))}
                 </select>
               </div>
@@ -1262,6 +1285,9 @@ export default function App() {
           currentInstalledVersion={versionUpgradeData.currentVersion}
           currentInstalledVersionCode={appVersionService.getCurrentVersionCode()}
         />
+
+        {/* Promo Code Video Announcement Interactive Modal */}
+        <PromoVideoModal />
       </div>
     </MaintenanceOverlay>
   );

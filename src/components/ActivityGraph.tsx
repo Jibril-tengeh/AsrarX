@@ -27,11 +27,11 @@ export const ActivityGraph: React.FC<ActivityGraphProps> = ({ data }) => {
     <div className="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700">
       <h3 className="font-bold text-gray-900 dark:text-white mb-4">Assiduité (30 derniers jours)</h3>
       <div className="flex flex-wrap gap-1">
-        {days.map((day) => {
+        {days.map((day, dIdx) => {
           const count = data[day] || 0;
           return (
             <div
-              key={day}
+              key={`act-day-${day}-${dIdx}`}
               title={`${day}: ${count} actions`}
               className={`w-4 h-4 sm:w-5 sm:h-5 rounded-sm ${getColor(count)}`}
             ></div>

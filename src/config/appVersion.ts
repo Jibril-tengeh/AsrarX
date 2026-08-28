@@ -17,6 +17,7 @@ export interface VersionRelease {
   downloadUrl?: string; // Lien de mise à jour (Play Store, Téléchargement APK direct, ou Web)
   apkDownloadUrl?: string; // Lien direct de téléchargement du fichier APK
   videoCardTheme?: VideoCardThemeId; // Modèle de style vidéo défini par l'administrateur
+  disableVideoCard?: boolean; // Désactiver l'affichage de la carte vidéo animée pour cette version
   highlights: string[];
   highlightsEn?: string[];
   highlightsHa?: string[];

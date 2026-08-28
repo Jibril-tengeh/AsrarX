@@ -412,9 +412,9 @@ export const CollapsibleFloatingWidget: React.FC = () => {
               {activeTab === 'tasbih' && (
                 <div className="space-y-3 text-center">
                   <div className="flex justify-center gap-1.5 text-xs">
-                    {['Subhanallah', 'Alhamdulillah', 'Allahu Akbar', 'Astaghfirullah'].map((item) => (
+                    {['Subhanallah', 'Alhamdulillah', 'Allahu Akbar', 'Astaghfirullah'].map((item, dIdx) => (
                       <button
-                        key={item}
+                        key={`float-dhikr-${item}-${dIdx}`}
                         onClick={() => setSelectedDhikr(item)}
                         className={`px-2 py-1 rounded-md border text-[10px] transition-all ${
                           selectedDhikr === item 

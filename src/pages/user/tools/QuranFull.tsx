@@ -3549,7 +3549,7 @@ export const QuranFull: React.FC = () => {
                                 { id: 'indigo', name: 'Indigo', bg: 'bg-indigo-600' }
                               ].map((c) => (
                                 <button
-                                  key={c.id}
+                                  key={`arabic-col-${c.id}`}
                                   type="button"
                                   onClick={() => {
                                     setArabicColor(c.id);
@@ -3574,7 +3574,7 @@ export const QuranFull: React.FC = () => {
                                 { id: 'mono', name: 'Mono' }
                               ].map((f) => (
                                 <button
-                                  key={f.id}
+                                  key={`trans-font-${f.id}`}
                                   type="button"
                                   onClick={() => {
                                     setTranslationFontFamily(f.id);
@@ -3599,7 +3599,7 @@ export const QuranFull: React.FC = () => {
                                 { id: 'blue', name: 'Bleu', bg: 'bg-blue-500' }
                               ].map((c) => (
                                 <button
-                                  key={c.id}
+                                  key={`trans-col-${c.id}`}
                                   type="button"
                                   onClick={() => {
                                     setTranslationColor(c.id);
@@ -4074,7 +4074,7 @@ export const QuranFull: React.FC = () => {
                                   <div className="flex items-center gap-2" id="zoomed-bg-selector">
                                     {ZOOM_BACKGROUNDS.map((bg, idx) => (
                                       <button
-                                        key={bg.id}
+                                        key={`zoom-bg-${bg.id}-${idx}`}
                                         onClick={(e) => { e.stopPropagation(); setZoomedAyahBg(idx); }}
                                         className={`w-8 h-8 rounded-full shadow-sm transition-transform ${zoomedAyahBg === idx ? 'scale-110 ring-2 ring-emerald-500 ring-offset-2 dark:ring-offset-gray-900' : 'hover:scale-105'} ${bg.iconClass}`}
                                         title={`Arrière-plan ${bg.id}`}
@@ -4084,7 +4084,7 @@ export const QuranFull: React.FC = () => {
                                   <div className="flex items-center gap-2" id="zoomed-color-selector">
                                     {ZOOM_TEXT_COLORS.map((color, idx) => (
                                       <button
-                                        key={color.id}
+                                        key={`zoom-color-${color.id}-${idx}`}
                                         onClick={(e) => { e.stopPropagation(); setZoomedAyahColor(idx); }}
                                         className={`w-6 h-6 rounded-full shadow-sm transition-transform ${zoomedAyahColor === idx ? 'scale-125 ring-2 ring-emerald-500 ring-offset-1 dark:ring-offset-gray-900' : 'hover:scale-110'} ${color.iconClass}`}
                                         title={`Couleur ${color.id}`}
@@ -4420,8 +4420,8 @@ export const QuranFull: React.FC = () => {
                          Aucun signet enregistré pour le moment.
                        </div>
                      ) : (
-                       bookmarks.sort((a, b) => b.timestamp - a.timestamp).map((bookmark: any) => (
-                         <div key={bookmark.id || `${bookmark.surahNumber || "s"}-${bookmark.ayahNumberInSurah || bookmark.ayahNumber || "v"}-${bookmark.timestamp}`} className="p-4 border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 rounded-2xl flex flex-col gap-3">
+                       bookmarks.sort((a, b) => b.timestamp - a.timestamp).map((bookmark: any, bmIdx: number) => (
+                         <div key={bookmark.id ? `bm-${bookmark.id}-${bmIdx}` : `bm-${bookmark.surahNumber || "s"}-${bookmark.ayahNumberInSurah || bookmark.ayahNumber || "v"}-${bookmark.timestamp || bmIdx}`} className="p-4 border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 rounded-2xl flex flex-col gap-3">
                            <div className="flex justify-between items-start">
                              <div className="flex flex-col">
                                <span className="font-bold text-emerald-600 dark:text-emerald-400">

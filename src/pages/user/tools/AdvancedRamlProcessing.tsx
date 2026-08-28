@@ -129,36 +129,36 @@ export const AdvancedRamlProcessing: React.FC = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8 safe-area-pt pb-28 space-y-8 min-h-screen">
+    <div className="w-full max-w-6xl mx-auto px-3.5 py-4 sm:p-6 lg:p-8 safe-area-pt pb-28 space-y-6 sm:space-y-8 min-h-screen min-w-0 overflow-x-hidden box-border">
       {/* Top Navigation */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2.5 w-full">
         <button
           onClick={() => navigate('/tools')}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-gray-100 dark:bg-slate-800 hover:bg-emerald-500 hover:text-slate-950 text-gray-700 dark:text-slate-200 text-xs font-bold transition-all cursor-pointer shadow-sm"
+          className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-gray-100 dark:bg-slate-800 hover:bg-emerald-500 hover:text-slate-950 text-gray-700 dark:text-slate-200 text-xs font-bold transition-all cursor-pointer shadow-sm shrink-0 active:scale-95"
         >
           <ArrowLeft size={16} />
           <span>{t.backToTools}</span>
         </button>
 
-        <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs font-bold shadow-sm">
-          <Award size={14} />
-          <span>{t.headerBadge}</span>
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs font-bold shadow-sm max-w-full">
+          <Award size={14} className="shrink-0" />
+          <span className="truncate">{t.headerBadge}</span>
         </div>
       </div>
 
       {/* Main Hero Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-950 via-amber-950 to-stone-900 p-6 sm:p-8 text-white shadow-2xl border border-amber-500/30">
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-950 via-amber-950 to-stone-900 p-5 sm:p-8 text-white shadow-2xl border border-amber-500/30 w-full max-w-full">
         <div className="relative z-10 space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-bold uppercase tracking-wider">
-            <Compass size={14} />
-            <span>Ilm al-Raml • Géomancie Avancée</span>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 text-[11px] sm:text-xs font-bold uppercase tracking-wider max-w-full">
+            <Compass size={14} className="shrink-0" />
+            <span className="truncate">Ilm al-Raml • Géomancie Avancée</span>
           </div>
 
-          <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-300 to-amber-100">
+          <h1 className="text-xl sm:text-3xl lg:text-4xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-yellow-300 to-amber-100 break-words leading-tight">
             {t.pageTitle}
           </h1>
 
-          <p className="text-slate-300 text-xs sm:text-sm max-w-3xl leading-relaxed">
+          <p className="text-slate-300 text-xs sm:text-sm max-w-3xl leading-relaxed break-words">
             {t.pageSubtitle}
           </p>
         </div>
@@ -167,24 +167,24 @@ export const AdvancedRamlProcessing: React.FC = () => {
       </div>
 
       {/* Info Notice */}
-      <div className="bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/40 rounded-2xl p-4 sm:p-5 flex items-start gap-3.5">
-        <Info className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" size={20} />
-        <p className="text-xs sm:text-sm text-amber-950 dark:text-amber-200 font-medium leading-relaxed">
+      <div className="bg-amber-50/80 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/40 rounded-2xl p-4 sm:p-5 flex items-start gap-3 w-full max-w-full overflow-hidden">
+        <Info className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" size={18} />
+        <p className="text-xs sm:text-sm text-amber-950 dark:text-amber-200 font-medium leading-relaxed break-words flex-1 min-w-0">
           {t.infoNotice}
         </p>
       </div>
 
       {/* Shared Inputs Panel */}
-      <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-7 border border-gray-200 dark:border-slate-800 shadow-md space-y-5">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-7 border border-gray-200 dark:border-slate-800 shadow-md space-y-5 w-full max-w-full min-w-0">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-gray-100 dark:border-slate-800 pb-3">
-          <h3 className="text-sm font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-2">
-            <Sliders size={16} />
-            <span>Saisie des 4 Mères (Mahaat) & Configuration</span>
+          <h3 className="text-xs sm:text-sm font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-2">
+            <Sliders size={16} className="shrink-0" />
+            <span className="truncate">Saisie des 4 Mères (Mahaat) & Configuration</span>
           </h3>
 
           <button
             onClick={handleRandomMothers}
-            className="px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 text-xs font-bold transition-all border border-amber-500/30 cursor-pointer flex items-center gap-1.5"
+            className="px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 text-amber-700 dark:text-amber-300 text-xs font-bold transition-all border border-amber-500/30 cursor-pointer flex items-center gap-1.5 shrink-0 active:scale-95"
           >
             <Sparkles size={14} />
             <span>{t.labels.randomTheme}</span>

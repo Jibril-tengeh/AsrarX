@@ -84,36 +84,36 @@ export const RouhaniyyaExtractor: React.FC = () => {
   ];
 
   return (
-    <div className="max-w-6xl mx-auto p-4 sm:p-6 lg:p-8 safe-area-pt pb-28 space-y-8 min-h-screen">
+    <div className="w-full max-w-6xl mx-auto px-3.5 py-4 sm:p-6 lg:p-8 safe-area-pt pb-28 space-y-6 sm:space-y-8 min-h-screen min-w-0 overflow-x-hidden box-border">
       {/* Navigation Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2.5 w-full">
         <button
           onClick={() => navigate('/tools')}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-gray-100 dark:bg-slate-800 hover:bg-emerald-500 hover:text-slate-950 text-gray-700 dark:text-slate-200 text-xs font-bold transition-all cursor-pointer shadow-sm"
+          className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-gray-100 dark:bg-slate-800 hover:bg-emerald-500 hover:text-slate-950 text-gray-700 dark:text-slate-200 text-xs font-bold transition-all cursor-pointer shadow-sm shrink-0 active:scale-95"
         >
           <ArrowLeft size={16} />
           <span>{t.backToTools}</span>
         </button>
 
-        <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-fuchsia-500/10 border border-fuchsia-500/30 text-fuchsia-700 dark:text-fuchsia-300 text-xs font-bold shadow-sm">
-          <Zap size={14} />
-          <span>{t.headerBadge}</span>
+        <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-fuchsia-500/10 border border-fuchsia-500/30 text-fuchsia-700 dark:text-fuchsia-300 text-xs font-bold shadow-sm max-w-full">
+          <Zap size={14} className="shrink-0" />
+          <span className="truncate">{t.headerBadge}</span>
         </div>
       </div>
 
       {/* Main Title Banner */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-950 via-purple-950 to-slate-900 p-6 sm:p-8 text-white shadow-2xl border border-fuchsia-500/30">
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-slate-950 via-purple-950 to-slate-900 p-5 sm:p-8 text-white shadow-2xl border border-fuchsia-500/30 w-full max-w-full">
         <div className="relative z-10 space-y-3">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-fuchsia-500/20 border border-fuchsia-500/40 text-fuchsia-300 text-xs font-bold uppercase tracking-wider">
-            <Sparkles size={14} />
-            <span>Science d'Istintaq & Rouhaniyat</span>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-fuchsia-500/20 border border-fuchsia-500/40 text-fuchsia-300 text-[11px] sm:text-xs font-bold uppercase tracking-wider max-w-full">
+            <Sparkles size={14} className="shrink-0" />
+            <span className="truncate">Science d'Istintaq & Rouhaniyat</span>
           </div>
 
-          <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-200 via-purple-300 to-amber-200">
+          <h1 className="text-xl sm:text-3xl lg:text-4xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-200 via-purple-300 to-amber-200 break-words leading-tight">
             {t.pageTitle}
           </h1>
 
-          <p className="text-slate-300 text-xs sm:text-sm max-w-3xl leading-relaxed">
+          <p className="text-slate-300 text-xs sm:text-sm max-w-3xl leading-relaxed break-words">
             {t.pageSubtitle}
           </p>
         </div>
@@ -122,21 +122,21 @@ export const RouhaniyyaExtractor: React.FC = () => {
       </div>
 
       {/* Information Notice */}
-      <div className="bg-fuchsia-50/80 dark:bg-fuchsia-950/30 border border-fuchsia-200/80 dark:border-fuchsia-900/40 rounded-2xl p-4 sm:p-5 flex items-start gap-3.5">
-        <Info className="text-fuchsia-600 dark:text-fuchsia-400 shrink-0 mt-0.5" size={20} />
-        <p className="text-xs sm:text-sm text-fuchsia-950 dark:text-fuchsia-200 font-medium leading-relaxed">
+      <div className="bg-fuchsia-50/80 dark:bg-fuchsia-950/30 border border-fuchsia-200/80 dark:border-fuchsia-900/40 rounded-2xl p-4 sm:p-5 flex items-start gap-3 w-full max-w-full overflow-hidden">
+        <Info className="text-fuchsia-600 dark:text-fuchsia-400 shrink-0 mt-0.5" size={18} />
+        <p className="text-xs sm:text-sm text-fuchsia-950 dark:text-fuchsia-200 font-medium leading-relaxed break-words flex-1 min-w-0">
           {t.infoNotice}
         </p>
       </div>
 
       {/* Inputs & Parameters Panel */}
-      <div className="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-7 border border-gray-200 dark:border-slate-800 shadow-md space-y-6">
+      <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-7 border border-gray-200 dark:border-slate-800 shadow-md space-y-5 sm:space-y-6 w-full max-w-full min-w-0">
         {/* Mode Switcher */}
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pb-4 border-b border-gray-100 dark:border-slate-800">
-          <div className="flex items-center gap-2 bg-gray-100 dark:bg-slate-800 p-1 rounded-2xl w-full sm:w-auto">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pb-4 border-b border-gray-100 dark:border-slate-800">
+          <div className="flex items-center gap-1.5 bg-gray-100 dark:bg-slate-800 p-1 rounded-2xl w-full sm:w-auto">
             <button
               onClick={() => setInputMode('text')}
-              className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer truncate ${
                 inputMode === 'text'
                   ? 'bg-fuchsia-600 text-white shadow-md'
                   : 'text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white'
@@ -146,7 +146,7 @@ export const RouhaniyyaExtractor: React.FC = () => {
             </button>
             <button
               onClick={() => setInputMode('number')}
-              className={`flex-1 sm:flex-none px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              className={`flex-1 sm:flex-none px-3 sm:px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer truncate ${
                 inputMode === 'number'
                   ? 'bg-fuchsia-600 text-white shadow-md'
                   : 'text-gray-600 dark:text-slate-400 hover:text-gray-900 dark:hover:text-white'
@@ -157,54 +157,68 @@ export const RouhaniyyaExtractor: React.FC = () => {
           </div>
 
           {/* Formula Settings */}
-          <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
-            <div className="flex items-center gap-2 bg-gray-50 dark:bg-slate-800/60 px-3 py-1.5 rounded-xl border border-gray-200 dark:border-slate-700">
-              <Sliders size={14} className="text-fuchsia-500" />
-              <span className="text-[11px] font-bold text-gray-700 dark:text-slate-300">{t.formulaLabel}:</span>
-              <button
-                onClick={() => setCelestialConstant(41)}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-black transition-all cursor-pointer ${
-                  celestialConstant === 41
-                    ? 'bg-fuchsia-600 text-white'
-                    : 'bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300'
-                }`}
-              >
-                41
-              </button>
-              <button
-                onClick={() => setCelestialConstant(51)}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-black transition-all cursor-pointer ${
-                  celestialConstant === 51
-                    ? 'bg-fuchsia-600 text-white'
-                    : 'bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300'
-                }`}
-              >
-                51
-              </button>
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3 w-full sm:w-auto">
+            <div className="flex items-center gap-2 bg-gray-50 dark:bg-slate-800/60 px-2.5 sm:px-3 py-1.5 rounded-xl border border-gray-200 dark:border-slate-700 flex-1 sm:flex-initial min-w-0 justify-between">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <Sliders size={13} className="text-fuchsia-500 shrink-0" />
+                <span className="text-[10px] sm:text-[11px] font-bold text-gray-700 dark:text-slate-300 truncate">
+                  {t.formulaLabel}:
+                </span>
+              </div>
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setCelestialConstant(41)}
+                  className={`px-2 py-1 rounded-lg text-[11px] font-black transition-all cursor-pointer ${
+                    celestialConstant === 41
+                      ? 'bg-fuchsia-600 text-white shadow-sm'
+                      : 'bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300'
+                  }`}
+                >
+                  41
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCelestialConstant(51)}
+                  className={`px-2 py-1 rounded-lg text-[11px] font-black transition-all cursor-pointer ${
+                    celestialConstant === 51
+                      ? 'bg-fuchsia-600 text-white shadow-sm'
+                      : 'bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300'
+                  }`}
+                >
+                  51
+                </button>
+              </div>
             </div>
 
-            <div className="flex items-center gap-2 bg-gray-50 dark:bg-slate-800/60 px-3 py-1.5 rounded-xl border border-gray-200 dark:border-slate-700">
-              <span className="text-[11px] font-bold text-gray-700 dark:text-slate-300">{t.suffixLabel}:</span>
-              <button
-                onClick={() => setCelestialSuffix('yael')}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                  celestialSuffix === 'yael'
-                    ? 'bg-fuchsia-600 text-white'
-                    : 'bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300'
-                }`}
-              >
-                -yael
-              </button>
-              <button
-                onClick={() => setCelestialSuffix('ael')}
-                className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
-                  celestialSuffix === 'ael'
-                    ? 'bg-fuchsia-600 text-white'
-                    : 'bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300'
-                }`}
-              >
-                -ael
-              </button>
+            <div className="flex items-center gap-2 bg-gray-50 dark:bg-slate-800/60 px-2.5 sm:px-3 py-1.5 rounded-xl border border-gray-200 dark:border-slate-700 flex-1 sm:flex-initial min-w-0 justify-between">
+              <span className="text-[10px] sm:text-[11px] font-bold text-gray-700 dark:text-slate-300 truncate">
+                {t.suffixLabel}:
+              </span>
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setCelestialSuffix('yael')}
+                  className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                    celestialSuffix === 'yael'
+                      ? 'bg-fuchsia-600 text-white shadow-sm'
+                      : 'bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300'
+                  }`}
+                >
+                  -yael
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setCelestialSuffix('ael')}
+                  className={`px-2 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                    celestialSuffix === 'ael'
+                      ? 'bg-fuchsia-600 text-white shadow-sm'
+                      : 'bg-gray-200 dark:bg-slate-700 text-gray-700 dark:text-slate-300'
+                  }`}
+                >
+                  -ael
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -221,7 +235,7 @@ export const RouhaniyyaExtractor: React.FC = () => {
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
               placeholder={t.placeholderText}
-              className="w-full bg-gray-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-700 rounded-2xl p-4 text-lg font-bold text-gray-900 dark:text-white font-arabic focus:outline-none focus:ring-2 focus:ring-fuchsia-500 shadow-inner"
+              className="w-full bg-gray-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-700 rounded-2xl p-3.5 sm:p-4 text-base sm:text-lg font-bold text-gray-900 dark:text-white font-arabic focus:outline-none focus:ring-2 focus:ring-fuchsia-500 shadow-inner"
               dir="rtl"
             />
           ) : (
@@ -230,15 +244,15 @@ export const RouhaniyyaExtractor: React.FC = () => {
               value={inputNumber}
               onChange={(e) => setInputNumber(e.target.value)}
               placeholder={t.placeholderNumber}
-              className="w-full bg-gray-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-700 rounded-2xl p-4 text-xl font-bold text-gray-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-fuchsia-500 shadow-inner"
+              className="w-full bg-gray-50 dark:bg-slate-950 border border-gray-200 dark:border-slate-700 rounded-2xl p-3.5 sm:p-4 text-lg sm:text-xl font-bold text-gray-900 dark:text-white font-mono focus:outline-none focus:ring-2 focus:ring-fuchsia-500 shadow-inner"
             />
           )}
         </div>
 
         {/* Summary Card Banner */}
-        <div className="p-5 rounded-2xl bg-gradient-to-r from-purple-900/10 via-fuchsia-900/10 to-indigo-900/10 border border-purple-200/60 dark:border-purple-800/40 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-center">
+        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-purple-900/10 via-fuchsia-900/10 to-indigo-900/10 border border-purple-200/60 dark:border-purple-800/40 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-center w-full max-w-full min-w-0">
           <div>
-            <span className="text-[11px] uppercase tracking-wider font-bold text-gray-500 dark:text-slate-400 block">
+            <span className="text-[10px] sm:text-[11px] uppercase tracking-wider font-bold text-gray-500 dark:text-slate-400 block">
               {t.totalWeight}
             </span>
             <span className="text-2xl font-black text-fuchsia-700 dark:text-fuchsia-300 font-mono">
@@ -246,35 +260,35 @@ export const RouhaniyyaExtractor: React.FC = () => {
             </span>
           </div>
 
-          <div>
-            <span className="text-[11px] uppercase tracking-wider font-bold text-gray-500 dark:text-slate-400 block">
+          <div className="min-w-0">
+            <span className="text-[10px] sm:text-[11px] uppercase tracking-wider font-bold text-gray-500 dark:text-slate-400 block">
               {t.sourceText}
             </span>
-            <span className="text-lg font-bold text-gray-800 dark:text-slate-200 font-arabic truncate block" dir="rtl">
+            <span className="text-base sm:text-lg font-bold text-gray-800 dark:text-slate-200 font-arabic truncate block" dir="rtl">
               {extractionData.inputText}
             </span>
           </div>
 
-          <div className="col-span-1 sm:col-span-2">
-            <span className="text-[11px] uppercase tracking-wider font-bold text-gray-500 dark:text-slate-400 block mb-1">
+          <div className="col-span-1 sm:col-span-2 min-w-0">
+            <span className="text-[10px] sm:text-[11px] uppercase tracking-wider font-bold text-gray-500 dark:text-slate-400 block mb-1">
               {t.elementalComposition}
             </span>
-            <div className="grid grid-cols-4 gap-2 text-center text-[10px] font-bold">
-              <div className="p-1.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 flex items-center justify-center gap-1">
-                <Flame size={12} />
-                <span>{extractionData.elementalBreakdown.fire}%</span>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center text-[10px] font-bold">
+              <div className="p-1.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 flex items-center justify-center gap-1 min-w-0">
+                <Flame size={12} className="shrink-0" />
+                <span className="truncate">{extractionData.elementalBreakdown.fire}%</span>
               </div>
-              <div className="p-1.5 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-600 dark:text-cyan-400 flex items-center justify-center gap-1">
-                <Wind size={12} />
-                <span>{extractionData.elementalBreakdown.air}%</span>
+              <div className="p-1.5 rounded-xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-600 dark:text-cyan-400 flex items-center justify-center gap-1 min-w-0">
+                <Wind size={12} className="shrink-0" />
+                <span className="truncate">{extractionData.elementalBreakdown.air}%</span>
               </div>
-              <div className="p-1.5 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-600 dark:text-blue-400 flex items-center justify-center gap-1">
-                <Droplets size={12} />
-                <span>{extractionData.elementalBreakdown.water}%</span>
+              <div className="p-1.5 rounded-xl bg-blue-500/10 border border-blue-500/30 text-blue-600 dark:text-blue-400 flex items-center justify-center gap-1 min-w-0">
+                <Droplets size={12} className="shrink-0" />
+                <span className="truncate">{extractionData.elementalBreakdown.water}%</span>
               </div>
-              <div className="p-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 flex items-center justify-center gap-1">
-                <Mountain size={12} />
-                <span>{extractionData.elementalBreakdown.earth}%</span>
+              <div className="p-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 flex items-center justify-center gap-1 min-w-0">
+                <Mountain size={12} className="shrink-0" />
+                <span className="truncate">{extractionData.elementalBreakdown.earth}%</span>
               </div>
             </div>
           </div>
@@ -284,8 +298,8 @@ export const RouhaniyyaExtractor: React.FC = () => {
       {/* Tool Info Tooltip Component */}
       <ToolInfoTooltip toolId="rouhaniyya" />
 
-      {/* Sub-Tabs Selector Bar */}
-      <div className="flex flex-wrap gap-2 p-2 rounded-2xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-sm">
+      {/* Sub-Tabs Selector Bar with swipe scroll */}
+      <div className="flex overflow-x-auto no-scrollbar gap-1.5 sm:gap-2 p-1.5 sm:p-2 sm:flex-wrap rounded-2xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-sm w-full max-w-full min-w-0">
         {tabsConfig.map((tab) => {
           const Icon = tab.icon;
           const isSelected = activeTab === tab.id;
@@ -293,13 +307,13 @@ export const RouhaniyyaExtractor: React.FC = () => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
+              className={`inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shrink-0 whitespace-nowrap ${
                 isSelected
-                  ? 'bg-fuchsia-600 text-white shadow-md scale-105'
+                  ? 'bg-fuchsia-600 text-white shadow-md'
                   : 'bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-700'
               }`}
             >
-              <Icon size={16} className={isSelected ? 'text-white' : tab.color} />
+              <Icon size={15} className={isSelected ? 'text-white' : tab.color} />
               <span>{tab.label}</span>
             </button>
           );
@@ -314,43 +328,44 @@ export const RouhaniyyaExtractor: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -15 }}
           transition={{ duration: 0.2 }}
+          className="w-full max-w-full min-w-0"
         >
           {/* TAB 1: MUWAKKIL 'ALAWI (ANGE CÉLESTE) */}
           {activeTab === 'celestial' && (
-            <div className="space-y-6">
-              <div className="bg-gradient-to-br from-cyan-950/40 via-purple-950/40 to-slate-900/60 rounded-3xl p-6 sm:p-8 border border-cyan-500/30 text-white shadow-xl space-y-6">
-                <div className="flex items-center justify-between border-b border-cyan-500/20 pb-4">
-                  <div>
-                    <h2 className="text-xl sm:text-2xl font-black text-cyan-300 flex items-center gap-2">
-                      <Sparkles size={22} className="text-cyan-400" />
+            <div className="space-y-6 w-full max-w-full min-w-0">
+              <div className="bg-gradient-to-br from-cyan-950/40 via-purple-950/40 to-slate-900/60 rounded-3xl p-4 sm:p-8 border border-cyan-500/30 text-white shadow-xl space-y-5 sm:space-y-6 w-full max-w-full min-w-0">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-cyan-500/20 pb-4">
+                  <div className="min-w-0">
+                    <h2 className="text-lg sm:text-2xl font-black text-cyan-300 flex items-center gap-2 flex-wrap">
+                      <Sparkles size={20} className="text-cyan-400 shrink-0" />
                       <span>{t.celestialTitle}</span>
                     </h2>
-                    <p className="text-xs sm:text-sm text-slate-300 mt-1">{t.celestialSubtitle}</p>
+                    <p className="text-xs sm:text-sm text-slate-300 mt-1 break-words">{t.celestialSubtitle}</p>
                   </div>
 
-                  <span className="px-3 py-1 rounded-full bg-cyan-500/20 border border-cyan-400/40 text-cyan-200 text-xs font-mono font-bold">
+                  <span className="px-3 py-1 rounded-full bg-cyan-500/20 border border-cyan-400/40 text-cyan-200 text-xs font-mono font-bold self-start sm:self-auto shrink-0 max-w-full truncate">
                     {extractionData.celestial.formulaUsed}
                   </span>
                 </div>
 
                 {/* Main Name Banner */}
-                <div className="bg-slate-900/80 rounded-2xl p-6 border border-cyan-500/30 text-center space-y-4">
-                  <span className="text-xs uppercase tracking-widest font-bold text-cyan-400 block">
+                <div className="bg-slate-900/80 rounded-2xl p-4 sm:p-6 border border-cyan-500/30 text-center space-y-3 sm:space-y-4 w-full max-w-full min-w-0 overflow-hidden">
+                  <span className="text-[10px] sm:text-xs uppercase tracking-widest font-bold text-cyan-400 block">
                     Ange Céleste Extrait (Muwakkil 'Alawi)
                   </span>
 
-                  <div className="font-arabic text-4xl sm:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-200 via-white to-blue-200 tracking-wide" dir="rtl">
+                  <div className="font-arabic text-3xl sm:text-5xl lg:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-200 via-white to-blue-200 tracking-wide break-words py-1" dir="rtl">
                     {extractionData.celestial.nameAr}
                   </div>
 
-                  <div className="inline-block px-4 py-1.5 rounded-xl bg-cyan-500/20 border border-cyan-500/40 text-cyan-200 text-sm font-mono font-bold tracking-widest">
+                  <div className="inline-block max-w-full px-3 sm:px-4 py-1.5 rounded-xl bg-cyan-500/20 border border-cyan-500/40 text-cyan-200 text-xs sm:text-sm font-mono font-bold tracking-widest break-words">
                     Transliteration: {extractionData.celestial.nameTrans}
                   </div>
 
                   <div className="pt-2 flex justify-center">
                     <button
                       onClick={() => handleCopy(extractionData.celestial.nameAr, 'celestial')}
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/40 text-cyan-200 text-xs font-bold transition-all cursor-pointer"
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-cyan-500/20 hover:bg-cyan-500/40 text-cyan-200 text-xs font-bold transition-all cursor-pointer active:scale-95"
                     >
                       {copiedKey === 'celestial' ? <Check size={14} /> : <Copy size={14} />}
                       <span>{copiedKey === 'celestial' ? t.copySuccess : t.copyName}</span>
@@ -359,14 +374,14 @@ export const RouhaniyyaExtractor: React.FC = () => {
                 </div>
 
                 {/* Invocation Box */}
-                <div className="p-5 rounded-2xl bg-cyan-900/20 border border-cyan-500/30 space-y-2">
-                  <span className="text-xs uppercase tracking-wider font-bold text-cyan-300 block">
+                <div className="p-4 sm:p-5 rounded-2xl bg-cyan-900/20 border border-cyan-500/30 space-y-2 w-full max-w-full overflow-hidden">
+                  <span className="text-[10px] sm:text-xs uppercase tracking-wider font-bold text-cyan-300 block">
                     {t.celestialInvocationTitle}
                   </span>
-                  <p className="font-arabic text-xl sm:text-2xl text-cyan-100 font-bold leading-relaxed" dir="rtl">
+                  <p className="font-arabic text-lg sm:text-2xl text-cyan-100 font-bold leading-relaxed break-words" dir="rtl">
                     {extractionData.celestial.invocationAr}
                   </p>
-                  <p className="text-xs font-mono text-cyan-200/80 pt-1">
+                  <p className="text-xs font-mono text-cyan-200/80 pt-1 break-words">
                     {extractionData.celestial.invocationTrans}
                   </p>
                 </div>
@@ -377,17 +392,17 @@ export const RouhaniyyaExtractor: React.FC = () => {
                     {t.celestialAttributesTitle}
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="p-3.5 rounded-2xl bg-slate-900/60 border border-cyan-500/20 flex items-start gap-2.5 text-xs text-slate-200">
+                    <div className="p-3.5 rounded-2xl bg-slate-900/60 border border-cyan-500/20 flex items-start gap-2.5 text-xs text-slate-200 min-w-0">
                       <CheckCircle2 size={16} className="text-cyan-400 shrink-0 mt-0.5" />
-                      <span>{t.celestialAttr1}</span>
+                      <span className="break-words">{t.celestialAttr1}</span>
                     </div>
-                    <div className="p-3.5 rounded-2xl bg-slate-900/60 border border-cyan-500/20 flex items-start gap-2.5 text-xs text-slate-200">
+                    <div className="p-3.5 rounded-2xl bg-slate-900/60 border border-cyan-500/20 flex items-start gap-2.5 text-xs text-slate-200 min-w-0">
                       <CheckCircle2 size={16} className="text-cyan-400 shrink-0 mt-0.5" />
-                      <span>{t.celestialAttr2}</span>
+                      <span className="break-words">{t.celestialAttr2}</span>
                     </div>
-                    <div className="p-3.5 rounded-2xl bg-slate-900/60 border border-cyan-500/20 flex items-start gap-2.5 text-xs text-slate-200">
+                    <div className="p-3.5 rounded-2xl bg-slate-900/60 border border-cyan-500/20 flex items-start gap-2.5 text-xs text-slate-200 min-w-0">
                       <CheckCircle2 size={16} className="text-cyan-400 shrink-0 mt-0.5" />
-                      <span>{t.celestialAttr3}</span>
+                      <span className="break-words">{t.celestialAttr3}</span>
                     </div>
                   </div>
                 </div>
@@ -397,40 +412,40 @@ export const RouhaniyyaExtractor: React.FC = () => {
 
           {/* TAB 2: MUWAKKIL SIFLI (GARDIEN TERRESTRE) */}
           {activeTab === 'terrestrial' && (
-            <div className="space-y-6">
-              <div className="bg-gradient-to-br from-amber-950/40 via-red-950/40 to-slate-900/60 rounded-3xl p-6 sm:p-8 border border-amber-500/30 text-white shadow-xl space-y-6">
-                <div className="flex items-center justify-between border-b border-amber-500/20 pb-4">
-                  <div>
-                    <h2 className="text-xl sm:text-2xl font-black text-amber-300 flex items-center gap-2">
-                      <ShieldCheck size={22} className="text-amber-400" />
+            <div className="space-y-6 w-full max-w-full min-w-0">
+              <div className="bg-gradient-to-br from-amber-950/40 via-red-950/40 to-slate-900/60 rounded-3xl p-4 sm:p-8 border border-amber-500/30 text-white shadow-xl space-y-5 sm:space-y-6 w-full max-w-full min-w-0">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-amber-500/20 pb-4">
+                  <div className="min-w-0">
+                    <h2 className="text-lg sm:text-2xl font-black text-amber-300 flex items-center gap-2 flex-wrap">
+                      <ShieldCheck size={20} className="text-amber-400 shrink-0" />
                       <span>{t.terrestrialTitle}</span>
                     </h2>
-                    <p className="text-xs sm:text-sm text-slate-300 mt-1">{t.terrestrialSubtitle}</p>
+                    <p className="text-xs sm:text-sm text-slate-300 mt-1 break-words">{t.terrestrialSubtitle}</p>
                   </div>
 
-                  <span className="px-3 py-1 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-200 text-xs font-mono font-bold">
+                  <span className="px-3 py-1 rounded-full bg-amber-500/20 border border-amber-400/40 text-amber-200 text-xs font-mono font-bold self-start sm:self-auto shrink-0 max-w-full truncate">
                     {extractionData.terrestrial.formulaUsed}
                   </span>
                 </div>
 
                 {/* Main Terrestrial Name Banner */}
-                <div className="bg-slate-900/80 rounded-2xl p-6 border border-amber-500/30 text-center space-y-4">
-                  <span className="text-xs uppercase tracking-widest font-bold text-amber-400 block">
+                <div className="bg-slate-900/80 rounded-2xl p-4 sm:p-6 border border-amber-500/30 text-center space-y-3 sm:space-y-4 w-full max-w-full min-w-0 overflow-hidden">
+                  <span className="text-[10px] sm:text-xs uppercase tracking-widest font-bold text-amber-400 block">
                     Gardien Terrestre Extrait (Muwakkil Sifli)
                   </span>
 
-                  <div className="font-arabic text-4xl sm:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-orange-300 to-red-200 tracking-wide" dir="rtl">
+                  <div className="font-arabic text-3xl sm:text-5xl lg:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-orange-300 to-red-200 tracking-wide break-words py-1" dir="rtl">
                     {extractionData.terrestrial.nameAr}
                   </div>
 
-                  <div className="inline-block px-4 py-1.5 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-200 text-sm font-mono font-bold tracking-widest">
+                  <div className="inline-block max-w-full px-3 sm:px-4 py-1.5 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-200 text-xs sm:text-sm font-mono font-bold tracking-widest break-words">
                     Transliteration: {extractionData.terrestrial.nameTrans}
                   </div>
 
                   <div className="pt-2 flex justify-center">
                     <button
                       onClick={() => handleCopy(extractionData.terrestrial.nameAr, 'terrestrial')}
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/40 text-amber-200 text-xs font-bold transition-all cursor-pointer"
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-amber-500/20 hover:bg-amber-500/40 text-amber-200 text-xs font-bold transition-all cursor-pointer active:scale-95"
                     >
                       {copiedKey === 'terrestrial' ? <Check size={14} /> : <Copy size={14} />}
                       <span>{copiedKey === 'terrestrial' ? t.copySuccess : t.copyName}</span>
@@ -439,14 +454,14 @@ export const RouhaniyyaExtractor: React.FC = () => {
                 </div>
 
                 {/* Invocation Box */}
-                <div className="p-5 rounded-2xl bg-amber-900/20 border border-amber-500/30 space-y-2">
-                  <span className="text-xs uppercase tracking-wider font-bold text-amber-300 block">
+                <div className="p-4 sm:p-5 rounded-2xl bg-amber-900/20 border border-amber-500/30 space-y-2 w-full max-w-full overflow-hidden">
+                  <span className="text-[10px] sm:text-xs uppercase tracking-wider font-bold text-amber-300 block">
                     {t.terrestrialInvocationTitle}
                   </span>
-                  <p className="font-arabic text-xl sm:text-2xl text-amber-100 font-bold leading-relaxed" dir="rtl">
+                  <p className="font-arabic text-lg sm:text-2xl text-amber-100 font-bold leading-relaxed break-words" dir="rtl">
                     {extractionData.terrestrial.invocationAr}
                   </p>
-                  <p className="text-xs font-mono text-amber-200/80 pt-1">
+                  <p className="text-xs font-mono text-amber-200/80 pt-1 break-words">
                     {extractionData.terrestrial.invocationTrans}
                   </p>
                 </div>
@@ -457,17 +472,17 @@ export const RouhaniyyaExtractor: React.FC = () => {
                     {t.terrestrialAttributesTitle}
                   </h4>
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="p-3.5 rounded-2xl bg-slate-900/60 border border-amber-500/20 flex items-start gap-2.5 text-xs text-slate-200">
+                    <div className="p-3.5 rounded-2xl bg-slate-900/60 border border-amber-500/20 flex items-start gap-2.5 text-xs text-slate-200 min-w-0">
                       <CheckCircle2 size={16} className="text-amber-400 shrink-0 mt-0.5" />
-                      <span>{t.terrestrialAttr1}</span>
+                      <span className="break-words">{t.terrestrialAttr1}</span>
                     </div>
-                    <div className="p-3.5 rounded-2xl bg-slate-900/60 border border-amber-500/20 flex items-start gap-2.5 text-xs text-slate-200">
+                    <div className="p-3.5 rounded-2xl bg-slate-900/60 border border-amber-500/20 flex items-start gap-2.5 text-xs text-slate-200 min-w-0">
                       <CheckCircle2 size={16} className="text-amber-400 shrink-0 mt-0.5" />
-                      <span>{t.terrestrialAttr2}</span>
+                      <span className="break-words">{t.terrestrialAttr2}</span>
                     </div>
-                    <div className="p-3.5 rounded-2xl bg-slate-900/60 border border-amber-500/20 flex items-start gap-2.5 text-xs text-slate-200">
+                    <div className="p-3.5 rounded-2xl bg-slate-900/60 border border-amber-500/20 flex items-start gap-2.5 text-xs text-slate-200 min-w-0">
                       <CheckCircle2 size={16} className="text-amber-400 shrink-0 mt-0.5" />
-                      <span>{t.terrestrialAttr3}</span>
+                      <span className="break-words">{t.terrestrialAttr3}</span>
                     </div>
                   </div>
                 </div>
@@ -477,85 +492,85 @@ export const RouhaniyyaExtractor: React.FC = () => {
 
           {/* TAB 3: MOULOUK AL-SAB'AH (ROIS DES 7 JOURS) */}
           {activeTab === 'kings' && (
-            <div className="space-y-6">
-              <div className="bg-gradient-to-br from-purple-950/40 via-indigo-950/40 to-slate-900/60 rounded-3xl p-6 sm:p-8 border border-purple-500/30 text-white shadow-xl space-y-6">
-                <div className="flex items-center justify-between border-b border-purple-500/20 pb-4">
-                  <div>
-                    <h2 className="text-xl sm:text-2xl font-black text-purple-300 flex items-center gap-2">
-                      <Crown size={22} className="text-purple-400" />
+            <div className="space-y-6 w-full max-w-full min-w-0">
+              <div className="bg-gradient-to-br from-purple-950/40 via-indigo-950/40 to-slate-900/60 rounded-3xl p-4 sm:p-8 border border-purple-500/30 text-white shadow-xl space-y-5 sm:space-y-6 w-full max-w-full min-w-0">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-purple-500/20 pb-4">
+                  <div className="min-w-0">
+                    <h2 className="text-lg sm:text-2xl font-black text-purple-300 flex items-center gap-2 flex-wrap">
+                      <Crown size={20} className="text-purple-400 shrink-0" />
                       <span>{t.kingsTitle}</span>
                     </h2>
-                    <p className="text-xs sm:text-sm text-slate-300 mt-1">{t.kingsSubtitle}</p>
+                    <p className="text-xs sm:text-sm text-slate-300 mt-1 break-words">{t.kingsSubtitle}</p>
                   </div>
 
-                  <span className="px-3.5 py-1.5 rounded-full bg-purple-500/20 border border-purple-400/40 text-purple-200 text-xs font-mono font-bold">
+                  <span className="px-3.5 py-1.5 rounded-full bg-purple-500/20 border border-purple-400/40 text-purple-200 text-xs font-mono font-bold self-start sm:self-auto shrink-0 max-w-full truncate">
                     {extractionData.abjadTotal} mod 7 = {extractionData.king.dayIndex}
                   </span>
                 </div>
 
                 {/* King Display Card */}
-                <div className="bg-slate-900/80 rounded-3xl p-6 border border-purple-500/30 space-y-6">
+                <div className="bg-slate-900/80 rounded-3xl p-4 sm:p-6 border border-purple-500/30 space-y-5 sm:space-y-6 w-full max-w-full min-w-0 overflow-hidden">
                   <div className="text-center space-y-2">
-                    <span className="text-xs uppercase tracking-widest font-bold text-purple-400 block">
+                    <span className="text-[10px] sm:text-xs uppercase tracking-widest font-bold text-purple-400 block">
                       Roi Spirituel de la Semaine
                     </span>
-                    <h3 className="font-arabic text-3xl sm:text-5xl font-black text-purple-200" dir="rtl">
+                    <h3 className="font-arabic text-3xl sm:text-5xl font-black text-purple-200 break-words" dir="rtl">
                       {extractionData.king.kingNameAr}
                     </h3>
-                    <p className="text-sm font-mono text-purple-300 font-bold">
+                    <p className="text-xs sm:text-sm font-mono text-purple-300 font-bold break-words">
                       {extractionData.king.kingNameTrans}
                     </p>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
-                    <div className="p-4 rounded-2xl bg-purple-900/20 border border-purple-500/20 space-y-1">
-                      <span className="text-[11px] font-bold text-purple-400 block uppercase">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 text-xs">
+                    <div className="p-3.5 sm:p-4 rounded-2xl bg-purple-900/20 border border-purple-500/20 space-y-1 min-w-0">
+                      <span className="text-[10px] sm:text-[11px] font-bold text-purple-400 block uppercase">
                         {t.rulingAngel}
                       </span>
-                      <span className="font-arabic text-lg font-bold text-white block" dir="rtl">
+                      <span className="font-arabic text-base sm:text-lg font-bold text-white block break-words" dir="rtl">
                         {extractionData.king.angelNameAr}
                       </span>
-                      <span className="text-slate-300 font-mono">{extractionData.king.angelNameTrans}</span>
+                      <span className="text-slate-300 font-mono text-[11px] sm:text-xs break-words">{extractionData.king.angelNameTrans}</span>
                     </div>
 
-                    <div className="p-4 rounded-2xl bg-purple-900/20 border border-purple-500/20 space-y-1">
-                      <span className="text-[11px] font-bold text-purple-400 block uppercase">
+                    <div className="p-3.5 sm:p-4 rounded-2xl bg-purple-900/20 border border-purple-500/20 space-y-1 min-w-0">
+                      <span className="text-[10px] sm:text-[11px] font-bold text-purple-400 block uppercase">
                         {t.governingPlanet}
                       </span>
-                      <span className="font-arabic text-lg font-bold text-white block" dir="rtl">
+                      <span className="font-arabic text-base sm:text-lg font-bold text-white block break-words" dir="rtl">
                         {extractionData.king.planetNameAr}
                       </span>
-                      <span className="text-slate-300 font-mono">{extractionData.king.planetNameTrans}</span>
+                      <span className="text-slate-300 font-mono text-[11px] sm:text-xs break-words">{extractionData.king.planetNameTrans}</span>
                     </div>
 
-                    <div className="p-4 rounded-2xl bg-purple-900/20 border border-purple-500/20 space-y-1">
-                      <span className="text-[11px] font-bold text-purple-400 block uppercase">
+                    <div className="p-3.5 sm:p-4 rounded-2xl bg-purple-900/20 border border-purple-500/20 space-y-1 min-w-0">
+                      <span className="text-[10px] sm:text-[11px] font-bold text-purple-400 block uppercase">
                         {t.sacredDay}
                       </span>
-                      <span className="font-arabic text-lg font-bold text-white block" dir="rtl">
+                      <span className="font-arabic text-base sm:text-lg font-bold text-white block break-words" dir="rtl">
                         {extractionData.king.dayNameAr}
                       </span>
-                      <span className="text-slate-300 font-mono">{extractionData.king.dayNameTrans}</span>
+                      <span className="text-slate-300 font-mono text-[11px] sm:text-xs break-words">{extractionData.king.dayNameTrans}</span>
                     </div>
 
-                    <div className="p-4 rounded-2xl bg-purple-900/20 border border-purple-500/20 space-y-1">
-                      <span className="text-[11px] font-bold text-purple-400 block uppercase">
+                    <div className="p-3.5 sm:p-4 rounded-2xl bg-purple-900/20 border border-purple-500/20 space-y-1 min-w-0">
+                      <span className="text-[10px] sm:text-[11px] font-bold text-purple-400 block uppercase">
                         {t.element}
                       </span>
-                      <span className="font-arabic text-base font-bold text-white block" dir="rtl">
+                      <span className="font-arabic text-sm sm:text-base font-bold text-white block break-words" dir="rtl">
                         {extractionData.king.elementAr}
                       </span>
-                      <span className="text-slate-300 font-mono">{extractionData.king.elementTrans}</span>
+                      <span className="text-slate-300 font-mono text-[11px] sm:text-xs break-words">{extractionData.king.elementTrans}</span>
                     </div>
 
-                    <div className="p-4 rounded-2xl bg-purple-900/20 border border-purple-500/20 space-y-1 lg:col-span-2">
-                      <span className="text-[11px] font-bold text-purple-400 block uppercase">
+                    <div className="p-3.5 sm:p-4 rounded-2xl bg-purple-900/20 border border-purple-500/20 space-y-1 min-w-0 sm:col-span-2 lg:col-span-2">
+                      <span className="text-[10px] sm:text-[11px] font-bold text-purple-400 block uppercase">
                         {t.sacredIncense}
                       </span>
-                      <span className="font-arabic text-base font-bold text-white block" dir="rtl">
+                      <span className="font-arabic text-sm sm:text-base font-bold text-white block break-words" dir="rtl">
                         {extractionData.king.incenseAr}
                       </span>
-                      <span className="text-slate-300 font-mono">{extractionData.king.incenseTrans}</span>
+                      <span className="text-slate-300 font-mono text-[11px] sm:text-xs break-words">{extractionData.king.incenseTrans}</span>
                     </div>
                   </div>
                 </div>
@@ -565,48 +580,48 @@ export const RouhaniyyaExtractor: React.FC = () => {
 
           {/* TAB 4: A'WAN (AUXILIAIRES) */}
           {activeTab === 'auxiliaries' && (
-            <div className="space-y-6">
-              <div className="bg-gradient-to-br from-emerald-950/40 via-teal-950/40 to-slate-900/60 rounded-3xl p-6 sm:p-8 border border-emerald-500/30 text-white shadow-xl space-y-6">
+            <div className="space-y-6 w-full max-w-full min-w-0">
+              <div className="bg-gradient-to-br from-emerald-950/40 via-teal-950/40 to-slate-900/60 rounded-3xl p-4 sm:p-8 border border-emerald-500/30 text-white shadow-xl space-y-5 sm:space-y-6 w-full max-w-full min-w-0">
                 <div className="flex items-center justify-between border-b border-emerald-500/20 pb-4">
-                  <div>
-                    <h2 className="text-xl sm:text-2xl font-black text-emerald-300 flex items-center gap-2">
-                      <Layers size={22} className="text-emerald-400" />
+                  <div className="min-w-0">
+                    <h2 className="text-lg sm:text-2xl font-black text-emerald-300 flex items-center gap-2 flex-wrap">
+                      <Layers size={20} className="text-emerald-400 shrink-0" />
                       <span>{t.auxiliariesTitle}</span>
                     </h2>
-                    <p className="text-xs sm:text-sm text-slate-300 mt-1">{t.auxiliariesSubtitle}</p>
+                    <p className="text-xs sm:text-sm text-slate-300 mt-1 break-words">{t.auxiliariesSubtitle}</p>
                   </div>
                 </div>
 
                 {/* Auxiliaries Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   {extractionData.auxiliaries.map((aux, idx) => (
                     <div
                       key={idx}
-                      className="p-5 rounded-2xl bg-slate-900/80 border border-emerald-500/30 space-y-3"
+                      className="p-4 sm:p-5 rounded-2xl bg-slate-900/80 border border-emerald-500/30 space-y-3 min-w-0 overflow-hidden"
                     >
-                      <div className="flex items-center justify-between border-b border-emerald-500/20 pb-2">
-                        <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-400">
+                      <div className="flex items-center justify-between border-b border-emerald-500/20 pb-2 gap-2">
+                        <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-emerald-400 truncate">
                           {aux.levelKey === 'units' && t.unitServant}
                           {aux.levelKey === 'tens' && t.tenServant}
                           {aux.levelKey === 'hundreds' && t.hundredServant}
                           {aux.levelKey === 'thousands' && t.thousandServant}
                         </span>
-                        <span className="px-2.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 font-mono text-xs font-bold">
+                        <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 font-mono text-xs font-bold shrink-0">
                           {aux.levelValue}
                         </span>
                       </div>
 
                       <div className="text-center space-y-1">
-                        <span className="font-arabic text-3xl font-bold text-white block" dir="rtl">
+                        <span className="font-arabic text-2xl sm:text-3xl font-bold text-white block break-words" dir="rtl">
                           {aux.nameAr}
                         </span>
-                        <span className="text-xs font-mono text-emerald-300 font-bold block">
+                        <span className="text-xs font-mono text-emerald-300 font-bold block break-words">
                           {aux.nameTrans}
                         </span>
                       </div>
 
                       <div className="pt-2 border-t border-slate-800 text-[11px] text-slate-300">
-                        <span className="font-bold text-emerald-400 block">{aux.roleTrans}</span>
+                        <span className="font-bold text-emerald-400 block break-words">{aux.roleTrans}</span>
                       </div>
                     </div>
                   ))}
@@ -617,43 +632,43 @@ export const RouhaniyyaExtractor: React.FC = () => {
 
           {/* TAB 5: DABT AL-ASMA (VOCALISATION) */}
           {activeTab === 'vocalization' && (
-            <div className="space-y-6">
-              <div className="bg-gradient-to-br from-rose-950/40 via-purple-950/40 to-slate-900/60 rounded-3xl p-6 sm:p-8 border border-rose-500/30 text-white shadow-xl space-y-6">
+            <div className="space-y-6 w-full max-w-full min-w-0">
+              <div className="bg-gradient-to-br from-rose-950/40 via-purple-950/40 to-slate-900/60 rounded-3xl p-4 sm:p-8 border border-rose-500/30 text-white shadow-xl space-y-5 sm:space-y-6 w-full max-w-full min-w-0">
                 <div className="flex items-center justify-between border-b border-rose-500/20 pb-4">
-                  <div>
-                    <h2 className="text-xl sm:text-2xl font-black text-rose-300 flex items-center gap-2">
-                      <BookOpen size={22} className="text-rose-400" />
+                  <div className="min-w-0">
+                    <h2 className="text-lg sm:text-2xl font-black text-rose-300 flex items-center gap-2 flex-wrap">
+                      <BookOpen size={20} className="text-rose-400 shrink-0" />
                       <span>{t.vocalizationTitle}</span>
                     </h2>
-                    <p className="text-xs sm:text-sm text-slate-300 mt-1">{t.vocalizationSubtitle}</p>
+                    <p className="text-xs sm:text-sm text-slate-300 mt-1 break-words">{t.vocalizationSubtitle}</p>
                   </div>
                 </div>
 
                 {/* Vocalizations List */}
-                <div className="space-y-4">
+                <div className="space-y-3 sm:space-y-4">
                   {extractionData.vocalizations.map((voc, idx) => (
                     <div
                       key={idx}
-                      className="p-5 rounded-2xl bg-slate-900/80 border border-rose-500/30 space-y-3"
+                      className="p-4 sm:p-5 rounded-2xl bg-slate-900/80 border border-rose-500/30 space-y-3 min-w-0 overflow-hidden"
                     >
                       <div className="flex items-center justify-between border-b border-rose-500/20 pb-2">
-                        <span className="text-xs font-bold uppercase tracking-wider text-rose-300">
+                        <span className="text-xs font-bold uppercase tracking-wider text-rose-300 truncate">
                           {voc.schemeNameTrans}
                         </span>
-                        <Volume2 size={16} className="text-rose-400" />
+                        <Volume2 size={16} className="text-rose-400 shrink-0" />
                       </div>
 
-                      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                        <div className="space-y-1 text-center sm:text-left">
-                          <span className="font-arabic text-2xl font-black text-rose-100 block" dir="rtl">
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4">
+                        <div className="space-y-1 text-center sm:text-left min-w-0">
+                          <span className="font-arabic text-xl sm:text-2xl font-black text-rose-100 block break-words" dir="rtl">
                             {voc.vocalizedNameAr}
                           </span>
-                          <span className="text-xs font-mono text-rose-300 font-bold block">
+                          <span className="text-xs font-mono text-rose-300 font-bold block break-words">
                             {voc.vocalizedNameTrans}
                           </span>
                         </div>
 
-                        <p className="text-xs text-slate-300 max-w-md">
+                        <p className="text-xs text-slate-300 max-w-md break-words">
                           {voc.schemeKey === 'faail' && t.vocalFaailDesc}
                           {voc.schemeKey === 'failush' && t.vocalFailushDesc}
                           {voc.schemeKey === 'mafulash' && t.vocalMafulashDesc}
@@ -668,75 +683,75 @@ export const RouhaniyyaExtractor: React.FC = () => {
 
           {/* TAB 6: CALENDRIER DE CONNEXION */}
           {activeTab === 'schedule' && (
-            <div className="space-y-6">
-              <div className="bg-gradient-to-br from-indigo-950/40 via-purple-950/40 to-slate-900/60 rounded-3xl p-6 sm:p-8 border border-indigo-500/30 text-white shadow-xl space-y-6">
-                <div className="flex items-center justify-between border-b border-indigo-500/20 pb-4">
-                  <div>
-                    <h2 className="text-xl sm:text-2xl font-black text-indigo-300 flex items-center gap-2">
-                      <Clock size={22} className="text-indigo-400" />
+            <div className="space-y-6 w-full max-w-full min-w-0">
+              <div className="bg-gradient-to-br from-indigo-950/40 via-purple-950/40 to-slate-900/60 rounded-3xl p-4 sm:p-8 border border-indigo-500/30 text-white shadow-xl space-y-5 sm:space-y-6 w-full max-w-full min-w-0">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-indigo-500/20 pb-4">
+                  <div className="min-w-0">
+                    <h2 className="text-lg sm:text-2xl font-black text-indigo-300 flex items-center gap-2 flex-wrap">
+                      <Clock size={20} className="text-indigo-400 shrink-0" />
                       <span>{t.scheduleTitle}</span>
                     </h2>
-                    <p className="text-xs sm:text-sm text-slate-300 mt-1">{t.scheduleSubtitle}</p>
+                    <p className="text-xs sm:text-sm text-slate-300 mt-1 break-words">{t.scheduleSubtitle}</p>
                   </div>
 
                   {extractionData.schedule.isCurrentlyAligned ? (
-                    <span className="px-3.5 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-xs font-bold flex items-center gap-1.5 animate-pulse">
+                    <span className="px-3.5 py-1.5 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-xs font-bold flex items-center gap-1.5 animate-pulse self-start sm:self-auto shrink-0">
                       <CheckCircle2 size={14} />
                       <span>{t.alignmentActive}</span>
                     </span>
                   ) : (
-                    <span className="px-3.5 py-1.5 rounded-full bg-indigo-500/20 border border-indigo-400/40 text-indigo-200 text-xs font-bold">
+                    <span className="px-3.5 py-1.5 rounded-full bg-indigo-500/20 border border-indigo-400/40 text-indigo-200 text-xs font-bold self-start sm:self-auto shrink-0 max-w-full truncate">
                       {t.alignmentInactive} {extractionData.schedule.bestDayTrans}
                     </span>
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 text-xs">
-                  <div className="p-5 rounded-2xl bg-slate-900/80 border border-indigo-500/30 space-y-2">
-                    <span className="text-[11px] font-bold text-indigo-400 uppercase block">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 text-xs">
+                  <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/80 border border-indigo-500/30 space-y-2 min-w-0">
+                    <span className="text-[10px] sm:text-[11px] font-bold text-indigo-400 uppercase block">
                       {t.repetitionCount}
                     </span>
-                    <div className="text-2xl font-black font-mono text-indigo-200">
+                    <div className="text-xl sm:text-2xl font-black font-mono text-indigo-200">
                       {extractionData.schedule.zikrCount} fois
                     </div>
-                    <p className="text-[11px] text-slate-400">
+                    <p className="text-[10px] sm:text-[11px] text-slate-400 break-words">
                       {t.fullZimām} ({extractionData.abjadTotal}) • {t.reducedAsl}: {extractionData.schedule.reducedCount}
                     </p>
                   </div>
 
-                  <div className="p-5 rounded-2xl bg-slate-900/80 border border-indigo-500/30 space-y-2">
-                    <span className="text-[11px] font-bold text-indigo-400 uppercase block">
+                  <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/80 border border-indigo-500/30 space-y-2 min-w-0">
+                    <span className="text-[10px] sm:text-[11px] font-bold text-indigo-400 uppercase block">
                       {t.sacredDay} & Planète
                     </span>
-                    <div className="font-arabic text-lg font-bold text-white" dir="rtl">
+                    <div className="font-arabic text-base sm:text-lg font-bold text-white break-words" dir="rtl">
                       {extractionData.schedule.bestDayAr} — {extractionData.schedule.bestPlanetAr}
                     </div>
-                    <p className="text-slate-300 font-mono">
+                    <p className="text-slate-300 font-mono text-[11px] sm:text-xs break-words">
                       {extractionData.schedule.bestDayTrans}
                     </p>
                   </div>
 
-                  <div className="p-5 rounded-2xl bg-slate-900/80 border border-indigo-500/30 space-y-2">
-                    <span className="text-[11px] font-bold text-indigo-400 uppercase block">
+                  <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/80 border border-indigo-500/30 space-y-2 min-w-0">
+                    <span className="text-[10px] sm:text-[11px] font-bold text-indigo-400 uppercase block">
                       {t.sacredIncense}
                     </span>
-                    <div className="font-arabic text-base font-bold text-white" dir="rtl">
+                    <div className="font-arabic text-sm sm:text-base font-bold text-white break-words" dir="rtl">
                       {extractionData.schedule.incenseAr}
                     </div>
-                    <p className="text-slate-300 font-mono">
+                    <p className="text-slate-300 font-mono text-[11px] sm:text-xs break-words">
                       {extractionData.schedule.incenseTrans}
                     </p>
                   </div>
 
-                  <div className="p-5 rounded-2xl bg-slate-900/80 border border-indigo-500/30 space-y-2 sm:col-span-2 lg:col-span-3">
-                    <span className="text-[11px] font-bold text-indigo-400 uppercase block">
+                  <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/80 border border-indigo-500/30 space-y-2 sm:col-span-2 lg:col-span-3 min-w-0">
+                    <span className="text-[10px] sm:text-[11px] font-bold text-indigo-400 uppercase block">
                       {t.bestTiming}
                     </span>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 pt-1">
                       {extractionData.schedule.optimalHours.map((hr, i) => (
-                        <div key={i} className="p-3 rounded-xl bg-indigo-950/50 border border-indigo-500/20 text-slate-200 flex items-center gap-2">
+                        <div key={i} className="p-2.5 sm:p-3 rounded-xl bg-indigo-950/50 border border-indigo-500/20 text-slate-200 flex items-center gap-2 min-w-0">
                           <Sun size={14} className="text-amber-400 shrink-0" />
-                          <span>{hr}</span>
+                          <span className="truncate">{hr}</span>
                         </div>
                       ))}
                     </div>

@@ -43,10 +43,10 @@ export const tools: ToolItem[] = [
   // Simple Tools
   {
     id: "abjad",
-    title: "Calculateur Abjad",
-    description: "Calculez la valeur numérique mystique de vos noms et wirds.",
+    title: "Moteur Abjad & Rūḥāniyya Master",
+    description: "Double système Abjad (Oriental & Maghrébin), anatomie élémentaire, lettres lumineuses vs sombres, serviteurs spirituels (Khoddam), Noms Divins et compatibilité (Tawafuq).",
     icon: Calculator,
-    color: "from-blue-500 to-indigo-600",
+    color: "from-blue-600 via-indigo-600 to-purple-700",
     path: "/tools/abjad",
     level: "simple",
   },
@@ -129,11 +129,11 @@ export const tools: ToolItem[] = [
   },
   {
     id: "planetary",
-    title: "Heures Planétaires",
+    title: "Heures Planétaires & Demeures Lunaires (Falak & Manazil)",
     description:
-      "Déterminez les heures spirituelles propices pour vos invocations.",
+      "Calculs astronomiques GPS ultra-précis (Sā'āt Zamaniyyah), suivi en direct des 28 Demeures de la Lune (Manazil) et Planificateur d'Invocations (Smart Spiritual Timing).",
     icon: Clock,
-    color: "from-amber-500 to-orange-600",
+    color: "from-amber-500 via-orange-600 to-indigo-700",
     path: "/tools/planetary",
     level: "simple",
   },

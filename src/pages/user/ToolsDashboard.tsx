@@ -22,6 +22,7 @@ import {
   Target,
   ChevronRight,
   ChevronLeft,
+  ChevronDown,
   X,
   Search,
   Share2,
@@ -48,7 +49,9 @@ import { BannerAd } from "../../components/BannerAd";
 export const ToolsDashboard: React.FC = () => {
   const { t, language } = useLanguage();
   const { user, isPremium: isAuthPremium } = useAuth();
+  const { featureToggles } = useFeatures();
   const navigate = useNavigate();
+
   const [showGuide, setShowGuide] = useState(false);
   const [guideStep, setGuideStep] = useState(0);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -56,6 +59,25 @@ export const ToolsDashboard: React.FC = () => {
   const [activeTab, setActiveTab] = useState<"simple" | "advanced">(
     () => (localStorage.getItem("active_tools_tab") as "simple" | "advanced") || "simple"
   );
+  const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
+  const [touchEnd, setTouchEnd] = useState<{ x: number; y: number } | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [lastToolId, setLastToolId] = useState<string | null>(null);
+  const [isLastToolOpen, setIsLastToolOpen] = useState(false);
+
+  const [premiumModalOpen, setPremiumModalOpen] = useState<{
+    isOpen: boolean;
+    title: string;
+  }>({ isOpen: false, title: "" });
+  const [maintenanceModalOpen, setMaintenanceModalOpen] = useState<{
+    isOpen: boolean;
+    title: string;
+  }>({ isOpen: false, title: "" });
+  const [blockedModalOpen, setBlockedModalOpen] = useState<{
+    isOpen: boolean;
+    title: string;
+  }>({ isOpen: false, title: "" });
 
   useEffect(() => {
     const updateCount = () => {
@@ -65,8 +87,45 @@ export const ToolsDashboard: React.FC = () => {
     window.addEventListener('calculation_history_updated', updateCount);
     return () => window.removeEventListener('calculation_history_updated', updateCount);
   }, []);
-  const [touchStart, setTouchStart] = useState<{ x: number; y: number } | null>(null);
-  const [touchEnd, setTouchEnd] = useState<{ x: number; y: number } | null>(null);
+
+  useEffect(() => {
+    localStorage.setItem("active_tools_tab", activeTab);
+  }, [activeTab]);
+
+  useEffect(() => {
+    const savedScrollPos = localStorage.getItem("tools_scroll_pos");
+    if (savedScrollPos) {
+      const y = parseInt(savedScrollPos, 10);
+      if (!isNaN(y)) {
+        const timer = setTimeout(() => {
+          window.scrollTo({ top: y, behavior: "instant" as ScrollBehavior });
+        }, 100);
+        return () => clearTimeout(timer);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      localStorage.setItem("tools_scroll_pos", String(window.scrollY));
+    };
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    const saved = localStorage.getItem("asrarhub_last_tool");
+    if (saved) {
+      setLastToolId(saved);
+    }
+  }, []);
+
+  useEffect(() => {
+    const hasSeenGuide = true;
+    if (!hasSeenGuide) {
+      setShowGuide(true);
+    }
+  }, [user]);
 
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchEnd(null);
@@ -104,65 +163,6 @@ export const ToolsDashboard: React.FC = () => {
       }
     }
   };
-
-  useEffect(() => {
-    localStorage.setItem("active_tools_tab", activeTab);
-  }, [activeTab]);
-
-  useEffect(() => {
-    const savedScrollPos = localStorage.getItem("tools_scroll_pos");
-    if (savedScrollPos) {
-      const y = parseInt(savedScrollPos, 10);
-      if (!isNaN(y)) {
-        const timer = setTimeout(() => {
-          window.scrollTo({ top: y, behavior: "instant" as ScrollBehavior });
-        }, 100);
-        return () => clearTimeout(timer);
-      }
-    }
-  }, []);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      localStorage.setItem("tools_scroll_pos", String(window.scrollY));
-    };
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-  const { featureToggles } = useFeatures();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [lastToolId, setLastToolId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const saved = localStorage.getItem("asrarhub_last_tool");
-    if (saved) {
-      setLastToolId(saved);
-    }
-  }, []);
-
-  const [premiumModalOpen, setPremiumModalOpen] = useState<{
-    isOpen: boolean;
-    title: string;
-  }>({ isOpen: false, title: "" });
-
-  const [maintenanceModalOpen, setMaintenanceModalOpen] = useState<{
-    isOpen: boolean;
-    title: string;
-  }>({ isOpen: false, title: "" });
-
-  const [blockedModalOpen, setBlockedModalOpen] = useState<{
-    isOpen: boolean;
-    title: string;
-  }>({ isOpen: false, title: "" });
-
-  useEffect(() => {
-    const hasSeenGuide = true;
-
-    if (!hasSeenGuide) {
-      setShowGuide(true);
-    }
-  }, [user]);
 
   const closeGuide = () => {
     setShowGuide(false);
@@ -349,6 +349,112 @@ export const ToolsDashboard: React.FC = () => {
         isOpen={isHistoryOpen}
         onClose={() => setIsHistoryOpen(false)}
       />
+
+      {/* Top Collapsible Last Consulted Tool (Closed by default) */}
+      {(() => {
+        const lastTool = lastToolId ? tools.find(t => t.id === lastToolId) : null;
+        if (!lastTool) return null;
+
+        const lastToolTitle = t(`tools.${lastTool.id}.title`) !== `tools.${lastTool.id}.title`
+          ? t(`tools.${lastTool.id}.title`)
+          : lastTool.title;
+        const lastToolDesc = t(`tools.${lastTool.id}.description`) !== `tools.${lastTool.id}.description`
+          ? t(`tools.${lastTool.id}.description`)
+          : lastTool.description;
+
+        return (
+          <div className="mb-3 bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-transparent border border-emerald-500/20 dark:border-emerald-500/30 rounded-2xl overflow-hidden shadow-xs transition-all">
+            {/* Collapsed Header / Toggle Bar */}
+            <div
+              onClick={() => setIsLastToolOpen(!isLastToolOpen)}
+              className="p-2.5 sm:p-3 flex items-center justify-between gap-2.5 cursor-pointer hover:bg-emerald-500/5 transition-colors select-none"
+            >
+              <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                <div className={`w-8 h-8 shrink-0 rounded-xl bg-gradient-to-br ${lastTool.color} text-white flex items-center justify-center shadow-xs`}>
+                  {React.createElement(lastTool.icon, { size: 16 })}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
+                      {t("tools.lastConsulted", "Dernier outil consulté")}
+                    </span>
+                  </div>
+                  <h4 className="font-bold text-gray-900 dark:text-white text-xs sm:text-sm truncate">
+                    {lastToolTitle}
+                  </h4>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(lastTool.path);
+                  }}
+                  className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-[11px] rounded-lg shadow-xs transition-all flex items-center gap-1 cursor-pointer"
+                >
+                  <span>{t("tools.resumePractice", "Reprendre")}</span>
+                  <ChevronRight size={13} />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsLastToolOpen(!isLastToolOpen);
+                  }}
+                  className="p-1 text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors rounded-lg"
+                  aria-label={isLastToolOpen ? "Fermer" : "Ouvrir"}
+                >
+                  <ChevronDown
+                    size={17}
+                    className={`transition-transform duration-200 ${isLastToolOpen ? 'rotate-180 text-emerald-500' : ''}`}
+                  />
+                </button>
+              </div>
+            </div>
+
+            {/* Expandable Details Area */}
+            <AnimatePresence>
+              {isLastToolOpen && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2, ease: "easeInOut" }}
+                  className="overflow-hidden border-t border-emerald-500/15"
+                >
+                  <div className="p-3.5 sm:p-4 bg-emerald-500/5 dark:bg-emerald-950/20 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                    <div className="flex items-start gap-3 min-w-0">
+                      <div className={`w-10 h-10 shrink-0 rounded-xl bg-gradient-to-br ${lastTool.color} text-white flex items-center justify-center shadow-md shadow-emerald-500/10`}>
+                        {React.createElement(lastTool.icon, { size: 20 })}
+                      </div>
+                      <div className="min-w-0">
+                        <h4 className="font-bold text-gray-900 dark:text-white text-xs sm:text-sm">
+                          {lastToolTitle}
+                        </h4>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-2 leading-relaxed">
+                          {lastToolDesc}
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => navigate(lastTool.path)}
+                      className="w-full sm:w-auto shrink-0 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-98 text-white font-bold text-xs rounded-xl shadow-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <span>{t("tools.resumePractice", "Reprendre la pratique")}</span>
+                      <ChevronRight size={15} />
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        );
+      })()}
 
       {/* Tabs */}
       <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-xl mb-3 relative">
@@ -669,44 +775,6 @@ export const ToolsDashboard: React.FC = () => {
           </motion.div>
         )}
       </div>
-
-      {/* Last Consulted Tool */}
-      {(() => {
-        const lastTool = lastToolId ? tools.find(t => t.id === lastToolId) : null;
-        if (!lastTool) return null;
-        return (
-          <div className="mb-6 p-4 sm:p-5 bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-transparent border border-emerald-500/20 dark:border-emerald-500/30 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3.5 relative overflow-hidden group">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-emerald-500/10 to-teal-500/10 rounded-full blur-xl pointer-events-none" />
-            <div className="flex items-center gap-3.5 relative z-10">
-              <div className={`w-11 h-11 shrink-0 rounded-2xl bg-gradient-to-br ${lastTool.color} text-white flex items-center justify-center shadow-md shadow-emerald-500/10 group-hover:scale-105 transition-transform`}>
-                {React.createElement(lastTool.icon, { size: 22 })}
-              </div>
-              <div>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                  {t("tools.lastConsulted", "Dernier outil consulté")}
-                </span>
-                <h3 className="font-bold text-gray-900 dark:text-white text-sm sm:text-base mt-0.5">
-                  {t(`tools.${lastTool.id}.title`) !== `tools.${lastTool.id}.title`
-                    ? t(`tools.${lastTool.id}.title`)
-                    : lastTool.title}
-                </h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-1">
-                  {t(`tools.${lastTool.id}.description`) !== `tools.${lastTool.id}.description`
-                    ? t(`tools.${lastTool.id}.description`)
-                    : lastTool.description}
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={() => navigate(lastTool.path)}
-              className="shrink-0 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-sm transition-all flex items-center gap-1.5 cursor-pointer self-stretch sm:self-auto justify-center"
-            >
-              <span>{t("tools.resumePractice", "Reprendre la pratique")}</span>
-              <ChevronRight size={15} />
-            </button>
-          </div>
-        );
-      })()}
 
       {/* Sponsored Banner Ad */}
       <div className="mt-4 mb-4">

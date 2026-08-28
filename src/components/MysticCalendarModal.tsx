@@ -1687,8 +1687,8 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
 
           {/* Week Days Headers */}
           <div className="grid grid-cols-7 gap-1 text-center mb-1 text-[11px] font-extrabold text-gray-400 dark:text-gray-500 uppercase tracking-widest shrink-0">
-            {daysOfWeek.map(day => (
-              <div key={day} className="py-1">{day}</div>
+            {daysOfWeek.map((day, dIdx) => (
+              <div key={`cal-dow-${day}-${dIdx}`} className="py-1">{day}</div>
             ))}
           </div>
 

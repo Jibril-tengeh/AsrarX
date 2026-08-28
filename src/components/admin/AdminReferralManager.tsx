@@ -35,7 +35,7 @@ import { ReferralWelcomeModal } from '../ReferralWelcomeModal';
 import { doc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 
-const HOUR_PRESETS = [2, 4, 6, 8, 10, 12];
+const HOUR_PRESETS = [1, 2, 4, 6, 8, 12];
 
 export const AdminReferralManager: React.FC = () => {
   const [config, setConfig] = useState<ReferralConfig>(DEFAULT_REFERRAL_CONFIG);
@@ -49,6 +49,7 @@ export const AdminReferralManager: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<'settings' | 'history' | 'preview'>('settings');
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewLang, setPreviewLang] = useState<'fr' | 'en' | 'ha'>('fr');
 
   useEffect(() => {
     loadData();
@@ -107,45 +108,64 @@ export const AdminReferralManager: React.FC = () => {
   const totalHoursDistributed = referrals.reduce((acc, curr) => acc + (curr.rewardHours || 0) + (curr.refereeRewardHours || 0), 0);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full max-w-full overflow-hidden min-w-0">
       
       {/* Top Banner & Header */}
-      <div className="bg-gradient-to-r from-amber-600 via-emerald-600 to-teal-700 rounded-3xl p-6 sm:p-8 text-white shadow-lg relative overflow-hidden">
+      <div className="bg-gradient-to-r from-amber-600 via-emerald-600 to-teal-700 rounded-2xl sm:rounded-3xl p-4 sm:p-8 text-white shadow-lg relative overflow-hidden w-full max-w-full">
         <div className="absolute -right-10 -top-10 w-48 h-48 bg-white/10 rounded-full blur-2xl pointer-events-none" />
         <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 shrink-0">
-              <Gift size={32} className="text-amber-300 animate-pulse" />
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 min-w-0 flex-1">
+            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center border border-white/30 shrink-0">
+              <Gift size={28} className="text-amber-300 animate-pulse" />
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl sm:text-2xl font-black tracking-tight">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-lg sm:text-2xl font-black tracking-tight break-words">
                   Gestion du Système de Parrainage
                 </h1>
-                <span className={`text-[11px] font-black uppercase px-2.5 py-0.5 rounded-full ${
+                <span className={`text-[10px] sm:text-[11px] font-black uppercase px-2.5 py-0.5 rounded-full shrink-0 ${
                   config.enabled ? 'bg-emerald-400 text-gray-950' : 'bg-red-500 text-white'
                 }`}>
                   {config.enabled ? 'Système Actif' : 'Système Inactif'}
                 </span>
               </div>
-              <p className="text-xs sm:text-sm text-amber-100 mt-1 max-w-xl">
+              <p className="text-xs sm:text-sm text-amber-100 mt-1 max-w-xl break-words">
                 Configurez les heures de récompense Premium accordées aux parrains et filleuls, personnalisez les animations vidéo et suivez toutes les invitations en temps réel.
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 self-start md:self-auto">
+          <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+            <div className="flex items-center bg-black/20 rounded-xl p-1 border border-white/10">
+              {(['fr', 'en', 'ha'] as const).map((l) => (
+                <button
+                  key={`prev-lang-${l}`}
+                  onClick={() => {
+                    setPreviewLang(l);
+                    setPreviewOpen(true);
+                  }}
+                  className={`px-2.5 py-1.5 rounded-lg text-xs font-black uppercase transition-all cursor-pointer ${
+                    previewLang === l && previewOpen
+                      ? 'bg-amber-400 text-gray-950 shadow-sm'
+                      : 'text-white/80 hover:text-white hover:bg-white/10'
+                  }`}
+                  title={`Tester la modal en ${l === 'fr' ? 'Français' : l === 'ha' ? 'Haoussa' : 'Anglais'}`}
+                >
+                  {l}
+                </button>
+              ))}
+            </div>
             <button
               onClick={() => setPreviewOpen(true)}
-              className="px-4 py-2.5 bg-white/15 hover:bg-white/25 text-white rounded-xl font-bold text-xs sm:text-sm flex items-center gap-2 transition-all border border-white/20 backdrop-blur-md cursor-pointer"
+              className="flex-1 sm:flex-initial px-3.5 sm:px-4 py-2.5 bg-white/15 hover:bg-white/25 text-white rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all border border-white/20 backdrop-blur-md cursor-pointer text-center"
             >
               <Eye size={16} />
-              <span>Tester la Vidéo / Modal</span>
+              <span>Tester Modal ({previewLang.toUpperCase()})</span>
             </button>
             <button
               onClick={handleSave}
               disabled={saving}
-              className="px-5 py-2.5 bg-white text-gray-950 hover:bg-amber-100 rounded-xl font-extrabold text-xs sm:text-sm flex items-center gap-2 transition-all shadow-md cursor-pointer disabled:opacity-50"
+              className="flex-1 sm:flex-initial px-4 sm:px-5 py-2.5 bg-white text-gray-950 hover:bg-amber-100 rounded-xl font-extrabold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer disabled:opacity-50 text-center"
             >
               {saving ? <RefreshCw size={16} className="animate-spin text-emerald-600" /> : savedSuccess ? <Check size={16} className="text-emerald-600" /> : <Save size={16} />}
               <span>{saving ? 'Enregistrement...' : savedSuccess ? 'Enregistré !' : 'Enregistrer'}</span>
@@ -155,61 +175,61 @@ export const AdminReferralManager: React.FC = () => {
       </div>
 
       {/* Metrics Row */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-xs flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-            <Users size={24} />
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 w-full">
+        <div className="bg-white dark:bg-gray-800 p-4 sm:p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-xs flex items-center gap-3 sm:gap-4 min-w-0">
+          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+            <Users size={22} />
           </div>
-          <div>
-            <div className="text-2xl font-black text-gray-900 dark:text-white">{totalReferrals}</div>
-            <div className="text-xs text-gray-500 font-bold uppercase tracking-wider">Parrainages Réussis</div>
-          </div>
-        </div>
-
-        <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-xs flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-            <Clock size={24} />
-          </div>
-          <div>
-            <div className="text-2xl font-black text-emerald-600 dark:text-emerald-400">+{totalHoursDistributed}h</div>
-            <div className="text-xs text-gray-500 font-bold uppercase tracking-wider">Heures Premium Distribuées</div>
+          <div className="min-w-0 flex-1">
+            <div className="text-xl sm:text-2xl font-black text-gray-900 dark:text-white truncate">{totalReferrals}</div>
+            <div className="text-[11px] sm:text-xs text-gray-500 font-bold uppercase tracking-wider truncate">Parrainages Réussis</div>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-xs flex items-center gap-4">
-          <div className="w-12 h-12 rounded-xl bg-teal-50 dark:bg-teal-950/40 text-teal-600 dark:text-teal-400 flex items-center justify-center shrink-0">
-            <Award size={24} />
+        <div className="bg-white dark:bg-gray-800 p-4 sm:p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-xs flex items-center gap-3 sm:gap-4 min-w-0">
+          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+            <Clock size={22} />
           </div>
-          <div>
-            <div className="text-2xl font-black text-teal-600 dark:text-teal-400">{config.rewardHours}h / invité</div>
-            <div className="text-xs text-gray-500 font-bold uppercase tracking-wider">Récompense Actuelle Parrain</div>
+          <div className="min-w-0 flex-1">
+            <div className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 truncate">+{totalHoursDistributed}h</div>
+            <div className="text-[11px] sm:text-xs text-gray-500 font-bold uppercase tracking-wider truncate">Heures Distribuées</div>
+          </div>
+        </div>
+
+        <div className="bg-white dark:bg-gray-800 p-4 sm:p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-xs flex items-center gap-3 sm:gap-4 min-w-0">
+          <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl bg-teal-50 dark:bg-teal-950/40 text-teal-600 dark:text-teal-400 flex items-center justify-center shrink-0">
+            <Award size={22} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-xl sm:text-2xl font-black text-teal-600 dark:text-teal-400 truncate">{config.rewardHours}h / invité</div>
+            <div className="text-[11px] sm:text-xs text-gray-500 font-bold uppercase tracking-wider truncate">Gain Actuel Parrain</div>
           </div>
         </div>
       </div>
 
       {/* Navigation Tabs */}
-      <div className="flex border-b border-gray-200 dark:border-gray-700 gap-4">
+      <div className="flex border-b border-gray-200 dark:border-gray-700 gap-2 sm:gap-4 overflow-x-auto pb-1 max-w-full">
         <button
           onClick={() => setActiveTab('settings')}
-          className={`pb-3 text-sm font-bold flex items-center gap-2 border-b-2 transition-all cursor-pointer ${
+          className={`pb-3 px-1 text-xs sm:text-sm font-bold flex items-center gap-2 border-b-2 transition-all cursor-pointer whitespace-nowrap shrink-0 ${
             activeTab === 'settings'
               ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400'
               : 'border-transparent text-gray-500 hover:text-gray-900 dark:hover:text-gray-300'
           }`}
         >
           <Sliders size={16} />
-          <span>Configuration & Heures de Récompense</span>
+          <span>Configuration & Heures</span>
         </button>
         <button
           onClick={() => setActiveTab('history')}
-          className={`pb-3 text-sm font-bold flex items-center gap-2 border-b-2 transition-all cursor-pointer ${
+          className={`pb-3 px-1 text-xs sm:text-sm font-bold flex items-center gap-2 border-b-2 transition-all cursor-pointer whitespace-nowrap shrink-0 ${
             activeTab === 'history'
               ? 'border-emerald-600 text-emerald-600 dark:text-emerald-400'
               : 'border-transparent text-gray-500 hover:text-gray-900 dark:hover:text-gray-300'
           }`}
         >
           <TrendingUp size={16} />
-          <span>Historique des Invitations ({referrals.length})</span>
+          <span>Historique ({referrals.length})</span>
         </button>
       </div>
 
@@ -254,9 +274,9 @@ export const AdminReferralManager: React.FC = () => {
               </p>
 
               <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mb-4">
-                {HOUR_PRESETS.map((h) => (
+                {HOUR_PRESETS.map((h, hIdx) => (
                   <button
-                    key={h}
+                    key={`ref-hours-${h}-${hIdx}`}
                     type="button"
                     onClick={() => setConfig({ ...config, rewardHours: h })}
                     className={`py-3 rounded-xl font-black text-sm flex flex-col items-center justify-center transition-all cursor-pointer border ${
@@ -298,9 +318,9 @@ export const AdminReferralManager: React.FC = () => {
               </p>
 
               <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 mb-4">
-                {HOUR_PRESETS.map((h) => (
+                {HOUR_PRESETS.map((h, hIdx) => (
                   <button
-                    key={h}
+                    key={`referee-hours-${h}-${hIdx}`}
                     type="button"
                     onClick={() => setConfig({ ...config, refereeRewardHours: h })}
                     className={`py-3 rounded-xl font-black text-sm flex flex-col items-center justify-center transition-all cursor-pointer border ${
@@ -335,6 +355,35 @@ export const AdminReferralManager: React.FC = () => {
                   className="w-32 px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl font-bold text-sm text-gray-900 dark:text-white"
                 />
                 <span className="text-xs text-gray-500 font-semibold">points / ami inscrit</span>
+              </div>
+            </div>
+
+            {/* Custom Referral Link / Play Store URL Configuration */}
+            <div className="bg-white dark:bg-gray-800 rounded-2xl p-5 sm:p-6 border border-gray-100 dark:border-gray-700 shadow-xs">
+              <div className="flex items-center gap-2 mb-2">
+                <Share2 size={18} className="text-teal-500" />
+                <h3 className="font-bold text-gray-900 dark:text-white text-base">
+                  Lien de Partage & Redirection (Play Store / Domaine Web)
+                </h3>
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-3 leading-relaxed">
+                Par défaut, l'application génère les liens avec l'adresse web actuelle (URL courante). Lorsque vous publiez votre application sur le <strong>Google Play Store</strong> ou sur votre <strong>nom de domaine personnalisé</strong> (ex: <code>https://asrarhub.com</code>), vous pouvez définir ici l'adresse racine :
+              </p>
+
+              <div className="space-y-2">
+                <input
+                  type="url"
+                  value={config.customShareBaseUrl || ''}
+                  onChange={(e) => setConfig({ ...config, customShareBaseUrl: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-mono text-gray-900 dark:text-white placeholder:text-gray-400"
+                  placeholder="Ex: https://asrarhub.com ou https://play.google.com/store/apps/details?id=com.asrarhub.app"
+                />
+                <p className="text-[11px] text-gray-500 flex items-center gap-1">
+                  <ExternalLink size={12} className="text-teal-500 shrink-0" />
+                  <span>
+                    Si laissé vide, l'URL du navigateur (ex: <code>{typeof window !== 'undefined' ? window.location.origin : 'https://...'}</code>) est utilisée automatiquement.
+                  </span>
+                </p>
               </div>
             </div>
 
@@ -530,11 +579,30 @@ export const AdminReferralManager: React.FC = () => {
       <ReferralWelcomeModal
         isOpen={previewOpen}
         onClose={() => setPreviewOpen(false)}
-        referrerName="Cheikh Ahmadou (Exemple)"
-        hoursAwarded={config.refereeRewardHours}
-        welcomeTitle={config.welcomeTitleFr}
-        welcomeMessage={config.welcomeMessageFr}
+        referrerName={
+          previewLang === 'fr' 
+            ? "Cheikh Ahmadou (Exemple)" 
+            : previewLang === 'ha' 
+            ? "Cheikh Ahmadou (Misali)" 
+            : "Cheikh Ahmadou (Example)"
+        }
+        hoursAwarded={config.refereeRewardHours || 1}
+        welcomeTitle={
+          previewLang === 'ha'
+            ? config.welcomeTitleHa
+            : previewLang === 'en'
+            ? config.welcomeTitleEn
+            : config.welcomeTitleFr
+        }
+        welcomeMessage={
+          previewLang === 'ha'
+            ? config.welcomeMessageHa
+            : previewLang === 'en'
+            ? config.welcomeMessageEn
+            : config.welcomeMessageFr
+        }
         customVideoUrl={config.customVideoUrl}
+        lang={previewLang}
       />
 
     </div>

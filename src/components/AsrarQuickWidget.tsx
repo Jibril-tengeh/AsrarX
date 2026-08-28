@@ -293,7 +293,7 @@ export const AsrarQuickWidget: React.FC<AsrarQuickWidgetProps> = ({
               <div className="py-3 space-y-2 max-h-72 overflow-y-auto">
                 {savedArticles.map((art, idx) => (
                   <div
-                    key={art.id || idx}
+                    key={art.id ? `quick-saved-${art.id}-${idx}` : `quick-saved-${idx}`}
                     className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700/50 flex items-center justify-between gap-3"
                   >
                     <div className="flex items-center gap-2.5 overflow-hidden">

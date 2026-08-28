@@ -37,21 +37,24 @@ export const NewVersionBannerModal: React.FC<NewVersionBannerModalProps> = ({
   };
 
   const targetRelease = activeReleases.find((r) => r.version === currentVersion) || activeReleases[0] || APP_VERSION_CONFIG.releases[0];
+  const isVideoCardDisabled = !!targetRelease?.disableVideoCard;
 
   return (
     <>
-      <UpdateVideoCardModal
-        isOpen={isOpen && !showChangelog}
-        targetRelease={targetRelease}
-        currentInstalledVersion={previousVersion || currentVersion}
-        isForceUpdate={false}
-        initialThemeId={targetRelease.videoCardTheme || 'cyber-emerald'}
-        onDismiss={handleDismissOnly}
-      />
+      {!isVideoCardDisabled && (
+        <UpdateVideoCardModal
+          isOpen={isOpen && !showChangelog}
+          targetRelease={targetRelease}
+          currentInstalledVersion={previousVersion || currentVersion}
+          isForceUpdate={false}
+          initialThemeId={targetRelease.videoCardTheme || 'cyber-emerald'}
+          onDismiss={handleDismissOnly}
+        />
+      )}
 
-      {/* Changelog detailed modal if requested */}
+      {/* Changelog detailed modal if requested or if video card is disabled by admin */}
       <ChangelogModal
-        isOpen={showChangelog}
+        isOpen={showChangelog || (isOpen && isVideoCardDisabled)}
         onClose={() => {
           setShowChangelog(false);
           handleDismissOnly();

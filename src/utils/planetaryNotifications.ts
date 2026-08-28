@@ -206,20 +206,66 @@ export async function requestNotificationPermission(): Promise<boolean> {
 }
 
 /**
- * Request Microphone Permission (For Voice Zikr / Speech recognition / Audio analysis)
+ * Check permission query status using Permissions API if available
+ */
+export async function checkPermissionQuery(name: 'microphone' | 'geolocation' | 'notifications'): Promise<'granted' | 'denied' | 'prompt'> {
+  try {
+    if (typeof navigator !== 'undefined' && navigator.permissions && navigator.permissions.query) {
+      const permissionName = (name === 'microphone' ? 'microphone' : name === 'geolocation' ? 'geolocation' : 'notifications') as any;
+      const status = await navigator.permissions.query({ name: permissionName });
+      return status.state;
+    }
+  } catch {
+    // Permissions API may throw on certain browsers/params
+  }
+  return 'prompt';
+}
+
+/**
+ * Request Microphone Permission with full diagnostics and clear error message
+ */
+export async function requestMicrophonePermissionDetailed(): Promise<{
+  granted: boolean;
+  status: 'granted' | 'denied' | 'prompt' | 'unsupported';
+  errorMessage?: string;
+}> {
+  if (typeof navigator === 'undefined' || !navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    return {
+      granted: false,
+      status: 'unsupported',
+      errorMessage: "Votre navigateur ou environnement web ne supporte pas l'enregistrement audio microphone."
+    };
+  }
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    // Stop all audio tracks immediately once authorized
+    stream.getTracks().forEach((track) => track.stop());
+    return { granted: true, status: 'granted' };
+  } catch (err: any) {
+    console.warn('Microphone permission error/denied:', err);
+    let msg = "L'accès au microphone a été refusé ou bloqué dans les paramètres du navigateur.";
+    if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+      msg = "L'accès au microphone est actuellement bloqué par le navigateur ou Android. Veuillez le débloquer dans les paramètres du site (icône 🔒).";
+    } else if (err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError') {
+      msg = "Aucun micro n'a été détecté sur cet appareil.";
+    } else if (err.name === 'NotReadableError' || err.name === 'TrackStartError') {
+      msg = "Le microphone est actuellement utilisé par une autre application.";
+    }
+    return {
+      granted: false,
+      status: 'denied',
+      errorMessage: msg
+    };
+  }
+}
+
+/**
+ * Request Microphone Permission (Legacy boolean helper)
  */
 export async function requestMicrophonePermission(): Promise<boolean> {
-  try {
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      // Stop stream immediately after permission granted
-      stream.getTracks().forEach((track) => track.stop());
-      return true;
-    }
-  } catch (err) {
-    console.warn('Microphone permission error/denied:', err);
-  }
-  return false;
+  const res = await requestMicrophonePermissionDetailed();
+  return res.granted;
 }
 
 /**
@@ -247,37 +293,117 @@ export async function requestStoragePermission(): Promise<boolean> {
 }
 
 /**
- * Request Geolocation Permission (For Qibla, exact sunrise/sunset & prayer calculations)
+ * Request Geolocation Permission with full diagnostics, high/low accuracy retry & coordinates
  */
-export async function requestGeolocationPermission(): Promise<boolean> {
+export async function requestGeolocationPermissionDetailed(): Promise<{
+  granted: boolean;
+  status: 'granted' | 'denied' | 'unavailable' | 'timeout' | 'unsupported';
+  errorMessage?: string;
+  coords?: { lat: number; lng: number };
+}> {
   if (Capacitor.isNativePlatform()) {
     try {
       const perm = await Geolocation.requestPermissions();
-      if (perm.location === 'granted' || perm.coarseLocation === 'granted') return true;
+      if (perm.location === 'granted' || perm.coarseLocation === 'granted') {
+        const pos = await Geolocation.getCurrentPosition({ timeout: 10000 });
+        return {
+          granted: true,
+          status: 'granted',
+          coords: { lat: pos.coords.latitude, lng: pos.coords.longitude }
+        };
+      }
     } catch (e) {
       console.warn('Capacitor Geolocation permission error:', e);
     }
   }
 
-  return new Promise<boolean>((resolve) => {
+  if (typeof navigator === 'undefined' || !navigator.geolocation) {
+    return {
+      granted: false,
+      status: 'unsupported',
+      errorMessage: "La géolocalisation n'est pas prise en charge par ce navigateur."
+    };
+  }
+
+  // Step 1: Try High Accuracy GPS
+  const tryGetPos = (options: PositionOptions): Promise<GeolocationPosition> => {
+    return new Promise((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, options);
+    });
+  };
+
+  try {
+    const pos = await tryGetPos({ enableHighAccuracy: true, timeout: 9000, maximumAge: 60000 });
+    // Cache for app-wide fallback
     try {
-      if (typeof navigator !== 'undefined' && navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          () => resolve(true),
-          (err) => {
-            console.warn('Geolocation permission notice:', err.message);
-            resolve(false);
-          },
-          { timeout: 8000, maximumAge: 60000 }
-        );
-      } else {
-        resolve(false);
-      }
-    } catch (err) {
-      console.warn('Geolocation permission error:', err);
-      resolve(false);
+      localStorage.setItem('asrarhub_user_location', JSON.stringify({
+        latitude: pos.coords.latitude,
+        longitude: pos.coords.longitude,
+        updatedAt: new Date().toISOString()
+      }));
+    } catch {}
+
+    return {
+      granted: true,
+      status: 'granted',
+      coords: { lat: pos.coords.latitude, lng: pos.coords.longitude }
+    };
+  } catch (firstErr: any) {
+    console.warn('High accuracy geolocation failed, trying low accuracy / cached fix:', firstErr);
+
+    // If permission was explicitly denied (code 1), don't retry, fail with clear message
+    if (firstErr.code === 1) {
+      return {
+        granted: false,
+        status: 'denied',
+        errorMessage: "L'accès à la localisation a été refusé. Veuillez l'autoriser via le cadenas 🔒 dans la barre d'adresse de votre navigateur."
+      };
     }
-  });
+
+    // Step 2: Retry with low accuracy (wifi/cellular/cached)
+    try {
+      const posLow = await tryGetPos({ enableHighAccuracy: false, timeout: 14000, maximumAge: 300000 });
+      try {
+        localStorage.setItem('asrarhub_user_location', JSON.stringify({
+          latitude: posLow.coords.latitude,
+          longitude: posLow.coords.longitude,
+          updatedAt: new Date().toISOString()
+        }));
+      } catch {}
+
+      return {
+        granted: true,
+        status: 'granted',
+        coords: { lat: posLow.coords.latitude, lng: posLow.coords.longitude }
+      };
+    } catch (secondErr: any) {
+      console.warn('Low accuracy geolocation also failed:', secondErr);
+      let status: 'denied' | 'unavailable' | 'timeout' = 'unavailable';
+      let msg = "Impossible d'obtenir la position GPS. Vérifiez que la « Localisation » est activée dans la barre de notifications de votre téléphone Android.";
+
+      if (secondErr.code === 1) {
+        status = 'denied';
+        msg = "L'accès à la localisation est bloqué dans votre navigateur.";
+      } else if (secondErr.code === 3) {
+        status = 'timeout';
+        msg = "Le signal GPS a mis trop de temps à répondre. Vérifiez votre connexion ou définissez votre ville manuellement.";
+      }
+
+      return {
+        granted: false,
+        status,
+        errorMessage: msg
+      };
+    }
+  }
+}
+
+/**
+ * Request Geolocation Permission (Legacy boolean helper)
+ */
+export async function requestGeolocationPermission(): Promise<boolean> {
+  const res = await requestGeolocationPermissionDetailed();
+  return res.granted;
 }
 
 /**

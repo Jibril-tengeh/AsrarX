@@ -816,9 +816,9 @@ export const SacredBooksLibrary: React.FC = () => {
                 ...(selectedBook.id !== 'book_barhatiah' ? [{ id: 'secrets', label: language === 'en' ? 'Secrets, Recipes & Talsams' : language === 'ha' ? 'Asirori, Magunguna da Talsam' : 'Secrets, Recettes & Talsams' }] : []),
                 { id: 'ethics', label: language === 'en' ? 'Rules & Ethics' : language === 'ha' ? 'Dokoki da Sharudda' : 'Règles & Éthique' },
                 { id: 'khatim', label: language === 'en' ? 'Seal & Khatim' : language === 'ha' ? 'Khatim & Sceo' : 'Sceau & Khatim' },
-              ].map((tab) => (
+              ].map((tab, idx) => (
                 <button
-                  key={tab.id}
+                  key={`${tab.id}-${idx}`}
                   onClick={() => setActiveTab(tab.id as any)}
                   className={`px-4 py-2.5 rounded-2xl text-xs font-bold transition-all whitespace-nowrap ${
                     activeTab === tab.id

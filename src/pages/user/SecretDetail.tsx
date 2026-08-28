@@ -35,8 +35,18 @@ import {
   VolumeX,
   Headphones,
   Music,
-  Folder
+  Folder,
+  HardDriveDownload,
+  CheckCircle2,
+  HardDrive,
+  WifiOff
 } from "lucide-react";
+import { 
+  saveSecretToOfflineVault, 
+  getSecretFromOfflineVault, 
+  isSecretSavedOffline, 
+  removeSecretFromOfflineVault 
+} from "../../utils/secretOfflineVault";
 import { motion, AnimatePresence } from "motion/react";
 import { getAsrarItems } from "../../data/store";
 import { AsrarItem } from "../../types";
@@ -217,6 +227,69 @@ export const SecretDetail: React.FC = () => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const backupIntervalRef = useRef<any>(null);
   const [isTranslating, setIsTranslating] = useState(false);
+  const [isOfflineSaved, setIsOfflineSaved] = useState(false);
+  const [isSavingOffline, setIsSavingOffline] = useState(false);
+  const [offlineToast, setOfflineToast] = useState<{ show: boolean; message: string; type: 'success' | 'info' | 'error' }>({ show: false, message: '', type: 'success' });
+  const offlineToastTimeoutRef = useRef<any>(null);
+
+  const showOfflineToast = (message: string, type: 'success' | 'info' | 'error' = 'success') => {
+    if (offlineToastTimeoutRef.current) clearTimeout(offlineToastTimeoutRef.current);
+    setOfflineToast({ show: true, message, type });
+    offlineToastTimeoutRef.current = setTimeout(() => {
+      setOfflineToast(prev => ({ ...prev, show: false }));
+    }, 3500);
+  };
+
+  const handleToggleOfflineSave = async () => {
+    if (!item) return;
+    setIsSavingOffline(true);
+    try {
+      if (isOfflineSaved) {
+        await removeSecretFromOfflineVault(item.id || id || '');
+        setIsOfflineSaved(false);
+        showOfflineToast(t("secretDetail.offlineRemovedToast", "Secret retiré de la lecture hors ligne"), 'info');
+      } else {
+        const fullSecretToSave = {
+          ...item,
+          id: item.id || id,
+          title: item.title,
+          content: item.content,
+          verse: item.verse,
+          reference: item.reference,
+          category: item.category,
+          subCategory: item.subCategory,
+          isPremium: item.isPremium,
+          audioUrl: item.audioUrl || item.audio_url,
+          audio_url: item.audio_url || item.audioUrl,
+          imageUrl: item.imageUrl || item.thumbnail,
+          thumbnail: item.thumbnail || item.imageUrl,
+          benefits: item.benefits || [],
+          title_fr: item.title_fr || item.title,
+          content_fr: item.content_fr || item.content,
+          hook_fr: item.hook_fr || item.hook,
+          title_en: item.title_en,
+          content_en: item.content_en,
+          hook_en: item.hook_en,
+          title_ha: item.title_ha,
+          content_ha: item.content_ha,
+          hook_ha: item.hook_ha,
+          hasManualTranslation: item.hasManualTranslation,
+        };
+        const success = await saveSecretToOfflineVault(fullSecretToSave);
+        if (success) {
+          setIsOfflineSaved(true);
+          showOfflineToast(t("secretDetail.offlineSavedToast", "Secret sauvegardé avec succès dans IndexedDB pour lecture hors ligne !"), 'success');
+        } else {
+          showOfflineToast("Erreur lors de la sauvegarde hors ligne", 'error');
+        }
+      }
+    } catch (e) {
+      console.error("Error toggling offline save:", e);
+      showOfflineToast("Erreur de stockage IndexedDB", 'error');
+    } finally {
+      setIsSavingOffline(false);
+    }
+  };
 
   const isUserPremium = isPremium || user?.role === 'admin' || user?.subscriptionTier === 'premium' || user?.subscriptionTier === 'pro';
   const isShowingTeaserOnly = !!item?.isPremium && !isUserPremium;
@@ -827,6 +900,30 @@ export const SecretDetail: React.FC = () => {
     }
 
     if (id) {
+      // Check offline vault status & load full offline record immediately if present
+      isSecretSavedOffline(id).then(saved => {
+        setIsOfflineSaved(saved);
+      }).catch(() => {});
+
+      getSecretFromOfflineVault(id).then(offlineSecret => {
+        if (offlineSecret) {
+          setIsOfflineSaved(true);
+          const resolved = {
+            ...offlineSecret,
+            title_fr: offlineSecret.title_fr || offlineSecret.title,
+            content_fr: offlineSecret.content_fr || offlineSecret.content,
+            hook_fr: offlineSecret.hook_fr || offlineSecret.hook,
+          };
+          setItem(prev => {
+            if (!prev) return resolved as AsrarItem;
+            if ((resolved.content?.length || 0) >= (prev.content?.length || 0)) {
+              return { ...prev, ...resolved } as AsrarItem;
+            }
+            return prev;
+          });
+        }
+      }).catch(() => {});
+
       // Try to fetch from Firestore
       const fetchFromFirestore = async () => {
         try {
@@ -1312,6 +1409,32 @@ export const SecretDetail: React.FC = () => {
             <span className="text-xs hidden sm:inline">{isSpeaking ? t("secretDetail.lectureVocaleStop", "Arrêter") : t("secretDetail.lectureVocalePlay", "Lecture Vocale")}</span>
           </button>
 
+          {/* Sauvegarder pour lecture hors ligne (IndexedDB) */}
+          <button
+            onClick={handleToggleOfflineSave}
+            disabled={isSavingOffline}
+            className={`p-1.5 rounded-full transition-all flex items-center gap-1 font-bold px-2.5 py-1 ${
+              isOfflineSaved
+                ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300 border border-emerald-300/80 dark:border-emerald-700 shadow-sm"
+                : readingMode
+                  ? "bg-[#f4ebd0] text-[#8b6e3f] hover:bg-[#e8dcb5] dark:bg-[#383120] dark:text-[#d4c39c]"
+                  : "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-100/50 dark:border-emerald-800/30 hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
+            }`}
+            title={isOfflineSaved ? t("secretDetail.savedOfflineBtn", "Enregistré pour lecture hors ligne (IndexedDB)") : t("secretDetail.saveOfflineBtn", "Sauvegarder pour lecture hors ligne (IndexedDB)")}
+          >
+            {isOfflineSaved ? (
+              <>
+                <CheckCircle2 size={15} className="text-emerald-600 dark:text-emerald-400" />
+                <span className="text-xs hidden sm:inline">{t("secretDetail.savedOffline", "Hors ligne")}</span>
+              </>
+            ) : (
+              <>
+                <HardDriveDownload size={15} className={isSavingOffline ? "animate-bounce text-emerald-500" : ""} />
+                <span className="text-xs hidden sm:inline">{t("secretDetail.saveOffline", "Sauvegarder")}</span>
+              </>
+            )}
+          </button>
+
           <button
             onClick={() => setZenMode(true)}
             className="p-1.5 rounded-full transition-all flex items-center gap-1 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-100/50 dark:border-emerald-800/30 font-bold px-2.5 py-1 hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
@@ -1411,13 +1534,45 @@ export const SecretDetail: React.FC = () => {
         <div
           className={`${readingMode ? "p-0 sm:p-2 lg:p-4" : "p-6 md:p-8 lg:p-10"}`}
         >
-          <div className="flex flex-col items-center sm:items-start gap-4 mb-6">
-            {item.isPremium && (
-              <div className="bg-gradient-to-r from-amber-400 to-orange-500 text-white px-3 py-1.5 rounded-full flex items-center gap-2 shadow-sm text-sm font-bold w-fit mx-auto sm:mx-0">
-                <Crown size={16} />
-                <span>Premium</span>
-              </div>
-            )}
+          <div className="flex flex-col items-center sm:items-start gap-3 mb-6">
+            <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-start w-full">
+              {item.isPremium && (
+                <div className="bg-gradient-to-r from-amber-400 to-orange-500 text-white px-3 py-1 rounded-full flex items-center gap-1.5 shadow-sm text-xs font-bold w-fit">
+                  <Crown size={14} />
+                  <span>Premium</span>
+                </div>
+              )}
+              {item.category && (
+                <span className="text-xs uppercase font-bold tracking-wider px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">
+                  {item.category}
+                </span>
+              )}
+
+              {/* Bouton/Pill Sauvegarder pour lecture hors ligne (IndexedDB) */}
+              <button
+                onClick={handleToggleOfflineSave}
+                disabled={isSavingOffline}
+                className={`text-xs font-semibold px-3 py-1 rounded-full flex items-center gap-1.5 transition-all cursor-pointer select-none ${
+                  isOfflineSaved
+                    ? "bg-emerald-100/90 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300/80 dark:border-emerald-700/60 shadow-xs"
+                    : "bg-gray-100 dark:bg-gray-700/60 text-gray-700 dark:text-gray-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 hover:text-emerald-600 border border-gray-200 dark:border-gray-600"
+                }`}
+                title={isOfflineSaved ? t("secretDetail.savedOfflineBtn", "Enregistré pour lecture hors ligne (IndexedDB)") : t("secretDetail.saveOfflineBtn", "Sauvegarder pour lecture hors ligne (IndexedDB)")}
+              >
+                {isOfflineSaved ? (
+                  <>
+                    <CheckCircle2 size={13} className="text-emerald-600 dark:text-emerald-400" />
+                    <span>{t("secretDetail.savedOffline", "Disponible hors ligne")}</span>
+                  </>
+                ) : (
+                  <>
+                    <HardDriveDownload size={13} className={isSavingOffline ? "animate-bounce text-emerald-500" : "text-gray-500 dark:text-gray-400"} />
+                    <span>{t("secretDetail.saveOffline", "Sauvegarder hors ligne")}</span>
+                  </>
+                )}
+              </button>
+            </div>
+
             <h1
               data-article-title="true"
               className={`font-extrabold leading-tight transition-colors text-center sm:text-left w-full article-title-custom article-detail-title ${
@@ -1428,6 +1583,14 @@ export const SecretDetail: React.FC = () => {
             >
               {item.title}
             </h1>
+
+            {/* Notification de disponibilité hors ligne */}
+            {isOfflineSaved && (
+              <div className="flex items-center gap-1.5 text-xs text-emerald-700 dark:text-emerald-300 bg-emerald-50/80 dark:bg-emerald-950/30 px-3 py-1.5 rounded-xl border border-emerald-200/50 dark:border-emerald-800/30 w-fit">
+                <HardDrive size={13} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span>{t("secretDetail.offlineReadyNotice", "Ce secret est stocké sur votre appareil. Accessible sans connexion internet.")}</span>
+              </div>
+            )}
             {language !== 'fr' && (
               <div className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full w-fit mt-1 select-none mx-auto sm:mx-0 ${
                 item.hasManualTranslation 
@@ -2051,6 +2214,47 @@ export const SecretDetail: React.FC = () => {
                 />
               </div>
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      {/* Offline Toast Notification */}
+      <AnimatePresence>
+        {offlineToast.show && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            transition={{ duration: 0.2 }}
+            className={`fixed bottom-6 right-4 sm:right-6 z-[9999] flex items-center gap-3 px-4 py-3 rounded-2xl shadow-2xl backdrop-blur-md border ${
+              offlineToast.type === 'success'
+                ? 'bg-emerald-900/95 text-white border-emerald-500/50 shadow-emerald-900/40'
+                : offlineToast.type === 'info'
+                ? 'bg-gray-900/95 text-white border-gray-700/50 shadow-black/40'
+                : 'bg-red-900/95 text-white border-red-500/50 shadow-red-900/40'
+            }`}
+          >
+            {offlineToast.type === 'success' ? (
+              <div className="p-1.5 rounded-full bg-emerald-500/20 text-emerald-400">
+                <CheckCircle2 size={18} />
+              </div>
+            ) : offlineToast.type === 'info' ? (
+              <div className="p-1.5 rounded-full bg-gray-700/40 text-gray-300">
+                <HardDrive size={18} />
+              </div>
+            ) : (
+              <div className="p-1.5 rounded-full bg-red-500/20 text-red-400">
+                <X size={18} />
+              </div>
+            )}
+            <div className="text-sm font-medium pr-2">
+              {offlineToast.message}
+            </div>
+            <button
+              onClick={() => setOfflineToast(prev => ({ ...prev, show: false }))}
+              className="p-1 text-white/70 hover:text-white rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+            >
+              <X size={14} />
+            </button>
           </motion.div>
         )}
       </AnimatePresence>

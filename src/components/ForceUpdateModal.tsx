@@ -120,7 +120,7 @@ export const ForceUpdateModal: React.FC<ForceUpdateModalProps> = ({
             secondaryActionLabel={
               isUpdatingCache
                 ? (updateStatusStep || (language === 'fr' ? 'Actualisation...' : 'Refreshing...'))
-                : (language === 'fr' ? 'Recharger & Purger le Cache' : 'Reload & Re-check')
+                : 'Refresh Cache & Reload'
             }
           />
         </motion.div>

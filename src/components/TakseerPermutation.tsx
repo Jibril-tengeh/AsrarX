@@ -294,9 +294,9 @@ export const TakseerPermutation: React.FC = () => {
           { text: 'القدوس', label: t.preset2 },
           { text: 'ودود', label: t.preset3 },
           { text: 'لطيف', label: t.preset4 }
-        ].map(p => (
+        ].map((p, pIdx) => (
           <button
-            key={p.text}
+            key={`takseer-preset-${p.text}-${pIdx}`}
             onClick={() => setInputText(p.text)}
             className="px-3 py-1 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-bold transition-all cursor-pointer"
           >

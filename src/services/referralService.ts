@@ -27,6 +27,7 @@ export interface ReferralConfig {
   welcomeMessageHa: string;
   videoAnimationType: 'gold_celestial' | 'spiritual_aura' | 'cosmic_emerald' | 'sacred_light';
   customVideoUrl?: string;
+  customShareBaseUrl?: string; // e.g. 'https://asrarhub.com' or 'https://play.google.com/store/apps/details?id=com.asrarhub.app'
   spiritualPointsPerReferral: number;
 }
 
@@ -47,8 +48,8 @@ export interface ReferralRecord {
 
 export const DEFAULT_REFERRAL_CONFIG: ReferralConfig = {
   enabled: true,
-  rewardHours: 6, // Default 6 hours
-  refereeRewardHours: 4, // Default 4 hours for the new user
+  rewardHours: 1, // 1 hour for the referrer
+  refereeRewardHours: 1, // 1 hour for the new user (filleul)
   welcomeTitleFr: "Félicitations ! Cadeau de Parrainage Activé 🎁",
   welcomeTitleEn: "Congratulations! Referral Gift Activated 🎁",
   welcomeTitleHa: "Taya Murna! An Kunna Kyautar Gayyata 🎁",
@@ -90,6 +91,7 @@ export async function getReferralConfig(): Promise<ReferralConfig> {
         welcomeMessageHa: data.referral_welcome_message_ha || DEFAULT_REFERRAL_CONFIG.welcomeMessageHa,
         videoAnimationType: data.referral_video_animation_type || DEFAULT_REFERRAL_CONFIG.videoAnimationType,
         customVideoUrl: data.referral_custom_video_url || DEFAULT_REFERRAL_CONFIG.customVideoUrl,
+        customShareBaseUrl: data.referral_custom_share_base_url || '',
         spiritualPointsPerReferral: Number(data.referral_spiritual_points) || DEFAULT_REFERRAL_CONFIG.spiritualPointsPerReferral
       };
     }
@@ -115,6 +117,7 @@ export async function saveReferralConfig(config: Partial<ReferralConfig>): Promi
   if (config.welcomeMessageHa !== undefined) payload.referral_welcome_message_ha = config.welcomeMessageHa;
   if (config.videoAnimationType !== undefined) payload.referral_video_animation_type = config.videoAnimationType;
   if (config.customVideoUrl !== undefined) payload.referral_custom_video_url = config.customVideoUrl;
+  if (config.customShareBaseUrl !== undefined) payload.referral_custom_share_base_url = config.customShareBaseUrl.trim();
   if (config.spiritualPointsPerReferral !== undefined) payload.referral_spiritual_points = Number(config.spiritualPointsPerReferral);
 
   await setDoc(doc(db, 'settings', 'features'), payload, { merge: true });
@@ -283,3 +286,127 @@ export async function getAllReferralsAdmin(): Promise<ReferralRecord[]> {
     return [];
   }
 }
+
+/**
+ * Get referrals for a specific user (as referrer)
+ */
+export async function getUserReferrals(userId: string): Promise<ReferralRecord[]> {
+  if (!userId) return [];
+  try {
+    const q = query(
+      collection(db, 'referrals'),
+      where('referrerId', '==', userId),
+      orderBy('createdAt', 'desc'),
+      limit(100)
+    );
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() } as ReferralRecord));
+  } catch (e: any) {
+    // Fallback if composite index is pending or missing
+    try {
+      const fallbackQuery = query(
+        collection(db, 'referrals'),
+        where('referrerId', '==', userId),
+        limit(100)
+      );
+      const snap = await getDocs(fallbackQuery);
+      const items = snap.docs.map(d => ({ id: d.id, ...d.data() } as ReferralRecord));
+      return items.sort((a, b) => {
+        const timeA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : (a.createdAt ? new Date(a.createdAt).getTime() : 0);
+        const timeB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : (b.createdAt ? new Date(b.createdAt).getTime() : 0);
+        return timeB - timeA;
+      });
+    } catch (fallbackErr) {
+      console.warn("Could not fetch user referrals:", fallbackErr);
+      return [];
+    }
+  }
+}
+
+export interface ReferralTier {
+  id: 'bronze' | 'silver' | 'gold' | 'diamond';
+  nameFr: string;
+  nameEn: string;
+  nameHa: string;
+  minReferrals: number;
+  badgeColor: string;
+  iconBg: string;
+  perkFr: string;
+  perkEn: string;
+  perkHa: string;
+}
+
+export const REFERRAL_TIERS: ReferralTier[] = [
+  {
+    id: 'bronze',
+    nameFr: 'Initié Ambassadeur',
+    nameEn: 'Novice Ambassador',
+    nameHa: 'Sabuwar Jakada',
+    minReferrals: 0,
+    badgeColor: 'text-amber-700 bg-amber-100 dark:bg-amber-950/60 dark:text-amber-300 border-amber-300',
+    iconBg: 'from-amber-600 to-amber-700',
+    perkFr: '1h Premium offert par filleul inscrit',
+    perkEn: '1h Premium granted per referral',
+    perkHa: 'Sa\'a 1 na kyautar Premium a kowane rajista'
+  },
+  {
+    id: 'silver',
+    nameFr: 'Guide Bienveillant',
+    nameEn: 'Silver Mentor',
+    nameHa: 'Jagora Mai Albarka',
+    minReferrals: 3,
+    badgeColor: 'text-slate-700 bg-slate-100 dark:bg-slate-800 dark:text-slate-200 border-slate-300',
+    iconBg: 'from-slate-400 to-slate-600',
+    perkFr: 'Badge argenté + 100 points spirituels bonus',
+    perkEn: 'Silver badge + 100 bonus spiritual points',
+    perkHa: 'Lambar azurfa + maki 100 na ruhi'
+  },
+  {
+    id: 'gold',
+    nameFr: 'Maître Parrain',
+    nameEn: 'Gold Master',
+    nameHa: 'Babban Jakada Zinariya',
+    minReferrals: 6,
+    badgeColor: 'text-amber-800 bg-amber-200 dark:bg-amber-900/60 dark:text-amber-200 border-amber-400',
+    iconBg: 'from-amber-400 to-yellow-600',
+    perkFr: 'Badge doré VIP + accès prioritaire aux nouveaux secrets',
+    perkEn: 'Gold VIP badge + priority access to new treatises',
+    perkHa: 'Lambar zinariya VIP + fifikon samun sabbin asirai'
+  },
+  {
+    id: 'diamond',
+    nameFr: 'Ambassadeur Céleste',
+    nameEn: 'Celestial Legend',
+    nameHa: 'Jakadan Sarari na Daukaka',
+    minReferrals: 10,
+    badgeColor: 'text-cyan-800 bg-cyan-100 dark:bg-cyan-950/60 dark:text-cyan-200 border-cyan-300',
+    iconBg: 'from-cyan-500 to-blue-600',
+    perkFr: 'Statut Légendaire + Pass Premium permanent aux livres sacrés',
+    perkEn: 'Legendary status + Lifetime Sacred Books VIP pass',
+    perkHa: 'Babban matsayi na musamman + damar dindindin a littattafan asiri'
+  }
+];
+
+export function getReferralTier(referralCount: number): { currentTier: ReferralTier; nextTier: ReferralTier | null; progressPercent: number } {
+  let currentTier = REFERRAL_TIERS[0];
+  for (let i = REFERRAL_TIERS.length - 1; i >= 0; i--) {
+    if (referralCount >= REFERRAL_TIERS[i].minReferrals) {
+      currentTier = REFERRAL_TIERS[i];
+      break;
+    }
+  }
+
+  const currentIndex = REFERRAL_TIERS.findIndex(t => t.id === currentTier.id);
+  const nextTier = currentIndex < REFERRAL_TIERS.length - 1 ? REFERRAL_TIERS[currentIndex + 1] : null;
+
+  let progressPercent = 100;
+  if (nextTier) {
+    const prevMin = currentTier.minReferrals;
+    const nextMin = nextTier.minReferrals;
+    const progress = Math.min(Math.max((referralCount - prevMin) / (nextMin - prevMin), 0), 1);
+    progressPercent = Math.round(progress * 100);
+  }
+
+  return { currentTier, nextTier, progressPercent };
+}
+

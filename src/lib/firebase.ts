@@ -135,6 +135,9 @@ export const signInWithGoogle = async () => {
         const isPremEnabled = isTrulyNewAccount && isNewUserPremiumEnabled();
         const trialHours = getTrialDurationHours();
         const trialExpiry = new Date(now.getTime() + trialHours * 60 * 60 * 1000);
+        const cleanUid = user.uid.replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+        const userReferralCode = `ASRAR-${cleanUid.length >= 6 ? cleanUid.substring(0, 6) : cleanUid.padEnd(6, '7')}`;
+
         await setDoc(userRef, {
           email: user.email,
           normalizedEmail: normEmail,
@@ -149,7 +152,10 @@ export const signInWithGoogle = async () => {
           freeTrialActivatedAt: isPremEnabled ? now.toISOString() : null,
           freeTrialExpiresAt: isPremEnabled ? trialExpiry.toISOString() : null,
           premiumUntil: isPremEnabled ? trialExpiry.toISOString() : null,
-          hasSeenTrialPopup: !isPremEnabled
+          hasSeenTrialPopup: !isPremEnabled,
+          referralCode: userReferralCode,
+          referralCount: 0,
+          spiritualPoints: 100
         });
       }
     }

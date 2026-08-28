@@ -1,9 +1,24 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { User, Bell, Clock, Save, Shield, Moon, Sun, Smartphone, Laptop, Tablet, Globe, Trash2, Award, Medal, Star, Target, LogOut, Camera, Image as ImageIcon, RefreshCw, Sparkles, LogIn, ChevronDown, Plus, XCircle, CheckCircle, FileText, BookOpen, ScrollText, Heart, X, Share2, Wifi, Database, HardDrive, Mic, MapPin, FolderCheck, Mail, MessageSquare, Info, Tag, ExternalLink, Check, Gift } from 'lucide-react';
+import { User, Bell, Clock, Save, Shield, Moon, Sun, Smartphone, Laptop, Tablet, Globe, Trash2, Award, Medal, Star, Target, LogOut, Camera, Image as ImageIcon, RefreshCw, Sparkles, LogIn, ChevronDown, Plus, XCircle, CheckCircle, FileText, BookOpen, ScrollText, Heart, X, Share2, Wifi, Database, HardDrive, HardDriveDownload, Mic, MapPin, FolderCheck, Mail, MessageSquare, Info, Tag, ExternalLink, Check, Gift, HelpCircle, Compass, AlertTriangle } from 'lucide-react';
+import { 
+  getAllOfflineSecrets, 
+  removeSecretFromOfflineVault, 
+  OfflineStoredSecret 
+} from '../../utils/secretOfflineVault';
 import { FloatingSupportContact } from '../../components/FloatingSupportContact';
 import { ReferralCenter } from '../../components/ReferralCenter';
-import { requestStoragePermission, requestMicrophonePermission, requestGeolocationPermission, requestNotificationPermission, requestAllPermissions } from '../../utils/planetaryNotifications';
+import { 
+  requestStoragePermission, 
+  requestMicrophonePermission, 
+  requestGeolocationPermission, 
+  requestNotificationPermission, 
+  requestAllPermissions,
+  requestMicrophonePermissionDetailed,
+  requestGeolocationPermissionDetailed,
+  checkPermissionQuery
+} from '../../utils/planetaryNotifications';
+import { PermissionTroubleshooterModal } from '../../components/PermissionTroubleshooterModal';
 import { motion, AnimatePresence } from 'motion/react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth, handleFirestoreError, OperationType } from '../../contexts/AuthContext';
@@ -308,6 +323,25 @@ export const UserProfile: React.FC = () => {
     microphone?: boolean;
   }>({});
 
+  // Troubleshooter Modal State
+  const [isTroubleshooterOpen, setIsTroubleshooterOpen] = useState(false);
+  const [troubleshooterTab, setTroubleshooterTab] = useState<'microphone' | 'geolocation' | 'notifications' | 'storage' | 'manual_city'>('microphone');
+  const [permissionToast, setPermissionToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  // Check initial permission status silently on mount
+  useEffect(() => {
+    const checkLivePerms = async () => {
+      const mic = await checkPermissionQuery('microphone');
+      const geo = await checkPermissionQuery('geolocation');
+      setAppPermissions(prev => ({
+        ...prev,
+        microphone: mic === 'granted',
+        geolocation: geo === 'granted'
+      }));
+    };
+    checkLivePerms();
+  }, []);
+
   const location = useLocation();
   const shouldOpenPermissions = Boolean(
     location.state?.openPermissions || 
@@ -338,30 +372,61 @@ export const UserProfile: React.FC = () => {
         microphone: res.microphone
       });
       setStoragePermissionGranted(res.storage);
+
+      if (res.microphone && res.geolocation) {
+        setPermissionToast({ message: "Toutes les autorisations ont été accordées avec succès !", type: "success" });
+        setTimeout(() => setPermissionToast(null), 4000);
+      } else {
+        // Open troubleshooter to guide user
+        setTroubleshooterTab(!res.microphone ? 'microphone' : 'geolocation');
+        setIsTroubleshooterOpen(true);
+      }
     } catch (err) {
       console.warn("Permissions request error:", err);
+      setIsTroubleshooterOpen(true);
     } finally {
       setIsRequestingPerms(false);
     }
   };
 
   const handleRequestMic = async () => {
-    const granted = await requestMicrophonePermission();
-    setAppPermissions(prev => ({ ...prev, microphone: granted }));
-    if (granted) {
-      alert("Microphone autorisé avec succès pour les Zikrs vocaux !");
-    } else {
-      alert("Accès au microphone refusé ou non disponible dans ce navigateur.");
+    setIsRequestingPerms(true);
+    try {
+      const res = await requestMicrophonePermissionDetailed();
+      setAppPermissions(prev => ({ ...prev, microphone: res.granted }));
+      if (res.granted) {
+        setPermissionToast({ message: "Microphone autorisé avec succès pour les Zikrs vocaux !", type: "success" });
+        setTimeout(() => setPermissionToast(null), 4000);
+      } else {
+        setTroubleshooterTab('microphone');
+        setIsTroubleshooterOpen(true);
+      }
+    } catch (e) {
+      setTroubleshooterTab('microphone');
+      setIsTroubleshooterOpen(true);
+    } finally {
+      setIsRequestingPerms(false);
     }
   };
 
   const handleRequestGeo = async () => {
-    const granted = await requestGeolocationPermission();
-    setAppPermissions(prev => ({ ...prev, geolocation: granted }));
-    if (granted) {
-      alert("Localisation GPS autorisée avec succès !");
-    } else {
-      alert("Accès à la localisation refusé ou non disponible.");
+    setIsRequestingPerms(true);
+    try {
+      const res = await requestGeolocationPermissionDetailed();
+      setAppPermissions(prev => ({ ...prev, geolocation: res.granted }));
+      if (res.granted) {
+        const coordsStr = res.coords ? ` (${res.coords.lat.toFixed(1)}°, ${res.coords.lng.toFixed(1)}°)` : '';
+        setPermissionToast({ message: `Position GPS autorisée avec succès${coordsStr} !`, type: "success" });
+        setTimeout(() => setPermissionToast(null), 4000);
+      } else {
+        setTroubleshooterTab('geolocation');
+        setIsTroubleshooterOpen(true);
+      }
+    } catch (e) {
+      setTroubleshooterTab('geolocation');
+      setIsTroubleshooterOpen(true);
+    } finally {
+      setIsRequestingPerms(false);
     }
   };
 
@@ -372,7 +437,8 @@ export const UserProfile: React.FC = () => {
       setStoragePermissionGranted(granted);
       setAppPermissions(prev => ({ ...prev, storage: granted }));
       if (granted) {
-        alert("Autorisation au stockage accordée ! Vos données hors-ligne et exports d'images sont sécurisés.");
+        setPermissionToast({ message: "Autorisation au stockage accordée ! Cache et parchemins sécurisés.", type: "success" });
+        setTimeout(() => setPermissionToast(null), 4000);
       }
     } catch (err) {
       console.warn("Storage permission request error:", err);
@@ -445,6 +511,37 @@ export const UserProfile: React.FC = () => {
     } catch (err) {
       console.error("Error removing favorite:", err);
     }
+  };
+
+  const [offlineSecrets, setOfflineSecrets] = useState<OfflineStoredSecret[]>([]);
+  const [loadingOfflineSecrets, setLoadingOfflineSecrets] = useState(true);
+
+  const loadOfflineSecrets = async () => {
+    setLoadingOfflineSecrets(true);
+    try {
+      const list = await getAllOfflineSecrets();
+      setOfflineSecrets(list);
+    } catch (e) {
+      console.error("Error loading offline secrets in profile:", e);
+    } finally {
+      setLoadingOfflineSecrets(false);
+    }
+  };
+
+  useEffect(() => {
+    loadOfflineSecrets();
+    const handleSync = () => loadOfflineSecrets();
+    window.addEventListener('asrarhub_offline_secrets_sync', handleSync);
+    return () => {
+      window.removeEventListener('asrarhub_offline_secrets_sync', handleSync);
+    };
+  }, []);
+
+  const handleRemoveOfflineSecret = async (secretId: string, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    await removeSecretFromOfflineVault(secretId);
+    setOfflineSecrets(prev => prev.filter(s => s.id !== secretId));
   };
 
   const handleShareFavArticle = async (article: any, e: React.MouseEvent) => {
@@ -1000,11 +1097,11 @@ export const UserProfile: React.FC = () => {
           </div>
         ) : (
           <div className="space-y-3">
-            {favorites.map((item) => {
+            {favorites.map((item, favIdx) => {
               const isArticle = item.category === undefined || item.category === '' || item.type === 'richtext';
               return (
                 <div 
-                  key={item.id}
+                  key={item.id ? `fav-${item.id}-${favIdx}` : `fav-${favIdx}`}
                   className="flex items-center justify-between border border-gray-100 dark:border-gray-700 bg-white dark:bg-gray-800/40 rounded-2xl p-4 transition-all hover:border-emerald-200 dark:hover:border-emerald-800/40 group"
                 >
                   <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -1056,6 +1153,96 @@ export const UserProfile: React.FC = () => {
                 </div>
               );
             })}
+          </div>
+        )}
+      </CollapsibleSection>
+
+      {/* Section Secrets Hors Ligne (IndexedDB) */}
+      <CollapsibleSection
+        title={t('profile.offlineSecrets.title', 'Secrets Hors Ligne (IndexedDB)')}
+        icon={<HardDriveDownload className="text-teal-500" size={20} />}
+        headerAction={
+          offlineSecrets.length > 0 ? (
+            <span className="text-xs font-bold px-2.5 py-1 rounded-full bg-teal-50 dark:bg-teal-900/30 text-teal-600 dark:text-teal-400 border border-teal-200 dark:border-teal-800/40">
+              {offlineSecrets.length} {offlineSecrets.length === 1 ? 'secret' : 'secrets'}
+            </span>
+          ) : undefined
+        }
+      >
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-5 leading-relaxed">
+          {t('profile.offlineSecrets.desc', 'Ces secrets sont intégralement enregistrés dans la mémoire locale de votre appareil (IndexedDB). Vous pouvez les consulter sans aucune connexion internet.')}
+        </p>
+
+        {loadingOfflineSecrets ? (
+          <div className="flex flex-col gap-3">
+            {Array.from({ length: 2 }).map((_, i) => (
+              <div key={i} className="h-16 w-full bg-gray-100 dark:bg-gray-800/50 rounded-2xl animate-pulse"></div>
+            ))}
+          </div>
+        ) : offlineSecrets.length === 0 ? (
+          <div className="text-center py-8 bg-gray-50 dark:bg-gray-800/30 rounded-2xl border border-dashed border-gray-200 dark:border-gray-700">
+            <HardDriveDownload className="mx-auto text-gray-300 dark:text-gray-600 mb-2" size={32} />
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {t('profile.offlineSecrets.empty', 'Aucun secret sauvegardé pour lecture hors ligne.')}
+            </p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+              {t('profile.offlineSecrets.emptyHint', "Sur la page d'un secret, cliquez sur 'Sauvegarder' pour y accéder à tout moment sans connexion internet.")}
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {offlineSecrets.map((item, idx) => (
+              <div
+                key={item.id ? `offline-${item.id}-${idx}` : `offline-${idx}`}
+                className="flex items-center justify-between border border-teal-100 dark:border-teal-900/40 bg-teal-50/20 dark:bg-teal-950/20 rounded-2xl p-4 transition-all hover:border-teal-300 dark:hover:border-teal-700/60 group"
+              >
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className="p-2.5 rounded-xl bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300">
+                    <BookOpen size={18} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-bold text-teal-700 dark:text-teal-300 uppercase tracking-wider">
+                        {item.category || "Secret"}
+                      </span>
+                      {item.isPremium && (
+                        <span className="bg-violet-100 dark:bg-violet-900/40 text-violet-600 dark:text-violet-400 text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase">
+                          Premium
+                        </span>
+                      )}
+                      <span className="bg-emerald-100/70 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase">
+                        IndexedDB
+                      </span>
+                    </div>
+                    <h4 className="font-bold text-gray-900 dark:text-white text-sm sm:text-base mt-0.5 truncate">
+                      {item.title}
+                    </h4>
+                    {item.savedAt && (
+                      <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-0.5">
+                        Enregistré le {new Date(item.savedAt).toLocaleDateString()}
+                      </p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0 ml-4">
+                  <Link
+                    to={`/secret/${item.id}`}
+                    className="text-xs text-teal-700 dark:text-teal-300 font-bold px-3 py-1.5 rounded-xl bg-teal-100 dark:bg-teal-900/40 hover:bg-teal-200 dark:hover:bg-teal-800/60 transition-colors"
+                  >
+                    {t('profile.offlineSecrets.read', 'Lire')}
+                  </Link>
+
+                  <button
+                    onClick={(e) => handleRemoveOfflineSecret(item.id, e)}
+                    className="p-2 text-gray-400 hover:text-red-500 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors cursor-pointer"
+                    title={t('profile.offlineSecrets.remove', 'Supprimer de la mémoire locale')}
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </CollapsibleSection>
@@ -1227,8 +1414,8 @@ export const UserProfile: React.FC = () => {
         </div>
 
         <div className="space-y-3 mb-6">
-          {reminders.map(rem => (
-            <div key={rem.id} className="flex flex-col sm:flex-row sm:items-center justify-between border border-gray-100 dark:border-gray-700 rounded-2xl p-4 bg-gray-50 dark:bg-gray-800/50 gap-4">
+          {reminders.map((rem, remIdx) => (
+            <div key={rem.id ? `rem-${rem.id}-${remIdx}` : `rem-${remIdx}`} className="flex flex-col sm:flex-row sm:items-center justify-between border border-gray-100 dark:border-gray-700 rounded-2xl p-4 bg-gray-50 dark:bg-gray-800/50 gap-4">
               <div className="flex items-center gap-3 flex-1">
                 <div className={`p-2 rounded-xl flex-shrink-0 ${rem.enabled ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/50 dark:text-emerald-400' : 'bg-gray-200 text-gray-400 dark:bg-gray-700 dark:text-gray-500'}`}>
                   {rem.isZikr ? <Sparkles size={20} /> : <Clock size={20} />}
@@ -1383,59 +1570,146 @@ export const UserProfile: React.FC = () => {
         icon={<Shield className="text-emerald-500" size={20} />}
       >
         <div className="space-y-4">
-          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 leading-relaxed">
-            {t('profile.permissions.subtitle', "Sur Android et sur le navigateur web, les autorisations (Localisation GPS, Microphone, Stockage, Notifications) apparaissent dans le menu système d'Android uniquement lorsqu'elles ont été sollicitées une première fois par l'application.")}
-          </p>
+          {/* Permission Toast */}
+          <AnimatePresence>
+            {permissionToast && (
+              <motion.div
+                initial={{ opacity: 0, y: -8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                className={`p-3 rounded-2xl border text-xs flex items-center justify-between gap-2 ${
+                  permissionToast.type === 'success'
+                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-800 dark:text-emerald-300'
+                    : 'bg-rose-500/10 border-rose-500/30 text-rose-800 dark:text-rose-300'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  {permissionToast.type === 'success' ? <CheckCircle size={16} /> : <AlertTriangle size={16} />}
+                  <span className="font-semibold">{permissionToast.message}</span>
+                </div>
+                <button
+                  onClick={() => setPermissionToast(null)}
+                  className="p-1 hover:bg-black/5 dark:hover:bg-white/5 rounded-lg"
+                >
+                  <X size={14} />
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 leading-relaxed max-w-xl">
+              {t('profile.permissions.subtitle', "Sur Android et sur le navigateur web, les autorisations apparaissent dans le menu système d'Android uniquement lorsqu'elles ont été sollicitées une première fois.")}
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setTroubleshooterTab('microphone');
+                setIsTroubleshooterOpen(true);
+              }}
+              className="text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1.5 p-1 cursor-pointer shrink-0"
+            >
+              <HelpCircle size={14} />
+              <span>Pourquoi c'est refusé ? (Guide d'aide)</span>
+            </button>
+          </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 my-4">
             {/* Geolocation */}
-            <div className="bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-700/80 rounded-2xl p-4 flex items-start justify-between gap-3">
-              <div className="flex items-start gap-3">
-                <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0">
-                  <MapPin size={20} />
-                </div>
-                <div>
-                  <h4 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
-                    {t('profile.permissions.geoTitle', 'Localisation GPS')}
-                    {appPermissions.geolocation && <CheckCircle size={14} className="text-emerald-500" />}
-                  </h4>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">
-                    {t('profile.permissions.geoDesc', 'Direction de la Qibla, heures de prière et calculs astronomiques.')}
-                  </p>
+            <div className="bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-700/80 rounded-2xl p-4 flex flex-col justify-between gap-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-start gap-3">
+                  <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0">
+                    <MapPin size={20} />
+                  </div>
+                  <div>
+                    <h4 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                      {t('profile.permissions.geoTitle', 'Localisation GPS')}
+                      {appPermissions.geolocation && <CheckCircle size={14} className="text-emerald-500" />}
+                    </h4>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">
+                      {t('profile.permissions.geoDesc', 'Direction de la Qibla, heures de prière et calculs astronomiques.')}
+                    </p>
+                  </div>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={handleRequestGeo}
-                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer"
-              >
-                {t('profile.permissions.authorize', 'Autoriser')}
-              </button>
+
+              <div className="flex items-center justify-between gap-2 pt-2 border-t border-gray-100 dark:border-gray-700/50">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTroubleshooterTab('manual_city');
+                    setIsTroubleshooterOpen(true);
+                  }}
+                  className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <Compass size={13} />
+                  <span>Choisir ville sans GPS</span>
+                </button>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTroubleshooterTab('geolocation');
+                      setIsTroubleshooterOpen(true);
+                    }}
+                    className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                    title="Aide au déblocage"
+                  >
+                    <HelpCircle size={14} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleRequestGeo}
+                    disabled={isRequestingPerms}
+                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer shadow-sm"
+                  >
+                    {appPermissions.geolocation ? 'Tester' : t('profile.permissions.authorize', 'Autoriser')}
+                  </button>
+                </div>
+              </div>
             </div>
 
             {/* Microphone */}
-            <div className="bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-700/80 rounded-2xl p-4 flex items-start justify-between gap-3">
-              <div className="flex items-start gap-3">
-                <div className="p-2.5 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 shrink-0">
-                  <Mic size={20} />
-                </div>
-                <div>
-                  <h4 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
-                    {t('profile.permissions.micTitle', 'Microphone & Audio')}
-                    {appPermissions.microphone && <CheckCircle size={14} className="text-emerald-500" />}
-                  </h4>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">
-                    {t('profile.permissions.micDesc', 'Compteur Zikr vocal et détection sonore de récitation.')}
-                  </p>
+            <div className="bg-gray-50 dark:bg-gray-800/40 border border-gray-100 dark:border-gray-700/80 rounded-2xl p-4 flex flex-col justify-between gap-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-start gap-3">
+                  <div className="p-2.5 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 shrink-0">
+                    <Mic size={20} />
+                  </div>
+                  <div>
+                    <h4 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                      {t('profile.permissions.micTitle', 'Microphone & Audio')}
+                      {appPermissions.microphone && <CheckCircle size={14} className="text-emerald-500" />}
+                    </h4>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">
+                      {t('profile.permissions.micDesc', 'Compteur Zikr vocal et détection sonore de récitation.')}
+                    </p>
+                  </div>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={handleRequestMic}
-                className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer"
-              >
-                {t('profile.permissions.authorize', 'Autoriser')}
-              </button>
+
+              <div className="flex items-center justify-between gap-2 pt-2 border-t border-gray-100 dark:border-gray-700/50">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setTroubleshooterTab('microphone');
+                    setIsTroubleshooterOpen(true);
+                  }}
+                  className="text-[11px] font-bold text-rose-600 dark:text-rose-400 hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <HelpCircle size={13} />
+                  <span>Guide de déblocage</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRequestMic}
+                  disabled={isRequestingPerms}
+                  className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer shadow-sm"
+                >
+                  {appPermissions.microphone ? 'Tester' : t('profile.permissions.authorize', 'Autoriser')}
+                </button>
+              </div>
             </div>
 
             {/* Storage */}
@@ -1714,7 +1988,7 @@ export const UserProfile: React.FC = () => {
           {/* Microphone & Dictée Vocal */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/40 rounded-2xl border border-gray-100 dark:border-gray-700 gap-4">
             <div className="flex items-center gap-3">
-              <div className="p-3 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-xl shrink-0">
+              <div className="p-3 bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 rounded-xl shrink-0">
                 <Mic size={22} />
               </div>
               <div>
@@ -1727,26 +2001,18 @@ export const UserProfile: React.FC = () => {
               </div>
             </div>
             <button
-              onClick={async () => {
-                try {
-                  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                  stream.getTracks().forEach(track => track.stop());
-                  alert("Autorisation microphone accordée avec succès !");
-                } catch (e: any) {
-                  alert("Erreur ou refus du microphone : " + (e.message || e));
-                }
-              }}
-              className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer shrink-0"
+              onClick={handleRequestMic}
+              className="px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer shrink-0"
             >
               <Mic size={14} />
-              Autoriser le microphone
+              {appPermissions.microphone ? "Microphone autorisé ✅" : "Autoriser le microphone"}
             </button>
           </div>
 
           {/* Géolocalisation */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/40 rounded-2xl border border-gray-100 dark:border-gray-700 gap-4">
             <div className="flex items-center gap-3">
-              <div className="p-3 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-xl shrink-0">
+              <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-xl shrink-0">
                 <MapPin size={22} />
               </div>
               <div>
@@ -1759,20 +2025,11 @@ export const UserProfile: React.FC = () => {
               </div>
             </div>
             <button
-              onClick={() => {
-                if (navigator.geolocation) {
-                  navigator.geolocation.getCurrentPosition(
-                    () => alert("Géolocalisation autorisée avec succès !"),
-                    (err) => alert("Erreur géolocalisation : " + err.message)
-                  );
-                } else {
-                  alert("Géolocalisation non supportée par votre appareil.");
-                }
-              }}
-              className="px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer shrink-0"
+              onClick={handleRequestGeo}
+              className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl transition-all shadow-sm flex items-center justify-center gap-2 cursor-pointer shrink-0"
             >
               <MapPin size={14} />
-              Autoriser la position
+              {appPermissions.geolocation ? "Position autorisée ✅" : "Autoriser la position"}
             </button>
           </div>
         </div>
@@ -1811,11 +2068,11 @@ export const UserProfile: React.FC = () => {
           </div>
         ) : (
           <div className="space-y-3">
-            {activeSessions.map((session) => {
+            {activeSessions.map((session, sIdx) => {
               const isCurrent = session.id === currentSessionId;
               return (
                 <div 
-                  key={session.id} 
+                  key={session.id ? `session-${session.id}-${sIdx}` : `session-${sIdx}`} 
                   className={`flex flex-col sm:flex-row sm:items-center justify-between border rounded-2xl p-4 gap-4 transition-all ${
                     isCurrent 
                       ? 'border-emerald-200 bg-emerald-50/30 dark:border-emerald-800/30 dark:bg-emerald-950/10' 
@@ -2205,6 +2462,11 @@ export const UserProfile: React.FC = () => {
       )}
       
       <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
+      <PermissionTroubleshooterModal
+        isOpen={isTroubleshooterOpen}
+        onClose={() => setIsTroubleshooterOpen(false)}
+        initialTab={troubleshooterTab}
+      />
     </div>
   );
 };

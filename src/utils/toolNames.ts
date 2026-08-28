@@ -64,11 +64,16 @@ const fallbackNames: Record<string, { fr: string; en: string; ha: string }> = {
   'comparative-traditions': { fr: 'Traditions Comparées', en: 'Comparative Traditions', ha: 'Kwatanta Hanyoyi' },
   'lunar-cycles': { fr: 'Cycles Lunaires', en: 'Lunar Cycles', ha: 'Zagayowar Wata' },
   store: { fr: 'Boutique (Store)', en: 'Store / Shop', ha: 'Shago' },
+  pdf: { fr: 'Bibliothèque PDF & Manuscrits', en: 'PDF Library & Manuscripts', ha: 'Dakin Karatu na PDF' },
+  'pdf-library': { fr: 'Bibliothèque PDF & Manuscrits', en: 'PDF Library & Manuscripts', ha: 'Dakin Karatu na PDF' },
+  explore: { fr: 'Explorateur de Secrets', en: 'Secrets Explorer', ha: 'Binciken Asirai' },
   community: { fr: 'Communauté Spirituelle', en: 'Spiritual Community', ha: 'Al\'umma' },
   journal: { fr: 'Journal Intime', en: 'Spiritual Journal', ha: 'Littafin Rubutu' },
   quizz: { fr: 'Quiz Spirituel', en: 'Spiritual Quiz', ha: 'Tambayoyin Asrar' },
   lexique: { fr: 'Lexique Esotérique', en: 'Esoteric Lexicon', ha: 'Kamus na Asrar' },
   calendar: { fr: 'Calendrier Hégirien & Solaire', en: 'Hijri & Solar Calendar', ha: 'Kalandar Musulunci' },
+  ruqyah: { fr: 'Module Ruqyah & Guérison', en: 'Ruqyah & Healing Module', ha: 'Rukya da Waraka' },
+  referral: { fr: 'Programme de Parrainage', en: 'Referral Program', ha: 'Shirin Gayyata' },
   faq: { fr: 'Assistant FAQ', en: 'FAQ Assistant', ha: 'Tambayoyi da Amsoshi' }
 };
 

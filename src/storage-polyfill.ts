@@ -1,9 +1,10 @@
 // 1. Global Process Polyfill for Browser & Capacitor WebViews
 if (typeof window !== 'undefined') {
+  const detectedEnv = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.MODE) || 'development';
   if (typeof (window as any).process === 'undefined') {
-    (window as any).process = { env: { NODE_ENV: 'production' } };
+    (window as any).process = { env: { NODE_ENV: detectedEnv } };
   } else if (typeof (window as any).process.env === 'undefined') {
-    (window as any).process.env = { NODE_ENV: 'production' };
+    (window as any).process.env = { NODE_ENV: detectedEnv };
   }
 }
 

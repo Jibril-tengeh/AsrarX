@@ -4,7 +4,7 @@ import { useAuth, handleFirestoreError, OperationType } from '../../contexts/Aut
 import { useFeatures } from '../../contexts/FeatureContext';
 import { db } from '../../lib/firebase';
 import { collection, query, orderBy, onSnapshot, doc, getDocsFromServer, getDocs, where } from 'firebase/firestore';
-import { Search, LayoutGrid, Square, List, Filter, X, BookOpen, Store, Award, MapPin, Trophy, ShieldCheck, ChevronDown, Bookmark, Flame, Shield, RefreshCw, Quote, Folder, Plus, Library, Music, Pencil, Trash2, Sliders, Sparkles, Calendar, FolderOpen, Star } from 'lucide-react';
+import { Search, LayoutGrid, Square, List, Filter, X, BookOpen, Store, Award, MapPin, Trophy, ShieldCheck, ChevronDown, Bookmark, Flame, Shield, RefreshCw, Quote, Folder, Plus, Library, Music, Pencil, Trash2, Sliders, Sparkles, Calendar, FolderOpen, Star, FileText } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { SecretCard, LayoutMode } from '../../components/SecretCard';
 import { HabitTracker } from '../../components/HabitTracker';
@@ -905,6 +905,36 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
           </Link>
         </motion.div>
 
+        {/* PDF Documents Library Icon */}
+        <motion.div
+          whileHover={{ scale: 1.08, y: -1.5 }}
+          whileTap={{ scale: 0.92 }}
+          className={`relative flex-shrink-0 transition-opacity duration-200 ${isSearchOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+        >
+          <Link
+            id="tour-pdf-library"
+            to="/pdf-library"
+            className="group relative p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-gradient-to-br from-rose-500/15 via-red-500/10 to-red-600/20 dark:from-rose-950/40 dark:via-red-900/30 dark:to-red-950/50 text-red-600 dark:text-red-400 border border-red-300/50 dark:border-red-700/50 h-[34px] w-[34px] sm:h-[42px] sm:w-[42px] flex items-center justify-center shadow-sm overflow-hidden"
+            title={language === 'fr' ? 'Bibliothèque PDF & Manuscrits' : 'PDF Sacred Library'}
+          >
+            <motion.div
+              className="absolute inset-0 bg-gradient-to-tr from-transparent via-red-200/30 dark:via-red-400/20 to-transparent opacity-0 group-hover:opacity-100"
+              animate={{ x: ['-100%', '200%'] }}
+              transition={{ repeat: Infinity, duration: 2.6, ease: 'linear' }}
+            />
+            <motion.div
+              animate={{ scale: [1, 1.06, 1], rotate: [0, -2, 2, 0] }}
+              transition={{ repeat: Infinity, duration: 3.1, ease: 'easeInOut' }}
+              className="relative flex items-center justify-center"
+            >
+              <FileText className="w-[15px] h-[15px] sm:w-[18px] sm:h-[18px] drop-shadow-[0_1px_3px_rgba(239,68,68,0.4)]" />
+              <span className="absolute -top-1.5 -right-2 text-[7px] font-black bg-red-600 text-white px-0.5 rounded leading-none">
+                PDF
+              </span>
+            </motion.div>
+          </Link>
+        </motion.div>
+
         <motion.div
           whileHover={{ scale: 1.08, y: -1.5 }}
           whileTap={{ scale: 0.92 }}
@@ -1049,7 +1079,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
                     <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('categories', 'Thématiques')}</h4>
                     
                     <div className="space-y-3">
-                      {categories.map((cat) => {
+                      {categories.map((cat, catIdx) => {
                         const isSelected = filter === cat.id;
                         const artCount = items.filter(a => a.category === cat.id).length;
                         
@@ -1058,7 +1088,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
                         if (language === 'ha' && cat.name_ha) displayName = cat.name_ha;
 
                         return (
-                          <div key={cat.id} className={`rounded-2xl border transition-all ${
+                          <div key={cat.id ? `cat-${cat.id}` : `cat-${catIdx}`} className={`rounded-2xl border transition-all ${
                             isSelected 
                               ? 'border-emerald-200 dark:border-emerald-800 bg-emerald-50/10 dark:bg-emerald-900/5'
                               : 'border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30'
@@ -1107,7 +1137,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
                                 >
                                   {t('allSub', 'Tout')}
                                 </button>
-                                {(cat.subCategories || []).map((sub: any) => {
+                                {(cat.subCategories || []).map((sub: any, subIdx: number) => {
                                   const isSubSelected = selectedSubCategory === sub.id;
                                   let subDisplayName = sub.name;
                                   if (language === 'en' && sub.name_en) subDisplayName = sub.name_en;
@@ -1115,7 +1145,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
 
                                   return (
                                     <button
-                                      key={sub.id}
+                                      key={sub.id ? `sub-${cat.id}-${sub.id}` : `sub-${catIdx}-${subIdx}`}
                                       onClick={() => {
                                         setSelectedSubCategory(sub.id);
                                         setIsCategoryModalOpen(false);
@@ -1401,7 +1431,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
                 className="overflow-hidden"
               >
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
-                  {readingHistory.map((item) => {
+                  {readingHistory.map((item, histIdx) => {
                     const formatTimeAgo = (timestamp: number) => {
                       const seconds = Math.floor((Date.now() - timestamp) / 1000);
                       const minutes = Math.floor(seconds / 60);
@@ -1434,7 +1464,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
 
                     return (
                       <Link
-                        key={item.id}
+                        key={item.id ? `history-${item.id}-${item.viewedAt || histIdx}` : `history-${histIdx}`}
                         to={`/secret/${item.id}`}
                         className="flex items-center gap-3 p-3 bg-gray-50/50 dark:bg-gray-750/30 hover:bg-emerald-50/50 dark:hover:bg-emerald-900/10 rounded-2xl border border-gray-100 dark:border-gray-700/50 hover:border-emerald-100 dark:hover:border-emerald-800 transition-all group"
                       >
@@ -1491,7 +1521,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
             <div className="space-y-3">
               {quranBookmarks.map((bookmark, idx) => (
                 <Link
-                  key={idx}
+                  key={bookmark.id ? `quran-bm-${bookmark.id}-${idx}` : `quran-bm-${bookmark.surahNumber}-${bookmark.ayahNumberInSurah}-${idx}`}
                   to={`/tools/quran?surah=${bookmark.surahNumber}&ayah=${bookmark.ayahNumberInSurah}`}
                   className="block bg-gray-50 dark:bg-gray-750 rounded-xl p-4 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors border border-transparent hover:border-emerald-100 dark:hover:border-emerald-800"
                 >
@@ -1561,9 +1591,9 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
               >
                 <Bookmark size={16} /> Tous les favoris
               </button>
-              {bookmarkFolders.map(folder => (
+              {bookmarkFolders.map((folder, fIdx) => (
                 <button
-                  key={folder.id}
+                  key={folder.id ? `folder-btn-${folder.id}` : `folder-btn-${fIdx}`}
                   onClick={() => setActiveFolder(folder.id)}
                   className={`px-4 py-2 rounded-xl flex items-center gap-2 whitespace-nowrap transition-colors border ${
                     activeFolder === folder.id 
@@ -1653,10 +1683,10 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
             </div>
           ))
         ) : filteredItems.length > 0 ? (
-          filteredItems.map(item => {
+          filteredItems.map((item, itemIdx) => {
             const currentFolder = bookmarkFolders.find(f => f.items.includes(item.id));
             return (
-              <div key={item.id} className="flex flex-col h-full">
+              <div key={item.id ? `card-item-${item.id}-${itemIdx}` : `card-item-${itemIdx}`} className="flex flex-col h-full">
                 <div className="flex-1">
                   <SecretCard item={item} layoutMode={layoutMode} categories={categories} />
                 </div>
@@ -1702,8 +1732,8 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
                       className="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-2 py-1 text-[11px] text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium cursor-pointer"
                     >
                       <option value="">📁 Aucun dossier</option>
-                      {bookmarkFolders.map(f => (
-                        <option key={f.id} value={f.id}>{f.name}</option>
+                      {bookmarkFolders.map((f, optIdx) => (
+                        <option key={f.id ? `f-opt-${f.id}` : `f-opt-${optIdx}`} value={f.id}>{f.name}</option>
                       ))}
                       <option value="__new__" className="text-emerald-600 dark:text-emerald-400 font-semibold">+ Nouveau dossier...</option>
                     </select>

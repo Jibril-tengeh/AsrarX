@@ -19,6 +19,8 @@ export interface FirestoreVersionDoc {
   isCurrent?: boolean;
   disabled?: boolean;
   forceUpdate?: boolean;
+  disableVideoCard?: boolean;
+  videoCardTheme?: any;
   minSupportedVersionCode?: number;
   downloadUrl?: string;
   apkDownloadUrl?: string;
@@ -157,6 +159,8 @@ class AppVersionService {
       isCurrent: data.isCurrent ?? (data.version === this.getCurrentVersion()),
       disabled: data.disabled === true,
       forceUpdate: !!data.forceUpdate,
+      disableVideoCard: !!data.disableVideoCard,
+      videoCardTheme: data.videoCardTheme || undefined,
       minSupportedVersionCode: data.minSupportedVersionCode ? Number(data.minSupportedVersionCode) : undefined,
       downloadUrl: data.downloadUrl || undefined,
       apkDownloadUrl: data.apkDownloadUrl || undefined,
@@ -262,9 +266,11 @@ class AppVersionService {
         disabled: !!release.disabled,
         isCurrent: !!release.isCurrent,
         forceUpdate: !!release.forceUpdate,
+        disableVideoCard: !!release.disableVideoCard,
         updatedAt: new Date().toISOString()
       };
 
+      if (release.videoCardTheme) payload.videoCardTheme = release.videoCardTheme;
       if (release.minSupportedVersionCode !== undefined) payload.minSupportedVersionCode = Number(release.minSupportedVersionCode);
       if (release.downloadUrl) payload.downloadUrl = release.downloadUrl;
       if (release.apkDownloadUrl) payload.apkDownloadUrl = release.apkDownloadUrl;
@@ -281,6 +287,35 @@ class AppVersionService {
     } catch (err) {
       console.error("Error saving version to Firestore:", err);
       throw err;
+    }
+  }
+
+  /**
+   * Quick toggle disableVideoCard status of a version
+   */
+  async toggleVideoCardDisabled(versionOrId: string, disableVideoCard: boolean): Promise<boolean> {
+    try {
+      const docId = versionOrId.replace(/\./g, '_');
+      const docRef = doc(db, 'app_versions', docId);
+      await updateDoc(docRef, {
+        disableVideoCard: disableVideoCard,
+        updatedAt: new Date().toISOString()
+      });
+      return true;
+    } catch (err) {
+      console.error("Error toggling version disableVideoCard state:", err);
+      try {
+        const docId = versionOrId.replace(/\./g, '_');
+        const docRef = doc(db, 'app_versions', docId);
+        await setDoc(docRef, {
+          version: versionOrId,
+          disableVideoCard: disableVideoCard,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+        return true;
+      } catch (innerErr) {
+        throw innerErr;
+      }
     }
   }
 

@@ -111,6 +111,7 @@ export const AdminVersionControlManager: React.FC = () => {
     isCurrent: boolean;
     disabled: boolean;
     forceUpdate: boolean;
+    disableVideoCard: boolean;
     minSupportedVersionCode: number;
     downloadUrl: string;
     apkDownloadUrl: string;
@@ -131,6 +132,7 @@ export const AdminVersionControlManager: React.FC = () => {
     isCurrent: false,
     disabled: false,
     forceUpdate: false,
+    disableVideoCard: false,
     minSupportedVersionCode: 1,
     downloadUrl: '',
     apkDownloadUrl: '',
@@ -438,6 +440,19 @@ export const AdminVersionControlManager: React.FC = () => {
     }
   };
 
+  // 1b. Toggle Video Card Disable / Enable
+  const handleToggleVideoCardAppVersion = async (rel: VersionRelease) => {
+    const newDisabledState = !rel.disableVideoCard;
+    try {
+      await appVersionService.toggleVideoCardDisabled(rel.version, newDisabledState);
+      showFeedback(
+        `Carte vidéo pour v${rel.version} ${newDisabledState ? '🚫 désactivée (affichage standard sans vidéo)' : '🎥 activée (carte vidéo animée active)'}.`
+      );
+    } catch (err: any) {
+      showFeedback(err.message || 'Erreur lors du changement de statut vidéo.', true);
+    }
+  };
+
   // 2. Set as Current Version
   const handleSetCurrentAppVersion = async (targetRel: VersionRelease) => {
     try {
@@ -464,6 +479,7 @@ export const AdminVersionControlManager: React.FC = () => {
   const handleOpenEditModal = (rel: VersionRelease) => {
     setEditingAppRelease({
       ...rel,
+      disableVideoCard: !!rel.disableVideoCard,
       videoCardTheme: rel.videoCardTheme || 'cyber-emerald',
       highlights: [...(rel.highlights || [])],
       highlightsEn: [...(rel.highlightsEn || [])],
@@ -538,6 +554,7 @@ export const AdminVersionControlManager: React.FC = () => {
       isCurrent: false,
       disabled: false,
       forceUpdate: false,
+      disableVideoCard: false,
       minSupportedVersionCode: (appReleases[0]?.versionCode || 1),
       downloadUrl: '',
       apkDownloadUrl: '',
@@ -607,6 +624,7 @@ export const AdminVersionControlManager: React.FC = () => {
         isCurrent: newAppReleaseForm.isCurrent,
         disabled: newAppReleaseForm.disabled,
         forceUpdate: newAppReleaseForm.forceUpdate,
+        disableVideoCard: newAppReleaseForm.disableVideoCard,
         minSupportedVersionCode: newAppReleaseForm.forceUpdate ? Number(newAppReleaseForm.minSupportedVersionCode) : undefined,
         downloadUrl: newAppReleaseForm.downloadUrl.trim() || undefined,
         apkDownloadUrl: newAppReleaseForm.apkDownloadUrl.trim() || undefined,
@@ -1561,10 +1579,15 @@ export const AdminVersionControlManager: React.FC = () => {
                                 </span>
                               )}
 
-                              {rel.videoCardTheme && (
+                              {rel.disableVideoCard ? (
+                                <span className="flex items-center gap-1 text-[10px] font-bold bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 px-2.5 py-0.5 rounded-full border border-amber-200 dark:border-amber-800/60">
+                                  <Film size={10} className="text-amber-500" />
+                                  🚫 Vidéo Désactivée (Standard)
+                                </span>
+                              ) : (
                                 <span className="flex items-center gap-1 text-[10px] font-bold bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300 px-2.5 py-0.5 rounded-full border border-purple-200 dark:border-purple-800/60">
                                   <Film size={10} className="text-purple-600 dark:text-purple-400" />
-                                  Style : {getPresetById(rel.videoCardTheme).titleFr}
+                                  🎥 Vidéo Active : {getPresetById(rel.videoCardTheme).titleFr}
                                 </span>
                               )}
                             </div>
@@ -1582,8 +1605,23 @@ export const AdminVersionControlManager: React.FC = () => {
                           </div>
                         </div>
 
-                        {/* Status Toggle Switch Control */}
+                        {/* Status Toggle Switch Controls */}
                         <div className="flex flex-wrap items-center gap-2">
+                          {/* Video Card Toggle Button */}
+                          <button
+                            onClick={() => handleToggleVideoCardAppVersion(rel)}
+                            title={rel.disableVideoCard ? 'Cliquer pour réactiver la carte vidéo animée' : 'Cliquer pour désactiver la carte vidéo pour cette version'}
+                            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all border shadow-sm ${
+                              rel.disableVideoCard
+                                ? 'bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-900/50 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700'
+                                : 'bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/40 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-700'
+                            }`}
+                          >
+                            <Film size={15} className={rel.disableVideoCard ? 'text-amber-500' : 'text-purple-500'} />
+                            <span>{rel.disableVideoCard ? 'Carte Vidéo : Désactivée' : 'Carte Vidéo : Active'}</span>
+                          </button>
+
+                          {/* Version Disabled Toggle Button */}
                           <button
                             onClick={() => handleToggleDisableAppVersion(rel)}
                             title={rel.disabled ? 'Cliquer pour activer cette version' : 'Cliquer pour désactiver et masquer cette version'}
@@ -2484,8 +2522,29 @@ export const AdminVersionControlManager: React.FC = () => {
                   </div>
                 )}
 
-                {/* Video Card Theme Selector */}
-                <div className="bg-gray-100/70 dark:bg-gray-800/80 p-4 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-3">
+                {/* Video Card Theme Selector & Disable Toggle */}
+                <div className="bg-gray-100/70 dark:bg-gray-800/80 p-4 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-4">
+                  {/* Disable Video Card Toggle */}
+                  <label className="flex items-center justify-between gap-3 p-3 rounded-xl bg-white dark:bg-gray-750 border border-gray-200 dark:border-gray-650 cursor-pointer shadow-sm">
+                    <div>
+                      <span className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                        <Film size={15} className={editingAppRelease.disableVideoCard ? 'text-amber-500' : 'text-purple-500'} />
+                        <span>Désactiver la carte vidéo animée pour cette version</span>
+                      </span>
+                      <span className="text-[11px] text-gray-500 dark:text-gray-400 block mt-0.5">
+                        {editingAppRelease.disableVideoCard 
+                          ? '🚫 La carte vidéo est désactivée : l\'utilisateur recevra un affichage standard sans animations vidéo.'
+                          : '🎥 La carte vidéo est active : l\'utilisateur verra le modèle vidéo sélectionné ci-dessous.'}
+                      </span>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={!!editingAppRelease.disableVideoCard}
+                      onChange={(e) => setEditingAppRelease({ ...editingAppRelease, disableVideoCard: e.target.checked })}
+                      className="w-5 h-5 rounded text-purple-600 focus:ring-purple-500 cursor-pointer shrink-0"
+                    />
+                  </label>
+
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
                       <Film size={16} className="text-purple-500" />
@@ -3133,8 +3192,29 @@ export const AdminVersionControlManager: React.FC = () => {
                 </div>
               )}
 
-              {/* Video Card Theme Selector */}
-              <div className="bg-gray-100/70 dark:bg-gray-800/80 p-4 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-3">
+              {/* Video Card Theme Selector & Disable Toggle */}
+              <div className="bg-gray-100/70 dark:bg-gray-800/80 p-4 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-4">
+                {/* Disable Video Card Toggle */}
+                <label className="flex items-center justify-between gap-3 p-3 rounded-xl bg-white dark:bg-gray-750 border border-gray-200 dark:border-gray-650 cursor-pointer shadow-sm">
+                  <div>
+                    <span className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                      <Film size={15} className={newAppReleaseForm.disableVideoCard ? 'text-amber-500' : 'text-purple-500'} />
+                      <span>Désactiver la carte vidéo animée pour cette version</span>
+                    </span>
+                    <span className="text-[11px] text-gray-500 dark:text-gray-400 block mt-0.5">
+                      {newAppReleaseForm.disableVideoCard 
+                        ? '🚫 La carte vidéo est désactivée : l\'utilisateur recevra un affichage standard sans animations vidéo.'
+                        : '🎥 La carte vidéo est active : l\'utilisateur verra le modèle vidéo sélectionné ci-dessous.'}
+                    </span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={!!newAppReleaseForm.disableVideoCard}
+                    onChange={(e) => setNewAppReleaseForm({ ...newAppReleaseForm, disableVideoCard: e.target.checked })}
+                    className="w-5 h-5 rounded text-purple-600 focus:ring-purple-500 cursor-pointer shrink-0"
+                  />
+                </label>
+
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <Film size={16} className="text-purple-500" />

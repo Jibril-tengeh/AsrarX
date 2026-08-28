@@ -9,7 +9,7 @@ import {
   Clock, CheckCircle, CheckCircle2, XCircle, Globe, Grid, List, Mail, Phone, Lock, Unlock, Bell, BellOff, Sparkles, Star, Share, ShieldAlert, Download, DownloadCloud, Crown, UserPlus, UserCheck, Award,
   FolderOpen, Copy, Radio, Type, Sliders, Maximize2, Activity, Terminal, RefreshCw, RotateCcw, AlertTriangle, Moon, ChevronDown, ChevronUp, Layout,
   AlignLeft, AlignCenter, AlignRight, AlignJustify, Camera, ShieldBan, Tag, Ticket, Check, ArrowLeft, Calculator,
-  ArrowUp, ArrowDown, MoveVertical, Compass, Gift
+  ArrowUp, ArrowDown, MoveVertical, Compass, Gift, AlertCircle, Share2, Edit3
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 
@@ -82,6 +82,8 @@ import {
 import { AdminSecurityAlertsManager } from '../../components/admin/AdminSecurityAlertsManager';
 import { BrandingSettings } from '../../components/admin/BrandingSettings';
 import { FloatingBackButtonSettings } from '../../components/admin/FloatingBackButtonSettings';
+import { AdminPdfDocumentsManager } from '../../components/admin/AdminPdfDocumentsManager';
+import { AdminPromoVideoAnnouncementManager } from '../../components/admin/AdminPromoVideoAnnouncementManager';
 import { PROMO_HOURS_OPTIONS, PROMO_HOURLY_OPTIONS, getPromoHourMessage, getPromoHourLabel, PromoDurationHours } from '../../utils/promoConfig';
 
 const LayoutSelector = ({ value, onChange, activeColor = 'emerald' }: { value: string, onChange: (val: string) => void, activeColor?: string }) => {
@@ -156,7 +158,7 @@ const LayoutSelector = ({ value, onChange, activeColor = 'emerald' }: { value: s
   );
 };
 
-type AdminTab = 'overview' | 'branding' | 'floating_button' | 'version_control' | 'referrals' | 'promo_codes' | 'security' | 'support' | 'users' | 'payments' | 'community' | 'features' | 'reciters' | 'ruqyah' | 'content' | 'notifications' | 'settings' | 'articles' | 'store' | 'grand_oaths' | 'categories' | 'seals' | 'book_covers' | 'media_storage';
+type AdminTab = 'overview' | 'pdf_documents' | 'branding' | 'floating_button' | 'version_control' | 'referrals' | 'promo_codes' | 'security' | 'support' | 'users' | 'payments' | 'community' | 'features' | 'reciters' | 'ruqyah' | 'content' | 'notifications' | 'settings' | 'articles' | 'store' | 'grand_oaths' | 'categories' | 'seals' | 'book_covers' | 'media_storage';
 
 interface Article {
   id: string;
@@ -244,7 +246,8 @@ export const SYSTEM_FEATURES = [
   { id: 'quick_widget', label: 'Widget Rapide AsrarHub (AsrarQuickWidget)', desc: 'Widget de recherche rapide, favoris et raccourcis d\'exploration sur le tableau de bord (désactivé par défaut)', category: 'system' },
   { id: 'direct_abjad_widget', label: 'Widget Calculateur Abjad Direct', desc: 'Widget interactif de calcul Abjad direct et décomposition élémentaire sur le Tableau de bord des Outils', category: 'system' },
   { id: 'explore', label: 'Explore', desc: 'Dashboard explorer (Secrets, Lexique, etc)', category: 'system' },
-  { id: 'store', label: 'Store (Boutique)', desc: 'Boutique en ligne', category: 'system' },
+  { id: 'store', label: 'Store (Boutique AsrarHub)', desc: 'Boutique en ligne, articles et services', category: 'system' },
+  { id: 'pdf', label: 'Bibliothèque PDF & Manuscrits', desc: 'Accès global à la bibliothèque de documents PDF, livres calligraphiques et manuscrits rares', category: 'system' },
   { id: 'community', label: 'Communauté', desc: 'Forum communautaire', category: 'system' },
   { id: 'journal', label: 'Journal Intime', desc: 'Notes personnelles', category: 'system' },
   { id: 'faq', label: 'FAQ / Assistant', desc: 'Assistant IA spirituel', category: 'system' },
@@ -296,33 +299,33 @@ const CollapsibleAdminCard: React.FC<{
   const cardSubtitle = subtitle || description;
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden transition-all">
+    <div className="bg-white dark:bg-gray-800 rounded-2xl sm:rounded-3xl shadow-sm border border-gray-100 dark:border-gray-700 overflow-hidden transition-all w-full max-w-full min-w-0">
       <div
         onClick={() => toggleCollapse(id)}
-        className="w-full p-5 sm:p-6 text-left flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:bg-gray-50/80 dark:hover:bg-gray-750 transition-colors cursor-pointer select-none"
+        className="w-full p-3.5 sm:p-5 md:p-6 text-left flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 hover:bg-gray-50/80 dark:hover:bg-gray-750 transition-colors cursor-pointer select-none"
       >
-        <div className="flex items-center gap-3 min-w-0 flex-1">
-          {icon && <div className="shrink-0 text-emerald-600 dark:text-emerald-400">{icon}</div>}
-          <div className="min-w-0 flex-1">
+        <div className="flex items-start sm:items-center gap-2.5 sm:gap-3 min-w-0 flex-1 w-full sm:w-auto">
+          {icon && <div className="shrink-0 text-emerald-600 dark:text-emerald-400 mt-0.5 sm:mt-0">{icon}</div>}
+          <div className="min-w-0 flex-1 max-w-full">
             <div className="flex items-center gap-2 flex-wrap">
-              <h3 className="font-bold text-gray-900 dark:text-white text-base sm:text-lg truncate">
+              <h3 className="font-bold text-gray-900 dark:text-white text-sm sm:text-base md:text-lg break-words max-w-full">
                 {title}
               </h3>
               {badge}
             </div>
             {cardSubtitle && (
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 line-clamp-1">
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 break-words line-clamp-2 sm:line-clamp-none">
                 {cardSubtitle}
               </p>
             )}
           </div>
         </div>
 
-        <div className="flex items-center gap-3 shrink-0 self-end sm:self-auto">
+        <div className="flex items-center justify-between sm:justify-end gap-2 shrink-0 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-0 border-gray-100 dark:border-gray-700/60 flex-wrap">
           {headerRight}
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs font-bold hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+          <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs font-bold hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors ml-auto sm:ml-0">
             <span>{isCollapsed ? 'Déplier' : 'Replier'}</span>
-            {isCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+            {isCollapsed ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
           </div>
         </div>
       </div>
@@ -334,7 +337,7 @@ const CollapsibleAdminCard: React.FC<{
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="p-5 sm:p-6 border-t border-gray-100 dark:border-gray-700 space-y-6"
+            className="p-3.5 sm:p-5 md:p-6 border-t border-gray-100 dark:border-gray-700 space-y-4 sm:space-y-6 w-full max-w-full overflow-x-auto"
           >
             {children}
           </motion.div>
@@ -1513,6 +1516,33 @@ export const AdminDashboard: React.FC = () => {
       await deleteDoc(doc(db, 'lexique_terms', id));
     } catch (error) {
       console.error("Error deleting term", error);
+    }
+  };
+
+  const handleUpdateUserStatus = async (userId: string, status: UserStatusType) => {
+    try {
+      const isBanned = status === "banned";
+      const isSuspended = status === "suspended";
+      const isPremium = status === "premium";
+      
+      await updateDoc(doc(db, "users", userId), {
+        isBanned,
+        isSuspended,
+        status,
+        subscriptionTier: isPremium ? "premium" : "free",
+        isPremium,
+      });
+      setUsers(prev => prev.map(u => u.id === userId ? {
+        ...u,
+        isBanned,
+        isSuspended,
+        status,
+        subscriptionTier: isPremium ? "premium" : "free",
+        isPremium,
+      } : u));
+      showToast("Statut utilisateur mis à jour");
+    } catch (e: any) {
+      showToast("Erreur: " + e.message, "error");
     }
   };
 
@@ -2815,6 +2845,7 @@ export const AdminDashboard: React.FC = () => {
       { id: 'support', label: 'Support & Emails', icon: Mail },
       { id: 'users', label: 'Utilisateurs', icon: Users },
       { id: 'payments', label: 'Paiements Directs', icon: CreditCard },
+      { id: 'pdf_documents', label: 'Livres & Manuscrits PDF', icon: FileText },
       { id: 'articles', label: 'Articles', icon: FileText },
       { id: 'media_storage', label: 'Stockage & Médias', icon: Icons.HardDrive },
       { id: 'categories', label: 'Catégories', icon: FolderOpen },
@@ -2876,6 +2907,41 @@ export const AdminDashboard: React.FC = () => {
         </div>
       </div>
     );
+  };
+
+  const getAutoIconForCategory = (catName: string): string => {
+    const lower = (catName || "").toLowerCase();
+    if (lower.includes("secret") || lower.includes("mystic")) return "Sparkles";
+    if (lower.includes("livre") || lower.includes("book") || lower.includes("manuscrit")) return "BookOpen";
+    if (lower.includes("coran") || lower.includes("sourate")) return "Book";
+    if (lower.includes("audio") || lower.includes("zikr") || lower.includes("priere")) return "Volume2";
+    if (lower.includes("sante") || lower.includes("guerison") || lower.includes("ruqyah")) return "Shield";
+    return "FolderOpen";
+  };
+
+  const handleDeleteCategory = async (catId: string) => {
+    if (!window.confirm("Supprimer cette catégorie ?")) return;
+    try {
+      await deleteDoc(doc(db, "categories", catId));
+      setCategories(prev => prev.filter(c => c.id !== catId));
+      showToast("Catégorie supprimée");
+    } catch (e: any) {
+      showToast("Erreur: " + e.message, "error");
+    }
+  };
+
+  const handleDeleteSubCategory = async (catId: string, subId: string) => {
+    if (!window.confirm("Supprimer cette sous-catégorie ?")) return;
+    try {
+      const parent = categories.find(c => c.id === catId);
+      if (!parent) return;
+      const updated = (parent.subCategories || []).filter((s: any) => s.id !== subId);
+      await setDoc(doc(db, "categories", catId), { subCategories: updated }, { merge: true });
+      setCategories(prev => prev.map(c => c.id === catId ? { ...c, subCategories: updated } : c));
+      showToast("Sous-catégorie supprimée");
+    } catch (e: any) {
+      showToast("Erreur: " + e.message, "error");
+    }
   };
 
   const handleQuickCreateCategory = async (name: string, nameEn: string, nameHa: string) => {
@@ -4329,6 +4395,9 @@ export const AdminDashboard: React.FC = () => {
           </div>
         </div>
 
+        {/* Video Card Promo Announcement Manager */}
+        <AdminPromoVideoAnnouncementManager promoCodes={promoCodes} />
+
         {/* Formulaire de création */}
         <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-gray-100 dark:border-gray-700 pb-4 mb-6">
@@ -4352,9 +4421,9 @@ export const AdminDashboard: React.FC = () => {
               </button>
               <div className="h-4 w-px bg-gray-200 dark:bg-gray-700 mx-1 hidden sm:block" />
               <span className="text-[10px] font-bold uppercase text-gray-400 mr-1">Raccourcis :</span>
-              {PROMO_HOURS_OPTIONS.map(h => (
+              {PROMO_HOURS_OPTIONS.map((h, hIdx) => (
                 <button
-                  key={h}
+                  key={`promo-shortcut-${h}-${hIdx}`}
                   type="button"
                   onClick={() => quickSelectHours(h)}
                   className="px-2.5 py-1 rounded-lg bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/50 border border-amber-200 dark:border-amber-800 text-[11px] font-bold text-amber-800 dark:text-amber-300 transition-colors cursor-pointer"
@@ -4426,9 +4495,9 @@ export const AdminDashboard: React.FC = () => {
                     Durée d'accès (Heures) *
                   </label>
                   <div className="grid grid-cols-6 gap-1">
-                    {PROMO_HOURS_OPTIONS.map((hours) => (
+                    {PROMO_HOURS_OPTIONS.map((hours, hIdx) => (
                       <button
-                        key={hours}
+                        key={`promo-duration-${hours}-${hIdx}`}
                         type="button"
                         onClick={() => setNewPromo({ ...newPromo, durationHours: hours })}
                         className={`py-2.5 rounded-xl text-xs font-black transition-all cursor-pointer ${
@@ -5388,280 +5457,180 @@ export const AdminDashboard: React.FC = () => {
     };
 
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 w-full max-w-full min-w-0">
         {/* Global Expand / Collapse Control Banner */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 bg-emerald-500/10 border border-emerald-500/20 dark:bg-emerald-950/20 dark:border-emerald-800/30 rounded-2xl">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3.5 sm:p-4 bg-emerald-500/10 border border-emerald-500/20 dark:bg-emerald-950/20 dark:border-emerald-800/30 rounded-2xl w-full max-w-full">
+          <div className="flex items-center gap-2 min-w-0">
             <Settings size={18} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
-            <span className="text-xs font-bold text-gray-800 dark:text-gray-200">
+            <span className="text-xs font-bold text-gray-800 dark:text-gray-200 break-words">
               Toutes les sections sont fermées par défaut pour une meilleure visibilité.
             </span>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto justify-end">
             <button
               type="button"
               onClick={() => setAllAdminSectionsCollapse(false)}
-              className="px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer shadow-sm"
+              className="flex-1 sm:flex-initial px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer shadow-sm text-center"
             >
               Tout déplier
             </button>
             <button
               type="button"
               onClick={() => setAllAdminSectionsCollapse(true)}
-              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-sm"
+              className="flex-1 sm:flex-initial px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-sm text-center"
             >
               Tout replier
             </button>
           </div>
         </div>
 
-        {/* 1. GESTION DES OUTILS UTILISATEUR */}
+        {/* 1. User Tools Card */}
         <CollapsibleAdminCard
           id="feat_user_tools"
-          title="Gestion Globale des Outils Utilisateur"
-          subtitle="Gérez l'accès à tous les outils pour tous les utilisateurs (Actif, Premium, Maintenance, Inactif, Bloqué)."
-          icon={<ToggleLeft size={22} className="text-emerald-600 dark:text-emerald-400" />}
-          badge={
-            <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">
-              {ALL_USER_TOOLS.length} Outils
-            </span>
-          }
+          title="Gestion des Outils Utilisateur"
+          subtitle="Gérez l'accès aux 38+ outils de l'application (Actif, Premium, Maintenance, Inactif, Bloqué)."
+          icon={<ToggleLeft size={22} className="text-emerald-500 shrink-0" />}
         >
-          {/* Status Counter Pills */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pb-2">
-            <div className="p-3 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 rounded-xl flex items-center justify-between">
-              <span className="text-xs font-semibold text-emerald-800 dark:text-emerald-300">Actifs</span>
-              <span className="text-sm font-black text-emerald-700 dark:text-emerald-400 bg-emerald-200/50 dark:bg-emerald-900/50 px-2 py-0.5 rounded-lg">{countActive}</span>
+          <div className="space-y-4">
+            {/* Search & Category Filter */}
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 w-full max-w-full">
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Sélectionnez le statut de chaque outil individuellement :
+              </p>
+              <div className="relative w-full sm:w-64 shrink-0">
+                <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                  <Search size={16} />
+                </span>
+                <input
+                  type="text"
+                  value={featureSearch}
+                  onChange={(e) => setFeatureSearch(e.target.value)}
+                  placeholder="Rechercher un outil..."
+                  className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-xs text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
+                />
+              </div>
             </div>
-            <div className="p-3 bg-violet-50 dark:bg-violet-950/20 border border-violet-100 dark:border-violet-900/30 rounded-xl flex items-center justify-between">
-              <span className="text-xs font-semibold text-violet-800 dark:text-violet-300">Premium</span>
-              <span className="text-sm font-black text-violet-700 dark:text-violet-400 bg-violet-200/50 dark:bg-violet-900/50 px-2 py-0.5 rounded-lg">{countPremium}</span>
-            </div>
-            <div className="p-3 bg-amber-50 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/30 rounded-xl flex items-center justify-between">
-              <span className="text-xs font-semibold text-amber-800 dark:text-amber-300">Maintenance</span>
-              <span className="text-sm font-black text-amber-700 dark:text-amber-400 bg-amber-200/50 dark:bg-amber-900/50 px-2 py-0.5 rounded-lg">{countMaintenance}</span>
-            </div>
-            <div className="p-3 bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/30 rounded-xl flex items-center justify-between">
-              <span className="text-xs font-semibold text-red-800 dark:text-red-300">Bloqués / Inactifs</span>
-              <span className="text-sm font-black text-red-700 dark:text-red-400 bg-red-200/50 dark:bg-red-900/50 px-2 py-0.5 rounded-lg">{countDisabled}</span>
-            </div>
-          </div>
 
-          {/* Quick Actions en Masse */}
-          <div className="bg-gray-50 dark:bg-gray-800/80 p-4 rounded-2xl border border-gray-150 dark:border-gray-700/60 space-y-3">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <span className="text-xs font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wider flex items-center gap-1.5">
-                <span className="text-amber-500">⚡</span> Actions Globales en Masse ({filteredTools.length} affichés) :
+            {/* Quick Bulk Action Buttons */}
+            <div className="flex flex-wrap items-center gap-2 p-3 bg-gray-50 dark:bg-gray-900/60 rounded-xl border border-gray-100 dark:border-gray-800">
+              <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider mr-1">
+                Actions groupées ({filteredTools.length}) :
               </span>
-              <span className="text-[11px] font-medium text-gray-500 dark:text-gray-400">
-                Applique le statut immédiatement aux {filteredTools.length} outils sélectionnés
-              </span>
-            </div>
-            <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-center gap-2">
               <button
                 type="button"
                 disabled={bulkUpdatingStatus !== null}
                 onClick={() => handleBulkApplyStatus('active')}
-                className={`px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer ${
-                  bulkUpdatingStatus === 'active' ? 'ring-2 ring-emerald-400 ring-offset-2 opacity-90 scale-98' : ''
-                }`}
+                className="px-2.5 py-1 text-xs font-bold rounded-lg bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 hover:bg-emerald-200 transition-colors"
               >
-                <CheckCircle2 size={15} className={bulkUpdatingStatus === 'active' ? 'animate-spin' : ''} />
-                <span>{bulkUpdatingStatus === 'active' ? 'Application...' : 'Tout Activer'}</span>
+                Tous Actifs ({countActive})
               </button>
-
               <button
                 type="button"
                 disabled={bulkUpdatingStatus !== null}
                 onClick={() => handleBulkApplyStatus('premium')}
-                className={`px-3.5 py-2 bg-violet-600 hover:bg-violet-700 active:scale-95 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer ${
-                  bulkUpdatingStatus === 'premium' ? 'ring-2 ring-violet-400 ring-offset-2 opacity-90 scale-98' : ''
-                }`}
+                className="px-2.5 py-1 text-xs font-bold rounded-lg bg-violet-100 text-violet-800 dark:bg-violet-900/40 dark:text-violet-300 hover:bg-violet-200 transition-colors"
               >
-                <Sparkles size={15} className={bulkUpdatingStatus === 'premium' ? 'animate-spin' : ''} />
-                <span>{bulkUpdatingStatus === 'premium' ? 'Application...' : 'Tout en Premium'}</span>
+                Tous Premium ({countPremium})
               </button>
-
               <button
                 type="button"
                 disabled={bulkUpdatingStatus !== null}
                 onClick={() => handleBulkApplyStatus('maintenance')}
-                className={`px-3.5 py-2 bg-amber-600 hover:bg-amber-700 active:scale-95 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer ${
-                  bulkUpdatingStatus === 'maintenance' ? 'ring-2 ring-amber-400 ring-offset-2 opacity-90 scale-98' : ''
-                }`}
+                className="px-2.5 py-1 text-xs font-bold rounded-lg bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 hover:bg-amber-200 transition-colors"
               >
-                <AlertTriangle size={15} className={bulkUpdatingStatus === 'maintenance' ? 'animate-spin' : ''} />
-                <span>{bulkUpdatingStatus === 'maintenance' ? 'Application...' : 'Tout en Maintenance'}</span>
+                Tous Maintenance ({countMaintenance})
               </button>
-
               <button
                 type="button"
                 disabled={bulkUpdatingStatus !== null}
                 onClick={() => handleBulkApplyStatus('disabled')}
-                className={`px-3.5 py-2 bg-red-600 hover:bg-red-700 active:scale-95 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer ${
-                  bulkUpdatingStatus === 'disabled' ? 'ring-2 ring-red-400 ring-offset-2 opacity-90 scale-98' : ''
-                }`}
+                className="px-2.5 py-1 text-xs font-bold rounded-lg bg-red-100 text-red-800 dark:bg-red-900/40 dark:text-red-300 hover:bg-red-200 transition-colors"
               >
-                <ShieldAlert size={15} className={bulkUpdatingStatus === 'disabled' ? 'animate-spin' : ''} />
-                <span>{bulkUpdatingStatus === 'disabled' ? 'Application...' : 'Tout Bloquer'}</span>
+                Tous Bloqués ({countDisabled})
               </button>
             </div>
-          </div>
 
-          {/* Search & Category Filter */}
-          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-            {/* Category Tabs */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
-              {[
-                { id: 'all', label: `Tous (${ALL_USER_TOOLS.length})` },
-                { id: 'simple', label: 'Simples' },
-                { id: 'advanced', label: 'Secrets & Avancés' },
-                { id: 'system', label: 'Système' }
-              ].map(cat => (
-                <button
-                  key={cat.id}
-                  type="button"
-                  onClick={() => setFeatureCategoryFilter(cat.id as any)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-colors cursor-pointer ${
-                    featureCategoryFilter === cat.id
-                      ? 'bg-emerald-600 text-white shadow-xs'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                  }`}
-                >
-                  {cat.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Search Input */}
-            <div className="relative w-full sm:w-64 shrink-0">
-              <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                <Search size={16} />
-              </span>
-              <input
-                type="text"
-                value={featureSearch}
-                onChange={(e) => setFeatureSearch(e.target.value)}
-                placeholder="Rechercher un outil..."
-                className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-xs text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
-              />
-            </div>
-          </div>
-
-          {filteredTools.length === 0 ? (
-            <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-              <Settings className="mx-auto mb-3 opacity-30" size={40} />
-              <p className="font-medium text-sm">Aucun outil ne correspond à votre recherche.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {filteredTools.map((tool) => {
-                const status = featureToggles[`tool_${tool.id}`] || (['inspector', 'quick_widget'].includes(tool.id) ? 'inactive' : 'active');
-                return (
-                  <div 
-                    key={tool.id} 
-                    className={`flex flex-col p-4 rounded-2xl border transition-all ${
-                      status === 'active' ? 'bg-emerald-50/20 border-emerald-100 dark:bg-gray-800 dark:border-emerald-900/30' :
-                      status === 'premium' ? 'bg-violet-50/20 border-violet-100 dark:bg-gray-800 dark:border-violet-900/30' :
-                      status === 'maintenance' ? 'bg-amber-50/20 border-amber-100 dark:bg-gray-800 dark:border-amber-900/30' :
-                      'bg-red-50/20 border-red-100 dark:bg-gray-800 dark:border-red-900/30'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h4 className="font-bold text-gray-900 dark:text-white text-sm">{tool.label}</h4>
-                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-wider ${
-                            tool.category === 'advanced' ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300' :
-                            tool.category === 'system' ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' :
-                            'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
-                          }`}>
-                            {tool.category === 'advanced' ? 'Avancé' : tool.category === 'system' ? 'Système' : 'Standard'}
-                          </span>
-                        </div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{tool.desc}</p>
+            {filteredTools.length === 0 ? (
+              <div className="text-center py-12 text-gray-500 dark:text-gray-400">
+                <AlertCircle className="mx-auto mb-3 opacity-30" size={40} />
+                <p className="font-medium text-sm">Aucun outil ne correspond à votre recherche.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4">
+                {filteredTools.map((tool) => {
+                  const currentStatus = featureToggles[`tool_${tool.id}`] || (['inspector', 'quick_widget'].includes(tool.id) ? 'inactive' : 'active');
+                  return (
+                    <div
+                      key={tool.id}
+                      className="flex flex-col p-3.5 sm:p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-3 hover:border-gray-250 dark:hover:border-gray-650 transition-all min-w-0"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <h4 className="font-bold text-sm text-gray-900 dark:text-white break-words">{tool.label}</h4>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 break-words line-clamp-2">{tool.desc}</p>
+                      </div>
+                      <div className="flex items-center gap-2 mt-auto">
+                        <select
+                          value={currentStatus}
+                          onChange={(e) => handleToggleFeature(`tool_${tool.id}`, e.target.value)}
+                          className={`text-xs font-semibold px-3 py-1.5 rounded-lg border-0 cursor-pointer w-full ${
+                            currentStatus === "active"
+                              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400"
+                              : currentStatus === "premium"
+                              ? "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-400"
+                              : currentStatus === "maintenance"
+                              ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400"
+                              : "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400"
+                          }`}
+                        >
+                          <option value="active">Actif (Tous)</option>
+                          <option value="premium">Premium (VIP)</option>
+                          <option value="maintenance">Maintenance</option>
+                          <option value="inactive">Inactif</option>
+                          <option value="disabled">Désactivé (Bloqué)</option>
+                        </select>
                       </div>
                     </div>
-                    
-                    <div className="flex items-center justify-between gap-3 mt-4 pt-3 border-t border-gray-150 dark:border-gray-700/60">
-                      <span className="text-[11px] font-medium text-gray-500 dark:text-gray-400">
-                        Statut pour tous :
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <ToolStatusPicker
-                          value={status}
-                          onChange={(newVal) => handleToggleFeature(`tool_${tool.id}`, newVal, tool.label)}
-                          toolName={tool.label}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </CollapsibleAdminCard>
 
-        {/* 2. SHAMSOUL MA'ARIF & AL-BUNI GRANULAR TOOL CONTROL */}
+        {/* 2. Shams al-Ma'arif & Al-Buni Granular */}
         <CollapsibleAdminCard
           id="feat_shams_buni"
           title="Contrôle Granulaire Shams al-Ma'arif & Al-Buni"
           subtitle="Contrôlez l'accès individuel pour chaque sous-outil et autorisations de téléchargement (PNG, PDF, Parchemin)."
-          icon={<Crown size={22} className="text-amber-500" />}
+          icon={<Sparkles size={22} className="text-amber-500 shrink-0" />}
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4">
             {[
-              { id: 'shams_main', label: 'Corpus Principal Shams al-Ma\'arif', desc: 'Accès au tableau de bord général Shams' },
-              { id: 'shams_buni_40', label: 'Les 40 Systèmes Al-Buni', desc: 'Visualisation, règles et khatims des 40 méthodes d\'Al-Buni' },
-              { id: 'shams_chapters', label: 'Les 12 Chapitres de Shams', desc: 'Lecteur et compendium des 12 chapitres sacrés' },
-              { id: 'shams_secrets', label: 'Tous les Secrets & Formules', desc: 'Catalogue complet des secrets théurgiques' },
-              { id: 'shams_generator', label: 'Générateur Théurgique Al-Buni', desc: 'Moteur d\'extraction abjad, calculs et carré 3x3' },
-              { id: 'shams_awfaq', label: 'Galerie des Awfaq & Sceaux', desc: 'Carrés magiques et sceaux sacrés' },
-              { id: 'shams_huruf', label: 'Table des 28 Haruffa & Éléments', desc: 'Tableau des correspondances des 28 lettres' },
-              { id: 'shams_khatim_png', label: 'Téléchargement Image PNG Sceau', desc: 'Exportation directe des Khatims en image HD PNG' },
-              { id: 'shams_khatim_pdf', label: 'Téléchargement Document PDF Sceau', desc: 'Exportation des Khatims au format document PDF' },
-              { id: 'shams_parchment', label: 'Export Parchemin Sacré', desc: 'Aperçu et téléchargement de parchemin sacré' },
-              { id: 'shams_zairja', label: 'Za\'irajah Astro-Divinatoire', desc: 'Machine divinatoire des 28 cases' },
-              { id: 'shams_taksir_spiral', label: 'Taksir Spirale Al-Buni', desc: 'Technique de permutation spirale de mots' },
-              { id: 'shams_istikhraj_angels', label: 'Extraction Angélique (Al-Khouddam)', desc: 'Calcul des anges et serviteurs célestes' },
-              { id: 'shams_mizan_elements', label: 'Balance des 4 Éléments (Mizān)', desc: 'Équilibre des éléments feu, air, eau, terre' }
-            ].map((subTool) => {
-              const status = featureToggles[subTool.id] || 'active';
-              const downloadStatus = featureToggles[`download_${subTool.id}`] !== 'inactive';
-
+              { id: 'shams_main', label: "Corpus Principal Shams al-Ma'arif", desc: 'Accès au tableau de bord général Shams' },
+              { id: 'shams_buni_40', label: 'Les 40 Systèmes Al-Buni', desc: "Visualisation, règles et khatims des 40 méthodes d'Al-Buni" },
+              { id: 'shams_chapters', label: 'Les 12 Chapitres de Shams', desc: "Lecteur et compendium des 12 chapitres sacrés" },
+              { id: 'shams_secrets', label: 'Tous les Secrets & Formules', desc: "Catalogue complet des secrets théurgiques" },
+              { id: 'shams_generator', label: "Générateur Théurgique Al-Buni", desc: "Moteur de génération et calculs théurgiques" },
+              { id: 'shams_planetary_hours', label: "Heures Planétaires Théurgiques", desc: "Calcul précis des mansions et influences" }
+            ].map((sub) => {
+              const status = featureToggles[sub.id] || 'active';
               return (
-                <div key={subTool.id} className="p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl space-y-3 hover:border-amber-500/40 transition-all">
-                  <div>
-                    <h4 className="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-1.5">
-                      <Sparkles size={14} className="text-amber-500" />
-                      {subTool.label}
-                    </h4>
-                    <p className="text-xs text-gray-500 mt-0.5">{subTool.desc}</p>
+                <div key={sub.id} className="p-3.5 sm:p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl space-y-3 min-w-0">
+                  <div className="min-w-0">
+                    <h4 className="font-bold text-sm text-gray-900 dark:text-white break-words">{sub.label}</h4>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 break-words">{sub.desc}</p>
                   </div>
-
-                  <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-gray-200/50 dark:border-gray-700/50">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[11px] font-bold text-gray-500">Statut:</span>
-                      <ToolStatusPicker
-                        value={status}
-                        onChange={(newVal) => handleToggleFeature(subTool.id, newVal, subTool.label)}
-                        toolName={subTool.label}
-                        size="sm"
-                      />
-                    </div>
-
-                    <label className="flex items-center gap-2 cursor-pointer bg-white dark:bg-gray-800 px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-700">
-                      <Download size={13} className={downloadStatus ? 'text-emerald-500' : 'text-red-500'} />
-                      <span className="text-[11px] font-semibold text-gray-700 dark:text-gray-300">
-                        {downloadStatus ? 'Téléchargement: AUTORISÉ' : 'Téléchargement: BLOQUÉ'}
-                      </span>
-                      <input
-                        type="checkbox"
-                        checked={downloadStatus}
-                        onChange={(e) => handleToggleFeature(`download_${subTool.id}`, e.target.checked ? 'active' : 'inactive', subTool.label)}
-                        className="sr-only"
-                      />
-                    </label>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={status}
+                      onChange={(e) => handleToggleFeature(sub.id, e.target.value)}
+                      className="text-xs font-semibold px-3 py-1.5 rounded-lg border-0 cursor-pointer bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 w-full"
+                    >
+                      <option value="active">Actif (Tous)</option>
+                      <option value="premium">Premium</option>
+                      <option value="maintenance">Maintenance</option>
+                      <option value="inactive">Inactif / Bloqué</option>
+                    </select>
                   </div>
                 </div>
               );
@@ -5669,64 +5638,46 @@ export const AdminDashboard: React.FC = () => {
           </div>
         </CollapsibleAdminCard>
 
-        {/* 2.5. CONTRÔLE GRANULAIRE DES 12 MANUSCRITS SACRÉS */}
+        {/* 3. 12 Sacred Manuscripts Granular */}
         <CollapsibleAdminCard
           id="feat_sacred_books"
           title="Contrôle Granulaire des 12 Manuscrits Sacrés"
           subtitle="Gérez le statut (Actif, Premium, Maintenance, Inactif, Bloqué) et les autorisations de téléchargement des Sceaux pour chacun des 12 livres."
-          icon={<BookOpen size={22} className="text-amber-500" />}
+          icon={<BookOpen size={22} className="text-amber-500 shrink-0" />}
         >
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4">
             {[
               { id: 'book_barhatiah', label: '1. Sharh al-Barhatiah', desc: 'Ahmad al-Buni - Le Commentaire sur le Grand Serment' },
               { id: 'book_picatrix', label: '2. Ghayat al-Hakim / Picatrix', desc: 'Maslama al-Majriti - Le But du Sage' },
-              { id: 'book_lataif_isharat', label: '3. Lata\'if al-Isharat', desc: 'Ahmad al-Buni - Subtilités des Lettres Célestes' },
-              { id: 'book_al_ajnas', label: '4. Al-Ajnas (Livre des Espèces)', desc: 'Asif ibn Barkhiya - Sceaux Salomuniques' },
+              { id: 'book_lataif_isharat', label: "3. Lata'if al-Isharat", desc: 'Ahmad al-Buni - Subtilités des Lettres Célestes' },
+              { id: 'book_al_ajnas', label: '4. Al-Ajnas (Livre des Espèces)', desc: 'Asif ibn Barkhiya - Sceaux Salomoniques' },
               { id: 'book_futuhat_makkiyya', label: '5. Al-Futuhat al-Makkiyya', desc: 'Ibn Arabi - Les Illuminations de la Mecque' },
               { id: 'book_shumush_anwar', label: '6. Shumush al-Anwar', desc: 'Ibn al-Hajj al-Tilimsani - Soleils des Lumières' },
-              { id: 'book_kitab_jifr', label: '7. Kitab al-Jifr', desc: 'Imam Ja\'far al-Sadiq - Prescience & Haruffa' },
-              { id: 'book_sirr_khalqah', label: '8. Sirr al-Khalqah (Table d\'Émeraude)', desc: 'Balinas al-Hakim - Secret de la Création' },
+              { id: 'book_kitab_jifr', label: "7. Kitab al-Jifr", desc: "Imam Ja'far al-Sadiq - Prescience & Haruffa" },
+              { id: 'book_sirr_khalqah', label: "8. Sirr al-Khalqah (Table d'Émeraude)", desc: 'Balinas al-Hakim - Secret de la Création' },
               { id: 'book_kanz_asrar', label: '9. Kanz al-Asrar', desc: 'Ahmad al-Buni - Le Trésor des Carrés (Awfaq)' },
-              { id: 'book_ufuk_mubin', label: '10. Al-Ufuk al-Mubin', desc: 'Mir Damad - L\'Horizon Lumineux' },
-              { id: 'book_lumah_nuraniyyah', label: '11. Al-Lum\'ah al-Nuraniyyah', desc: 'Ahmad al-Buni - Litanies & Ism al-Azam' },
-              { id: 'book_kitab_diryak', label: '12. Kitab al-Diryak (Thériaque)', desc: 'Pseudo-Galien - Médecine & Guérison' }
-            ].map((bookItem) => {
-              const status = featureToggles[bookItem.id] || 'active';
-              const downloadStatus = featureToggles[`download_${bookItem.id}`] !== 'inactive';
-
+              { id: 'book_ufuk_mubin', label: "10. Al-Ufuk al-Mubin", desc: "Mir Damad - L'Horizon Lumineux" },
+              { id: 'book_lumah_nuraniyyah', label: "11. Al-Lum'ah al-Nuraniyyah", desc: "Ahmad al-Buni - Litanies & Ism al-Azam" },
+              { id: 'book_kitab_diryak', label: '12. Kitab al-Diryak (Thériaque)', desc: "Pseudo-Galien - Médecine & Guérison" }
+            ].map((book) => {
+              const status = featureToggles[book.id] || 'active';
               return (
-                <div key={bookItem.id} className="p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl space-y-3 hover:border-amber-500/40 transition-all">
-                  <div>
-                    <h4 className="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-1.5">
-                      <Sparkles size={14} className="text-amber-500" />
-                      {bookItem.label}
-                    </h4>
-                    <p className="text-xs text-gray-500 mt-0.5">{bookItem.desc}</p>
+                <div key={book.id} className="p-3.5 sm:p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl space-y-3 min-w-0">
+                  <div className="min-w-0">
+                    <h4 className="font-bold text-sm text-gray-900 dark:text-white break-words">{book.label}</h4>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 break-words">{book.desc}</p>
                   </div>
-
-                  <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-gray-200/50 dark:border-gray-700/50">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[11px] font-bold text-gray-500">Statut:</span>
-                      <ToolStatusPicker
-                        value={status}
-                        onChange={(newVal) => handleToggleFeature(bookItem.id, newVal, bookItem.label)}
-                        toolName={bookItem.label}
-                        size="sm"
-                      />
-                    </div>
-
-                    <label className="flex items-center gap-2 cursor-pointer bg-white dark:bg-gray-800 px-2.5 py-1 rounded-lg border border-gray-200 dark:border-gray-700">
-                      <Download size={13} className={downloadStatus ? 'text-emerald-500' : 'text-red-500'} />
-                      <span className="text-[11px] font-semibold text-gray-700 dark:text-gray-300">
-                        {downloadStatus ? 'Sceau PNG & Parchemin: AUTORISÉ' : 'Sceau PNG & Parchemin: BLOQUÉ'}
-                      </span>
-                      <input
-                        type="checkbox"
-                        checked={downloadStatus}
-                        onChange={(e) => handleToggleFeature(`download_${bookItem.id}`, e.target.checked ? 'active' : 'inactive', bookItem.label)}
-                        className="sr-only"
-                      />
-                    </label>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={status}
+                      onChange={(e) => handleToggleFeature(book.id, e.target.value)}
+                      className="text-xs font-semibold px-3 py-1.5 rounded-lg border-0 cursor-pointer bg-white dark:bg-gray-700 text-gray-800 dark:text-gray-200 w-full"
+                    >
+                      <option value="active">Actif (Tous)</option>
+                      <option value="premium">Premium</option>
+                      <option value="maintenance">Maintenance</option>
+                      <option value="inactive">Inactif / Bloqué</option>
+                    </select>
                   </div>
                 </div>
               );
@@ -5734,95 +5685,73 @@ export const AdminDashboard: React.FC = () => {
           </div>
         </CollapsibleAdminCard>
 
-        {/* 3. GLOBAL DOWNLOADS CONTROL & USER ACCOUNTS BLOCK */}
+        {/* 4. Downloads & Documents */}
         <CollapsibleAdminCard
           id="feat_downloads"
           title="Contrôle Général des Téléchargements & Documents"
           subtitle="Activez ou désactivez globalement la possibilité d'exporter les Sceaux, PNG, PDF et Parchemins."
-          icon={<DownloadCloud size={22} className="text-amber-600 dark:text-amber-400" />}
+          icon={<Download size={22} className="text-emerald-500 shrink-0" />}
         >
-          <div className="space-y-6">
-            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
-              <div>
-                <p className="text-xs text-gray-500">
-                  Verrouillez ou déverrouillez les téléchargements pour l'ensemble des utilisateurs de la plateforme.
-                </p>
-              </div>
-
-              <div className="flex items-center gap-3 bg-gray-50 dark:bg-gray-750 p-3 rounded-2xl border border-gray-100 dark:border-gray-700">
-                <span className="text-xs font-bold text-gray-800 dark:text-gray-200">
-                  Téléchargements Globaux :
-                </span>
-                <button
-                  type="button"
-                  onClick={() => handleToggleFeature('download_global_enabled', featureToggles['download_global_enabled'] === 'inactive' ? 'active' : 'inactive')}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    featureToggles['download_global_enabled'] !== 'inactive' ? 'bg-emerald-600' : 'bg-gray-300 dark:bg-gray-600'
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Téléchargements Globaux :</span>
+              <button
+                type="button"
+                onClick={() => handleToggleFeature('allow_downloads', !featureToggles.allow_downloads)}
+                className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors ${
+                  featureToggles.allow_downloads !== false ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
+                }`}
+              >
+                <div
+                  className={`w-4 h-4 rounded-full bg-white transition-transform ${
+                    featureToggles.allow_downloads !== false ? 'translate-x-6' : 'translate-x-0'
                   }`}
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      featureToggles['download_global_enabled'] !== 'inactive' ? 'translate-x-6' : 'translate-x-1'
-                    }`}
-                  />
-                </button>
-                <span className={`text-xs font-extrabold ${featureToggles['download_global_enabled'] !== 'inactive' ? 'text-emerald-600' : 'text-red-500'}`}>
-                  {featureToggles['download_global_enabled'] !== 'inactive' ? 'ACTIVÉ (Autorisé)' : 'DÉSACTIVÉ (Bloqué globalement)'}
-                </span>
-              </div>
+                />
+              </button>
             </div>
-
-            <div className="bg-gray-50 dark:bg-gray-750 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 space-y-2">
-              <label className="block text-xs font-bold text-gray-800 dark:text-gray-200">
+            <div className="space-y-1">
+              <label className="text-xs text-gray-500 dark:text-gray-400">
                 Comptes ou Numéros de téléphone spécifiques bloqués (séparés par des virgules) :
               </label>
               <input
                 type="text"
-                value={featureToggles['blocked_phone_numbers'] || ''}
-                onChange={(e) => handleToggleFeature('blocked_phone_numbers', e.target.value)}
-                placeholder="Ex: +22790000000, +2348000000000, +221770000000"
-                className="w-full px-3.5 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-mono text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                value={featureToggles.blocked_download_users || ''}
+                onChange={(e) => handleToggleFeature('blocked_download_users', e.target.value)}
+                placeholder="ex: user_123, +22790000000"
+                className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white outline-none"
               />
-              <p className="text-[11px] text-gray-500">
-                Les utilisateurs utilisant l'un de ces numéros ou comptes bloqués verront le Pop-Up d'accès restreint.
-              </p>
             </div>
           </div>
         </CollapsibleAdminCard>
 
-        {/* 4. GESTION DES ACCÈS ADMIN */}
+        {/* 5. Admin Access Control */}
         <CollapsibleAdminCard
           id="feat_admin_access"
           title="Gestion des Accès Admin"
           subtitle="Autorisez ou restreignez les sous-modules du panneau d'administration."
-          icon={<Shield size={22} className="text-emerald-600 dark:text-emerald-400" />}
+          icon={<Shield size={22} className="text-indigo-500 shrink-0" />}
         >
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {[
-              { id: 'admin_users', label: 'Gestion Utilisateurs' },
-              { id: 'admin_articles', label: 'Gestion Articles' },
-              { id: 'admin_community', label: 'Modération Communauté' },
-              { id: 'admin_notifications', label: 'Envoi Notifications' },
-              { id: 'admin_ruqyah', label: 'Gestion Audios Ruqyah' },
-              { id: 'admin_lexique', label: 'Gestion Lexique' }
-            ].map((tool) => {
-               const active = featureToggles[`admin_tool_${tool.id}`] !== false;
-               return (
-                <div key={tool.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4">
-                  <div>
-                    <h4 className="font-bold text-gray-900 dark:text-white">{tool.label}</h4>
-                  </div>
+              { id: 'admin_can_manage_users', label: 'Gestion des Utilisateurs' },
+              { id: 'admin_can_manage_payments', label: 'Gestion des Paiements' },
+              { id: 'admin_can_manage_articles', label: 'Gestion des Articles & CMS' },
+              { id: 'admin_can_manage_features', label: 'Gestion des Outils & Statuts' },
+              { id: 'admin_can_manage_promo_codes', label: 'Gestion des Codes Promo' },
+              { id: 'admin_can_manage_settings', label: 'Paramètres Globaux du Système' }
+            ].map((perm) => {
+              const enabled = featureToggles[perm.id] !== false;
+              return (
+                <div key={perm.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-750 rounded-xl border border-gray-100 dark:border-gray-700">
+                  <span className="text-xs font-semibold text-gray-800 dark:text-gray-200">{perm.label}</span>
                   <button
-                    onClick={() => handleToggleFeature(`admin_tool_${tool.id}`, active)}
-                    className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors ${
-                      active ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
+                    type="button"
+                    onClick={() => handleToggleFeature(perm.id, !enabled)}
+                    className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors ${
+                      enabled ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
                     }`}
                   >
-                    <div
-                      className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${
-                        active ? 'translate-x-6' : 'translate-x-0'
-                      }`}
-                    />
+                    <div className={`w-4 h-4 rounded-full bg-white transition-transform ${enabled ? 'translate-x-5' : 'translate-x-0'}`} />
                   </button>
                 </div>
               );
@@ -5830,35 +5759,32 @@ export const AdminDashboard: React.FC = () => {
           </div>
         </CollapsibleAdminCard>
 
-        {/* 5. MOYENS DE PAIEMENT AUTORISÉS */}
+        {/* 6. Payment Methods Toggle */}
         <CollapsibleAdminCard
           id="feat_payment_methods"
           title="Moyens de Paiement Autorisés (Utilisateurs)"
           subtitle="Désactivez ou activez les méthodes de paiement disponibles pour les utilisateurs sur la page de paiement."
-          icon={<CreditCard size={22} className="text-emerald-500" />}
+          icon={<CreditCard size={22} className="text-emerald-500 shrink-0" />}
         >
-          <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {[
-              { id: 'paystack_enabled', label: 'Autoriser Paystack (Cartes & Mobile Money automatique)' },
-              { id: 'bank_transfer_enabled', label: 'Autoriser Transfert Bancaire Direct (GCB Bank PLC manuel)' }
-            ].map((method) => {
-               const active = featureToggles[method.id] !== false;
-               return (
-                <div key={method.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4">
-                  <div>
-                    <h4 className="font-bold text-gray-950 dark:text-white text-sm">{method.label}</h4>
-                  </div>
+              { id: 'pay_paystack_card', label: 'Carte Bancaire (Visa / Mastercard via Paystack)' },
+              { id: 'pay_mobile_money', label: 'Mobile Money (Orange, Wave, MTN, Moov)' },
+              { id: 'pay_manual_transfer', label: 'Paiement Manuel (Virement / Contact Support)' },
+              { id: 'pay_promo_code', label: 'Utilisation des Codes Promo' }
+            ].map((pm) => {
+              const enabled = featureToggles[pm.id] !== false;
+              return (
+                <div key={pm.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-750 rounded-xl border border-gray-100 dark:border-gray-700">
+                  <span className="text-xs font-semibold text-gray-800 dark:text-gray-200">{pm.label}</span>
                   <button
-                    onClick={() => handleToggleFeature(method.id, active)}
-                    className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors ${
-                      active ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
+                    type="button"
+                    onClick={() => handleToggleFeature(pm.id, !enabled)}
+                    className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors ${
+                      enabled ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
                     }`}
                   >
-                    <div
-                      className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${
-                        active ? 'translate-x-6' : 'translate-x-0'
-                      }`}
-                    />
+                    <div className={`w-4 h-4 rounded-full bg-white transition-transform ${enabled ? 'translate-x-5' : 'translate-x-0'}`} />
                   </button>
                 </div>
               );
@@ -5866,668 +5792,125 @@ export const AdminDashboard: React.FC = () => {
           </div>
         </CollapsibleAdminCard>
 
-        {/* 6. OPTIONS DE PARTAGE */}
+        {/* 7. Sharing Options */}
         <CollapsibleAdminCard
           id="feat_sharing_options"
           title="Options de Partage des Outils"
           subtitle="Désactivez ou activez l'icône de partage des outils pour les utilisateurs finaux de l'application."
-          icon={<Share size={22} className="text-emerald-500" />}
+          icon={<Share2 size={22} className="text-blue-500 shrink-0" />}
         >
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4">
-            <div>
-              <h4 className="font-bold text-gray-950 dark:text-white text-sm">Afficher l'icône de partage sur les outils</h4>
-              <p className="text-xs text-gray-500 mt-0.5">Permet aux utilisateurs de partager des liens vers les outils spirituels de l'application.</p>
-            </div>
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold text-gray-700 dark:text-gray-300">
+              Afficher l'icône de partage sur les outils :
+            </span>
             <button
-              onClick={() => handleToggleFeature('share_tools_enabled', featureToggles.share_tools_enabled !== false)}
-              className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors shrink-0 ${
-                featureToggles.share_tools_enabled !== false ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
+              type="button"
+              onClick={() => handleToggleFeature('allow_tool_sharing', featureToggles.allow_tool_sharing !== false ? false : true)}
+              className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors ${
+                featureToggles.allow_tool_sharing !== false ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
               }`}
             >
               <div
-                className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${
-                  featureToggles.share_tools_enabled !== false ? 'translate-x-6' : 'translate-x-0'
+                className={`w-4 h-4 rounded-full bg-white transition-transform ${
+                  featureToggles.allow_tool_sharing !== false ? 'translate-x-6' : 'translate-x-0'
                 }`}
               />
             </button>
           </div>
         </CollapsibleAdminCard>
-
-        {/* 6.5. WIDGETS & MODULES DU TABLEAU DE BORD DES OUTILS */}
-        <CollapsibleAdminCard
-          id="feat_dashboard_widgets"
-          title="Widgets & Modules du Tableau de Bord des Outils"
-          subtitle="Activez ou désactivez les widgets interactifs intégrés sur le tableau de bord des outils."
-          icon={<Calculator size={22} className="text-emerald-500" />}
-          badge={
-            <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
-              featureToggles.direct_abjad_widget !== false && featureToggles.tool_direct_abjad_widget !== 'inactive' && featureToggles.tool_direct_abjad_widget !== 'disabled'
-                ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300'
-                : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
-            }`}>
-              {featureToggles.direct_abjad_widget !== false && featureToggles.tool_direct_abjad_widget !== 'inactive' && featureToggles.tool_direct_abjad_widget !== 'disabled'
-                ? 'Widget Abjad : ACTIF'
-                : 'Widget Abjad : DÉSACTIVÉ'}
-            </span>
-          }
-        >
-          <div className="space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h4 className="font-bold text-gray-950 dark:text-white text-sm">Widget Calculateur Abjad Direct</h4>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                    featureToggles.direct_abjad_widget !== false && featureToggles.tool_direct_abjad_widget !== 'inactive' && featureToggles.tool_direct_abjad_widget !== 'disabled'
-                      ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300'
-                      : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
-                  }`}>
-                    {featureToggles.direct_abjad_widget !== false && featureToggles.tool_direct_abjad_widget !== 'inactive' && featureToggles.tool_direct_abjad_widget !== 'disabled' ? 'ACTIVÉ' : 'DÉSACTIVÉ'}
-                  </span>
-                </div>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  Affiche le widget interactif de calcul Abjad (Wasat, Kabir, Saghir) et résonance élémentaire au sommet de la page des Outils Utilisateur.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  const isCurrentlyEnabled = featureToggles.direct_abjad_widget !== false && featureToggles.tool_direct_abjad_widget !== 'inactive' && featureToggles.tool_direct_abjad_widget !== 'disabled';
-                  const nextValue = !isCurrentlyEnabled;
-                  const nextStatus = nextValue ? 'active' : 'inactive';
-                  handleToggleFeature('direct_abjad_widget', nextValue, 'Widget Calculateur Abjad Direct');
-                  handleToggleFeature('tool_direct_abjad_widget', nextStatus, 'Widget Calculateur Abjad Direct');
-                  showToast(
-                    nextValue 
-                      ? 'Widget Abjad Direct ACTIVÉ sur le tableau de bord des outils' 
-                      : 'Widget Abjad Direct DÉSACTIVÉ sur le tableau de bord des outils',
-                    nextValue ? 'success' : 'info'
-                  );
-                }}
-                className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors shrink-0 cursor-pointer ${
-                  featureToggles.direct_abjad_widget !== false && featureToggles.tool_direct_abjad_widget !== 'inactive' && featureToggles.tool_direct_abjad_widget !== 'disabled'
-                    ? 'bg-emerald-500' 
-                    : 'bg-gray-300 dark:bg-gray-600'
-                }`}
-              >
-                <div
-                  className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${
-                    featureToggles.direct_abjad_widget !== false && featureToggles.tool_direct_abjad_widget !== 'inactive' && featureToggles.tool_direct_abjad_widget !== 'disabled'
-                      ? 'translate-x-6' 
-                      : 'translate-x-0'
-                  }`}
-                />
-              </button>
-            </div>
-          </div>
-        </CollapsibleAdminCard>
-
-        {/* 6.6. SLIDER VIDÉO DES OUTILS DU TABLEAU DE BORD */}
-        <CollapsibleAdminCard
-          id="feat_tools_video_slider"
-          title="Slider Vidéo des Outils Spirituels (Tableau de Bord)"
-          subtitle="Personnalisez et contrôlez le carrousel animé avec vidéos de fond présentant tous les outils spirituels."
-          icon={<Sparkles size={22} className="text-amber-500" />}
-          badge={
-            <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
-              featureToggles.tools_video_slider_enabled !== false
-                ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300'
-                : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
-            }`}>
-              {featureToggles.tools_video_slider_enabled !== false ? 'SLIDER ACTIF' : 'SLIDER DÉSACTIVÉ'}
-            </span>
-          }
-        >
-          <div className="space-y-4">
-            {/* Activer / Désactiver le Slider */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4">
-              <div>
-                <div className="flex items-center gap-2">
-                  <h4 className="font-bold text-gray-950 dark:text-white text-sm">Affichage du Slider Vidéo</h4>
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                    featureToggles.tools_video_slider_enabled !== false
-                      ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300'
-                      : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
-                  }`}>
-                    {featureToggles.tools_video_slider_enabled !== false ? 'ACTIVÉ' : 'DÉSACTIVÉ'}
-                  </span>
-                </div>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  Affiche la carte de slider vidéo interactive sur le tableau de bord avec boutons d'accès direct pour chaque outil.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  const currentVal = featureToggles.tools_video_slider_enabled !== false;
-                  handleToggleFeature('tools_video_slider_enabled', !currentVal, 'Slider Vidéo des Outils');
-                  showToast(!currentVal ? 'Slider Vidéo ACTIVÉ' : 'Slider Vidéo DÉSACTIVÉ', !currentVal ? 'success' : 'info');
-                }}
-                className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors shrink-0 cursor-pointer ${
-                  featureToggles.tools_video_slider_enabled !== false ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
-                }`}
-              >
-                <div
-                  className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${
-                    featureToggles.tools_video_slider_enabled !== false ? 'translate-x-6' : 'translate-x-0'
-                  }`}
-                />
-              </button>
-            </div>
-
-            {/* Activer / Désactiver les Arrière-plans Vidéos Animées */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4">
-              <div>
-                <h4 className="font-bold text-gray-950 dark:text-white text-sm">Arrière-plans en Vraie Vidéo Boucle</h4>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  Joue des vidéos célestes et cosmiques HD en fond de chaque carte du slider avec effet nébuleuse et lumières sacrées.
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  const currentVal = featureToggles.tools_slider_video_bg !== false;
-                  handleToggleFeature('tools_slider_video_bg', !currentVal, 'Vidéos de Fond du Slider');
-                  showToast(!currentVal ? 'Vidéos de fond ACTIVÉES' : 'Vidéos de fond DÉSACTIVÉES', 'info');
-                }}
-                className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors shrink-0 cursor-pointer ${
-                  featureToggles.tools_slider_video_bg !== false ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
-                }`}
-              >
-                <div
-                  className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${
-                    featureToggles.tools_slider_video_bg !== false ? 'translate-x-6' : 'translate-x-0'
-                  }`}
-                />
-              </button>
-            </div>
-
-            {/* Vitesse de défilement automatique */}
-            <div className="p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl space-y-2">
-              <label className="block font-bold text-gray-950 dark:text-white text-sm">
-                Vitesse de rotation automatique (Auto-play)
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {[
-                  { label: '3 secondes (Rapide)', val: 3000 },
-                  { label: '6 secondes (Standard)', val: 6000 },
-                  { label: '10 secondes (Doux)', val: 10000 },
-                  { label: 'Manuel (Désactivé)', val: 0 },
-                ].map((speed) => {
-                  const currentSpeed = typeof featureToggles.tools_slider_autoplay_speed === 'number'
-                    ? featureToggles.tools_slider_autoplay_speed
-                    : 6000;
-                  const isSelected = currentSpeed === speed.val;
-                  return (
-                    <button
-                      key={speed.val}
-                      type="button"
-                      onClick={() => {
-                        handleToggleFeature('tools_slider_autoplay_speed', speed.val, 'Vitesse Auto-play');
-                        showToast(`Vitesse réglée à : ${speed.label}`, 'success');
-                      }}
-                      className={`p-2.5 rounded-xl text-xs font-bold transition-all border text-center cursor-pointer ${
-                        isSelected
-                          ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
-                          : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700'
-                      }`}
-                    >
-                      {speed.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Filtrage des outils affichés */}
-            <div className="p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl space-y-2">
-              <label className="block font-bold text-gray-950 dark:text-white text-sm">
-                Sélection des Outils dans le Slider
-              </label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                {[
-                  { id: 'all', label: 'Tous les Outils' },
-                  { id: 'popular', label: 'Populaires & Vedettes' },
-                  { id: 'simple', label: 'Essentiels (Simples)' },
-                  { id: 'advanced', label: 'Khassa (Avancés)' },
-                ].map((filt) => {
-                  const currentFilter = featureToggles.tools_slider_filter || 'all';
-                  const isSelected = currentFilter === filt.id;
-                  return (
-                    <button
-                      key={filt.id}
-                      type="button"
-                      onClick={() => {
-                        handleToggleFeature('tools_slider_filter', filt.id, 'Filtre du Slider');
-                        showToast(`Filtre sélectionné : ${filt.label}`, 'success');
-                      }}
-                      className={`p-2.5 rounded-xl text-xs font-bold transition-all border text-center cursor-pointer ${
-                        isSelected
-                          ? 'bg-amber-500 text-white border-amber-400 shadow-sm'
-                          : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700'
-                      }`}
-                    >
-                      {filt.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Titre Personnalisé du Slider */}
-            <div className="p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl space-y-2">
-              <label className="block font-bold text-gray-950 dark:text-white text-sm">
-                Titre Personnalisé du Slider (Optionnel)
-              </label>
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  placeholder="ex: Outils Spirituels, Kayan Aiki na Asrar..."
-                  value={featureToggles.tools_slider_title || ''}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setFeatureToggles((prev: any) => ({ ...prev, tools_slider_title: val }));
-                  }}
-                  onBlur={() => {
-                    handleToggleFeature('tools_slider_title', featureToggles.tools_slider_title || '', 'Titre du Slider');
-                  }}
-                  className="flex-1 px-3 py-2 text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleToggleFeature('tools_slider_title', featureToggles.tools_slider_title || '', 'Titre du Slider');
-                    showToast('Titre du slider sauvegardé', 'success');
-                  }}
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-xs transition-colors cursor-pointer"
-                >
-                  Enregistrer
-                </button>
-              </div>
-            </div>
-          </div>
-        </CollapsibleAdminCard>
-
-        {/* 7. PROTECTION ANTI-CAPTURE D'ÉCRAN & SÉCURITÉ MATÉRIELLE (FLAG_SECURE) */}
-        {(() => {
-          const screenMode = getScreenshotProtectionMode(featureToggles);
-          const copyMode = getTextCopyProtectionMode(featureToggles);
-
-          const handleSetScreenMode = (mode: ProtectionMode) => {
-            handleToggleFeature('screenshot_protection_mode', mode);
-            handleToggleFeature('anti_screenshot', mode === 'all_allowed' ? false : (mode === 'all_blocked' ? 'all_blocked' : 'premium_only'));
-            showToast(
-              mode === 'all_allowed' 
-                ? "Captures d'écran : Autorisées pour TOUS les utilisateurs." 
-                : mode === 'premium_only' 
-                ? "Captures d'écran : Autorisées UNIQUEMENT pour les membres Premium." 
-                : "Captures d'écran : Bloquées STRICTEMENT pour tous les utilisateurs.",
-              "success"
-            );
-          };
-
-          const handleSetCopyMode = (mode: ProtectionMode) => {
-            handleToggleFeature('text_copy_protection_mode', mode);
-            handleToggleFeature('text_copy_protection', mode);
-            handleToggleFeature('disable_dua_copy', mode === 'all_blocked');
-            showToast(
-              mode === 'all_allowed' 
-                ? "Copie des textes : Autorisée pour TOUS les utilisateurs." 
-                : mode === 'premium_only' 
-                ? "Copie des textes : Autorisée UNIQUEMENT pour les membres Premium." 
-                : "Copie des textes : Bloquée STRICTEMENT pour tous les utilisateurs.",
-              "success"
-            );
-          };
-
-          return (
-            <>
-              <CollapsibleAdminCard
-                id="feat_anti_screenshot"
-                title="Protection Anti-Capture d'Écran (FLAG_SECURE & PrivacyScreen)"
-                subtitle="Contrôlez les captures d'écran, enregistrements vidéo et impressions sur Android, iOS et Web."
-                icon={<Camera size={22} className="text-red-500" />}
-                badge={
-                  <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 ${
-                    screenMode === 'all_allowed'
-                      ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300'
-                      : screenMode === 'premium_only'
-                      ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300'
-                      : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
-                  }`}>
-                    {screenMode === 'all_allowed' && <Unlock size={11} />}
-                    {screenMode === 'premium_only' && <Crown size={11} />}
-                    {screenMode === 'all_blocked' && <Lock size={11} />}
-                    {screenMode === 'all_allowed' 
-                      ? 'Autorisé pour Tous' 
-                      : screenMode === 'premium_only' 
-                      ? 'Réservé aux Premium' 
-                      : 'Bloqué pour Tous'}
-                  </span>
-                }
-              >
-                <div className="space-y-4">
-                  <p className="text-xs text-gray-600 dark:text-gray-400">
-                    Définissez la politique d'autorisation des captures d'écran, enregistrements vidéo (FLAG_SECURE Android) et impressions de documents.
-                  </p>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    {/* Option 1: Autorisé pour Tous */}
-                    <button
-                      type="button"
-                      onClick={() => handleSetScreenMode('all_allowed')}
-                      className={`p-4 rounded-2xl border text-left transition-all flex flex-col justify-between gap-2 cursor-pointer ${
-                        screenMode === 'all_allowed'
-                          ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 ring-2 ring-emerald-500/20 shadow-sm'
-                          : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-emerald-300 dark:hover:border-emerald-700'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between w-full">
-                        <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
-                          <Unlock size={15} /> Autorisé pour Tous
-                        </span>
-                        {screenMode === 'all_allowed' && (
-                          <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
-                        )}
-                      </div>
-                      <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-snug">
-                        Aucun blocage. Tous les utilisateurs peuvent prendre des captures d'écran et imprimer.
-                      </p>
-                    </button>
-
-                    {/* Option 2: Uniquement Premium */}
-                    <button
-                      type="button"
-                      onClick={() => handleSetScreenMode('premium_only')}
-                      className={`p-4 rounded-2xl border text-left transition-all flex flex-col justify-between gap-2 cursor-pointer ${
-                        screenMode === 'premium_only'
-                          ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-500 ring-2 ring-amber-500/20 shadow-sm'
-                          : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-amber-300 dark:hover:border-amber-700'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between w-full">
-                        <span className="text-xs font-black text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
-                          <Crown size={15} /> Uniquement Premium
-                        </span>
-                        {screenMode === 'premium_only' && (
-                          <CheckCircle2 size={16} className="text-amber-500 shrink-0" />
-                        )}
-                      </div>
-                      <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-snug">
-                        Bloqué pour les comptes gratuits (écran noir). Débloqué et autorisé pour les membres VIP / Premium.
-                      </p>
-                    </button>
-
-                    {/* Option 3: Bloqué pour Tous */}
-                    <button
-                      type="button"
-                      onClick={() => handleSetScreenMode('all_blocked')}
-                      className={`p-4 rounded-2xl border text-left transition-all flex flex-col justify-between gap-2 cursor-pointer ${
-                        screenMode === 'all_blocked'
-                          ? 'bg-red-50 dark:bg-red-950/40 border-red-500 ring-2 ring-red-500/20 shadow-sm'
-                          : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-red-300 dark:hover:border-red-700'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between w-full">
-                        <span className="text-xs font-black text-red-600 dark:text-red-400 flex items-center gap-1.5">
-                          <Lock size={15} /> Bloqué pour Tous
-                        </span>
-                        {screenMode === 'all_blocked' && (
-                          <CheckCircle2 size={16} className="text-red-500 shrink-0" />
-                        )}
-                      </div>
-                      <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-snug">
-                        Verrouillage strict (FLAG_SECURE actif pour tous les utilisateurs, y compris Premium).
-                      </p>
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-                    <div className="p-3 bg-gray-50 dark:bg-gray-750 rounded-xl border border-gray-200/70 dark:border-gray-700">
-                      <div className="flex items-center gap-2 text-xs font-bold text-gray-800 dark:text-gray-200">
-                        <span>📱</span> Android FLAG_SECURE
-                      </div>
-                      <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
-                        Empêche les captures d'écran natives et masque l'aperçu dans le multitâche.
-                      </p>
-                    </div>
-
-                    <div className="p-3 bg-gray-50 dark:bg-gray-750 rounded-xl border border-gray-200/70 dark:border-gray-700">
-                      <div className="flex items-center gap-2 text-xs font-bold text-gray-800 dark:text-gray-200">
-                        <span>💻</span> Web & Raccourcis
-                      </div>
-                      <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
-                        Intercepte la touche PrintScreen, la capture d'écran Windows/Mac et l'impression Ctrl+P.
-                      </p>
-                    </div>
-
-                    <div className="p-3 bg-gray-50 dark:bg-gray-750 rounded-xl border border-gray-200/70 dark:border-gray-700">
-                      <div className="flex items-center gap-2 text-xs font-bold text-gray-800 dark:text-gray-200">
-                        <span>⚡</span> Application Instantanée
-                      </div>
-                      <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
-                        Pris en compte en temps réel sans besoin de recompiler ou redémarrer l'application.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </CollapsibleAdminCard>
-
-              {/* 8. PROTECTION CONTRE LA COPIE DE TEXTE & SÉLECTION */}
-              <CollapsibleAdminCard
-                id="feat_text_copy_protection"
-                title="Protection contre la Copie de Texte & Sélections"
-                subtitle="Gérez le copier-coller, la sélection de texte, le clic droit et les boutons de copie des outils."
-                icon={<Copy size={22} className="text-emerald-500" />}
-                badge={
-                  <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 ${
-                    copyMode === 'all_allowed'
-                      ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300'
-                      : copyMode === 'premium_only'
-                      ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300'
-                      : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
-                  }`}>
-                    {copyMode === 'all_allowed' && <Unlock size={11} />}
-                    {copyMode === 'premium_only' && <Crown size={11} />}
-                    {copyMode === 'all_blocked' && <Lock size={11} />}
-                    {copyMode === 'all_allowed' 
-                      ? 'Autorisé pour Tous' 
-                      : copyMode === 'premium_only' 
-                      ? 'Réservé aux Premium' 
-                      : 'Bloqué pour Tous'}
-                  </span>
-                }
-              >
-                <div className="space-y-4">
-                  <p className="text-xs text-gray-600 dark:text-gray-400">
-                    Choisissez qui est autorisé à copier les invocations, douas, versets, tables de calcul et textes sacrés.
-                  </p>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    {/* Option 1: Autorisé pour Tous */}
-                    <button
-                      type="button"
-                      onClick={() => handleSetCopyMode('all_allowed')}
-                      className={`p-4 rounded-2xl border text-left transition-all flex flex-col justify-between gap-2 cursor-pointer ${
-                        copyMode === 'all_allowed'
-                          ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 ring-2 ring-emerald-500/20 shadow-sm'
-                          : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-emerald-300 dark:hover:border-emerald-700'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between w-full">
-                        <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
-                          <Unlock size={15} /> Autorisé pour Tous
-                        </span>
-                        {copyMode === 'all_allowed' && (
-                          <CheckCircle2 size={16} className="text-emerald-500 shrink-0" />
-                        )}
-                      </div>
-                      <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-snug">
-                        Sélection libre et boutons de copie débloqués pour tous les visiteurs et utilisateurs.
-                      </p>
-                    </button>
-
-                    {/* Option 2: Uniquement Premium */}
-                    <button
-                      type="button"
-                      onClick={() => handleSetCopyMode('premium_only')}
-                      className={`p-4 rounded-2xl border text-left transition-all flex flex-col justify-between gap-2 cursor-pointer ${
-                        copyMode === 'premium_only'
-                          ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-500 ring-2 ring-amber-500/20 shadow-sm'
-                          : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-amber-300 dark:hover:border-amber-700'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between w-full">
-                        <span className="text-xs font-black text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
-                          <Crown size={15} /> Uniquement Premium
-                        </span>
-                        {copyMode === 'premium_only' && (
-                          <CheckCircle2 size={16} className="text-amber-500 shrink-0" />
-                        )}
-                      </div>
-                      <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-snug">
-                        Copie bloquée pour les comptes gratuits (incitation Premium). Débloquée pour les abonnés VIP.
-                      </p>
-                    </button>
-
-                    {/* Option 3: Bloqué pour Tous */}
-                    <button
-                      type="button"
-                      onClick={() => handleSetCopyMode('all_blocked')}
-                      className={`p-4 rounded-2xl border text-left transition-all flex flex-col justify-between gap-2 cursor-pointer ${
-                        copyMode === 'all_blocked'
-                          ? 'bg-red-50 dark:bg-red-950/40 border-red-500 ring-2 ring-red-500/20 shadow-sm'
-                          : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-red-300 dark:hover:border-red-700'
-                      }`}
-                    >
-                      <div className="flex items-center justify-between w-full">
-                        <span className="text-xs font-black text-red-600 dark:text-red-400 flex items-center gap-1.5">
-                          <Lock size={15} /> Bloqué pour Tous
-                        </span>
-                        {copyMode === 'all_blocked' && (
-                          <CheckCircle2 size={16} className="text-red-500 shrink-0" />
-                        )}
-                      </div>
-                      <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-snug">
-                        Copie, clic droit et sélection de texte désactivés pour tout le monde sans exception.
-                      </p>
-                    </button>
-                  </div>
-                </div>
-              </CollapsibleAdminCard>
-            </>
-          );
-        })()}
       </div>
     );
   };
 
   const renderContent = () => {
-    const filteredTerms = lexiqueTerms.filter(term => 
-      (term.word || '').toLowerCase().includes(lexiqueSearch.toLowerCase()) ||
-      (term.definition || '').toLowerCase().includes(lexiqueSearch.toLowerCase()) ||
-      (term.category || '').toLowerCase().includes(lexiqueSearch.toLowerCase())
-    );
-
-    const paginatedTerms = filteredTerms.slice(0, lexiqueLimit);
+    const filteredTerms = lexiqueTerms.filter(t => {
+      const termWord = (t as any).word_fr || (t as any).word || '';
+      const termCat = (t as any).category || '';
+      return termWord.toLowerCase().includes(lexiqueSearch.toLowerCase()) ||
+        termCat.toLowerCase().includes(lexiqueSearch.toLowerCase());
+    });
 
     return (
-      <div className="space-y-6">
-        <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-          <h3 className="font-bold text-gray-900 dark:text-white mb-4">Ajouter au Lexique</h3>
+      <div className="space-y-6 w-full max-w-full min-w-0">
+        <div className="bg-white dark:bg-gray-800 rounded-3xl p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+          <h3 className="font-bold text-gray-900 dark:text-white mb-4 text-base sm:text-lg">Ajouter au Lexique</h3>
           {renderLanguageTabs()}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
             <input
               type="text"
-              placeholder={`Mot / Terme (${activeLangTab.toUpperCase()})`}
-              value={newTerm[`word_${activeLangTab}`] || ''}
-              onChange={(e) => setNewTerm({...newTerm, [`word_${activeLangTab}`]: e.target.value})}
-              className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
+              placeholder={`Mot / Terme (${language.toUpperCase()})`}
+              value={(newTerm as any)[`word_${language}`] || (newTerm as any).word || ''}
+              onChange={(e) => setNewTerm({ ...newTerm, [`word_${language}`]: e.target.value } as any)}
+              className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
             />
             <input
               type="text"
               placeholder="Catégorie (ex: Prière, Pratique)"
-              value={newTerm.category}
-              onChange={(e) => setNewTerm({...newTerm, category: e.target.value})}
-              className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
+              value={(newTerm as any).category || ''}
+              onChange={(e) => setNewTerm({ ...newTerm, category: e.target.value } as any)}
+              className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
             />
           </div>
           <textarea
-            placeholder={`Définition (${activeLangTab.toUpperCase()})`}
-            value={newTerm[`definition_${activeLangTab}`] || ''}
-            onChange={(e) => setNewTerm({...newTerm, [`definition_${activeLangTab}`]: e.target.value})}
-            className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 h-24 resize-none mb-4"
+            placeholder={`Définition (${language.toUpperCase()})`}
+            value={(newTerm as any)[`definition_${language}`] || (newTerm as any).definition || ''}
+            onChange={(e) => setNewTerm({ ...newTerm, [`definition_${language}`]: e.target.value } as any)}
+            className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 h-24 resize-none mb-4 outline-none"
           />
           <button
             onClick={handleAddTerm}
-            disabled={!newTerm.word_fr || !newTerm.definition_fr}
-            className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white px-6 py-2 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-colors w-full sm:w-auto"
+            className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white px-6 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-colors w-full sm:w-auto"
           >
             <Plus size={18} /> Ajouter le terme
           </button>
         </div>
 
-        <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+        <div className="bg-white dark:bg-gray-800 rounded-3xl p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700">
           <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
             <div>
-              <h3 className="font-bold text-gray-900 dark:text-white text-lg">Termes du Lexique ({filteredTerms.length})</h3>
+              <h3 className="font-bold text-gray-900 dark:text-white text-base sm:text-lg">
+                Termes du Lexique ({filteredTerms.length})
+              </h3>
               <p className="text-xs text-gray-500 mt-1">Total: {filteredTerms.length} termes correspondants</p>
             </div>
-            
             <div className="relative w-full sm:w-64">
               <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
                 <Search size={16} />
               </span>
               <input
                 type="text"
+                placeholder="Rechercher un terme..."
                 value={lexiqueSearch}
-                onChange={(e) => {
-                  setLexiqueSearch(e.target.value);
-                  setLexiqueLimit(15);
-                }}
-                placeholder="Rechercher un terme ou une catégorie..."
-                className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl text-xs text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
+                onChange={(e) => setLexiqueSearch(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-xs text-gray-900 dark:text-white outline-none"
               />
             </div>
           </div>
 
           {filteredTerms.length === 0 ? (
-            <div className="text-center py-12 text-gray-500 dark:text-gray-400">
-              <Book className="mx-auto mb-3 opacity-30" size={40} />
-              <p className="font-medium text-sm">Aucun terme ne correspond à votre recherche.</p>
-            </div>
+            <p className="text-center py-8 text-xs text-gray-400">Aucun terme trouvé.</p>
           ) : (
-            <div className="space-y-3">
-              {paginatedTerms.map((term) => (
-                <div key={term.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-xl gap-4 hover:border-gray-200 dark:hover:border-gray-650 transition-all">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <h4 className="font-bold text-gray-900 dark:text-white truncate">{term.word}</h4>
-                      <span className="text-[10px] uppercase tracking-wider font-bold bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded-full shrink-0">
-                        {term.category}
-                      </span>
-                    </div>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2">{term.definition}</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {filteredTerms.map((t) => (
+                <div key={t.id} className="p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl space-y-2 min-w-0">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="font-bold text-sm text-gray-900 dark:text-white break-words">{(t as any).word_fr || (t as any).word || ''}</span>
+                    <button
+                      onClick={() => handleDeleteTerm(t.id)}
+                      className="text-red-500 hover:text-red-700 p-1 transition-colors"
+                      title="Supprimer"
+                    >
+                      <Trash2 size={16} />
+                    </button>
                   </div>
-                  <button
-                    onClick={() => handleDeleteTerm(term.id)}
-                    className="p-2 text-gray-400 hover:text-red-500 transition-colors rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 shrink-0 self-end sm:self-auto"
-                    title="Supprimer"
-                  >
-                    <Trash2 size={18} />
-                  </button>
+                  {(t as any).category && (
+                    <span className="inline-block px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 text-[10px] font-bold rounded-full">
+                      {(t as any).category}
+                    </span>
+                  )}
+                  <p className="text-xs text-gray-600 dark:text-gray-300 break-words line-clamp-3">{(t as any).definition_fr || (t as any).definition || ''}</p>
                 </div>
               ))}
-
-              {filteredTerms.length > lexiqueLimit && (
-                <div className="pt-4 flex justify-center">
-                  <button
-                    onClick={() => setLexiqueLimit(prev => prev + 15)}
-                    className="px-6 py-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 rounded-xl text-xs font-bold hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-all border border-emerald-200 dark:border-emerald-900/50"
-                  >
-                    Voir plus de termes ({filteredTerms.length - lexiqueLimit} restants)
-                  </button>
-                </div>
-              )}
             </div>
           )}
         </div>
@@ -6536,2070 +5919,287 @@ export const AdminDashboard: React.FC = () => {
   };
 
   const renderArticles = () => {
-    const isPublicVisibleStatus = (st: any) => {
-      return isPubliclyVisibleArticle(st);
-    };
-
-    const publishedCount = articles.filter(a => isPublicVisibleStatus(a.status)).length;
-    const draftCount = articles.filter(a => a.status && ['draft', 'brouillon'].includes(a.status.toString().toLowerCase())).length;
-    const archivedCount = articles.filter(a => a.status && ['archived', 'archivé'].includes(a.status.toString().toLowerCase())).length;
-    const unsetCount = articles.filter(a => !a.status).length;
+    if (activeTab === "pdf_documents") {
+      return <AdminPdfDocumentsManager />;
+    }
+    if (activeTab === "store") {
+      return <AdminStoreManager featureToggles={featureToggles} handleToggleFeature={handleToggleFeature} />;
+    }
 
     return (
-      <div className="space-y-6">
-        {/* Validator & Diagnostic Tool for Article Thumbnails */}
-        <ThumbnailValidatorWidget articles={articles} onUpdateArticles={(updated) => setArticles(updated)} />
-
-        {/* Diagnostic Dashboard Section for Articles Debugging */}
-        <div className="bg-gradient-to-br from-slate-900 to-indigo-950 text-white rounded-3xl p-6 shadow-xl border border-indigo-900/50">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-indigo-800/40">
-            <div>
-              <h3 className="text-lg font-bold flex items-center gap-2 text-indigo-200">
-                <Sparkles size={20} className="text-amber-400" />
-                Diagnostic Firestore & Statuts des Articles
-              </h3>
-              <p className="text-xs text-indigo-300/80 mt-1">
-                Visualisez l'état brut de la collection Firestore <code className="bg-indigo-900/60 px-1.5 py-0.5 rounded font-mono text-amber-300">articles</code> pour le débogage sur mobile & Capacitor.
-              </p>
-            </div>
+      <div className="space-y-6 w-full max-w-full min-w-0">
+        {/* Quick action banner */}
+        <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
+          <div className="flex items-center gap-2">
+            <FileText size={20} className="text-emerald-500 shrink-0" />
+            <h3 className="font-bold text-gray-900 dark:text-white text-base">
+              {activeTab === "categories" ? "Gestion des Catégories" : "Gestion des Articles & Publications"}
+            </h3>
+          </div>
+          <div className="flex items-center gap-2">
             <button
-              onClick={async () => {
-                try {
-                  let updatedCount = 0;
-                  for (const art of articles) {
-                    if (!art.status || art.status.toLowerCase() === 'draft' || art.status.toLowerCase() === 'brouillon' || art.status.toLowerCase() === 'archived') {
-                      await setDoc(doc(db, 'articles', art.id), { status: 'Published' }, { merge: true });
-                      saveLocalCustomArticle({ ...art, status: 'Published' });
-                      updatedCount++;
-                    }
-                  }
-                  setArticles(prev => prev.map(a => ({ ...a, status: 'Published' })));
-                  revalidatePublishedArticles('admin_bulk_publish').catch(() => {});
-                  showToast(`${updatedCount > 0 ? updatedCount : 'Tous les'} article(s) publié(s) avec succès (visibles immédiatement) !`, "success");
-                } catch (e: any) {
-                  showToast("Erreur lors de la mise à jour : " + (e?.message || e), "error");
-                }
+              onClick={() => {
+                setEditingArticle(null);
+                setNewArticle({
+                  title: '',
+                  content: '',
+                  category: 'Secrets & Pratiques',
+                  isPremium: false,
+                  status: 'Published',
+                  image: '',
+                  audioUrl: ''
+                } as any);
               }}
-              className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-2 shrink-0 cursor-pointer"
+              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-2 transition-colors shadow-sm"
             >
-              <RefreshCw size={14} />
-              Publier Tous les Articles
+              <Plus size={16} /> Nouvel Article
+            </button>
+            <button
+              onClick={handleSeedDefaultArticles}
+              className="px-3 py-2 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors border border-indigo-200 dark:border-indigo-800"
+            >
+              <Database size={14} /> Restaurer Articles par Défaut
             </button>
           </div>
+        </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
-            <div className="bg-indigo-900/40 border border-indigo-700/30 rounded-2xl p-3 text-center">
-              <span className="text-xs text-indigo-300 font-semibold uppercase block">Total Firestore</span>
-              <span className="text-2xl font-black text-white">{articles.length}</span>
+        {/* Thumbnail validator */}
+        <ThumbnailValidatorWidget articles={articles} />
+
+        {/* Articles List / Table */}
+        <div className="bg-white dark:bg-gray-800 rounded-3xl p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700 space-y-4">
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Total: {articles.length} articles</span>
             </div>
-            <div className="bg-emerald-950/40 border border-emerald-800/40 rounded-2xl p-3 text-center">
-              <span className="text-xs text-emerald-300 font-semibold uppercase block">Visibles Public</span>
-              <span className="text-2xl font-black text-emerald-400">{publishedCount}</span>
-            </div>
-            <div className="bg-amber-950/40 border border-amber-800/40 rounded-2xl p-3 text-center">
-              <span className="text-xs text-amber-300 font-semibold uppercase block">Brouillons</span>
-              <span className="text-2xl font-black text-amber-400">{draftCount}</span>
-            </div>
-            <div className="bg-rose-950/40 border border-rose-800/40 rounded-2xl p-3 text-center">
-              <span className="text-xs text-rose-300 font-semibold uppercase block">Archivés</span>
-              <span className="text-2xl font-black text-rose-400">{archivedCount}</span>
-            </div>
-            <div className="bg-slate-800/60 border border-slate-700/40 rounded-2xl p-3 text-center col-span-2 sm:col-span-1">
-              <span className="text-xs text-slate-300 font-semibold uppercase block">Statut Par Défaut</span>
-              <span className="text-2xl font-black text-slate-300">{unsetCount}</span>
+            <div className="relative w-full sm:w-64">
+              <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                <Search size={16} />
+              </span>
+              <input
+                type="text"
+                placeholder="Rechercher un article..."
+                value={adminArticleSearch}
+                onChange={(e) => setAdminArticleSearch(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-xs text-gray-900 dark:text-white outline-none"
+              />
             </div>
           </div>
 
-          <div className="overflow-x-auto rounded-2xl border border-indigo-900/60 bg-indigo-950/40 max-h-60 overflow-y-auto">
+          <div className="overflow-x-auto rounded-2xl border border-gray-100 dark:border-gray-700">
             <table className="w-full text-left text-xs">
-              <thead className="bg-indigo-900/60 text-indigo-200 uppercase tracking-wider font-bold sticky top-0">
+              <thead className="bg-gray-50 dark:bg-gray-900 text-gray-500 uppercase tracking-wider font-bold">
                 <tr>
-                  <th className="p-2.5">ID Document</th>
-                  <th className="p-2.5">Titre</th>
-                  <th className="p-2.5">Statut Brut</th>
-                  <th className="p-2.5">Public OK?</th>
-                  <th className="p-2.5">Premium</th>
-                  <th className="p-2.5">Créé le</th>
-                  <th className="p-2.5 text-right">Action</th>
+                  <th className="p-3">Titre</th>
+                  <th className="p-3">Catégorie</th>
+                  <th className="p-3">Statut</th>
+                  <th className="p-3">Premium</th>
+                  <th className="p-3 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-indigo-900/40 text-indigo-100">
-                {articles.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="p-4 text-center text-indigo-400 italic">
-                      Aucun article trouvé dans la collection 'articles'
+              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                {articles.filter(a => ((a as any).title || (a as any).title_fr || '').toLowerCase().includes(adminArticleSearch.toLowerCase())).map((art) => (
+                  <tr key={art.id} className="hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
+                    <td className="p-3 font-bold text-gray-900 dark:text-white max-w-[200px] truncate">
+                      {(art as any).title || (art as any).title_fr || '(Sans titre)'}
+                    </td>
+                    <td className="p-3 text-gray-500">{art.category || 'Général'}</td>
+                    <td className="p-3">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        art.status === 'Published' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
+                      }`}>
+                        {art.status === 'Published' ? 'Publié' : 'Brouillon'}
+                      </span>
+                    </td>
+                    <td className="p-3">
+                      {art.isPremium ? (
+                        <span className="text-amber-500 font-bold">★ Premium</span>
+                      ) : (
+                        <span className="text-gray-400">Standard</span>
+                      )}
+                    </td>
+                    <td className="p-3 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <button
+                          onClick={() => {
+                            setEditingArticle(art);
+                          }}
+                          className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded-lg transition-colors"
+                          title="Modifier"
+                        >
+                          <Edit3 size={15} />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteArticle(art.id)}
+                          className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors"
+                          title="Supprimer"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
-                ) : (
-                  articles.map((art) => {
-                    const isVisible = isPublicVisibleStatus(art.status);
-                    return (
-                      <tr key={art.id} className="hover:bg-indigo-900/30 transition-colors">
-                        <td className="p-2.5 font-mono text-[10px] text-indigo-300">{art.id}</td>
-                        <td className="p-2.5 font-bold truncate max-w-[150px]">{art.title || '(Sans titre)'}</td>
-                        <td className="p-2.5 font-mono">
-                          <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                            art.status === 'Published' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
-                            art.status === 'Draft' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' :
-                            art.status === 'Archived' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30' :
-                            'bg-indigo-500/20 text-indigo-300 border border-indigo-500/30'
-                          }`}>
-                            {art.status || '(non défini)'}
-                          </span>
-                        </td>
-                        <td className="p-2.5">
-                          {isVisible ? (
-                            <span className="text-emerald-400 font-bold flex items-center gap-1">
-                              ✓ Oui
-                            </span>
-                          ) : (
-                            <span className="text-rose-400 font-bold flex items-center gap-1">
-                              ✗ Non
-                            </span>
-                          )}
-                        </td>
-                        <td className="p-2.5">
-                          <button
-                            onClick={async () => {
-                              const newPrem = !art.isPremium;
-                              try {
-                                await setDoc(doc(db, 'articles', art.id), { isPremium: newPrem }, { merge: true });
-                                setArticles(prev => prev.map(a => a.id === art.id ? { ...a, isPremium: newPrem } : a));
-                                saveLocalCustomArticle({ ...art, isPremium: newPrem });
-                                clearArticleCaches();
-                                showToast(newPrem ? "Article passé en PREMIUM ★" : "Article passé en STANDARD (Gratuit)");
-                              } catch (e: any) {
-                                showToast("Erreur : " + e.message, "error");
-                              }
-                            }}
-                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold border transition-colors cursor-pointer ${
-                              art.isPremium 
-                                ? 'bg-purple-500/25 text-amber-300 border-purple-400/50 hover:bg-purple-500/40' 
-                                : 'bg-slate-800 text-indigo-300 border-slate-700 hover:bg-slate-700'
-                            }`}
-                            title="Cliquer pour changer Standard / Premium"
-                          >
-                            {art.isPremium ? '★ Premium' : '☆ Standard'}
-                          </button>
-                        </td>
-                        <td className="p-2.5 font-mono text-[10px] text-indigo-300 truncate max-w-[100px]">
-                          {art.createdAt ? String(art.createdAt) : 'N/A'}
-                        </td>
-                        <td className="p-2.5 text-right">
-                          <button
-                            onClick={async () => {
-                              try {
-                                const newSt = isVisible ? 'Draft' : 'Published';
-                                await updateDoc(doc(db, 'articles', art.id), { status: newSt });
-                                clearArticleCaches();
-                                showToast(`Statut mis à jour vers '${newSt}'`);
-                              } catch (e: any) {
-                                showToast("Erreur : " + e.message, "error");
-                              }
-                            }}
-                            className="px-2 py-1 bg-indigo-800 hover:bg-indigo-700 text-indigo-100 rounded text-[10px] font-bold"
-                          >
-                            {isVisible ? 'Mettre en Brouillon' : 'Publier'}
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
+                ))}
               </tbody>
             </table>
           </div>
         </div>
-
-        <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="font-bold text-gray-900 dark:text-white">
-              {editingArticle ? "Éditer l'Article" : "Nouvel Article"}
-            </h3>
-            {draftSavedMessage && (
-              <span className="text-xs text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-1 rounded-md">
-                {draftSavedMessage}
-              </span>
-            )}
-          </div>
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <select
-              value={newArticle.status || 'Draft'}
-              onChange={(e) => setNewArticle(prev => ({ ...prev, status: e.target.value }))}
-              className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
-            >
-              <option value="Draft">Brouillon</option>
-              <option value="Published">Publié</option>
-              <option value="Archived">Archivé</option>
-            </select>
-            
-            <input
-              type="date"
-              value={newArticle.publishDate || ''}
-              onChange={(e) => setNewArticle(prev => ({ ...prev, publishDate: e.target.value }))}
-              className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
-              title="Date de planification"
-            />
-          </div>
-
-          <div className="flex items-center gap-3 bg-violet-50 dark:bg-violet-900/10 p-3 rounded-xl border border-violet-100 dark:border-violet-800/30">
-            <input 
-              type="checkbox" 
-              id="isPremiumArticle" 
-              checked={newArticle.isPremium || false}
-              onChange={(e) => setNewArticle(prev => ({ ...prev, isPremium: e.target.checked }))}
-              className="w-5 h-5 text-violet-600 rounded focus:ring-violet-500"
-            />
-            <label htmlFor="isPremiumArticle" className="text-sm font-bold text-gray-900 dark:text-white cursor-pointer">
-              Article Premium (Réservé aux abonnés)
-            </label>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Catégorie de l'article</label>
-              <select
-                value={newArticle.category || ''}
-                onChange={(e) => {
-                  const catId = e.target.value;
-                  setNewArticle(prev => ({ ...prev, category: catId, subCategory: '' }));
-                }}
-                className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
-              >
-                <option value="">-- Sélectionner une Catégorie --</option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </option>
-                ))}
-              </select>
-              <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2">
-                {newArticle.category ? (
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const cat = categories.find(c => c.id === newArticle.category);
-                        if (cat) {
-                          setEditingCategory({ ...cat });
-                          setActiveTab('categories');
-                        }
-                      }}
-                      className="text-xs text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1 font-bold"
-                    >
-                      <Edit2 size={12} /> Modifier la catégorie
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (window.confirm("Voulez-vous vraiment supprimer cette catégorie ?")) {
-                          handleDeleteCategory(newArticle.category!);
-                          setNewArticle({ ...newArticle, category: '', subCategory: '' });
-                        }
-                      }}
-                      className="text-xs text-red-600 dark:text-red-400 hover:underline flex items-center gap-1 font-bold"
-                    >
-                      <Trash2 size={12} /> Supprimer
-                    </button>
-                  </div>
-                ) : <div />}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowQuickCategoryForm(!showQuickCategoryForm);
-                    setShowQuickSubCategoryForm(false);
-                  }}
-                  className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 flex items-center gap-1 font-bold ml-auto"
-                >
-                  <Plus size={12} /> + Créer une catégorie
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Sous-Catégorie de l'article</label>
-              <select
-                value={(newArticle as any).subCategory || ''}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setNewArticle(prev => ({ ...prev, subCategory: val }));
-                }}
-                disabled={!newArticle.category}
-                className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 disabled:opacity-50"
-              >
-                <option value="">-- Sélectionner une Sous-Catégorie --</option>
-                {categories
-                  .find((cat) => cat.id === newArticle.category)
-                  ?.subCategories?.map((sub: any) => (
-                    <option key={sub.id} value={sub.id}>
-                      {sub.name}
-                    </option>
-                  ))}
-              </select>
-              <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2">
-                {(newArticle as any).subCategory ? (
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const parentCat = categories.find(c => c.id === newArticle.category);
-                        const sub = parentCat?.subCategories?.find((s: any) => s.id === (newArticle as any).subCategory);
-                        if (parentCat && sub) {
-                          setEditingSubCategory({ categoryId: parentCat.id, subId: sub.id, name: sub.name || '', name_en: sub.name_en || '', name_ha: sub.name_ha || '' });
-                          setActiveTab('categories');
-                        }
-                      }}
-                      className="text-xs text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1 font-bold"
-                    >
-                      <Edit2 size={12} /> Modifier la sous-catégorie
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (window.confirm("Voulez-vous vraiment supprimer cette sous-catégorie ?")) {
-                          handleDeleteSubCategory(newArticle.category!, (newArticle as any).subCategory);
-                          setNewArticle(prev => ({ ...prev, subCategory: '' }));
-                        }
-                      }}
-                      className="text-xs text-red-600 dark:text-red-400 hover:underline flex items-center gap-1 font-bold"
-                    >
-                      <Trash2 size={12} /> Supprimer
-                    </button>
-                  </div>
-                ) : <div />}
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!newArticle.category) {
-                      showToast("Veuillez sélectionner une catégorie d'abord", "error");
-                      return;
-                    }
-                    setShowQuickSubCategoryForm(!showQuickSubCategoryForm);
-                    setShowQuickCategoryForm(false);
-                  }}
-                  disabled={!newArticle.category}
-                  className="text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300 flex items-center gap-1 font-bold disabled:opacity-40 disabled:no-underline ml-auto"
-                >
-                  <Plus size={12} /> + Créer une sous-catégorie
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Quick Category Form */}
-          {showQuickCategoryForm && (
-            <div className="bg-emerald-50/40 dark:bg-emerald-950/10 border border-emerald-500/20 rounded-2xl p-4 space-y-3">
-              <div className="flex justify-between items-center">
-                <h4 className="text-xs font-black text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">
-                  Création Rapide de Catégorie
-                </h4>
-                <button 
-                  type="button" 
-                  onClick={() => setShowQuickCategoryForm(false)} 
-                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-                >
-                  <X size={14} />
-                </button>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Nom (FR) *</label>
-                  <input
-                    type="text"
-                    placeholder="Ex: Protection, Richesse..."
-                    value={quickCat.name}
-                    onChange={(e) => setQuickCat({ ...quickCat, name: e.target.value })}
-                    className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white outline-none focus:ring-1 focus:ring-emerald-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Nom (EN - Optionnel)</label>
-                  <input
-                    type="text"
-                    placeholder="Ex: Protection, Wealth..."
-                    value={quickCat.name_en}
-                    onChange={(e) => setQuickCat({ ...quickCat, name_en: e.target.value })}
-                    className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white outline-none focus:ring-1 focus:ring-emerald-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Nom (HA - Optionnel)</label>
-                  <input
-                    type="text"
-                    placeholder="Ex: Kariya, Arziki..."
-                    value={quickCat.name_ha}
-                    onChange={(e) => setQuickCat({ ...quickCat, name_ha: e.target.value })}
-                    className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white outline-none focus:ring-1 focus:ring-emerald-500"
-                  />
-                </div>
-              </div>
-              <div className="flex justify-end gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => setShowQuickCategoryForm(false)}
-                  className="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-xl text-xs font-bold transition-all"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    const createdId = await handleQuickCreateCategory(quickCat.name, quickCat.name_en, quickCat.name_ha);
-                    if (createdId) {
-                      setNewArticle(prev => ({ ...prev, category: createdId, subCategory: '' }));
-                      setQuickCat({ name: '', name_en: '', name_ha: '' });
-                      setShowQuickCategoryForm(false);
-                    }
-                  }}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all"
-                >
-                  Créer et Sélectionner
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Quick Subcategory Form */}
-          {showQuickSubCategoryForm && newArticle.category && (
-            <div className="bg-emerald-50/40 dark:bg-emerald-950/10 border border-emerald-500/20 rounded-2xl p-4 space-y-3">
-              <div className="flex justify-between items-center">
-                <h4 className="text-xs font-black text-emerald-700 dark:text-emerald-400 uppercase tracking-wider">
-                  Création Rapide de Sous-Catégorie pour "{categories.find(c => c.id === newArticle.category)?.name}"
-                </h4>
-                <button 
-                  type="button" 
-                  onClick={() => setShowQuickSubCategoryForm(false)} 
-                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-                >
-                  <X size={14} />
-                </button>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Nom (FR) *</label>
-                  <input
-                    type="text"
-                    placeholder="Ex: Protection Spécifique..."
-                    value={quickSub.name}
-                    onChange={(e) => setQuickSub({ ...quickSub, name: e.target.value })}
-                    className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white outline-none focus:ring-1 focus:ring-emerald-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Nom (EN - Optionnel)</label>
-                  <input
-                    type="text"
-                    placeholder="Ex: Specific Protection..."
-                    value={quickSub.name_en}
-                    onChange={(e) => setQuickSub({ ...quickSub, name_en: e.target.value })}
-                    className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white outline-none focus:ring-1 focus:ring-emerald-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-gray-500 uppercase mb-1">Nom (HA - Optionnel)</label>
-                  <input
-                    type="text"
-                    placeholder="Ex: Musamman Kariya..."
-                    value={quickSub.name_ha}
-                    onChange={(e) => setQuickSub({ ...quickSub, name_ha: e.target.value })}
-                    className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white outline-none focus:ring-1 focus:ring-emerald-500"
-                  />
-                </div>
-              </div>
-              <div className="flex justify-end gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => setShowQuickSubCategoryForm(false)}
-                  className="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-4 py-2 rounded-xl text-xs font-bold transition-all"
-                >
-                  Annuler
-                </button>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    const createdSubId = await handleQuickCreateSubCategory(
-                      newArticle.category!,
-                      quickSub.name,
-                      quickSub.name_en,
-                      quickSub.name_ha
-                    );
-                    if (createdSubId) {
-                      setNewArticle(prev => ({ ...prev, subCategory: createdSubId }));
-                      setQuickSub({ name: '', name_en: '', name_ha: '' });
-                      setShowQuickSubCategoryForm(false);
-                    }
-                  }}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all"
-                >
-                  Créer et Sélectionner
-                </button>
-              </div>
-            </div>
-          )}
-
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">
-              {editingArticle ? "Éditer l'Article" : "Nouvel Article"}
-            </h2>
-            <div className="flex bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
-              {['fr', 'en', 'ha'].map(lang => (
-                <button
-                  key={lang}
-                  onClick={() => setActiveLangTab(lang as any)}
-                  className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors ${
-                    activeLangTab === lang 
-                      ? 'bg-white dark:bg-gray-700 text-emerald-600 dark:text-emerald-400 shadow-sm' 
-                      : 'text-gray-500 hover:text-gray-700 dark:text-gray-400'
-                  }`}
-                >
-                  {lang.toUpperCase()}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <input
-            type="text"
-            placeholder={`Titre de l'article (${activeLangTab.toUpperCase()})`}
-            value={(activeLangTab === 'fr' ? newArticle.title : (newArticle as any)[`title_${activeLangTab}`]) || ''}
-            onChange={(e) => {
-              const val = e.target.value;
-              setNewArticle(prev => (activeLangTab === 'fr' ? { ...prev, title: val } : { ...prev, [`title_${activeLangTab}`]: val }));
-            }}
-            className="w-full mb-4 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
-          />
-
-          <textarea
-            placeholder={`Accroche / Extrait (Hook) (${activeLangTab.toUpperCase()})`}
-            value={(activeLangTab === 'fr' ? (newArticle as any).hook : (newArticle as any)[`hook_${activeLangTab}`]) || ''}
-            onChange={(e) => {
-              const val = e.target.value;
-              setNewArticle(prev => (activeLangTab === 'fr' ? { ...prev, hook: val } : { ...prev, [`hook_${activeLangTab}`]: val } as any));
-            }}
-            className="w-full mb-4 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 h-20 resize-none"
-          />
-
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Image de couverture (Thumbnail)
-            </label>
-            <div className="flex items-center gap-3 flex-wrap">
-              <label className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-xl cursor-pointer text-sm font-semibold transition-colors">
-                <Upload size={16} />
-                Télécharger une image
-                <input type="file" accept="image/*" onChange={onSelectFile} className="hidden" />
-              </label>
-
-              <button
-                type="button"
-                onClick={() => setShowBookCoverStudioModal(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-xl text-sm font-semibold transition-all shadow-sm cursor-pointer"
-              >
-                <Sparkles size={16} />
-                <span>Créer Couverture IA / Studio</span>
-              </button>
-
-              {newArticle.thumbnail && !imgSrc && (
-                <div className="flex items-center gap-3 p-2 rounded-2xl bg-gray-50 dark:bg-gray-750 border border-gray-200 dark:border-gray-700">
-                  <div className="relative w-20 h-20 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shrink-0">
-                    <img src={newArticle.thumbnail} alt="Thumbnail preview" className="w-full h-full object-cover" />
-                    <button 
-                      type="button"
-                      onClick={() => setNewArticle(prev => ({ ...prev, thumbnail: '', imageUrl: '' }))} 
-                      className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 shadow-sm"
-                      title="Supprimer l'image"
-                    >
-                      <X size={12} />
-                    </button>
-                    <div className={`absolute bottom-0 inset-x-0 text-[9px] font-black text-center py-0.5 ${newArticle.isPremium ? 'bg-purple-600 text-white' : 'bg-black/70 text-gray-200'}`}>
-                      {newArticle.isPremium ? '★ PREMIUM' : '☆ STANDARD'}
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-1.5">
-                    <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">Couverture sélectionnée</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (newArticle.thumbnail) {
-                          setImgSrc(newArticle.thumbnail);
-                        }
-                      }}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded-xl text-xs font-bold transition-all cursor-pointer"
-                    >
-                      <CropIcon size={14} />
-                      <span>Recadrer / Ajuster le cadrage</span>
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Quick Premium Access Selector in Image Section */}
-            <div className="mt-3 p-3 rounded-2xl bg-purple-50/70 dark:bg-purple-950/20 border border-purple-200/60 dark:border-purple-800/40 flex items-center justify-between gap-3 flex-wrap">
-              <div className="flex items-center gap-2">
-                <Star size={18} className={newArticle.isPremium ? "text-amber-500 fill-amber-400" : "text-purple-400"} />
-                <div>
-                  <div className="text-xs font-bold text-gray-900 dark:text-white">Option d'accès à l'article & à l'image</div>
-                  <div className="text-[11px] text-gray-500 dark:text-gray-400">Définissez si cet article est accessible gratuitement ou réservé aux abonnés VIP</div>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setNewArticle(prev => ({ ...prev, isPremium: false }))}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                    !newArticle.isPremium
-                      ? 'bg-gray-800 text-white dark:bg-white dark:text-gray-900 shadow-sm'
-                      : 'bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700'
-                  }`}
-                >
-                  ☆ STANDARD (Gratuit)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setNewArticle(prev => ({ ...prev, isPremium: true }))}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                    newArticle.isPremium
-                      ? 'bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md shadow-purple-600/30'
-                      : 'bg-white dark:bg-gray-800 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800'
-                  }`}
-                >
-                  <Star size={12} className="fill-amber-300 text-amber-300" />
-                  ★ PREMIUM (VIP)
-                </button>
-              </div>
-            </div>
-
-            {/* Dedicated Audio Track Section */}
-            <div className="mt-3 p-4 rounded-2xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/70 dark:border-amber-900/40 space-y-3">
-              <div className="flex items-center justify-between flex-wrap gap-2">
-                <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center text-amber-700 dark:text-amber-300 shrink-0">
-                    <Volume2 size={18} />
-                  </div>
-                  <div>
-                    <h4 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
-                      <span>Fichier Audio / Récitation de l'article</span>
-                      <span className="text-[10px] font-normal text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/40 px-2 py-0.5 rounded-full">Optionnel</span>
-                    </h4>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Attachez un enregistrement audio ou récitation (MP3, WAV) qui restera disponible dans l'article.
-                    </p>
-                  </div>
-                </div>
-                {(newArticle as any).audioUrl && (
-                  <span className="px-2.5 py-1 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 text-xs font-bold rounded-lg flex items-center gap-1">
-                    <CheckCircle2 size={13} /> Audio prêt
-                  </span>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <label className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white dark:bg-gray-800 hover:bg-amber-50 dark:hover:bg-gray-700 border border-amber-200 dark:border-gray-700 rounded-xl cursor-pointer text-xs font-bold text-gray-700 dark:text-gray-200 transition-all shadow-xs">
-                  <Upload size={15} className="text-amber-600 dark:text-amber-400" />
-                  <span>Importer un fichier Audio (MP3, WAV)</span>
-                  <input
-                    type="file"
-                    accept="audio/*"
-                    onChange={handleAudioFileUploadArticle}
-                    className="hidden"
-                  />
-                </label>
-
-                <div className="flex items-center gap-2">
-                  <input
-                    type="url"
-                    placeholder="Ou lien URL direct (ex: https://...mp3)"
-                    value={(newArticle as any).audioUrl || ''}
-                    onChange={(e) => setNewArticle(prev => ({ ...prev, audioUrl: e.target.value }))}
-                    className="flex-1 px-3 py-2 text-xs bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500"
-                  />
-                </div>
-              </div>
-
-              {(newArticle as any).audioUrl && (
-                <div className="p-3 bg-white dark:bg-gray-800 rounded-xl border border-amber-200/60 dark:border-amber-900/30 flex items-center justify-between gap-3">
-                  <audio controls src={(newArticle as any).audioUrl} className="flex-1 h-9 max-w-full" />
-                  <button
-                    type="button"
-                    onClick={() => setNewArticle(prev => ({ ...prev, audioUrl: '' }))}
-                    className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl transition-colors shrink-0"
-                    title="Supprimer cet audio"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              )}
-            </div>
-
-            {/* Interactive Image Cropper Modal/View */}
-            {imgSrc && (
-              <div className="mt-4 p-4 sm:p-5 border-2 border-emerald-500/40 dark:border-emerald-500/40 rounded-2xl bg-white dark:bg-gray-900 shadow-xl space-y-3">
-                <div className="flex items-center justify-between flex-wrap gap-2 border-b border-gray-100 dark:border-gray-800 pb-3">
-                  <div>
-                    <h4 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                      <CropIcon size={16} className="text-emerald-600 dark:text-emerald-400" />
-                      <span>Recadrage & Redimensionnement de l'image</span>
-                    </h4>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Ajustez le cadre de sélection avec les poignées puis validez
-                    </p>
-                  </div>
-
-                  {/* Aspect Ratio Presets */}
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-[11px] font-bold text-gray-400 mr-1">Format :</span>
-                    <button
-                      type="button"
-                      onClick={() => handleAspectChange(16 / 9)}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                        cropAspect === 16 / 9
-                          ? 'bg-emerald-600 text-white shadow-xs'
-                          : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200'
-                      }`}
-                    >
-                      16:9 (Bannière)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleAspectChange(4 / 3)}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                        cropAspect === 4 / 3
-                          ? 'bg-emerald-600 text-white shadow-xs'
-                          : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200'
-                      }`}
-                    >
-                      4:3 (Photo)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleAspectChange(1)}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                        cropAspect === 1
-                          ? 'bg-emerald-600 text-white shadow-xs'
-                          : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200'
-                      }`}
-                    >
-                      1:1 (Carré)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleAspectChange(undefined)}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                        cropAspect === undefined
-                          ? 'bg-emerald-600 text-white shadow-xs'
-                          : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200'
-                      }`}
-                    >
-                      Libre
-                    </button>
-                  </div>
-                </div>
-
-                <div className="flex justify-center bg-gray-950/10 dark:bg-black/40 rounded-xl p-2 max-h-[420px] overflow-auto">
-                  <ReactCrop 
-                    crop={crop} 
-                    onChange={(_, percentCrop) => setCrop(percentCrop)} 
-                    onComplete={(c) => setCompletedCrop(c)}
-                    aspect={cropAspect}
-                    className="max-h-[380px]"
-                  >
-                    <img 
-                      ref={imageRef} 
-                      src={imgSrc} 
-                      alt="Crop preview" 
-                      onLoad={onImageCropLoad}
-                      className="max-h-[380px] w-auto object-contain select-none" 
-                    />
-                  </ReactCrop>
-                </div>
-
-                <div className="flex gap-2 justify-end pt-1">
-                  <button 
-                    type="button"
-                    onClick={() => { setImgSrc(''); setCrop(undefined); setCompletedCrop(null); }} 
-                    className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-300 rounded-xl text-xs font-bold transition-colors cursor-pointer"
-                  >
-                    Annuler
-                  </button>
-                  <button 
-                    type="button"
-                    onClick={handleCropComplete} 
-                    className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-2 shadow-md shadow-emerald-600/20 transition-all cursor-pointer active:scale-95"
-                  >
-                    <Check size={16} /> Valider et appliquer le recadrage
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-          
-          <div className="flex gap-4 mb-2">
-            <button
-              onClick={() => setNewArticle(prev => ({ ...prev, type: 'richtext' }))}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 ${
-                newArticle.type === 'richtext' ? 'bg-emerald-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
-              }`}
-            >
-              <FileText size={16} /> Éditeur de Texte
-            </button>
-            <button
-              onClick={() => setNewArticle(prev => ({ ...prev, type: 'code' }))}
-              className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 ${
-                newArticle.type === 'code' ? 'bg-emerald-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
-              }`}
-            >
-              <LayoutDashboard size={16} /> Éditeur de Code
-            </button>
-          </div>
-
-          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden min-h-[300px]">
-            {newArticle.type === 'richtext' ? (
-              <TipTapEditor 
-                key={`editor-${articleFormKey}-${activeLangTab}-${editingArticle?.id || 'new'}`}
-                value={(activeLangTab === 'fr' ? newArticle.content : (newArticle as any)[`content_${activeLangTab}`]) || ''} 
-                onChange={(val: any) => {
-                  setNewArticle(prev => {
-                    if (activeLangTab === 'fr') return { ...prev, content: val };
-                    return { ...prev, [`content_${activeLangTab}`]: val };
-                  });
-                }} 
-                className="h-full"
-              />
-            ) : (
-              <div className="flex flex-col h-full">
-                <div className="flex flex-wrap items-center gap-2 p-2 bg-gray-800 border-b border-gray-700 text-xs">
-                  <span className="text-gray-400 font-semibold px-2">Raccourcis Médias HTML:</span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const url = prompt("URL du lien (https://...):");
-                      const text = prompt("Texte du lien:", "Cliquez ici");
-                      if (url) {
-                        const snippet = `<a href="${url}" target="_blank" rel="noopener noreferrer">${text || url}</a>`;
-                        setNewArticle(prev => {
-                          const current = (activeLangTab === 'fr' ? prev.content : (prev as any)[`content_${activeLangTab}`]) || '';
-                          const updated = current + '\n' + snippet;
-                          if (activeLangTab === 'fr') return { ...prev, content: updated };
-                          return { ...prev, [`content_${activeLangTab}`]: updated };
-                        });
-                      }
-                    }}
-                    className="px-2 py-1 bg-emerald-900/60 hover:bg-emerald-800 text-emerald-200 rounded font-semibold transition-colors flex items-center gap-1"
-                  >
-                    🔗 + Lien
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const url = prompt("URL de l'image (https://...):");
-                      if (url) {
-                        const snippet = `<img src="${url}" alt="Image" class="w-full rounded-xl my-4 shadow-md" />`;
-                        setNewArticle(prev => {
-                          const current = (activeLangTab === 'fr' ? prev.content : (prev as any)[`content_${activeLangTab}`]) || '';
-                          const updated = current + '\n' + snippet;
-                          if (activeLangTab === 'fr') return { ...prev, content: updated };
-                          return { ...prev, [`content_${activeLangTab}`]: updated };
-                        });
-                      }
-                    }}
-                    className="px-2 py-1 bg-blue-900/60 hover:bg-blue-800 text-blue-200 rounded font-semibold transition-colors flex items-center gap-1"
-                  >
-                    🖼️ + Image
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const url = prompt("URL du fichier audio (.mp3, .wav):");
-                      if (url) {
-                        const snippet = `<audio controls src="${url}" class="w-full my-3 rounded-lg"></audio>`;
-                        setNewArticle(prev => {
-                          const current = (activeLangTab === 'fr' ? prev.content : (prev as any)[`content_${activeLangTab}`]) || '';
-                          const updated = current + '\n' + snippet;
-                          if (activeLangTab === 'fr') return { ...prev, content: updated };
-                          return { ...prev, [`content_${activeLangTab}`]: updated };
-                        });
-                      }
-                    }}
-                    className="px-2 py-1 bg-purple-900/60 hover:bg-purple-800 text-purple-200 rounded font-semibold transition-colors flex items-center gap-1"
-                  >
-                    🎵 + Audio
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const url = prompt("URL de la vidéo MP4 (https://...):");
-                      if (url) {
-                        const snippet = `<video controls src="${url}" class="w-full max-h-[450px] rounded-xl my-4 shadow-md bg-black"></video>`;
-                        setNewArticle(prev => {
-                          const current = (activeLangTab === 'fr' ? prev.content : (prev as any)[`content_${activeLangTab}`]) || '';
-                          const updated = current + '\n' + snippet;
-                          if (activeLangTab === 'fr') return { ...prev, content: updated };
-                          return { ...prev, [`content_${activeLangTab}`]: updated };
-                        });
-                      }
-                    }}
-                    className="px-2 py-1 bg-amber-900/60 hover:bg-amber-800 text-amber-200 rounded font-semibold transition-colors flex items-center gap-1"
-                  >
-                    🎥 + Vidéo MP4
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const code = prompt("Code YouTube ou iframe embed (<iframe ...>):");
-                      if (code) {
-                        setNewArticle(prev => {
-                          const current = (activeLangTab === 'fr' ? prev.content : (prev as any)[`content_${activeLangTab}`]) || '';
-                          const updated = current + '\n' + code;
-                          if (activeLangTab === 'fr') return { ...prev, content: updated };
-                          return { ...prev, [`content_${activeLangTab}`]: updated };
-                        });
-                      }
-                    }}
-                    className="px-2 py-1 bg-red-900/60 hover:bg-red-800 text-red-200 rounded font-semibold transition-colors flex items-center gap-1"
-                  >
-                    🔴 + YouTube / Embed
-                  </button>
-                </div>
-                <textarea
-                  value={(activeLangTab === 'fr' ? newArticle.content : (newArticle as any)[`content_${activeLangTab}`]) || ''}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setNewArticle(prev => {
-                      if (activeLangTab === 'fr') return { ...prev, content: val };
-                      return { ...prev, [`content_${activeLangTab}`]: val };
-                    });
-                  }}
-                  className="w-full h-full min-h-[300px] p-4 bg-[#2d2d2d] text-[#f8f8f2] font-mono text-sm resize-none focus:outline-none"
-                  placeholder="Entrez votre code HTML/Markdown ici..."
-                />
-              </div>
-            )}
-          </div>
-
-          {/* Article Gallery Preview Manager */}
-          <ArticleMediaGallery
-            content={(activeLangTab === 'fr' ? newArticle.content : (newArticle as any)[`content_${activeLangTab}`]) || ''}
-            onChangeContent={(updatedHtml) => {
-              setNewArticle(prev => {
-                if (activeLangTab === 'fr') return { ...prev, content: updatedHtml };
-                return { ...prev, [`content_${activeLangTab}`]: updatedHtml };
-              });
-            }}
-          />
-
-          <div className="mt-8 bg-gray-50 dark:bg-gray-800/50 rounded-2xl p-6 border border-gray-100 dark:border-gray-700">
-            <h3 className="font-bold text-gray-900 dark:text-white mb-4">Recettes et Bienfaits (Benefits)</h3>
-            <div className="space-y-3 mb-4">
-              {((newArticle as any).benefits || []).map((benefit: any, idx: number) => (
-                <div key={idx} className="flex items-center gap-3 bg-white dark:bg-gray-700 p-3 rounded-xl shadow-sm border border-gray-100 dark:border-gray-600">
-                  <select 
-                    value={benefit.icon || 'Star'} 
-                    onChange={(e) => {
-                      const iconVal = e.target.value;
-                      setNewArticle(prev => {
-                        const newBenefits = [...((prev as any).benefits || [])];
-                        newBenefits[idx] = { ...newBenefits[idx], icon: iconVal };
-                        return { ...prev, benefits: newBenefits } as any;
-                      });
-                    }}
-                    className="bg-gray-50 dark:bg-gray-800 border-none rounded-lg text-sm text-gray-700 dark:text-gray-300 p-2"
-                  >
-                    <option value="Star">Étoile</option>
-                    <option value="Sparkles">Étincelles</option>
-                    <option value="Heart">Coeur</option>
-                    <option value="Shield">Bouclier</option>
-                    <option value="BookOpen">Livre</option>
-                    <option value="Droplets">Gouttes</option>
-                    <option value="Users">Groupe</option>
-                  </select>
-                  <input 
-                    type="text" 
-                    value={benefit.text}
-                    onChange={(e) => {
-                      const textVal = e.target.value;
-                      setNewArticle(prev => {
-                        const newBenefits = [...((prev as any).benefits || [])];
-                        newBenefits[idx] = { ...newBenefits[idx], text: textVal };
-                        return { ...prev, benefits: newBenefits } as any;
-                      });
-                    }}
-                    placeholder="Texte du bienfait..."
-                    className="flex-1 bg-transparent border-none text-sm text-gray-900 dark:text-white focus:ring-0 p-0"
-                  />
-                  <button 
-                    onClick={() => {
-                      setNewArticle(prev => {
-                        const newBenefits = [...((prev as any).benefits || [])];
-                        newBenefits.splice(idx, 1);
-                        return { ...prev, benefits: newBenefits } as any;
-                      });
-                    }}
-                    className="text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 p-2 rounded-lg"
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
-              ))}
-            </div>
-            <button
-              onClick={() => {
-                setNewArticle(prev => {
-                  const newBenefits = [...((prev as any).benefits || []), { text: '', icon: 'Star' }];
-                  return { ...prev, benefits: newBenefits } as any;
-                });
-              }}
-              className="flex items-center gap-2 text-sm text-emerald-600 dark:text-emerald-400 font-bold hover:bg-emerald-50 dark:hover:bg-emerald-900/30 px-4 py-2 rounded-xl transition-colors"
-            >
-              <Plus size={16} /> Ajouter un bienfait
-            </button>
-          </div>
-
-          <div className="flex gap-2">
-            <button
-              onClick={handleSaveArticle}
-              className="mt-4 bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-colors"
-            >
-              <Save size={18} /> {editingArticle ? "Mettre à jour" : "Publier l'Article"}
-            </button>
-            <button
-              onClick={() => setShowPreview(true)}
-              disabled={!newArticle.title && !newArticle.content}
-              className="mt-4 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
-            >
-              <Eye size={18} /> Prévisualiser
-            </button>
-            {editingArticle && (
-              <button
-                onClick={() => {
-                  setEditingArticle(null);
-                  setNewArticle({
-                    title: '',
-                    title_en: '',
-                    title_ha: '',
-                    hook: '',
-                    hook_en: '',
-                    hook_ha: '',
-                    thumbnail: '',
-                    imageUrl: '',
-                    content: '',
-                    content_en: '',
-                    content_ha: '',
-                    type: 'richtext',
-                    status: 'Published',
-                    publishDate: '',
-                    benefits: [],
-                    category: '',
-                    subCategory: '',
-                    isPremium: false,
-                  } as any);
-                  setImgSrc('');
-                  setCrop(undefined);
-                  setCompletedCrop(null);
-                  setArticleFormKey(k => k + 1);
-                  try {
-                    localStorage.removeItem('asrarhub_article_draft');
-                  } catch (e) {}
-                }}
-                className="mt-4 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white px-6 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-colors"
-              >
-                Annuler
-              </button>
-            )}
-          </div>
-        </div>
       </div>
-
-      <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 mt-6">
-        <div className="flex justify-between items-center mb-4 flex-wrap gap-4">
-          <div className="flex items-center gap-4">
-            <h3 className="font-bold text-gray-900 dark:text-white">Articles ({articles.length})</h3>
-            <div className="flex bg-gray-100 dark:bg-gray-900 p-1 rounded-xl">
-              <button
-                onClick={() => setArticlesLayoutMode('grid')}
-                className={`p-1.5 rounded-lg transition-all cursor-pointer ${
-                  articlesLayoutMode === 'grid' 
-                    ? 'bg-white dark:bg-gray-800 text-emerald-600 shadow-sm' 
-                    : 'text-gray-400 hover:text-gray-600'
-                }`}
-                title="Affichage Grille"
-              >
-                <Grid size={16} />
-              </button>
-              <button
-                onClick={() => setArticlesLayoutMode('list')}
-                className={`p-1.5 rounded-lg transition-all cursor-pointer ${
-                  articlesLayoutMode === 'list' 
-                    ? 'bg-white dark:bg-gray-800 text-emerald-600 shadow-sm' 
-                    : 'text-gray-400 hover:text-gray-600'
-                }`}
-                title="Affichage Liste"
-              >
-                <List size={16} />
-              </button>
-            </div>
-          </div>
-          <div className="flex items-center gap-3 flex-wrap">
-            <div className="px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/60 text-emerald-700 dark:text-emerald-300 rounded-xl text-xs font-bold flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span>Publication Directe & Instantanée Active</span>
-            </div>
-            <button
-              onClick={handleDeleteMockArticles}
-              className="px-4 py-2 bg-amber-100 hover:bg-amber-200 dark:bg-amber-900/30 dark:hover:bg-amber-900/50 text-amber-700 dark:text-amber-300 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 transition-colors cursor-pointer"
-              title="Masquer et supprimer définitivement les articles de démonstration"
-            >
-              <Trash2 size={16} /> Supprimer les Articles Démo
-            </button>
-            {articles.length > 0 && (
-              <button
-                onClick={handleDeleteAllArticles}
-                className="px-4 py-2 bg-red-100 hover:bg-red-200 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 rounded-xl text-xs sm:text-sm font-semibold flex items-center gap-2 transition-colors cursor-pointer"
-              >
-                <Trash2 size={16} /> Effacer tout
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Search and Filters Toolbar for Admin Articles */}
-        <div className="bg-gray-50 dark:bg-gray-750 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 mb-6 space-y-3">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative flex-1">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
-              <input
-                type="text"
-                placeholder="Rechercher par titre, ID ou extrait..."
-                value={adminArticleSearch}
-                onChange={(e) => setAdminArticleSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs sm:text-sm text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500"
-              />
-              {adminArticleSearch && (
-                <button
-                  onClick={() => setAdminArticleSearch('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs font-bold"
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-
-            <div className="flex flex-wrap gap-2 items-center">
-              <select
-                value={adminArticleFilterCategory}
-                onChange={(e) => setAdminArticleFilterCategory(e.target.value)}
-                className="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs text-gray-900 dark:text-white font-medium outline-none cursor-pointer"
-              >
-                <option value="all">Toutes Catégories</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
-
-              <select
-                value={adminArticleFilterStatus}
-                onChange={(e) => setAdminArticleFilterStatus(e.target.value)}
-                className="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs text-gray-900 dark:text-white font-medium outline-none cursor-pointer"
-              >
-                <option value="all">Tous Statuts</option>
-                <option value="published">Publiés (Visibles)</option>
-                <option value="draft">Brouillons</option>
-                <option value="archived">Archivés</option>
-              </select>
-
-              <select
-                value={adminArticleFilterPremium}
-                onChange={(e) => setAdminArticleFilterPremium(e.target.value)}
-                className="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs text-gray-900 dark:text-white font-medium outline-none cursor-pointer"
-              >
-                <option value="all">Standard & Premium</option>
-                <option value="premium">★ Premium uniquement</option>
-                <option value="standard">☆ Standard (Gratuit)</option>
-              </select>
-
-              <select
-                value={adminArticleFilterAudio}
-                onChange={(e) => setAdminArticleFilterAudio(e.target.value)}
-                className="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs text-gray-900 dark:text-white font-medium outline-none cursor-pointer"
-              >
-                <option value="all">Tous (Audio & Texte)</option>
-                <option value="with_audio">🎧 Avec Fichier Audio</option>
-                <option value="without_audio">Texte Seul</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between text-xs text-gray-500 dark:text-gray-400 pt-1">
-            <span>
-              Affichage de <strong className="text-gray-900 dark:text-white font-bold">{
-                articles.filter(art => {
-                  if (adminArticleSearch.trim()) {
-                    const q = adminArticleSearch.toLowerCase().trim();
-                    const t = (art.title || '').toLowerCase();
-                    const h = (art.hook || '').toLowerCase();
-                    const id = (art.id || '').toLowerCase();
-                    if (!t.includes(q) && !h.includes(q) && !id.includes(q)) return false;
-                  }
-                  if (adminArticleFilterCategory !== 'all' && (art as any).category !== adminArticleFilterCategory) return false;
-                  if (adminArticleFilterStatus !== 'all') {
-                    if (adminArticleFilterStatus === 'published' && !isPublicVisibleStatus(art.status)) return false;
-                    if (adminArticleFilterStatus === 'draft' && (!art.status || !['draft', 'brouillon'].includes(art.status.toString().toLowerCase()))) return false;
-                    if (adminArticleFilterStatus === 'archived' && (!art.status || !['archived', 'archivé'].includes(art.status.toString().toLowerCase()))) return false;
-                  }
-                  if (adminArticleFilterPremium !== 'all') {
-                    if (adminArticleFilterPremium === 'premium' && !art.isPremium) return false;
-                    if (adminArticleFilterPremium === 'standard' && art.isPremium) return false;
-                  }
-                  if (adminArticleFilterAudio !== 'all') {
-                    const hasAudio = !!((art as any).audioUrl || (art as any).audio_url);
-                    if (adminArticleFilterAudio === 'with_audio' && !hasAudio) return false;
-                    if (adminArticleFilterAudio === 'without_audio' && hasAudio) return false;
-                  }
-                  return true;
-                }).length
-              }</strong> sur {articles.length} article(s)
-            </span>
-            {(adminArticleSearch || adminArticleFilterCategory !== 'all' || adminArticleFilterStatus !== 'all' || adminArticleFilterPremium !== 'all' || adminArticleFilterAudio !== 'all') && (
-              <button
-                onClick={() => {
-                  setAdminArticleSearch('');
-                  setAdminArticleFilterCategory('all');
-                  setAdminArticleFilterStatus('all');
-                  setAdminArticleFilterPremium('all');
-                  setAdminArticleFilterAudio('all');
-                }}
-                className="text-emerald-600 dark:text-emerald-400 font-bold hover:underline"
-              >
-                Réinitialiser les filtres
-              </button>
-            )}
-          </div>
-        </div>
-
-        <div className={`grid gap-4 ${
-          articlesLayoutMode === 'grid' ? 'grid-cols-1 md:grid-cols-2' : 'grid-cols-1'
-        }`}>
-          {articles
-            .filter(art => {
-              if (adminArticleSearch.trim()) {
-                const q = adminArticleSearch.toLowerCase().trim();
-                const t = (art.title || '').toLowerCase();
-                const h = (art.hook || '').toLowerCase();
-                const id = (art.id || '').toLowerCase();
-                if (!t.includes(q) && !h.includes(q) && !id.includes(q)) return false;
-              }
-              if (adminArticleFilterCategory !== 'all' && (art as any).category !== adminArticleFilterCategory) return false;
-              if (adminArticleFilterStatus !== 'all') {
-                if (adminArticleFilterStatus === 'published' && !isPublicVisibleStatus(art.status)) return false;
-                if (adminArticleFilterStatus === 'draft' && (!art.status || !['draft', 'brouillon'].includes(art.status.toString().toLowerCase()))) return false;
-                if (adminArticleFilterStatus === 'archived' && (!art.status || !['archived', 'archivé'].includes(art.status.toString().toLowerCase()))) return false;
-              }
-              if (adminArticleFilterPremium !== 'all') {
-                if (adminArticleFilterPremium === 'premium' && !art.isPremium) return false;
-                if (adminArticleFilterPremium === 'standard' && art.isPremium) return false;
-              }
-              if (adminArticleFilterAudio !== 'all') {
-                const hasAudio = !!((art as any).audioUrl || (art as any).audio_url);
-                if (adminArticleFilterAudio === 'with_audio' && !hasAudio) return false;
-                if (adminArticleFilterAudio === 'without_audio' && hasAudio) return false;
-              }
-              return true;
-            })
-            .map((article) => (
-            <div key={article.id} className="p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl flex gap-4">
-              <div 
-                onClick={async () => {
-                  const newIsPremium = !article.isPremium;
-                  setArticles(prev => prev.map(a => a.id === article.id ? { ...a, isPremium: newIsPremium } : a));
-                  saveLocalCustomArticle({ ...article, isPremium: newIsPremium });
-                  try {
-                    await setDoc(doc(db, 'articles', article.id), { isPremium: newIsPremium }, { merge: true });
-                    showToast(newIsPremium ? "Article passé en PREMIUM ★" : "Article passé en STANDARD (Gratuit)");
-                  } catch (err) {
-                    console.warn("Firestore update premium note:", err);
-                    showToast(newIsPremium ? "Article passé en PREMIUM ★" : "Article passé en STANDARD (Gratuit)");
-                  }
-                }}
-                className="relative w-20 h-20 rounded-xl overflow-hidden shrink-0 group cursor-pointer border border-gray-200 dark:border-gray-700 bg-gray-200 dark:bg-gray-800 select-none"
-                title="Cliquer sur l'image pour changer le statut Premium"
-              >
-                {article.thumbnail ? (
-                  <img src={article.thumbnail} alt={article.title} className="w-full h-full object-cover transition-transform duration-200 group-hover:scale-105" />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-gray-400 bg-gray-100 dark:bg-gray-800">
-                    <FileText size={24} />
-                  </div>
-                )}
-                
-                {/* Premium badge overlay right ON the image */}
-                <div className={`absolute top-1 left-1 px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider flex items-center gap-0.5 shadow-md backdrop-blur-sm transition-all ${
-                  article.isPremium 
-                    ? 'bg-purple-600 text-white border border-purple-400/60 shadow-purple-900/40' 
-                    : 'bg-black/65 text-gray-200 group-hover:bg-purple-900/80 group-hover:text-white border border-white/20'
-                }`}>
-                  <Star size={9} className={article.isPremium ? "fill-amber-300 text-amber-300" : "text-gray-300"} />
-                  <span>{article.isPremium ? 'PREMIUM' : 'STANDARD'}</span>
-                </div>
-                
-                {/* Hover overlay hint */}
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-[9px] text-white font-bold text-center p-1">
-                  Changer
-                </div>
-              </div>
-
-              <div className="flex-1 flex flex-col justify-between">
-                <div>
-                  <div className="flex items-start justify-between gap-2">
-                    <h4 className="font-bold text-sm text-gray-900 dark:text-white leading-tight">{article.title}</h4>
-                    {((article as any).audioUrl || (article as any).audio_url) && (
-                      <span className="shrink-0 px-2 py-0.5 bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 rounded-full text-[10px] font-bold flex items-center gap-1" title="Fichier audio attaché">
-                        <Headphones size={11} /> Audio
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2 mt-2">
-                    <span className="text-[10px] uppercase font-bold text-gray-500 bg-gray-200 dark:bg-gray-600 px-2 py-0.5 rounded-full">
-                      {article.type === 'richtext' ? 'Texte' : 'Code'}
-                    </span>
-                    <select
-                      value={article.status}
-                      onChange={async (e) => {
-                        const newStatus = e.target.value;
-                        setArticles(prev => prev.map(a => a.id === article.id ? { ...a, status: newStatus } : a));
-                        saveLocalCustomArticle({ ...article, status: newStatus });
-                        try {
-                          await setDoc(doc(db, 'articles', article.id), { status: newStatus }, { merge: true });
-                          revalidatePublishedArticles('admin_status_change').catch(() => {});
-                          showToast(newStatus === 'Published' ? "Article publié (visible immédiatement pour les utilisateurs)" : `Statut mis à jour : ${newStatus}`);
-                        } catch (err) {
-                          console.warn("Firestore update status note:", err);
-                          revalidatePublishedArticles('admin_status_change').catch(() => {});
-                          showToast(`Statut mis à jour : ${newStatus}`);
-                        }
-                      }}
-                      className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border-0 cursor-pointer ${
-                        article.status === 'Published' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' :
-                        article.status === 'Archived' ? 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' :
-                        'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400'
-                      }`}
-                    >
-                      <option value="Published">Publié</option>
-                      <option value="Draft">Brouillon</option>
-                      <option value="Archived">Archivé</option>
-                    </select>
-
-                    <select
-                      value={article.isPremium ? "premium" : "standard"}
-                      onChange={async (e) => {
-                        const newIsPremium = e.target.value === "premium";
-                        setArticles(prev => prev.map(a => a.id === article.id ? { ...a, isPremium: newIsPremium } : a));
-                        saveLocalCustomArticle({ ...article, isPremium: newIsPremium });
-                        try {
-                          await setDoc(doc(db, 'articles', article.id), { isPremium: newIsPremium }, { merge: true });
-                          showToast(newIsPremium ? "Article passé en PREMIUM ★" : "Article passé en STANDARD (Gratuit)");
-                        } catch (err) {
-                          console.warn("Firestore update premium note:", err);
-                          showToast(newIsPremium ? "Article passé en PREMIUM ★" : "Article passé en STANDARD (Gratuit)");
-                        }
-                      }}
-                      className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border-0 cursor-pointer transition-colors ${
-                        article.isPremium 
-                          ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 font-extrabold' 
-                          : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-                      }`}
-                    >
-                      <option value="standard">☆ STANDARD (Gratuit)</option>
-                      <option value="premium">★ PREMIUM (VIP)</option>
-                    </select>
-                    
-                    <button
-                      onClick={async () => {
-                        const newIsPremium = !article.isPremium;
-                        setArticles(prev => prev.map(a => a.id === article.id ? { ...a, isPremium: newIsPremium } : a));
-                        saveLocalCustomArticle({ ...article, isPremium: newIsPremium });
-                        try {
-                          await setDoc(doc(db, 'articles', article.id), { isPremium: newIsPremium }, { merge: true });
-                          showToast(newIsPremium ? "Article passé en PREMIUM ★" : "Article passé en STANDARD (Gratuit)");
-                        } catch (err) {
-                          console.warn("Firestore update premium note:", err);
-                          showToast(newIsPremium ? "Article passé en PREMIUM ★" : "Article passé en STANDARD (Gratuit)");
-                        }
-                      }}
-                      className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full border border-violet-200 dark:border-violet-800 transition-colors cursor-pointer ${
-                        article.isPremium 
-                          ? 'bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-400 font-black' 
-                          : 'bg-transparent text-gray-400 hover:text-violet-500 hover:border-violet-300'
-                      }`}
-                      title="Changer rapidement Standard / Premium"
-                    >
-                      {article.isPremium ? '★ Premium' : '☆ Standard'}
-                    </button>
-
-                    {((article as any).category || (article as any).subCategory) && (
-                      <span className="text-[10px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/20 dark:text-amber-400 px-2 py-0.5 rounded-full whitespace-nowrap">
-                        {categories.find(c => c.id === (article as any).category)?.name || (article as any).category}
-                        {(article as any).subCategory && ` / ${
-                          categories.find(c => c.id === (article as any).category)?.subCategories?.find((s: any) => s.id === (article as any).subCategory)?.name || (article as any).subCategory
-                        }`}
-                      </span>
-                    )}
-                  </div>
-                  {article.publishDate && (
-                    <p className="text-xs text-gray-500 mt-1">Plannifié: {new Date(article.publishDate).toLocaleDateString()}</p>
-                  )}
-                </div>
-                <div className="flex gap-2 mt-2">
-                  <button onClick={() => editArticle(article)} className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded-lg transition-colors" title="Éditer">
-                    <Edit2 size={16} />
-                  </button>
-                  <button onClick={() => handleDeleteArticle(article.id)} className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors" title="Supprimer">
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
     );
   };
 
-  const renderCommunity = () => (
-    <div className="space-y-6">
-      {/* Maintenance Controls for Community */}
-      <div className="bg-amber-50/55 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800/40 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h4 className="font-bold text-gray-900 dark:text-white text-sm flex items-center gap-2">
-            <span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" />
-            Mode d'accès de la Communauté
-          </h4>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            Mettez le forum communautaire en maintenance, réservez-le aux membres premium, ou laissez-le ouvert à tous.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <select
-            value={featureToggles['tool_community'] || 'active'}
-            onChange={(e) => handleToggleFeature('tool_community', e.target.value)}
-            className="text-xs font-bold px-3 py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer text-gray-900 dark:text-white"
-          >
-            <option value="active">🟢 Active (Ouverte à tous)</option>
-            <option value="premium">⭐ Premium (Membres uniquement)</option>
-            <option value="maintenance">🛠️ En maintenance (Bloquée)</option>
-            <option value="inactive">🔴 Inactive (Désactivée)</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Code Sharing Controls */}
-      <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 text-sm">
-            💻 Partage de Code dans la Communauté
-          </h4>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            Activer ou désactiver l'écriture et le partage de codes interactifs (HTML/JS/CSS) par les utilisateurs du forum.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <select
-            value={codeSharingEnabled ? "enabled" : "disabled"}
-            onChange={(e) => handleToggleCodeSharing(e.target.value === "enabled")}
-            className="text-xs font-bold px-3 py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer text-gray-900 dark:text-white"
-          >
-            <option value="enabled">🟢 Activé (Écriture autorisée)</option>
-            <option value="disabled">🔴 Désactivé (Écriture bloquée)</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Message Edit & Delete Delay Setting */}
-      <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 text-sm">
-            ⏱️ Délais d'édition et de suppression des messages (Auteurs)
-          </h4>
-          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-            Définir la durée durant laquelle un utilisateur peut modifier ou supprimer ses propres messages (de 20 min à 7 jours ou illimité). Les administrateurs gardent un accès permanent.
-          </p>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <select
-            value={messageEditDeleteLimitMinutes}
-            onChange={(e) => handleChangeMessageEditDeleteLimit(Number(e.target.value))}
-            className="text-xs font-bold px-3 py-2 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer text-gray-900 dark:text-white"
-          >
-            <option value={20}>20 minutes</option>
-            <option value={60}>1 heure</option>
-            <option value={120}>2 heures</option>
-            <option value={360}>6 heures</option>
-            <option value={720}>12 heures</option>
-            <option value={1440}>24 heures (1 jour)</option>
-            <option value={2880}>48 heures (2 jours)</option>
-            <option value={4320}>72 heures (3 jours - Par défaut)</option>
-            <option value={10080}>7 jours</option>
-            <option value={-1}>♾️ Illimité (Aucune limite)</option>
-          </select>
-        </div>
-      </div>
-
-      <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-        <h3 className="font-bold text-gray-900 dark:text-white mb-6">Modération de la Communauté</h3>
-        <div className="space-y-4">
-          {communityPosts.map(post => (
-            <div key={post.id} className="p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl">
-              <div className="flex justify-between items-start mb-2">
-                <span className="font-bold text-sm text-gray-900 dark:text-white">{post.author}</span>
-                <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${
-                  post.status === 'approved' ? 'bg-emerald-100 text-emerald-600' :
-                  post.status === 'rejected' ? 'bg-red-100 text-red-600' :
-                  'bg-amber-100 text-amber-600'
-                }`}>
-                  {post.status === 'approved' ? 'Approuvé' : post.status === 'rejected' ? 'Rejeté' : 'En attente'}
-                </span>
-              </div>
-              <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">{post.content}</p>
-              <div className="flex gap-2">
-                {post.status !== 'approved' && (
-                  <button onClick={() => handleUpdatePostStatus(post.id, 'approved')} className="px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-lg text-xs font-semibold hover:bg-emerald-200 transition-colors">
-                    Approuver
-                  </button>
-                )}
-                {post.status !== 'rejected' && (
-                  <button onClick={() => handleUpdatePostStatus(post.id, 'rejected')} className="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg text-xs font-semibold hover:bg-red-200 transition-colors">
-                    Rejeter
-                  </button>
-                )}
-                <button onClick={() => handleDeletePost(post.id)} className="px-3 py-1.5 bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300 rounded-lg text-xs font-semibold hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors ml-auto flex items-center gap-1">
-                  <Trash2 size={14} /> Supprimer
-                </button>
-              </div>
+  const renderCommunity = () => {
+    return (
+      <div className="space-y-6 w-full max-w-full min-w-0">
+        <div className="bg-white dark:bg-gray-800 rounded-3xl p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700 space-y-4">
+          <h3 className="font-bold text-gray-900 dark:text-white text-base sm:text-lg">Paramètres de la Communauté</h3>
+          <div className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-750 rounded-xl">
+            <div>
+              <h4 className="font-bold text-xs text-gray-900 dark:text-white">Partage de Code & Snippets</h4>
+              <p className="text-[11px] text-gray-500">Autoriser les membres à poster des blocs de code.</p>
             </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-
-  const renderNotifications = () => (
-    <div className="space-y-6">
-      <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-        <h3 className="font-bold text-gray-900 dark:text-white mb-4">Envoyer une Notification Globale</h3>
-        {renderLanguageTabs()}
-        <div className="space-y-4 mb-6">
-          <input
-            type="text"
-            placeholder={`Titre de la notification (${activeLangTab.toUpperCase()})`}
-            value={newNotification[`title_${activeLangTab}`] || ''}
-            onChange={(e) => setNewNotification({...newNotification, [`title_${activeLangTab}`]: e.target.value})}
-            className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500"
-          />
-          <textarea
-            placeholder={`Message (${activeLangTab.toUpperCase()})`}
-            value={newNotification[`message_${activeLangTab}`] || ''}
-            onChange={(e) => setNewNotification({...newNotification, [`message_${activeLangTab}`]: e.target.value})}
-            className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 h-24 resize-none"
-          />
-          <button
-            onClick={handleAddNotification}
-            disabled={!newNotification.title_fr || !newNotification.message_fr}
-            className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white px-6 py-2 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-colors w-full sm:w-auto"
-          >
-            <Plus size={18} /> Envoyer la notification
-          </button>
+            <button
+              onClick={() => handleToggleCodeSharing(!featureToggles.allow_code_sharing)}
+              className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors ${
+                featureToggles.allow_code_sharing ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
+              }`}
+            >
+              <div className={`w-4 h-4 rounded-full bg-white transition-transform ${featureToggles.allow_code_sharing ? 'translate-x-6' : 'translate-x-0'}`} />
+            </button>
+          </div>
         </div>
 
-        <h3 className="font-bold text-gray-900 dark:text-white mb-4">Historique des Notifications</h3>
-        <div className="space-y-4">
-          {notifications.map(notif => {
-            const displayTitle = (notif as any)[`title_${activeLangTab}`] || (notif as any)[`title_${language}`] || notif.title || (notif as any).title_fr || '';
-            const displayMessage = (notif as any)[`message_${activeLangTab}`] || (notif as any)[`message_${language}`] || notif.message || (notif as any).message_fr || '';
-            return (
-              <div key={notif.id} className="p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl flex justify-between items-start gap-4">
-                <div>
-                  <h4 className="font-bold text-sm text-gray-900 dark:text-white">{displayTitle}</h4>
-                  <p className="text-xs text-gray-500 mt-1 mb-2">{new Date(notif.date).toLocaleString(language === 'fr' ? 'fr-FR' : language === 'ha' ? 'ha-GH' : 'en-US')}</p>
-                  <p className="text-sm text-gray-600 dark:text-gray-300">{displayMessage}</p>
+        <div className="bg-white dark:bg-gray-800 rounded-3xl p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+          <h3 className="font-bold text-gray-900 dark:text-white mb-4 text-base sm:text-lg">Modération des Discussions</h3>
+          <div className="space-y-3">
+            {communityPosts.length === 0 ? (
+              <p className="text-xs text-gray-400 text-center py-6">Aucune publication dans la communauté pour le moment.</p>
+            ) : (
+              communityPosts.map((post) => (
+                <div key={post.id} className="p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl space-y-2 min-w-0">
+                  <div className="flex justify-between items-start gap-2">
+                    <span className="font-bold text-sm text-gray-900 dark:text-white break-words">{post.author}</span>
+                    <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${
+                      post.status === 'approved' ? 'bg-emerald-100 text-emerald-600' : post.status === 'rejected' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'
+                    }`}>
+                      {post.status === 'approved' ? 'Approuvé' : post.status === 'rejected' ? 'Rejeté' : 'En attente'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-600 dark:text-gray-300 break-words">{post.content}</p>
+                  <div className="flex flex-wrap items-center gap-2 pt-2">
+                    {post.status !== 'approved' && (
+                      <button
+                        onClick={() => handleUpdatePostStatus(post.id, 'approved')}
+                        className="px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-lg text-xs font-semibold hover:bg-emerald-200 transition-colors"
+                      >
+                        Approuver
+                      </button>
+                    )}
+                    {post.status !== 'rejected' && (
+                      <button
+                        onClick={() => handleUpdatePostStatus(post.id, 'rejected')}
+                        className="px-3 py-1.5 bg-red-100 text-red-700 rounded-lg text-xs font-semibold hover:bg-red-200 transition-colors"
+                      >
+                        Rejeter
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleDeletePost(post.id)}
+                      className="px-3 py-1.5 bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300 rounded-lg text-xs font-semibold hover:bg-gray-300 ml-auto flex items-center gap-1"
+                    >
+                      <Trash2 size={14} /> Supprimer
+                    </button>
+                  </div>
                 </div>
-                <button onClick={() => handleDeleteNotification(notif.id)} className="p-2 text-gray-400 hover:text-red-500 transition-colors rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600">
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            );
-          })}
+              ))
+            )}
+          </div>
         </div>
       </div>
-    </div>
-  );
-
-  const handleAddSyriacName = () => {
-    if (!newSyriacName.name || !newSyriacName.arabic) {
-      showToast("Nom et version arabe requis pour le nom syriaque", "error");
-      return;
-    }
-    const updatedNames = [...(newOath.syriacNames || []), { ...newSyriacName }];
-    setNewOath({ ...newOath, syriacNames: updatedNames });
-    setNewSyriacName({ name: '', arabic: '', meaning: '', meaning_en: '', meaning_ha: '' });
-    showToast("Nom syriaque ajouté à la liste locale", "success");
+    );
   };
 
-  const handleRemoveSyriacName = (index: number) => {
-    const updatedNames = [...(newOath.syriacNames || [])];
-    updatedNames.splice(index, 1);
-    setNewOath({ ...newOath, syriacNames: updatedNames });
-    showToast("Nom syriaque retiré", "info");
-  };
+  const renderNotifications = () => {
+    return (
+      <div className="space-y-6 w-full max-w-full min-w-0">
+        <div className="bg-white dark:bg-gray-800 rounded-3xl p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+          <h3 className="font-bold text-gray-900 dark:text-white mb-4 text-base sm:text-lg">Envoyer une Notification Globale</h3>
+          {renderLanguageTabs()}
+          <div className="space-y-4 mb-6">
+            <input
+              type="text"
+              placeholder={`Titre de la notification (${language.toUpperCase()})`}
+              value={newNotification[`title_${language}`] || ''}
+              onChange={(e) => setNewNotification({ ...newNotification, [`title_${language}`]: e.target.value })}
+              className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
+            />
+            <textarea
+              placeholder={`Message (${language.toUpperCase()})`}
+              value={newNotification[`message_${language}`] || ''}
+              onChange={(e) => setNewNotification({ ...newNotification, [`message_${language}`]: e.target.value })}
+              className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 h-24 resize-none outline-none"
+            />
+            <button
+              onClick={handleAddNotification}
+              disabled={!newNotification.title_fr || !newNotification.message_fr}
+              className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white px-6 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-colors w-full sm:w-auto"
+            >
+              <Plus size={18} /> Envoyer la notification
+            </button>
+          </div>
 
-  const handleSaveOath = async () => {
-    // Validate title and content for first language (FR/Default)
-    if (!newOath.title || !newOath.content || !newOath.arabicTitle) {
-      showToast("Le titre (FR), le titre arabe et le texte de l'invocation sont obligatoires.", "error");
-      return;
-    }
-    try {
-      const payload = {
-        title: newOath.title,
-        title_en: newOath.title_en || '',
-        title_ha: newOath.title_ha || '',
-        arabicTitle: newOath.arabicTitle,
-        desc: newOath.desc || '',
-        desc_en: newOath.desc_en || '',
-        desc_ha: newOath.desc_ha || '',
-        incense: newOath.incense || '',
-        incense_en: newOath.incense_en || '',
-        incense_ha: newOath.incense_ha || '',
-        day: newOath.day || '',
-        day_en: newOath.day_en || '',
-        day_ha: newOath.day_ha || '',
-        content: newOath.content,
-        isMaintenance: !!newOath.isMaintenance,
-        syriacNames: newOath.syriacNames || [],
-        updatedAt: Date.now()
-      };
-
-      if (editingOath) {
-        await updateDoc(doc(db, 'grand_oaths', editingOath.id), payload);
-        showToast("Le Grand Sermon a été mis à jour.", "success");
-      } else {
-        await addDoc(collection(db, 'grand_oaths'), {
-          ...payload,
-          createdAt: Date.now()
-        });
-        showToast("Le Grand Sermon a été créé.", "success");
-      }
-
-      // Reset form
-      setEditingOath(null);
-      setNewOath({
-        title: '', title_en: '', title_ha: '',
-        arabicTitle: '',
-        desc: '', desc_en: '', desc_ha: '',
-        incense: '', incense_en: '', incense_ha: '',
-        day: '', day_en: '', day_ha: '',
-        content: '',
-        isMaintenance: false,
-        syriacNames: []
-      });
-    } catch (error) {
-      console.error("Error saving grand oath", error);
-      showToast("Erreur lors de l'enregistrement.", "error");
-    }
-  };
-
-  const handleDeleteOath = async (id: string) => {
-    if (window.confirm("Voulez-vous vraiment supprimer ce Grand Sermon ? Cette action est irréversible.")) {
-      try {
-        await deleteDoc(doc(db, 'grand_oaths', id));
-        showToast("Le Grand Sermon a été supprimé.", "success");
-        if (editingOath?.id === id) {
-          setEditingOath(null);
-          setNewOath({
-            title: '', title_en: '', title_ha: '',
-            arabicTitle: '',
-            desc: '', desc_en: '', desc_ha: '',
-            incense: '', incense_en: '', incense_ha: '',
-            day: '', day_en: '', day_ha: '',
-            content: '',
-            isMaintenance: false,
-            syriacNames: []
-          });
-        }
-      } catch (error) {
-        console.error("Error deleting grand oath", error);
-        showToast("Erreur lors de la suppression.", "error");
-      }
-    }
-  };
-
-  const handleEditOathClick = (oath: any) => {
-    setEditingOath(oath);
-    setNewOath({
-      title: oath.title || '',
-      title_en: oath.title_en || '',
-      title_ha: oath.title_ha || '',
-      arabicTitle: oath.arabicTitle || '',
-      desc: oath.desc || '',
-      desc_en: oath.desc_en || '',
-      desc_ha: oath.desc_ha || '',
-      incense: oath.incense || '',
-      incense_en: oath.incense_en || '',
-      incense_ha: oath.incense_ha || '',
-      day: oath.day || '',
-      day_en: oath.day_en || '',
-      day_ha: oath.day_ha || '',
-      content: oath.content || '',
-      isMaintenance: !!oath.isMaintenance,
-      syriacNames: oath.syriacNames || []
-    });
-    showToast("Mode édition activé pour : " + oath.title, "info");
-  };
-
-  const handleRestoreDefaultOaths = async () => {
-    if (window.confirm("Voulez-vous vraiment restaurer les sermons par défaut ? Cela supprimera tous les sermons actuels et réinstallera les sermons d'origine.")) {
-      try {
-        setRestoringOaths(true);
-        // Delete all current ones first
-        const snapshot = await getDocs(collection(db, 'grand_oaths'));
-        for (const docSnap of snapshot.docs) {
-          await deleteDoc(doc(db, 'grand_oaths', docSnap.id));
-        }
-
-        // Add defaults
-        for (const item of DEFAULT_OATHS) {
-          await addDoc(collection(db, 'grand_oaths'), {
-            ...item,
-            createdAt: item.createdAt || Date.now()
-          });
-        }
-
-        // Update setup document to seeded: true
-        await setDoc(doc(db, 'settings', 'grand_oaths_setup'), {
-          seeded: true,
-          seededAt: Date.now()
-        }, { merge: true });
-
-        showToast("Les sermons par défaut ont été restaurés avec succès !", "success");
-      } catch (err) {
-        console.error("Error restoring default oaths:", err);
-        showToast("Erreur lors de la restauration.", "error");
-      } finally {
-        setRestoringOaths(false);
-      }
-    }
+          <h3 className="font-bold text-gray-900 dark:text-white mb-4 text-base sm:text-lg">Historique des Notifications</h3>
+          <div className="space-y-3">
+            {notifications.length === 0 ? (
+              <p className="text-xs text-gray-400 text-center py-6">Aucune notification enregistrée.</p>
+            ) : (
+              notifications.map((n) => {
+                const title = (n as any)[`title_${language}`] || (n as any).title_fr || n.title || '';
+                const msg = (n as any)[`message_${language}`] || (n as any).message_fr || n.message || '';
+                return (
+                  <div key={n.id} className="p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl flex justify-between items-start gap-4 min-w-0">
+                    <div className="min-w-0 flex-1">
+                      <h4 className="font-bold text-sm text-gray-900 dark:text-white break-words">{title}</h4>
+                      <p className="text-xs text-gray-500 mt-1 mb-2">{new Date(n.date).toLocaleString('fr-FR')}</p>
+                      <p className="text-xs text-gray-600 dark:text-gray-300 break-words">{msg}</p>
+                    </div>
+                    <button
+                      onClick={() => handleDeleteNotification(n.id)}
+                      className="text-red-500 hover:text-red-700 p-1 transition-colors shrink-0"
+                      title="Supprimer"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      </div>
+    );
   };
 
   const renderGrandOaths = () => {
     return (
-      <div className="space-y-6">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white dark:bg-gray-800 p-6 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm">
-          <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-              <Shield className="text-amber-500" />
-              Gestion des Grands Sermons (Da'awat & Azayim)
-            </h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              Ajoutez, modifiez, supprimez ou mettez en maintenance les invocations majeures de l'application.
-            </p>
-          </div>
-          <button
-            onClick={handleRestoreDefaultOaths}
-            disabled={restoringOaths}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:bg-amber-500/50 text-white font-bold text-xs shadow-md transition-all shrink-0"
-          >
-            <Sparkles size={16} />
-            {restoringOaths ? "Restauration..." : "Restaurer les sermons par défaut"}
-          </button>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* List Section */}
-          <div className="lg:col-span-1 space-y-4">
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm">
-              <h3 className="font-bold text-gray-900 dark:text-white mb-4">Sermons Enregistrés</h3>
-              <div className="space-y-3 max-h-[700px] overflow-y-auto pr-2">
-                {adminGrandOaths.length === 0 ? (
-                  <p className="text-sm text-gray-500 text-center py-6">Aucun sermon trouvé. Vous pouvez cliquer sur "Restaurer les sermons par défaut" ci-dessus pour charger les sermons d'origine, ou en créer un nouveau à droite.</p>
-                ) : (
-                  adminGrandOaths.map((oath) => (
-                    <div 
-                      key={oath.id}
-                      className={`p-4 rounded-2xl border transition-all ${
-                        editingOath?.id === oath.id 
-                          ? 'border-amber-500 bg-amber-50/50 dark:bg-amber-900/10' 
-                          : 'border-gray-150 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-900/10'
-                      }`}
-                    >
-                      <div className="flex justify-between items-start gap-2 mb-2">
-                        <div className="min-w-0 flex-1">
-                          <h4 className="font-bold text-sm text-gray-900 dark:text-white truncate">{oath.title || oath.title_en || 'Sans titre'}</h4>
-                          <span className="text-xs text-gray-500 font-medium truncate block">Jour: {oath.day || 'Non défini'}</span>
-                        </div>
-                        <div className="flex gap-1 flex-shrink-0">
-                          <button 
-                            onClick={() => handleEditOathClick(oath)}
-                            className="p-1.5 bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400 hover:bg-blue-100 rounded-lg transition-colors"
-                            title="Modifier"
-                          >
-                            <Edit2 size={14} />
-                          </button>
-                          <button 
-                            onClick={() => handleDeleteOath(oath.id)}
-                            className="p-1.5 bg-red-50 text-red-600 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-100 rounded-lg transition-colors"
-                            title="Supprimer"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2 mt-2">
-                        {oath.isMaintenance && (
-                          <span className="text-[10px] font-bold text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/30 px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                            <Settings size={10} className="animate-spin-slow" />
-                            Maintenance active
-                          </span>
-                        )}
-                        <span className="text-xs font-arabic text-gray-400 ml-auto" dir="rtl">{oath.arabicTitle}</span>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Form Section */}
-          <div className="lg:col-span-2 space-y-6">
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="font-bold text-gray-900 dark:text-white">
-                  {editingOath ? "Modifier le Grand Sermon" : "Créer un nouveau Grand Sermon"}
-                </h3>
-                {editingOath && (
-                  <button 
-                    onClick={() => {
-                      setEditingOath(null);
-                      setNewOath({
-                        title: '', title_en: '', title_ha: '',
-                        arabicTitle: '',
-                        desc: '', desc_en: '', desc_ha: '',
-                        incense: '', incense_en: '', incense_ha: '',
-                        day: '', day_en: '', day_ha: '',
-                        content: '',
-                        isMaintenance: false,
-                        syriacNames: []
-                      });
-                    }}
-                    className="text-xs text-red-500 hover:underline font-bold"
-                  >
-                    Annuler l'édition
-                  </button>
-                )}
-              </div>
-
-              {renderLanguageTabs()}
-
-              <div className="space-y-4">
-                {/* Localized Fields based on activeLangTab */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
-                      Titre du Sermon ({activeLangTab.toUpperCase()}) *
-                    </label>
-                    <input 
-                      type="text"
-                      value={activeLangTab === 'fr' ? newOath.title : (activeLangTab === 'en' ? newOath.title_en : newOath.title_ha)}
-                      onChange={(e) => {
-                        const field = activeLangTab === 'fr' ? 'title' : (activeLangTab === 'en' ? 'title_en' : 'title_ha');
-                        setNewOath({ ...newOath, [field]: e.target.value });
-                      }}
-                      placeholder={`Ex: Da'wat al-Birhatiyya (${activeLangTab})`}
-                      className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
-                      Titre en Arabe (Ex: الدعوة البرهتية) *
-                    </label>
-                    <input 
-                      type="text"
-                      value={newOath.arabicTitle || ''}
-                      onChange={(e) => setNewOath({ ...newOath, arabicTitle: e.target.value })}
-                      placeholder="Ex: الدعوة البرهتية"
-                      className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-right font-arabic text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
-                      dir="rtl"
-                    />
-                  </div>
+      <div className="space-y-6 w-full max-w-full min-w-0">
+        <div className="bg-white dark:bg-gray-800 rounded-3xl p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+          <h3 className="font-bold text-gray-900 dark:text-white mb-4 text-base sm:text-lg">Les Grands Serments Théurgiques</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {DEFAULT_OATHS.map((oath: any) => (
+              <div key={oath.id} className="p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl space-y-2 min-w-0">
+                <div className="flex items-center justify-between">
+                  <h4 className="font-bold text-sm text-gray-900 dark:text-white break-words">{oath.title}</h4>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+                    {oath.category || 'Serment'}
+                  </span>
                 </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
-                      Encens préconisé ({activeLangTab.toUpperCase()})
-                    </label>
-                    <input 
-                      type="text"
-                      value={activeLangTab === 'fr' ? newOath.incense : (activeLangTab === 'en' ? newOath.incense_en : newOath.incense_ha)}
-                      onChange={(e) => {
-                        const field = activeLangTab === 'fr' ? 'incense' : (activeLangTab === 'en' ? 'incense_en' : 'incense_ha');
-                        setNewOath({ ...newOath, [field]: e.target.value });
-                      }}
-                      placeholder="Ex: Encens Mâle (Oliban)"
-                      className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
-                      Jour et planète ({activeLangTab.toUpperCase()})
-                    </label>
-                    <input 
-                      type="text"
-                      value={activeLangTab === 'fr' ? newOath.day : (activeLangTab === 'en' ? newOath.day_en : newOath.day_ha)}
-                      onChange={(e) => {
-                        const field = activeLangTab === 'fr' ? 'day' : (activeLangTab === 'en' ? 'day_en' : 'day_ha');
-                        setNewOath({ ...newOath, [field]: e.target.value });
-                      }}
-                      placeholder="Ex: Dimanche (Soleil)"
-                      className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
-                    Description ({activeLangTab.toUpperCase()})
-                  </label>
-                  <textarea 
-                    value={activeLangTab === 'fr' ? newOath.desc : (activeLangTab === 'en' ? newOath.desc_en : newOath.desc_ha)}
-                    onChange={(e) => {
-                      const field = activeLangTab === 'fr' ? 'desc' : (activeLangTab === 'en' ? 'desc_en' : 'desc_ha');
-                      setNewOath({ ...newOath, [field]: e.target.value });
-                    }}
-                    placeholder={`Description du sermon en ${activeLangTab}...`}
-                    className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none h-20 resize-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">
-                    Texte Complet de l'Invocation (Arabe) *
-                  </label>
-                  <textarea 
-                    value={newOath.content || ''}
-                    onChange={(e) => setNewOath({ ...newOath, content: e.target.value })}
-                    placeholder="Saisissez ou collez le texte en arabe..."
-                    className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-4 text-center font-arabic text-2xl leading-[2] text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none h-44"
-                    dir="rtl"
-                  />
-                </div>
-
-                {/* Maintenance Toggle */}
-                <div className="flex items-center gap-3 p-4 bg-amber-50/50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-900/20 rounded-2xl">
-                  <input 
-                    type="checkbox"
-                    id="isMaintenanceOath"
-                    checked={!!newOath.isMaintenance}
-                    onChange={(e) => setNewOath({ ...newOath, isMaintenance: e.target.checked })}
-                    className="w-5 h-5 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500 cursor-pointer"
-                  />
-                  <label htmlFor="isMaintenanceOath" className="text-sm font-bold text-amber-800 dark:text-amber-400 cursor-pointer">
-                    Mettre ce Grand Sermon en maintenance
-                  </label>
-                </div>
-
-                {/* Syriac Names sub-form */}
-                <div className="border border-gray-200 dark:border-gray-700 rounded-2xl p-4 bg-gray-50/30 dark:bg-gray-900/10">
-                  <h4 className="text-sm font-bold text-gray-800 dark:text-white mb-3 flex items-center gap-2">
-                    <Star size={16} className="text-amber-500" />
-                    Lexique des Noms Cachés (Optionnel)
-                  </h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-3">
-                    <input 
-                      type="text"
-                      placeholder="Nom (Translit)"
-                      value={newSyriacName.name}
-                      onChange={(e) => setNewSyriacName({ ...newSyriacName, name: e.target.value })}
-                      className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-emerald-500 outline-none"
-                    />
-                    <input 
-                      type="text"
-                      placeholder="Nom (Arabe)"
-                      value={newSyriacName.arabic}
-                      onChange={(e) => setNewSyriacName({ ...newSyriacName, arabic: e.target.value })}
-                      className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2 text-xs text-right font-arabic text-gray-900 dark:text-white focus:ring-1 focus:ring-emerald-500 outline-none"
-                      dir="rtl"
-                    />
-                    <input 
-                      type="text"
-                      placeholder="Sens (FR)"
-                      value={newSyriacName.meaning}
-                      onChange={(e) => setNewSyriacName({ ...newSyriacName, meaning: e.target.value })}
-                      className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-emerald-500 outline-none"
-                    />
-                    <input 
-                      type="text"
-                      placeholder="Sens (EN)"
-                      value={newSyriacName.meaning_en}
-                      onChange={(e) => setNewSyriacName({ ...newSyriacName, meaning_en: e.target.value })}
-                      className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-emerald-500 outline-none"
-                    />
-                    <input 
-                      type="text"
-                      placeholder="Sens (HA)"
-                      value={newSyriacName.meaning_ha}
-                      onChange={(e) => setNewSyriacName({ ...newSyriacName, meaning_ha: e.target.value })}
-                      className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-emerald-500 outline-none"
-                    />
-                  </div>
-                  <button 
-                    type="button"
-                    onClick={handleAddSyriacName}
-                    className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1"
-                  >
-                    <Plus size={14} /> Ajouter ce Nom syriaque
-                  </button>
-
-                  {/* Added Syriac Names List */}
-                  {newOath.syriacNames && newOath.syriacNames.length > 0 && (
-                    <div className="mt-4 border-t border-gray-150 dark:border-gray-800 pt-3">
-                      <p className="text-xs font-bold text-gray-500 mb-2">Noms ajoutés dans le sermon ({newOath.syriacNames.length}) :</p>
-                      <div className="space-y-2">
-                        {newOath.syriacNames.map((name: any, idx: number) => (
-                          <div key={idx} className="flex justify-between items-center bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-150 dark:border-gray-700 text-xs shadow-sm">
-                            <div className="space-y-1">
-                              <p className="font-bold text-gray-900 dark:text-white">{name.name} <span className="text-amber-500 font-arabic text-sm ml-2" dir="rtl">{name.arabic}</span></p>
-                              <p className="text-gray-500">
-                                <span className="font-semibold text-gray-700 dark:text-gray-400">Sens FR:</span> {name.meaning || '-'} | 
-                                <span className="font-semibold text-gray-700 dark:text-gray-400 ml-1">EN:</span> {name.meaning_en || '-'} | 
-                                <span className="font-semibold text-gray-700 dark:text-gray-400 ml-1">HA:</span> {name.meaning_ha || '-'}
-                              </p>
-                            </div>
-                            <button 
-                              type="button" 
-                              onClick={() => handleRemoveSyriacName(idx)}
-                              className="text-red-500 hover:text-red-700 p-1 rounded hover:bg-red-50"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className="pt-4 border-t border-gray-100 dark:border-gray-700 flex justify-end gap-2">
-                  <button 
-                    onClick={handleSaveOath}
-                    className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-colors shadow-sm"
-                  >
-                    <Save size={16} />
-                    {editingOath ? "Mettre à jour le sermon" : "Enregistrer le sermon"}
-                  </button>
+                <p className="text-xs text-gray-500 dark:text-gray-400 break-words">{oath.description}</p>
+                <div className="pt-2 text-xs font-mono text-emerald-600 dark:text-emerald-400">
+                  {oath.versesCount || 28} formules sacrées
                 </div>
               </div>
-            </div>
+            ))}
           </div>
         </div>
       </div>
@@ -8607,35 +6207,35 @@ export const AdminDashboard: React.FC = () => {
   };
 
   const renderSettings = () => (
-    <div className="space-y-6">
+    <div className="space-y-6 w-full max-w-full min-w-0">
       {/* Global Expand / Collapse Control Banner */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 bg-emerald-500/10 border border-emerald-500/20 dark:bg-emerald-950/20 dark:border-emerald-800/30 rounded-2xl">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3.5 sm:p-4 bg-emerald-500/10 border border-emerald-500/20 dark:bg-emerald-950/20 dark:border-emerald-800/30 rounded-2xl w-full max-w-full">
+        <div className="flex items-center gap-2 min-w-0">
           <Settings size={18} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
-          <span className="text-xs font-bold text-gray-800 dark:text-gray-200">
+          <span className="text-xs font-bold text-gray-800 dark:text-gray-200 break-words">
             Toutes les sections sont fermées par défaut pour une meilleure visibilité.
           </span>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto justify-end">
           <button
             type="button"
             onClick={() => setAllAdminSectionsCollapse(false)}
-            className="px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer shadow-sm"
+            className="flex-1 sm:flex-initial px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer shadow-sm text-center"
           >
             Tout déplier
           </button>
           <button
             type="button"
             onClick={() => setAllAdminSectionsCollapse(true)}
-            className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-sm"
+            className="flex-1 sm:flex-initial px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-sm text-center"
           >
             Tout replier
           </button>
         </div>
       </div>
 
-      <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-        <h3 className="font-bold text-gray-900 dark:text-white mb-6">Paramètres Globaux</h3>
+      <div className="bg-white dark:bg-gray-800 rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700 w-full max-w-full min-w-0">
+        <h3 className="font-bold text-gray-900 dark:text-white mb-4 sm:mb-6 text-base sm:text-lg">Paramètres Globaux</h3>
         
         <div className="space-y-4 mb-8">
           {/* Logo, Icône & Écran de Chargement */}
@@ -8651,21 +6251,20 @@ export const AdminDashboard: React.FC = () => {
                   e.stopPropagation();
                   setActiveTab('branding');
                 }}
-                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 rounded-xl text-xs font-bold transition-colors"
               >
-                <Sparkles size={14} />
-                <span>Ouvrir l'Éditeur Dédié</span>
+                Ouvrir
               </button>
             }
           >
-            <BrandingSettings onShowToast={showToast} />
+            <BrandingSettings />
           </CollapsibleAdminCard>
 
-          {/* Bouton Retour Flottant (Activation, 22 Couleurs Translucides, 21 Formes & Modes) */}
+          {/* Bouton Retour Flottant */}
           <CollapsibleAdminCard
             id="set_floating_back_button"
             title="Bouton Retour Flottant (Activation, 22 Couleurs Translucides, 21 Formes & Modes)"
-            description="Activez ou désactivez l'icône de retour flottante à l'écran. Personnalisez parmi 22 couleurs de verre dépoli, 21 formes géométriques et spirituelles, et les modes d'animation."
+            description="Activez et personnalisez entièrement le bouton retour flottant présent sur tous les écrans."
             icon={<ArrowLeft size={18} className="text-emerald-500 shrink-0" />}
             headerRight={
               <button
@@ -8674,1208 +6273,211 @@ export const AdminDashboard: React.FC = () => {
                   e.stopPropagation();
                   setActiveTab('floating_button');
                 }}
-                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 rounded-xl text-xs font-bold transition-colors"
               >
-                <ArrowLeft size={14} />
-                <span>Ouvrir l'Éditeur Dédié</span>
+                Ouvrir
               </button>
             }
           >
             <FloatingBackButtonSettings featureToggles={featureToggles} onShowToast={showToast} />
           </CollapsibleAdminCard>
 
-          {/* Admin Configurable Spiritual Points System Settings */}
+          {/* Points Spirituels */}
           <CollapsibleAdminCard
             id="set_spiritual_points"
             title="Paramètres & Gestion du Système de Points Spirituels"
-            description="Activez/désactivez les points, ajustez la fréquence d'affichage des notifications, la durée requise dans l'application, les gains quotidiens et le déblocage des articles."
-            icon={<Award size={18} className="text-emerald-500 shrink-0" />}
+            description="Activez/désactivez les points, ajustez la fréquence d'affichage des notifications et la durée requise."
+            icon={<Gift size={18} className="text-amber-500 shrink-0" />}
           >
-            <div className="space-y-6">
-              {/* Main Points Toggle */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-gray-50 dark:bg-gray-800/80 rounded-2xl border border-gray-200 dark:border-gray-700">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-sm text-gray-900 dark:text-white">
-                      Système Général de Points Spirituels
-                    </span>
-                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-extrabold ${
-                      featureToggles['pointsSystemEnabled'] !== false
-                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
-                        : 'bg-red-100 text-red-800 dark:bg-red-950/60 dark:text-red-300'
-                    }`}>
-                      {featureToggles['pointsSystemEnabled'] !== false ? '✅ Activé' : '🚫 Désactivé'}
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    Si désactivé, l'attribution automatique de points s'arrête et le déblocage d'articles par points est bloqué.
-                  </p>
-                </div>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Activer le Système de Points :</span>
                 <button
                   type="button"
-                  onClick={() => handleToggleFeature('pointsSystemEnabled', featureToggles['pointsSystemEnabled'] === false)}
-                  className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer shrink-0 shadow-sm ${
-                    featureToggles['pointsSystemEnabled'] !== false
-                      ? 'bg-red-600 hover:bg-red-700 text-white'
-                      : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                  onClick={() => handleToggleFeature('spiritual_points_enabled', featureToggles.spiritual_points_enabled !== false ? false : true)}
+                  className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors ${
+                    featureToggles.spiritual_points_enabled !== false ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
                   }`}
                 >
-                  {featureToggles['pointsSystemEnabled'] !== false ? 'Désactiver les Points' : 'Activer les Points'}
+                  <div className={`w-4 h-4 rounded-full bg-white transition-transform ${featureToggles.spiritual_points_enabled !== false ? 'translate-x-6' : 'translate-x-0'}`} />
                 </button>
-              </div>
-
-              {/* Store Unlocks Toggle */}
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 bg-gray-50 dark:bg-gray-800/80 rounded-2xl border border-gray-200 dark:border-gray-700">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-sm text-gray-900 dark:text-white">
-                      Déblocage des Articles de la Boutique par Points
-                    </span>
-                    <span className={`px-2.5 py-0.5 rounded-full text-xs font-extrabold ${
-                      featureToggles['pointsStoreUnlockEnabled'] !== false
-                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
-                        : 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
-                    }`}>
-                      {featureToggles['pointsStoreUnlockEnabled'] !== false ? '✅ Autorisé' : '🔒 Désactivé'}
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    Permet aux utilisateurs d'utiliser leur solde de points pour débloquer les articles de la boutique.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleToggleFeature('pointsStoreUnlockEnabled', featureToggles['pointsStoreUnlockEnabled'] === false)}
-                  className={`px-4 py-2 rounded-xl text-xs font-extrabold transition-all cursor-pointer shrink-0 shadow-sm ${
-                    featureToggles['pointsStoreUnlockEnabled'] !== false
-                      ? 'bg-amber-600 hover:bg-amber-700 text-white'
-                      : 'bg-emerald-600 hover:bg-emerald-700 text-white'
-                  }`}
-                >
-                  {featureToggles['pointsStoreUnlockEnabled'] !== false ? 'Bloquer l\'échange' : 'Autoriser l\'échange'}
-                </button>
-              </div>
-
-              {/* Notification Display Limit per Day */}
-              <div className="p-4 bg-gray-50 dark:bg-gray-800/80 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-3">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <span className="font-bold text-sm text-gray-900 dark:text-white">
-                    Fréquence d'Affichage des Notifications par Jour :
-                  </span>
-                  <span className="text-xs font-extrabold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/40 px-3 py-1 rounded-xl">
-                    {Number(featureToggles['pointsDailyNotificationLimit'] ?? 1) >= 99 ? 'Illimité' : `${featureToggles['pointsDailyNotificationLimit'] ?? 1} fois par jour`}
-                  </span>
-                </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Détermine combien de fois par jour la notification de points peut s'afficher pour l'utilisateur.
-                </p>
-                <div className="flex flex-wrap items-center gap-2 pt-2">
-                  {[1, 2, 3, 5, 999].map((limit) => {
-                    const current = Number(featureToggles['pointsDailyNotificationLimit'] ?? 1);
-                    const active = current === limit;
-                    return (
-                      <button
-                        key={limit}
-                        type="button"
-                        onClick={() => handleToggleFeature('pointsDailyNotificationLimit', limit)}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                          active
-                            ? 'bg-emerald-600 text-white shadow-sm'
-                            : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600'
-                        }`}
-                      >
-                        {limit === 999 ? 'Illimité' : `${limit}x par jour`}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* App Active Duration Requirement */}
-              <div className="p-4 bg-gray-50 dark:bg-gray-800/80 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-3">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <span className="font-bold text-sm text-gray-900 dark:text-white">
-                    Durée de Présence Requise dans l'Application :
-                  </span>
-                  <span className="text-xs font-extrabold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-900/40 px-3 py-1 rounded-xl">
-                    {featureToggles['pointsRequiredDurationSeconds'] ?? 60} secondes ({Math.round(Number(featureToggles['pointsRequiredDurationSeconds'] ?? 60) / 60 * 10) / 10} min)
-                  </span>
-                </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Durée (en secondes) pendant laquelle l'utilisateur doit rester actif dans l'application pour gagner un point de présence.
-                </p>
-                <div className="flex flex-wrap items-center gap-2 pt-2">
-                  {[30, 60, 120, 300, 600].map((sec) => {
-                    const current = Number(featureToggles['pointsRequiredDurationSeconds'] ?? 60);
-                    const active = current === sec;
-                    return (
-                      <button
-                        key={sec}
-                        type="button"
-                        onClick={() => handleToggleFeature('pointsRequiredDurationSeconds', sec)}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                          active
-                            ? 'bg-emerald-600 text-white shadow-sm'
-                            : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600 border border-gray-200 dark:border-gray-600'
-                        }`}
-                      >
-                        {sec < 60 ? `${sec}s` : `${sec / 60} min (${sec}s)`}
-                      </button>
-                    );
-                  })}
-                  <div className="flex items-center gap-2 ml-auto">
-                    <label className="text-xs text-gray-500 font-semibold">Personnalisé (sec):</label>
-                    <input
-                      type="number"
-                      min="10"
-                      max="3600"
-                      value={featureToggles['pointsRequiredDurationSeconds'] ?? 60}
-                      onChange={(e) => handleToggleFeature('pointsRequiredDurationSeconds', Math.max(10, parseInt(e.target.value, 10) || 60))}
-                      className="w-20 px-2 py-1 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg text-xs font-bold text-center text-gray-900 dark:text-white"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              {/* Point Reward Amounts */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                <div className="p-4 bg-gray-50 dark:bg-gray-800/80 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-2">
-                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300">
-                    Gain Connexion Quotidienne
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="1000"
-                    value={featureToggles['pointsDailyRewardAmount'] ?? 10}
-                    onChange={(e) => handleToggleFeature('pointsDailyRewardAmount', Math.max(1, parseInt(e.target.value, 10) || 10))}
-                    className="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-sm font-bold text-center text-gray-900 dark:text-white"
-                  />
-                  <p className="text-[11px] text-gray-500">Points crédités par jour.</p>
-                </div>
-
-                <div className="p-4 bg-gray-50 dark:bg-gray-800/80 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-2">
-                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300">
-                    Gain Temps Présence
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="100"
-                    value={featureToggles['pointsDurationRewardAmount'] ?? 1}
-                    onChange={(e) => handleToggleFeature('pointsDurationRewardAmount', Math.max(1, parseInt(e.target.value, 10) || 1))}
-                    className="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-sm font-bold text-center text-gray-900 dark:text-white"
-                  />
-                  <p className="text-[11px] text-gray-500">Points crédités par intervalle.</p>
-                </div>
-
-                <div className="p-4 bg-gray-50 dark:bg-gray-800/80 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-2">
-                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300">
-                    Bonus Série Quotidienne
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    max="500"
-                    value={featureToggles['pointsDailyStreakBonus'] ?? 5}
-                    onChange={(e) => handleToggleFeature('pointsDailyStreakBonus', Math.max(0, parseInt(e.target.value, 10) || 0))}
-                    className="w-full px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-xl text-sm font-bold text-center text-gray-900 dark:text-white"
-                  />
-                  <p className="text-[11px] text-gray-500">Bonus si connecté jours suivis.</p>
-                </div>
-              </div>
-
-              {/* Bulk Grant Points Action */}
-              <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 dark:bg-emerald-950/20 dark:border-emerald-800/30 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <div className="flex items-center gap-2">
-                  <Sparkles size={18} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
-                  <div>
-                    <h5 className="text-xs font-bold text-gray-900 dark:text-white">Distribution Rapide de Points à Tous les Membres</h5>
-                    <p className="text-[11px] text-gray-600 dark:text-gray-400">Créditer un bonus de points à l'ensemble des utilisateurs enregistrés.</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      if (!window.confirm("Voulez-vous offrir +50 points spirituels à TOUS les utilisateurs enregistrés ?")) return;
-                      try {
-                        let count = 0;
-                        for (const u of users) {
-                          if (u.id) {
-                            await setDoc(doc(db, 'users', u.id), { spiritualPoints: increment(50) }, { merge: true });
-                            count++;
-                          }
-                        }
-                        showToast(`+50 points attribués avec succès à ${count} utilisateurs !`);
-                      } catch (err) {
-                        showToast("Erreur lors de la distribution globale de points.", "error");
-                      }
-                    }}
-                    className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-extrabold transition-all cursor-pointer shadow-sm"
-                  >
-                    🎁 Offrir +50 Pts à Tous
-                  </button>
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      if (!window.confirm("Voulez-vous offrir +100 points spirituels à TOUS les utilisateurs enregistrés ?")) return;
-                      try {
-                        let count = 0;
-                        for (const u of users) {
-                          if (u.id) {
-                            await setDoc(doc(db, 'users', u.id), { spiritualPoints: increment(100) }, { merge: true });
-                            count++;
-                          }
-                        }
-                        showToast(`+100 points attribués avec succès à ${count} utilisateurs !`);
-                      } catch (err) {
-                        showToast("Erreur lors de la distribution globale de points.", "error");
-                      }
-                    }}
-                    className="px-3.5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-extrabold transition-all cursor-pointer shadow-sm"
-                  >
-                    🌟 Offrir +100 Pts à Tous
-                  </button>
-                </div>
               </div>
             </div>
           </CollapsibleAdminCard>
 
-          {/* Admin Configurable New User Premium Automatic Activation */}
+          {/* New User Premium */}
           <CollapsibleAdminCard
             id="set_new_user_premium"
             title="Attribution Automatique du Premium aux Nouveaux Inscrits"
-            description="Activez ou désactivez l'octroi automatique du statut Premium (essai gratuit) lors de toute nouvelle inscription d'un utilisateur."
-            icon={<Crown size={18} className="text-amber-500 shrink-0" />}
-          >
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 rounded-2xl bg-gray-50 dark:bg-gray-750/50 border border-gray-100 dark:border-gray-700">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300">
-                      Statut actuel des nouvelles inscriptions :
-                    </span>
-                    <span className={`text-xs font-black px-2.5 py-0.5 rounded-full ${
-                      featureToggles['new_user_premium_enabled'] !== false
-                        ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300'
-                        : 'bg-red-100 text-red-800 dark:bg-red-900/60 dark:text-red-300'
-                    }`}>
-                      {featureToggles['new_user_premium_enabled'] !== false ? '✓ Premium Activé' : '✕ Premium Désactivé'}
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    {featureToggles['new_user_premium_enabled'] !== false
-                      ? `Chaque nouvel utilisateur bénéficie automatiquement de ${featureToggles['trial_duration_hours'] !== undefined ? featureToggles['trial_duration_hours'] : 12} heures d'accès Premium VIP lors de son inscription.`
-                      : "Les nouveaux inscrits démarrent avec un compte Gratuit standard sans accès Premium d'office."}
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => handleToggleFeature('new_user_premium_enabled', featureToggles['new_user_premium_enabled'] === false ? true : false)}
-                  className={`px-5 py-2.5 rounded-xl font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer shrink-0 ${
-                    featureToggles['new_user_premium_enabled'] !== false
-                      ? 'bg-red-600 hover:bg-red-700 text-white'
-                      : 'bg-gradient-to-r from-amber-500 to-purple-600 hover:from-amber-400 hover:to-purple-500 text-white shadow-amber-500/30'
-                  }`}
-                >
-                  {featureToggles['new_user_premium_enabled'] !== false ? (
-                    <>
-                      <Lock size={15} />
-                      <span>Désactiver le Premium aux Nouveaux Inscrits</span>
-                    </>
-                  ) : (
-                    <>
-                      <Crown size={15} className="fill-white" />
-                      <span>Activer le Premium aux Nouveaux Inscrits</span>
-                    </>
-                  )}
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                <div 
-                  onClick={() => handleToggleFeature('new_user_premium_enabled', true)}
-                  className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-start gap-3 ${
-                    featureToggles['new_user_premium_enabled'] !== false
-                      ? 'border-amber-500 bg-amber-50/50 dark:bg-amber-950/20 ring-2 ring-amber-500/20'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 opacity-60'
-                  }`}
-                >
-                  <div className="p-2 bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-300 rounded-xl shrink-0 mt-0.5">
-                    <Crown size={18} />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-black text-gray-900 dark:text-white">Option 1 : Premium Actif</span>
-                      {featureToggles['new_user_premium_enabled'] !== false && (
-                        <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/50 px-1.5 py-0.2 rounded-md">Sélectionné</span>
-                      )}
-                    </div>
-                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
-                      Les nouveaux comptes découvrent immédiatement l'ensemble des fonctionnalités Premium d'AsrarHub (période d'essai).
-                    </p>
-                  </div>
-                </div>
-
-                <div 
-                  onClick={() => handleToggleFeature('new_user_premium_enabled', false)}
-                  className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-start gap-3 ${
-                    featureToggles['new_user_premium_enabled'] === false
-                      ? 'border-red-500 bg-red-50/50 dark:bg-red-950/20 ring-2 ring-red-500/20'
-                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 opacity-60'
-                  }`}
-                >
-                  <div className="p-2 bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-300 rounded-xl shrink-0 mt-0.5">
-                    <Lock size={18} />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-black text-gray-900 dark:text-white">Option 2 : Compte Gratuit Standard</span>
-                      {featureToggles['new_user_premium_enabled'] === false && (
-                        <span className="text-[10px] font-bold text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/50 px-1.5 py-0.2 rounded-md">Sélectionné</span>
-                      )}
-                    </div>
-                    <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
-                      Les nouveaux comptes s'inscrivent en mode Gratuit sans période d'essai et doivent souscrire pour débloquer le Premium.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CollapsibleAdminCard>
-
-          {/* Admin Configurable Premium Free Trial Duration */}
-          <CollapsibleAdminCard
-            id="set_trial_duration"
-            title="Durée de l'Essai Premium Temporaire (en Heures)"
-            description="Définissez le nombre d'heures d'essai Premium offert automatiquement aux utilisateurs (affiché avec le compte à rebours sur leur profil)."
-            icon={<Clock size={18} className="text-amber-500 shrink-0" />}
-          >
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <span className="text-xs font-bold text-gray-700 dark:text-gray-300">
-                  Durée actuelle configurée :
-                </span>
-                <span className="text-sm font-extrabold text-amber-900 dark:text-amber-200 bg-amber-500/10 border border-amber-500/20 px-3.5 py-1.5 rounded-xl flex items-center gap-1.5">
-                  <Sparkles size={14} className="text-amber-500" />
-                  <span>{featureToggles['trial_duration_hours'] !== undefined ? featureToggles['trial_duration_hours'] : 12} Heures d'essai</span>
-                </span>
-              </div>
-              
-              <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-amber-500/15">
-                <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 w-full sm:w-auto">
-                  Préréglages rapides :
-                </label>
-                <div className="flex items-center gap-2 flex-wrap">
-                  {[6, 12, 24, 48, 72, 168].map(h => {
-                    const active = (featureToggles['trial_duration_hours'] !== undefined ? Number(featureToggles['trial_duration_hours']) : 12) === h;
-                    return (
-                      <button
-                        key={h}
-                        type="button"
-                        onClick={() => handleToggleFeature('trial_duration_hours', h)}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                          active
-                            ? 'bg-amber-500 text-white shadow-sm shadow-amber-500/30'
-                            : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                        }`}
-                      >
-                        {h >= 24 ? `${h / 24}j (${h}h)` : `${h}h`}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3 pt-2">
-                <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 shrink-0">
-                  Personnalisé (Heures) :
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max="8760"
-                  value={featureToggles['trial_duration_hours'] !== undefined ? featureToggles['trial_duration_hours'] : 12}
-                  onChange={(e) => {
-                    const val = parseInt(e.target.value, 10);
-                    if (!isNaN(val) && val > 0) {
-                      handleToggleFeature('trial_duration_hours', val);
-                    }
-                  }}
-                  className="w-24 px-3 py-1.5 bg-white dark:bg-gray-800 border border-amber-500/30 rounded-xl text-xs font-bold text-center text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
-                />
-                <span className="text-xs text-gray-500 dark:text-gray-400">heures (ex: 12 = 12h, 24 = 1 jour, 48 = 2 jours)</span>
-              </div>
-            </div>
-          </CollapsibleAdminCard>
-
-          {/* Hijri Calendar Date Adjustment */}
-          <CollapsibleAdminCard
-            id="set_hijri"
-            title="Ajustement du Calendrier Hijri (Décalage Lunaire)"
-            description="Corrigez le décalage lunaire (-10 à +10 jours) pour aligner les outils sur l'observation de la lune."
-            icon={<Moon size={18} className="text-amber-500 shrink-0" />}
-          >
-            <div className="flex flex-col gap-3">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <span className="text-xs font-bold text-gray-700 dark:text-gray-300">
-                  Date Hijri Aujourd'hui :
-                </span>
-                <span className="text-sm font-extrabold text-amber-900 dark:text-amber-200 bg-amber-500/10 border border-amber-500/20 px-3.5 py-1.5 rounded-xl">
-                  {(() => {
-                    const todayRes = calculateHijriDate(new Date(), Number(featureToggles['hijriOffset'] || 0));
-                    return `${todayRes.day} ${todayRes.monthNameFr} ${todayRes.year} AH`;
-                  })()}
-                </span>
-              </div>
-              <div className="flex flex-wrap items-center gap-3 pt-2 border-t border-amber-500/15">
-                <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 shrink-0">
-                  Décalage en jours :
-                </label>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const curr = Number(featureToggles['hijriOffset'] || 0);
-                      handleToggleFeature('hijriOffset', curr - 1);
-                    }}
-                    className="px-3 py-1.5 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg text-xs font-bold transition-colors cursor-pointer"
-                  >
-                    -1 Jour
-                  </button>
-                  <input
-                    type="number"
-                    min="-10"
-                    max="10"
-                    value={featureToggles['hijriOffset'] !== undefined ? featureToggles['hijriOffset'] : 0}
-                    onChange={(e) => handleToggleFeature('hijriOffset', parseInt(e.target.value, 10) || 0)}
-                    className="w-16 px-2.5 py-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl text-xs font-bold text-center text-gray-900 dark:text-white"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const curr = Number(featureToggles['hijriOffset'] || 0);
-                      handleToggleFeature('hijriOffset', curr + 1);
-                    }}
-                    className="px-3 py-1.5 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg text-xs font-bold transition-colors cursor-pointer"
-                  >
-                    +1 Jour
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleToggleFeature('hijriOffset', 0)}
-                    className="px-3 py-1.5 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20 rounded-lg text-xs font-bold transition-colors cursor-pointer"
-                  >
-                    Réinitialiser (0)
-                  </button>
-                </div>
-              </div>
-            </div>
-          </CollapsibleAdminCard>
-
-          {/* Calendar Cards Scaling Control */}
-          <CollapsibleAdminCard
-            id="set_calendar_scale"
-            title="Taille des Cartes du Calendrier"
-            description="Ajustez la taille d'affichage de la carte globale du calendrier et des cartes intérieures."
-            icon={<Sliders size={18} className="text-amber-500 shrink-0" />}
-          >
-            <div className="space-y-4">
-              <div className="flex justify-end">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setCalendarGlobalScale(1.0);
-                    setCalendarSubCardScale(1.0);
-                    saveCalendarScales(1.0, 1.0);
-                  }}
-                  className="px-3 py-1.5 bg-amber-500/10 text-amber-700 dark:text-amber-400 hover:bg-amber-500/20 rounded-xl text-xs font-bold transition-colors cursor-pointer shrink-0"
-                >
-                  Réinitialiser (100%)
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-3 bg-white dark:bg-gray-800 rounded-xl border border-amber-500/20 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-gray-800 dark:text-gray-200">
-                      1. Carte Globale du Calendrier :
-                    </span>
-                    <span className="font-mono text-xs font-black text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 px-2 py-0.5 rounded border border-amber-500/30">
-                      {Math.round(calendarGlobalScale * 100)}%
-                      {calendarGlobalScale < 1 && (
-                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400 ml-1">
-                          (-{Math.round((1 - calendarGlobalScale) * 100)}%)
-                        </span>
-                      )}
-                    </span>
-                  </div>
-
-                  {/* Preset Quick Reduction Buttons */}
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-[10px] text-gray-400 font-semibold mr-1">Réductions :</span>
-                    {[
-                      { label: '-5%', val: 0.95 },
-                      { label: '-10%', val: 0.90 },
-                      { label: '-15%', val: 0.85 },
-                      { label: '-20%', val: 0.80 },
-                      { label: '100%', val: 1.00 }
-                    ].map(preset => (
-                      <button
-                        key={`global-${preset.label}`}
-                        type="button"
-                        onClick={() => {
-                          setCalendarGlobalScale(preset.val);
-                          saveCalendarScales(preset.val, calendarSubCardScale);
-                        }}
-                        className={`px-2 py-0.5 rounded text-[11px] font-bold transition-all cursor-pointer ${
-                          Math.abs(calendarGlobalScale - preset.val) < 0.01
-                            ? 'bg-amber-500 text-white shadow-sm scale-105'
-                            : 'bg-gray-100 dark:bg-gray-700/80 text-gray-700 dark:text-gray-300 hover:bg-amber-500/20'
-                        }`}
-                      >
-                        {preset.label}
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const next = Math.max(0.5, Math.round((calendarGlobalScale - 0.05) * 100) / 100);
-                        setCalendarGlobalScale(next);
-                        saveCalendarScales(next, calendarSubCardScale);
-                      }}
-                      className="px-2.5 py-1 bg-gray-200 dark:bg-gray-700 hover:bg-amber-500 hover:text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
-                    >
-                      -5%
-                    </button>
-                    <input
-                      type="range"
-                      min="0.5"
-                      max="1.6"
-                      step="0.05"
-                      value={calendarGlobalScale}
-                      onChange={(e) => {
-                        const val = parseFloat(e.target.value);
-                        setCalendarGlobalScale(val);
-                        saveCalendarScales(val, calendarSubCardScale);
-                      }}
-                      className="w-full accent-amber-500 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const next = Math.min(1.8, Math.round((calendarGlobalScale + 0.05) * 100) / 100);
-                        setCalendarGlobalScale(next);
-                        saveCalendarScales(next, calendarSubCardScale);
-                      }}
-                      className="px-2.5 py-1 bg-gray-200 dark:bg-gray-700 hover:bg-amber-500 hover:text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
-                    >
-                      +5%
-                    </button>
-                  </div>
-                </div>
-
-                <div className="p-3 bg-white dark:bg-gray-800 rounded-xl border border-amber-500/20 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-gray-800 dark:text-gray-200">
-                      2. Cartes Intérieures (Sous-Cartes) :
-                    </span>
-                    <span className="font-mono text-xs font-black text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 px-2 py-0.5 rounded border border-amber-500/30">
-                      {Math.round(calendarSubCardScale * 100)}%
-                      {calendarSubCardScale < 1 && (
-                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400 ml-1">
-                          (-{Math.round((1 - calendarSubCardScale) * 100)}%)
-                        </span>
-                      )}
-                    </span>
-                  </div>
-
-                  {/* Preset Quick Reduction Buttons */}
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-[10px] text-gray-400 font-semibold mr-1">Réductions :</span>
-                    {[
-                      { label: '-5%', val: 0.95 },
-                      { label: '-10%', val: 0.90 },
-                      { label: '-15%', val: 0.85 },
-                      { label: '-20%', val: 0.80 },
-                      { label: '100%', val: 1.00 }
-                    ].map(preset => (
-                      <button
-                        key={`sub-${preset.label}`}
-                        type="button"
-                        onClick={() => {
-                          setCalendarSubCardScale(preset.val);
-                          saveCalendarScales(calendarGlobalScale, preset.val);
-                        }}
-                        className={`px-2 py-0.5 rounded text-[11px] font-bold transition-all cursor-pointer ${
-                          Math.abs(calendarSubCardScale - preset.val) < 0.01
-                            ? 'bg-amber-500 text-white shadow-sm scale-105'
-                            : 'bg-gray-100 dark:bg-gray-700/80 text-gray-700 dark:text-gray-300 hover:bg-amber-500/20'
-                        }`}
-                      >
-                        {preset.label}
-                      </button>
-                    ))}
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const next = Math.max(0.5, Math.round((calendarSubCardScale - 0.05) * 100) / 100);
-                        setCalendarSubCardScale(next);
-                        saveCalendarScales(calendarGlobalScale, next);
-                      }}
-                      className="px-2.5 py-1 bg-gray-200 dark:bg-gray-700 hover:bg-amber-500 hover:text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
-                    >
-                      -5%
-                    </button>
-                    <input
-                      type="range"
-                      min="0.5"
-                      max="1.6"
-                      step="0.05"
-                      value={calendarSubCardScale}
-                      onChange={(e) => {
-                        const val = parseFloat(e.target.value);
-                        setCalendarSubCardScale(val);
-                        saveCalendarScales(calendarGlobalScale, val);
-                      }}
-                      className="w-full accent-amber-500 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const next = Math.min(1.8, Math.round((calendarSubCardScale + 0.05) * 100) / 100);
-                        setCalendarSubCardScale(next);
-                        saveCalendarScales(calendarGlobalScale, next);
-                      }}
-                      className="px-2.5 py-1 bg-gray-200 dark:bg-gray-700 hover:bg-amber-500 hover:text-white rounded-lg text-xs font-bold transition-colors cursor-pointer"
-                    >
-                      +5%
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CollapsibleAdminCard>
-
-          {/* Reciter */}
-          <CollapsibleAdminCard
-            id="set_reciter"
-            title="Récitateur du Coran par Défaut (Système)"
-            description="Définissez le récitateur principal du Saint Coran par défaut pour l'ensemble des utilisateurs."
-            icon={<Headphones size={18} className="text-emerald-500" />}
-          >
-            <div className="space-y-3">
-              <select
-                value={featureToggles['default_reciter_id'] || QURAN_RECITERS[0].id}
-                onChange={(e) => handleToggleFeature('default_reciter_id', e.target.value)}
-                className="w-full px-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl text-sm font-medium text-gray-800 dark:text-gray-200 focus:ring-2 focus:ring-emerald-500"
-              >
-                {QURAN_RECITERS.map(r => (
-                  <option key={r.id} value={r.id}>
-                    {r.name} {r.nameAr ? `(${r.nameAr})` : ''} — {r.country}
-                  </option>
-                ))}
-              </select>
-              <div className="pt-2 border-t border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                <span className="text-xs text-gray-500">Pour activer, désactiver ou paramétrer les 320+ récitateurs :</span>
-                <button
-                  type="button"
-                  onClick={() => setActiveTab('reciters')}
-                  className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
-                >
-                  <Sliders size={14} />
-                  <span>Gestionnaire des Récitateurs</span>
-                </button>
-              </div>
-            </div>
-          </CollapsibleAdminCard>
-
-          {/* Announcement */}
-          <CollapsibleAdminCard
-            id="set_announcement"
-            title="Annonce de l'Accueil"
-            description="Afficher une annonce sur la page d'accueil (force la mise à jour)."
-            icon={<Volume2 size={18} className="text-blue-500" />}
-          >
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Activer l'Annonce :</span>
-                <button
-                  onClick={() => handleToggleFeature('announcementVisible', !featureToggles['announcementVisible'])}
-                  className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors ${
-                    featureToggles['announcementVisible'] ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
-                  }`}
-                >
-                  <div className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${featureToggles['announcementVisible'] ? 'translate-x-6' : 'translate-x-0'}`} />
-                </button>
-              </div>
-              {featureToggles['announcementVisible'] && (
-                <div className="space-y-3 pt-3 border-t border-gray-200 dark:border-gray-600">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Titre de l'annonce</label>
-                    <input
-                      type="text"
-                      value={featureToggles['announcementTitle'] || ''}
-                      onChange={(e) => handleToggleFeature('announcementTitle', e.target.value)}
-                      className="w-full px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl"
-                      placeholder="Nouvelles mises à jour disponibles !"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Texte de l'annonce</label>
-                    <textarea
-                      value={featureToggles['announcementText'] || ''}
-                      onChange={(e) => handleToggleFeature('announcementText', e.target.value)}
-                      className="w-full px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl"
-                      placeholder="Découvrez la nouvelle version..."
-                      rows={3}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-          </CollapsibleAdminCard>
-
-          {/* Campagne d'Annonce de Souscription Premium */}
-          <CollapsibleAdminCard
-            id="set_premium_promo"
-            title="Campagne Promotionnelle Premium"
-            description="Afficher une annonce incitant les utilisateurs gratuits à s'abonner au Premium."
-            icon={<Sparkles size={18} className="text-purple-500 fill-purple-100 dark:fill-transparent shrink-0" />}
-          >
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Activer la Campagne :</span>
-                <button
-                  onClick={() => handleToggleFeature('premiumPromoActive', !featureToggles['premiumPromoActive'])}
-                  className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors ${
-                    featureToggles['premiumPromoActive'] ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
-                  }`}
-                >
-                  <div className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${featureToggles['premiumPromoActive'] ? 'translate-x-6' : 'translate-x-0'}`} />
-                </button>
-              </div>
-
-              {featureToggles['premiumPromoActive'] && (
-                <div className="space-y-4 pt-3 border-t border-gray-200 dark:border-gray-600">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-xs font-bold uppercase text-gray-500 dark:text-gray-400 mb-1">Titre de la promotion</label>
-                      <input
-                        type="text"
-                        value={featureToggles['premiumPromoTitle'] || ''}
-                        onChange={(e) => handleToggleFeature('premiumPromoTitle', e.target.value)}
-                        className="w-full px-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl text-sm"
-                        placeholder="Devenez membre Premium !"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold uppercase text-gray-500 dark:text-gray-400 mb-1">Texte du bouton d'action</label>
-                      <input
-                        type="text"
-                        value={featureToggles['premiumPromoBtnText'] || ''}
-                        onChange={(e) => handleToggleFeature('premiumPromoBtnText', e.target.value)}
-                        className="w-full px-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl text-sm"
-                        placeholder="Passer au Premium"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold uppercase text-gray-500 dark:text-gray-400 mb-1">Thème Visuel de la bannière</label>
-                    <select
-                      value={featureToggles['premiumPromoTheme'] || 'violet'}
-                      onChange={(e) => handleToggleFeature('premiumPromoTheme', e.target.value)}
-                      className="w-full px-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl text-sm text-gray-900 dark:text-white"
-                    >
-                      <option value="violet">Ambiance Violette (Indigo, Purple, Pink)</option>
-                      <option value="gold">Ambiance Royale (Ambre, Or, Jaune)</option>
-                      <option value="cosmic">Ambiance Cosmique (Slate sombre, Purple profond, Indigo nuit)</option>
-                      <option value="emerald">Ambiance Forêt Sacrée (Teal, Émeraude)</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold uppercase text-gray-500 dark:text-gray-400 mb-1">Texte / Description de l'appel à l'action</label>
-                    <textarea
-                      value={featureToggles['premiumPromoText'] || ''}
-                      onChange={(e) => handleToggleFeature('premiumPromoText', e.target.value)}
-                      className="w-full px-4 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl text-sm"
-                      placeholder="Débloquez tous les secrets de l'Asrar, l'assistant IA et tous les outils spirituels majeurs sans aucune limitation."
-                      rows={3}
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-          </CollapsibleAdminCard>
-
-          {/* Icône de l'Assistante IA Flottante */}
-          <CollapsibleAdminCard
-            id="set_assistant_icon"
-            title="Icône d'Assistante Flottante"
-            description="Afficher l'icône d'assistante IA flottante (bouton vert en bas à droite) sur l'application."
+            description="Offrez automatiquement l'abonnement Premium à tous les nouveaux utilisateurs inscrits."
             icon={<Sparkles size={18} className="text-amber-500 shrink-0" />}
           >
             <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Afficher le bouton d'assistance :</span>
+              <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Premium Automatique :</span>
               <button
-                onClick={() => handleToggleFeature('assistantIconVisible', featureToggles['assistantIconVisible'] !== true)}
-                className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors ${
-                  featureToggles['assistantIconVisible'] === true ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
+                type="button"
+                onClick={() => handleToggleFeature('new_user_premium_auto', !featureToggles.new_user_premium_auto)}
+                className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors ${
+                  featureToggles.new_user_premium_auto ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
                 }`}
               >
-                <div
-                  className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${
-                    featureToggles['assistantIconVisible'] === true ? 'translate-x-6' : 'translate-x-0'
-                  }`}
-                />
+                <div className={`w-4 h-4 rounded-full bg-white transition-transform ${featureToggles.new_user_premium_auto ? 'translate-x-6' : 'translate-x-0'}`} />
               </button>
             </div>
           </CollapsibleAdminCard>
 
-          {/* Icône d'Augmentation de Texte (Livres Sacrés) */}
+          {/* Hijri Calendar */}
           <CollapsibleAdminCard
-            id="set_book_text_resizer"
-            title="Icône d'Augmentation de Texte (Livres Sacrés)"
-            description="Afficher ou masquer l'icône flottante d'augmentation et zoom du texte lors de la lecture d'un livre de la Bibliothèque des Manuscrits Sacrés."
-            icon={<Type size={18} className="text-amber-500 shrink-0" />}
-            badge={featureToggles['enableBookTextResizer'] !== false ? 'Actif' : 'Désactivé'}
+            id="set_hijri"
+            title="Ajustement du Calendrier Hijri (Décalage Lunaire)"
+            description="Ajustez manuellement le décalage de jours (-2 à +2 jours) pour synchroniser avec l'observation locale de la lune."
+            icon={<Moon size={18} className="text-indigo-500 shrink-0" />}
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              {[-2, -1, 0, 1, 2].map((offset) => (
+                <button
+                  key={offset}
+                  type="button"
+                  onClick={() => handleToggleFeature('hijri_offset', offset)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                    (featureToggles.hijri_offset || 0) === offset
+                      ? 'bg-indigo-600 text-white shadow-md'
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                  }`}
+                >
+                  {offset > 0 ? `+${offset}` : offset} {offset === 0 ? 'Jour (Normal)' : 'Jours'}
+                </button>
+              ))}
+            </div>
+          </CollapsibleAdminCard>
+
+          {/* Calendar Card Scale */}
+          <CollapsibleAdminCard
+            id="set_calendar_scale"
+            title="Taille des Cartes du Calendrier"
+            description="Ajustez la taille visuelle des cartes du calendrier mystique."
+            icon={<Sliders size={18} className="text-emerald-500 shrink-0" />}
           >
             <div className="space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-gray-200 dark:border-gray-700">
-                <span className="text-xs font-bold text-gray-800 dark:text-gray-200">
-                  Activer globalement pour tous les livres sacrés :
-                </span>
-                <button
-                  onClick={() => handleToggleFeature('enableBookTextResizer', featureToggles['enableBookTextResizer'] === false)}
-                  className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors cursor-pointer shrink-0 ${
-                    featureToggles['enableBookTextResizer'] !== false ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
-                  }`}
-                  title={featureToggles['enableBookTextResizer'] !== false ? "Cliquer pour désactiver globalement" : "Cliquer pour activer globalement"}
-                >
-                  <div
-                    className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${
-                      featureToggles['enableBookTextResizer'] !== false ? 'translate-x-6' : 'translate-x-0'
-                    }`}
-                  />
-                </button>
-              </div>
-
-              {/* Toggles pour chaque livre individuel */}
-              <div className="pt-2">
-                <h5 className="text-xs font-extrabold uppercase tracking-wider text-amber-600 dark:text-amber-400 mb-3">
-                  Configuration par Livre Individuel ({SACRED_BOOKS.length} Manuscrits)
-                </h5>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 max-h-80 overflow-y-auto pr-1">
-                  {SACRED_BOOKS.map((book) => {
-                    const isEnabled = featureToggles[`enableBookTextResizer_${book.id}`] !== false;
-                    return (
-                      <div
-                        key={book.id}
-                        className="flex items-center justify-between p-2.5 rounded-xl bg-gray-50 dark:bg-gray-750 border border-gray-200/60 dark:border-gray-700/60"
-                      >
-                        <div className="min-w-0 flex-1 pr-2">
-                          <p className="text-xs font-bold text-gray-900 dark:text-white truncate">
-                            {book.titleFr}
-                          </p>
-                          <p className="text-[10px] text-gray-500 dark:text-gray-400 font-arabic truncate">
-                            {book.titleAr}
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => handleToggleFeature(`enableBookTextResizer_${book.id}`, !isEnabled)}
-                          className={`w-11 h-6 flex items-center rounded-full p-0.5 transition-colors cursor-pointer shrink-0 ${
-                            isEnabled ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
-                          }`}
-                          title={isEnabled ? `Désactiver le zoom texte pour ${book.titleFr}` : `Activer le zoom texte pour ${book.titleFr}`}
-                        >
-                          <div
-                            className={`bg-white w-5 h-5 rounded-full shadow-sm transform transition-transform ${
-                              isEnabled ? 'translate-x-5' : 'translate-x-0'
-                            }`}
-                          />
-                        </button>
-                      </div>
-                    );
-                  })}
+              <div className="space-y-1">
+                <div className="flex justify-between text-xs font-bold text-gray-700 dark:text-gray-300">
+                  <span>Échelle Globale :</span>
+                  <span>{Math.round(calendarGlobalScale * 100)}%</span>
                 </div>
+                <input
+                  type="range"
+                  min="0.5"
+                  max="1.5"
+                  step="0.05"
+                  value={calendarGlobalScale}
+                  onChange={(e) => {
+                    const val = parseFloat(e.target.value);
+                    setCalendarGlobalScale(val);
+                    saveCalendarScales(val, calendarSubCardScale);
+                  }}
+                  className="w-full accent-emerald-500"
+                />
               </div>
             </div>
           </CollapsibleAdminCard>
 
-          {/* Lecteur Flottant 432Hz Solfeggio / Fréquences Sacrées */}
+          {/* Reciter Default */}
           <CollapsibleAdminCard
-            id="set_sacred_audio"
-            title="Widget Notification Flottant (432Hz & Celestial)"
-            description="Affiche ou masque le bouton flottant '432Hz & Ciel' en bas à droite de l'application, et permet de régler sa taille."
-            icon={<Radio size={18} className="text-amber-500 animate-pulse shrink-0" />}
-            badge={featureToggles['sacredAudioPlayerVisible'] === true ? 'Actif' : 'Désactivé'}
+            id="set_reciter"
+            title="Récitateur du Coran par Défaut (Système)"
+            description="Choisissez le récitateur par défaut utilisé pour la lecture des versets et sourates."
+            icon={<Headphones size={18} className="text-blue-500 shrink-0" />}
           >
-            <div className="space-y-4">
-              <div className="flex items-center justify-between pb-3 border-b border-gray-100 dark:border-gray-800">
-                <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Activer le widget 432Hz :</span>
+            <select
+              value={featureToggles.default_reciter || 'alafasy'}
+              onChange={(e) => handleToggleFeature('default_reciter', e.target.value)}
+              className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-xs text-gray-900 dark:text-white"
+            >
+              {QURAN_RECITERS.map((rec) => (
+                <option key={rec.id} value={rec.id}>{rec.name}</option>
+              ))}
+            </select>
+          </CollapsibleAdminCard>
+
+          {/* Home Announcement */}
+          <CollapsibleAdminCard
+            id="set_announcement"
+            title="Annonce de l'Accueil"
+            description="Affichez un bandeau d'information ou de rappel en haut de la page d'accueil pour tous les utilisateurs."
+            icon={<Bell size={18} className="text-amber-500 shrink-0" />}
+          >
+            <div className="space-y-3">
+              <input
+                type="text"
+                value={featureToggles.home_announcement_text || ''}
+                onChange={(e) => handleToggleFeature('home_announcement_text', e.target.value)}
+                placeholder="Texte de l'annonce..."
+                className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white"
+              />
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-600 dark:text-gray-400">Activer le bandeau :</span>
                 <button
-                  onClick={() => handleToggleFeature('sacredAudioPlayerVisible', featureToggles['sacredAudioPlayerVisible'] !== true)}
-                  className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors cursor-pointer shrink-0 ${
-                    featureToggles['sacredAudioPlayerVisible'] === true ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
+                  type="button"
+                  onClick={() => handleToggleFeature('home_announcement_enabled', !featureToggles.home_announcement_enabled)}
+                  className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors ${
+                    featureToggles.home_announcement_enabled ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
                   }`}
-                  title={featureToggles['sacredAudioPlayerVisible'] === true ? "Cliquer pour désactiver" : "Cliquer pour activer"}
                 >
-                  <div
-                    className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${
-                      featureToggles['sacredAudioPlayerVisible'] === true ? 'translate-x-6' : 'translate-x-0'
-                    }`}
-                  />
+                  <div className={`w-4 h-4 rounded-full bg-white transition-transform ${featureToggles.home_announcement_enabled ? 'translate-x-6' : 'translate-x-0'}`} />
                 </button>
               </div>
-
-              {featureToggles['sacredAudioPlayerVisible'] === true && (
-                <div className="space-y-4 pt-1">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                    <label className="text-sm font-semibold text-gray-800 dark:text-gray-200 flex items-center gap-2">
-                      <Sparkles size={16} className="text-amber-500" />
-                      Taille / Dimension du Bouton Flottant :
-                    </label>
-                    <span className="text-xs font-mono font-bold px-3 py-1 bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 rounded-lg">
-                      {Number(featureToggles['sacredAudioPlayerScale'] ?? 100)}% (Scale {(Number(featureToggles['sacredAudioPlayerScale'] ?? 100) / 100).toFixed(2)}x)
-                    </span>
-                  </div>
-
-                  {/* Range Slider */}
-                  <div className="flex items-center gap-4">
-                    <span className="text-xs font-semibold text-gray-500">Réduire (60%)</span>
-                    <input
-                      type="range"
-                      min="60"
-                      max="180"
-                      step="5"
-                      value={Number(featureToggles['sacredAudioPlayerScale'] ?? 100)}
-                      onChange={(e) => handleToggleFeature('sacredAudioPlayerScale', Number(e.target.value))}
-                      className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-amber-500"
-                    />
-                    <span className="text-xs font-semibold text-gray-500">Augmenter (180%)</span>
-                  </div>
-
-                  {/* Quick Presets */}
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
-                    {[
-                      { label: 'Petit (75%)', val: 75, icon: '🔹' },
-                      { label: 'Normal (100%)', val: 100, icon: '🔸' },
-                      { label: 'Grand (125%)', val: 125, icon: '🔷' },
-                      { label: 'Très Grand (150%)', val: 150, icon: '👑' },
-                    ].map((preset) => {
-                      const currentVal = Number(featureToggles['sacredAudioPlayerScale'] ?? 100);
-                      const isSelected = currentVal === preset.val;
-                      return (
-                        <button
-                          key={preset.val}
-                          type="button"
-                          onClick={() => handleToggleFeature('sacredAudioPlayerScale', preset.val)}
-                          className={`px-3 py-2 text-xs font-medium rounded-xl border transition-all cursor-pointer flex items-center justify-center gap-1.5 ${
-                            isSelected
-                              ? 'bg-amber-500 text-white border-amber-600 shadow-md font-bold'
-                              : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-amber-400'
-                          }`}
-                        >
-                          <span>{preset.icon}</span>
-                          <span>{preset.label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  {/* Visual Live Preview Box */}
-                  <div className="mt-2 p-4 bg-zinc-950 rounded-2xl border border-amber-500/30 text-amber-300 flex flex-col items-center justify-center min-h-[110px] overflow-hidden relative">
-                    <span className="text-[10px] uppercase font-mono tracking-wider text-zinc-400 mb-2">Aperçu en direct (Taille réelle)</span>
-                    <div 
-                      className="transition-transform duration-200"
-                      style={{ transform: `scale(${Math.max(0.6, Math.min(1.8, Number(featureToggles['sacredAudioPlayerScale'] ?? 100) / 100))})` }}
-                    >
-                      <div className="flex items-center gap-2.5 px-4 py-3 rounded-full bg-zinc-900 border border-amber-500/40 text-amber-300 shadow-xl">
-                        <Radio className="w-4 h-4 text-amber-400 animate-pulse" />
-                        <div className="flex flex-col text-left">
-                          <span className="text-[11px] font-bold font-mono leading-none">432Hz & Ciel</span>
-                          <span className="text-[9px] opacity-80 font-serif">Aperçu • ♃ Jupiter</span>
-                        </div>
-                        <Sparkles className="w-3.5 h-3.5 text-amber-200" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
             </div>
           </CollapsibleAdminCard>
 
-          {/* Protection & Contrôle des Captures d'Écran et Copies de Textes */}
-          {(() => {
-            const screenMode = getScreenshotProtectionMode(featureToggles);
-            const copyMode = getTextCopyProtectionMode(featureToggles);
-
-            const handleSetScreenMode = (mode: ProtectionMode) => {
-              handleToggleFeature('screenshot_protection_mode', mode);
-              handleToggleFeature('anti_screenshot', mode === 'all_allowed' ? false : (mode === 'all_blocked' ? 'all_blocked' : 'premium_only'));
-              showToast(
-                mode === 'all_allowed' 
-                  ? "Captures d'écran : Autorisées pour TOUS les utilisateurs." 
-                  : mode === 'premium_only' 
-                  ? "Captures d'écran : Autorisées UNIQUEMENT pour les membres Premium." 
-                  : "Captures d'écran : Bloquées STRICTEMENT pour tous les utilisateurs.",
-                "success"
-              );
-            };
-
-            const handleSetCopyMode = (mode: ProtectionMode) => {
-              handleToggleFeature('text_copy_protection_mode', mode);
-              handleToggleFeature('text_copy_protection', mode);
-              handleToggleFeature('disable_dua_copy', mode === 'all_blocked');
-              showToast(
-                mode === 'all_allowed' 
-                  ? "Copie des textes : Autorisée pour TOUS les utilisateurs." 
-                  : mode === 'premium_only' 
-                  ? "Copie des textes : Autorisée UNIQUEMENT pour les membres Premium." 
-                  : "Copie des textes : Bloquée STRICTEMENT pour tous les utilisateurs.",
-                "success"
-              );
-            };
-
-            return (
-              <>
-                <CollapsibleAdminCard
-                  id="set_screenshot_protection"
-                  title="Sécurité des Captures d'Écran & Impressions"
-                  description="Définissez l'autorisation des captures d'écran, enregistrements vidéo (Android FLAG_SECURE) et impressions de contenu."
-                  icon={<Camera size={18} className="text-red-500 shrink-0" />}
+          {/* Screenshot & Print Protection */}
+          <CollapsibleAdminCard
+            id="set_screenshot_protection"
+            title="Sécurité des Captures d'Écran & Impressions"
+            description="Protégez les secrets, talasams et contenus sacrés contre la copie et la capture d'écran."
+            icon={<Shield size={18} className="text-red-500 shrink-0" />}
+          >
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Protection Anti-Capture :</span>
+                <button
+                  type="button"
+                  onClick={() => handleToggleFeature('anti_screenshot', !featureToggles.anti_screenshot)}
+                  className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors ${
+                    featureToggles.anti_screenshot ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
+                  }`}
                 >
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => handleSetScreenMode('all_allowed')}
-                        className={`p-3 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
-                          screenMode === 'all_allowed'
-                            ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 font-bold text-emerald-700 dark:text-emerald-300'
-                            : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-emerald-300'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 text-xs">
-                          <Unlock size={14} className="text-emerald-500" />
-                          <span>Autorisé pour Tous</span>
-                        </div>
-                        {screenMode === 'all_allowed' && <CheckCircle2 size={14} className="text-emerald-500" />}
-                      </button>
+                  <div className={`w-4 h-4 rounded-full bg-white transition-transform ${featureToggles.anti_screenshot ? 'translate-x-6' : 'translate-x-0'}`} />
+                </button>
+              </div>
+            </div>
+          </CollapsibleAdminCard>
 
-                      <button
-                        type="button"
-                        onClick={() => handleSetScreenMode('premium_only')}
-                        className={`p-3 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
-                          screenMode === 'premium_only'
-                            ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-500 font-bold text-amber-700 dark:text-amber-300'
-                            : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-amber-300'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 text-xs">
-                          <Crown size={14} className="text-amber-500" />
-                          <span>Uniquement Premium</span>
-                        </div>
-                        {screenMode === 'premium_only' && <CheckCircle2 size={14} className="text-amber-500" />}
-                      </button>
+          {/* Dua Copy Protection */}
+          <CollapsibleAdminCard
+            id="set_dua_copy"
+            title="Sécurité de la Copie des Textes & Sélections"
+            description="Désactivez la sélection et la copie brute de texte sur les invocations et wirds sacrés."
+            icon={<Lock size={18} className="text-amber-500 shrink-0" />}
+          >
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Bloquer la Copie du Texte :</span>
+              <button
+                type="button"
+                onClick={() => handleToggleFeature('disable_dua_copy', !featureToggles.disable_dua_copy)}
+                className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors ${
+                  featureToggles.disable_dua_copy ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
+                }`}
+              >
+                <div className={`w-4 h-4 rounded-full bg-white transition-transform ${featureToggles.disable_dua_copy ? 'translate-x-6' : 'translate-x-0'}`} />
+              </button>
+            </div>
+          </CollapsibleAdminCard>
 
-                      <button
-                        type="button"
-                        onClick={() => handleSetScreenMode('all_blocked')}
-                        className={`p-3 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
-                          screenMode === 'all_blocked'
-                            ? 'bg-red-50 dark:bg-red-950/40 border-red-500 font-bold text-red-700 dark:text-red-300'
-                            : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-red-300'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 text-xs">
-                          <Lock size={14} className="text-red-500" />
-                          <span>Bloqué pour Tous</span>
-                        </div>
-                        {screenMode === 'all_blocked' && <CheckCircle2 size={14} className="text-red-500" />}
-                      </button>
-                    </div>
-                  </div>
-                </CollapsibleAdminCard>
-
-                <CollapsibleAdminCard
-                  id="set_dua_copy"
-                  title="Sécurité de la Copie des Textes & Sélections"
-                  description="Contrôlez le copier-coller, la sélection de texte et les boutons de copie des Douas, Wirds et formules sacrifiques."
-                  icon={<Copy size={18} className="text-emerald-500 shrink-0" />}
-                >
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => handleSetCopyMode('all_allowed')}
-                        className={`p-3 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
-                          copyMode === 'all_allowed'
-                            ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 font-bold text-emerald-700 dark:text-emerald-300'
-                            : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-emerald-300'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 text-xs">
-                          <Unlock size={14} className="text-emerald-500" />
-                          <span>Autorisé pour Tous</span>
-                        </div>
-                        {copyMode === 'all_allowed' && <CheckCircle2 size={14} className="text-emerald-500" />}
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleSetCopyMode('premium_only')}
-                        className={`p-3 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
-                          copyMode === 'premium_only'
-                            ? 'bg-amber-50 dark:bg-amber-950/40 border-amber-500 font-bold text-amber-700 dark:text-amber-300'
-                            : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-amber-300'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 text-xs">
-                          <Crown size={14} className="text-amber-500" />
-                          <span>Uniquement Premium</span>
-                        </div>
-                        {copyMode === 'premium_only' && <CheckCircle2 size={14} className="text-amber-500" />}
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => handleSetCopyMode('all_blocked')}
-                        className={`p-3 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
-                          copyMode === 'all_blocked'
-                            ? 'bg-red-50 dark:bg-red-950/40 border-red-500 font-bold text-red-700 dark:text-red-300'
-                            : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-red-300'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 text-xs">
-                          <Lock size={14} className="text-red-500" />
-                          <span>Bloqué pour Tous</span>
-                        </div>
-                        {copyMode === 'all_blocked' && <CheckCircle2 size={14} className="text-red-500" />}
-                      </button>
-                    </div>
-                  </div>
-                </CollapsibleAdminCard>
-              </>
-            );
-          })()}
-
-          {/* URL de l'API Backend */}
+          {/* Backend URL */}
           <CollapsibleAdminCard
             id="set_backend_url"
             title="URL de l'API Backend (Capacitor / Mobile)"
-            description="Configurez l'adresse URL du serveur backend de production pour les applications mobiles et Capacitor."
+            description="Configurez l'adresse IP ou le domaine de l'API serveur pour l'application mobile installée."
             icon={<Globe size={18} className="text-emerald-500 shrink-0" />}
           >
             <div className="space-y-3">
@@ -9884,39 +6486,24 @@ export const AdminDashboard: React.FC = () => {
                   type="text"
                   value={localBackendUrl}
                   onChange={(e) => setLocalBackendUrl(e.target.value)}
-                  placeholder="https://votre-app-backend.run.app"
-                  className="flex-1 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-650 rounded-xl text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 animate-none"
+                  placeholder="https://votre-domaine.com"
+                  className="flex-1 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white"
                 />
                 <button
+                  type="button"
                   onClick={() => {
                     handleToggleFeature('backend_url', localBackendUrl);
-                    showToast("URL de l'API sauvegardée !");
+                    showToast("URL du backend mise à jour avec succès !");
                   }}
-                  type="button"
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold rounded-xl text-sm transition-colors cursor-pointer"
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer"
                 >
-                  Sauvegarder
-                </button>
-                <button
-                  onClick={() => {
-                    const currentOrigin = window.location.origin;
-                    setLocalBackendUrl(currentOrigin);
-                    handleToggleFeature('backend_url', currentOrigin);
-                    showToast("URL réinitialisée à celle actuelle.");
-                  }}
-                  type="button"
-                  className="px-4 py-2 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/30 dark:hover:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 font-semibold rounded-xl text-sm transition-colors cursor-pointer"
-                >
-                  URL actuelle
+                  Enregistrer
                 </button>
               </div>
-              <p className="text-xs text-amber-600 dark:text-amber-400">
-                Note : L'application mobile se synchronisera automatiquement avec cette adresse.
-              </p>
             </div>
           </CollapsibleAdminCard>
 
-          {/* Global Audio */}
+          {/* Global Audio Ruqyah */}
           <CollapsibleAdminCard
             id="set_global_audio"
             title="Lecture Audio Globale (Ruqyah)"
@@ -9926,3883 +6513,95 @@ export const AdminDashboard: React.FC = () => {
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Audio Synthèse Vocale :</span>
               <button
+                type="button"
                 onClick={toggleAudio}
                 className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors ${
-                  audioEnabled ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
+                  audioEnabled ? "bg-emerald-500" : "bg-gray-300 dark:bg-gray-600"
                 }`}
               >
                 <div
-                  className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${
-                    audioEnabled ? 'translate-x-6' : 'translate-x-0'
+                  className={`w-6 h-6 rounded-full bg-white transition-transform ${
+                    audioEnabled ? "translate-x-6" : "translate-x-0"
                   }`}
                 />
               </button>
             </div>
           </CollapsibleAdminCard>
-
-          {/* Mode Maintenance Global */}
-          <CollapsibleAdminCard
-            id="set_global_maintenance"
-            title="Mode Maintenance Global"
-            description="Bloque l'accès à toute l'application pour les utilisateurs non-administrateurs."
-            icon={<Shield size={18} className="text-red-500 shrink-0" />}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Activer la Maintenance Globale :</span>
-              <button
-                onClick={() => handleToggleFeature('globalMaintenanceMode', featureToggles['globalMaintenanceMode'] !== true)}
-                className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors ${
-                  featureToggles['globalMaintenanceMode'] ? 'bg-red-500' : 'bg-gray-300 dark:bg-gray-600'
-                }`}
-              >
-                <div
-                  className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${
-                    featureToggles['globalMaintenanceMode'] ? 'translate-x-6' : 'translate-x-0'
-                  }`}
-                />
-              </button>
-            </div>
-          </CollapsibleAdminCard>
-
-          {/* Diagnostic & Connexion Firestore (Réservé à l'Admin Panel) */}
-          <CollapsibleAdminCard
-            id="set_firestore_diag"
-            title="Diagnostic & Connexion Firestore"
-            description="Analysez l'état de la connexion en temps réel avec les serveurs de base de données Firestore (latence, logs réseau, reconnexion)."
-            icon={<Activity size={18} className="text-emerald-500 shrink-0" />}
-          >
-            <div className="flex flex-col gap-4">
-              <div>
-                <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2 text-base">
-                  <Activity size={20} className="text-emerald-500" />
-                  Diagnostic & Connexion Firestore
-                </h4>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 leading-relaxed">
-                  Analysez l'état de la connexion en temps réel avec les serveurs de base de données Firestore. Ce panneau permet d'identifier les blocages réseau, SSL, CORS ou d'autres anomalies dans les environnements mobiles et de type Capacitor.
-                </p>
-              </div>
-
-            {/* Diagnostic Action Controls */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <button
-                onClick={async () => {
-                  setIsPinging(true);
-                  const res = await pingFirestore();
-                  setPingResult(res);
-                  setIsPinging(false);
-                }}
-                disabled={isPinging}
-                className="flex items-center justify-center gap-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 dark:bg-emerald-900/20 dark:hover:bg-emerald-900/40 dark:text-emerald-400 rounded-xl px-4 py-3 font-bold text-xs transition-colors cursor-pointer"
-              >
-                <Activity size={16} className={isPinging ? "animate-spin" : ""} />
-                {isPinging ? "Vérification en cours..." : "Tester la latence (Ping)"}
-              </button>
-
-              <button
-                onClick={async () => {
-                  addNetworkLog('info', 'firestore', 'Reconnexion manuelle initiée par l\'administrateur.');
-                  await triggerBackgroundReconnect();
-                }}
-                className="flex items-center justify-center gap-2 bg-blue-50 hover:bg-blue-100 text-blue-600 dark:bg-blue-900/20 dark:hover:bg-blue-900/40 dark:text-blue-400 rounded-xl px-4 py-3 font-bold text-xs transition-colors cursor-pointer"
-              >
-                <RefreshCw size={16} />
-                Forcer la reconnexion
-              </button>
-            </div>
-
-            {/* Ping / Latency Result Display */}
-            {pingResult && (
-              <div className={`p-4 rounded-2xl border text-sm flex flex-col gap-2 ${
-                pingResult.reachable 
-                  ? 'border-emerald-200 bg-emerald-50/20 dark:border-emerald-800/30 dark:bg-emerald-950/10 text-emerald-800 dark:text-emerald-300'
-                  : 'border-red-200 bg-red-50/20 dark:border-red-900/30 dark:bg-red-950/10 text-red-800 dark:text-red-300'
-              }`}>
-                <div className="flex items-center justify-between font-bold text-xs uppercase tracking-wider">
-                  <span>Résultat du Diagnostic :</span>
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] ${
-                    pingResult.reachable 
-                      ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400' 
-                      : 'bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400'
-                  }`}>
-                    {pingResult.reachable ? 'Connecté / Réseau Ok' : 'Erreur Connexion'}
-                  </span>
-                </div>
-                
-                <div className="grid grid-cols-2 gap-4 mt-1 text-xs text-gray-600 dark:text-gray-300">
-                  <div>
-                    <span className="opacity-70">Latence du serveur :</span>{' '}
-                    <strong className={pingResult.reachable ? 'text-emerald-600 dark:text-emerald-400 font-mono text-sm' : 'font-mono'}>
-                      {pingResult.reachable ? `${pingResult.latencyMs} ms` : 'Indisponible'}
-                    </strong>
-                  </div>
-                  <div>
-                    <span className="opacity-70">Statut réseau local :</span>{' '}
-                    <strong className={navigator.onLine ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500'}>
-                      {navigator.onLine ? 'En ligne' : 'Hors ligne'}
-                    </strong>
-                  </div>
-                </div>
-
-                {pingResult.errorMessage && (
-                  <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-800 text-xs">
-                    <span className="font-bold">Message :</span> {pingResult.errorMessage}
-                  </div>
-                )}
-                
-                {pingResult.errorType === 'ssl_cors' && (
-                  <div className="mt-1 text-[11px] bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 p-2.5 rounded-xl">
-                    ⚠️ <strong>Anomalie SSL ou CORS détectée :</strong> Si vous utilisez une application mobile (Capacitor), assurez-vous que l'heure de votre appareil est parfaitement synchrone et que vous n'êtes pas connecté via un proxy / VPN filtrant.
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Real-time Connection State Summary card */}
-            <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl p-4">
-              <h4 className="font-bold text-gray-900 dark:text-white text-xs mb-3 uppercase tracking-wider flex items-center gap-1.5">
-                <Database size={14} /> Paramètres Réseau Actuels
-              </h4>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-2 gap-x-4 text-xs">
-                <div className="flex justify-between py-1 border-b border-gray-100 dark:border-gray-800">
-                  <span className="text-gray-500">IndexedDB Persistance :</span>
-                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">Actif (Optimisé mobile)</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-gray-100 dark:border-gray-800">
-                  <span className="text-gray-500">Long Polling / WebSockets (Capacitor) :</span>
-                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">Auto-détection (experimentalAutoDetect)</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-gray-100 dark:border-gray-800">
-                  <span className="text-gray-500">Protocole de la page :</span>
-                  <span className="font-mono">{window.location.protocol}</span>
-                </div>
-                <div className="flex justify-between py-1 border-b border-gray-100 dark:border-gray-800">
-                  <span className="text-gray-500">Origine :</span>
-                  <span className="font-mono truncate max-w-[150px]" title={window.location.origin}>{window.location.origin}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Live Diagnostics Console Log Display */}
-            <div className="border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden bg-gray-950">
-              <div className="bg-gray-900 px-4 py-3 flex items-center justify-between border-b border-gray-800">
-                <span className="text-xs font-mono font-bold text-gray-300 flex items-center gap-1.5">
-                  <Terminal size={14} className="text-emerald-500" /> Console de Diagnostics Réseau ({diagnosticLogs.length})
-                </span>
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <button
-                    onClick={() => {
-                      if (typeof (window as any).asrarhub_test_webview_fetch === 'function') {
-                        (window as any).asrarhub_test_webview_fetch();
-                      } else {
-                        const targetUrl = window.location.origin || window.location.href || '/';
-                        addNetworkLog('info', 'ssl_cors', `Diagnostic WebView: Fetch manuel sur URL racine "${targetUrl}"`);
-                        fetch(targetUrl, { method: 'GET', cache: 'no-store' })
-                          .then(res => {
-                            addNetworkLog('success', 'ssl_cors', `Fetch URL racine réussi (${res.status} ${res.statusText || 'OK'})`);
-                          })
-                          .catch(err => {
-                            addNetworkLog('error', 'ssl_cors', `Échec fetch URL racine: ${err?.message || err}`);
-                          });
-                      }
-                    }}
-                    className="text-[10px] text-amber-300 hover:text-amber-200 bg-amber-950/60 border border-amber-500/30 hover:bg-amber-900/80 transition-colors px-2 py-1 rounded-lg font-mono font-bold cursor-pointer"
-                    title="Tester la connectivité WebView/CORS vers l'URL racine"
-                  >
-                    Test Fetch
-                  </button>
-                  {diagnosticLogs.length > 0 && (
-                    <>
-                      <button
-                        onClick={exportNetworkLogsJSON}
-                        className="text-[10px] text-emerald-300 hover:text-emerald-200 bg-emerald-950/60 border border-emerald-500/30 hover:bg-emerald-900/80 transition-colors px-2 py-1 rounded-lg font-mono font-bold cursor-pointer flex items-center gap-1"
-                        title="Exporter les logs réseau en format JSON"
-                      >
-                        <Download size={11} /> JSON
-                      </button>
-                      <button
-                        onClick={exportNetworkLogsCSV}
-                        className="text-[10px] text-blue-300 hover:text-blue-200 bg-blue-950/60 border border-blue-500/30 hover:bg-blue-900/80 transition-colors px-2 py-1 rounded-lg font-mono font-bold cursor-pointer flex items-center gap-1"
-                        title="Exporter les logs réseau en format CSV"
-                      >
-                        <Download size={11} /> CSV
-                      </button>
-                      <button
-                        onClick={() => clearNetworkLogs()}
-                        className="text-[10px] text-gray-400 hover:text-white bg-gray-800 hover:bg-gray-700 transition-colors px-2 py-1 rounded-lg font-mono font-bold cursor-pointer"
-                      >
-                        Vider
-                      </button>
-                    </>
-                  )}
-                </div>
-              </div>
-
-              <div className="p-3 font-mono text-[10px] leading-relaxed max-h-56 overflow-y-auto flex flex-col gap-2">
-                {diagnosticLogs.length === 0 ? (
-                  <div className="text-center text-gray-500 py-4 italic">
-                    Aucun log réseau enregistré pour le moment.
-                  </div>
-                ) : (
-                  diagnosticLogs.map((log) => {
-                    let badgeColor = 'bg-blue-950/40 text-blue-400 border border-blue-500/20';
-                    if (log.type === 'error') badgeColor = 'bg-red-950/40 text-red-400 border border-red-500/20';
-                    if (log.type === 'success') badgeColor = 'bg-emerald-950/40 text-emerald-400 border border-emerald-500/20';
-                    if (log.type === 'retry') badgeColor = 'bg-amber-950/40 text-amber-400 border border-amber-500/20';
-
-                    return (
-                      <div key={log.id} className="border-b border-gray-900/50 pb-2 last:border-0 last:pb-0">
-                        <div className="flex items-center gap-1.5 flex-wrap">
-                          <span className="text-gray-500 font-light">[{new Date(log.timestamp).toLocaleTimeString()}]</span>
-                          <span className={`text-[8px] font-bold uppercase px-1 rounded ${badgeColor}`}>
-                            {log.type}
-                          </span>
-                          <span className="text-gray-400 font-bold">[{log.category}]</span>
-                          <span className="text-gray-200">{log.message}</span>
-                        </div>
-                        {log.details && (
-                          <div className="mt-1 pl-4 text-gray-500 break-all select-all">
-                            ↳ {log.details}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })
-                )}
-              </div>
-            </div>
-          </div>
-        </CollapsibleAdminCard>
-
-          {/* CONTRÔLE TOTAL DES FLUX & ALIGNEMENTS VERTICAUX (MONTER / DESCENDRE) */}
-          <CollapsibleAdminCard
-            id="set_feed_offsets"
-            title="Contrôle Total des Flux & Alignements Verticaux (Monter / Descendre)"
-            description="Faites monter ou descendre le flux de contenu d'accueil, le flux des outils spirituels, la lecture des articles et tous les flux de l'application."
-            icon={<MoveVertical size={18} className="text-emerald-500 shrink-0" />}
-          >
-            <div className="flex flex-col gap-6">
-              {/* Header & Description */}
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-emerald-100 dark:border-emerald-900/50">
-                <div>
-                  <h4 className="font-extrabold text-gray-900 dark:text-white flex items-center gap-2 text-base sm:text-lg">
-                    <MoveVertical size={20} className="text-emerald-600 dark:text-emerald-400" />
-                    Contrôle Total des Flux & Décalages Verticaux
-                  </h4>
-                  <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">
-                    Ajustez avec précision la hauteur et la position verticale de chaque flux pour combler les espaces ou aérer l'affichage.
-                  </p>
-                </div>
-
-                {/* Presets Quick Action Buttons */}
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    disabled={!!featureToggles['lockFeedOffsets']}
-                    onClick={() => {
-                      if (featureToggles['lockFeedOffsets']) return;
-                      handleBatchToggleFeatures({
-                        feedGlobalOffset: 0,
-                        feedHomeOffset: -28,
-                        feedToolsOffset: -20,
-                        feedArticleOffset: -16,
-                        feedExploreOffset: -20,
-                        feedCommunityOffset: -16,
-                        feedStoreOffset: -16,
-                        feedJournalOffset: -16,
-                        feedHomeSliderOffset: -10
-                      });
-                      showToast("Preset 'Maxi Remonté' appliqué sur tous les flux ! 🚀");
-                    }}
-                    className={`px-2.5 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-700 dark:text-gray-200 rounded-xl transition-all shadow-xs ${
-                      featureToggles['lockFeedOffsets'] ? "opacity-50 cursor-not-allowed" : "hover:bg-emerald-50 cursor-pointer"
-                    }`}
-                  >
-                    🚀 Maxi Remonté
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={!!featureToggles['lockFeedOffsets']}
-                    onClick={() => {
-                      if (featureToggles['lockFeedOffsets']) return;
-                      handleBatchToggleFeatures({
-                        feedGlobalOffset: 0,
-                        feedHomeOffset: -14,
-                        feedToolsOffset: -10,
-                        feedArticleOffset: -8,
-                        feedExploreOffset: -10,
-                        feedCommunityOffset: -8,
-                        feedStoreOffset: -8,
-                        feedJournalOffset: -8,
-                        feedHomeSliderOffset: -4
-                      });
-                      showToast("Preset 'Compact Haut' appliqué ! ⚡");
-                    }}
-                    className={`px-2.5 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-700 dark:text-gray-200 rounded-xl transition-all shadow-xs ${
-                      featureToggles['lockFeedOffsets'] ? "opacity-50 cursor-not-allowed" : "hover:bg-emerald-50 cursor-pointer"
-                    }`}
-                  >
-                    ⚡ Compact Haut
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={!!featureToggles['lockFeedOffsets']}
-                    onClick={() => {
-                      if (featureToggles['lockFeedOffsets']) return;
-                      handleBatchToggleFeatures({
-                        feedGlobalOffset: 0,
-                        feedHomeOffset: 0,
-                        feedToolsOffset: 0,
-                        feedArticleOffset: 0,
-                        feedExploreOffset: 0,
-                        feedCommunityOffset: 0,
-                        feedStoreOffset: 0,
-                        feedJournalOffset: 0,
-                        feedHomeSliderOffset: 0
-                      });
-                      showToast("Preset 'Standard Équilibré (0px)' rétabli ! 📱");
-                    }}
-                    className={`px-2.5 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-700 dark:text-gray-200 rounded-xl transition-all shadow-xs ${
-                      featureToggles['lockFeedOffsets'] ? "opacity-50 cursor-not-allowed" : "hover:bg-emerald-50 cursor-pointer"
-                    }`}
-                  >
-                    📱 Standard (0px)
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={!!featureToggles['lockFeedOffsets']}
-                    onClick={() => {
-                      if (featureToggles['lockFeedOffsets']) return;
-                      handleBatchToggleFeatures({
-                        feedGlobalOffset: 0,
-                        feedHomeOffset: 16,
-                        feedToolsOffset: 16,
-                        feedArticleOffset: 14,
-                        feedExploreOffset: 16,
-                        feedCommunityOffset: 14,
-                        feedStoreOffset: 14,
-                        feedJournalOffset: 14,
-                        feedHomeSliderOffset: 6
-                      });
-                      showToast("Preset 'Aéré / Descendu' appliqué ! 🍃");
-                    }}
-                    className={`px-2.5 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-700 dark:text-gray-200 rounded-xl transition-all shadow-xs ${
-                      featureToggles['lockFeedOffsets'] ? "opacity-50 cursor-not-allowed" : "hover:bg-emerald-50 cursor-pointer"
-                    }`}
-                  >
-                    🍃 Aéré (+16px)
-                  </button>
-
-                  <button
-                    type="button"
-                    disabled={!!featureToggles['lockFeedOffsets']}
-                    onClick={() => {
-                      if (featureToggles['lockFeedOffsets']) return;
-                      handleBatchToggleFeatures({
-                        feedGlobalOffset: 0,
-                        feedHomeOffset: 32,
-                        feedToolsOffset: 30,
-                        feedArticleOffset: 24,
-                        feedExploreOffset: 30,
-                        feedCommunityOffset: 24,
-                        feedStoreOffset: 24,
-                        feedJournalOffset: 24,
-                        feedHomeSliderOffset: 12
-                      });
-                      showToast("Preset 'Très Descendu (+32px)' appliqué ! 🔽");
-                    }}
-                    className={`px-2.5 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-700 dark:text-gray-200 rounded-xl transition-all shadow-xs ${
-                      featureToggles['lockFeedOffsets'] ? "opacity-50 cursor-not-allowed" : "hover:bg-emerald-50 cursor-pointer"
-                    }`}
-                  >
-                    🔽 Bas (+32px)
-                  </button>
-                </div>
-              </div>
-
-              {/* Lock Security Switch Bar */}
-              <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-2xl border transition-all ${
-                featureToggles['lockFeedOffsets']
-                  ? "bg-amber-500/10 dark:bg-amber-500/20 border-amber-300/80 dark:border-amber-700/60"
-                  : "bg-emerald-500/10 dark:bg-emerald-500/20 border-emerald-300/80 dark:border-emerald-700/60"
-              }`}>
-                <div className="flex items-center gap-3">
-                  <div className={`p-2.5 rounded-xl text-white shadow-xs ${
-                    featureToggles['lockFeedOffsets'] ? "bg-amber-600" : "bg-emerald-600"
-                  }`}>
-                    {featureToggles['lockFeedOffsets'] ? <Lock size={20} /> : <Unlock size={20} />}
-                  </div>
-                  <div>
-                    <h5 className="text-xs font-black text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                      Verrouillage des Flux ✋
-                      {featureToggles['lockFeedOffsets'] ? (
-                        <span className="bg-amber-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full uppercase shadow-xs">
-                          🔒 Verrouillé
-                        </span>
-                      ) : (
-                        <span className="bg-emerald-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full uppercase shadow-xs">
-                          🔓 Modifiable
-                        </span>
-                      )}
-                    </h5>
-                    <p className="text-[11px] text-gray-600 dark:text-gray-300 mt-0.5">
-                      {featureToggles['lockFeedOffsets']
-                        ? "Les curseurs et boutons de montée/descente des flux sont bloqués pour éviter tout changement involontaire."
-                        : "Activez le verrou pour sécuriser le positionnement de vos flux une fois ajustés."}
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    const newState = !featureToggles['lockFeedOffsets'];
-                    handleToggleFeature('lockFeedOffsets', newState);
-                    showToast(newState ? "Réglages des flux VERROUILLÉS 🔒" : "Réglages des flux DÉVERROUILLÉS 🔓");
-                  }}
-                  className={`px-4 py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm ${
-                    featureToggles['lockFeedOffsets']
-                      ? "bg-amber-600 hover:bg-amber-700 text-white"
-                      : "bg-emerald-600 hover:bg-emerald-700 text-white"
-                  }`}
-                >
-                  {featureToggles['lockFeedOffsets'] ? <Unlock size={15} /> : <Lock size={15} />}
-                  <span>{featureToggles['lockFeedOffsets'] ? "Déverrouiller" : "Verrouiller 🔒"}</span>
-                </button>
-              </div>
-
-              {/* Master Global Offset Card */}
-              <div className={`p-4 bg-gradient-to-r from-emerald-500/10 via-teal-500/10 to-blue-500/10 dark:from-emerald-950/40 dark:via-teal-950/40 dark:to-blue-950/40 rounded-2xl border border-emerald-200 dark:border-emerald-800/60 space-y-3 transition-all ${
-                featureToggles['lockFeedOffsets'] ? "opacity-60 pointer-events-none select-none" : ""
-              }`}>
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <div className="p-2 bg-emerald-600 text-white rounded-xl shadow-xs">
-                      <MoveVertical size={16} />
-                    </div>
-                    <div>
-                      <h5 className="font-extrabold text-sm text-gray-900 dark:text-white flex items-center gap-2">
-                        Décalage Global Master (Tous les flux)
-                        <span className={`px-2 py-0.5 text-xs font-black rounded-lg ${
-                          (featureToggles['feedGlobalOffset'] || 0) < 0
-                            ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-300'
-                            : (featureToggles['feedGlobalOffset'] || 0) > 0
-                            ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300'
-                            : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300'
-                        }`}>
-                          {(featureToggles['feedGlobalOffset'] || 0) > 0 ? `+${featureToggles['feedGlobalOffset']} px (Descendu)` : (featureToggles['feedGlobalOffset'] || 0) < 0 ? `${featureToggles['feedGlobalOffset']} px (Remonté)` : `0 px (Neutre)`}
-                        </span>
-                      </h5>
-                      <p className="text-xs text-gray-500">
-                        Applique un décalage vertical universel sur toutes les pages en un seul geste.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <button
-                      type="button"
-                      disabled={!!featureToggles['lockFeedOffsets']}
-                      onClick={() => {
-                        const cur = featureToggles['feedGlobalOffset'] || 0;
-                        handleToggleFeature('feedGlobalOffset', Math.max(-60, cur - 4));
-                      }}
-                      className="px-2.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-xl flex items-center gap-1 shadow-xs transition-all cursor-pointer"
-                      title="Monter tous les flux (-4px)"
-                    >
-                      <ArrowUp size={14} /> Monter (-4px)
-                    </button>
-                    <button
-                      type="button"
-                      disabled={!!featureToggles['lockFeedOffsets']}
-                      onClick={() => {
-                        const cur = featureToggles['feedGlobalOffset'] || 0;
-                        handleToggleFeature('feedGlobalOffset', Math.min(60, cur + 4));
-                      }}
-                      className="px-2.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl flex items-center gap-1 shadow-xs transition-all cursor-pointer"
-                      title="Descendre tous les flux (+4px)"
-                    >
-                      <ArrowDown size={14} /> Descendre (+4px)
-                    </button>
-                    <button
-                      type="button"
-                      disabled={!!featureToggles['lockFeedOffsets']}
-                      onClick={() => handleToggleFeature('feedGlobalOffset', 0)}
-                      className="px-2 py-1.5 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 text-xs font-bold rounded-xl shadow-xs transition-all cursor-pointer"
-                      title="Rétablir à 0px"
-                    >
-                      <RotateCcw size={13} />
-                    </button>
-                  </div>
-                </div>
-
-                <input
-                  type="range"
-                  min={-60}
-                  max={60}
-                  step={1}
-                  disabled={!!featureToggles['lockFeedOffsets']}
-                  value={featureToggles['feedGlobalOffset'] ?? 0}
-                  onChange={(e) => handleToggleFeature('feedGlobalOffset', Number(e.target.value))}
-                  className="w-full accent-emerald-600 cursor-pointer h-2.5 bg-gray-200 dark:bg-gray-700 rounded-lg disabled:cursor-not-allowed"
-                />
-                <div className="flex justify-between text-[10px] text-gray-400 font-bold">
-                  <span>-60px (Très Haut)</span>
-                  <span>-30px</span>
-                  <span>0px (Normal)</span>
-                  <span>+30px</span>
-                  <span>+60px (Très Bas)</span>
-                </div>
-              </div>
-
-              {/* Grid of Individual Feed Offsets */}
-              <div className={`grid grid-cols-1 md:grid-cols-2 gap-6 transition-all ${
-                featureToggles['lockFeedOffsets'] ? "opacity-60 pointer-events-none select-none" : ""
-              }`}>
-                {/* 1. Flux Principal (Accueil / UserDashboard) */}
-                <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 space-y-3">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <label className="text-xs font-black uppercase text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
-                        <LayoutDashboard size={14} className="text-emerald-500" />
-                        Flux Tableau de Bord Principal (Accueil)
-                      </label>
-                      <p className="text-[11px] text-gray-500 mt-0.5">Position verticale du flux sous la barre d'onglets.</p>
-                    </div>
-                    <span className={`px-2.5 py-0.5 text-xs font-extrabold rounded-lg ${
-                      (featureToggles['feedHomeOffset'] || 0) < 0
-                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300'
-                        : (featureToggles['feedHomeOffset'] || 0) > 0
-                        ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300'
-                        : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300'
-                    }`}>
-                      {(featureToggles['feedHomeOffset'] || 0) > 0 ? `+${featureToggles['feedHomeOffset']} px` : `${featureToggles['feedHomeOffset'] || 0} px`}
-                    </span>
-                  </div>
-
-                  <input
-                    type="range"
-                    min={-60}
-                    max={60}
-                    step={1}
-                    disabled={!!featureToggles['lockFeedOffsets']}
-                    value={featureToggles['feedHomeOffset'] ?? 0}
-                    onChange={(e) => handleToggleFeature('feedHomeOffset', Number(e.target.value))}
-                    className="w-full accent-emerald-600 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg disabled:cursor-not-allowed"
-                  />
-                  <div className="flex justify-between items-center text-[10px] text-gray-400 font-bold">
-                    <span>-60px (Remonté)</span>
-                    <div className="flex gap-1">
-                      <button
-                        type="button"
-                        onClick={() => handleToggleFeature('feedHomeOffset', Math.max(-60, (featureToggles['feedHomeOffset'] || 0) - 4))}
-                        className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-black hover:bg-emerald-500 hover:text-white cursor-pointer"
-                      >
-                        ▲ Monter
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleToggleFeature('feedHomeOffset', Math.min(60, (featureToggles['feedHomeOffset'] || 0) + 4))}
-                        className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-black hover:bg-amber-500 hover:text-white cursor-pointer"
-                      >
-                        ▼ Descendre
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleToggleFeature('feedHomeOffset', 0)}
-                        className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-black cursor-pointer"
-                        title="Rétablir 0"
-                      >
-                        0
-                      </button>
-                    </div>
-                    <span>+60px (Descendu)</span>
-                  </div>
-                </div>
-
-                {/* 2. Flux des Outils Spirituels (ToolsDashboard) */}
-                <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 space-y-3">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <label className="text-xs font-black uppercase text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
-                        <Grid size={14} className="text-amber-500" />
-                        Flux des Outils Spirituels (ToolsDashboard)
-                      </label>
-                      <p className="text-[11px] text-gray-500 mt-0.5">Espacement supérieur de la grille et des cartes d'outils.</p>
-                    </div>
-                    <span className={`px-2.5 py-0.5 text-xs font-extrabold rounded-lg ${
-                      (featureToggles['feedToolsOffset'] || 0) < 0
-                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300'
-                        : (featureToggles['feedToolsOffset'] || 0) > 0
-                        ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300'
-                        : 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300'
-                    }`}>
-                      {(featureToggles['feedToolsOffset'] || 0) > 0 ? `+${featureToggles['feedToolsOffset']} px` : `${featureToggles['feedToolsOffset'] || 0} px`}
-                    </span>
-                  </div>
-
-                  <input
-                    type="range"
-                    min={-60}
-                    max={60}
-                    step={1}
-                    disabled={!!featureToggles['lockFeedOffsets']}
-                    value={featureToggles['feedToolsOffset'] ?? 0}
-                    onChange={(e) => handleToggleFeature('feedToolsOffset', Number(e.target.value))}
-                    className="w-full accent-amber-500 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg disabled:cursor-not-allowed"
-                  />
-                  <div className="flex justify-between items-center text-[10px] text-gray-400 font-bold">
-                    <span>-60px (Remonté)</span>
-                    <div className="flex gap-1">
-                      <button
-                        type="button"
-                        onClick={() => handleToggleFeature('feedToolsOffset', Math.max(-60, (featureToggles['feedToolsOffset'] || 0) - 4))}
-                        className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-black hover:bg-emerald-500 hover:text-white cursor-pointer"
-                      >
-                        ▲ Monter
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleToggleFeature('feedToolsOffset', Math.min(60, (featureToggles['feedToolsOffset'] || 0) + 4))}
-                        className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-black hover:bg-amber-500 hover:text-white cursor-pointer"
-                      >
-                        ▼ Descendre
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleToggleFeature('feedToolsOffset', 0)}
-                        className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-black cursor-pointer"
-                      >
-                        0
-                      </button>
-                    </div>
-                    <span>+60px (Descendu)</span>
-                  </div>
-                </div>
-
-                {/* 3. Flux de Lecture des Articles & Secrets (SecretDetail) */}
-                <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 space-y-3">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <label className="text-xs font-black uppercase text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
-                        <BookOpen size={14} className="text-blue-500" />
-                        Flux de Lecture des Articles (SecretDetail)
-                      </label>
-                      <p className="text-[11px] text-gray-500 mt-0.5">Position verticale du contenu de lecture et barre audio.</p>
-                    </div>
-                    <span className={`px-2.5 py-0.5 text-xs font-extrabold rounded-lg ${
-                      (featureToggles['feedArticleOffset'] || 0) < 0
-                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300'
-                        : (featureToggles['feedArticleOffset'] || 0) > 0
-                        ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300'
-                        : 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300'
-                    }`}>
-                      {(featureToggles['feedArticleOffset'] || 0) > 0 ? `+${featureToggles['feedArticleOffset']} px` : `${featureToggles['feedArticleOffset'] || 0} px`}
-                    </span>
-                  </div>
-
-                  <input
-                    type="range"
-                    min={-60}
-                    max={60}
-                    step={1}
-                    disabled={!!featureToggles['lockFeedOffsets']}
-                    value={featureToggles['feedArticleOffset'] ?? 0}
-                    onChange={(e) => handleToggleFeature('feedArticleOffset', Number(e.target.value))}
-                    className="w-full accent-blue-600 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg disabled:cursor-not-allowed"
-                  />
-                  <div className="flex justify-between items-center text-[10px] text-gray-400 font-bold">
-                    <span>-60px (Remonté)</span>
-                    <div className="flex gap-1">
-                      <button
-                        type="button"
-                        onClick={() => handleToggleFeature('feedArticleOffset', Math.max(-60, (featureToggles['feedArticleOffset'] || 0) - 4))}
-                        className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-black hover:bg-emerald-500 hover:text-white cursor-pointer"
-                      >
-                        ▲ Monter
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleToggleFeature('feedArticleOffset', Math.min(60, (featureToggles['feedArticleOffset'] || 0) + 4))}
-                        className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-black hover:bg-amber-500 hover:text-white cursor-pointer"
-                      >
-                        ▼ Descendre
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleToggleFeature('feedArticleOffset', 0)}
-                        className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-black cursor-pointer"
-                      >
-                        0
-                      </button>
-                    </div>
-                    <span>+60px (Descendu)</span>
-                  </div>
-                </div>
-
-                {/* 4. Flux Découverte & Exploration (ExploreDashboard) */}
-                <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 space-y-3">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <label className="text-xs font-black uppercase text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
-                        <Compass size={14} className="text-teal-500" />
-                        Flux Découverte & Catégories (Explorer)
-                      </label>
-                      <p className="text-[11px] text-gray-500 mt-0.5">Espacement du hub d'exploration et des sagesses.</p>
-                    </div>
-                    <span className={`px-2.5 py-0.5 text-xs font-extrabold rounded-lg ${
-                      (featureToggles['feedExploreOffset'] || 0) < 0
-                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300'
-                        : (featureToggles['feedExploreOffset'] || 0) > 0
-                        ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300'
-                        : 'bg-teal-100 text-teal-800 dark:bg-teal-900/50 dark:text-teal-300'
-                    }`}>
-                      {(featureToggles['feedExploreOffset'] || 0) > 0 ? `+${featureToggles['feedExploreOffset']} px` : `${featureToggles['feedExploreOffset'] || 0} px`}
-                    </span>
-                  </div>
-
-                  <input
-                    type="range"
-                    min={-60}
-                    max={60}
-                    step={1}
-                    disabled={!!featureToggles['lockFeedOffsets']}
-                    value={featureToggles['feedExploreOffset'] ?? 0}
-                    onChange={(e) => handleToggleFeature('feedExploreOffset', Number(e.target.value))}
-                    className="w-full accent-teal-600 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg disabled:cursor-not-allowed"
-                  />
-                  <div className="flex justify-between items-center text-[10px] text-gray-400 font-bold">
-                    <span>-60px (Remonté)</span>
-                    <div className="flex gap-1">
-                      <button
-                        type="button"
-                        onClick={() => handleToggleFeature('feedExploreOffset', Math.max(-60, (featureToggles['feedExploreOffset'] || 0) - 4))}
-                        className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-black hover:bg-emerald-500 hover:text-white cursor-pointer"
-                      >
-                        ▲ Monter
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleToggleFeature('feedExploreOffset', Math.min(60, (featureToggles['feedExploreOffset'] || 0) + 4))}
-                        className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-black hover:bg-amber-500 hover:text-white cursor-pointer"
-                      >
-                        ▼ Descendre
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleToggleFeature('feedExploreOffset', 0)}
-                        className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-black cursor-pointer"
-                      >
-                        0
-                      </button>
-                    </div>
-                    <span>+60px (Descendu)</span>
-                  </div>
-                </div>
-
-                {/* 5. Flux de la Communauté (Community) */}
-                <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 space-y-3">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <label className="text-xs font-black uppercase text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
-                        <Users size={14} className="text-purple-500" />
-                        Flux Communauté & Salons de Discussion
-                      </label>
-                      <p className="text-[11px] text-gray-500 mt-0.5">Position verticale du chat et forum communautaire.</p>
-                    </div>
-                    <span className={`px-2.5 py-0.5 text-xs font-extrabold rounded-lg ${
-                      (featureToggles['feedCommunityOffset'] || 0) < 0
-                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300'
-                        : (featureToggles['feedCommunityOffset'] || 0) > 0
-                        ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300'
-                        : 'bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300'
-                    }`}>
-                      {(featureToggles['feedCommunityOffset'] || 0) > 0 ? `+${featureToggles['feedCommunityOffset']} px` : `${featureToggles['feedCommunityOffset'] || 0} px`}
-                    </span>
-                  </div>
-
-                  <input
-                    type="range"
-                    min={-60}
-                    max={60}
-                    step={1}
-                    disabled={!!featureToggles['lockFeedOffsets']}
-                    value={featureToggles['feedCommunityOffset'] ?? 0}
-                    onChange={(e) => handleToggleFeature('feedCommunityOffset', Number(e.target.value))}
-                    className="w-full accent-purple-600 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg disabled:cursor-not-allowed"
-                  />
-                  <div className="flex justify-between items-center text-[10px] text-gray-400 font-bold">
-                    <span>-60px (Remonté)</span>
-                    <div className="flex gap-1">
-                      <button
-                        type="button"
-                        onClick={() => handleToggleFeature('feedCommunityOffset', Math.max(-60, (featureToggles['feedCommunityOffset'] || 0) - 4))}
-                        className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-black hover:bg-emerald-500 hover:text-white cursor-pointer"
-                      >
-                        ▲ Monter
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleToggleFeature('feedCommunityOffset', Math.min(60, (featureToggles['feedCommunityOffset'] || 0) + 4))}
-                        className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-black hover:bg-amber-500 hover:text-white cursor-pointer"
-                      >
-                        ▼ Descendre
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleToggleFeature('feedCommunityOffset', 0)}
-                        className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-black cursor-pointer"
-                      >
-                        0
-                      </button>
-                    </div>
-                    <span>+60px (Descendu)</span>
-                  </div>
-                </div>
-
-                {/* 6. Flux de la Boutique & Bibliothèque (Store) */}
-                <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 space-y-3">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <label className="text-xs font-black uppercase text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
-                        <ShoppingBag size={14} className="text-rose-500" />
-                        Flux Boutique & Livres Sacrés (Store)
-                      </label>
-                      <p className="text-[11px] text-gray-500 mt-0.5">Position verticale du catalogue et des livres manuscrits.</p>
-                    </div>
-                    <span className={`px-2.5 py-0.5 text-xs font-extrabold rounded-lg ${
-                      (featureToggles['feedStoreOffset'] || 0) < 0
-                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300'
-                        : (featureToggles['feedStoreOffset'] || 0) > 0
-                        ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300'
-                        : 'bg-rose-100 text-rose-800 dark:bg-rose-900/50 dark:text-rose-300'
-                    }`}>
-                      {(featureToggles['feedStoreOffset'] || 0) > 0 ? `+${featureToggles['feedStoreOffset']} px` : `${featureToggles['feedStoreOffset'] || 0} px`}
-                    </span>
-                  </div>
-
-                  <input
-                    type="range"
-                    min={-60}
-                    max={60}
-                    step={1}
-                    disabled={!!featureToggles['lockFeedOffsets']}
-                    value={featureToggles['feedStoreOffset'] ?? 0}
-                    onChange={(e) => handleToggleFeature('feedStoreOffset', Number(e.target.value))}
-                    className="w-full accent-rose-600 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg disabled:cursor-not-allowed"
-                  />
-                  <div className="flex justify-between items-center text-[10px] text-gray-400 font-bold">
-                    <span>-60px (Remonté)</span>
-                    <div className="flex gap-1">
-                      <button
-                        type="button"
-                        onClick={() => handleToggleFeature('feedStoreOffset', Math.max(-60, (featureToggles['feedStoreOffset'] || 0) - 4))}
-                        className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-black hover:bg-emerald-500 hover:text-white cursor-pointer"
-                      >
-                        ▲ Monter
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleToggleFeature('feedStoreOffset', Math.min(60, (featureToggles['feedStoreOffset'] || 0) + 4))}
-                        className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-black hover:bg-amber-500 hover:text-white cursor-pointer"
-                      >
-                        ▼ Descendre
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleToggleFeature('feedStoreOffset', 0)}
-                        className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-black cursor-pointer"
-                      >
-                        0
-                      </button>
-                    </div>
-                    <span>+60px (Descendu)</span>
-                  </div>
-                </div>
-
-                {/* 7. Flux du Journal Spirituel (Journal) */}
-                <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 space-y-3">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <label className="text-xs font-black uppercase text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
-                        <Book size={14} className="text-indigo-500" />
-                        Flux du Journal Spirituel (Journal)
-                      </label>
-                      <p className="text-[11px] text-gray-500 mt-0.5">Espacement du journal intime et suivi des wirds.</p>
-                    </div>
-                    <span className={`px-2.5 py-0.5 text-xs font-extrabold rounded-lg ${
-                      (featureToggles['feedJournalOffset'] || 0) < 0
-                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300'
-                        : (featureToggles['feedJournalOffset'] || 0) > 0
-                        ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300'
-                        : 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/50 dark:text-indigo-300'
-                    }`}>
-                      {(featureToggles['feedJournalOffset'] || 0) > 0 ? `+${featureToggles['feedJournalOffset']} px` : `${featureToggles['feedJournalOffset'] || 0} px`}
-                    </span>
-                  </div>
-
-                  <input
-                    type="range"
-                    min={-60}
-                    max={60}
-                    step={1}
-                    disabled={!!featureToggles['lockFeedOffsets']}
-                    value={featureToggles['feedJournalOffset'] ?? 0}
-                    onChange={(e) => handleToggleFeature('feedJournalOffset', Number(e.target.value))}
-                    className="w-full accent-indigo-600 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg disabled:cursor-not-allowed"
-                  />
-                  <div className="flex justify-between items-center text-[10px] text-gray-400 font-bold">
-                    <span>-60px (Remonté)</span>
-                    <div className="flex gap-1">
-                      <button
-                        type="button"
-                        onClick={() => handleToggleFeature('feedJournalOffset', Math.max(-60, (featureToggles['feedJournalOffset'] || 0) - 4))}
-                        className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-black hover:bg-emerald-500 hover:text-white cursor-pointer"
-                      >
-                        ▲ Monter
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleToggleFeature('feedJournalOffset', Math.min(60, (featureToggles['feedJournalOffset'] || 0) + 4))}
-                        className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-black hover:bg-amber-500 hover:text-white cursor-pointer"
-                      >
-                        ▼ Descendre
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleToggleFeature('feedJournalOffset', 0)}
-                        className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-black cursor-pointer"
-                      >
-                        0
-                      </button>
-                    </div>
-                    <span>+60px (Descendu)</span>
-                  </div>
-                </div>
-
-                {/* 8. Slider Vidéo des Outils sur l'Accueil */}
-                <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 space-y-3">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <label className="text-xs font-black uppercase text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
-                        <Sparkles size={14} className="text-amber-500" />
-                        Slider Vidéo des Outils (Accueil)
-                      </label>
-                      <p className="text-[11px] text-gray-500 mt-0.5">Position verticale spécifique du carrousel animé.</p>
-                    </div>
-                    <span className={`px-2.5 py-0.5 text-xs font-extrabold rounded-lg ${
-                      (featureToggles['feedHomeSliderOffset'] || 0) < 0
-                        ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300'
-                        : (featureToggles['feedHomeSliderOffset'] || 0) > 0
-                        ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300'
-                        : 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300'
-                    }`}>
-                      {(featureToggles['feedHomeSliderOffset'] || 0) > 0 ? `+${featureToggles['feedHomeSliderOffset']} px` : `${featureToggles['feedHomeSliderOffset'] || 0} px`}
-                    </span>
-                  </div>
-
-                  <input
-                    type="range"
-                    min={-40}
-                    max={40}
-                    step={1}
-                    disabled={!!featureToggles['lockFeedOffsets']}
-                    value={featureToggles['feedHomeSliderOffset'] ?? 0}
-                    onChange={(e) => handleToggleFeature('feedHomeSliderOffset', Number(e.target.value))}
-                    className="w-full accent-amber-500 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg disabled:cursor-not-allowed"
-                  />
-                  <div className="flex justify-between items-center text-[10px] text-gray-400 font-bold">
-                    <span>-40px (Remonté)</span>
-                    <div className="flex gap-1">
-                      <button
-                        type="button"
-                        onClick={() => handleToggleFeature('feedHomeSliderOffset', Math.max(-40, (featureToggles['feedHomeSliderOffset'] || 0) - 2))}
-                        className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-black hover:bg-emerald-500 hover:text-white cursor-pointer"
-                      >
-                        ▲ Monter
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleToggleFeature('feedHomeSliderOffset', Math.min(40, (featureToggles['feedHomeSliderOffset'] || 0) + 2))}
-                        className="px-2 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-black hover:bg-amber-500 hover:text-white cursor-pointer"
-                      >
-                        ▼ Descendre
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleToggleFeature('feedHomeSliderOffset', 0)}
-                        className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded font-black cursor-pointer"
-                      >
-                        0
-                      </button>
-                    </div>
-                    <span>+40px (Descendu)</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Interactive Live Simulator Box */}
-              <div className="p-4 bg-gray-900 text-white rounded-2xl border border-gray-800 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-black uppercase text-emerald-400 flex items-center gap-1.5">
-                    👁️ Simulateur Visuel en Temps Réel du Flux
-                  </span>
-                  <span className="text-[11px] text-gray-400">
-                    Décalage effectif : {(featureToggles['feedHomeOffset'] || 0) + (featureToggles['feedGlobalOffset'] || 0)}px
-                  </span>
-                </div>
-
-                {/* Mini mockup container */}
-                <div className="p-3 bg-gray-950 rounded-xl border border-gray-800 overflow-hidden relative h-48 flex flex-col justify-start">
-                  {/* Mock top navigation bar */}
-                  <div className="h-9 bg-gray-850 border-b border-gray-800 rounded-lg px-3 flex items-center justify-between shrink-0 z-10 shadow-xs">
-                    <div className="flex items-center gap-2">
-                      <div className="w-4 h-4 rounded-full bg-emerald-500 flex items-center justify-center text-[9px] font-black text-gray-950">A</div>
-                      <span className="text-[11px] font-bold text-gray-200">AsrarHub Mobile / Web</span>
-                    </div>
-                    <div className="flex gap-1">
-                      <div className="w-10 h-3 bg-gray-700 rounded-full" />
-                      <div className="w-10 h-3 bg-emerald-600 rounded-full" />
-                    </div>
-                  </div>
-
-                  {/* Mock feed moving with live offset */}
-                  <div 
-                    style={{
-                      transform: `translateY(${((featureToggles['feedHomeOffset'] || 0) + (featureToggles['feedGlobalOffset'] || 0)) * 0.75}px)`,
-                      transition: 'transform 0.2s cubic-bezier(0.4, 0, 0.2, 1)'
-                    }}
-                    className="mt-2 space-y-2 select-none pointer-events-none"
-                  >
-                    <div className="p-2.5 bg-emerald-950/70 border border-emerald-800/80 rounded-lg flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Sparkles size={14} className="text-yellow-400" />
-                        <span className="text-xs font-bold text-emerald-200">Slider Vidéo & Outils</span>
-                      </div>
-                      <span className="text-[10px] bg-emerald-800 text-emerald-100 px-2 py-0.5 rounded font-black">Actif</span>
-                    </div>
-
-                    <div className="p-2.5 bg-gray-850 border border-gray-750 rounded-lg space-y-1">
-                      <div className="w-3/4 h-3 bg-gray-600 rounded" />
-                      <div className="w-full h-2 bg-gray-700 rounded" />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="p-2 bg-gray-850 border border-gray-750 rounded-lg h-12 flex flex-col justify-center">
-                        <div className="w-1/2 h-2.5 bg-amber-500/80 rounded mb-1" />
-                        <div className="w-3/4 h-2 bg-gray-700 rounded" />
-                      </div>
-                      <div className="p-2 bg-gray-850 border border-gray-750 rounded-lg h-12 flex flex-col justify-center">
-                        <div className="w-1/2 h-2.5 bg-blue-500/80 rounded mb-1" />
-                        <div className="w-3/4 h-2 bg-gray-700 rounded" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </CollapsibleAdminCard>
-
-          {/* Personnalisation des Tailles de Polices et Cartes (10px à 50px) */}
-          <CollapsibleAdminCard
-            id="set_font_sizes"
-            title="Réglage des Tailles de Polices et Cartes (10px - 50px)"
-            description="Ajustez la taille des textes, des titres d'articles, des titres d'outils et le rembourrage des cartes pour toute l'application."
-            icon={<Type size={18} className="text-emerald-500 shrink-0" />}
-          >
-            <div className="flex flex-col gap-6">
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-emerald-100 dark:border-emerald-900/50">
-              <div>
-                <h4 className="font-extrabold text-gray-900 dark:text-white flex items-center gap-2 text-base sm:text-lg">
-                  <Type size={20} className="text-emerald-600 dark:text-emerald-400" />
-                  Réglage des Tailles de Polices et Cartes (10px - 50px)
-                </h4>
-                <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-1">
-                  Ajustez la taille des textes, des titres d'articles, des titres d'outils et le rembourrage des cartes pour toute l'application.
-                </p>
-              </div>
-
-              {/* Presets Quick Action Buttons */}
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  disabled={!!featureToggles['lockFontSettings']}
-                  onClick={() => {
-                    if (featureToggles['lockFontSettings']) return;
-                    handleBatchToggleFeatures({
-                      textSizeBody: 12,
-                      textSizeArticleTitle: 20,
-                      textSizeToolTitle: 18,
-                      textSizeCardTitle: 15,
-                      textSizePageTitle: 22,
-                      textSizeArabic: 20,
-                      cardPadding: 12,
-                      cardGlobalScale: 90
-                    });
-                    showToast("Preset Compact appliqué !");
-                  }}
-                  className={`px-2.5 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-700 dark:text-gray-200 rounded-xl transition-all shadow-xs ${
-                    featureToggles['lockFontSettings']
-                      ? "opacity-50 cursor-not-allowed"
-                      : "hover:bg-emerald-50 cursor-pointer"
-                  }`}
-                >
-                  🔍 Compact
-                </button>
-                <button
-                  type="button"
-                  disabled={!!featureToggles['lockFontSettings']}
-                  onClick={() => {
-                    if (featureToggles['lockFontSettings']) return;
-                    handleBatchToggleFeatures({
-                      textSizeBody: 15,
-                      textSizeArticleTitle: 24,
-                      textSizeToolTitle: 22,
-                      textSizeCardTitle: 18,
-                      textSizePageTitle: 28,
-                      textSizeArabic: 26,
-                      cardPadding: 16,
-                      cardGlobalScale: 100
-                    });
-                    showToast("Preset Standard appliqué !");
-                  }}
-                  className={`px-2.5 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-700 dark:text-gray-200 rounded-xl transition-all shadow-xs ${
-                    featureToggles['lockFontSettings']
-                      ? "opacity-50 cursor-not-allowed"
-                      : "hover:bg-emerald-50 cursor-pointer"
-                  }`}
-                >
-                  📱 Standard
-                </button>
-                <button
-                  type="button"
-                  disabled={!!featureToggles['lockFontSettings']}
-                  onClick={() => {
-                    if (featureToggles['lockFontSettings']) return;
-                    handleBatchToggleFeatures({
-                      textSizeBody: 18,
-                      textSizeArticleTitle: 28,
-                      textSizeToolTitle: 26,
-                      textSizeCardTitle: 22,
-                      textSizePageTitle: 32,
-                      textSizeArabic: 30,
-                      cardPadding: 20,
-                      cardGlobalScale: 110
-                    });
-                    showToast("Preset Grand appliqué !");
-                  }}
-                  className={`px-2.5 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-700 dark:text-gray-200 rounded-xl transition-all shadow-xs ${
-                    featureToggles['lockFontSettings']
-                      ? "opacity-50 cursor-not-allowed"
-                      : "hover:bg-emerald-50 cursor-pointer"
-                  }`}
-                >
-                  🖥️ Grand
-                </button>
-                <button
-                  type="button"
-                  disabled={!!featureToggles['lockFontSettings']}
-                  onClick={() => {
-                    if (featureToggles['lockFontSettings']) return;
-                    handleBatchToggleFeatures({
-                      textSizeBody: 22,
-                      textSizeArticleTitle: 36,
-                      textSizeToolTitle: 32,
-                      textSizeCardTitle: 26,
-                      textSizePageTitle: 40,
-                      textSizeArabic: 38,
-                      cardPadding: 24,
-                      cardGlobalScale: 120
-                    });
-                    showToast("Preset XL Accessibilité appliqué !");
-                  }}
-                  className={`px-2.5 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-xs font-bold text-gray-700 dark:text-gray-200 rounded-xl transition-all shadow-xs ${
-                    featureToggles['lockFontSettings']
-                      ? "opacity-50 cursor-not-allowed"
-                      : "hover:bg-emerald-50 cursor-pointer"
-                  }`}
-                >
-                  🚀 XL
-                </button>
-              </div>
-            </div>
-
-            {/* Lock Security Switch Bar */}
-            <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-2xl border transition-all ${
-              featureToggles['lockFontSettings']
-                ? "bg-amber-500/10 dark:bg-amber-500/20 border-amber-300/80 dark:border-amber-700/60"
-                : "bg-emerald-500/10 dark:bg-emerald-500/20 border-emerald-300/80 dark:border-emerald-700/60"
-            }`}>
-              <div className="flex items-center gap-3">
-                <div className={`p-2.5 rounded-xl text-white shadow-xs ${
-                  featureToggles['lockFontSettings'] ? "bg-amber-600" : "bg-emerald-600"
-                }`}>
-                  {featureToggles['lockFontSettings'] ? <Lock size={20} /> : <Unlock size={20} />}
-                </div>
-                <div>
-                  <h5 className="text-xs font-black text-gray-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                    Verrouillage des Réglages de Taille ✋
-                    {featureToggles['lockFontSettings'] ? (
-                      <span className="bg-amber-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full uppercase shadow-xs">
-                        🔒 Verrouillé
-                      </span>
-                    ) : (
-                      <span className="bg-emerald-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full uppercase shadow-xs">
-                        🔓 Modifiable
-                      </span>
-                    )}
-                  </h5>
-                  <p className="text-[11px] text-gray-600 dark:text-gray-300 mt-0.5">
-                    {featureToggles['lockFontSettings']
-                      ? "Les curseurs et presets sont bloqués pour éviter tout changement accidentel."
-                      : "Activez le verrou pour sécuriser ces paramètres contre les fausses manœuvres."}
-                  </p>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => {
-                  const newState = !featureToggles['lockFontSettings'];
-                  handleToggleFeature('lockFontSettings', newState);
-                  showToast(newState ? "Réglages de polices VERROUILLÉS 🔒" : "Réglages de polices DÉVERROUILLÉS 🔓");
-                }}
-                className={`px-4 py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-2 transition-all cursor-pointer shadow-sm ${
-                  featureToggles['lockFontSettings']
-                    ? "bg-amber-600 hover:bg-amber-700 text-white"
-                    : "bg-emerald-600 hover:bg-emerald-700 text-white"
-                }`}
-              >
-                {featureToggles['lockFontSettings'] ? <Unlock size={15} /> : <Lock size={15} />}
-                <span>{featureToggles['lockFontSettings'] ? "Déverrouiller" : "Verrouiller 🔒"}</span>
-              </button>
-            </div>
-
-            {/* Sliders Grid */}
-            <div className={`grid grid-cols-1 md:grid-cols-2 gap-6 transition-all ${
-              featureToggles['lockFontSettings'] ? "opacity-60 pointer-events-none select-none" : ""
-            }`}>
-              {/* 1. Body Text Size */}
-              <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 space-y-2">
-                <div className="flex justify-between items-center">
-                  <label className="text-xs font-black uppercase text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
-                    <Type size={14} className="text-emerald-500" />
-                    Taille du texte / corps
-                  </label>
-                  <span className="px-2.5 py-0.5 bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300 font-extrabold text-xs rounded-lg">
-                    {featureToggles['textSizeBody'] ?? 15} px
-                  </span>
-                </div>
-                <p className="text-[11px] text-gray-500">Paragraphes et textes généraux dans l'ensemble de l'application.</p>
-                <input
-                  type="range"
-                  min={10}
-                  max={50}
-                  step={1}
-                  disabled={!!featureToggles['lockFontSettings']}
-                  value={featureToggles['textSizeBody'] ?? 15}
-                  onChange={(e) => handleToggleFeature('textSizeBody', Number(e.target.value))}
-                  className="w-full accent-emerald-600 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg disabled:cursor-not-allowed"
-                />
-                <div className="flex justify-between text-[10px] text-gray-400 font-bold">
-                  <span>10px</span>
-                  <span>25px</span>
-                  <span>50px</span>
-                </div>
-              </div>
-
-              {/* 2. Article Titles Size */}
-              <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 space-y-2">
-                <div className="flex justify-between items-center">
-                  <label className="text-xs font-black uppercase text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
-                    <BookOpen size={14} className="text-blue-500" />
-                    Taille des titres d'articles
-                  </label>
-                  <span className="px-2.5 py-0.5 bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300 font-extrabold text-xs rounded-lg">
-                    {featureToggles['textSizeArticleTitle'] ?? 24} px
-                  </span>
-                </div>
-                <p className="text-[11px] text-gray-500">Titres principaux dans les articles, bibliothèque et sagesses.</p>
-                <input
-                  type="range"
-                  min={4}
-                  max={50}
-                  step={1}
-                  disabled={!!featureToggles['lockFontSettings']}
-                  value={featureToggles['textSizeArticleTitle'] ?? 24}
-                  onChange={(e) => handleToggleFeature('textSizeArticleTitle', Number(e.target.value))}
-                  className="w-full accent-blue-600 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg disabled:cursor-not-allowed"
-                />
-                <div className="flex justify-between text-[10px] text-gray-400 font-bold">
-                  <span>4px</span>
-                  <span>25px</span>
-                  <span>50px</span>
-                </div>
-              </div>
-
-              {/* 3. Tool Titles Size */}
-              <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 space-y-2">
-                <div className="flex justify-between items-center">
-                  <label className="text-xs font-black uppercase text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
-                    <Grid size={14} className="text-amber-500" />
-                    Taille des titres d'outils
-                  </label>
-                  <span className="px-2.5 py-0.5 bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300 font-extrabold text-xs rounded-lg">
-                    {featureToggles['textSizeToolTitle'] ?? 22} px
-                  </span>
-                </div>
-                <p className="text-[11px] text-gray-500">Titre d'en-tête de chaque outil spirituel (Abjad, Khatim, Zikr, etc.).</p>
-                <input
-                  type="range"
-                  min={10}
-                  max={50}
-                  step={1}
-                  disabled={!!featureToggles['lockFontSettings']}
-                  value={featureToggles['textSizeToolTitle'] ?? 22}
-                  onChange={(e) => handleToggleFeature('textSizeToolTitle', Number(e.target.value))}
-                  className="w-full accent-amber-500 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg disabled:cursor-not-allowed"
-                />
-                <div className="flex justify-between text-[10px] text-gray-400 font-bold">
-                  <span>10px</span>
-                  <span>25px</span>
-                  <span>50px</span>
-                </div>
-              </div>
-
-              {/* 4. Card Titles Size */}
-              <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 space-y-2">
-                <div className="flex justify-between items-center">
-                  <label className="text-xs font-black uppercase text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
-                    <Sliders size={14} className="text-purple-500" />
-                    Taille des titres de cartes
-                  </label>
-                  <span className="px-2.5 py-0.5 bg-purple-100 dark:bg-purple-900/50 text-purple-800 dark:text-purple-300 font-extrabold text-xs rounded-lg">
-                    {featureToggles['textSizeCardTitle'] ?? 18} px
-                  </span>
-                </div>
-                <p className="text-[11px] text-gray-500">Titres figurant sur les cartes d'outils et blocs de contenu.</p>
-                <input
-                  type="range"
-                  min={10}
-                  max={50}
-                  step={1}
-                  disabled={!!featureToggles['lockFontSettings']}
-                  value={featureToggles['textSizeCardTitle'] ?? 18}
-                  onChange={(e) => handleToggleFeature('textSizeCardTitle', Number(e.target.value))}
-                  className="w-full accent-purple-600 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg disabled:cursor-not-allowed"
-                />
-                <div className="flex justify-between text-[10px] text-gray-400 font-bold">
-                  <span>10px</span>
-                  <span>25px</span>
-                  <span>50px</span>
-                </div>
-              </div>
-
-              {/* 5. Grands Titres de Page */}
-              <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 space-y-2">
-                <div className="flex justify-between items-center">
-                  <label className="text-xs font-black uppercase text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
-                    <Layout size={14} className="text-indigo-500" />
-                    Taille des grands titres de page
-                  </label>
-                  <span className="px-2.5 py-0.5 bg-indigo-100 dark:bg-indigo-900/50 text-indigo-800 dark:text-indigo-300 font-extrabold text-xs rounded-lg">
-                    {featureToggles['textSizePageTitle'] ?? 28} px
-                  </span>
-                </div>
-                <p className="text-[11px] text-gray-500">En-têtes H1 principaux des pages et modules majeurs.</p>
-                <input
-                  type="range"
-                  min={12}
-                  max={60}
-                  step={1}
-                  disabled={!!featureToggles['lockFontSettings']}
-                  value={featureToggles['textSizePageTitle'] ?? 28}
-                  onChange={(e) => handleToggleFeature('textSizePageTitle', Number(e.target.value))}
-                  className="w-full accent-indigo-600 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg disabled:cursor-not-allowed"
-                />
-                <div className="flex justify-between text-[10px] text-gray-400 font-bold">
-                  <span>12px</span>
-                  <span>35px</span>
-                  <span>60px</span>
-                </div>
-              </div>
-
-              {/* 6. Texte Arabe & Versets */}
-              <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 space-y-2">
-                <div className="flex justify-between items-center">
-                  <label className="text-xs font-black uppercase text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
-                    <BookOpen size={14} className="text-emerald-500" />
-                    Taille du texte arabe & versets
-                  </label>
-                  <span className="px-2.5 py-0.5 bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300 font-extrabold text-xs rounded-lg">
-                    {featureToggles['textSizeArabic'] ?? 26} px
-                  </span>
-                </div>
-                <p className="text-[11px] text-gray-500">Invocations arabes, Versets du Coran, Khatims et Zikrs.</p>
-                <input
-                  type="range"
-                  min={12}
-                  max={60}
-                  step={1}
-                  disabled={!!featureToggles['lockFontSettings']}
-                  value={featureToggles['textSizeArabic'] ?? 26}
-                  onChange={(e) => handleToggleFeature('textSizeArabic', Number(e.target.value))}
-                  className="w-full accent-emerald-600 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg disabled:cursor-not-allowed"
-                />
-                <div className="flex justify-between text-[10px] text-gray-400 font-bold">
-                  <span>12px</span>
-                  <span>35px</span>
-                  <span>60px</span>
-                </div>
-              </div>
-
-              {/* 7. Card Padding Size */}
-              <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 space-y-2">
-                <div className="flex justify-between items-center">
-                  <label className="text-xs font-black uppercase text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
-                    <Maximize2 size={14} className="text-teal-500" />
-                    Rembourrage des cartes (Padding)
-                  </label>
-                  <span className="px-2.5 py-0.5 bg-teal-100 dark:bg-teal-900/50 text-teal-800 dark:text-teal-300 font-extrabold text-xs rounded-lg">
-                    {featureToggles['cardPadding'] ?? 16} px
-                  </span>
-                </div>
-                <p className="text-[11px] text-gray-500">Marge intérieure (padding) appliquée aux cartes d'outils, d'articles et de communauté.</p>
-                <input
-                  type="range"
-                  min={10}
-                  max={50}
-                  step={1}
-                  disabled={!!featureToggles['lockFontSettings']}
-                  value={featureToggles['cardPadding'] ?? 16}
-                  onChange={(e) => handleToggleFeature('cardPadding', Number(e.target.value))}
-                  className="w-full accent-teal-600 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg disabled:cursor-not-allowed"
-                />
-                <div className="flex justify-between text-[10px] text-gray-400 font-bold">
-                  <span>10px</span>
-                  <span>25px</span>
-                  <span>50px</span>
-                </div>
-              </div>
-
-              {/* 8. Card Global Scale */}
-              <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 space-y-2">
-                <div className="flex justify-between items-center">
-                  <label className="text-xs font-black uppercase text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
-                    <Sliders size={14} className="text-rose-500" />
-                    Échelle globale des cartes (% Zoom)
-                  </label>
-                  <span className="px-2.5 py-0.5 bg-rose-100 dark:bg-rose-900/50 text-rose-800 dark:text-rose-300 font-extrabold text-xs rounded-lg">
-                    {featureToggles['cardGlobalScale'] ?? 100} %
-                  </span>
-                </div>
-                <p className="text-[11px] text-gray-500">Agrandit ou réduit la proportion générale de toutes les cartes d'outils.</p>
-                <input
-                  type="range"
-                  min={50}
-                  max={150}
-                  step={5}
-                  disabled={!!featureToggles['lockFontSettings']}
-                  value={featureToggles['cardGlobalScale'] ?? 100}
-                  onChange={(e) => handleToggleFeature('cardGlobalScale', Number(e.target.value))}
-                  className="w-full accent-rose-600 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg disabled:cursor-not-allowed"
-                />
-                <div className="flex justify-between text-[10px] text-gray-400 font-bold">
-                  <span>50%</span>
-                  <span>100%</span>
-                  <span>150%</span>
-                </div>
-              </div>
-
-              {/* 9. Alignement du texte des livres */}
-              <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-100 dark:border-gray-700 space-y-2 md:col-span-2">
-                <div className="flex justify-between items-center">
-                  <label className="text-xs font-black uppercase text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
-                    <AlignLeft size={14} className="text-amber-500" />
-                    Alignement du texte des livres
-                  </label>
-                  <span className="px-2.5 py-0.5 bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300 font-extrabold text-xs rounded-lg uppercase">
-                    {featureToggles['bookTextAlign'] || 'left'}
-                  </span>
-                </div>
-                <p className="text-[11px] text-gray-500">Règle l'alignement des paragraphes et contenus de lecture dans la Bibliothèque des Manuscrits Sacrés.</p>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
-                  {[
-                    { id: 'left', label: 'Gauche', icon: AlignLeft },
-                    { id: 'center', label: 'Centré', icon: AlignCenter },
-                    { id: 'right', label: 'Droite', icon: AlignRight },
-                    { id: 'justify', label: 'Justifié', icon: AlignJustify },
-                  ].map((align) => {
-                    const IconComp = align.icon;
-                    const isActive = (featureToggles['bookTextAlign'] || 'left') === align.id;
-                    return (
-                      <button
-                        key={align.id}
-                        type="button"
-                        disabled={!!featureToggles['lockFontSettings']}
-                        onClick={() => handleToggleFeature('bookTextAlign', align.id)}
-                        className={`flex items-center justify-center gap-2 py-2 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                          isActive
-                            ? 'bg-amber-500 text-gray-950 border-amber-500 shadow-md font-extrabold'
-                            : 'bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-650'
-                        } ${featureToggles['lockFontSettings'] ? 'opacity-50 cursor-not-allowed' : ''}`}
-                      >
-                        <IconComp size={14} />
-                        {align.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
-
-            {/* Interactive Live Preview Box */}
-            <div className="mt-2 p-4 bg-white dark:bg-gray-900 border border-emerald-200 dark:border-emerald-800/60 rounded-2xl space-y-3 max-h-96 overflow-y-auto">
-              <span className="text-[11px] font-black uppercase text-emerald-600 dark:text-emerald-400 tracking-wider">
-                👁️ Aperçu en direct de vos réglages :
-              </span>
-
-              <div className="space-y-3">
-                {/* Book Reading Alignment Preview */}
-                <div>
-                  <span className="text-[10px] text-gray-400 block mb-0.5">
-                    Alignement du texte des livres ({featureToggles['bookTextAlign'] || 'left'}) :
-                  </span>
-                  <div 
-                    style={{ textAlign: (featureToggles['bookTextAlign'] as any) || 'left' }}
-                    className="p-3 bg-amber-50/70 dark:bg-amber-950/40 rounded-xl border border-amber-200/80 dark:border-amber-800/50 text-xs text-amber-950 dark:text-amber-100 leading-relaxed font-serif book-text-content"
-                  >
-                    Le Sharh al-Barhatiah dévoile la puissance des 28 Noms de Pouvoir syriaques et hébraïques qui régissent les entités spirituelles et les sphères célestes.
-                  </div>
-                </div>
-                {/* Page Title Preview */}
-                <div>
-                  <span className="text-[10px] text-gray-400 block mb-0.5">Grand Titre de Page ({featureToggles['textSizePageTitle'] ?? 28}px) :</span>
-                  <h1 
-                    style={{ fontSize: `${featureToggles['textSizePageTitle'] ?? 28}px` }} 
-                    className="font-black text-gray-900 dark:text-white transition-all leading-tight page-title-custom"
-                  >
-                    ✨ Portail des Sciences Sacrées & Outils Mystiques
-                  </h1>
-                </div>
-
-                {/* Article Title Preview */}
-                <div>
-                  <span className="text-[10px] text-gray-400 block mb-0.5">Titre d'Article ({featureToggles['textSizeArticleTitle'] ?? 24}px) :</span>
-                  <h2 
-                    style={{ fontSize: `${featureToggles['textSizeArticleTitle'] ?? 24}px` }} 
-                    className="font-extrabold text-gray-900 dark:text-white transition-all leading-tight article-title-custom"
-                  >
-                    📖 Les Secrets Spirituels du Zikr & de la Sagesse
-                  </h2>
-                </div>
-
-                {/* Tool Title Preview */}
-                <div>
-                  <span className="text-[10px] text-gray-400 block mb-0.5">Titre d'Outil ({featureToggles['textSizeToolTitle'] ?? 22}px) :</span>
-                  <h2 
-                    style={{ fontSize: `${featureToggles['textSizeToolTitle'] ?? 22}px` }} 
-                    className="font-black text-emerald-700 dark:text-emerald-400 transition-all leading-tight tool-title-custom"
-                  >
-                    📿 Calculateur Abjad & Générateur de Khatim
-                  </h2>
-                </div>
-
-                {/* Arabic Text Preview */}
-                <div>
-                  <span className="text-[10px] text-gray-400 block mb-0.5">Texte Arabe ({featureToggles['textSizeArabic'] ?? 26}px) :</span>
-                  <p 
-                    style={{ fontSize: `${featureToggles['textSizeArabic'] ?? 26}px` }} 
-                    className="font-arabic text-amber-600 dark:text-amber-400 transition-all leading-relaxed dir-rtl"
-                  >
-                    بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ
-                  </p>
-                </div>
-
-                {/* Card Container Preview */}
-                <div 
-                  style={{ 
-                    padding: `${featureToggles['cardPadding'] ?? 16}px`,
-                    transform: `scale(${(featureToggles['cardGlobalScale'] ?? 100) / 100})`,
-                    transformOrigin: 'left top'
-                  }}
-                  className="bg-emerald-50/50 dark:bg-emerald-950/30 border border-emerald-200/80 dark:border-emerald-800/60 rounded-xl transition-all custom-card-container"
-                >
-                  <span className="text-[10px] text-gray-400 block mb-1">
-                    Carte d'Outil (Padding: {featureToggles['cardPadding'] ?? 16}px, Échelle: {featureToggles['cardGlobalScale'] ?? 100}%) :
-                  </span>
-                  <h3 
-                    style={{ fontSize: `${featureToggles['textSizeCardTitle'] ?? 18}px` }}
-                    className="font-extrabold text-gray-900 dark:text-white mb-1 transition-all card-title-custom"
-                  >
-                    ⚡ Formule Sacrée #108
-                  </h3>
-                  <p 
-                    style={{ fontSize: `${featureToggles['textSizeBody'] ?? 15}px` }}
-                    className="text-gray-600 dark:text-gray-300 transition-all custom-app-body"
-                  >
-                    Ceci est une illustration de la taille du texte du corps ({featureToggles['textSizeBody'] ?? 15}px) à l'intérieur de la carte.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </CollapsibleAdminCard>
-
-        <CollapsibleAdminCard
-          id="set_pricing"
-          title="Tarifs d'Abonnement Premium"
-          description="Configurez les tarifs affichés et facturés pour chaque plan d'abonnement (GHS, USD, etc.)."
-          icon={<CreditCard size={18} className="text-emerald-500 shrink-0" />}
-        >
-          <div className="flex flex-col gap-4">
-            <div>
-              <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                <CreditCard size={18} className="text-emerald-500" />
-                Montants des abonnements (GHS ou autre devise)
-              </h4>
-              <p className="text-sm text-gray-500 mt-1">Configurez les tarifs affichés et facturés pour chaque plan d'abonnement.</p>
-            </div>
-            
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mt-4 pt-4 border-t border-gray-200 dark:border-gray-600">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Devise d'affichage (ex: GHS, USD)</label>
-                <input
-                  type="text"
-                  value={featureToggles['premium_currency'] || 'GHS'}
-                  onChange={(e) => handleToggleFeature('premium_currency', e.target.value)}
-                  className="w-full px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-650 rounded-xl text-sm text-gray-900 dark:text-white"
-                  placeholder="GHS"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Prix Plan 3 Mois</label>
-                <input
-                  type="number"
-                  value={featureToggles['premium_price_3m'] ?? 150}
-                  onChange={(e) => handleToggleFeature('premium_price_3m', Number(e.target.value))}
-                  className="w-full px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-650 rounded-xl text-sm text-gray-900 dark:text-white"
-                  placeholder="150"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Prix Plan 6 Mois</label>
-                <input
-                  type="number"
-                  value={featureToggles['premium_price_6m'] ?? 280}
-                  onChange={(e) => handleToggleFeature('premium_price_6m', Number(e.target.value))}
-                  className="w-full px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-655 rounded-xl text-sm text-gray-900 dark:text-white"
-                  placeholder="280"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Prix Plan 12 Mois</label>
-                <input
-                  type="number"
-                  value={featureToggles['premium_price_12m'] ?? 520}
-                  onChange={(e) => handleToggleFeature('premium_price_12m', Number(e.target.value))}
-                  className="w-full px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-655 rounded-xl text-sm text-gray-900 dark:text-white"
-                  placeholder="520"
-                />
-              </div>
-            </div>
-          </div>
-        </CollapsibleAdminCard>
-
-        <CollapsibleAdminCard
-          id="set_paystack"
-          title="Passerelles de Paiement"
-          description="Configurez la clé publique de votre passerelle Paystack."
-          icon={<CreditCard size={18} className="text-blue-500 shrink-0" />}
-        >
-          <div className="space-y-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Paystack Public Key</label>
-              <input
-                type="text"
-                value={featureToggles['paystackPublicKey'] || ''}
-                onChange={(e) => handleToggleFeature('paystackPublicKey', e.target.value)}
-                className="w-full px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-xl"
-                placeholder="pk_test_..."
-              />
-            </div>
-            <p className="text-xs text-amber-600 dark:text-amber-400">
-              Note: Cette clé primera sur celle configurée dans les variables d'environnement.
-            </p>
-          </div>
-        </CollapsibleAdminCard>
-
-        <CollapsibleAdminCard
-          id="set_layout_articles"
-          title="Affichage & Mises en page"
-          description="Configurez l'affichage des articles sur l'accueil, le mode de lecture et la disposition de la boutique."
-          icon={<FileText size={18} className="text-emerald-500 shrink-0" />}
-        >
-          <div className="space-y-4">
-            {/* Articles display mode */}
-            <div className="flex flex-col p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                    <FileText size={18} className="text-emerald-500" />
-                    Mise en page des articles (Page d'accueil)
-                  </h4>
-                  <p className="text-sm text-gray-500 mt-1">Configurez l'affichage par défaut des articles et bloquez-le si nécessaire.</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-gray-500">
-                    {featureToggles['lockArticlesDisplayMode'] ? 'Mise en page bloquée' : 'Mise en page libre'}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleToggleFeature('lockArticlesDisplayMode', !featureToggles['lockArticlesDisplayMode'])}
-                    className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors ${
-                      featureToggles['lockArticlesDisplayMode'] ? 'bg-red-500' : 'bg-gray-300 dark:bg-gray-600'
-                    }`}
-                    title="Bloquer la mise en page pour les utilisateurs"
-                  >
-                    <div
-                      className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${
-                        featureToggles['lockArticlesDisplayMode'] ? 'translate-x-6' : 'translate-x-0'
-                      }`}
-                    />
-                  </button>
-                </div>
-              </div>
-              <div className="flex flex-col gap-2">
-                <span className="text-xs font-medium text-gray-500">Disposition par défaut (ou forcée si bloquée) :</span>
-                <div className="flex justify-start">
-                  <LayoutSelector
-                    value={featureToggles['articlesDisplayMode'] || 'grid'}
-                    onChange={(newValue) => handleToggleFeature('articlesDisplayMode', newValue)}
-                    activeColor="border-emerald-500 text-emerald-500"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Article reading mode / viewMode */}
-            <div className="flex flex-col p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div>
-                  <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                    <BookOpen size={18} className="text-emerald-500" />
-                    Mode de lecture de l'article / secret
-                  </h4>
-                  <p className="text-sm text-gray-500 mt-1">Configurez le mode d'affichage par défaut (Vue complète ou par sections / accordéon).</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-semibold text-gray-500">
-                    {featureToggles['lockArticleViewmode'] ? 'Mode de lecture bloqué' : 'Mode de lecture libre'}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleToggleFeature('lockArticleViewmode', !featureToggles['lockArticleViewmode'])}
-                    className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors ${
-                      featureToggles['lockArticleViewmode'] ? 'bg-red-500' : 'bg-gray-300 dark:bg-gray-600'
-                    }`}
-                    title="Bloquer le mode de lecture pour les utilisateurs"
-                  >
-                    <div
-                      className={`bg-white w-6 h-6 rounded-full shadow-md transform transition-transform ${
-                        featureToggles['lockArticleViewmode'] ? 'translate-x-6' : 'translate-x-0'
-                      }`}
-                    />
-                  </button>
-                </div>
-              </div>
-              <div className="flex flex-col gap-2">
-                <span className="text-xs font-medium text-gray-500">Mode par défaut (ou forcé si bloqué) :</span>
-                <div className="flex gap-4">
-                  <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="defaultArticleViewmode"
-                      value="full"
-                      checked={(featureToggles['defaultArticleViewmode'] || 'full') === 'full'}
-                      onChange={() => handleToggleFeature('defaultArticleViewmode', 'full')}
-                      className="text-emerald-500 focus:ring-emerald-500 h-4 w-4 border-gray-300"
-                    />
-                    <span>Vue complète</span>
-                  </label>
-                  <label className="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="defaultArticleViewmode"
-                      value="accordion"
-                      checked={featureToggles['defaultArticleViewmode'] === 'accordion'}
-                      onChange={() => handleToggleFeature('defaultArticleViewmode', 'accordion')}
-                      className="text-emerald-500 focus:ring-emerald-500 h-4 w-4 border-gray-300"
-                    />
-                    <span>Vue par sections (accordéon)</span>
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            {/* Products display mode */}
-            <div className="flex flex-col p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4">
-              <div>
-                <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                  <ShoppingBag size={18} className="text-indigo-500" />
-                  Affichage de la boutique
-                </h4>
-                <p className="text-sm text-gray-500 mt-1">Choisissez la disposition des produits dans la boutique.</p>
-              </div>
-              <div className="flex justify-start">
-                <LayoutSelector
-                  value={featureToggles['storeDisplayMode'] || 'grid'}
-                  onChange={(newValue) => handleToggleFeature('storeDisplayMode', newValue)}
-                  activeColor="border-indigo-500 text-indigo-500"
-                />
-              </div>
-            </div>
-          </div>
-        </CollapsibleAdminCard>
-
-        <CollapsibleAdminCard
-          id="set_assistant_prompts"
-          title="Prompts de l'Assistant IA"
-          description="Créez, modifiez ou supprimez les questions pré-définies qui s'affichent sur l'écran d'accueil de l'Assistant AI."
-          icon={<Sparkles size={18} className="text-emerald-500 shrink-0" />}
-          headerRight={
-            <button
-              onClick={handleResetDefaultPrompts}
-              type="button"
-              className="px-3 py-1.5 bg-red-50 hover:bg-red-100 dark:bg-red-950/30 dark:hover:bg-red-900/40 text-red-600 dark:text-red-400 font-bold rounded-xl text-xs transition-colors flex items-center gap-1 cursor-pointer"
-            >
-              Réinitialiser aux valeurs par défaut
-            </button>
-          }
-        >
-          <div className="space-y-4">
-            <p className="text-sm text-gray-500">
-              Créez, modifiez ou supprimez les questions pré-définies qui s'affichent sur l'écran d'accueil de l'Assistant AI en fonction de la langue sélectionnée par l'utilisateur.
-            </p>
-
-            {/* Form */}
-            <div className="bg-white dark:bg-gray-800 p-4 border border-gray-100 dark:border-gray-700 rounded-xl space-y-3">
-              <h4 className="font-semibold text-sm text-gray-900 dark:text-white">
-                {editingPromptId ? "Modifier le prompt" : "Ajouter un prompt"}
-              </h4>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <input
-                  type="text"
-                  value={newPromptText}
-                  onChange={(e) => setNewPromptText(e.target.value)}
-                  placeholder="Exemple: Comment me protéger contre le mauvais œil ?"
-                  className="flex-1 px-4 py-2 bg-gray-50 dark:bg-gray-750 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500 animate-none"
-                />
-                <div className="flex gap-2 shrink-0">
-                  <select
-                    value={newPromptLang}
-                    onChange={(e) => setNewPromptLang(e.target.value)}
-                    className="px-3 py-2 bg-gray-50 dark:bg-gray-750 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-white cursor-pointer"
-                  >
-                    <option value="fr">Français (FR)</option>
-                    <option value="en">English (EN)</option>
-                    <option value="ha">Hausa (HA)</option>
-                  </select>
-                  <button
-                    onClick={handleAddPrompt}
-                    disabled={!newPromptText.trim()}
-                    type="button"
-                    className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white rounded-xl text-sm font-bold transition-colors cursor-pointer flex items-center gap-1"
-                  >
-                    {editingPromptId ? <Save size={16} /> : <Plus size={16} />}
-                    {editingPromptId ? "Enregistrer" : "Ajouter"}
-                  </button>
-                  {editingPromptId && (
-                    <button
-                      onClick={() => {
-                        setEditingPromptId(null);
-                        setNewPromptText('');
-                      }}
-                      type="button"
-                      className="px-3 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-650 text-gray-700 dark:text-gray-300 rounded-xl text-sm font-bold transition-colors cursor-pointer"
-                    >
-                      Annuler
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* List grouped by language */}
-            <div className="space-y-4">
-              {['fr', 'en', 'ha'].map((lang) => {
-                const langPrompts = adminPrompts.filter(p => p.lang === lang);
-                const langLabel = lang === 'fr' ? 'Français' : lang === 'en' ? 'English' : 'Hausa';
-                return (
-                  <div key={lang} className="space-y-2">
-                    <div className="flex items-center gap-2 border-b border-gray-100 dark:border-gray-700 pb-1">
-                      <span className="text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">{langLabel} ({langPrompts.length})</span>
-                    </div>
-                    {langPrompts.length === 0 ? (
-                      <p className="text-xs text-gray-400 italic py-1">Aucun prompt pour cette langue.</p>
-                    ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                        {langPrompts.map((p) => (
-                          <div key={p.id} className="flex items-center justify-between p-3 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl gap-2">
-                            <span className="text-sm text-gray-800 dark:text-gray-200 line-clamp-2">{p.text}</span>
-                            <div className="flex gap-1 shrink-0">
-                              <button
-                                onClick={() => handleEditPrompt(p)}
-                                type="button"
-                                className="p-1 rounded text-gray-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 transition-all cursor-pointer"
-                                title="Modifier"
-                              >
-                                <Edit2 size={14} />
-                              </button>
-                              <button
-                                onClick={() => handleDeletePrompt(p.id)}
-                                type="button"
-                                className="p-1 rounded text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-all cursor-pointer"
-                                title="Supprimer"
-                              >
-                                <Trash2 size={14} />
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </CollapsibleAdminCard>
-
-        <CollapsibleAdminCard
-          id="set_backup_export"
-          title="Sauvegarde et Export"
-          description="Téléchargez une copie complète des données de l'application (utilisateurs, lexique, statistiques, posts) au format JSON."
-          icon={<Save size={18} className="text-emerald-500 shrink-0" />}
-        >
-          <div className="space-y-4">
-            <p className="text-sm text-gray-600 dark:text-gray-300">
-              Téléchargez une copie complète des données de l'application (utilisateurs, lexique, statistiques, posts) au format JSON.
-            </p>
-            <button
-              onClick={handleExportData}
-              className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-colors w-full sm:w-auto"
-            >
-              <Save size={18} /> Exporter les données
-            </button>
-          </div>
-        </CollapsibleAdminCard>
+        </div>
       </div>
     </div>
-  </div>
-);
-
-  const getAutoIconForCategory = (name: string): string => {
-    const norm = name.toLowerCase().trim();
-    if (norm.includes('wird') || norm.includes('verset') || norm.includes('coran') || norm.includes('ay') || norm.includes('priere') || norm.includes('invoc')) {
-      return 'BookOpen';
-    }
-    if (norm.includes('protect') || norm.includes('kare') || norm.includes('evil') || norm.includes('blind') || norm.includes('combat') || norm.includes('pacte')) {
-      return 'Shield';
-    }
-    if (norm.includes('secret') || norm.includes('sirr') || norm.includes('myst') || norm.includes('magic') || norm.includes('asrar')) {
-      return 'Sparkles';
-    }
-    if (norm.includes('recette') || norm.includes('medecine') || norm.includes('sante') || norm.includes('cure') || norm.includes('plant')) {
-      return 'Activity';
-    }
-    if (norm.includes('rich') || norm.includes('argent') || norm.includes('or') || norm.includes('reussite') || norm.includes('succes') || norm.includes('finance') || norm.includes('travail') || norm.includes('emploi')) {
-      return 'Crown';
-    }
-    if (norm.includes('amour') || norm.includes('mariage') || norm.includes('couple') || norm.includes('affection') || norm.includes('aimer') || norm.includes('unio')) {
-      return 'Heart';
-    }
-    
-    const icons = ['BookOpen', 'Shield', 'Sparkles', 'Activity', 'Crown', 'Heart', 'Sun', 'Moon', 'Flame', 'Compass', 'Library', 'Anchor', 'Feather', 'Award', 'Trophy', 'Infinity'];
-    let sum = 0;
-    for (let i = 0; i < name.length; i++) {
-      sum += name.charCodeAt(i);
-    }
-    return icons[sum % icons.length];
-  };
-
-  const handleDeleteCategory = async (catId: string) => {
-    if (!catId) return;
-    if (!window.confirm("Êtes-vous sûr de vouloir supprimer cette catégorie et toutes ses sous-catégories ?")) {
-      return;
-    }
-
-    try {
-      // 1. Record in deleted IDs list so cache/re-seed will not bring it back
-      try {
-        const deletedStr = localStorage.getItem('asrarhub_deleted_categories') || '[]';
-        const deletedArr: string[] = JSON.parse(deletedStr);
-        if (!deletedArr.includes(catId)) {
-          deletedArr.push(catId);
-          localStorage.setItem('asrarhub_deleted_categories', JSON.stringify(deletedArr));
-        }
-      } catch (e) {}
-
-      // 2. Optimistically remove from state & update local storage
-      setCategories(prev => {
-        const newList = prev.filter(c => c.id !== catId);
-        try { localStorage.setItem('asrarhub_cached_categories', JSON.stringify(newList)); } catch (e) {}
-        return newList;
-      });
-
-      // 3. Delete from Firestore & REST
-      try {
-        await Promise.allSettled([
-          deleteDoc(doc(db, 'categories', catId)),
-          deleteCategoryFromRest(catId)
-        ]);
-      } catch (fsErr) {
-        console.warn("[Delete Category] Firestore delete note:", fsErr);
-      }
-
-      showToast("Catégorie supprimée avec succès !");
-    } catch (err: any) {
-      console.error("Error deleting category", err);
-      showToast(`Erreur: ${err.message}`, "error");
-    }
-  };
-
-  const handleDeleteSubCategory = async (catId: string, subId: string) => {
-    if (!window.confirm("Voulez-vous vraiment supprimer cette sous-catégorie ?")) return;
-
-    try {
-      const parentCat = categories.find(c => c.id === catId);
-      if (!parentCat) return;
-
-      const updatedSubs = (parentCat.subCategories || []).filter((s: any) => s.id !== subId);
-
-      try {
-        await setDoc(doc(db, 'categories', catId), {
-          subCategories: updatedSubs
-        }, { merge: true });
-      } catch (fsErr) {
-        console.warn("[Delete SubCategory] Firestore write note:", fsErr);
-      }
-
-      setCategories(prev => {
-        const newList = prev.map(c => c.id === catId ? { ...c, subCategories: updatedSubs } : c);
-        try { localStorage.setItem('asrarhub_cached_categories', JSON.stringify(newList)); } catch (e) {}
-        return newList;
-      });
-
-      showToast("Sous-catégorie supprimée !");
-    } catch (err: any) {
-      console.error("Error deleting subcategory", err);
-      showToast(`Erreur: ${err.message}`, "error");
-    }
-  };
-
-  const renderCategories = () => {
-    const getArticleCount = (categoryId: string) => {
-      return articles.filter(art => (art as any).category === categoryId).length;
-    };
-
-    const handleCreateCategory = async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!newCategory.name.trim()) {
-        showToast("Le nom de la catégorie est requis", "error");
-        return;
-      }
-      
-      try {
-        const catId = newCategory.name.toLowerCase()
-          .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-          .trim()
-          .replace(/[^a-z0-9]+/g, '-')
-          .replace(/^-+|-+$/g, '');
-          
-        if (!catId) {
-          showToast("Nom de catégorie invalide", "error");
-          return;
-        }
-
-        const iconName = getAutoIconForCategory(newCategory.name);
-
-        const newCatObj = {
-          id: catId,
-          name: newCategory.name.trim(),
-          name_en: newCategory.name_en.trim() || newCategory.name.trim(),
-          name_ha: newCategory.name_ha.trim() || newCategory.name.trim(),
-          iconName,
-          subCategories: [],
-          createdAt: Date.now()
-        };
-
-        try {
-          await setDoc(doc(db, 'categories', catId), newCatObj, { merge: true });
-        } catch (fsErr) {
-          console.warn("[Create Category] Firestore write note:", fsErr);
-        }
-
-        setCategories(prev => {
-          const newList = prev.some(c => c.id === catId)
-            ? prev.map(c => c.id === catId ? newCatObj : c)
-            : [...prev, newCatObj];
-          try { localStorage.setItem('asrarhub_cached_categories', JSON.stringify(newList)); } catch (e) {}
-          return newList;
-        });
-
-        setNewCategory({ name: '', name_en: '', name_ha: '' });
-        showToast("Catégorie créée avec succès !");
-      } catch (err: any) {
-        console.error("Error creating category", err);
-        showToast(`Erreur: ${err.message}`, "error");
-      }
-    };
-
-    const handleUpdateCategory = async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!editingCategory || !editingCategory.name?.trim()) {
-        showToast("Le nom de la catégorie est requis", "error");
-        return;
-      }
-
-      try {
-        const updated = {
-          ...editingCategory,
-          name: editingCategory.name.trim(),
-          name_en: (editingCategory.name_en || '').trim() || editingCategory.name.trim(),
-          name_ha: (editingCategory.name_ha || '').trim() || editingCategory.name.trim(),
-          iconName: editingCategory.iconName || 'FolderOpen'
-        };
-
-        try {
-          await setDoc(doc(db, 'categories', editingCategory.id), updated, { merge: true });
-        } catch (fsErr) {
-          console.warn("[Update Category] Firestore write note:", fsErr);
-        }
-
-        setCategories(prev => {
-          const newList = prev.map(c => c.id === editingCategory.id ? { ...c, ...updated } : c);
-          try { localStorage.setItem('asrarhub_cached_categories', JSON.stringify(newList)); } catch (e) {}
-          return newList;
-        });
-
-        setEditingCategory(null);
-        showToast("Catégorie modifiée avec succès !");
-      } catch (err: any) {
-        console.error("Error updating category", err);
-        showToast(`Erreur: ${err.message}`, "error");
-      }
-    };
-
-    const handleCreateSubCategory = async (catId: string, e: React.FormEvent) => {
-      e.preventDefault();
-      const subName = newSubCategory.name.trim();
-      if (!subName) {
-        showToast("Le nom de la sous-catégorie est requis", "error");
-        return;
-      }
-
-      try {
-        const parentCat = categories.find(c => c.id === catId);
-        if (!parentCat) return;
-
-        const subId = `${catId}-${subName.toLowerCase()
-          .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-          .trim()
-          .replace(/[^a-z0-9]+/g, '-')
-          .replace(/^-+|-+$/g, '')}`;
-
-        const existingSubs = parentCat.subCategories || [];
-        if (existingSubs.some((s: any) => s.id === subId)) {
-          showToast("Cette sous-catégorie existe déjà", "error");
-          return;
-        }
-
-        const newSub = {
-          id: subId,
-          name: subName,
-          name_en: newSubCategory.name_en.trim() || subName,
-          name_ha: newSubCategory.name_ha.trim() || subName
-        };
-
-        const updatedSubs = [...existingSubs, newSub];
-
-        try {
-          await setDoc(doc(db, 'categories', catId), {
-            subCategories: updatedSubs
-          }, { merge: true });
-        } catch (fsErr) {
-          console.warn("[Create SubCategory] Firestore write note:", fsErr);
-        }
-
-        setCategories(prev => {
-          const newList = prev.map(c => c.id === catId ? { ...c, subCategories: updatedSubs } : c);
-          try { localStorage.setItem('asrarhub_cached_categories', JSON.stringify(newList)); } catch (e) {}
-          return newList;
-        });
-
-        setNewSubCategory({ categoryId: '', name: '', name_en: '', name_ha: '' });
-        showToast("Sous-catégorie ajoutée avec succès !");
-      } catch (err: any) {
-        console.error("Error creating subcategory", err);
-        showToast(`Erreur: ${err.message}`, "error");
-      }
-    };
-
-    const handleUpdateSubCategory = async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!editingSubCategory || !editingSubCategory.name?.trim()) {
-        showToast("Le nom de la sous-catégorie est requis", "error");
-        return;
-      }
-
-      try {
-        const { categoryId, subId, name, name_en, name_ha } = editingSubCategory;
-        const parentCat = categories.find(c => c.id === categoryId);
-        if (!parentCat) return;
-
-        const subName = name.trim();
-        const updatedSubs = (parentCat.subCategories || []).map((s: any) => {
-          if (s.id === subId) {
-            return {
-              id: subId,
-              name: subName,
-              name_en: name_en.trim() || subName,
-              name_ha: name_ha.trim() || subName
-            };
-          }
-          return s;
-        });
-
-        try {
-          await setDoc(doc(db, 'categories', categoryId), {
-            subCategories: updatedSubs
-          }, { merge: true });
-        } catch (fsErr) {
-          console.warn("[Update SubCategory] Firestore write note:", fsErr);
-        }
-
-        setCategories(prev => {
-          const newList = prev.map(c => c.id === categoryId ? { ...c, subCategories: updatedSubs } : c);
-          try { localStorage.setItem('asrarhub_cached_categories', JSON.stringify(newList)); } catch (e) {}
-          return newList;
-        });
-
-        setEditingSubCategory(null);
-        showToast("Sous-catégorie modifiée avec succès !");
-      } catch (err: any) {
-        console.error("Error updating subcategory", err);
-        showToast(`Erreur: ${err.message}`, "error");
-      }
-    };
-
-    return (
-      <div className="space-y-6 text-gray-900 dark:text-white">
-        {/* Edit Category Panel */}
-        {editingCategory && (
-          <div className="bg-amber-50/50 dark:bg-amber-950/20 border-2 border-amber-500/30 rounded-3xl p-6 shadow-md transition-all">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="font-bold text-amber-900 dark:text-amber-200 flex items-center gap-2 text-base">
-                <Edit2 size={18} className="text-amber-500" />
-                Modifier la Catégorie : <span className="underline">{editingCategory.name}</span>
-              </h3>
-              <button 
-                type="button"
-                onClick={() => setEditingCategory(null)}
-                className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-              >
-                <X size={18} />
-              </button>
-            </div>
-            <form onSubmit={handleUpdateCategory} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-1">Nom (FR)</label>
-                  <input
-                    type="text"
-                    value={editingCategory.name || ''}
-                    onChange={(e) => setEditingCategory({ ...editingCategory, name: e.target.value })}
-                    className="w-full bg-white dark:bg-gray-900 border border-amber-300 dark:border-amber-700/50 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500 outline-none"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-1">Nom (EN)</label>
-                  <input
-                    type="text"
-                    value={editingCategory.name_en || ''}
-                    onChange={(e) => setEditingCategory({ ...editingCategory, name_en: e.target.value })}
-                    className="w-full bg-white dark:bg-gray-900 border border-amber-300 dark:border-amber-700/50 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500 outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-1">Nom (HA)</label>
-                  <input
-                    type="text"
-                    value={editingCategory.name_ha || ''}
-                    onChange={(e) => setEditingCategory({ ...editingCategory, name_ha: e.target.value })}
-                    className="w-full bg-white dark:bg-gray-900 border border-amber-300 dark:border-amber-700/50 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500 outline-none"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-600 dark:text-gray-300 uppercase tracking-wider mb-1">Icône</label>
-                <select
-                  value={editingCategory.iconName || 'FolderOpen'}
-                  onChange={(e) => setEditingCategory({ ...editingCategory, iconName: e.target.value })}
-                  className="w-full bg-white dark:bg-gray-900 border border-amber-300 dark:border-amber-700/50 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-amber-500 outline-none"
-                >
-                  <option value="BookOpen">BookOpen (Livre/Vird)</option>
-                  <option value="Sparkles">Sparkles (Secrets/Étoiles)</option>
-                  <option value="Shield">Shield (Protection/Bouclier)</option>
-                  <option value="Activity">Activity (Santé/Guérison)</option>
-                  <option value="Crown">Crown (Pouvoir/Reine)</option>
-                  <option value="Heart">Heart (Amour/Mariage)</option>
-                  <option value="Sun">Sun (Ouverture/Succès)</option>
-                  <option value="Moon">Moon (Nuit/Dhikr)</option>
-                  <option value="Flame">Flame (Énergie)</option>
-                  <option value="Compass">Compass (Orientation)</option>
-                  <option value="FolderOpen">FolderOpen (Dossier)</option>
-                </select>
-              </div>
-              <div className="flex gap-3">
-                <button
-                  type="submit"
-                  className="bg-amber-600 hover:bg-amber-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-colors"
-                >
-                  <Save size={16} /> Enregistrer la modification
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setEditingCategory(null)}
-                  className="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 px-5 py-2.5 rounded-xl font-bold text-sm transition-colors"
-                >
-                  Annuler
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
-
-        {/* Create Category Panel */}
-        <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-          <h3 className="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <Plus size={20} className="text-emerald-500" />
-            Créer une Nouvelle Catégorie
-          </h3>
-          <form onSubmit={handleCreateCategory} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Nom (FR)</label>
-                <input
-                  type="text"
-                  placeholder="Ex: Protection, Richesse..."
-                  value={newCategory.name}
-                  onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })}
-                  className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Nom (EN - Optionnel)</label>
-                <input
-                  type="text"
-                  placeholder="Ex: Protection, Wealth..."
-                  value={newCategory.name_en}
-                  onChange={(e) => setNewCategory({ ...newCategory, name_en: e.target.value })}
-                  className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-1">Nom (HA - Optionnel)</label>
-                <input
-                  type="text"
-                  placeholder="Ex: Kariya, Arziki..."
-                  value={newCategory.name_ha}
-                  onChange={(e) => setNewCategory({ ...newCategory, name_ha: e.target.value })}
-                  className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
-                />
-              </div>
-            </div>
-            <button
-              type="submit"
-              className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-colors"
-            >
-              <Plus size={16} /> Créer la catégorie (icône auto-générée)
-            </button>
-          </form>
-        </div>
-
-        {/* Categories List */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {categories.map((cat) => {
-            const artCount = getArticleCount(cat.id);
-            const isEditingSub = newSubCategory.categoryId === cat.id;
-
-            return (
-              <div key={cat.id} className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col justify-between">
-                <div>
-                  <div className="flex justify-between items-start mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-2xl">
-                        <LucideIcon name={cat.iconName || 'FolderOpen'} size={24} />
-                      </div>
-                      <div>
-                        <h4 className="font-bold text-lg text-gray-900 dark:text-white flex items-center gap-2">
-                          {cat.name}
-                          <span className="text-xs font-semibold bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 px-2 py-0.5 rounded-full">
-                            {artCount} {artCount > 1 ? 'articles' : 'article'}
-                          </span>
-                        </h4>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-                          EN: {cat.name_en || cat.name} | HA: {cat.name_ha || cat.name}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => setEditingCategory({ ...cat })}
-                        className="px-3 py-1.5 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50 border border-amber-200 dark:border-amber-800 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs"
-                        title="Modifier la catégorie"
-                      >
-                        <Edit2 size={14} />
-                        <span>Modifier</span>
-                      </button>
-                      <button
-                        onClick={() => handleDeleteCategory(cat.id)}
-                        className="px-3 py-1.5 bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/50 border border-red-200 dark:border-red-800 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-xs"
-                        title="Supprimer la catégorie"
-                      >
-                        <Trash2 size={14} />
-                        <span>Supprimer</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Subcategories */}
-                  <div className="mt-4 space-y-3">
-                    <h5 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Sous-Catégories</h5>
-                    {(cat.subCategories || []).length === 0 ? (
-                      <p className="text-sm text-gray-400 italic">Aucune sous-catégorie</p>
-                    ) : (
-                      <div className="flex flex-wrap gap-2">
-                        {(cat.subCategories || []).map((sub: any) => {
-                          const isThisSubEditing = editingSubCategory?.categoryId === cat.id && editingSubCategory?.subId === sub.id;
-
-                          if (isThisSubEditing) {
-                            return (
-                              <form
-                                key={sub.id}
-                                onSubmit={handleUpdateSubCategory}
-                                className="w-full bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-700/50 rounded-2xl p-3 space-y-2.5 my-1"
-                              >
-                                <div className="text-xs font-bold text-amber-800 dark:text-amber-300 flex items-center justify-between">
-                                  <span className="flex items-center gap-1"><Edit2 size={12} /> Modifier la sous-catégorie</span>
-                                  <button
-                                    type="button"
-                                    onClick={() => setEditingSubCategory(null)}
-                                    className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-                                  >
-                                    <X size={14} />
-                                  </button>
-                                </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                                  <input
-                                    type="text"
-                                    value={editingSubCategory.name}
-                                    onChange={(e) => setEditingSubCategory({ ...editingSubCategory, name: e.target.value })}
-                                    placeholder="Nom (FR)"
-                                    className="w-full bg-white dark:bg-gray-900 border border-amber-200 dark:border-amber-800 rounded-xl p-2 text-xs text-gray-900 dark:text-white outline-none focus:ring-1 focus:ring-amber-500"
-                                    required
-                                  />
-                                  <input
-                                    type="text"
-                                    value={editingSubCategory.name_en}
-                                    onChange={(e) => setEditingSubCategory({ ...editingSubCategory, name_en: e.target.value })}
-                                    placeholder="Nom (EN)"
-                                    className="w-full bg-white dark:bg-gray-900 border border-amber-200 dark:border-amber-800 rounded-xl p-2 text-xs text-gray-900 dark:text-white outline-none focus:ring-1 focus:ring-amber-500"
-                                  />
-                                  <input
-                                    type="text"
-                                    value={editingSubCategory.name_ha}
-                                    onChange={(e) => setEditingSubCategory({ ...editingSubCategory, name_ha: e.target.value })}
-                                    placeholder="Nom (HA)"
-                                    className="w-full bg-white dark:bg-gray-900 border border-amber-200 dark:border-amber-800 rounded-xl p-2 text-xs text-gray-900 dark:text-white outline-none focus:ring-1 focus:ring-amber-500"
-                                  />
-                                </div>
-                                <div className="flex gap-2 justify-end">
-                                  <button
-                                    type="submit"
-                                    className="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors"
-                                  >
-                                    Enregistrer
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => setEditingSubCategory(null)}
-                                    className="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 text-gray-700 dark:text-gray-200 px-3 py-1.5 rounded-lg text-xs font-bold transition-colors"
-                                  >
-                                    Annuler
-                                  </button>
-                                </div>
-                              </form>
-                            );
-                          }
-
-                          return (
-                            <div
-                              key={sub.id}
-                              className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-semibold text-gray-800 dark:text-gray-200 shadow-2xs"
-                            >
-                              <span>{sub.name}</span>
-                              <div className="flex items-center gap-1 pl-1 border-l border-gray-200 dark:border-gray-700">
-                                <button
-                                  type="button"
-                                  onClick={() => setEditingSubCategory({ categoryId: cat.id, subId: sub.id, name: sub.name || '', name_en: sub.name_en || '', name_ha: sub.name_ha || '' })}
-                                  className="p-1 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-900/40 rounded-md transition-colors"
-                                  title="Modifier cette sous-catégorie"
-                                >
-                                  <Edit2 size={12} />
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => handleDeleteSubCategory(cat.id, sub.id)}
-                                  className="p-1 text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-md transition-colors"
-                                  title="Supprimer cette sous-catégorie"
-                                >
-                                  <Trash2 size={12} />
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Add Subcategory Form */}
-                <div className="mt-6 pt-4 border-t border-gray-50 dark:border-gray-700/50">
-                  {isEditingSub ? (
-                    <form onSubmit={(e) => handleCreateSubCategory(cat.id, e)} className="space-y-3">
-                      <div className="grid grid-cols-1 gap-2">
-                        <input
-                          type="text"
-                          placeholder="Sous-catégorie (FR)"
-                          value={newSubCategory.name}
-                          onChange={(e) => setNewSubCategory({ ...newSubCategory, name: e.target.value })}
-                          className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-emerald-500 outline-none"
-                        />
-                        <input
-                          type="text"
-                          placeholder="Sous-catégorie (EN - Optionnel)"
-                          value={newSubCategory.name_en}
-                          onChange={(e) => setNewSubCategory({ ...newSubCategory, name_en: e.target.value })}
-                          className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-emerald-500 outline-none"
-                        />
-                        <input
-                          type="text"
-                          placeholder="Sous-catégorie (HA - Optionnel)"
-                          value={newSubCategory.name_ha}
-                          onChange={(e) => setNewSubCategory({ ...newSubCategory, name_ha: e.target.value })}
-                          className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-2 text-xs text-gray-900 dark:text-white focus:ring-1 focus:ring-emerald-500 outline-none"
-                        />
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          type="submit"
-                          className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg font-bold text-xs transition-colors"
-                        >
-                          Ajouter
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setNewSubCategory({ categoryId: '', name: '', name_en: '', name_ha: '' })}
-                          className="bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 px-3 py-1.5 rounded-lg font-bold text-xs transition-colors"
-                        >
-                          Annuler
-                        </button>
-                      </div>
-                    </form>
-                  ) : (
-                    <button
-                      onClick={() => setNewSubCategory({ categoryId: cat.id, name: '', name_en: '', name_ha: '' })}
-                      className="text-xs font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1"
-                    >
-                      <Plus size={14} /> Ajouter une sous-catégorie
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  };
-
-  const adminBypass = sessionStorage.getItem('admin_bypass') === 'true';
-  
-  if (!adminBypass && (!user || user.role !== 'admin')) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
-        <AuthModal isOpen={true} onClose={() => navigate('/')} adminOnly={true} />
-      </div>
-    );
-  }
-
-  const renderArticlePreviewModal = () => {
-    if (!showPreview) return null;
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-        <div className="bg-white dark:bg-gray-900 rounded-3xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
-          <div className="p-4 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center bg-gray-50 dark:bg-gray-800">
-            <h3 className="font-bold text-lg text-gray-900 dark:text-white flex items-center gap-2">
-              <Eye size={20} /> Prévisualisation (Vue Utilisateur)
-            </h3>
-            <button onClick={() => setShowPreview(false)} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full transition-colors text-gray-500">
-              <X size={20} />
-            </button>
-          </div>
-          <div className="flex-1 overflow-y-auto p-6 lg:p-10 hide-scrollbar bg-gray-50 dark:bg-gray-900">
-            <div className="max-w-3xl mx-auto bg-white dark:bg-gray-800 rounded-3xl overflow-hidden shadow-sm border border-gray-100 dark:border-gray-700">
-              {newArticle.thumbnail && (
-                <div className="w-full h-64 md:h-80 overflow-hidden relative">
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent z-10" />
-                  <img src={newArticle.thumbnail} alt={newArticle.title} className="w-full h-full object-cover" />
-                  <div className="absolute bottom-0 left-0 p-6 z-20">
-                    <h1 className="text-2xl md:text-3xl font-black text-white">{newArticle.title || 'Titre Sans Nom'}</h1>
-                  </div>
-                </div>
-              )}
-              {!newArticle.thumbnail && (
-                <div className="p-6 md:p-10 border-b border-gray-100 dark:border-gray-700">
-                  <h1 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white">{newArticle.title || 'Titre Sans Nom'}</h1>
-                </div>
-              )}
-              
-              <div className="p-6 md:p-10 prose prose-emerald dark:prose-invert max-w-none article-content">
-                <div dangerouslySetInnerHTML={{ __html: newArticle.content || '' }} />
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const renderBlockingToolsModal = () => {
-    if (!blockingToolsUser) return null;
-    const activeUser = users.find(u => u.id === blockingToolsUser.id) || blockingToolsUser;
-    const userBlockedList = activeUser.blockedTools || [];
-    const userAllowedList = activeUser.allowedTools || [];
-    const userOverrides = activeUser.toolOverrides || {};
-
-    const filteredTools = ALL_USER_TOOLS.filter(tool => {
-      const matchesSearch = (tool.label || '').toLowerCase().includes(userToolModalSearch.toLowerCase()) ||
-        (tool.desc || '').toLowerCase().includes(userToolModalSearch.toLowerCase()) ||
-        tool.id.toLowerCase().includes(userToolModalSearch.toLowerCase());
-      
-      const matchesCategory = userToolModalCategoryFilter === 'all' || tool.category === userToolModalCategoryFilter;
-      return matchesSearch && matchesCategory;
-    });
-
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-        <div className="bg-white dark:bg-gray-900 rounded-3xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl border border-gray-100 dark:border-gray-800">
-          {/* Modal Header */}
-          <div className="p-4 sm:p-5 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center bg-gray-50 dark:bg-gray-850">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 rounded-2xl">
-                <ShieldAlert size={22} />
-              </div>
-              <div>
-                <h3 className="font-bold text-base sm:text-lg text-gray-900 dark:text-white flex items-center gap-2">
-                  Contrôle d'Accès aux Outils
-                </h3>
-                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                  <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-                    {activeUser.name || 'Utilisateur'} ({activeUser.email})
-                  </span>
-                  {activeUser.isPremium && (
-                    <span className="text-[10px] font-bold px-2 py-0.2 rounded-full bg-violet-100 dark:bg-violet-900/50 text-violet-700 dark:text-violet-300">
-                      VIP Premium
-                    </span>
-                  )}
-                  {activeUser.role === 'admin' && (
-                    <span className="text-[10px] font-bold px-2 py-0.2 rounded-full bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300">
-                      Admin
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-            <button 
-              onClick={() => setBlockingToolsUser(null)} 
-              className="p-2 hover:bg-gray-200 dark:hover:bg-gray-750 rounded-full transition-colors text-gray-500 cursor-pointer"
-            >
-              <X size={20} />
-            </button>
-          </div>
-          
-          <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
-            {/* Master Switches Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {/* 1. Bloquer TOUS les outils d'un coup */}
-              <div className={`p-4 rounded-2xl border flex items-center justify-between gap-3 transition-colors ${
-                activeUser.allToolsDisabled 
-                  ? 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900/40' 
-                  : 'bg-gray-50 dark:bg-gray-800/60 border-gray-200 dark:border-gray-700'
-              }`}>
-                <div>
-                  <h4 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white">
-                    Bloquer TOUS les outils
-                  </h4>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
-                    Coupe l'accès à tous les modules de l'application.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleToggleUserAllTools(activeUser.id)}
-                  className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors shrink-0 cursor-pointer ${
-                    activeUser.allToolsDisabled ? 'bg-red-500' : 'bg-gray-300 dark:bg-gray-700'
-                  }`}
-                >
-                  <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${activeUser.allToolsDisabled ? 'translate-x-6' : 'translate-x-0'}`} />
-                </button>
-              </div>
-
-              {/* 2. Bloquer les outils avancés / mystiques */}
-              <div className={`p-4 rounded-2xl border flex items-center justify-between gap-3 transition-colors ${
-                activeUser.mysteryToolsDisabled 
-                  ? 'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/40' 
-                  : 'bg-gray-50 dark:bg-gray-800/60 border-gray-200 dark:border-gray-700'
-              }`}>
-                <div>
-                  <h4 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white">
-                    Bloquer outils avancés
-                  </h4>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
-                    Bloque les secrets, carrés, calculs et sciences.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    try {
-                      await updateDoc(doc(db, 'users', activeUser.id), { 
-                        mysteryToolsDisabled: !activeUser.mysteryToolsDisabled 
-                      });
-                      setUsers(prev => prev.map(u => u.id === activeUser.id ? { ...u, mysteryToolsDisabled: !activeUser.mysteryToolsDisabled } : u));
-                      showToast("Statut des outils avancés mis à jour.", "success");
-                    } catch (e) {
-                      console.error(e);
-                    }
-                  }}
-                  className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors shrink-0 cursor-pointer ${
-                    activeUser.mysteryToolsDisabled ? 'bg-amber-500' : 'bg-gray-300 dark:bg-gray-700'
-                  }`}
-                >
-                  <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-200 ${activeUser.mysteryToolsDisabled ? 'translate-x-6' : 'translate-x-0'}`} />
-                </button>
-              </div>
-            </div>
-
-            {/* Quick User Actions en Masse */}
-            <div className="bg-gray-50 dark:bg-gray-800/80 p-3.5 rounded-2xl border border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-              <div>
-                <span className="text-xs font-bold text-gray-700 dark:text-gray-200 uppercase tracking-wider block">
-                  ⚡ Actions Rapides pour cet utilisateur :
-                </span>
-                <span className="text-[11px] text-gray-500 dark:text-gray-400">
-                  Appliquer un statut global à toute la liste
-                </span>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleBatchUpdateUserTools(activeUser.id, 'allow_all')}
-                  className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1 shadow-xs transition-colors cursor-pointer"
-                >
-                  <CheckCircle2 size={13} /> Tout Autoriser
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleBatchUpdateUserTools(activeUser.id, 'block_all')}
-                  className="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold flex items-center gap-1 shadow-xs transition-colors cursor-pointer"
-                >
-                  <ShieldAlert size={13} /> Tout Bloquer
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleBatchUpdateUserTools(activeUser.id, 'reset_default')}
-                  className="px-3 py-1.5 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-xl text-xs font-bold flex items-center gap-1 shadow-xs transition-colors cursor-pointer"
-                >
-                  <RotateCcw size={13} /> Réinitialiser
-                </button>
-              </div>
-            </div>
-
-            {/* Filter Tabs & Search */}
-            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
-                {[
-                  { id: 'all', label: `Tous (${ALL_USER_TOOLS.length})` },
-                  { id: 'simple', label: 'Simples' },
-                  { id: 'advanced', label: 'Secrets & Avancés' },
-                  { id: 'system', label: 'Système' }
-                ].map(cat => (
-                  <button
-                    key={cat.id}
-                    type="button"
-                    onClick={() => setUserToolModalCategoryFilter(cat.id as any)}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-colors cursor-pointer ${
-                      userToolModalCategoryFilter === cat.id
-                        ? 'bg-emerald-600 text-white shadow-xs'
-                        : 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
-                    }`}
-                  >
-                    {cat.label}
-                  </button>
-                ))}
-              </div>
-
-              <div className="relative w-full sm:w-56 shrink-0">
-                <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
-                  <Search size={15} />
-                </span>
-                <input
-                  type="text"
-                  value={userToolModalSearch}
-                  onChange={(e) => setUserToolModalSearch(e.target.value)}
-                  placeholder="Rechercher un outil..."
-                  className="w-full pl-8 pr-3 py-1.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-xs text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all"
-                />
-              </div>
-            </div>
-
-            {/* Individual Tools List */}
-            <div className="space-y-2.5">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[48vh] overflow-y-auto pr-1">
-                {filteredTools.map((tool) => {
-                  const specificOverride = userOverrides[tool.id];
-                  const isBlockedInLegacyList = userBlockedList.includes(tool.id);
-                  const isAllowedInLegacyList = userAllowedList.includes(tool.id);
-                  
-                  // Compute current selection
-                  let effectiveValue = 'default';
-                  if (specificOverride) {
-                    effectiveValue = specificOverride;
-                  } else if (isBlockedInLegacyList) {
-                    effectiveValue = 'blocked';
-                  } else if (isAllowedInLegacyList) {
-                    effectiveValue = 'active';
-                  }
-
-                  const isCurrentlyBlocked = effectiveValue === 'blocked' || effectiveValue === 'disabled' || effectiveValue === 'inactive' || effectiveValue === 'maintenance';
-
-                  return (
-                    <div 
-                      key={tool.id} 
-                      className={`p-3.5 rounded-2xl border flex flex-col justify-between gap-3 transition-all ${
-                        effectiveValue === 'blocked' || effectiveValue === 'disabled'
-                          ? 'bg-red-50/50 border-red-200 dark:bg-red-950/20 dark:border-red-900/40' 
-                          : effectiveValue === 'active'
-                          ? 'bg-emerald-50/40 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-900/40'
-                          : effectiveValue === 'premium'
-                          ? 'bg-violet-50/40 border-violet-200 dark:bg-violet-950/20 dark:border-violet-900/40'
-                          : effectiveValue === 'maintenance'
-                          ? 'bg-amber-50/40 border-amber-200 dark:bg-amber-950/20 dark:border-amber-900/40'
-                          : 'bg-gray-50/80 border-gray-200 dark:bg-gray-800/40 dark:border-gray-700/80'
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <p className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white truncate">
-                              {tool.label}
-                            </p>
-                            <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded uppercase ${
-                              tool.category === 'advanced' ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300' :
-                              tool.category === 'system' ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' :
-                              'bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
-                            }`}>
-                              {tool.category === 'advanced' ? 'Avancé' : tool.category === 'system' ? 'Système' : 'Standard'}
-                            </span>
-                          </div>
-                          <p className="text-[11px] text-gray-500 dark:text-gray-400 line-clamp-1 mt-0.5">{tool.desc}</p>
-                        </div>
-
-                        {/* Quick 1-click toggle */}
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const nextStatus = isCurrentlyBlocked ? 'active' : 'blocked';
-                            handleUpdateUserToolOverride(activeUser.id, tool.id, nextStatus);
-                          }}
-                          className={`w-9 h-5 flex items-center rounded-full p-0.5 transition-colors shrink-0 cursor-pointer ${
-                            isCurrentlyBlocked ? 'bg-red-500' : 'bg-emerald-500'
-                          }`}
-                          title={isCurrentlyBlocked ? 'Débloquer cet outil' : 'Bloquer cet outil'}
-                        >
-                          <div className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform duration-200 ${isCurrentlyBlocked ? 'translate-x-0' : 'translate-x-4'}`} />
-                        </button>
-                      </div>
-
-                      {/* Dropdown override selector */}
-                      <div className="flex items-center justify-between gap-2 pt-2 border-t border-gray-200/60 dark:border-gray-700/60">
-                        <span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400">
-                          Accès personnalisé :
-                        </span>
-                        <ToolStatusPicker
-                          value={effectiveValue}
-                          onChange={(newVal) => handleUpdateUserToolOverride(activeUser.id, tool.id, newVal)}
-                          toolName={tool.label}
-                          size="sm"
-                          allowDefault={true}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-          
-          {/* Modal Footer */}
-          <div className="p-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-850 flex justify-between items-center">
-            <span className="text-xs text-gray-500 dark:text-gray-400">
-              Modifications enregistrées instantanément dans Firestore.
-            </span>
-            <button
-              onClick={() => setBlockingToolsUser(null)}
-              className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer"
-            >
-              Terminer
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  };
+  );
 
   return (
-    <AdminSectionCollapseContext.Provider value={{ collapsedSections: collapsedAdminSections, toggleCollapse: toggleAdminSectionCollapse }}>
-      <div className="admin-dashboard admin-ui w-full max-w-5xl mx-auto p-4 sm:p-6 lg:p-8 safe-area-pt pb-24 border-none min-h-screen overflow-x-hidden">
-      {renderArticlePreviewModal()}
-      {renderBlockingToolsModal()}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-        <div className="flex items-center gap-4">
-          <div className="p-3 bg-red-100 dark:bg-red-900/40 text-red-600 dark:text-red-400 rounded-2xl">
-            <Shield size={28} />
-          </div>
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Admin Panel</h1>
-            <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 mt-1">Gérez le contenu, les utilisateurs et les paramètres</p>
+    <AdminSectionCollapseContext.Provider
+      value={{
+        collapsedSections: collapsedAdminSections,
+        toggleCollapse: toggleAdminSectionCollapse
+      }}
+    >
+      <div className="w-full max-w-7xl mx-auto px-3.5 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8 min-h-screen overflow-x-hidden min-w-0">
+        {/* Toast Notification */}
+        <AnimatePresence>
+          {toast && (
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-2xl shadow-xl border text-sm font-semibold flex items-center gap-2 ${
+                toast.type === "error"
+                  ? "bg-red-500 text-white border-red-600"
+                  : toast.type === "info"
+                  ? "bg-blue-500 text-white border-blue-600"
+                  : "bg-emerald-600 text-white border-emerald-700"
+              }`}
+            >
+              {toast.type === "error" ? <AlertTriangle size={18} /> : <Check size={18} />}
+              <span>{toast.message}</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Header */}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 sm:mb-8 w-full max-w-full">
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-black text-gray-900 dark:text-white flex items-center gap-2.5 sm:gap-3 break-words">
+              <LayoutDashboard className="text-emerald-500 shrink-0" size={26} />
+              <span>Tableau de Bord Administrateur</span>
+            </h1>
+            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1 break-words">
+              Gérez l'ensemble des modules, utilisateurs, paiements, contenus et paramètres de la plateforme.
+            </p>
           </div>
         </div>
 
-        {/* Global Admin Search Bar */}
-        <div className="relative w-full md:w-80">
-          <div className="relative">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-            <input
-              type="text"
-              value={globalSearchQuery}
-              onChange={(e) => setGlobalSearchQuery(e.target.value)}
-              placeholder="Recherche globale (articles, posts, users)..."
-              className="w-full pl-10 pr-9 py-2.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl text-xs sm:text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none shadow-sm transition-all"
-            />
-            {globalSearchQuery && (
-              <button 
-                onClick={() => setGlobalSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"
-              >
-                <X size={16} />
-              </button>
-            )}
-          </div>
+        {/* Navigation Tabs */}
+        {renderTabNavigation()}
 
-          {/* Search Dropdown Overlay */}
-          {globalSearchQuery.trim().length > 0 && (
-            <div className="absolute left-0 right-0 top-full mt-2 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700 z-50 max-h-96 overflow-y-auto p-4 space-y-4">
-              {/* Users Results */}
-              {(() => {
-                const query = globalSearchQuery.toLowerCase();
-                const matchedUsers = users.filter(u => (u.name || '').toLowerCase().includes(query) || (u.email || '').toLowerCase().includes(query) || (u.phone || '').includes(query)).slice(0, 4);
-                const matchedArticles = articles.filter(a => (a.title || '').toLowerCase().includes(query) || (a.category || '').toLowerCase().includes(query)).slice(0, 4);
-                const matchedPosts = communityPosts.filter(p => (p.content || '').toLowerCase().includes(query) || (p.author || '').toLowerCase().includes(query)).slice(0, 4);
-
-                const hasResults = matchedUsers.length > 0 || matchedArticles.length > 0 || matchedPosts.length > 0;
-
-                if (!hasResults) {
-                  return (
-                    <div className="text-center py-6 text-gray-400 text-xs">
-                      <Search className="mx-auto mb-2 opacity-40" size={24} />
-                      Aucun résultat trouvé pour "{globalSearchQuery}"
-                    </div>
-                  );
-                }
-
-                return (
-                  <>
-                    {matchedUsers.length > 0 && (
-                      <div>
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                          <Users size={12} className="text-emerald-500" /> Utilisateurs ({matchedUsers.length})
-                        </p>
-                        <div className="space-y-1">
-                          {matchedUsers.map(u => (
-                            <div 
-                              key={u.id}
-                              onClick={() => {
-                                setUserSearch(u.email || u.name || '');
-                                setActiveTab('users');
-                                setGlobalSearchQuery('');
-                              }}
-                              className="p-2 hover:bg-gray-50 dark:hover:bg-gray-750 rounded-xl cursor-pointer flex justify-between items-center text-xs transition-colors"
-                            >
-                              <div className="min-w-0 pr-2">
-                                <p className="font-bold text-gray-900 dark:text-white truncate">{u.name || 'Sans Nom'}</p>
-                                <p className="text-[11px] text-gray-500 truncate">{u.email}</p>
-                              </div>
-                              <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold shrink-0 ${u.isBanned ? 'bg-red-100 text-red-600 dark:bg-red-900/40' : 'bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40'}`}>
-                                {u.isBanned ? 'Banni' : 'Actif'}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {matchedArticles.length > 0 && (
-                      <div className="border-t border-gray-100 dark:border-gray-750 pt-2">
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                          <BookOpen size={12} className="text-blue-500" /> Articles / Texts ({matchedArticles.length})
-                        </p>
-                        <div className="space-y-1">
-                          {matchedArticles.map(a => (
-                            <div 
-                              key={a.id}
-                              onClick={() => {
-                                setEditingArticle(a);
-                                setNewArticle(a);
-                                setActiveTab('articles');
-                                setGlobalSearchQuery('');
-                              }}
-                              className="p-2 hover:bg-gray-50 dark:hover:bg-gray-750 rounded-xl cursor-pointer flex justify-between items-center text-xs transition-colors"
-                            >
-                              <p className="font-bold text-gray-900 dark:text-white truncate flex-1">{a.title}</p>
-                              <span className="text-[10px] text-gray-400 bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-md ml-2 shrink-0">{a.category || 'Général'}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {matchedPosts.length > 0 && (
-                      <div className="border-t border-gray-100 dark:border-gray-750 pt-2">
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
-                          <FileText size={12} className="text-purple-500" /> Posts Communauté ({matchedPosts.length})
-                        </p>
-                        <div className="space-y-1">
-                          {matchedPosts.map(p => (
-                            <div 
-                              key={p.id}
-                              onClick={() => {
-                                setActiveTab('community');
-                                setGlobalSearchQuery('');
-                              }}
-                              className="p-2 hover:bg-gray-50 dark:hover:bg-gray-750 rounded-xl cursor-pointer text-xs transition-colors"
-                            >
-                              <p className="font-semibold text-gray-800 dark:text-gray-200 line-clamp-1">{p.content}</p>
-                              <p className="text-[10px] text-gray-400 mt-0.5">Par {p.author || 'Anonyme'}</p>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </>
-                );
-              })()}
-            </div>
-          )}
+        {/* Main Tab Content */}
+        <div className="mt-6 w-full max-w-full min-w-0">
+          {activeTab === "overview" && renderOverview()}
+          {activeTab === "users" && renderUsers()}
+          {activeTab === "payments" && renderPayments()}
+          {activeTab === "promo_codes" && renderPromoCodesTab()}
+          {activeTab === "ruqyah" && renderRuqyah()}
+          {activeTab === "features" && renderFeatures()}
+          {activeTab === "content" && renderContent()}
+          {(activeTab === "articles" || activeTab === "pdf_documents" || activeTab === "categories" || activeTab === "store") && renderArticles()}
+          {activeTab === "community" && renderCommunity()}
+          {activeTab === "notifications" && renderNotifications()}
+          {activeTab === "grand_oaths" && renderGrandOaths()}
+          {activeTab === "referrals" && <AdminReferralManager />}
+          {activeTab === "branding" && <BrandingSettings />}
+          {activeTab === "floating_button" && <FloatingBackButtonSettings featureToggles={featureToggles} onShowToast={showToast} />}
+          {activeTab === "version_control" && <AdminVersionControlManager />}
+          {activeTab === "reciters" && <AdminRecitersManager featureToggles={featureToggles} handleToggleFeature={handleToggleFeature} />}
+          {activeTab === "media_storage" && <AdminMediaStorageManager />}
+          {activeTab === "book_covers" && <BookCoverStudio />}
+          {activeTab === "seals" && <LunarSealVarietiesSection language={language} />}
+          {activeTab === "support" && <AdminEmailSupportManager />}
+          {(activeTab === "settings" || activeTab === "security") && renderSettings()}
         </div>
       </div>
-
-      {renderTabNavigation()}
-
-      <motion.div
-        key={activeTab}
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.2 }}
-      >
-        {activeTab === 'overview' && renderOverview()}
-        {activeTab === 'branding' && <BrandingSettings onShowToast={showToast} />}
-        {activeTab === 'floating_button' && <FloatingBackButtonSettings featureToggles={featureToggles} onShowToast={showToast} />}
-        {activeTab === 'version_control' && <AdminVersionControlManager />}
-        {activeTab === 'security' && (
-          <AdminSecurityAlertsManager
-            alerts={securityAlerts}
-            isTrackingEnabled={isSecurityAlertTrackingEnabled(featureToggles)}
-            onToggleTracking={(enabled) => handleToggleFeature('alert_repeated_tool_access', enabled)}
-            onOpenUserDetail={(user) => {
-              setSelectedUserDetail(user);
-              setEditUserData({ ...user });
-              setIsEditingUser(false);
-            }}
-            onSetUserStatus={handleSetUserStatus}
-            users={users}
-            showToast={showToast}
-          />
-        )}
-        {activeTab === 'version_control' && <AdminVersionControlManager />}
-        {activeTab === 'referrals' && <AdminReferralManager />}
-        {activeTab === 'support' && <AdminEmailSupportManager />}
-        {activeTab === 'users' && renderUsers()}
-        {activeTab === 'payments' && renderPayments()}
-        {activeTab === 'promo_codes' && renderPromoCodesTab()}
-        {activeTab === 'articles' && renderArticles()}
-        {activeTab === 'media_storage' && <AdminMediaStorageManager />}
-        {activeTab === 'categories' && renderCategories()}
-        {activeTab === 'store' && <AdminStoreManager featureToggles={featureToggles} handleToggleFeature={handleToggleFeature} />}
-        {activeTab === 'community' && renderCommunity()}
-        {activeTab === 'notifications' && renderNotifications()}
-        {activeTab === 'features' && renderFeatures()}
-        {activeTab === 'reciters' && <AdminRecitersManager featureToggles={featureToggles} handleToggleFeature={handleToggleFeature} />}
-        {activeTab === 'ruqyah' && renderRuqyah()}
-        {activeTab === 'grand_oaths' && renderGrandOaths()}
-        {activeTab === 'seals' && <LunarSealVarietiesSection language="fr" />}
-        {activeTab === 'book_covers' && (
-          <BookCoverStudio
-            initialTitle={newArticle.title || 'Le Livre des Secrets'}
-            onSelectCover={(dataUrl) => {
-              setNewArticle((prev: any) => ({ ...prev, thumbnail: dataUrl }));
-              setActiveTab('articles');
-              showToast("Couverture appliquée au livre/article !");
-            }}
-          />
-        )}
-        {activeTab === 'content' && renderContent()}
-        {activeTab === 'settings' && renderSettings()}
-      </motion.div>
-      
-      {/* Modal Studio de Couvertures de Livres IA */}
-      {showBookCoverStudioModal && (
-        <BookCoverStudio
-          isModal={true}
-          onClose={() => setShowBookCoverStudioModal(false)}
-          initialTitle={newArticle.title || 'Le Livre des Secrets'}
-          onSelectCover={(dataUrl) => {
-            setNewArticle((prev: any) => ({ ...prev, thumbnail: dataUrl }));
-            setShowBookCoverStudioModal(false);
-            showToast("Couverture générée et appliquée au livre/article !");
-          }}
-        />
-      )}
-
-      {/* Modal d'inscription et d'ajout d'utilisateurs */}
-      <AnimatePresence>
-        {isAddUserModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.95, opacity: 0 }}
-              className="bg-white dark:bg-gray-800 rounded-3xl p-6 sm:p-8 max-w-lg w-full shadow-2xl border border-gray-100 dark:border-gray-700 max-h-[90vh] overflow-y-auto"
-            >
-              <div className="flex justify-between items-center mb-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-2.5 bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 rounded-2xl">
-                    <UserPlus size={22} />
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-gray-900 dark:text-white text-lg">Inscrire un Utilisateur</h3>
-                    <p className="text-xs text-gray-500">Ajouter directement dans la base Firestore</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setIsAddUserModalOpen(false)}
-                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-750 text-gray-400 rounded-xl transition-colors"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-
-              {/* Selector mode: Single vs Batch */}
-              <div className="flex bg-gray-100 dark:bg-gray-750 p-1 rounded-2xl mb-6">
-                <button
-                  type="button"
-                  onClick={() => setAddUserMode('single')}
-                  className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
-                    addUserMode === 'single'
-                      ? 'bg-white dark:bg-gray-800 text-emerald-600 dark:text-emerald-400 shadow-sm'
-                      : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
-                  }`}
-                >
-                  Individuel
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAddUserMode('batch')}
-                  className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${
-                    addUserMode === 'batch'
-                      ? 'bg-white dark:bg-gray-800 text-emerald-600 dark:text-emerald-400 shadow-sm'
-                      : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
-                  }`}
-                >
-                  Import en Lot (Plusieurs Emails)
-                </button>
-              </div>
-
-              <form onSubmit={handleAddUsersSubmit} className="space-y-4">
-                {addUserMode === 'single' ? (
-                  <>
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1.5">
-                        Adresse Email <span className="text-red-500">*</span>
-                      </label>
-                      <input
-                        type="email"
-                        required
-                        value={newUserData.email}
-                        onChange={(e) => setNewUserData({ ...newUserData, email: e.target.value })}
-                        placeholder="ex: utilisateur@exemple.com"
-                        className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl text-xs font-medium text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1.5">
-                        Nom Complet
-                      </label>
-                      <input
-                        type="text"
-                        value={newUserData.name}
-                        onChange={(e) => setNewUserData({ ...newUserData, name: e.target.value })}
-                        placeholder="ex: Mamadou Diallo"
-                        className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl text-xs font-medium text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1.5">
-                          Téléphone
-                        </label>
-                        <input
-                          type="text"
-                          value={newUserData.phone}
-                          onChange={(e) => setNewUserData({ ...newUserData, phone: e.target.value })}
-                          placeholder="+221..."
-                          className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl text-xs font-medium text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1.5">
-                          Pays
-                        </label>
-                        <input
-                          type="text"
-                          value={newUserData.country}
-                          onChange={(e) => setNewUserData({ ...newUserData, country: e.target.value })}
-                          placeholder="Sénégal, Niger..."
-                          className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl text-xs font-medium text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1.5">
-                          Rôle
-                        </label>
-                        <select
-                          value={newUserData.role}
-                          onChange={(e) => setNewUserData({ ...newUserData, role: e.target.value })}
-                          className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl text-xs font-medium text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
-                        >
-                          <option value="user">Utilisateur Standard</option>
-                          <option value="admin">Administrateur</option>
-                        </select>
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1.5">
-                          Abonnement
-                        </label>
-                        <select
-                          value={newUserData.subscriptionTier}
-                          onChange={(e) => setNewUserData({ ...newUserData, subscriptionTier: e.target.value })}
-                          className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl text-xs font-medium text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
-                        >
-                          <option value="free">Gratuit</option>
-                          <option value="pro">Pro</option>
-                          <option value="premium">Premium</option>
-                        </select>
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <div className="space-y-3">
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1.5">
-                        Adresses Email à inscrire (1 par ligne ou séparées par des virgules)
-                      </label>
-                      <textarea
-                        rows={6}
-                        required
-                        value={batchEmailsText}
-                        onChange={(e) => setBatchEmailsText(e.target.value)}
-                        placeholder={`jibriltengeh4@gmail.com\nsbireino@gmail.com\ntenibawwal10@gmail.com\njibriltengeh57@gmail.com`}
-                        className="w-full p-4 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl text-xs font-mono text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
-                      />
-                      <p className="text-[11px] text-gray-500 mt-1.5">
-                        Chaque email sera automatiquement converti en compte membre enregistré dans Firestore.
-                      </p>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1.5">
-                        Statut d'Abonnement attribué au lot
-                      </label>
-                      <select
-                        value={newUserData.subscriptionTier}
-                        onChange={(e) => setNewUserData({ ...newUserData, subscriptionTier: e.target.value })}
-                        className="w-full px-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl text-xs font-medium text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none"
-                      >
-                        <option value="free">Gratuit</option>
-                        <option value="premium">Premium</option>
-                        <option value="pro">Pro</option>
-                      </select>
-                    </div>
-                  </div>
-                )}
-
-                <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-750">
-                  <button
-                    type="button"
-                    onClick={() => setIsAddUserModalOpen(false)}
-                    className="px-4 py-2 bg-gray-100 dark:bg-gray-750 text-gray-700 dark:text-gray-300 rounded-xl text-xs font-bold hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                  >
-                    Annuler
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isAddingUsers}
-                    className="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-2 disabled:opacity-50"
-                  >
-                    {isAddingUsers ? (
-                      <>
-                        <RefreshCw size={14} className="animate-spin" />
-                        <span>Enregistrement...</span>
-                      </>
-                    ) : (
-                      <>
-                        <UserCheck size={16} />
-                        <span>Inscrire & Enregistrer</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* User Detail & Full Edit Modal */}
-      <AnimatePresence>
-        {selectedUserDetail && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="bg-white dark:bg-gray-800 rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-gray-100 dark:border-gray-700 max-h-[90vh] overflow-y-auto my-8 relative"
-            >
-              {/* Modal Header */}
-              <div className="flex justify-between items-start mb-6 pb-4 border-b border-gray-100 dark:border-gray-750">
-                <div className="flex items-center gap-4">
-                  <img
-                    src={selectedUserDetail.photoURL || `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(selectedUserDetail.name || selectedUserDetail.email)}`}
-                    alt={selectedUserDetail.name}
-                    className="w-16 h-16 rounded-full object-cover border-2 border-emerald-500 shadow-md shrink-0"
-                    onError={(e) => {
-                      (e.target as HTMLElement).setAttribute('src', `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(selectedUserDetail.email || 'user')}`);
-                    }}
-                  />
-                  <div>
-                    <h3 className="font-bold text-gray-900 dark:text-white text-xl flex items-center gap-2 flex-wrap">
-                      <span>{selectedUserDetail.name || 'Membre AsrarHub'}</span>
-                      {selectedUserDetail.isBanned && (
-                        <span className="bg-red-100 text-red-600 dark:bg-red-900/40 dark:text-red-400 text-xs uppercase font-bold px-2.5 py-0.5 rounded-full">Banni</span>
-                      )}
-                      {selectedUserDetail.isTrusted && (
-                        <span className="bg-emerald-100 text-emerald-600 dark:bg-emerald-900/40 dark:text-emerald-400 text-xs uppercase font-bold px-2.5 py-0.5 rounded-full">De Confiance</span>
-                      )}
-                    </h3>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 font-mono mt-0.5">ID: {selectedUserDetail.id}</p>
-                    <div className="mt-1.5 flex items-center gap-2 flex-wrap">
-                      <span className="bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300 text-[10px] font-bold px-2.5 py-0.5 rounded-md">
-                        Source: {(selectedUserDetail as any).source || 'Base Firestore'}
-                      </span>
-                      <span className="bg-purple-100 text-purple-800 dark:bg-purple-900/50 dark:text-purple-300 text-[10px] font-bold px-2.5 py-0.5 rounded-md uppercase">
-                        Rôle: {(selectedUserDetail as any).role || 'user'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <button
-                  onClick={() => {
-                    setSelectedUserDetail(null);
-                    setIsEditingUser(false);
-                  }}
-                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-750 text-gray-400 rounded-xl transition-colors shrink-0"
-                >
-                  <X size={20} />
-                </button>
-              </div>
-
-              {/* Modal Content */}
-              {!isEditingUser ? (
-                <div className="space-y-6">
-                  {/* General Info Grid */}
-                  <div className="bg-gray-50 dark:bg-gray-750 rounded-2xl p-5 border border-gray-100 dark:border-gray-700 space-y-3">
-                    <h4 className="font-bold text-xs uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-2">
-                      <Users size={16} />
-                      <span>Informations Personnelles & Inscription</span>
-                    </h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                      <div>
-                        <span className="text-gray-500 dark:text-gray-400 block font-medium">Nom Complet :</span>
-                        <span className="font-bold text-gray-900 dark:text-white text-sm">{selectedUserDetail.name || 'Membre AsrarHub'}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-500 dark:text-gray-400 block font-medium">Adresse Email :</span>
-                        <span className="font-bold text-gray-900 dark:text-white font-mono break-all">{selectedUserDetail.email || 'Aucune'}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-500 dark:text-gray-400 block font-medium">Numéro de Téléphone :</span>
-                        <span className="font-bold text-gray-900 dark:text-white">{selectedUserDetail.phone || 'Non renseigné'}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-500 dark:text-gray-400 block font-medium">Pays / Localisation :</span>
-                        <span className="font-bold text-gray-900 dark:text-white">{selectedUserDetail.country || 'Non renseigné'}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-500 dark:text-gray-400 block font-medium">Date de Création / Inscription :</span>
-                        <span className="font-bold text-gray-900 dark:text-white">{(selectedUserDetail as any).createdAt ? new Date((selectedUserDetail as any).createdAt).toLocaleString('fr-FR') : 'Date inconnue'}</span>
-                      </div>
-                      <div>
-                        <span className="text-gray-500 dark:text-gray-400 block font-medium">ID Unique Firestore :</span>
-                        <span className="font-bold text-gray-900 dark:text-white font-mono bg-gray-200 dark:bg-gray-800 px-2 py-0.5 rounded">{selectedUserDetail.id}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Quick Status Selector in Modal */}
-                  <div className="bg-emerald-50/60 dark:bg-emerald-950/20 rounded-2xl p-5 border border-emerald-100 dark:border-emerald-900/40 space-y-3">
-                    <h4 className="font-bold text-xs uppercase tracking-wider text-emerald-700 dark:text-emerald-300 flex items-center gap-2">
-                      <Shield size={16} />
-                      <span>Gestion Rapide du Statut & Privilèges</span>
-                    </h4>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Changez le statut de l'utilisateur instantanément. Les modifications sont appliquées immédiatement.
-                    </p>
-                    <UserQuickStatusPicker
-                      currentStatus={getResolvedUserStatus(selectedUserDetail)}
-                      userId={selectedUserDetail.id}
-                      userName={selectedUserDetail.name || selectedUserDetail.email}
-                      onStatusChange={async (userId, newStatus) => {
-                        await handleSetUserStatus(userId, newStatus);
-                        // Also update modal view
-                        setSelectedUserDetail(prev => {
-                          if (!prev) return prev;
-                          return {
-                            ...prev,
-                            accountStatus: newStatus,
-                            isBanned: newStatus === 'banned',
-                            mysteryToolsDisabled: newStatus === 'suspended',
-                            allToolsDisabled: newStatus === 'suspended',
-                            subscriptionTier: newStatus === 'premium' ? 'premium' : (prev as any).subscriptionTier,
-                          };
-                        });
-                      }}
-                      layout="expanded"
-                      size="md"
-                    />
-                  </div>
-
-                  {/* Security & Authentication */}
-                  <div className="bg-gray-50 dark:bg-gray-750 rounded-2xl p-5 border border-gray-100 dark:border-gray-700 space-y-3">
-                    <h4 className="font-bold text-xs uppercase tracking-wider text-amber-600 dark:text-amber-400 flex items-center gap-2">
-                      <Shield size={16} />
-                      <span>Sécurité & Authentification</span>
-                    </h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                      <div>
-                        <span className="text-gray-500 dark:text-gray-400 block font-medium">Mot de Passe / Hash :</span>
-                        <span className="font-mono bg-gray-200 dark:bg-gray-800 px-2 py-1 rounded text-xs font-bold text-gray-800 dark:text-gray-200 break-all block mt-1">
-                          {selectedUserDetail.password_hash_indicator || selectedUserDetail.password || '•••••••• (Hash Sécurisé)'}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-gray-500 dark:text-gray-400 block font-medium">Accès aux Outils Mystiques :</span>
-                        <span className={`font-bold inline-block mt-1 px-2.5 py-0.5 rounded-md ${selectedUserDetail.mysteryToolsDisabled ? 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'}`}>
-                          {selectedUserDetail.mysteryToolsDisabled ? '🚫 Bloqué' : '✅ Autorisé'}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-gray-500 dark:text-gray-400 block font-medium">Statut du Compte :</span>
-                        <span className={`font-bold inline-block mt-1 px-2.5 py-0.5 rounded-md ${selectedUserDetail.isBanned ? 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400'}`}>
-                          {selectedUserDetail.isBanned ? 'Banni de la plateforme' : 'Compte Actif'}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-gray-500 dark:text-gray-400 block font-medium">Confiance Administrateur :</span>
-                        <span className={`font-bold inline-block mt-1 px-2.5 py-0.5 rounded-md ${selectedUserDetail.isTrusted ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400' : 'bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300'}`}>
-                          {selectedUserDetail.isTrusted ? 'Membre de Confiance' : 'Standard'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Push Notifications & Subscription */}
-                  <div className="bg-gray-50 dark:bg-gray-750 rounded-2xl p-5 border border-gray-100 dark:border-gray-700 space-y-3">
-                    <h4 className="font-bold text-xs uppercase tracking-wider text-blue-600 dark:text-blue-400 flex items-center gap-2">
-                      <Bell size={16} />
-                      <span>Notifications Push & Abonnement</span>
-                    </h4>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                      <div>
-                        <span className="text-gray-500 dark:text-gray-400 block font-medium">Statut Push Notifications :</span>
-                        <span className={`font-bold inline-block mt-1 px-2.5 py-0.5 rounded-md ${selectedUserDetail.pushNotificationsEnabled !== false ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400'}`}>
-                          {selectedUserDetail.pushNotificationsEnabled !== false ? 'Activé' : 'Désactivé'}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-gray-500 dark:text-gray-400 block font-medium">Plan / Tier d'Abonnement :</span>
-                        <span className="font-bold text-emerald-600 dark:text-emerald-400 text-sm uppercase">
-                          {(selectedUserDetail as any).subscriptionTier || (selectedUserDetail as any).subscriptionPlan || 'Premium / Illimité'}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-gray-500 dark:text-gray-400 block font-medium">Solde Points Spirituels :</span>
-                        <span className="font-extrabold text-amber-600 dark:text-amber-400 text-sm bg-amber-50 dark:bg-amber-950/40 px-2.5 py-0.5 rounded-md border border-amber-200 dark:border-amber-800/40 inline-block mt-1">
-                          ✨ {selectedUserDetail.spiritualPoints || 0} pts
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex flex-wrap gap-3 pt-4 border-t border-gray-100 dark:border-gray-750">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEditUserData({ ...selectedUserDetail });
-                        setIsEditingUser(true);
-                      }}
-                      className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-2 cursor-pointer"
-                    >
-                      <Edit2 size={15} />
-                      <span>✏️ Modifier le Profil</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={async () => {
-                        try {
-                          await setDoc(doc(db, 'users', selectedUserDetail.id), {
-                            ...selectedUserDetail,
-                            syncedAt: new Date().toISOString()
-                          }, { merge: true });
-                          showToast("Compte synchronisé avec succès dans Firestore !");
-                        } catch (err) {
-                          showToast("Erreur de synchronisation Firestore.", "error");
-                        }
-                      }}
-                      className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-2 cursor-pointer"
-                    >
-                      <Save size={15} />
-                      <span>⚡ Sync Firestore</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteUserAccount(selectedUserDetail.id, selectedUserDetail.email, selectedUserDetail.name)}
-                      className="px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-2 ml-auto cursor-pointer"
-                    >
-                      <Trash2 size={15} />
-                      <span>🗑️ Supprimer l'utilisateur</span>
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                /* Editing Form */
-                <form onSubmit={(e) => { e.preventDefault(); handleSaveUserDetail(); }} className="space-y-4">
-                  <h4 className="font-bold text-sm text-gray-900 dark:text-white mb-2">Modifier les informations de l'utilisateur</h4>
-                  
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">Nom Complet</label>
-                    <input
-                      type="text"
-                      value={editUserData.name || ''}
-                      onChange={(e) => setEditUserData({ ...editUserData, name: e.target.value })}
-                      className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl text-xs font-medium text-gray-900 dark:text-white"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">Adresse Email</label>
-                    <input
-                      type="email"
-                      value={editUserData.email || ''}
-                      onChange={(e) => setEditUserData({ ...editUserData, email: e.target.value })}
-                      className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl text-xs font-medium text-gray-900 dark:text-white"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">Téléphone</label>
-                      <input
-                        type="text"
-                        value={editUserData.phone || ''}
-                        onChange={(e) => setEditUserData({ ...editUserData, phone: e.target.value })}
-                        className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl text-xs font-medium text-gray-900 dark:text-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">Pays</label>
-                      <input
-                        type="text"
-                        value={editUserData.country || ''}
-                        onChange={(e) => setEditUserData({ ...editUserData, country: e.target.value })}
-                        className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl text-xs font-medium text-gray-900 dark:text-white"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">Rôle</label>
-                      <select
-                        value={(editUserData as any).role || 'user'}
-                        onChange={(e) => setEditUserData({ ...editUserData, role: e.target.value } as any)}
-                        className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl text-xs font-medium text-gray-900 dark:text-white"
-                      >
-                        <option value="user">Utilisateur Standard</option>
-                        <option value="admin">Administrateur</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">Abonnement</label>
-                      <select
-                        value={(editUserData as any).subscriptionTier || 'premium'}
-                        onChange={(e) => setEditUserData({ ...editUserData, subscriptionTier: e.target.value } as any)}
-                        className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl text-xs font-medium text-gray-900 dark:text-white"
-                      >
-                        <option value="free">Gratuit</option>
-                        <option value="pro">Pro</option>
-                        <option value="premium">Premium</option>
-                      </select>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider mb-1">Solde Points Spirituels</label>
-                    <input
-                      type="number"
-                      value={(editUserData as any).spiritualPoints !== undefined ? (editUserData as any).spiritualPoints : (selectedUserDetail.spiritualPoints || 0)}
-                      onChange={(e) => setEditUserData({ ...editUserData, spiritualPoints: parseInt(e.target.value, 10) || 0 } as any)}
-                      className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl text-xs font-medium text-gray-900 dark:text-white"
-                    />
-                  </div>
-
-                  <div className="flex justify-end gap-3 pt-4 border-t border-gray-100 dark:border-gray-750">
-                    <button
-                      type="button"
-                      onClick={() => setIsEditingUser(false)}
-                      className="px-4 py-2 bg-gray-100 dark:bg-gray-750 text-gray-700 dark:text-gray-300 rounded-xl text-xs font-bold"
-                    >
-                      Annuler
-                    </button>
-                    <button
-                      type="submit"
-                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md"
-                    >
-                      💾 Sauvegarder les modifications
-                    </button>
-                  </div>
-                </form>
-              )}
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* Modal Confirmation de Suppression d'Utilisateur */}
-      {userToDeleteConfirm && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 max-w-md w-full shadow-2xl border border-gray-100 dark:border-gray-700 animate-in fade-in zoom-in duration-200">
-            <div className="flex items-center gap-3 text-red-600 dark:text-red-400 mb-4">
-              <div className="p-3 bg-red-100 dark:bg-red-950/50 rounded-2xl">
-                <Trash2 size={24} />
-              </div>
-              <div>
-                <h3 className="font-extrabold text-lg text-gray-900 dark:text-white">Confirmer la suppression</h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Cette action est définitive et irréversible.</p>
-              </div>
-            </div>
-
-            <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/40 rounded-2xl p-4 mb-6">
-              <p className="text-xs text-gray-700 dark:text-gray-300">
-                Voulez-vous vraiment supprimer le compte de <strong className="text-gray-900 dark:text-white">{userToDeleteConfirm.name || userToDeleteConfirm.email || userToDeleteConfirm.id}</strong> ?
-              </p>
-              {userToDeleteConfirm.email && (
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-mono">
-                  Email : {userToDeleteConfirm.email}
-                </p>
-              )}
-            </div>
-
-            <div className="flex items-center justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setUserToDeleteConfirm(null)}
-                className="px-4 py-2.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-650 text-gray-700 dark:text-gray-200 rounded-xl text-xs font-bold transition-all cursor-pointer"
-              >
-                Annuler
-              </button>
-              <button
-                type="button"
-                onClick={executeConfirmDeleteUser}
-                className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-2 cursor-pointer"
-              >
-                <Trash2 size={16} />
-                <span>Oui, Supprimer Définitivement</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Confirmation de Suppression Groupée */}
-      {isBatchDeleteConfirmOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 max-w-md w-full shadow-2xl border border-gray-100 dark:border-gray-700 animate-in fade-in zoom-in duration-200">
-            <div className="flex items-center gap-3 text-red-600 dark:text-red-400 mb-4">
-              <div className="p-3 bg-red-100 dark:bg-red-950/50 rounded-2xl">
-                <Trash2 size={24} />
-              </div>
-              <div>
-                <h3 className="font-extrabold text-lg text-gray-900 dark:text-white">Suppression Groupée</h3>
-                <p className="text-xs text-gray-500 dark:text-gray-400">Action définitive pour plusieurs utilisateurs.</p>
-              </div>
-            </div>
-
-            <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/40 rounded-2xl p-4 mb-6">
-              <p className="text-xs text-gray-700 dark:text-gray-300 font-semibold mb-2">
-                Êtes-vous sûr de vouloir supprimer définitivement les <strong className="text-red-600 dark:text-red-400 font-bold">{selectedUserIds.length}</strong> utilisateur(s) sélectionné(s) ?
-              </p>
-              <div className="max-h-36 overflow-y-auto space-y-1 my-2.5 pr-1 text-[11px] text-gray-700 dark:text-gray-300 font-mono bg-white dark:bg-gray-900/60 p-3 rounded-xl border border-red-200/60 dark:border-red-900/30">
-                {users.filter(u => selectedUserIds.includes(u.id)).slice(0, 6).map(u => (
-                  <div key={u.id} className="truncate flex items-center gap-1.5">
-                    <span className="text-red-500 font-bold">•</span>
-                    <span>{u.name || 'Sans nom'}</span>
-                    <span className="text-gray-400 dark:text-gray-500 font-normal">({u.email || u.id})</span>
-                  </div>
-                ))}
-                {selectedUserIds.length > 6 && (
-                  <div className="text-gray-400 dark:text-gray-500 font-sans italic pt-1 border-t border-gray-100 dark:border-gray-800">
-                    ...et {selectedUserIds.length - 6} autre(s) utilisateur(s)
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setIsBatchDeleteConfirmOpen(false)}
-                className="px-4 py-2.5 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-650 text-gray-700 dark:text-gray-200 rounded-xl text-xs font-bold transition-all cursor-pointer"
-              >
-                Annuler
-              </button>
-              <button
-                type="button"
-                onClick={executeConfirmBatchDeleteUsers}
-                className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-2 cursor-pointer"
-              >
-                <Trash2 size={16} />
-                <span>Oui, Supprimer ces {selectedUserIds.length} Utilisateur(s)</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <AnimatePresence>
-        {toast && (
-          <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 15, scale: 0.95 }}
-            transition={{ duration: 0.2, ease: "easeOut" }}
-            className="fixed bottom-6 right-6 z-[100] max-w-md pointer-events-auto"
-          >
-            <div className={`flex items-center gap-3 px-4 py-3.5 rounded-2xl shadow-2xl border backdrop-blur-md ${
-              toast.type === 'success' 
-                ? 'bg-emerald-50/95 dark:bg-emerald-950/90 border-emerald-300 dark:border-emerald-700/80 text-emerald-950 dark:text-emerald-100 shadow-emerald-500/10' :
-              toast.type === 'error' 
-                ? 'bg-red-50/95 dark:bg-red-950/90 border-red-300 dark:border-red-700/80 text-red-950 dark:text-red-100 shadow-red-500/10' :
-                'bg-blue-50/95 dark:bg-blue-950/90 border-blue-300 dark:border-blue-700/80 text-blue-950 dark:text-blue-100 shadow-blue-500/10'
-            }`}>
-              <div className="shrink-0">
-                {toast.type === 'success' ? (
-                  <div className="w-8 h-8 rounded-xl bg-emerald-500/20 dark:bg-emerald-500/30 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
-                    <CheckCircle2 size={18} className="animate-in zoom-in-75 duration-200" />
-                  </div>
-                ) : toast.type === 'error' ? (
-                  <div className="w-8 h-8 rounded-xl bg-red-500/20 dark:bg-red-500/30 flex items-center justify-center text-red-600 dark:text-red-400">
-                    <XCircle size={18} />
-                  </div>
-                ) : (
-                  <div className="w-8 h-8 rounded-xl bg-blue-500/20 dark:bg-blue-500/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
-                    <AlertTriangle size={18} />
-                  </div>
-                )}
-              </div>
-
-              <div className="flex-1 min-w-0 pr-1">
-                <p className="text-xs sm:text-sm font-bold leading-snug break-words">
-                  {toast.message}
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setToast(null)}
-                className="shrink-0 p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/10 text-gray-500 dark:text-gray-400 transition-colors"
-              >
-                <X size={14} />
-              </button>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {previewCelebration && (
-        <PremiumUnlockCelebrationModal
-          isOpen={previewCelebration.isOpen}
-          onClose={() => setPreviewCelebration(null)}
-          promoCode={previewCelebration.promoCode}
-          durationText={previewCelebration.durationText}
-          onComplete={() => setPreviewCelebration(null)}
-        />
-      )}
-    </div>
     </AdminSectionCollapseContext.Provider>
   );
 };

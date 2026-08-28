@@ -555,8 +555,8 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, on
 
               {categoriesToDisplay.length > 0 ? (
                 <div className="space-y-6">
-                  {categoriesToDisplay.map((cat) => (
-                    <div key={cat.id} className="space-y-2">
+                  {categoriesToDisplay.map((cat, catIdx) => (
+                    <div key={`search-cat-${cat.id}-${catIdx}`} className="space-y-2">
                       <div className="flex items-center justify-between px-2 py-1">
                         <span className="text-xs font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/30 px-2.5 py-1 rounded-full">
                           {cat.title}
@@ -567,9 +567,9 @@ export const GlobalSearchModal: React.FC<GlobalSearchModalProps> = ({ isOpen, on
                       </div>
                       
                       <div className="grid grid-cols-1 gap-1.5">
-                        {cat.items.map((item) => (
+                        {cat.items.map((item, itemIdx) => (
                           <button
-                            key={item.id}
+                            key={`search-item-${cat.id}-${item.id}-${itemIdx}`}
                             onClick={() => handleItemSelect(item)}
                             className="w-full text-left flex items-start gap-3.5 p-3 sm:p-3.5 rounded-2xl hover:bg-gray-50 dark:hover:bg-gray-900/50 transition-all border border-transparent hover:border-gray-100 dark:hover:border-gray-800/20 cursor-pointer group"
                           >

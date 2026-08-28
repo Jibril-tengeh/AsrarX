@@ -40,7 +40,7 @@ export function checkFeatureAccess(
   const isDownloadAction =
     featureId.includes('download') ||
     featureId.includes('png') ||
-    featureId.includes('pdf') ||
+    featureId.includes('pdf_download') ||
     featureId.includes('parchment') ||
     featureId.includes('khatim');
 
@@ -67,13 +67,35 @@ export function checkFeatureAccess(
     return { allowed: false, restrictionType: 'blocked', featureName, status: 'blocked' };
   }
 
-  // 4. Check tool status from featureToggles
-  // Key precedence: tool_<id> -> status_<id> -> <id>
-  const status =
-    featureToggles[`tool_${featureId}`] ||
-    featureToggles[`status_${featureId}`] ||
-    featureToggles[featureId] ||
-    'active';
+  // Check user tool override if configured specifically by admin
+  const userOverride = user?.toolOverrides?.[featureId] || 
+    (featureId === 'pdf-library' ? user?.toolOverrides?.['pdf'] : featureId === 'pdf' ? user?.toolOverrides?.['pdf-library'] : undefined);
+
+  // 4. Check tool status from featureToggles or userOverride
+  let status = 'active';
+  if (userOverride && userOverride !== 'default') {
+    status = userOverride;
+  } else {
+    // Check aliases
+    const aliases = [featureId];
+    if (featureId === 'pdf' || featureId === 'pdf-library') {
+      aliases.push('pdf', 'pdf-library');
+    }
+    if (featureId === 'sacred-books' || featureId === 'books') {
+      aliases.push('sacred-books', 'books');
+    }
+    if (featureId === 'al-buni-shams' || featureId === 'shams' || featureId === 'buni') {
+      aliases.push('al-buni-shams', 'shams', 'buni');
+    }
+
+    for (const id of aliases) {
+      const found = featureToggles[`tool_${id}`] || featureToggles[`status_${id}`] || featureToggles[id];
+      if (found) {
+        status = found;
+        break;
+      }
+    }
+  }
 
   if (status === 'disabled' || status === 'blocked' || status === 'inactive') {
     return { allowed: false, restrictionType: 'blocked', featureName, status };

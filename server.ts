@@ -382,7 +382,17 @@ Ne mettez aucun texte d'enrobage avant ou après le JSON.
   // Za'irja AI Oracle & Prophetic Poetry
   app.post("/api/zairja/oracle", async (req, res) => {
     try {
-      const { question, abjadSum, language } = req.body;
+      const { 
+        question, 
+        abjadSum, 
+        language, 
+        birthDate, 
+        birthTime, 
+        ascendant, 
+        location, 
+        elementDominance, 
+        qutbDegree 
+      } = req.body;
       const apiKey = process.env.GEMINI_API_KEY;
       if (!apiKey) {
         return res.status(500).json({ error: "Gemini API key is not configured" });
@@ -397,23 +407,35 @@ Ne mettez aucun texte d'enrobage avant ou après le JSON.
         }
       });
 
+      const langInstruction = language === 'en' 
+        ? "Respond with English translation and interpretation."
+        : language === 'ha'
+        ? "Respond with Hausa translation and interpretation."
+        : "Répondez avec traduction et interprétation en français.";
+
       const prompt = `
-Vous êtes le maître gardien de la Za'irja (الزايرجة de Tlemsani & Ibn Khaldoun), la matrice ésotérique soufie d'Iqtiran et d'Abjad.
-L'utilisateur pose la question complexe suivante :
-"${question}"
-Valeur numérique Abjad Jummal calculée : ${abjadSum || 129}
+Vous êtes le maître gardien et grand arithmologue de la Za'irja traditionnelle (الزايرجة السبتية الفلكية d'Al-Sabti, Tlemsani & Ibn Khaldoun), la matrice ésotérique combinant l'astrologie sacrée, les degrés des buruj, l'astrolabe céleste et l'Ilm al-Huruf (science des lettres et des nombres).
 
-Tâche :
-Utilisez la poésie soufie prophétique et la sagesse des lettres (Ilm al-Huruf) pour composer un poème répondeur rythmé et rimé, sous la forme d'un verset/poème sacré (Bayt / Qasida) en arabe avec tashkeel complet, accompagné de sa traduction fluide et d'une exégèse spirituelle.
+DONNÉES DU CONSULTANT :
+- Question / Niyyah : "${question}"
+- Somme Jummal de la question : ${abjadSum || 129}
+${birthDate ? `- Date de naissance / consultation : ${birthDate}` : ''}
+${birthTime ? `- Heure de naissance / consultation : ${birthTime}` : ''}
+${ascendant ? `- Ascendant céleste (Tali' / الطالع) : ${ascendant}` : ''}
+${location ? `- Coordonnées / Ville : ${location}` : ''}
+${elementDominance ? `- Élément dominant (Feu/Terre/Air/Eau) : ${elementDominance}` : ''}
+${qutbDegree ? `- Degré du Pôle (Qutb) : ${qutbDegree}°` : ''}
 
-RÈGLES STRICTES :
-1. "arabicVerse": Un poème ou verset rimé de 2 à 4 lignes en alphabet arabe original avec voyelles (tashkeel).
-2. "translation": La traduction française/anglaise poétique et élégante du poème.
-3. "interpretation": Une explication ésotérique spirituelle apaisante (Sharh) de 3 à 4 phrases pour guider le questionneur.
-4. "recommendedDhikr": Le Nom Divin ou verset recommandé avec le nombre de répétitions (ex: "Ya Latif (129 fois) - Pour dénouer l'épreuve").
-5. "numericString": Une suite de 5 à 7 nombres séparés par des tirets représentant la corde numérique de la Za'irja.
+INSTRUCTIONS DE SORTIE :
+1. "arabicVerse": Un poème sacré ou verset rimé (Bayt / Qasida) de 2 à 4 vers en calligraphie arabe avec tashkeel complet (voyelles exactes) répondant mystiquement à la question posée.
+2. "translation": La traduction élégante, poétique et rythmée du poème dans la langue demandée (${langInstruction}).
+3. "interpretation": Une exégèse spirituelle profonde (Sharh al-Zairja) de 3 à 5 phrases expliquant les causes subtiles, le sens de l'épreuve ou de l'opportunité, et l'orientation juste.
+4. "astrologicalDiagnosis": Une analyse synthétique des correspondances astro-spirituelles (rôle de l'ascendant, élément dominant et degré céleste dans cette affaire).
+5. "recommendedDhikr": Le Nom Divin ou verset spécifique d'activation avec son nombre exact de récitation Jummal (ex: "يا فتاح يا رزاق (489 fois)").
+6. "spiritualPrescription": Une recommandation d'action spirituelle concrète (moment propice, aumône/sadaqa recommandée ou attitude intérieure à adopter).
+7. "numericString": Une suite chiffrée sacrée de 5 à 7 nombres séparés par des tirets représentant la corde numérique de la Za'irja (Al-Watar al-Raqami).
 
-Ne mettez aucun texte d'enrobage avant ou après le JSON.
+Format JSON strict sans balises extérieures.
 `;
 
       const response = await generateWithRetry(ai, {
@@ -424,13 +446,15 @@ Ne mettez aucun texte d'enrobage avant ou après le JSON.
           responseSchema: {
             type: "OBJECT",
             properties: {
-              arabicVerse: { type: "STRING", description: "Rhyming Arabic poem with tashkeel" },
-              translation: { type: "STRING", description: "Translation of the poem" },
-              interpretation: { type: "STRING", description: "Spiritual commentary and advice" },
-              recommendedDhikr: { type: "STRING", description: "Associated Dhikr and count" },
-              numericString: { type: "STRING", description: "Crypted numeric string" }
+              arabicVerse: { type: "STRING", description: "Rhyming Arabic poem with full vocalization (tashkeel)" },
+              translation: { type: "STRING", description: "Poetic translation of the verse" },
+              interpretation: { type: "STRING", description: "Deep spiritual interpretation and exegesis" },
+              astrologicalDiagnosis: { type: "STRING", description: "Astrological and celestial synthesis" },
+              recommendedDhikr: { type: "STRING", description: "Recommended divine name with exact numerical count" },
+              spiritualPrescription: { type: "STRING", description: "Prescription including auspicious time, sadaqa or remedy" },
+              numericString: { type: "STRING", description: "Extracted numeric string cord" }
             },
-            required: ["arabicVerse", "translation", "interpretation", "recommendedDhikr", "numericString"]
+            required: ["arabicVerse", "translation", "interpretation", "astrologicalDiagnosis", "recommendedDhikr", "spiritualPrescription", "numericString"]
           }
         }
       });

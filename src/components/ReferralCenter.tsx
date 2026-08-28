@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Share2, Users, Gift, Copy, Check, Sparkles, Clock, Send, MessageCircle, ExternalLink, Award } from 'lucide-react';
+import { Share2, Users, Gift, Copy, Check, Sparkles, Clock, Send, MessageCircle, ExternalLink, Award, LayoutDashboard } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { generateUserReferralCode, getReferralConfig, ReferralConfig, DEFAULT_REFERRAL_CONFIG } from '../services/referralService';
 
 export const ReferralCenter: React.FC = () => {
   const { user } = useAuth();
-  const { language } = useLanguage();
+  const { language, t } = useLanguage();
   const [copiedCode, setCopiedCode] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
   const [config, setConfig] = useState<ReferralConfig>(DEFAULT_REFERRAL_CONFIG);
@@ -16,15 +17,19 @@ export const ReferralCenter: React.FC = () => {
     getReferralConfig().then(setConfig);
   }, []);
 
-  const referralCode = user ? (user as any).referralCode || generateUserReferralCode(user) : 'ASRAR-VIP';
-  const origin = typeof window !== 'undefined' ? window.location.origin : 'https://asrarhub.com';
-  const referralLink = `${origin}?ref=${referralCode}`;
+  const referralCode = user ? ((user as any).referralCode || generateUserReferralCode(user)) : 'ASRAR-VIP';
+  
+  // Base link logic: If administrator defined a custom landing / Play Store URL, use it; otherwise fallback to current origin
+  const baseUrl = config.customShareBaseUrl?.trim() || (typeof window !== 'undefined' ? window.location.origin : 'https://asrarhub.com');
+  const referralLink = baseUrl.includes('?') 
+    ? `${baseUrl}&ref=${referralCode}` 
+    : `${baseUrl}${baseUrl.endsWith('/') ? '' : '/'}?ref=${referralCode}`;
 
   const isFr = language === 'fr';
   const isHa = language === 'ha';
 
-  const rewardHours = config.rewardHours || 6;
-  const refereeHours = config.refereeRewardHours || 4;
+  const rewardHours = config.rewardHours ?? 1;
+  const refereeHours = config.refereeRewardHours ?? 1;
   const referralCount = (user as any)?.referralCount || 0;
   const totalEarnedHours = referralCount * rewardHours;
 
@@ -57,7 +62,7 @@ export const ReferralCenter: React.FC = () => {
   };
 
   const handleNativeShare = () => {
-    if (navigator.share) {
+    if (typeof navigator !== 'undefined' && navigator.share) {
       navigator.share({
         title: 'AsrarHub - Invitation VIP',
         text: shareText,
@@ -99,6 +104,14 @@ export const ReferralCenter: React.FC = () => {
             </p>
           </div>
         </div>
+
+        <Link
+          to="/referral"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-xs transition-transform active:scale-95 shrink-0"
+        >
+          <LayoutDashboard size={15} />
+          <span>{isFr ? "Tableau de Bord Complet" : isHa ? "Babban Allon Kula" : "Full Dashboard"}</span>
+        </Link>
       </div>
 
       <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
@@ -227,3 +240,4 @@ export const ReferralCenter: React.FC = () => {
     </div>
   );
 };
+

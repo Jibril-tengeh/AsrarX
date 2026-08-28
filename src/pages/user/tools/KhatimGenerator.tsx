@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { 
-  Star, ArrowLeft, Grid, Type, Download, Share2, FileDown, Image, Sparkles, Feather, Key, BookOpen, Crown, Edit3, Check, Compass, Info, Trash2, RefreshCw, Layers, Sliders, Eye, History
+  Star, ArrowLeft, Grid, Type, Download, Share2, FileDown, Image, Sparkles, Feather, Key, BookOpen, Crown, Edit3, Check, Compass, Info, Trash2, RefreshCw, Layers, Sliders, Eye, History, ChevronDown, ChevronUp
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
@@ -27,7 +27,13 @@ import {
   VersetNeedPreset, 
   generateAdvancedKhatim,
   CustomKhatimConfig,
-  getBaseHouseMatrix
+  getBaseHouseMatrix,
+  ORDERS_METADATA,
+  ARCHANGELS_PRESET,
+  QURANIC_TAWQ_PRESETS,
+  findMatchingDivineNames,
+  calculateRuhaniyyaNames,
+  calculateMagicSumsAudit
 } from '../../../utils/khatimEngine';
 import { asmaListData } from '../../../data/asmaListData';
 
@@ -251,6 +257,10 @@ const khatimI18n = {
   }
 };
 
+import { KasrMathBreakdown } from '../../../components/khatim/KasrMathBreakdown';
+import { SacredFramingControls } from '../../../components/khatim/SacredFramingControls';
+import { WritingPathPlayer } from '../../../components/khatim/WritingPathPlayer';
+
 const DIVINE_NAMES_PRESETS = asmaListData.map((item) => item.ar);
 
 export const KhatimGenerator: React.FC = () => {
@@ -304,14 +314,30 @@ export const KhatimGenerator: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [calculatedTotal, setCalculatedTotal] = useState<number>(0);
   const [isCommunityModalOpen, setIsCommunityModalOpen] = useState(false);
-  const [exportTheme, setExportTheme] = useState<'dark' | 'parchment'>('dark');
+  const [exportTheme, setExportTheme] = useState<'dark' | 'parchment' | 'emerald' | 'circular' | 'white'>('dark');
   
+  // Mathematical Kasr Breakdown & Audit State
+  const [kasrBreakdown, setKasrBreakdown] = useState<{
+    step: number;
+    remainder: number;
+    kasrHouse: number;
+    minRequired: number;
+    magicAudit: any;
+  } | null>(null);
+
+  // Ritual Writing Sequence Step-by-Step Player
+  const [activeWritingStep, setActiveWritingStep] = useState<number>(0);
+
   // Bait Al-Khali (Empty center cell option)
   const [isCenterEmpty, setIsCenterEmpty] = useState<boolean>(false);
   const [centerCustomText, setCenterCustomText] = useState<string>('');
+  const [isCenterEmptyCardOpen, setIsCenterEmptyCardOpen] = useState<boolean>(false);
 
   // Tawq framing borders option (enable / disable)
   const [isTawqEnabled, setIsTawqEnabled] = useState<boolean>(true);
+
+  // Long names adjustment card collapse state (closed by default)
+  const [isLongNamesCardOpen, setIsLongNamesCardOpen] = useState<boolean>(false);
 
   // Helper to override center cell when Bait Al-Khali is active
   const applyCenterCellOverride = (
@@ -887,10 +913,32 @@ export const KhatimGenerator: React.FC = () => {
       setCornerCalligraphy(res.cornerTexts);
       setActiveBadge(`ASRARHUB • KHATIM ${method.toUpperCase()}`);
 
+      // Compute mathematical Kasr & audit breakdown
+      const orderMeta = ORDERS_METADATA[gridSize] || {
+        baseAsas: Math.floor((gridSize * (gridSize * gridSize - 1)) / 2),
+        minMagicSum: Math.floor((gridSize * (gridSize * gridSize + 1)) / 2),
+      };
+      const baseAsas = orderMeta.baseAsas;
+      const delta = weight - baseAsas;
+      const step = Math.floor(delta / gridSize);
+      const remainder = ((delta % gridSize) + gridSize) % gridSize;
+      const kasrHouse = gridSize === 3 ? 7 : gridSize === 4 ? 13 : gridSize === 5 ? 21 : gridSize === 6 ? 31 : gridSize === 7 ? 43 : gridSize === 8 ? 57 : gridSize === 9 ? 73 : Math.floor(gridSize * gridSize * 0.85);
+
+      const audit = calculateMagicSumsAudit(finalGrid);
+      setKasrBreakdown({
+        step,
+        remainder,
+        kasrHouse,
+        minRequired: orderMeta.minMagicSum,
+        magicAudit: audit,
+      });
+      setActiveWritingStep(0);
+
     } catch (err: any) {
       setError(err.message);
       setGrid(null);
       setHousesGrid(null);
+      setKasrBreakdown(null);
     }
   };
 
@@ -927,6 +975,8 @@ export const KhatimGenerator: React.FC = () => {
     8: 'gap-0.5 sm:gap-1',
     9: 'gap-[1px] sm:gap-0.5',
     10: 'gap-[1px] sm:gap-[2px]',
+    11: 'gap-[1px] sm:gap-[1px]',
+    12: 'gap-[1px] sm:gap-[1px]',
   };
 
   const gridColsClassMap: Record<number, string> = {
@@ -938,6 +988,8 @@ export const KhatimGenerator: React.FC = () => {
     8: 'grid-cols-8',
     9: 'grid-cols-9',
     10: 'grid-cols-10',
+    11: 'grid-cols-11',
+    12: 'grid-cols-12',
   };
 
   const textPercentSizeMap: Record<number, string> = {
@@ -949,6 +1001,8 @@ export const KhatimGenerator: React.FC = () => {
     8: 'text-[11px] sm:text-xs',
     9: 'text-[9px] sm:text-[11px]',
     10: 'text-[8px] sm:text-[10px]',
+    11: 'text-[7px] sm:text-[9px]',
+    12: 'text-[6px] sm:text-[8px]',
   };
 
   const gridCellPaddingMap: Record<number, string> = {
@@ -960,6 +1014,8 @@ export const KhatimGenerator: React.FC = () => {
     8: 'p-0.5 sm:p-1 aspect-square',
     9: 'p-[1px] sm:p-0.5 aspect-square',
     10: 'p-0 sm:p-[1px] aspect-square',
+    11: 'p-0 sm:p-[1px] aspect-square',
+    12: 'p-0 sm:p-[1px] aspect-square',
   };
 
   const activeDoorList = method === 'dahmouch' ? DAHMOUCH_DOORS : KOUNTIYOU_DOORS;
@@ -1631,181 +1687,243 @@ export const KhatimGenerator: React.FC = () => {
           </div>
         )}
 
-        {/* Dimension of Square (Grid Size 3x3 to 10x10) */}
+        {/* Dimension of Square (Grid Size 3x3 to 12x12) */}
         <div>
-          <label className="block text-sm font-bold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-            <Grid size={16} /> {i18n.dimensionLabel}
-          </label>
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2">
+          <div className="flex items-center justify-between mb-3">
+            <label className="text-sm font-bold text-gray-700 dark:text-gray-300 flex items-center gap-2">
+              <Grid size={16} /> {i18n.dimensionLabel} (3×3 à 12×12)
+            </label>
+            <span className="text-xs font-mono font-bold text-purple-600 dark:text-purple-400 bg-purple-500/10 px-2.5 py-0.5 rounded-full border border-purple-500/20">
+              {ORDERS_METADATA[gridSize]?.nameAr || `وفق ${gridSize}×${gridSize}`} • {ORDERS_METADATA[gridSize]?.planetFr || 'Planète'}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-2">
             {[
-              { size: 3, name: 'Muthallath' },
-              { size: 4, name: 'Murabba\'' },
-              { size: 5, name: 'Mukhammas' },
-              { size: 6, name: 'Musaddas' },
-              { size: 7, name: 'Musabba\'' },
-              { size: 8, name: 'Muthamman' },
-              { size: 9, name: 'Mutassa\'' },
-              { size: 10, name: 'Mu\'ashshar' }
-            ].map(({ size, name }) => (
+              { size: 3, name: 'Muthallath', ar: 'المثلث' },
+              { size: 4, name: 'Murabba\'', ar: 'المربع' },
+              { size: 5, name: 'Mukhammas', ar: 'المخمس' },
+              { size: 6, name: 'Musaddas', ar: 'المسدس' },
+              { size: 7, name: 'Musabba\'', ar: 'المسبع' },
+              { size: 8, name: 'Muthamman', ar: 'المثمن' },
+              { size: 9, name: 'Mutassa\'', ar: 'المتسع' },
+              { size: 10, name: 'Mu\'ashshar', ar: 'المعشر' },
+              { size: 11, name: 'Ahada \'Ashari', ar: 'الحادي عشر' },
+              { size: 12, name: 'Ithna \'Ashari', ar: 'الثاني عشر' },
+            ].map(({ size, name, ar }) => (
               <button
                 key={size}
                 type="button"
                 onClick={() => setGridSize(size)}
-                className={`py-2 px-2 rounded-xl text-xs font-bold border transition-all duration-200 text-center flex flex-col items-center justify-center gap-0.5 cursor-pointer ${gridSize === size ? 'bg-purple-600 border-purple-500 text-white shadow-md shadow-purple-500/20' : 'bg-gray-50 hover:bg-gray-100 border-gray-200 text-gray-700 dark:bg-gray-900 dark:hover:bg-gray-800 dark:border-gray-700 dark:text-gray-300'}`}
+                className={`py-2 px-1.5 rounded-xl text-xs font-bold border transition-all duration-200 text-center flex flex-col items-center justify-center gap-0.5 cursor-pointer ${
+                  gridSize === size
+                    ? 'bg-purple-600 border-purple-500 text-white shadow-md shadow-purple-500/20 scale-102'
+                    : 'bg-gray-50 hover:bg-gray-100 border-gray-200 text-gray-700 dark:bg-gray-900 dark:hover:bg-gray-800 dark:border-gray-700 dark:text-gray-300'
+                }`}
               >
-                <span className="truncate">{name}</span>
-                <span className={`text-[10px] ${gridSize === size ? 'text-purple-200' : 'text-gray-400 dark:text-gray-300'}`}>({size}x{size})</span>
+                <span className="truncate text-[11px]">{name}</span>
+                <span className={`text-[10px] font-arabic truncate ${gridSize === size ? 'text-amber-200' : 'text-gray-400 dark:text-gray-400'}`}>{ar}</span>
+                <span className={`text-[9px] font-mono ${gridSize === size ? 'text-purple-200' : 'text-gray-400 dark:text-gray-400'}`}>({size}x{size})</span>
               </button>
             ))}
           </div>
         </div>
 
         {/* Bait Al-Khali Option (Carré Khalawi / Case centrale vide) */}
-        <div className="bg-gradient-to-r from-indigo-950/70 via-purple-950/60 to-amber-950/50 border border-amber-500/40 rounded-2xl p-4 shadow-md">
-          <div className="flex items-center justify-between mb-2">
-            <label className="text-xs sm:text-sm font-bold text-amber-200 flex items-center gap-2 cursor-pointer" onClick={() => {
-              const next = !isCenterEmpty;
-              setIsCenterEmpty(next);
-              if (grid) {
-                setGrid((prev) => applyCenterCellOverride(prev, next, centerCustomText, gridSize));
-              }
-            }}>
-              <Sparkles size={16} className="text-amber-400" />
-              <span>{i18n.emptyCenterTitle}</span>
-            </label>
-            <input
-              type="checkbox"
-              checked={isCenterEmpty}
-              onChange={(e) => {
-                const checked = e.target.checked;
-                setIsCenterEmpty(checked);
-                if (grid) {
-                  setGrid((prev) => applyCenterCellOverride(prev, checked, centerCustomText, gridSize));
-                }
-              }}
-              className="w-5 h-5 accent-amber-500 rounded cursor-pointer"
-            />
-          </div>
-          <p className="text-[11px] text-gray-300 mb-3 leading-relaxed">
-            {i18n.emptyCenterDesc}
-          </p>
-
-          {isCenterEmpty && (
-            <div className="mt-2.5 pt-2.5 border-t border-amber-500/20">
-              <input
-                type="text"
-                value={centerCustomText}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setCenterCustomText(val);
-                  if (grid && isCenterEmpty) {
-                    setGrid((prev) => applyCenterCellOverride(prev, true, val, gridSize));
-                  }
-                }}
-                placeholder={i18n.centerCustomTextPlaceholder}
-                className="w-full bg-black/60 border border-amber-500/40 rounded-xl px-3 py-2 text-xs font-arabic text-amber-200 focus:outline-none focus:border-amber-400 shadow-inner"
-                dir="rtl"
-              />
+        <div className="bg-gradient-to-r from-indigo-950/70 via-purple-950/60 to-amber-950/50 border border-amber-500/40 rounded-2xl p-4 shadow-md transition-all">
+          <div 
+            className="flex items-center justify-between cursor-pointer select-none"
+            onClick={() => setIsCenterEmptyCardOpen((prev) => !prev)}
+          >
+            <div className="flex items-center gap-2 flex-1 min-w-0 pr-2">
+              <Sparkles size={16} className="text-amber-400 shrink-0" />
+              <span className="text-xs sm:text-sm font-bold text-amber-200 truncate">
+                {i18n.emptyCenterTitle}
+              </span>
             </div>
-          )}
+            <div className="flex items-center gap-2.5 shrink-0">
+              <label 
+                className="flex items-center gap-1.5 cursor-pointer text-[11px] text-amber-300 font-medium"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <input
+                  type="checkbox"
+                  checked={isCenterEmpty}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setIsCenterEmpty(checked);
+                    if (grid) {
+                      setGrid((prev) => applyCenterCellOverride(prev, checked, centerCustomText, gridSize));
+                    }
+                  }}
+                  className="w-4 h-4 accent-amber-500 rounded cursor-pointer"
+                />
+              </label>
+              <button 
+                type="button" 
+                className="p-1 text-amber-300/80 hover:text-amber-200 transition-colors"
+                aria-label="Toggle card"
+              >
+                {isCenterEmptyCardOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              </button>
+            </div>
+          </div>
+
+          <AnimatePresence>
+            {isCenterEmptyCardOpen && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden"
+              >
+                <p className="text-[11px] text-gray-300 mt-3 mb-2 leading-relaxed">
+                  {i18n.emptyCenterDesc}
+                </p>
+
+                <div className="mt-2.5 pt-2.5 border-t border-amber-500/20">
+                  <input
+                    type="text"
+                    value={centerCustomText}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setCenterCustomText(val);
+                      if (grid && isCenterEmpty) {
+                        setGrid((prev) => applyCenterCellOverride(prev, true, val, gridSize));
+                      }
+                    }}
+                    placeholder={i18n.centerCustomTextPlaceholder}
+                    className="w-full bg-black/60 border border-amber-500/40 rounded-xl px-3 py-2 text-xs font-arabic text-amber-200 focus:outline-none focus:border-amber-400 shadow-inner"
+                    dir="rtl"
+                  />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Long Names Font Size Adjustment Setting (Admin & Typography Control +20% to -50%) */}
-        <div className="bg-gradient-to-r from-purple-950/60 via-indigo-950/40 to-amber-950/50 border border-amber-500/40 rounded-2xl p-4 shadow-md">
-          <div className="flex items-center justify-between mb-2">
-            <label className="text-xs sm:text-sm font-bold text-amber-200 flex items-center gap-2">
-              <Sliders size={16} className="text-amber-400" />
-              <span>{i18n.longNamesTitle}</span>
-            </label>
-            {longNamesReduction < 0 ? (
-              <span className="text-xs font-mono font-black text-emerald-300 bg-emerald-500/20 px-2.5 py-1 rounded-lg border border-emerald-500/30">
-                +{Math.abs(longNamesReduction)}%
+        <div className="bg-gradient-to-r from-purple-950/60 via-indigo-950/40 to-amber-950/50 border border-amber-500/40 rounded-2xl p-4 shadow-md transition-all">
+          <div 
+            className="flex items-center justify-between cursor-pointer select-none"
+            onClick={() => setIsLongNamesCardOpen((prev) => !prev)}
+          >
+            <div className="flex items-center gap-2 flex-1 min-w-0 pr-2">
+              <Sliders size={16} className="text-amber-400 shrink-0" />
+              <span className="text-xs sm:text-sm font-bold text-amber-200 truncate">
+                {i18n.longNamesTitle}
               </span>
-            ) : longNamesReduction > 0 ? (
-              <span className="text-xs font-mono font-black text-amber-300 bg-amber-500/20 px-2.5 py-1 rounded-lg border border-amber-500/30">
-                -{longNamesReduction}%
-              </span>
-            ) : (
-              <span className="text-xs font-mono font-black text-gray-300 bg-gray-500/20 px-2.5 py-1 rounded-lg border border-gray-500/30">
-                0%
-              </span>
-            )}
-          </div>
-          <p className="text-[11px] text-gray-300 mb-3 leading-relaxed">
-            {i18n.longNamesDesc}
-          </p>
-          <div className="flex items-center gap-3">
-            <span className="text-[10px] font-mono font-bold text-emerald-400">+20%</span>
-            <input
-              type="range"
-              min="-20"
-              max="50"
-              step="1"
-              value={longNamesReduction}
-              onChange={(e) => handleLongNamesReductionChange(Number(e.target.value))}
-              className="w-full accent-amber-500 cursor-pointer h-2 bg-gray-700 rounded-lg"
-            />
-            <span className="text-[10px] font-mono font-bold text-amber-400">-50%</span>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 mt-3">
-            {[
-              { label: i18n.presetEnlargeMax, val: -20 },
-              { label: i18n.presetEnlargeLight, val: -10 },
-              { label: i18n.presetStandard, val: 0 },
-              { label: i18n.presetRecommended, val: 30 },
-              { label: i18n.presetMax, val: 50 },
-            ].map((preset) => (
-              <button
-                key={preset.val}
-                type="button"
-                onClick={() => handleLongNamesReductionChange(preset.val)}
-                className={`py-1.5 px-1.5 rounded-xl text-[10px] sm:text-[11px] font-bold border transition-all cursor-pointer text-center ${
-                  longNamesReduction === preset.val
-                    ? 'bg-amber-500 border-amber-400 text-black font-black shadow-md'
-                    : 'bg-black/50 border-gray-700 text-gray-300 hover:border-amber-500/50'
-                }`}
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {longNamesReduction < 0 ? (
+                <span className="text-xs font-mono font-black text-emerald-300 bg-emerald-500/20 px-2 py-0.5 rounded-lg border border-emerald-500/30">
+                  +{Math.abs(longNamesReduction)}%
+                </span>
+              ) : longNamesReduction > 0 ? (
+                <span className="text-xs font-mono font-black text-amber-300 bg-amber-500/20 px-2 py-0.5 rounded-lg border border-amber-500/30">
+                  -{longNamesReduction}%
+                </span>
+              ) : (
+                <span className="text-xs font-mono font-black text-gray-300 bg-gray-500/20 px-2 py-0.5 rounded-lg border border-gray-500/30">
+                  0%
+                </span>
+              )}
+              <button 
+                type="button" 
+                className="p-1 text-amber-300/80 hover:text-amber-200 transition-colors"
+                aria-label="Toggle card"
               >
-                {preset.label}
+                {isLongNamesCardOpen ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
               </button>
-            ))}
-          </div>
-
-          {/* Live Preview Window for 'ذو الجلال والاكرام' */}
-          <div className="mt-4 pt-3 border-t border-amber-500/30">
-            <div className="text-xs font-bold text-amber-200 mb-2.5 flex items-center gap-1.5">
-              <Eye size={14} className="text-amber-400" />
-              <span>{i18n.livePreviewLabel}</span>
-            </div>
-            <div className="flex flex-wrap items-center justify-center gap-4 bg-black/40 p-3 rounded-xl border border-amber-500/20">
-              {/* Parchment preview */}
-              <div className="flex flex-col items-center gap-1">
-                <span className="text-[10px] text-amber-300/80 font-semibold">Parchemin (Parchment)</span>
-                <div className="w-18 h-18 sm:w-22 sm:h-22 bg-[#fef3c7] border-2 border-[#b45309] rounded-xl shadow-inner flex items-center justify-center p-1 overflow-hidden relative">
-                  <span
-                    style={getCellInlineStyle('ذو الجلال والاكرام', gridSize)}
-                    className="font-arabic font-black text-[#451a03] text-center px-0.5 max-w-full flex items-center justify-center leading-[1.05] whitespace-pre-line break-words"
-                    dir="rtl"
-                  >
-                    ذو الجلال والاكرام
-                  </span>
-                </div>
-              </div>
-
-              {/* Dark Mystique preview */}
-              <div className="flex flex-col items-center gap-1">
-                <span className="text-[10px] text-amber-300/80 font-semibold">Nuit Mystique (Dark)</span>
-                <div className="w-18 h-18 sm:w-22 sm:h-22 bg-stone-900 border-2 border-amber-500/70 rounded-xl shadow-inner flex items-center justify-center p-1 overflow-hidden relative">
-                  <span
-                    style={getCellInlineStyle('ذو الجلال والاكرام', gridSize)}
-                    className="font-arabic font-black text-amber-100 text-center px-0.5 max-w-full flex items-center justify-center leading-[1.05] whitespace-pre-line break-words drop-shadow-md"
-                    dir="rtl"
-                  >
-                    ذو الجلال والاكرام
-                  </span>
-                </div>
-              </div>
             </div>
           </div>
+
+          <AnimatePresence>
+            {isLongNamesCardOpen && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="overflow-hidden"
+              >
+                <p className="text-[11px] text-gray-300 mt-3 mb-3 leading-relaxed">
+                  {i18n.longNamesDesc}
+                </p>
+                <div className="flex items-center gap-3">
+                  <span className="text-[10px] font-mono font-bold text-emerald-400">+20%</span>
+                  <input
+                    type="range"
+                    min="-20"
+                    max="50"
+                    step="1"
+                    value={longNamesReduction}
+                    onChange={(e) => handleLongNamesReductionChange(Number(e.target.value))}
+                    className="w-full accent-amber-500 cursor-pointer h-2 bg-gray-700 rounded-lg"
+                  />
+                  <span className="text-[10px] font-mono font-bold text-amber-400">-50%</span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5 mt-3">
+                  {[
+                    { label: i18n.presetEnlargeMax, val: -20 },
+                    { label: i18n.presetEnlargeLight, val: -10 },
+                    { label: i18n.presetStandard, val: 0 },
+                    { label: i18n.presetRecommended, val: 30 },
+                    { label: i18n.presetMax, val: 50 },
+                  ].map((preset) => (
+                    <button
+                      key={preset.val}
+                      type="button"
+                      onClick={() => handleLongNamesReductionChange(preset.val)}
+                      className={`py-1.5 px-1.5 rounded-xl text-[10px] sm:text-[11px] font-bold border transition-all cursor-pointer text-center ${
+                        longNamesReduction === preset.val
+                          ? 'bg-amber-500 border-amber-400 text-black font-black shadow-md'
+                          : 'bg-black/50 border-gray-700 text-gray-300 hover:border-amber-500/50'
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Live Preview Window for 'ذو الجلال والاكرام' */}
+                <div className="mt-4 pt-3 border-t border-amber-500/30">
+                  <div className="text-xs font-bold text-amber-200 mb-2.5 flex items-center gap-1.5">
+                    <Eye size={14} className="text-amber-400" />
+                    <span>{i18n.livePreviewLabel}</span>
+                  </div>
+                  <div className="flex flex-wrap items-center justify-center gap-4 bg-black/40 p-3 rounded-xl border border-amber-500/20">
+                    {/* Parchment preview */}
+                    <div className="flex flex-col items-center gap-1">
+                      <span className="text-[10px] text-amber-300/80 font-semibold">Parchemin (Parchment)</span>
+                      <div className="w-18 h-18 sm:w-22 sm:h-22 bg-[#fef3c7] border-2 border-[#b45309] rounded-xl shadow-inner flex items-center justify-center p-1 overflow-hidden relative">
+                        <span
+                          style={getCellInlineStyle('ذو الجلال والاكرام', gridSize)}
+                          className="font-arabic font-black text-[#451a03] text-center px-0.5 max-w-full flex items-center justify-center leading-[1.05] whitespace-pre-line break-words"
+                          dir="rtl"
+                        >
+                          ذو الجلال والاكرام
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Dark Mystique preview */}
+                    <div className="flex flex-col items-center gap-1">
+                      <span className="text-[10px] text-amber-300/80 font-semibold">Nuit Mystique (Dark)</span>
+                      <div className="w-18 h-18 sm:w-22 sm:h-22 bg-stone-900 border-2 border-amber-500/70 rounded-xl shadow-inner flex items-center justify-center p-1 overflow-hidden relative">
+                        <span
+                          style={getCellInlineStyle('ذو الجلال والاكرام', gridSize)}
+                          className="font-arabic font-black text-amber-100 text-center px-0.5 max-w-full flex items-center justify-center leading-[1.05] whitespace-pre-line break-words drop-shadow-md"
+                          dir="rtl"
+                        >
+                          ذو الجلال والاكرام
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Generate Action Button */}
@@ -1840,11 +1958,11 @@ export const KhatimGenerator: React.FC = () => {
             className="relative flex flex-col items-center gap-6"
           >
             {/* Theme Selector Toggle Bar */}
-            <div className="flex flex-wrap items-center justify-center gap-2 bg-zinc-900/90 dark:bg-zinc-900 p-1.5 rounded-2xl border border-amber-500/30">
+            <div className="flex flex-wrap items-center justify-center gap-2 bg-zinc-900/90 dark:bg-zinc-900 p-2 rounded-2xl border border-amber-500/30">
               <button
                 type="button"
                 onClick={() => setExportTheme('dark')}
-                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                   exportTheme === 'dark'
                     ? 'bg-gradient-to-r from-purple-900 to-indigo-900 text-amber-300 shadow-md border border-amber-500/40'
                     : 'text-gray-400 hover:text-white'
@@ -1855,7 +1973,7 @@ export const KhatimGenerator: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setExportTheme('parchment')}
-                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
                   exportTheme === 'parchment'
                     ? 'bg-amber-100 text-amber-950 font-black shadow-md border border-amber-600'
                     : 'text-gray-400 hover:text-white'
@@ -1865,26 +1983,61 @@ export const KhatimGenerator: React.FC = () => {
               </button>
               <button
                 type="button"
+                onClick={() => setExportTheme('emerald')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  exportTheme === 'emerald'
+                    ? 'bg-emerald-800 text-amber-300 font-black shadow-md border border-amber-400'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                <span>💎 Velours Émeraude</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setExportTheme('white')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                  exportTheme === 'white'
+                    ? 'bg-white text-zinc-950 font-black shadow-md border border-zinc-900'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+              >
+                <span>📄 Papier Céleste</span>
+              </button>
+              <button
+                type="button"
                 onClick={() => setIsTawqEnabled(!isTawqEnabled)}
-                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer border ${
                   isTawqEnabled
                     ? 'bg-emerald-950/80 text-emerald-300 border-emerald-500/50 shadow-md'
                     : 'bg-zinc-800 text-zinc-400 border-zinc-700 hover:text-white'
                 }`}
                 title="Activer ou désactiver l'affichage des 4 bordures (Tawq)"
               >
-                <span>{isTawqEnabled ? '🖼️ Bordures : Activées' : '🖼️ Bordures : Désactivées'}</span>
+                <span>{isTawqEnabled ? '🖼️ Tawq Activé' : '🖼️ Tawq Désactivé'}</span>
               </button>
             </div>
+
+            {/* Writing Path Step-by-Step Player */}
+            <WritingPathPlayer
+              gridSize={gridSize}
+              totalHouses={gridSize * gridSize}
+              currentStep={activeWritingStep}
+              onStepChange={setActiveWritingStep}
+              className="w-full max-w-lg"
+            />
 
             {/* Khatim Canvas Box */}
             <div 
               ref={resultRef} 
               className={`rounded-2xl sm:rounded-3xl ${
-                gridSize >= 9 ? 'p-2 sm:p-6' : gridSize >= 7 ? 'p-3 sm:p-7' : 'p-5 sm:p-8'
+                gridSize >= 9 ? 'p-2 sm:p-5' : gridSize >= 7 ? 'p-3 sm:p-6' : 'p-5 sm:p-8'
               } shadow-2xl mx-auto max-w-lg relative overflow-hidden w-full font-serif transition-colors ${
                 exportTheme === 'parchment'
                   ? 'bg-[#fef3c7] text-[#451a03] border-4 border-double border-[#b45309]'
+                  : exportTheme === 'emerald'
+                  ? 'bg-gradient-to-b from-[#022c22] via-[#064e3b] to-[#022c22] border-4 border-amber-400 text-amber-100'
+                  : exportTheme === 'white'
+                  ? 'bg-white text-zinc-900 border-4 border-zinc-900 shadow-xl'
                   : 'bg-gradient-to-b from-zinc-950 via-purple-950/40 to-zinc-950 border-4 border-amber-500/70 text-amber-100'
               }`}
               style={exportTheme === 'parchment' ? {
@@ -1894,19 +2047,28 @@ export const KhatimGenerator: React.FC = () => {
                 color: '#451a03'
               } : undefined}
             >
-               {exportTheme !== 'parchment' && (
+               {exportTheme === 'dark' && (
                  <>
                    <div className="absolute inset-0 bg-gradient-to-br from-amber-500/10 via-transparent to-purple-950/30 pointer-events-none" />
                    <div className="absolute inset-1.5 border border-amber-500/30 rounded-2xl pointer-events-none" />
                  </>
                )}
+               {exportTheme === 'emerald' && (
+                 <>
+                   <div className="absolute inset-0 bg-gradient-to-br from-amber-400/15 via-transparent to-emerald-950/40 pointer-events-none" />
+                   <div className="absolute inset-1.5 border border-amber-400/40 rounded-2xl pointer-events-none" />
+                 </>
+               )}
                {exportTheme === 'parchment' && (
                  <div className="absolute inset-1.5 border border-[#b45309]/40 rounded-2xl pointer-events-none" />
+               )}
+               {exportTheme === 'white' && (
+                 <div className="absolute inset-1.5 border border-zinc-900/20 rounded-2xl pointer-events-none" />
                )}
 
                {/* Traditional Corner Calligraphy Marks */}
                <span className={`absolute top-2 left-2.5 sm:top-2.5 sm:left-3 font-arabic select-none pointer-events-none z-20 text-left leading-none ${
-                 exportTheme === 'parchment' ? 'text-[#92400e]' : 'text-amber-400'
+                 exportTheme === 'parchment' ? 'text-[#92400e]' : exportTheme === 'white' ? 'text-zinc-950' : 'text-amber-400'
                } ${
                  cornerCalligraphy.topLeft === '﷽' || cornerCalligraphy.topLeft.includes('بسم') || cornerCalligraphy.topLeft.includes('بِسْمِ')
                    ? 'text-[11px] sm:text-xs font-black max-w-[38px] sm:max-w-[48px] overflow-hidden whitespace-nowrap block'
@@ -1919,50 +2081,52 @@ export const KhatimGenerator: React.FC = () => {
                    : cornerCalligraphy.topLeft}
                </span>
                <span className={`absolute top-2.5 right-3.5 max-w-[110px] sm:max-w-[140px] font-arabic select-none pointer-events-none z-20 text-right leading-snug ${
-                 exportTheme === 'parchment' ? 'text-[#92400e]' : 'text-amber-400/80'
+                 exportTheme === 'parchment' ? 'text-[#92400e]' : exportTheme === 'white' ? 'text-zinc-950 font-bold' : 'text-amber-400/80'
                } ${cornerCalligraphy.topRight.length > 12 ? 'text-[9px] sm:text-[10px] break-words line-clamp-2' : 'text-xs sm:text-sm'}`} dir="rtl">{cornerCalligraphy.topRight}</span>
                <span className={`absolute bottom-2.5 left-3.5 max-w-[110px] sm:max-w-[140px] font-arabic select-none pointer-events-none z-20 text-left leading-snug ${
-                 exportTheme === 'parchment' ? 'text-[#92400e]' : 'text-amber-400/80'
+                 exportTheme === 'parchment' ? 'text-[#92400e]' : exportTheme === 'white' ? 'text-zinc-950 font-bold' : 'text-amber-400/80'
                } ${cornerCalligraphy.bottomLeft.length > 12 ? 'text-[9px] sm:text-[10px] break-words line-clamp-2' : 'text-xs sm:text-sm'}`} dir="rtl">{cornerCalligraphy.bottomLeft}</span>
                <span className={`absolute bottom-2.5 right-3.5 max-w-[110px] sm:max-w-[140px] font-arabic select-none pointer-events-none z-20 text-right leading-snug ${
-                 exportTheme === 'parchment' ? 'text-[#92400e]' : 'text-amber-400/80'
+                 exportTheme === 'parchment' ? 'text-[#92400e]' : exportTheme === 'white' ? 'text-zinc-950 font-bold' : 'text-amber-400/80'
                } ${cornerCalligraphy.bottomRight.length > 12 ? 'text-[9px] sm:text-[10px] break-words line-clamp-2' : 'text-xs sm:text-sm'}`} dir="rtl">{cornerCalligraphy.bottomRight}</span>
 
                {/* Watermark */}
-               <AsrarHubWatermark variant={exportTheme === 'parchment' ? 'parchment' : 'dark'} opacity={0.16} showCentralSeal={true} />
+               <AsrarHubWatermark variant={exportTheme === 'parchment' ? 'parchment' : exportTheme === 'white' ? 'parchment' : 'dark'} opacity={0.16} showCentralSeal={true} />
 
                {/* Header Badge */}
                <div className={`text-center space-y-1 relative z-10 pb-3 mb-4 border-b ${
-                 exportTheme === 'parchment' ? 'border-[#b45309]/30' : 'border-amber-500/30'
+                 exportTheme === 'parchment' ? 'border-[#b45309]/30' : exportTheme === 'white' ? 'border-zinc-900/20' : 'border-amber-500/30'
                }`}>
                  <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase shadow-sm ${
                    exportTheme === 'parchment'
                      ? 'bg-[#fde68a] border border-[#b45309] text-[#78350f]'
+                     : exportTheme === 'white'
+                     ? 'bg-zinc-100 border border-zinc-900 text-zinc-950'
                      : 'bg-amber-500/10 border border-amber-500/30 text-amber-300'
                  }`}>
-                   <Sparkles className={`w-3.5 h-3.5 ${exportTheme === 'parchment' ? 'text-[#b45309]' : 'text-amber-400'}`} />
+                   <Sparkles className={`w-3.5 h-3.5 ${exportTheme === 'parchment' ? 'text-[#b45309]' : exportTheme === 'white' ? 'text-zinc-950' : 'text-amber-400'}`} />
                    <span>{activeBadge}</span>
                  </div>
 
                  {method === 'custom' && (
                    <div className="space-y-0.5 mt-1">
-                     <h3 className={`text-sm font-extrabold ${exportTheme === 'parchment' ? 'text-[#78350f]' : 'text-amber-200'}`}>
+                     <h3 className={`text-sm font-extrabold ${exportTheme === 'parchment' ? 'text-[#78350f]' : exportTheme === 'white' ? 'text-zinc-950' : 'text-amber-200'}`}>
                        {customTitleFr}
                      </h3>
-                     <p className={`text-base font-arabic font-bold ${exportTheme === 'parchment' ? 'text-[#b45309]' : 'text-amber-300'}`} dir="rtl">
+                     <p className={`text-base font-arabic font-bold ${exportTheme === 'parchment' ? 'text-[#b45309]' : exportTheme === 'white' ? 'text-zinc-900' : 'text-amber-300'}`} dir="rtl">
                        {customTitleAr}
                      </p>
                    </div>
                  )}
 
                  {activeDoorInfo && (
-                   <h3 className={`text-xs sm:text-sm font-extrabold tracking-wide mt-1 ${exportTheme === 'parchment' ? 'text-[#78350f]' : 'text-amber-300'}`}>
+                   <h3 className={`text-xs sm:text-sm font-extrabold tracking-wide mt-1 ${exportTheme === 'parchment' ? 'text-[#78350f]' : exportTheme === 'white' ? 'text-zinc-950' : 'text-amber-300'}`}>
                      {langKey === 'en' ? activeDoorInfo.nameEn : activeDoorInfo.nameFr}
                    </h3>
                  )}
 
                  {selectedPreset && (
-                   <h3 className={`text-xs sm:text-sm font-extrabold tracking-wide mt-1 ${exportTheme === 'parchment' ? 'text-[#065f46]' : 'text-emerald-300'}`}>
+                   <h3 className={`text-xs sm:text-sm font-extrabold tracking-wide mt-1 ${exportTheme === 'parchment' ? 'text-[#065f46]' : exportTheme === 'white' ? 'text-zinc-950' : 'text-emerald-300'}`}>
                      {langKey === 'en' ? selectedPreset.titleEn : selectedPreset.titleFr}
                    </h3>
                  )}
@@ -1971,6 +2135,8 @@ export const KhatimGenerator: React.FC = () => {
                    <span className={`inline-block border-2 px-5 py-1.5 rounded-full text-xs sm:text-sm font-black tracking-[0.2em] ${
                      exportTheme === 'parchment'
                        ? 'border-[#b45309] text-[#78350f] bg-[#fde68a] shadow-sm'
+                       : exportTheme === 'white'
+                       ? 'border-zinc-900 text-zinc-950 bg-zinc-100 shadow-sm'
                        : 'border-amber-500/60 text-amber-300 bg-black/60 shadow-[0_0_15px_rgba(245,158,11,0.2)]'
                    }`}>
                      POIDS JUMMAL : {calculatedTotal}
@@ -1985,6 +2151,8 @@ export const KhatimGenerator: React.FC = () => {
                    <div className={`text-center font-uthmani text-xs sm:text-sm font-bold tracking-wider leading-relaxed px-4 py-1.5 rounded-xl border max-w-fit mx-auto shadow-md ${
                       exportTheme === 'parchment'
                         ? 'bg-[#fde68a]/90 text-[#5c2406] border-[#b45309]/60 shadow-[#b45309]/15'
+                        : exportTheme === 'white'
+                        ? 'bg-zinc-100 text-zinc-950 border-zinc-900/40 shadow-sm'
                         : 'bg-gradient-to-r from-amber-950/80 via-black/90 to-amber-950/80 text-amber-300 border-amber-500/50 shadow-amber-500/20'
                     }`} dir="rtl">
                      {tawqFrame[0]}
@@ -1998,6 +2166,8 @@ export const KhatimGenerator: React.FC = () => {
                      <div className={`text-center font-arabic text-[11px] sm:text-xs font-medium px-1.5 py-3 rounded-l-xl border-l border-y shadow-sm flex items-center justify-center [writing-mode:vertical-rl] rotate-180 select-none ${
                        exportTheme === 'parchment'
                          ? 'bg-[#fde68a]/60 text-[#78350f] border-[#b45309]/30'
+                         : exportTheme === 'white'
+                         ? 'bg-zinc-100 text-zinc-950 border-zinc-900/30'
                          : 'bg-black/40 text-amber-300/90 border-amber-500/30'
                      }`} dir="rtl">
                        {tawqFrame[3]}
@@ -2014,40 +2184,54 @@ export const KhatimGenerator: React.FC = () => {
                          className={`grid ${gridGapClassMap[gridSize] || 'gap-1.5'} relative z-10 ${gridColsClassMap[gridSize] || 'grid-cols-3'}`}
                        >
                          {grid.map((row, i) => (
-                           row.map((val, j) => (
-                             <motion.div 
-                               key={`${i}-${j}`}
-                               variants={item}
-                               className={`${gridCellPaddingMap[gridSize] || 'p-2 aspect-square'} ${
-                                 exportTheme === 'parchment'
-                                   ? `${gridSize >= 9 ? 'border' : 'border-2'} border-[#b45309] bg-[#fffbeb] shadow-sm`
-                                   : `${gridSize >= 9 ? 'border' : 'border-2'} border-amber-500/50 bg-gradient-to-br from-amber-500/20 via-purple-950/70 to-black shadow-md`
-                               } ${getCellRadiusClass(gridSize)} flex items-center justify-center relative group min-h-0 min-w-0`}
-                             >
-                               <span 
-                                 style={getCellInlineStyle(val, gridSize)}
-                                 className={`font-black tabular-nums z-10 text-center px-0.5 max-w-full flex items-center justify-center ${
-                                    exportTheme === 'parchment'
-                                      ? 'text-[#451a03] group-hover:text-black'
-                                      : 'text-amber-100 group-hover:text-white drop-shadow-md'
-                                  } ${getCellTextStyle(val, gridSize)} ${
-                                    typeof val === 'string'
-                                      ? 'font-arabic leading-[1.05] sm:leading-[1.1] py-0 whitespace-pre-line break-words'
-                                      : 'leading-tight whitespace-nowrap'
-                                  }`}
-                                 dir="rtl"
+                           row.map((val, j) => {
+                             const houseNum = housesGrid ? housesGrid[i][j] : (i * gridSize + j + 1);
+                             const isWritten = activeWritingStep === 0 || houseNum <= activeWritingStep;
+                             const isCurrentTarget = activeWritingStep > 0 && houseNum === activeWritingStep;
+
+                             return (
+                               <motion.div 
+                                 key={`${i}-${j}`}
+                                 variants={item}
+                                 className={`${gridCellPaddingMap[gridSize] || 'p-2 aspect-square'} ${
+                                   exportTheme === 'parchment'
+                                     ? `${gridSize >= 9 ? 'border' : 'border-2'} border-[#b45309] bg-[#fffbeb] shadow-sm`
+                                     : exportTheme === 'emerald'
+                                     ? `${gridSize >= 9 ? 'border' : 'border-2'} border-amber-400/60 bg-emerald-950/90 shadow-md`
+                                     : exportTheme === 'white'
+                                     ? `${gridSize >= 9 ? 'border' : 'border-2'} border-zinc-800 bg-zinc-50 shadow-sm`
+                                     : `${gridSize >= 9 ? 'border' : 'border-2'} border-amber-500/50 bg-gradient-to-br from-amber-500/20 via-purple-950/70 to-black shadow-md`
+                                 } ${getCellRadiusClass(gridSize)} ${
+                                   isCurrentTarget ? 'ring-2 ring-amber-400 scale-105 z-20 shadow-[0_0_15px_rgba(245,158,11,0.5)]' : ''
+                                 } ${!isWritten ? 'opacity-20' : 'opacity-100'} flex items-center justify-center relative group min-h-0 min-w-0 transition-all`}
                                >
-                                 {renderFormattedCellValue(val)}
-                               </span>
-                               {housesGrid && method !== 'custom' && gridSize <= 6 && (
-                                 <span className={`absolute bottom-0.5 right-1 text-[8px] font-mono select-none ${
-                                   exportTheme === 'parchment' ? 'text-[#b45309]' : 'text-amber-400/60'
-                                 }`}>
-                                   #{housesGrid[i][j]}
+                                 <span 
+                                   style={getCellInlineStyle(val, gridSize)}
+                                   className={`font-black tabular-nums z-10 text-center px-0.5 max-w-full flex items-center justify-center ${
+                                      exportTheme === 'parchment'
+                                        ? 'text-[#451a03] group-hover:text-black'
+                                        : exportTheme === 'white'
+                                        ? 'text-zinc-950 font-black'
+                                        : 'text-amber-100 group-hover:text-white drop-shadow-md'
+                                   } ${getCellTextStyle(val, gridSize)} ${
+                                     typeof val === 'string'
+                                       ? 'font-arabic leading-[1.05] sm:leading-[1.1] py-0 whitespace-pre-line break-words'
+                                       : 'leading-tight whitespace-nowrap'
+                                   }`}
+                                   dir="rtl"
+                                 >
+                                   {isWritten ? renderFormattedCellValue(val) : '·'}
                                  </span>
-                               )}
-                             </motion.div>
-                           ))
+                                 {housesGrid && method !== 'custom' && gridSize <= 6 && (
+                                   <span className={`absolute bottom-0.5 right-1 text-[8px] font-mono select-none ${
+                                     exportTheme === 'parchment' ? 'text-[#b45309]' : exportTheme === 'white' ? 'text-zinc-500' : 'text-amber-400/60'
+                                   }`}>
+                                     #{housesGrid[i][j]}
+                                   </span>
+                                 )}
+                               </motion.div>
+                             );
+                           })
                          ))}
                        </motion.div>
                      </div>
@@ -2058,6 +2242,8 @@ export const KhatimGenerator: React.FC = () => {
                      <div className={`text-center font-arabic text-[11px] sm:text-xs font-medium px-1.5 py-3 rounded-r-xl border-r border-y shadow-sm flex items-center justify-center [writing-mode:vertical-rl] select-none ${
                        exportTheme === 'parchment'
                          ? 'bg-[#fde68a]/60 text-[#78350f] border-[#b45309]/30'
+                         : exportTheme === 'white'
+                         ? 'bg-zinc-100 text-zinc-950 border-zinc-900/30'
                          : 'bg-black/40 text-amber-300/90 border-amber-500/30'
                      }`} dir="rtl">
                        {tawqFrame[1]}
@@ -2070,6 +2256,8 @@ export const KhatimGenerator: React.FC = () => {
                    <div className={`text-center font-arabic text-xs sm:text-sm font-medium px-4 py-1.5 rounded-xl border max-w-fit mx-auto shadow-sm ${
                      exportTheme === 'parchment' 
                        ? 'bg-[#fde68a]/70 text-[#78350f] border-[#b45309]/40' 
+                       : exportTheme === 'white'
+                       ? 'bg-zinc-100 text-zinc-950 border-zinc-900/30'
                        : 'bg-black/40 text-amber-300/90 border-amber-500/30'
                    }`} dir="rtl">
                      {tawqFrame[2]}
@@ -2079,19 +2267,43 @@ export const KhatimGenerator: React.FC = () => {
 
                {/* Footer Details */}
                <div className={`text-center mt-6 relative z-10 pt-3 border-t ${
-                 exportTheme === 'parchment' ? 'border-[#b45309]/30' : 'border-amber-500/30'
+                 exportTheme === 'parchment' ? 'border-[#b45309]/30' : exportTheme === 'white' ? 'border-zinc-900/20' : 'border-amber-500/30'
                }`}>
                   <p className={`text-[10px] font-bold tracking-widest uppercase mb-1 ${
-                    exportTheme === 'parchment' ? 'text-[#78350f]' : 'text-amber-400/80'
+                    exportTheme === 'parchment' ? 'text-[#78350f]' : exportTheme === 'white' ? 'text-zinc-900' : 'text-amber-400/80'
                   }`}>Harmonie & Sceau Sacré</p>
                   <p className={`text-[11px] ${
-                    exportTheme === 'parchment' ? 'text-[#92400e]' : 'text-amber-200/70'
+                    exportTheme === 'parchment' ? 'text-[#92400e]' : exportTheme === 'white' ? 'text-zinc-700' : 'text-amber-200/70'
                   }`}>Taille : {gridSize}x{gridSize} • Somme Totale : {calculatedTotal}</p>
                   <p className={`text-[9px] font-mono uppercase mt-0.5 ${
-                    exportTheme === 'parchment' ? 'text-[#b45309]' : 'text-amber-400/60'
+                    exportTheme === 'parchment' ? 'text-[#b45309]' : exportTheme === 'white' ? 'text-zinc-500' : 'text-amber-400/60'
                   }`}>AsrarHub • Ruhaniyat & Science des Awfaq</p>
                </div>
             </div>
+
+            {/* Sacred Framing & Archangels Customizer Component */}
+            <SacredFramingControls
+              totalAdad={calculatedTotal}
+              tawqFrame={tawqFrame}
+              cornerCalligraphy={cornerCalligraphy}
+              onUpdateTawq={setTawqFrame}
+              onUpdateCorners={setCornerCalligraphy}
+              className="w-full"
+            />
+
+            {/* Automatic Kasr & Mathematical Audit Breakdown Component */}
+            {kasrBreakdown && (
+              <KasrMathBreakdown
+                gridSize={gridSize}
+                totalAdad={calculatedTotal}
+                step={kasrBreakdown.step}
+                remainder={kasrBreakdown.remainder}
+                kasrHouse={kasrBreakdown.kasrHouse}
+                minRequired={kasrBreakdown.minRequired}
+                magicAudit={kasrBreakdown.magicAudit}
+                className="w-full"
+              />
+            )}
             
             {/* Export & Download Space */}
             <div className="mt-4 bg-zinc-900/80 backdrop-blur-sm p-6 rounded-3xl border border-zinc-800 w-full relative z-10 space-y-4">

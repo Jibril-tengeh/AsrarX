@@ -1,4 +1,5 @@
 import { calculateAbjadValue } from './abjad';
+import { asmaListData } from '../data/asmaListData';
 
 export type KhatimMethod = 'ghazali' | 'dahmouch' | 'kountiyou' | 'verset_besoin' | 'custom';
 
@@ -49,6 +50,273 @@ export interface CustomKhatimConfig {
   centerSecretNote?: string;
   badgeLabel?: string;
 }
+
+export interface OrderMetadata {
+  size: number;
+  nameFr: string;
+  nameEn: string;
+  nameAr: string;
+  elementFr: string;
+  elementAr: string;
+  planetFr: string;
+  planetAr: string;
+  baseAsas: number; // Usul / Asas = n*(n^2-1)/2
+  minMagicSum: number; // n*(n^2+1)/2
+  kasrFormulaDescFr: string;
+  kasrFormulaDescEn: string;
+  spiritualVirtueFr: string;
+  spiritualVirtueEn: string;
+}
+
+// Complete Metadata for Orders 3x3 to 12x12
+export const ORDERS_METADATA: Record<number, OrderMetadata> = {
+  3: {
+    size: 3,
+    nameFr: "Muthallath (المثلث — Ghazali)",
+    nameEn: "Muthallath (3x3 — Ghazali)",
+    nameAr: "المثلث الغزالي المبارك",
+    elementFr: "Feu / Saturne",
+    elementAr: "ناري / زحل",
+    planetFr: "Saturne (Zuhal)",
+    planetAr: "زحل",
+    baseAsas: 12,
+    minMagicSum: 15,
+    kasrFormulaDescFr: "(Total - 12) / 3 = Miftah (Clé). Si reste 1: saut à la maison 7. Si reste 2: saut à la maison 4 & 7.",
+    kasrFormulaDescEn: "(Total - 12) / 3 = Key. If remainder 1: jump at house 7. If remainder 2: jump at house 4 & 7.",
+    spiritualVirtueFr: "Le sceau mère de la tradition asrar. Action rapide, déblocages majeurs, protection et vœux ciblés.",
+    spiritualVirtueEn: "The mother seal of spiritual sciences. Swift action, major unblockings, and targeted petitions.",
+  },
+  4: {
+    size: 4,
+    nameFr: "Murabba' (المربع — Al-Buni)",
+    nameEn: "Murabba' (4x4 — Al-Buni)",
+    nameAr: "المربع البوني الشريف",
+    elementFr: "Terre / Jupiter",
+    elementAr: "ترابي / المشتري",
+    planetFr: "Jupiter (Mushtari)",
+    planetAr: "المشتري",
+    baseAsas: 30,
+    minMagicSum: 34,
+    kasrFormulaDescFr: "(Total - 30) / 4 = Miftah. Si reste 1: case 13. Si reste 2: case 9. Si reste 3: case 5.",
+    kasrFormulaDescEn: "(Total - 30) / 4 = Key. If rem 1: house 13. If rem 2: house 9. If rem 3: house 5.",
+    spiritualVirtueFr: "Sceau royal de stabilité, attraction durable de la richesse, victoires judiciaires et charisme imposant.",
+    spiritualVirtueEn: "Royal seal of stability, lasting wealth attraction, judicial victory, and commanding awe.",
+  },
+  5: {
+    size: 5,
+    nameFr: "Mukhammas (المخمس — Mars)",
+    nameEn: "Mukhammas (5x5 — Mars)",
+    nameAr: "المخمس المريخي القاهر",
+    elementFr: "Air / Mars",
+    elementAr: "هوائي / المريخ",
+    planetFr: "Mars (Marrikh)",
+    planetAr: "المريخ",
+    baseAsas: 60,
+    minMagicSum: 65,
+    kasrFormulaDescFr: "(Total - 60) / 5 = Miftah. Reste 1..4 réparti sur les maisons 21, 16, 11, 6.",
+    kasrFormulaDescEn: "(Total - 60) / 5 = Key. Remainder 1..4 distributed on houses 21, 16, 11, 6.",
+    spiritualVirtueFr: "Puissance de destruction des ennemis et blocages occultes, courage et protection invincible.",
+    spiritualVirtueEn: "Destruction of spiritual blockages and adversaries, divine courage, and impenetrable shielding.",
+  },
+  6: {
+    size: 6,
+    nameFr: "Musaddas (المسدس — Soleil)",
+    nameEn: "Musaddas (6x6 — Sun)",
+    nameAr: "المسدس الشمسي الذهبي",
+    elementFr: "Eau / Soleil",
+    elementAr: "مائي / الشمس",
+    planetFr: "Soleil (Shams)",
+    planetAr: "الشمس",
+    baseAsas: 105,
+    minMagicSum: 111,
+    kasrFormulaDescFr: "(Total - 105) / 6 = Miftah. Reste 1..5 réparti sur les maisons 31, 25, 19, 13, 7.",
+    kasrFormulaDescEn: "(Total - 60) / 6 = Key. Remainder 1..5 distributed across corresponding houses.",
+    spiritualVirtueFr: "Rayonnement suprême, honneurs des rois et dirigeants, succès universel et santé vivifiante.",
+    spiritualVirtueEn: "Supreme charisma, high honors, universal success, radiant health, and gold baraka.",
+  },
+  7: {
+    size: 7,
+    nameFr: "Musabba' (المسبع — Vénus)",
+    nameEn: "Musabba' (7x7 — Venus)",
+    nameAr: "المسبع الزهري الجامع",
+    elementFr: "Feu / Vénus",
+    elementAr: "ناري / الزهرة",
+    planetFr: "Vénus (Zuhrah)",
+    planetAr: "الزهرة",
+    baseAsas: 168,
+    minMagicSum: 175,
+    kasrFormulaDescFr: "(Total - 168) / 7 = Miftah. Reste 1..6 réparti sur les maisons 43, 36, 29, 22, 15, 8.",
+    kasrFormulaDescEn: "(Total - 168) / 7 = Key. Remainder 1..6 on houses 43, 36, 29, 22, 15, 8.",
+    spiritualVirtueFr: "Amour divin, réconciliation des couples, attraction universelle des cœurs et créativité.",
+    spiritualVirtueEn: "Divine love, marital harmony, universal attraction of hearts, and profound artistic bliss.",
+  },
+  8: {
+    size: 8,
+    nameFr: "Muthamman (المثمن — Mercure)",
+    nameEn: "Muthamman (8x8 — Mercury)",
+    nameAr: "المثمن العطاردي الحكيم",
+    elementFr: "Terre / Mercure",
+    elementAr: "ترابي / عطارد",
+    planetFr: "Mercure ('Utarid)",
+    planetAr: "عطارد",
+    baseAsas: 252,
+    minMagicSum: 260,
+    kasrFormulaDescFr: "(Total - 252) / 8 = Miftah. Reste 1..7 réparti sur les maisons 57, 49, 41, 33, 25, 17, 9.",
+    kasrFormulaDescEn: "(Total - 252) / 8 = Key. Remainder 1..7 on houses 57, 49, 41, 33, 25, 17, 9.",
+    spiritualVirtueFr: "Sagesse supérieure, mémorisation prodigieuse, réussite aux examens et éloquence.",
+    spiritualVirtueEn: "Superior wisdom, rapid Quranic memorization, academic eloquence, and business intellect.",
+  },
+  9: {
+    size: 9,
+    nameFr: "Mutassa' (المتسع — Lune)",
+    nameEn: "Mutassa' (9x9 — Moon)",
+    nameAr: "المتسع القمري النوراني",
+    elementFr: "Air / Lune",
+    elementAr: "هوائي / القمر",
+    planetFr: "Lune (Qamar)",
+    planetAr: "القمر",
+    baseAsas: 360,
+    minMagicSum: 369,
+    kasrFormulaDescFr: "(Total - 360) / 9 = Miftah. Reste 1..8 réparti sur les maisons 73, 64, 55, 46, 37, 28, 19, 10.",
+    kasrFormulaDescEn: "(Total - 360) / 9 = Key. Remainder 1..8 on houses 73, 64, 55, 46, 37, 28, 19, 10.",
+    spiritualVirtueFr: "Intuition spirituelle, visions véridiques, secrets ésotériques profonds et paix intérieure.",
+    spiritualVirtueEn: "Spiritual intuition, true oneiric visions, esoteric secrets, and emotional tranquility.",
+  },
+  10: {
+    size: 10,
+    nameFr: "Mu'ashshar (المعشر — Sphère des Étoiles)",
+    nameEn: "Mu'ashshar (10x10 — Decuple)",
+    nameAr: "المعشر الفلكي العظيم",
+    elementFr: "Eau / Étoiles",
+    elementAr: "مائي / الفلك",
+    planetFr: "Sphère céleste (Falak)",
+    planetAr: "الفلك الأعظم",
+    baseAsas: 495,
+    minMagicSum: 505,
+    kasrFormulaDescFr: "(Total - 495) / 10 = Miftah. Reste 1..9 réparti selon l'échelle décuple.",
+    kasrFormulaDescEn: "(Total - 495) / 10 = Key. Remainder 1..9 on decuple scale.",
+    spiritualVirtueFr: "Accomplissement total des projets de grande envergure et couronnement de la destinée.",
+    spiritualVirtueEn: "Total fulfillment of monumental endeavors and spiritual coronation.",
+  },
+  11: {
+    size: 11,
+    nameFr: "Ahada 'Ashari (الأحد عشري — Trône)",
+    nameEn: "Ahada 'Ashari (11x11 — Throne)",
+    nameAr: "الأحد عشري العرشي",
+    elementFr: "Lumière Pure / Kursi",
+    elementAr: "نوراني / الكرسي",
+    planetFr: "Le Siège Divin (Al-Kursi)",
+    planetAr: "الكرسي",
+    baseAsas: 660,
+    minMagicSum: 671,
+    kasrFormulaDescFr: "(Total - 660) / 11 = Miftah. Répartition sacrée des 11 degrés.",
+    kasrFormulaDescEn: "(Total - 660) / 11 = Key. Sacred distribution of the 11 degrees.",
+    spiritualVirtueFr: "Élévation spirituelle suprême, ouverture des voiles mystiques et dévoilement des secrets.",
+    spiritualVirtueEn: "Supreme spiritual ascension, unveiling of celestial secrets, and direct divine presence.",
+  },
+  12: {
+    size: 12,
+    nameFr: "Ithna 'Ashari (الاثنا عشري — Zodiaque)",
+    nameEn: "Ithna 'Ashari (12x12 — Zodiac)",
+    nameAr: "الاثنا عشري البروجي التام",
+    elementFr: "Totalité des 12 Constellations",
+    elementAr: "جامع البروج الاثنا عشر",
+    planetFr: "Les 12 Constellations (Al-Buruj)",
+    planetAr: "البروج",
+    baseAsas: 858,
+    minMagicSum: 870,
+    kasrFormulaDescFr: "(Total - 858) / 12 = Miftah. Répartition intégrale sur les 12 maisons astrologiques.",
+    kasrFormulaDescEn: "(Total - 858) / 12 = Key. Harmonization across the 12 astrological houses.",
+    spiritualVirtueFr: "Harmonisation universelle avec le zodiaque, neutralisation de toutes les afflictions astrales.",
+    spiritualVirtueEn: "Universal zodiac harmonization, nullifying all astral afflictions and bad planetary aspects.",
+  },
+};
+
+// 4 Archangels Framing Preset
+export const ARCHANGELS_PRESET = {
+  corners: {
+    topLeft: "جِبْرِيلُ",
+    topRight: "مِيكَائِيلُ",
+    bottomLeft: "إِسْرَافِيلُ",
+    bottomRight: "عِزْرَائِيلُ",
+  },
+  borders: {
+    top: "جِبْرِيلُ عَلَيْهِ السَّلاَمُ — مَلَكُ الوَحْيِ وَالقُوَّةِ",
+    right: "مِيكَائِيلُ عَلَيْهِ السَّلاَمُ — مَلَكُ الرِّزْقِ وَالبَرَكَةِ",
+    bottom: "إِسْرَافِيلُ عَلَيْهِ السَّلاَمُ — مَلَكُ الصُّورِ وَالحَيَاةِ",
+    left: "عِزْرَائِيلُ عَلَيْهِ السَّلاَمُ — مَلَكُ القَبْضِ وَالسِّرِّ",
+  },
+  namesList: [
+    { ar: "جبريل", fr: "Jibril (Gabriel)", en: "Jibreel (Gabriel)", virtue: "Révélation & Force" },
+    { ar: "ميكائيل", fr: "Mika'il (Michel)", en: "Mikaeel (Michael)", virtue: "Subsistance & Pluies" },
+    { ar: "إسرافيل", fr: "Israfil (Raphaël)", en: "Israfeel (Raphael)", virtue: "Souffle de Vie & Résurrection" },
+    { ar: "عزرائيل", fr: "Izra'il (Azraël)", en: "Azrael (Izraeel)", virtue: "Secret & Passage Céleste" },
+  ]
+};
+
+// Curated Quranic Framing Presets (Tawq)
+export const QURANIC_TAWQ_PRESETS = [
+  {
+    id: 'ayat_kursi',
+    nameFr: 'Ayat Al-Kursi (Verset du Trône)',
+    nameEn: 'Ayat Al-Kursi (Throne Verse)',
+    nameAr: 'آية الكرسي الشريفة',
+    top: "اللَّهُ لَا إِلَٰهَ إِلَّا هُوَ الْحَيُّ الْقَيُّومُ",
+    right: "لَا تَأْخُذُهُ سِنَةٌ وَلَا نَوْمٌ لَّهُ مَا فِي السَّمَاوَاتِ وَمَا فِي الْأَرْضِ",
+    bottom: "مَن ذَا الَّذِي يَشْفَعُ عِندَهُ إِلَّا بِإِذْنِهِ يَعْلَمُ مَا بَيْنَ أَيْدِيهِمْ وَمَا خَلْفَهُمْ",
+    left: "وَسِعَ كُرْسِيُّهُ السَّمَاوَاتِ وَالْأَرْضَ وَلَا يَئُودُهُ حِفْظُهُمَا وَهُوَ الْعَلِيُّ الْعَظِيمُ",
+  },
+  {
+    id: 'surah_ikhlas',
+    nameFr: 'Sourate Al-Ikhlas (Le Monothéisme Pur)',
+    nameEn: 'Surah Al-Ikhlas (Pure Faith)',
+    nameAr: 'سورة الإخلاص المباركة',
+    top: "قُلْ هُوَ اللَّهُ أَحَدٌ",
+    right: "اللَّهُ الصَّمَدُ",
+    bottom: "لَمْ يَلِدْ وَلَمْ يُولَدْ",
+    left: "وَلَمْ يَكُن لَّهُ كُفُوًا أَحَدٌ",
+  },
+  {
+    id: 'surah_nasr',
+    nameFr: 'Sourate An-Nasr (La Victoire Divine)',
+    nameEn: 'Surah An-Nasr (Divine Victory)',
+    nameAr: 'سورة النصر والفتح',
+    top: "إِذَا جَاءَ نَصْرُ اللَّهِ وَالْفَتْحُ",
+    right: "وَرَأَيْتَ النَّاسَ يَدْخُلُونَ فِي دِينِ اللَّهِ أَفْوَاجًا",
+    bottom: "فَسَبِّحْ بِحَمْدِ رَبِّكَ وَاسْتَغْفِرْهُ",
+    left: "إِنَّهُ كَانَ تَوَّابًا",
+  },
+  {
+    id: 'fath_mubeen',
+    nameFr: 'Verset de l\'Ouverture & Gloire (Fath)',
+    nameEn: 'Verse of Manifest Opening & Victory',
+    nameAr: 'آية الفتح المبين والنصر العزيز',
+    top: "إِنَّا فَتَحْنَا لَكَ فَتْحًا مُبِينًا",
+    right: "لِيَغْفِرَ لَكَ اللَّهُ مَا تَقَدَّمَ مِن ذَنبِكَ وَمَا تَأَخَّرَ",
+    bottom: "وَيُتِمَّ نِعْمَتَهُ عَلَيْكَ وَيَهْدِيَكَ صِرَاطًا مُّسْتَقِيمًا",
+    left: "وَيَنصُرَكَ اللَّهُ نَصْرًا عَزِيزًا",
+  },
+  {
+    id: 'rizq_baraka',
+    nameFr: 'Verset de la Subsistance Céleste (Rizq)',
+    nameEn: 'Verse of Boundless Provision (Rizq)',
+    nameAr: 'آية الرزق الواسع وتيسير العسير',
+    top: "وَمَن يَتَّقِ اللَّهَ يَجْعَل لَّهُ مَخْرَجًا",
+    right: "وَيَرْزُقْهُ مِنْ حَيْثُ لَا يَحْتَسِبُ",
+    bottom: "وَمَن يَتَوَكَّلْ عَلَى اللَّهِ فَهُوَ حَسْبُهُ",
+    left: "إِنَّ اللَّهَ بَالِغُ أَمْرِهِ قَدْ جَعَلَ اللَّهُ لِكُلِّ شَيْءٍ قَدْرًا",
+  },
+  {
+    id: 'hifz_aman',
+    nameFr: 'Verset de Protection Absolue (Hifz)',
+    nameEn: 'Verse of Total Guardianship & Shield',
+    nameAr: 'آية الحفظ والتحصين المنيع',
+    top: "فَاللَّهُ خَيْرٌ حَافِظًا وَهُوَ أَرْحَمُ الرَّاحِمِينَ",
+    right: "وَحَفِظْنَاهَا مِن كُلِّ شَيْطَانٍ رَّجِيمٍ",
+    bottom: "لَهُ مُعَقِّبَاتٌ مِّن بَيْنِ يَدَيْهِ وَمِنْ خَلْفِهِ يَحْفَظُونَهُ",
+    left: "إِنَّا نَحْنُ نَزَّلْنَا الذِّكْرَ وَإِنَّا لَهُ لَحَافِظُونَ",
+  }
+];
 
 // 9 Dahmouch Doors Definitions (Multilingual)
 export const DAHMOUCH_DOORS: KhatimDoor[] = [
@@ -671,5 +939,130 @@ export function generateAdvancedKhatim(
     kasrHouse,
     tawqFrameText,
     cornerTexts
+  };
+}
+
+/**
+ * Finds Divine Names (Asma'ullah al-Husna) whose Abjad value matches or is closely resonant with target value.
+ */
+export function findMatchingDivineNames(targetAdad: number, limit = 6) {
+  if (!targetAdad || targetAdad <= 0) return [];
+  
+  const exactMatches = asmaListData.filter(a => a.abjad === targetAdad);
+  const factorMatches = asmaListData.filter(a => a.abjad !== targetAdad && (targetAdad % a.abjad === 0 || a.abjad % targetAdad === 0));
+  
+  const sorted = [...asmaListData].sort((a, b) => {
+    const diffA = Math.abs(a.abjad - targetAdad);
+    const diffB = Math.abs(b.abjad - targetAdad);
+    return diffA - diffB;
+  });
+
+  const combined = Array.from(new Set([...exactMatches, ...factorMatches, ...sorted]));
+  return combined.slice(0, limit);
+}
+
+/**
+ * Calculates Spiritual Servants (Rūḥāniyya / Khoddam) from total Adad.
+ * Returns Upper Angel (Malak 'Alawi - ending in 'āyā'īl or 'īl) and Lower Servant (Khadim Sufli - ending in 'ṭash' or 'ṭūsh').
+ */
+export function calculateRuhaniyyaNames(totalAdad: number): {
+  malakAlawi: { ar: string; fr: string; meaningFr: string };
+  khadimSufli: { ar: string; fr: string; meaningFr: string };
+  rawLetters: string;
+} {
+  const numStr = String(totalAdad);
+  
+  // Abjad units map
+  const onesMap: Record<number, string> = { 1: 'ا', 2: 'ب', 3: 'ج', 4: 'د', 5: 'ه', 6: 'و', 7: 'ز', 8: 'ح', 9: 'ط' };
+  const tensMap: Record<number, string> = { 10: 'ي', 20: 'ك', 30: 'ل', 40: 'م', 50: 'ن', 60: 'س', 70: 'ع', 80: 'ف', 90: 'ص' };
+  const hundredsMap: Record<number, string> = { 100: 'ق', 200: 'ر', 300: 'ش', 400: 'ت', 500: 'ث', 600: 'خ', 700: 'ذ', 800: 'ض', 900: 'ظ' };
+  const thousandsMap: Record<number, string> = { 1000: 'غ' };
+
+  let remaining = totalAdad;
+  let lettersArr: string[] = [];
+
+  if (remaining >= 1000) {
+    const countGhayn = Math.floor(remaining / 1000);
+    for (let i = 0; i < countGhayn; i++) lettersArr.push('غ');
+    remaining = remaining % 1000;
+  }
+  if (remaining >= 100) {
+    const h = Math.floor(remaining / 100) * 100;
+    if (hundredsMap[h]) lettersArr.push(hundredsMap[h]);
+    remaining = remaining % 100;
+  }
+  if (remaining >= 10) {
+    const t = Math.floor(remaining / 10) * 10;
+    if (tensMap[t]) lettersArr.push(tensMap[t]);
+    remaining = remaining % 10;
+  }
+  if (remaining > 0) {
+    if (onesMap[remaining]) lettersArr.push(onesMap[remaining]);
+  }
+
+  const rootArabic = lettersArr.join('');
+  const malakAlawiAr = `${rootArabic}يَائِيلُ`;
+  const khadimSufliAr = `${rootArabic}طَيْشٍ`;
+
+  return {
+    malakAlawi: {
+      ar: malakAlawiAr,
+      fr: `${lettersArr.join('-')}yā'īl`,
+      meaningFr: "L'Ange Céleste Lumineux gouverneur du secret de ce nombre (Malak 'Alawi)",
+    },
+    khadimSufli: {
+      ar: khadimSufliAr,
+      fr: `${lettersArr.join('-')}ṭaysh`,
+      meaningFr: "L'Esprit Serviteur Terrestre exécutant le décret de ce nombre (Khadim Sufli)",
+    },
+    rawLetters: lettersArr.join(' + ')
+  };
+}
+
+/**
+ * Calculates sum verification for all rows, cols, and diagonals.
+ */
+export function calculateMagicSumsAudit(grid: (number | string)[][]): {
+  rowSums: number[];
+  colSums: number[];
+  diag1Sum: number;
+  diag2Sum: number;
+  isMagicSquare: boolean;
+  targetSum: number;
+} {
+  const n = grid.length;
+  if (!n) return { rowSums: [], colSums: [], diag1Sum: 0, diag2Sum: 0, isMagicSquare: false, targetSum: 0 };
+
+  const numGrid: number[][] = grid.map(row =>
+    row.map(val => (typeof val === 'number' ? val : parseInt(String(val), 10) || 0))
+  );
+
+  const rowSums: number[] = numGrid.map(row => row.reduce((acc, v) => acc + v, 0));
+  const colSums: number[] = Array.from({ length: n }, (_, c) =>
+    numGrid.reduce((acc, row) => acc + row[c], 0)
+  );
+
+  let diag1Sum = 0;
+  let diag2Sum = 0;
+  for (let i = 0; i < n; i++) {
+    diag1Sum += numGrid[i][i];
+    diag2Sum += numGrid[i][n - 1 - i];
+  }
+
+  const targetSum = rowSums[0] || 0;
+  const isMagicSquare =
+    targetSum > 0 &&
+    rowSums.every(s => s === targetSum) &&
+    colSums.every(s => s === targetSum) &&
+    diag1Sum === targetSum &&
+    diag2Sum === targetSum;
+
+  return {
+    rowSums,
+    colSums,
+    diag1Sum,
+    diag2Sum,
+    isMagicSquare,
+    targetSum
   };
 }

@@ -77,6 +77,9 @@ interface UserData {
   pushNotificationsEnabled?: boolean;
   usedPromoCodes?: string[];
   lastPromoCodeUsed?: string;
+  referralCode?: string;
+  referralCount?: number;
+  referredBy?: string;
   createdAt?: any;
 }
 
@@ -249,7 +252,9 @@ export const setLocalUserSession = (email: string, name?: string, country?: stri
     purchasedItems: existingUser?.purchasedItems || [],
     country: country || existingUser?.country || '',
     phone: phone || existingUser?.phone || '',
-    pushNotificationsEnabled: true
+    pushNotificationsEnabled: true,
+    referralCode: existingUser?.referralCode || `ASRAR-${(existingUser?.uid || Math.random().toString(36).substring(2, 8)).replace(/[^a-zA-Z0-9]/g, '').toUpperCase().substring(0, 6).padEnd(6, '7')}`,
+    referralCount: existingUser?.referralCount || 0
   };
   
   localStorage.setItem('asrarhub_local_user', JSON.stringify(userData));
@@ -448,7 +453,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               phone: data.phone || '',
               pushNotificationsEnabled: data.pushNotificationsEnabled !== undefined ? data.pushNotificationsEnabled : true,
               usedPromoCodes: data.usedPromoCodes || [],
-              lastPromoCodeUsed: data.lastPromoCodeUsed || null
+              lastPromoCodeUsed: data.lastPromoCodeUsed || null,
+              referralCode: data.referralCode || `ASRAR-${firebaseUser.uid.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().substring(0, 6).padEnd(6, '7')}`,
+              referralCount: data.referralCount || 0,
+              referredBy: data.referredBy || undefined
             };
           } else {
             const now = new Date();
@@ -483,7 +491,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               purchasedItems: [],
               country: '',
               phone: '',
-              pushNotificationsEnabled: true
+              pushNotificationsEnabled: true,
+              referralCode: `ASRAR-${firebaseUser.uid.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().substring(0, 6).padEnd(6, '7')}`,
+              referralCount: 0
             };
 
             // Auto-persist user profile to Firestore so admin dashboard sees them!
@@ -501,7 +511,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               freeTrialExpiresAt: isPremEnabled ? trialExpiry.toISOString() : null,
               premiumUntil: isPremEnabled ? trialExpiry.toISOString() : null,
               hasSeenTrialPopup: !isPremEnabled,
-              requiresValidation: false
+              requiresValidation: false,
+              referralCode: resolvedUser.referralCode,
+              referralCount: 0,
+              spiritualPoints: 100
             }, { merge: true }).catch(err => console.warn("Auto-persist missing user doc note:", err));
           }
 

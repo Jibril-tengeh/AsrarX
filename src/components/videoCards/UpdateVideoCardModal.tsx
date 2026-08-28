@@ -108,7 +108,7 @@ export const UpdateVideoCardModal: React.FC<UpdateVideoCardModalProps> = ({
             secondaryActionLabel={
               isRefreshing 
                 ? (refreshStep || (language === 'fr' ? 'Actualisation...' : 'Refreshing...'))
-                : (language === 'fr' ? 'Actualiser le Cache SWR & Recharger' : 'Refresh Cache & Reload')
+                : 'Refresh Cache & Reload'
             }
           />
 
@@ -120,7 +120,7 @@ export const UpdateVideoCardModal: React.FC<UpdateVideoCardModalProps> = ({
               className="flex items-center gap-1.5 hover:text-white transition-colors cursor-pointer bg-white/5 hover:bg-white/10 px-3 py-1.5 rounded-xl border border-white/5"
             >
               {copiedLink ? <Check size={13} className="text-emerald-400" /> : <Share2 size={13} />}
-              <span>{copiedLink ? (language === 'fr' ? 'Lien copié !' : 'Link copied!') : (language === 'fr' ? 'Copier le lien APK' : 'Copy APK Link')}</span>
+              <span>{copiedLink ? (language === 'fr' ? 'Lien copié !' : 'Link copied!') : 'Copy APK Link'}</span>
             </button>
 
             {!isForceUpdate && (
@@ -129,7 +129,7 @@ export const UpdateVideoCardModal: React.FC<UpdateVideoCardModalProps> = ({
                 onClick={onDismiss}
                 className="hover:text-white transition-colors underline cursor-pointer"
               >
-                {language === 'fr' ? 'Continuer sans mettre à jour' : 'Skip for now'}
+                Skip for now
               </button>
             )}
           </div>

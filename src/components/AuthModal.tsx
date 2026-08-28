@@ -5,7 +5,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { X, Mail, Lock, User as UserIcon, AlertCircle, Eye, EyeOff, KeyRound, CheckCircle, CheckCircle2, Globe, Phone, Search, ExternalLink, Sparkles, ShieldAlert, Zap, Gift } from 'lucide-react';
 import { signInWithGoogle, signInWithEmail, signUpWithEmail, sendVerificationEmail, auth, db, signOut } from '../lib/firebase';
 import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth, setLocalUserSession } from '../contexts/AuthContext';
 import { isDisposableEmail, isGmailAddress, hasGmailPlusAlias, hasEmailAlias, normalizeEmail, normalizePhone, validateRegistrationDetails } from '../lib/validationUtils';
 import { useNavigate } from 'react-router-dom';
 import { sendPasswordResetEmail } from 'firebase/auth';
@@ -887,6 +887,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
                           <AlertCircle size={18} className="mt-0.5 shrink-0 text-red-500" />
                           <p className="flex-1 text-xs sm:text-sm leading-relaxed">{error}</p>
                         </div>
+                        {(error.includes("serveurs") || error.includes("connexion") || error.includes("network")) && email && (
+                          <div className="pt-2 border-t border-red-200/50 dark:border-red-800/40 flex justify-end">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setLocalUserSession(email, name, country, phone, !isLogin);
+                                onClose();
+                              }}
+                              className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline transition-all"
+                            >
+                              Continuer en session locale &rarr;
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )}
 
