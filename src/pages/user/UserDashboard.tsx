@@ -3,8 +3,8 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth, handleFirestoreError, OperationType } from '../../contexts/AuthContext';
 import { useFeatures } from '../../contexts/FeatureContext';
 import { db } from '../../lib/firebase';
-import { collection, query, orderBy, onSnapshot, doc, getDocsFromServer, getDocs, where } from 'firebase/firestore';
-import { Search, LayoutGrid, Square, List, Filter, X, BookOpen, Store, Award, MapPin, Trophy, ShieldCheck, ChevronDown, Bookmark, Flame, Shield, RefreshCw, Quote, Folder, Plus, Library, Music, Pencil, Trash2, Sliders, Sparkles, Calendar, FolderOpen, Star, FileText } from 'lucide-react';
+import { collection, query, orderBy, onSnapshot, doc, getDocsFromServer, getDocs, where, limit } from 'firebase/firestore';
+import { Search, LayoutGrid, Square, List, Filter, X, BookOpen, Store, Award, MapPin, Trophy, ShieldCheck, ChevronDown, Bookmark, Flame, Shield, RefreshCw, Quote, Folder, Plus, Library, Music, Pencil, Trash2, Sliders, Sparkles, Calendar, FolderOpen, Star, FileText, HardDrive, ArrowRight } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { SecretCard, LayoutMode } from '../../components/SecretCard';
 import { HabitTracker } from '../../components/HabitTracker';
@@ -16,6 +16,8 @@ import { MysticCalendarModal } from '../../components/MysticCalendarModal';
 import { AsrarQuickWidget } from '../../components/AsrarQuickWidget';
 import { ToolsVideoSlider } from '../../components/ToolsVideoSlider';
 import { PullToRefresh } from '../../components/PullToRefresh';
+import { OfflineDashboardSection } from '../../components/OfflineDashboardSection';
+import { PromoAnnouncementBanner } from '../../components/videoCards/PromoAnnouncementBanner';
 
 import { INITIAL_DEFAULT_ARTICLES, DefaultArticle } from '../../data/defaultArticles';
 import { fetchArticlesFromRest } from '../../lib/firestoreRest';
@@ -44,7 +46,7 @@ import { tools } from '../../data/tools';
 import { getApiUrl } from '../../lib/api';
 
 interface Props {
-  initialFilter?: Category | 'all' | 'favoris';
+  initialFilter?: Category | 'all' | 'favoris' | 'offline';
 }
 
 export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
@@ -71,9 +73,23 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
   const [showOfflineModal, setShowOfflineModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filter, setFilter] = useState<Category | 'all' | 'favoris'>(initialFilter);
+  const [filter, setFilter] = useState<Category | 'all' | 'favoris' | 'offline'>(() => {
+    const locState = (location.state as any)?.filter;
+    if (locState === 'offline') return 'offline';
+    return initialFilter;
+  });
   const [layoutMode, setLayoutMode] = useState<LayoutMode>('grid2');
   const [lastToolId, setLastToolId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handleOpenOfflineVault = () => {
+      setFilter('offline');
+    };
+    window.addEventListener('asrarhub_open_offline_vault', handleOpenOfflineVault);
+    return () => {
+      window.removeEventListener('asrarhub_open_offline_vault', handleOpenOfflineVault);
+    };
+  }, []);
 
   useEffect(() => {
     const saved = localStorage.getItem("asrarhub_last_tool");
@@ -83,20 +99,24 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
   }, []);
 
   
+  const isLayoutFree = featureToggles?.home_articles_layout_free !== false && 
+                       !featureToggles?.lockArticlesDisplayMode && 
+                       !featureToggles?.home_articles_layout_locked;
+
   useEffect(() => {
-    if (featureToggles?.articlesDisplayMode) {
-      const mode = featureToggles.articlesDisplayMode;
-      if (mode === 'grid') {
+    const layoutSetting = featureToggles?.home_articles_layout || featureToggles?.articles_layout_mode || featureToggles?.articlesDisplayMode;
+    if (layoutSetting) {
+      if (layoutSetting === 'grid' || layoutSetting === 'grid2') {
         setLayoutMode('grid2');
-      } else if (mode === 'large' || mode === 'grid1') {
+      } else if (layoutSetting === 'large' || layoutSetting === 'grid1') {
         setLayoutMode('grid1');
-      } else if (mode === 'list') {
+      } else if (layoutSetting === 'list') {
         setLayoutMode('list');
       } else {
         setLayoutMode('grid2');
       }
     }
-  }, [featureToggles?.articlesDisplayMode]);
+  }, [featureToggles?.home_articles_layout, featureToggles?.articles_layout_mode, featureToggles?.articlesDisplayMode, featureToggles?.home_articles_layout_free, featureToggles?.lockArticlesDisplayMode]);
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -132,7 +152,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
   const [aiSearchResults, setAiSearchResults] = useState<string[] | null>(null);
   const [aiMessage, setAiMessage] = useState<string | null>(null);
   const [isAiSearching, setIsAiSearching] = useState(false);
-  const [announcement, setAnnouncement] = useState<{ title: string, text: string, visible: boolean } | null>(null);
+  const [announcement, setAnnouncement] = useState<{ title: string; text: string; visible: boolean; link?: string; buttonText?: string; uniqueId?: string } | null>(null);
   const [isAnnouncementDismissed, setIsAnnouncementDismissed] = useState(false);
   const [isPremiumPromoDismissed, setIsPremiumPromoDismissed] = useState(false);
 
@@ -563,22 +583,93 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
   }, []);
 
   useEffect(() => {
-    if (featureToggles && featureToggles.announcementTitle && featureToggles.announcementText && featureToggles.announcementVisible) {
-      const dismissedText = localStorage.getItem('asrarhub_dismissed_announcement_text');
-      if (dismissedText !== featureToggles.announcementText) {
+    // 1. Check if Home Announcement from settings/features is enabled
+    const isManualEnabled = featureToggles?.home_announcement_enabled === true || 
+                            featureToggles?.home_announcement_enabled === 'true' || 
+                            featureToggles?.announcementVisible === true || 
+                            featureToggles?.announcementVisible === 'true';
+
+    const manualText = (language === 'ha' ? featureToggles?.home_announcement_text_ha : language === 'en' ? featureToggles?.home_announcement_text_en : null) ||
+                       featureToggles?.home_announcement_text || 
+                       featureToggles?.home_announcement_text_fr || 
+                       featureToggles?.announcementText;
+
+    const manualTitle = (language === 'ha' ? featureToggles?.home_announcement_title_ha : language === 'en' ? featureToggles?.home_announcement_title_en : null) ||
+                        featureToggles?.home_announcement_title || 
+                        featureToggles?.home_announcement_title_fr || 
+                        featureToggles?.announcementTitle || 
+                        t('dashboardContent.announcementTitle', 'Nouvelles mises à jour disponibles !');
+
+    const manualLink = featureToggles?.home_announcement_link || featureToggles?.announcementLink || '';
+    const manualBtnText = featureToggles?.home_announcement_btn_text || featureToggles?.announcementBtnText || '';
+
+    if (isManualEnabled && manualText) {
+      const dismissedKey = localStorage.getItem('asrarhub_dismissed_announcement_text');
+      const uniqueId = `manual_${manualText}`;
+      if (dismissedKey !== uniqueId && dismissedKey !== manualText) {
         setIsAnnouncementDismissed(false);
       } else {
         setIsAnnouncementDismissed(true);
       }
       setAnnouncement({
-        title: featureToggles.announcementTitle,
-        text: featureToggles.announcementText,
-        visible: featureToggles.announcementVisible
+        title: manualTitle,
+        text: manualText,
+        visible: true,
+        link: manualLink,
+        buttonText: manualBtnText,
+        uniqueId: uniqueId
       });
-    } else {
+      return;
+    }
+
+    // 2. If manual announcement is not explicitly configured, listen for the latest active notification in Firestore
+    let isSubscribed = true;
+    let unsubNotifs: (() => void) | null = null;
+
+    try {
+      const notifsQuery = query(collection(db, 'notifications'), orderBy('createdAt', 'desc'), limit(1));
+      unsubNotifs = onSnapshot(notifsQuery, (snapshot) => {
+        if (!isSubscribed) return;
+        if (!snapshot.empty) {
+          const latestDoc = snapshot.docs[0];
+          const data = latestDoc.data();
+          const notifTitle = (language === 'ha' ? data.title_ha : language === 'en' ? data.title_en : data.title_fr) || data.title || '';
+          const notifText = (language === 'ha' ? data.message_ha : language === 'en' ? data.message_en : data.message_fr) || data.message || '';
+          
+          if (notifText) {
+            const uniqueId = `notif_${latestDoc.id}_${notifText}`;
+            const dismissedKey = localStorage.getItem('asrarhub_dismissed_announcement_text');
+            if (dismissedKey !== uniqueId && dismissedKey !== notifText) {
+              setIsAnnouncementDismissed(false);
+            } else {
+              setIsAnnouncementDismissed(true);
+            }
+            setAnnouncement({
+              title: notifTitle || t('dashboardContent.announcementTitle', 'Annonce'),
+              text: notifText,
+              visible: true,
+              uniqueId: uniqueId
+            });
+            return;
+          }
+        }
+        setAnnouncement(null);
+      }, (err) => {
+        console.warn("Notifications onSnapshot in UserDashboard:", err);
+        setAnnouncement(null);
+      });
+    } catch (e) {
+      console.warn("Failed to subscribe to notifications for dashboard banner:", e);
       setAnnouncement(null);
     }
-  }, [featureToggles]);
+
+    return () => {
+      isSubscribed = false;
+      if (unsubNotifs) {
+        try { unsubNotifs(); } catch (_) {}
+      }
+    };
+  }, [featureToggles, language, t]);
 
   useEffect(() => {
     if (featureToggles?.premiumPromoText) {
@@ -935,6 +1026,39 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
           </Link>
         </motion.div>
 
+        {/* Contenu Hors-Ligne (IndexedDB) Vault Button */}
+        <motion.div
+          whileHover={{ scale: 1.08, y: -1.5 }}
+          whileTap={{ scale: 0.92 }}
+          className={`relative flex-shrink-0 transition-opacity duration-200 ${isSearchOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+        >
+          <button
+            id="tour-offline-vault"
+            onClick={() => {
+              setFilter(filter === 'offline' ? 'all' : 'offline');
+            }}
+            className={`group relative p-1.5 sm:p-2 rounded-lg sm:rounded-xl border h-[34px] w-[34px] sm:h-[42px] sm:w-[42px] flex items-center justify-center shadow-sm overflow-hidden transition-all ${
+              filter === 'offline'
+                ? 'bg-gradient-to-br from-teal-500/30 via-emerald-500/25 to-cyan-600/35 text-teal-600 dark:text-teal-300 border-teal-500 dark:border-teal-400 ring-2 ring-teal-400/40'
+                : 'bg-gradient-to-br from-teal-500/15 via-teal-500/10 to-cyan-600/20 dark:from-teal-950/40 dark:via-teal-900/30 dark:to-cyan-950/50 text-teal-600 dark:text-teal-400 border-teal-300/50 dark:border-teal-700/50'
+            }`}
+            title={language === 'fr' ? 'Contenu Hors-Ligne (Articles & Outils enregistrés)' : 'Offline Vault (Saved Articles & Tools)'}
+          >
+            <motion.div
+              className="absolute inset-0 bg-gradient-to-tr from-transparent via-teal-200/30 dark:via-teal-400/20 to-transparent opacity-0 group-hover:opacity-100"
+              animate={{ x: ['-100%', '200%'] }}
+              transition={{ repeat: Infinity, duration: 2.5, ease: 'linear' }}
+            />
+            <motion.div
+              animate={{ scale: [1, 1.06, 1] }}
+              transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
+              className="relative flex items-center justify-center"
+            >
+              <HardDrive className="w-[15px] h-[15px] sm:w-[18px] sm:h-[18px] drop-shadow-[0_1px_3px_rgba(20,184,166,0.4)]" />
+            </motion.div>
+          </button>
+        </motion.div>
+
         <motion.div
           whileHover={{ scale: 1.08, y: -1.5 }}
           whileTap={{ scale: 0.92 }}
@@ -1038,22 +1162,22 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
 
                   {/* Content */}
                   <div className="flex-1 p-6 overflow-y-auto space-y-4 max-h-[60vh] scrollbar-thin">
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-3 gap-2.5">
                       <button
                         onClick={() => {
                           setFilter('all');
                           setSelectedSubCategory('');
                           setIsCategoryModalOpen(false);
                         }}
-                        className={`p-4 rounded-2xl border flex flex-col items-center justify-center gap-2 transition-all shadow-sm ${
+                        className={`p-3.5 rounded-2xl border flex flex-col items-center justify-center gap-1.5 transition-all shadow-sm ${
                           filter === 'all'
                             ? 'bg-emerald-50 border-emerald-200 text-emerald-600 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-400'
                             : 'bg-white border-gray-200 text-gray-650 hover:bg-gray-50 dark:bg-gray-850 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700'
                         }`}
                       >
-                        <FolderOpen size={22} />
+                        <FolderOpen size={20} />
                         <span className="text-xs font-bold">{t('all', 'Tout')}</span>
-                        <span className="text-[10px] text-gray-400 dark:text-gray-500">{items.length} {t('articles', 'articles')}</span>
+                        <span className="text-[10px] text-gray-400 dark:text-gray-500">{items.length} {t('articles', 'art.')}</span>
                       </button>
 
                       <button
@@ -1062,15 +1186,32 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
                           setSelectedSubCategory('');
                           setIsCategoryModalOpen(false);
                         }}
-                        className={`p-4 rounded-2xl border flex flex-col items-center justify-center gap-2 transition-all shadow-sm ${
+                        className={`p-3.5 rounded-2xl border flex flex-col items-center justify-center gap-1.5 transition-all shadow-sm ${
                           filter === 'favoris'
                             ? 'bg-emerald-50 border-emerald-200 text-emerald-600 dark:bg-emerald-900/20 dark:border-emerald-800 dark:text-emerald-400'
                             : 'bg-white border-gray-200 text-gray-650 hover:bg-gray-50 dark:bg-gray-850 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700'
                         }`}
                       >
-                        <Star size={22} />
+                        <Star size={20} />
                         <span className="text-xs font-bold">{t('favorites', 'Favoris')}</span>
-                        <span className="text-[10px] text-gray-400 dark:text-gray-500">{bookmarks.length} {t('saved', 'enregistrés')}</span>
+                        <span className="text-[10px] text-gray-400 dark:text-gray-500">{bookmarks.length} {t('saved', 'sauv.')}</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setFilter('offline');
+                          setSelectedSubCategory('');
+                          setIsCategoryModalOpen(false);
+                        }}
+                        className={`p-3.5 rounded-2xl border flex flex-col items-center justify-center gap-1.5 transition-all shadow-sm ${
+                          filter === 'offline'
+                            ? 'bg-teal-50 border-teal-200 text-teal-600 dark:bg-teal-900/30 dark:border-teal-700 dark:text-teal-300 ring-1 ring-teal-400/40'
+                            : 'bg-white border-gray-200 text-gray-650 hover:bg-gray-50 dark:bg-gray-850 dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        <HardDrive size={20} className="text-teal-600 dark:text-teal-400" />
+                        <span className="text-xs font-bold">Hors-Ligne</span>
+                        <span className="text-[10px] text-teal-600 dark:text-teal-400 font-semibold">Local</span>
                       </button>
                     </div>
 
@@ -1183,7 +1324,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
           </AnimatePresence>
         </div>
 
-        {!featureToggles?.lockArticlesDisplayMode && (
+        {isLayoutFree && (
           <div id="tour-layout" className={`flex bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-0.5 sm:p-1 flex-shrink-0 h-[34px] sm:h-[42px] items-center transition-opacity duration-200 ${isSearchOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
             <button 
               onClick={() => setLayoutMode('grid2')}
@@ -1248,6 +1389,9 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
 
       {/* Banner Section */}
       <div className="mb-2.5 sm:mb-3 grid grid-cols-1 gap-3">
+        {/* Promo Announcement Banner if published by admin */}
+        <PromoAnnouncementBanner pageLocation="home" className="shadow-md" />
+
         {/* Annonce Board */}
         {announcement && announcement.visible && !isAnnouncementDismissed && (
           <div className="bg-gradient-to-br from-emerald-500 to-teal-600 dark:from-emerald-900 dark:to-teal-900 rounded-3xl p-5 sm:p-6 shadow-sm relative overflow-hidden text-white flex flex-col justify-between">
@@ -1266,27 +1410,48 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
                 )}
               </div>
               <h3 className="text-xl sm:text-2xl font-bold mb-2">{announcement.title || t('dashboardContent.announcementTitle', 'Nouvelles mises à jour disponibles !')}</h3>
-              <p className="text-emerald-50 dark:text-emerald-100 max-w-lg text-sm sm:text-base">
+              <p className="text-emerald-50 dark:text-emerald-100 max-w-lg text-sm sm:text-base leading-relaxed">
                 {announcement.text || t('dashboardContent.announcementText', 'Découvrez la nouvelle version des outils d\'AsrarHub. Le Saint Coran est désormais disponible avec une option de téléchargement pour une lecture hors ligne fluide et rapide.')}
               </p>
             </div>
             
             <div className="relative z-10 mt-auto flex flex-wrap items-center gap-3">
-              {lastReadPosition && (
+              {announcement.link ? (
+                announcement.link.startsWith('http') ? (
+                  <a
+                    href={announcement.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 bg-white text-emerald-700 hover:bg-emerald-50 font-bold px-4 py-2 rounded-xl text-sm transition-all shadow-sm"
+                  >
+                    <span>{announcement.buttonText || (language === 'ha' ? 'Duba' : language === 'en' ? 'Open' : 'Ouvrir')}</span>
+                    <ArrowRight size={15} />
+                  </a>
+                ) : (
+                  <Link
+                    to={announcement.link}
+                    className="inline-flex items-center gap-1.5 bg-white text-emerald-700 hover:bg-emerald-50 font-bold px-4 py-2 rounded-xl text-sm transition-all shadow-sm"
+                  >
+                    <span>{announcement.buttonText || (language === 'ha' ? 'Duba' : language === 'en' ? 'Ouvrir' : 'Ouvrir')}</span>
+                    <ArrowRight size={15} />
+                  </Link>
+                )
+              ) : lastReadPosition ? (
                 <Link to="/tools/quran?resume=true" className="inline-flex items-center gap-1.5 bg-white text-emerald-600 hover:bg-emerald-50 font-bold px-3 py-1.5 rounded-lg text-sm transition-colors shadow-sm">
                   <BookOpen size={16} />
                   Reprendre : {lastReadPosition.surahName} (Verset {lastReadPosition.ayahNumberInSurah})
                 </Link>
-              )}
+              ) : null}
+
               <button 
                 onClick={() => {
-                  localStorage.setItem('asrarhub_dismissed_announcement_text', announcement.text);
+                  const keyToDismiss = announcement.uniqueId || announcement.text;
+                  localStorage.setItem('asrarhub_dismissed_announcement_text', keyToDismiss);
                   setIsAnnouncementDismissed(true);
-                  window.location.reload();
                 }}
-                className="inline-flex items-center gap-1.5 bg-emerald-700/50 text-white hover:bg-emerald-700 font-bold px-4 py-1.5 rounded-lg text-sm transition-colors"
+                className="inline-flex items-center gap-1.5 bg-emerald-700/50 hover:bg-emerald-700 text-white font-bold px-4 py-1.5 rounded-lg text-sm transition-colors cursor-pointer"
               >
-                OK
+                {language === 'ha' ? 'Na gani' : language === 'en' ? 'Got it' : 'Compris'}
               </button>
             </div>
           </div>
@@ -1663,11 +1828,16 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
         </div>
       )}
 
-      <div className={`grid gap-3 sm:gap-6 lg:gap-8 w-full max-w-full min-w-0 ${
-        layoutMode === 'grid2' ? 'grid-cols-2 lg:grid-cols-3' : 
-        layoutMode === 'list' ? 'grid-cols-1 lg:grid-cols-2' : 
-        'grid-cols-1'
-      }`}>
+      {filter === 'offline' ? (
+        <div className="mb-8">
+          <OfflineDashboardSection />
+        </div>
+      ) : (
+        <div className={`grid gap-3 sm:gap-6 lg:gap-8 w-full max-w-full min-w-0 ${
+          layoutMode === 'grid2' ? 'grid-cols-2 lg:grid-cols-3' : 
+          layoutMode === 'list' ? 'grid-cols-1 lg:grid-cols-2' : 
+          'grid-cols-1'
+        }`}>
         {isLoading ? (
           Array.from({ length: 6 }).map((_, idx) => (
             <div key={idx} className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700/80 p-4 animate-pulse h-48 flex flex-col justify-between shadow-sm">
@@ -1808,6 +1978,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
           </div>
         )}
       </div>
+      )}
       </PullToRefresh>
       <GlobalSearchModal isOpen={isGlobalSearchOpen} onClose={() => setIsGlobalSearchOpen(false)} />
       <MysticCalendarModal isOpen={isCalendarOpen} onClose={() => setIsCalendarOpen(false)} />

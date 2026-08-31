@@ -980,9 +980,9 @@
     "saveOfflineBtn": "Ajiye domin karantawa ba tare da intanet ba",
     "savedOfflineBtn": "An ajiye domin karantawa offline",
     "removeFromOffline": "Cire daga ajiyar offline",
-    "offlineSavedToast": "An ajiye wannan sirri cikin nasara a IndexedDB don karantawa a kashe intanet!",
+    "offlineSavedToast": "An ajiye wannan sirri cikin nasara a wayarku don karantawa a kashe intanet!",
     "offlineRemovedToast": "An cire wannan sirri daga ajiyar offline",
-    "offlineBadge": "Yanayin Ba tare da Intanet ba (IndexedDB)",
+    "offlineBadge": "Yanayin Ba tare da Intanet ba",
     "offlineReadyNotice": "An ajiye wannan sirri gaba ɗaya a wayarku. Kuna iya karantawa a kowane lokaci ba tare da intanet ba."
   },
   "dailyReward": {

@@ -1,15 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Moon, Sun, Languages, User, Users, Shield, LogOut, LogIn, Bell, BellOff, Store, ChevronDown, ChevronUp, Megaphone, X, ExternalLink, MessageCircle, Search, Inbox, MessageSquare, Vote, Radio } from 'lucide-react';
+import { Moon, Sun, Languages, User, Users, Shield, LogOut, LogIn, Bell, BellOff, Store, ChevronDown, ChevronUp, Megaphone, X, ExternalLink, MessageCircle, Search, Inbox, MessageSquare, Vote, Radio, Maximize2, Minimize2, HardDrive, HardDriveDownload, Settings, CheckCircle2 } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useFeatures } from '../contexts/FeatureContext';
 import { useAppBranding } from '../contexts/BrandingContext';
+import { useFullscreen } from '../contexts/FullscreenContext';
 import { signOut, db } from '../lib/firebase';
 import { collection, query, orderBy, onSnapshot, limit, doc, updateDoc } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { GlobalSearchModal } from './GlobalSearchModal';
+import { OfflineAppSaverModal } from './OfflineAppSaverModal';
 import { AsrarLogo } from './AsrarLogo';
 import { SyncStatusBadge } from './SyncStatusBadge';
 
@@ -23,11 +25,13 @@ interface Notification {
 export const Header: React.FC = () => {
   const { language, setLanguage, t } = useLanguage();
   const { theme, actualTheme, toggleTheme } = useTheme();
-  const { user } = useAuth();
+  const { user, isPremium } = useAuth();
   const { featureToggles } = useFeatures();
   const { branding } = useAppBranding();
+  const { isFullscreen, toggleFullscreen } = useFullscreen();
   const [langMenuOpen, setLangMenuOpen] = useState(false);
   const [notifMenuOpen, setNotifMenuOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [announcementOpen, setAnnouncementOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [hasUnread, setHasUnread] = useState(false);
@@ -35,9 +39,20 @@ export const Header: React.FC = () => {
   const [showEnableNotifPopup, setShowEnableNotifPopup] = useState(false);
   const [notifsEnabled, setNotifsEnabled] = useState(false);
   const [communityMenuOpen, setCommunityMenuOpen] = useState(false);
+  const [isOfflineSaverOpen, setIsOfflineSaverOpen] = useState(false);
   const [showLoginSuccessNotification, setShowLoginSuccessNotification] = useState(false);
   const prevUserRef = useRef<any>(null);
   const initialLoadTime = useRef(Date.now());
+
+  useEffect(() => {
+    const handleOpenOfflineSaver = () => {
+      setIsOfflineSaverOpen(true);
+    };
+    window.addEventListener('asrarhub_open_offline_app_saver', handleOpenOfflineSaver);
+    return () => {
+      window.removeEventListener('asrarhub_open_offline_app_saver', handleOpenOfflineSaver);
+    };
+  }, []);
 
   useEffect(() => {
     if (user && !prevUserRef.current) {
@@ -52,6 +67,7 @@ export const Header: React.FC = () => {
   }, [user]);
   const langMenuRef = useRef<HTMLDivElement>(null);
   const notifMenuRef = useRef<HTMLDivElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
   const communityMenuRef = useRef<HTMLDivElement>(null);
   const communityMenuMobileRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
@@ -96,6 +112,9 @@ export const Header: React.FC = () => {
       }
       if (notifMenuRef.current && !notifMenuRef.current.contains(event.target as Node)) {
         setNotifMenuOpen(false);
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
+        setUserMenuOpen(false);
       }
       if (communityMenuRef.current && !communityMenuRef.current.contains(event.target as Node)) {
         setCommunityMenuOpen(false);
@@ -598,19 +617,174 @@ export const Header: React.FC = () => {
 
             <SyncStatusBadge />
 
-            <Link to="/profile" id="tour-profile">
-              <motion.div 
+            {/* User Profile & Quick Actions Menu */}
+            <div className="relative" ref={userMenuRef}>
+              <motion.button 
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="w-8 h-8 rounded-full bg-emerald-500 dark:bg-emerald-600 flex items-center justify-center overflow-hidden ring-2 ring-white/20 cursor-pointer ml-0.5 sm:ml-1"
+                onClick={() => setUserMenuOpen(!userMenuOpen)}
+                id="tour-profile"
+                className="w-8 h-8 rounded-full bg-emerald-500 dark:bg-emerald-600 flex items-center justify-center overflow-hidden ring-2 ring-white/20 cursor-pointer ml-0.5 sm:ml-1 focus:outline-none"
+                aria-label="User Menu"
               >
                 {user?.photoURL ? (
                   <img src={user.photoURL} alt="Profile" className="w-full h-full object-cover" />
                 ) : (
                   <User className="text-white" size={16} />
                 )}
-              </motion.div>
-            </Link>
+              </motion.button>
+
+              <AnimatePresence>
+                {userMenuOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700/80 py-2 z-50 overflow-hidden text-gray-800 dark:text-gray-200"
+                  >
+                    {/* User info preview */}
+                    <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700/60 bg-gray-50/50 dark:bg-gray-800/50">
+                      <p className="text-sm font-bold truncate text-gray-900 dark:text-white">
+                        {user?.name || (language === 'fr' ? 'Chercheur Spirituel' : 'Spiritual Seeker')}
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                        {user?.email || ''}
+                      </p>
+                      <div className="mt-2 flex items-center gap-1.5">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">
+                          {user?.role === 'admin' ? 'Admin' : (isPremium ? 'Membre Premium' : 'Membre')}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Quick Menu Options */}
+                    <div className="p-1.5 space-y-1">
+                      {/* Mode Plein Écran Switch */}
+                      <button
+                        onClick={async () => {
+                          setUserMenuOpen(false);
+                          await toggleFullscreen();
+                        }}
+                        className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+                          isFullscreen
+                            ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 font-bold'
+                            : 'hover:bg-gray-100 dark:hover:bg-gray-700/60 text-gray-700 dark:text-gray-200'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5">
+                          {isFullscreen ? (
+                            <Minimize2 size={16} className="text-amber-500" />
+                          ) : (
+                            <Maximize2 size={16} className="text-emerald-500" />
+                          )}
+                          <span>
+                            {language === 'fr' 
+                              ? 'Mode Plein Écran' 
+                              : language === 'ha'
+                              ? 'Yanayin Cikakken Fuska'
+                              : 'Fullscreen Mode'}
+                          </span>
+                        </div>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                          isFullscreen 
+                            ? 'bg-amber-500 text-white' 
+                            : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
+                        }`}>
+                          {isFullscreen ? 'Actif' : 'Off'}
+                        </span>
+                      </button>
+
+                      {/* Contenu Hors-Ligne (IndexedDB) link */}
+                      <Link
+                        to="/user/dashboard"
+                        state={{ filter: 'offline' }}
+                        onClick={() => {
+                          setUserMenuOpen(false);
+                          // Trigger custom event so dashboard switches tab smoothly
+                          window.dispatchEvent(new CustomEvent('asrarhub_open_offline_vault'));
+                        }}
+                        className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold hover:bg-gray-100 dark:hover:bg-gray-700/60 text-gray-700 dark:text-gray-200 transition-colors"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <HardDrive size={16} className="text-teal-500" />
+                          <span>
+                            {language === 'fr' 
+                              ? 'Contenu Hors-Ligne' 
+                              : language === 'ha'
+                              ? 'Abubuwan da Ba a Haɗa ba'
+                              : 'Offline Content'}
+                          </span>
+                        </div>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300 font-bold">
+                          IndexedDB
+                        </span>
+                      </Link>
+
+                      {/* Sauvegarder l'application hors-ligne */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setUserMenuOpen(false);
+                          setIsOfflineSaverOpen(true);
+                        }}
+                        className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold bg-emerald-50/70 dark:bg-emerald-950/30 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 transition-colors cursor-pointer"
+                      >
+                        <div className="flex items-center gap-2.5">
+                          <HardDriveDownload size={16} className="text-emerald-600 dark:text-emerald-400" />
+                          <span className="font-bold">
+                            {language === 'fr' 
+                              ? "Sauvegarder l'app (Hors-ligne)" 
+                              : language === 'ha'
+                              ? 'Ajiye App don Offline'
+                              : 'Save App for Offline'}
+                          </span>
+                        </div>
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-200/60 dark:bg-emerald-800/60 text-emerald-800 dark:text-emerald-200 font-bold">
+                          100%
+                        </span>
+                      </button>
+
+                      {/* Mon Profil & Paramètres */}
+                      <Link
+                        to="/profile"
+                        onClick={() => setUserMenuOpen(false)}
+                        className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold hover:bg-gray-100 dark:hover:bg-gray-700/60 text-gray-700 dark:text-gray-200 transition-colors"
+                      >
+                        <Settings size={16} className="text-blue-500" />
+                        <span>
+                          {language === 'fr' 
+                            ? 'Mon Profil & Réglages' 
+                            : language === 'ha'
+                            ? 'Bayanina & Saituna'
+                            : 'Profile & Settings'}
+                        </span>
+                      </Link>
+
+                      <div className="h-px bg-gray-100 dark:bg-gray-700/60 my-1" />
+
+                      {/* Sign Out */}
+                      <button
+                        onClick={async () => {
+                          setUserMenuOpen(false);
+                          await signOut();
+                        }}
+                        className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 transition-colors"
+                      >
+                        <LogOut size={16} />
+                        <span>
+                          {language === 'fr' 
+                            ? 'Se Déconnecter' 
+                            : language === 'ha'
+                            ? 'Fita daga Asusun'
+                            : 'Sign Out'}
+                        </span>
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
           </div>
         </div>
       </header>
@@ -738,6 +912,9 @@ export const Header: React.FC = () => {
 
       {/* Global Search Overlay */}
       <GlobalSearchModal isOpen={searchModalOpen} onClose={() => setSearchModalOpen(false)} />
+
+      {/* Complete Offline App Saver Modal */}
+      <OfflineAppSaverModal isOpen={isOfflineSaverOpen} onClose={() => setIsOfflineSaverOpen(false)} />
     </>
   );
 };

@@ -12,12 +12,13 @@ class PromoAnnouncementService {
     try {
       const stored = localStorage.getItem(PROMO_ANNOUNCEMENT_STORAGE_KEY);
       if (stored) {
-        return { ...DEFAULT_PROMO_ANNOUNCEMENT, ...JSON.parse(stored) };
+        const parsed = JSON.parse(stored);
+        return { ...DEFAULT_PROMO_ANNOUNCEMENT, ...parsed, isActive: Boolean(parsed.isActive) };
       }
     } catch {
       // LocalStorage unavailable
     }
-    return DEFAULT_PROMO_ANNOUNCEMENT;
+    return { ...DEFAULT_PROMO_ANNOUNCEMENT, isActive: false };
   }
 
   private saveLocalAnnouncement(data: PromoAnnouncement) {
@@ -46,28 +47,53 @@ class PromoAnnouncementService {
         (docSnap) => {
           if (docSnap.exists()) {
             const data = docSnap.data() as PromoAnnouncement;
+            let isActive = Boolean(data.isActive);
+
+            // Check expiration
+            if (data.hasExpiry && data.expiryDate) {
+              const expTime = new Date(data.expiryDate).getTime();
+              if (!isNaN(expTime) && expTime < Date.now()) {
+                isActive = false;
+              }
+            }
+
             const full: PromoAnnouncement = {
               ...DEFAULT_PROMO_ANNOUNCEMENT,
               ...data,
+              isActive,
               id: docSnap.id
             };
             this.activeAnnouncement = full;
             this.saveLocalAnnouncement(full);
             callback(full);
           } else {
-            // Document does not exist yet in Firestore, emit local default if active
-            callback(this.activeAnnouncement);
+            // Document does NOT exist in Firestore (Admin has not created or published any announcement)
+            const inactive: PromoAnnouncement = {
+              ...DEFAULT_PROMO_ANNOUNCEMENT,
+              isActive: false
+            };
+            this.activeAnnouncement = inactive;
+            this.saveLocalAnnouncement(inactive);
+            callback(inactive);
           }
         },
         (error) => {
           console.warn("Error subscribing to promo announcement in Firestore:", error);
-          callback(this.activeAnnouncement);
+          const fallback: PromoAnnouncement = {
+            ...DEFAULT_PROMO_ANNOUNCEMENT,
+            isActive: false
+          };
+          callback(fallback);
         }
       );
       return unsubscribe;
     } catch (e) {
       console.warn("subscribeActiveAnnouncement error:", e);
-      callback(this.activeAnnouncement);
+      const fallback: PromoAnnouncement = {
+        ...DEFAULT_PROMO_ANNOUNCEMENT,
+        isActive: false
+      };
+      callback(fallback);
       return () => {};
     }
   }
@@ -81,19 +107,35 @@ class PromoAnnouncementService {
       const snap = await getDoc(docRef);
       if (snap.exists()) {
         const data = snap.data() as PromoAnnouncement;
+        let isActive = Boolean(data.isActive);
+        if (data.hasExpiry && data.expiryDate) {
+          const expTime = new Date(data.expiryDate).getTime();
+          if (!isNaN(expTime) && expTime < Date.now()) {
+            isActive = false;
+          }
+        }
         const full: PromoAnnouncement = {
           ...DEFAULT_PROMO_ANNOUNCEMENT,
           ...data,
+          isActive,
           id: snap.id
         };
         this.activeAnnouncement = full;
         this.saveLocalAnnouncement(full);
         return full;
+      } else {
+        const inactive: PromoAnnouncement = {
+          ...DEFAULT_PROMO_ANNOUNCEMENT,
+          isActive: false
+        };
+        this.activeAnnouncement = inactive;
+        this.saveLocalAnnouncement(inactive);
+        return inactive;
       }
     } catch (err) {
-      console.warn("Could not fetch promo_announcement from Firestore, using local:", err);
+      console.warn("Could not fetch promo_announcement from Firestore, using inactive default:", err);
     }
-    return this.activeAnnouncement;
+    return { ...DEFAULT_PROMO_ANNOUNCEMENT, isActive: false };
   }
 
   /**

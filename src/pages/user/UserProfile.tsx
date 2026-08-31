@@ -38,6 +38,8 @@ import { APP_VERSION_CONFIG, VersionRelease, getAppVersion, getFullVersionDispla
 import { appVersionService } from '../../services/appVersionService';
 import { ChangelogModal } from '../../components/ChangelogModal';
 import { ChangelogView } from '../../components/ChangelogView';
+import { OfflineAppSaverModal } from '../../components/OfflineAppSaverModal';
+import { getOfflineAppStatus, OfflineAppStatus } from '../../utils/offlineAppManager';
 
 interface Reminder {
   id: string;
@@ -515,6 +517,21 @@ export const UserProfile: React.FC = () => {
 
   const [offlineSecrets, setOfflineSecrets] = useState<OfflineStoredSecret[]>([]);
   const [loadingOfflineSecrets, setLoadingOfflineSecrets] = useState(true);
+  const [isOfflineSaverOpen, setIsOfflineSaverOpen] = useState(false);
+  const [offlineAppMeta, setOfflineAppMeta] = useState<OfflineAppStatus | null>(null);
+
+  useEffect(() => {
+    getOfflineAppStatus().then(setOfflineAppMeta);
+    const handleSaved = () => {
+      getOfflineAppStatus().then(setOfflineAppMeta);
+    };
+    window.addEventListener('asrarhub_offline_app_saved', handleSaved);
+    window.addEventListener('asrarhub_offline_app_cleared', handleSaved);
+    return () => {
+      window.removeEventListener('asrarhub_offline_app_saved', handleSaved);
+      window.removeEventListener('asrarhub_offline_app_cleared', handleSaved);
+    };
+  }, []);
 
   const loadOfflineSecrets = async () => {
     setLoadingOfflineSecrets(true);
@@ -1157,9 +1174,9 @@ export const UserProfile: React.FC = () => {
         )}
       </CollapsibleSection>
 
-      {/* Section Secrets Hors Ligne (IndexedDB) */}
+      {/* Section Secrets Hors Ligne */}
       <CollapsibleSection
-        title={t('profile.offlineSecrets.title', 'Secrets Hors Ligne (IndexedDB)')}
+        title={t('profile.offlineSecrets.title', 'Secrets Hors Ligne')}
         icon={<HardDriveDownload className="text-teal-500" size={20} />}
         headerAction={
           offlineSecrets.length > 0 ? (
@@ -1170,7 +1187,7 @@ export const UserProfile: React.FC = () => {
         }
       >
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-5 leading-relaxed">
-          {t('profile.offlineSecrets.desc', 'Ces secrets sont intégralement enregistrés dans la mémoire locale de votre appareil (IndexedDB). Vous pouvez les consulter sans aucune connexion internet.')}
+          {t('profile.offlineSecrets.desc', 'Ces secrets sont intégralement enregistrés dans la mémoire locale de votre appareil. Vous pouvez les consulter sans aucune connexion internet.')}
         </p>
 
         {loadingOfflineSecrets ? (
@@ -1211,7 +1228,7 @@ export const UserProfile: React.FC = () => {
                         </span>
                       )}
                       <span className="bg-emerald-100/70 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 text-[9px] px-1.5 py-0.5 rounded-full font-bold uppercase">
-                        IndexedDB
+                        Hors-Ligne
                       </span>
                     </div>
                     <h4 className="font-bold text-gray-900 dark:text-white text-sm sm:text-base mt-0.5 truncate">
@@ -1892,9 +1909,50 @@ export const UserProfile: React.FC = () => {
       </CollapsibleSection>
 
       <CollapsibleSection
-        title={t('profile.offlineMode.title', 'Mode Hors-ligne')}
+        title={t('profile.offlineMode.title', 'Mode Hors-ligne & Sauvegarde Complète')}
         icon={<Save className="text-emerald-500" size={20} />}
       >
+        {/* Full Offline App Saver Card */}
+        <div className="mb-6 p-4.5 sm:p-5 rounded-2xl bg-gradient-to-br from-emerald-500/10 via-teal-500/5 to-transparent border border-emerald-500/25 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <span className={`inline-block w-2.5 h-2.5 rounded-full ${offlineAppMeta?.isFullySaved ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+              <h4 className="text-sm sm:text-base font-bold text-gray-900 dark:text-white">
+                {language === 'en'
+                  ? 'Save Entire Application for Offline Use'
+                  : language === 'ha'
+                  ? 'Ajiye Dukkan App don Amfani Offline'
+                  : "Enregistrer l'Application pour Utilisation Hors-Ligne"}
+              </h4>
+            </div>
+            <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed max-w-xl">
+              {language === 'en'
+                ? 'Pre-cache all spiritual tools (Abjad, Wafq, 99 Names, Falak, Istikhara), articles, and core assets so you can use AsrarHub anywhere with zero internet.'
+                : language === 'ha'
+                ? 'Ajiye dukkan kayan aikin asrar da labarai a cikin na’urarka don amfani a koina ba tare da intanet ba.'
+                : 'Mettez en cache tous les outils spirituels (Abjad, Wafq, 99 Noms, Falak, Istikhara), articles et composants pour utiliser AsrarHub partout sans aucune connexion.'}
+            </p>
+            {offlineAppMeta?.savedAt && (
+              <p className="text-[11px] text-emerald-700 dark:text-emerald-300 font-medium pt-1">
+                ✓ Pack hors-ligne actif ({offlineAppMeta.cachedToolsCount} outils, {offlineAppMeta.cachedArticlesCount} secrets, ~{offlineAppMeta.storageUsageMB} MB)
+              </p>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setIsOfflineSaverOpen(true)}
+            className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2 transition-all shrink-0 cursor-pointer"
+          >
+            <HardDriveDownload size={16} />
+            <span>
+              {offlineAppMeta?.isFullySaved
+                ? (language === 'en' ? 'Manage Offline Pack' : 'Gérer le pack hors-ligne')
+                : (language === 'en' ? 'Save App Offline' : "Sauvegarder l'app")}
+            </span>
+          </button>
+        </div>
+
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-5 leading-relaxed">
           {t('profile.offlineMode.subtitle', 'Synchronisez vos favoris et données locales pour y accéder sans connexion internet.')}
         </p>
@@ -2466,6 +2524,10 @@ export const UserProfile: React.FC = () => {
         isOpen={isTroubleshooterOpen}
         onClose={() => setIsTroubleshooterOpen(false)}
         initialTab={troubleshooterTab}
+      />
+      <OfflineAppSaverModal
+        isOpen={isOfflineSaverOpen}
+        onClose={() => setIsOfflineSaverOpen(false)}
       />
     </div>
   );

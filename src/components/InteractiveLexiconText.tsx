@@ -193,7 +193,7 @@ export const InteractiveLexiconText: React.FC<InteractiveLexiconTextProps> = ({
     <div ref={containerRef} className={`w-full max-w-full break-words overflow-hidden relative ${className}`} style={style}>
       <div 
         dangerouslySetInnerHTML={{ __html: getHighlightedContent() }} 
-        className="prose dark:prose-invert w-full max-w-full break-words overflow-hidden text-justify"
+        className="article-reader-container article-reader-content prose dark:prose-invert w-full max-w-full break-words overflow-hidden text-justify"
         style={style}
       />
 

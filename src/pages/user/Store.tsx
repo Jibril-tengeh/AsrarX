@@ -18,6 +18,18 @@ export const Store: React.FC = () => {
   const { user } = useAuth();
   const { featureToggles } = useFeatures();
   const [layoutMode, setLayoutMode] = useState<LayoutMode>('grid2');
+
+  useEffect(() => {
+    if (featureToggles?.store_layout_mode) {
+      if (featureToggles.store_layout_mode === 'grid') {
+        setLayoutMode('grid2');
+      } else if (featureToggles.store_layout_mode === 'large') {
+        setLayoutMode('grid1');
+      } else if (featureToggles.store_layout_mode === 'list') {
+        setLayoutMode('list');
+      }
+    }
+  }, [featureToggles?.store_layout_mode]);
   const [selectedCategory, setSelectedCategory] = useState<string>('Tous');
   const [sortOption, setSortOption] = useState<SortOption>('Date');
   const [isSortOpen, setIsSortOpen] = useState(false);

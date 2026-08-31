@@ -65,22 +65,32 @@ export const AdminPromoVideoAnnouncementManager: React.FC<AdminPromoVideoAnnounc
     setTimeout(() => setFeedback(null), 4000);
   };
 
-  const handleSave = async () => {
+  const handleSaveWithState = async (publishState?: boolean) => {
     if (!announcement.promoCode.trim()) {
       showNotification('Veuillez spécifier le code promo à diffuser.', true);
       return;
     }
 
+    const targetActiveState = publishState !== undefined ? publishState : announcement.isActive;
+    const updatedAnnouncement = { ...announcement, isActive: targetActiveState };
+    setAnnouncement(updatedAnnouncement);
+
     try {
       setIsSaving(true);
-      await promoAnnouncementService.saveAnnouncement(announcement);
-      showNotification('✅ Annonce vidéo de code promo enregistrée et synchronisée avec succès !');
+      await promoAnnouncementService.saveAnnouncement(updatedAnnouncement);
+      if (targetActiveState) {
+        showNotification('🚀 Annonce vidéo PUBLIÉE avec succès ! Elle est désormais visible pour les utilisateurs.');
+      } else {
+        showNotification('💾 Annonce vidéo enregistrée comme BROUILLON (désactivée / masquée pour les utilisateurs).');
+      }
     } catch (err: any) {
       showNotification(`Erreur lors de l'enregistrement : ${err.message || 'Échec'}`, true);
     } finally {
       setIsSaving(false);
     }
   };
+
+  const handleSave = () => handleSaveWithState();
 
   const handleToggleActive = async () => {
     const newState = !announcement.isActive;
@@ -668,16 +678,26 @@ export const AdminPromoVideoAnnouncementManager: React.FC<AdminPromoVideoAnnounc
               </div>
             </div>
 
-            {/* Bottom Save Action */}
-            <div className="pt-2 flex items-center justify-end gap-3">
+            {/* Bottom Save & Publish Actions */}
+            <div className="pt-2 flex flex-wrap items-center justify-end gap-3">
               <button
                 type="button"
-                onClick={handleSave}
+                onClick={() => handleSaveWithState(false)}
                 disabled={isSaving}
-                className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-amber-500 hover:opacity-95 text-white font-black text-sm shadow-xl shadow-purple-500/25 active:scale-95 transition-all cursor-pointer"
+                className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-gray-100 dark:bg-gray-750 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold text-xs sm:text-sm border border-gray-300 dark:border-gray-600 active:scale-95 transition-all cursor-pointer"
               >
-                {isSaving ? <RefreshCw size={16} className="animate-spin" /> : <Save size={16} />}
-                <span>Enregistrer & Diffuser l'Annonce Vidéo</span>
+                {isSaving ? <RefreshCw size={15} className="animate-spin" /> : <Save size={15} />}
+                <span>Enregistrer Brouillon (Masqué)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleSaveWithState(true)}
+                disabled={isSaving}
+                className="flex items-center gap-2 px-6 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 hover:opacity-95 text-white font-black text-xs sm:text-sm shadow-xl shadow-emerald-500/20 active:scale-95 transition-all cursor-pointer"
+              >
+                {isSaving ? <RefreshCw size={15} className="animate-spin" /> : <Send size={15} />}
+                <span>Publier & Diffuser en Direct</span>
               </button>
             </div>
           </div>

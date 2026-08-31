@@ -18,7 +18,7 @@ export const PromoVideoModal: React.FC<PromoVideoModalProps> = ({
   isPreview = false
 }) => {
   const [announcement, setAnnouncement] = useState<PromoAnnouncement | null>(
-    forcedAnnouncement || promoAnnouncementService.getCachedAnnouncement()
+    forcedAnnouncement || (isPreview ? promoAnnouncementService.getCachedAnnouncement() : null)
   );
   const [internalIsOpen, setInternalIsOpen] = useState<boolean>(false);
 
@@ -29,9 +29,9 @@ export const PromoVideoModal: React.FC<PromoVideoModalProps> = ({
     }
 
     const unsub = promoAnnouncementService.subscribeActiveAnnouncement((data) => {
-      if (data) {
+      if (data && data.isActive && data.showAsModal) {
         setAnnouncement(data);
-        if (!isPreview && data.isActive && data.showAsModal) {
+        if (!isPreview) {
           const dismissed = promoAnnouncementService.isPopupDismissedToday(data.promoCode);
           if (!dismissed) {
             // Small delay for smooth entry after initial page load
@@ -41,11 +41,17 @@ export const PromoVideoModal: React.FC<PromoVideoModalProps> = ({
             return () => clearTimeout(timer);
           }
         }
+      } else {
+        // Announcement is not published or turned off by admin
+        setAnnouncement(data || null);
+        if (!isPreview && forcedIsOpen === undefined) {
+          setInternalIsOpen(false);
+        }
       }
     });
 
     return () => unsub();
-  }, [forcedAnnouncement, isPreview]);
+  }, [forcedAnnouncement, isPreview, forcedIsOpen]);
 
   const isOpen = forcedIsOpen !== undefined ? forcedIsOpen : internalIsOpen;
 
@@ -60,7 +66,9 @@ export const PromoVideoModal: React.FC<PromoVideoModalProps> = ({
     }
   };
 
+  // If not in preview or forced mode, ensure announcement is explicitly active before showing
   if (!isOpen || !announcement) return null;
+  if (!isPreview && forcedIsOpen === undefined && !announcement.isActive) return null;
 
   return (
     <AnimatePresence>

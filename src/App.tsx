@@ -47,6 +47,9 @@ import { ForceUpdateModal } from './components/ForceUpdateModal';
 import { PromoVideoModal } from './components/videoCards/PromoVideoModal';
 import { PremiumLockScreen } from './components/PremiumLockScreen';
 import { NavigationProgressBar } from './components/NavigationProgressBar';
+import { FloatingFullscreenExitButton } from './components/FloatingFullscreenExitButton';
+import { FloatingToolFullscreenButton } from './components/FloatingToolFullscreenButton';
+import { useFullscreen } from './contexts/FullscreenContext';
 import { clear as clearIdbKeyval } from 'idb-keyval';
 
 declare const __APP_VERSION__: string;
@@ -671,6 +674,7 @@ const ProtectedToolsLayout: React.FC = () => {
 export default function App() {
   const { user, showTrialPopup, markTrialPopupSeen } = useAuth();
   const { language } = useLanguage();
+  const { isFullscreen } = useFullscreen();
   const { featureToggles } = useFeatures();
   const { isPlaying: globalIsPlaying, currentTrack, quranRepeatCount: repeatCount, setQuranRepeatCount: setRepeatCount } = useAudio();
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = React.useState(
@@ -1008,9 +1012,11 @@ export default function App() {
       <ErrorToastContainer />
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors flex flex-col font-sans mb-16 sm:mb-0 w-full max-w-full m-0 p-0 pt-0 overflow-x-hidden">
         <FloatingBackButton />
-        <Header />
+        {!isFullscreen && <Header />}
+        <FloatingFullscreenExitButton />
+        <FloatingToolFullscreenButton />
         <DailyRewardHandler />
-        <main className="flex flex-col flex-1 w-full max-w-full text-gray-900 dark:text-gray-100 pb-20 m-0 p-0 pt-[48px] sm:pt-[54px] min-w-0 overflow-x-hidden">
+        <main className={`flex flex-col flex-1 w-full max-w-full text-gray-900 dark:text-gray-100 pb-20 m-0 p-0 ${isFullscreen ? 'pt-0' : 'pt-[48px] sm:pt-[54px]'} min-w-0 overflow-x-hidden`}>
           <React.Suspense fallback={
             <div className="flex items-center justify-center min-h-[60vh] w-full">
               <div className="w-10 h-10 border-4 border-emerald-500/10 border-t-emerald-600 rounded-full animate-spin" />
@@ -1176,7 +1182,7 @@ export default function App() {
         {featureToggles['tool_inspector'] === 'active' && <LayoutTester />}
         <FaqButton />
         {featureToggles['sacredAudioPlayerVisible'] === true && <SacredAudioPlayer />}
-        <BottomNav />
+        {!isFullscreen && <BottomNav />}
 
         {/* Global Floating Repeat Mode (visible only when Quran is playing and NOT on the Quran page itself) */}
         <AnimatePresence>

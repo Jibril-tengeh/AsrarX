@@ -980,9 +980,9 @@
     "saveOfflineBtn": "Save for offline reading",
     "savedOfflineBtn": "Saved for offline reading",
     "removeFromOffline": "Remove from offline storage",
-    "offlineSavedToast": "Secret successfully saved to IndexedDB for offline reading!",
+    "offlineSavedToast": "Secret successfully saved for offline reading!",
     "offlineRemovedToast": "Secret removed from offline reading",
-    "offlineBadge": "Offline Mode (IndexedDB)",
+    "offlineBadge": "Offline Mode",
     "offlineReadyNotice": "This secret is stored on your device. Accessible without internet connection."
   },
   "dailyReward": {

@@ -52,7 +52,7 @@ export interface PromoAnnouncement {
 
 export const DEFAULT_PROMO_ANNOUNCEMENT: PromoAnnouncement = {
   id: 'active_announcement',
-  isActive: true,
+  isActive: false,
   promoCode: 'VIP2H',
   videoCardTheme: 'golden-geometry',
   

@@ -114,25 +114,35 @@ export const GrandOaths: React.FC = () => {
     let unsub: (() => void) | undefined;
 
     const setupAndSubscribe = async () => {
-      try {
-        const setupRef = doc(db, 'settings', 'grand_oaths_setup');
-        const setupSnap = await getDoc(setupRef);
-        
-        if (!setupSnap.exists() || !setupSnap.data()?.seeded) {
-          // Double check if collection is indeed empty before seeding to avoid duplication
-          const qSnap = await getDocs(collection(db, "grand_oaths"));
-          if (qSnap.empty) {
-            for (const item of DEFAULT_OATHS) {
-              await addDoc(collection(db, "grand_oaths"), {
-                ...item,
-                createdAt: item.createdAt || Date.now()
-              });
+      const isSeededLocally = typeof window !== 'undefined' && localStorage.getItem('asrarhub_oaths_seeded') === 'true';
+      const isOffline = typeof navigator !== 'undefined' && !navigator.onLine;
+
+      if (!isSeededLocally && !isOffline) {
+        try {
+          const setupRef = doc(db, 'settings', 'grand_oaths_setup');
+          const setupSnap = await getDoc(setupRef);
+          
+          if (!setupSnap.exists() || !setupSnap.data()?.seeded) {
+            // Double check if collection is indeed empty before seeding to avoid duplication
+            const qSnap = await getDocs(collection(db, "grand_oaths"));
+            if (qSnap.empty) {
+              for (const item of DEFAULT_OATHS) {
+                await addDoc(collection(db, "grand_oaths"), {
+                  ...item,
+                  createdAt: item.createdAt || Date.now()
+                });
+              }
             }
+            await setDoc(setupRef, { seeded: true, seededAt: Date.now() }, { merge: true });
           }
-          await setDoc(setupRef, { seeded: true, seededAt: Date.now() }, { merge: true });
+          try { localStorage.setItem('asrarhub_oaths_seeded', 'true'); } catch (e) {}
+        } catch (err: any) {
+          if (err?.message?.includes('offline') || err?.code === 'unavailable' || err?.code === 'failed-precondition') {
+            console.warn("Grand oaths seeding deferred (offline or connecting):", err?.message || err);
+          } else {
+            console.warn("Grand oaths seeding note:", err?.message || err);
+          }
         }
-      } catch (err) {
-        console.error("Error setting up/seeding grand_oaths:", err);
       }
 
       if (!active) return;

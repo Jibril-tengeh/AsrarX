@@ -980,9 +980,9 @@
     "saveOfflineBtn": "Sauvegarder pour lecture hors ligne",
     "savedOfflineBtn": "Enregistré pour lecture hors ligne",
     "removeFromOffline": "Retirer de la lecture hors ligne",
-    "offlineSavedToast": "Secret sauvegardé avec succès dans IndexedDB pour lecture hors ligne !",
+    "offlineSavedToast": "Secret sauvegardé avec succès pour lecture hors ligne !",
     "offlineRemovedToast": "Secret retiré de la lecture hors ligne",
-    "offlineBadge": "Mode Hors-ligne (IndexedDB)",
+    "offlineBadge": "Mode Hors-ligne",
     "offlineReadyNotice": "Ce secret est stocké sur votre appareil. Accessible sans connexion internet."
   },
   "dailyReward": {

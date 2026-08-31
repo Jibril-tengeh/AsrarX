@@ -71,13 +71,13 @@ export const HijriCalendarWidget: React.FC = () => {
   const [showAdminControls, setShowAdminControls] = useState<boolean>(false);
 
   const changeGlobalScale = (delta: number) => {
-    const next = Math.min(1.8, Math.max(0.6, Math.round((globalCardScale + delta) * 100) / 100));
+    const next = Math.min(1.8, Math.max(0.5, Math.round((globalCardScale + delta) * 100) / 100));
     setGlobalCardScale(next);
     saveCalendarScales(next, subCardScale);
   };
 
   const changeSubCardScale = (delta: number) => {
-    const next = Math.min(1.8, Math.max(0.6, Math.round((subCardScale + delta) * 100) / 100));
+    const next = Math.min(1.8, Math.max(0.5, Math.round((subCardScale + delta) * 100) / 100));
     setSubCardScale(next);
     saveCalendarScales(globalCardScale, next);
   };
@@ -400,10 +400,13 @@ export const HijriCalendarWidget: React.FC = () => {
                       <div className="flex items-center gap-1 flex-wrap">
                         <span className="text-[10px] text-gray-400 font-semibold mr-0.5">Presets :</span>
                         {[
-                          { label: '-5%', val: 0.95 },
-                          { label: '-10%', val: 0.90 },
-                          { label: '-15%', val: 0.85 },
+                          { label: '-50%', val: 0.50 },
+                          { label: '-40%', val: 0.60 },
+                          { label: '-30%', val: 0.70 },
                           { label: '-20%', val: 0.80 },
+                          { label: '-15%', val: 0.85 },
+                          { label: '-10%', val: 0.90 },
+                          { label: '-5%', val: 0.95 },
                           { label: '100%', val: 1.00 }
                         ].map(preset => (
                           <button
@@ -473,10 +476,13 @@ export const HijriCalendarWidget: React.FC = () => {
                       <div className="flex items-center gap-1 flex-wrap">
                         <span className="text-[10px] text-gray-400 font-semibold mr-0.5">Presets :</span>
                         {[
-                          { label: '-5%', val: 0.95 },
-                          { label: '-10%', val: 0.90 },
-                          { label: '-15%', val: 0.85 },
+                          { label: '-50%', val: 0.50 },
+                          { label: '-40%', val: 0.60 },
+                          { label: '-30%', val: 0.70 },
                           { label: '-20%', val: 0.80 },
+                          { label: '-15%', val: 0.85 },
+                          { label: '-10%', val: 0.90 },
+                          { label: '-5%', val: 0.95 },
                           { label: '100%', val: 1.00 }
                         ].map(preset => (
                           <button

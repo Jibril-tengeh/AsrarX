@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { useAuth } from "../../contexts/AuthContext";
+import { useFullscreen } from "../../contexts/FullscreenContext";
 import { triggerProtectionModal } from "../../components/ContentProtectionManager";
 import { useFeatures } from "../../contexts/FeatureContext";
 import { INITIAL_DEFAULT_ARTICLES } from "../../data/defaultArticles";
@@ -58,7 +59,7 @@ import { PremiumWrapper } from "../../components/PremiumWrapper";
 import { UnverifiedEmailGuard } from "../../components/UnverifiedEmailGuard";
 import { getApiUrl } from "../../lib/api";
 
-const AccordionSection: React.FC<{ title: string, htmlContent: string, readingMode: boolean, style?: React.CSSProperties }> = ({ title, htmlContent, readingMode, style }) => {
+const AccordionSection: React.FC<{ title: string, htmlContent: string, readingMode: boolean, fontSize: number, style?: React.CSSProperties }> = ({ title, htmlContent, readingMode, fontSize, style }) => {
   const [isOpen, setIsOpen] = useState(false);
   return (
     <div className={`rounded-2xl border transition-colors overflow-hidden ${readingMode ? "border-[#e8dcb5] dark:border-[#524830]/50" : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"}`} style={style}>
@@ -70,7 +71,7 @@ const AccordionSection: React.FC<{ title: string, htmlContent: string, readingMo
             : "hover:bg-gray-50 dark:hover:bg-gray-700/50 text-gray-900 dark:text-white"
         }`}
       >
-        <span className="text-lg">{title}</span>
+        <span className="text-base sm:text-lg font-bold">{title}</span>
         <ChevronDown size={20} className={`transform transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`} />
       </button>
       <AnimatePresence initial={false}>
@@ -82,8 +83,22 @@ const AccordionSection: React.FC<{ title: string, htmlContent: string, readingMo
             transition={{ duration: 0.25, ease: "easeInOut" }}
             className="overflow-hidden"
           >
-            <div className={`p-4 sm:p-5 border-t ${readingMode ? "border-[#e8dcb5] dark:border-[#524830]/50 text-[#363028] dark:text-[#c4b79d]" : "border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300"}`} style={style}>
-              <div dangerouslySetInnerHTML={{ __html: htmlContent }} className="prose dark:prose-invert w-full max-w-full break-words overflow-hidden" style={style} />
+            <div 
+              className={`article-reader-container p-4 sm:p-5 border-t ${readingMode ? "border-[#e8dcb5] dark:border-[#524830]/50 text-[#363028] dark:text-[#c4b79d]" : "border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300"}`} 
+              style={{ 
+                '--article-reader-font-size': `${fontSize}px`, 
+                fontSize: `${fontSize}px`, 
+                ...style 
+              } as React.CSSProperties}
+            >
+              <div 
+                dangerouslySetInnerHTML={{ __html: htmlContent }} 
+                className="article-reader-content prose dark:prose-invert w-full max-w-full break-words overflow-hidden" 
+                style={{ 
+                  '--article-reader-font-size': `${fontSize}px`, 
+                  fontSize: `${fontSize}px` 
+                } as React.CSSProperties}
+              />
             </div>
           </motion.div>
         )}
@@ -201,6 +216,7 @@ export const SecretDetail: React.FC = () => {
   const { t, language } = useLanguage();
   const { user, loading: authLoading, isPremium } = useAuth();
   const { featureToggles } = useFeatures();
+  const { isFullscreen, toggleFullscreen } = useFullscreen();
 
   const [item, setItem] = useState<AsrarItem | null>(null);
   const [notFound, setNotFound] = useState(false);
@@ -216,10 +232,33 @@ export const SecretDetail: React.FC = () => {
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [bookmarkFolders, setBookmarkFolders] = useState<any[]>([]);
   const [viewMode, setViewMode] = useState<'full' | 'accordion'>('full');
+
+  useEffect(() => {
+    const defaultMode = featureToggles?.article_reading_mode || featureToggles?.reading_mode_default;
+    if (defaultMode) {
+      if (defaultMode === 'sections' || defaultMode === 'accordion') {
+        setViewMode('accordion');
+      } else if (defaultMode === 'full') {
+        setViewMode('full');
+      }
+    }
+  }, [featureToggles?.article_reading_mode, featureToggles?.reading_mode_default]);
   const [articleFontSize, setArticleFontSize] = useState<number>(() => {
-    const isAndroid = /Android/i.test(navigator.userAgent);
-    return isAndroid ? 12 : 18;
+    try {
+      const saved = localStorage.getItem('asrar_article_font_size');
+      if (saved) {
+        const parsed = parseInt(saved, 10);
+        if (!isNaN(parsed) && parsed >= 12 && parsed <= 36) return parsed;
+      }
+    } catch (_) {}
+    return 16;
   });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('asrar_article_font_size', String(articleFontSize));
+    } catch (_) {}
+  }, [articleFontSize]);
   const [rating, setRating] = useState(0);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
@@ -259,10 +298,10 @@ export const SecretDetail: React.FC = () => {
           category: item.category,
           subCategory: item.subCategory,
           isPremium: item.isPremium,
-          audioUrl: item.audioUrl || item.audio_url,
-          audio_url: item.audio_url || item.audioUrl,
-          imageUrl: item.imageUrl || item.thumbnail,
-          thumbnail: item.thumbnail || item.imageUrl,
+          audioUrl: item.audioUrl || (item as any).audio_url,
+          audio_url: (item as any).audio_url || item.audioUrl,
+          imageUrl: item.imageUrl || (item as any).thumbnail,
+          thumbnail: (item as any).thumbnail || item.imageUrl,
           benefits: item.benefits || [],
           title_fr: item.title_fr || item.title,
           content_fr: item.content_fr || item.content,
@@ -278,14 +317,14 @@ export const SecretDetail: React.FC = () => {
         const success = await saveSecretToOfflineVault(fullSecretToSave);
         if (success) {
           setIsOfflineSaved(true);
-          showOfflineToast(t("secretDetail.offlineSavedToast", "Secret sauvegardé avec succès dans IndexedDB pour lecture hors ligne !"), 'success');
+          showOfflineToast(t("secretDetail.offlineSavedToast", "Secret sauvegardé avec succès pour lecture hors ligne !"), 'success');
         } else {
           showOfflineToast("Erreur lors de la sauvegarde hors ligne", 'error');
         }
       }
     } catch (e) {
       console.error("Error toggling offline save:", e);
-      showOfflineToast("Erreur de stockage IndexedDB", 'error');
+      showOfflineToast("Erreur de sauvegarde locale", 'error');
     } finally {
       setIsSavingOffline(false);
     }
@@ -915,9 +954,9 @@ export const SecretDetail: React.FC = () => {
             hook_fr: offlineSecret.hook_fr || offlineSecret.hook,
           };
           setItem(prev => {
-            if (!prev) return resolved as AsrarItem;
+            if (!prev) return (resolved as unknown) as AsrarItem;
             if ((resolved.content?.length || 0) >= (prev.content?.length || 0)) {
-              return { ...prev, ...resolved } as AsrarItem;
+              return { ...prev, ...resolved } as unknown as AsrarItem;
             }
             return prev;
           });
@@ -1367,7 +1406,7 @@ export const SecretDetail: React.FC = () => {
         </button>
 
         <div className="flex items-center gap-1 sm:gap-1.5">
-          {!featureToggles?.lockArticleViewmode && (
+          {!featureToggles?.lockArticleViewmode && !featureToggles?.article_reading_mode_locked && !featureToggles?.lockArticleReadingMode && (
             <div className="flex items-center bg-gray-100 dark:bg-gray-800 p-0.5 rounded-full mr-1">
               <button
                 onClick={() => setViewMode('full')}
@@ -1420,7 +1459,7 @@ export const SecretDetail: React.FC = () => {
                   ? "bg-[#f4ebd0] text-[#8b6e3f] hover:bg-[#e8dcb5] dark:bg-[#383120] dark:text-[#d4c39c]"
                   : "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-100/50 dark:border-emerald-800/30 hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
             }`}
-            title={isOfflineSaved ? t("secretDetail.savedOfflineBtn", "Enregistré pour lecture hors ligne (IndexedDB)") : t("secretDetail.saveOfflineBtn", "Sauvegarder pour lecture hors ligne (IndexedDB)")}
+            title={isOfflineSaved ? t("secretDetail.savedOfflineBtn", "Enregistré pour lecture hors ligne") : t("secretDetail.saveOfflineBtn", "Sauvegarder pour lecture hors ligne")}
           >
             {isOfflineSaved ? (
               <>
@@ -1436,12 +1475,19 @@ export const SecretDetail: React.FC = () => {
           </button>
 
           <button
-            onClick={() => setZenMode(true)}
-            className="p-1.5 rounded-full transition-all flex items-center gap-1 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-100/50 dark:border-emerald-800/30 font-bold px-2.5 py-1 hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
-            title={t("secretDetail.zenModeTitle", "Mode Zen (Plein Écran)")}
+            onClick={() => {
+              toggleFullscreen();
+              setZenMode(true);
+            }}
+            className={`p-1.5 rounded-full transition-all flex items-center gap-1 font-bold px-2.5 py-1 ${
+              isFullscreen
+                ? "bg-amber-500 text-white shadow-md"
+                : "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-100/50 dark:border-emerald-800/30 hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
+            }`}
+            title={t("secretDetail.zenModeTitle", "Mode Plein Écran (Immersion sans distraction)")}
           >
             <Maximize2 size={15} />
-            <span className="text-xs hidden sm:inline">{t("secretDetail.zenModeBtn", "Mode Zen")}</span>
+            <span className="text-xs hidden sm:inline">{t("secretDetail.zenModeBtn", "Plein Écran")}</span>
           </button>
           <button
             onClick={toggleBookmark}
@@ -1557,7 +1603,7 @@ export const SecretDetail: React.FC = () => {
                     ? "bg-emerald-100/90 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300/80 dark:border-emerald-700/60 shadow-xs"
                     : "bg-gray-100 dark:bg-gray-700/60 text-gray-700 dark:text-gray-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 hover:text-emerald-600 border border-gray-200 dark:border-gray-600"
                 }`}
-                title={isOfflineSaved ? t("secretDetail.savedOfflineBtn", "Enregistré pour lecture hors ligne (IndexedDB)") : t("secretDetail.saveOfflineBtn", "Sauvegarder pour lecture hors ligne (IndexedDB)")}
+                title={isOfflineSaved ? t("secretDetail.savedOfflineBtn", "Enregistré pour lecture hors ligne") : t("secretDetail.saveOfflineBtn", "Sauvegarder pour lecture hors ligne")}
               >
                 {isOfflineSaved ? (
                   <>
@@ -1753,15 +1799,24 @@ export const SecretDetail: React.FC = () => {
                 </div>
               )}
               <div
-                className={`w-full max-w-full break-words overflow-hidden transition-all ${
+                className={`article-reader-container w-full max-w-full break-words overflow-hidden transition-all ${
                   readingMode
-                    ? "text-[#363028] dark:text-[#c4b79d] font-arabic text-xl sm:text-2xl leading-[2.5]"
-                    : "text-gray-700 dark:text-gray-300 leading-relaxed text-lg"
+                    ? "text-[#363028] dark:text-[#c4b79d] font-arabic leading-[2.5]"
+                    : "text-gray-700 dark:text-gray-300 leading-relaxed"
                 }`}
-                style={{ fontSize: `${articleFontSize}px` }}
+                style={{ 
+                  '--article-reader-font-size': `${articleFontSize}px`,
+                  fontSize: `${articleFontSize}px` 
+                } as React.CSSProperties}
               >
                 {isSpeaking ? (
-                  <div className="space-y-6 select-text transition-all" style={{ fontSize: `${articleFontSize}px` }}>
+                  <div 
+                    className="article-reader-container space-y-6 select-text transition-all" 
+                    style={{ 
+                      '--article-reader-font-size': `${articleFontSize}px`,
+                      fontSize: `${articleFontSize}px` 
+                    } as React.CSSProperties}
+                  >
                     {buildSpokenSegments(item, displayContent).map((segment, sIdx) => {
                       if (segment.type === 'title') {
                         return (
@@ -1802,7 +1857,7 @@ export const SecretDetail: React.FC = () => {
                         );
                       }
                       return (
-                        <p key={sIdx} className="mb-4 leading-relaxed text-justify">
+                        <p key={sIdx} className="mb-4 leading-relaxed text-justify" style={{ fontSize: `${articleFontSize}px` }}>
                           {segment.words.map((word) => (
                             <span
                               key={word.globalIndex}
@@ -1824,14 +1879,42 @@ export const SecretDetail: React.FC = () => {
                   const isHtml = /<[a-z][\s\S]*>/i.test(displayContent);
 
                   if (viewMode === 'full') {
-                    return <InteractiveLexiconText content={displayContent} isHtml={isHtml} style={{ fontSize: `${articleFontSize}px` }} />;
+                    return (
+                      <InteractiveLexiconText 
+                        content={displayContent} 
+                        isHtml={isHtml} 
+                        style={{ 
+                          '--article-reader-font-size': `${articleFontSize}px`,
+                          fontSize: `${articleFontSize}px` 
+                        } as React.CSSProperties} 
+                      />
+                    );
                   }
 
                   if (viewMode === 'accordion') {
                     if (!isHtml) {
-                      return displayContent.split("\n").map((paragraph, idx) => (
-                        <p key={idx} className="mb-6" style={{ fontSize: `${articleFontSize}px` }}>{paragraph}</p>
-                      ));
+                      return (
+                        <div 
+                          className="article-reader-container space-y-6"
+                          style={{ 
+                            '--article-reader-font-size': `${articleFontSize}px`,
+                            fontSize: `${articleFontSize}px` 
+                          } as React.CSSProperties}
+                        >
+                          {displayContent.split("\n").map((paragraph, idx) => (
+                            <p 
+                              key={idx} 
+                              className="mb-6 article-reader-content" 
+                              style={{ 
+                                '--article-reader-font-size': `${articleFontSize}px`,
+                                fontSize: `${articleFontSize}px` 
+                              } as React.CSSProperties}
+                            >
+                              {paragraph}
+                            </p>
+                          ))}
+                        </div>
+                      );
                     }
 
                     const parser = new DOMParser();
@@ -1864,7 +1947,13 @@ export const SecretDetail: React.FC = () => {
                     return (
                       <div className="space-y-4">
                         {sections.map((section, idx) => (
-                          <AccordionSection key={idx} title={section.title} htmlContent={section.htmlContent} readingMode={readingMode} style={{ fontSize: `${articleFontSize}px` }} />
+                          <AccordionSection 
+                            key={idx} 
+                            title={section.title} 
+                            htmlContent={section.htmlContent} 
+                            readingMode={readingMode} 
+                            fontSize={articleFontSize} 
+                          />
                         ))}
                       </div>
                     );
@@ -2198,19 +2287,21 @@ export const SecretDetail: React.FC = () => {
               )}
 
               <div 
-                className="prose dark:prose-invert max-w-none text-justify"
+                className="article-reader-container prose dark:prose-invert max-w-none text-justify"
                 style={{ 
+                  '--article-reader-font-size': `${zenFontSizePx}px`,
                   fontSize: `${zenFontSizePx}px`,
                   fontFamily: `var(--font-${zenFont === 'serif' ? 'serif' : zenFont === 'sans' ? 'sans' : zenFont})`,
-                }}
+                } as React.CSSProperties}
               >
                 <InteractiveLexiconText 
                   content={displayContent} 
                   isHtml={/<[a-z][\s\S]*>/i.test(displayContent)} 
                   style={{ 
+                    '--article-reader-font-size': `${zenFontSizePx}px`,
                     fontSize: `${zenFontSizePx}px`,
                     fontFamily: `var(--font-${zenFont === 'serif' ? 'serif' : zenFont === 'sans' ? 'sans' : zenFont})`,
-                  }}
+                  } as React.CSSProperties}
                 />
               </div>
             </div>

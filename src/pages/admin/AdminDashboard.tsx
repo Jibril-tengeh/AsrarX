@@ -9,7 +9,8 @@ import {
   Clock, CheckCircle, CheckCircle2, XCircle, Globe, Grid, List, Mail, Phone, Lock, Unlock, Bell, BellOff, Sparkles, Star, Share, ShieldAlert, Download, DownloadCloud, Crown, UserPlus, UserCheck, Award,
   FolderOpen, Copy, Radio, Type, Sliders, Maximize2, Activity, Terminal, RefreshCw, RotateCcw, AlertTriangle, Moon, ChevronDown, ChevronUp, Layout,
   AlignLeft, AlignCenter, AlignRight, AlignJustify, Camera, ShieldBan, Tag, Ticket, Check, ArrowLeft, Calculator,
-  ArrowUp, ArrowDown, MoveVertical, Compass, Gift, AlertCircle, Share2, Edit3
+  ArrowUp, ArrowDown, MoveVertical, Compass, Gift, AlertCircle, Share2, Edit3, Video, HardDrive,
+  GripVertical, ArrowUpDown, Move
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 
@@ -80,10 +81,12 @@ import {
   getResolvedUserStatus 
 } from '../../components/admin/UserQuickStatusPicker';
 import { AdminSecurityAlertsManager } from '../../components/admin/AdminSecurityAlertsManager';
+import { AdminDeepSettingsManager } from "../../components/admin/AdminDeepSettingsManager";
 import { BrandingSettings } from '../../components/admin/BrandingSettings';
 import { FloatingBackButtonSettings } from '../../components/admin/FloatingBackButtonSettings';
 import { AdminPdfDocumentsManager } from '../../components/admin/AdminPdfDocumentsManager';
 import { AdminPromoVideoAnnouncementManager } from '../../components/admin/AdminPromoVideoAnnouncementManager';
+import { ArticleQuickControlModal } from '../../components/admin/ArticleQuickControlModal';
 import { PROMO_HOURS_OPTIONS, PROMO_HOURLY_OPTIONS, getPromoHourMessage, getPromoHourLabel, PromoDurationHours } from '../../utils/promoConfig';
 
 const LayoutSelector = ({ value, onChange, activeColor = 'emerald' }: { value: string, onChange: (val: string) => void, activeColor?: string }) => {
@@ -238,23 +241,26 @@ interface Notification {
 }
 
 export const SYSTEM_FEATURES = [
-  { id: 'tools_video_slider', label: 'Slider Vidéo des Outils (Tableau de Bord)', desc: 'Carrousel animé avec vidéos de fond présentant tous les outils spirituels avec boutons d\'accès direct', category: 'system' },
-  { id: 'anti_screenshot', label: "Protection Anti-Capture d'Écran", desc: "Bloque matériellement et logiciellement les captures d'écran, enregistrements vidéo et impressions sur Android et Web", category: 'system' },
-  { id: 'text_copy_protection', label: "Protection Anti-Copie de Texte", desc: "Empêche la sélection, le clic droit et la copie de texte non autorisée dans l'application", category: 'system' },
-  { id: 'alert_repeated_tool_access', label: "Alerte Tentatives Répétées d'Accès aux Outils Restreints", desc: "Détecte et alerte l'administrateur en temps réel lorsqu'un utilisateur tente d'accéder à plusieurs reprises à des outils bloqués, en maintenance ou réservés aux membres Premium", category: 'system' },
-  { id: 'inspector', label: 'Inspecteur de diagnostic', desc: 'Active ou désactive le bouton rouge Inspecteur / Débogueur de mise en page dans le coin inférieur droit', category: 'system' },
-  { id: 'quick_widget', label: 'Widget Rapide AsrarHub (AsrarQuickWidget)', desc: 'Widget de recherche rapide, favoris et raccourcis d\'exploration sur le tableau de bord (désactivé par défaut)', category: 'system' },
-  { id: 'direct_abjad_widget', label: 'Widget Calculateur Abjad Direct', desc: 'Widget interactif de calcul Abjad direct et décomposition élémentaire sur le Tableau de bord des Outils', category: 'system' },
-  { id: 'explore', label: 'Explore', desc: 'Dashboard explorer (Secrets, Lexique, etc)', category: 'system' },
-  { id: 'store', label: 'Store (Boutique AsrarHub)', desc: 'Boutique en ligne, articles et services', category: 'system' },
-  { id: 'pdf', label: 'Bibliothèque PDF & Manuscrits', desc: 'Accès global à la bibliothèque de documents PDF, livres calligraphiques et manuscrits rares', category: 'system' },
-  { id: 'community', label: 'Communauté', desc: 'Forum communautaire', category: 'system' },
-  { id: 'journal', label: 'Journal Intime', desc: 'Notes personnelles', category: 'system' },
-  { id: 'faq', label: 'FAQ / Assistant', desc: 'Assistant IA spirituel', category: 'system' },
-  { id: 'quizz', label: 'Quiz', desc: 'Test de connaissances', category: 'system' },
-  { id: 'lexique', label: 'Lexique', desc: 'Lexique des termes', category: 'system' },
-  { id: 'calendar', label: 'Calendrier Mystique (Hégirien)', desc: 'Contrôler l\'accès global : Actif, Premium, Maintenance, Inactif (Désactiver/Bloquer)', category: 'simple' },
-  { id: 'ruqyah', label: 'Module Ruqyah', desc: 'Accès aux versets de protection et guérison', category: 'simple' },
+  { id: 'home', label: 'Accueil (Tableau de Bord)', desc: 'Page d\'accueil principale avec feed et widgets', category: 'nav' },
+  { id: 'explore', label: 'Explore (Secrets & Articles)', desc: 'Dashboard exploreur avec secrets, filtres et catégories', category: 'nav' },
+  { id: 'tools', label: 'Outils Spirituels (Catalogue)', desc: 'Page principale regroupant tous les outils mystiques', category: 'nav' },
+  { id: 'journal', label: 'Journal Intime (Notes & Suivi)', desc: 'Carnet de notes spirituel personnel et historique', category: 'nav' },
+  { id: 'saved', label: 'Favoris & Enregistrements', desc: 'Accès rapide aux articles et secrets sauvegardés', category: 'nav' },
+  { id: 'store', label: 'Boutique AsrarHub (Store)', desc: 'Boutique en ligne, articles et services spirituels', category: 'nav' },
+  { id: 'community', label: 'Communauté (Forum & Chat)', desc: 'Forum communautaire, messages et membres', category: 'nav' },
+  { id: 'pdf', label: 'Bibliothèque PDF & Manuscrits', desc: 'Accès global aux documents PDF et manuscrits rares', category: 'nav' },
+  { id: 'calendar', label: 'Calendrier Mystique (Hégirien)', desc: 'Heures planétaires, calendrier hégirien et mansions', category: 'simple' },
+  { id: 'ruqyah', label: 'Module Ruqyah & Audio', desc: 'Accès aux versets de protection et guérison audio', category: 'simple' },
+  { id: 'faq', label: 'FAQ / Assistant IA Spirituel', desc: 'Assistant IA spirituel et foire aux questions', category: 'simple' },
+  { id: 'quizz', label: 'Quiz Mystique (Test de connaissances)', desc: 'Évaluation des connaissances spirituelles et niveaux', category: 'simple' },
+  { id: 'lexique', label: 'Lexique des Termes Sacrés', desc: 'Dictionnaire des termes et concepts mystiques', category: 'simple' },
+  { id: 'tools_video_slider', label: 'Slider Vidéo des Outils (Tableau de Bord)', desc: 'Carrousel animé avec vidéos de fond présentant les outils spirituels', category: 'system' },
+  { id: 'anti_screenshot', label: "Protection Anti-Capture d'Écran", desc: "Bloque les captures d'écran, enregistrements vidéo et impressions", category: 'system' },
+  { id: 'text_copy_protection', label: "Protection Anti-Copie de Texte", desc: "Empêche la sélection, le clic droit et la copie de texte", category: 'system' },
+  { id: 'alert_repeated_tool_access', label: "Alerte Tentatives d'Accès aux Outils Restreints", desc: "Détecte et alerte l'admin en temps réel lors de tentatives d'accès restreint", category: 'system' },
+  { id: 'inspector', label: 'Inspecteur de diagnostic', desc: 'Active ou désactive le bouton Inspecteur / Débogueur de mise en page', category: 'system' },
+  { id: 'quick_widget', label: 'Widget Rapide AsrarHub (AsrarQuickWidget)', desc: 'Widget de recherche rapide et raccourcis sur le tableau de bord', category: 'system' },
+  { id: 'direct_abjad_widget', label: 'Widget Calculateur Abjad Direct', desc: 'Widget interactif de calcul Abjad direct sur le Tableau des Outils', category: 'system' },
 ];
 
 export const ALL_USER_TOOLS = [
@@ -295,7 +301,8 @@ const CollapsibleAdminCard: React.FC<{
   headerRight
 }) => {
   const { collapsedSections, toggleCollapse } = React.useContext(AdminSectionCollapseContext);
-  const isCollapsed = collapsedSections[id] !== false; // Default is true (closed)
+  // By default, sections are CLOSED (collapsed) unless explicitly opened by the admin
+  const isCollapsed = collapsedSections[id] !== undefined ? collapsedSections[id] : true;
   const cardSubtitle = subtitle || description;
 
   return (
@@ -377,7 +384,7 @@ export const AdminDashboard: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
-  // Collapsible Admin Sections State (all sections closed/collapsed by default)
+  // Collapsible Admin Sections State (closed/collapsed by default)
   const [collapsedAdminSections, setCollapsedAdminSections] = useState<Record<string, boolean>>(() => {
     try {
       const saved = localStorage.getItem('asrarhub_collapsed_admin_sections');
@@ -394,16 +401,19 @@ export const AdminDashboard: React.FC = () => {
   }, [collapsedAdminSections]);
 
   const toggleAdminSectionCollapse = (sectionId: string) => {
-    setCollapsedAdminSections(prev => ({
-      ...prev,
-      [sectionId]: prev[sectionId] === false ? true : false
-    }));
+    setCollapsedAdminSections(prev => {
+      const current = prev[sectionId] !== undefined ? prev[sectionId] : true;
+      return {
+        ...prev,
+        [sectionId]: !current
+      };
+    });
   };
 
   const setAllAdminSectionsCollapse = (collapsed: boolean) => {
     const sectionIds = [
       'feat_user_tools', 'feat_shams_buni', 'feat_sacred_books', 'feat_downloads', 'feat_admin_access', 'feat_payment_methods', 'feat_sharing_options',
-      'set_feed_offsets', 'set_branding', 'set_hijri', 'set_calendar_scale', 'set_reciter', 'set_announcement', 'set_premium_promo', 'set_assistant_icon', 'set_sacred_audio', 'set_dua_copy', 'set_backend_url', 'set_global_audio', 'set_global_maintenance', 'set_firestore_diag', 'set_font_sizes', 'set_pricing', 'set_paystack', 'set_layout_articles', 'set_article_mode', 'set_store_layout', 'set_assistant_prompts', 'set_backup_export'
+      'set_branding', 'set_floating_back_button', 'set_spiritual_points', 'set_new_user_premium', 'set_hijri', 'set_calendar_scale', 'set_font_sizes', 'set_card_padding_scale', 'set_feed_offsets', 'set_layout_modes', 'set_global_maintenance', 'set_pricing_paystack', 'set_firestore_diag', 'set_assistant_prompts', 'set_backup_export', 'set_reciter', 'set_announcement', 'set_screenshot_protection', 'set_dua_copy', 'set_backend_url', 'set_global_audio', 'set_version_control', 'set_promo_videos', 'set_referrals', 'set_support_emails', 'set_security_alerts', 'set_reciters_mgmt', 'set_media_storage', 'set_maintenance_cache'
     ];
     const newState: Record<string, boolean> = {};
     sectionIds.forEach(id => {
@@ -497,8 +507,62 @@ export const AdminDashboard: React.FC = () => {
   useBackButton(() => setBlockingToolsUser(null), !!blockingToolsUser);
   useBackButton(() => setIsAddUserModalOpen(false), isAddUserModalOpen);
 
-  // Feature Search
+  // Feature Search & Drag-and-Drop Reordering States
   const [featureSearch, setFeatureSearch] = useState('');
+  const [draggedFeatureId, setDraggedFeatureId] = useState<string | null>(null);
+  const [dragOverFeatureId, setDragOverFeatureId] = useState<string | null>(null);
+
+  // Diagnostic Ping State
+  const [firestorePingResult, setFirestorePingResult] = useState<PingResult | null>(null);
+  const [isTestingPing, setIsTestingPing] = useState(false);
+
+  const handleRunPingTest = async () => {
+    setIsTestingPing(true);
+    try {
+      const res = await pingFirestore();
+      setFirestorePingResult(res);
+      if (res.reachable) {
+        showToast(`Connexion Firestore réussie (${res.latencyMs} ms) !`, "success");
+      } else {
+        showToast(`Erreur Firestore : ${res.errorMessage || res.errorType}`, "error");
+      }
+    } catch (err: any) {
+      showToast(`Erreur de diagnostic : ${err?.message || err}`, "error");
+    } finally {
+      setIsTestingPing(false);
+    }
+  };
+
+  const handleExportBackup = () => {
+    try {
+      const backupData = {
+        exportDate: new Date().toISOString(),
+        version: '1.0',
+        articles,
+        categories,
+        users,
+        promoCodes,
+        storeProducts,
+        lexiqueTerms,
+        adminGrandOaths,
+        featureToggles,
+        ruqyahAudios,
+        notifications
+      };
+      const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `asrarhub_backup_${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast("Sauvegarde exportée avec succès !", "success");
+    } catch (e: any) {
+      showToast("Erreur lors de l'exportation : " + e.message, "error");
+    }
+  };
 
   const masterDiscoveredMapRef = useRef<Map<string, User>>(new Map());
 
@@ -769,7 +833,14 @@ export const AdminDashboard: React.FC = () => {
 
   // Features State
   const [featureToggles, setFeatureToggles] = useState<any>({});
-  const [featureCategoryFilter, setFeatureCategoryFilter] = useState<'all' | 'simple' | 'advanced' | 'system'>('all');
+  const [fontSizeLocked, setFontSizeLocked] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('asrar_font_locked') === 'true';
+    } catch {
+      return false;
+    }
+  });
+  const [featureCategoryFilter, setFeatureCategoryFilter] = useState<string>('all');
   const [userToolModalSearch, setUserToolModalSearch] = useState('');
   const [userToolModalCategoryFilter, setUserToolModalCategoryFilter] = useState<'all' | 'simple' | 'advanced' | 'system'>('all');
   const [localBackendUrl, setLocalBackendUrl] = useState('');
@@ -816,6 +887,12 @@ export const AdminDashboard: React.FC = () => {
   const [adminArticleFilterStatus, setAdminArticleFilterStatus] = useState('all');
   const [adminArticleFilterPremium, setAdminArticleFilterPremium] = useState('all');
   const [adminArticleFilterAudio, setAdminArticleFilterAudio] = useState('all');
+  
+  // Quick Control & Bulk Management for Articles
+  const [selectedArticleForQuickControl, setSelectedArticleForQuickControl] = useState<Article | null>(null);
+  const [selectedArticleIds, setSelectedArticleIds] = useState<string[]>([]);
+  const [bulkArticleTargetCategory, setBulkArticleTargetCategory] = useState<string>('Secrets & Pratiques');
+  const [isBulkArticleActionRunning, setIsBulkArticleActionRunning] = useState(false);
   
   // Crop state
   const [imgSrc, setImgSrc] = useState('');
@@ -1108,6 +1185,13 @@ export const AdminDashboard: React.FC = () => {
 
     // Seed Grand Oaths if not already done
     const seedOathsIfNeeded = async () => {
+      // If client is offline or already seeded locally, skip to prevent offline getDoc error
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        return;
+      }
+      if (typeof window !== 'undefined' && localStorage.getItem('asrarhub_oaths_seeded') === 'true') {
+        return;
+      }
       try {
         const setupRef = doc(db, 'settings', 'grand_oaths_setup');
         const setupSnap = await getDoc(setupRef);
@@ -1123,8 +1207,13 @@ export const AdminDashboard: React.FC = () => {
           }
           await setDoc(setupRef, { seeded: true, seededAt: Date.now() }, { merge: true });
         }
-      } catch (err) {
-        console.error("Admin seeding error", err);
+        try { localStorage.setItem('asrarhub_oaths_seeded', 'true'); } catch (e) {}
+      } catch (err: any) {
+        if (err?.message?.includes('offline') || err?.code === 'unavailable' || err?.code === 'failed-precondition') {
+          console.warn("Admin seeding deferred (client offline or connecting):", err?.message || err);
+        } else {
+          console.warn("Admin seeding note:", err?.message || err);
+        }
       }
     };
     seedOathsIfNeeded();
@@ -2831,6 +2920,248 @@ export const AdminDashboard: React.FC = () => {
       audioDuration: (article as any).audioDuration || ''
     } as any);
     setActiveTab('articles');
+  };
+
+  const handleQuickUpdateArticleStatus = async (articleId: string, newStatus: 'Published' | 'Draft') => {
+    try {
+      const art = articles.find(a => a && a.id === articleId);
+      if (!art) return;
+
+      const updatedArt = {
+        ...art,
+        status: newStatus,
+        updatedAt: new Date().toISOString()
+      };
+
+      saveLocalCustomArticle(updatedArt as any);
+
+      setArticles(prev => {
+        const next = prev.map(a => a.id === articleId ? updatedArt : a);
+        try {
+          saveCachedArticlesList(CACHED_ADMIN_ARTICLES_KEY, next);
+          saveCachedArticlesList(CACHED_ARTICLES_LIST_KEY, next);
+          saveCachedArticlesList(CACHED_EXPLORE_ARTICLES_KEY, next);
+        } catch (e) {}
+        return next;
+      });
+
+      if (selectedArticleForQuickControl?.id === articleId) {
+        setSelectedArticleForQuickControl(updatedArt);
+      }
+
+      try {
+        await setDoc(doc(db, 'articles', articleId), { status: newStatus, updatedAt: new Date().toISOString() }, { merge: true });
+      } catch (err) {
+        console.warn("[Admin] Firestore status update note (saved locally):", err);
+      }
+
+      revalidatePublishedArticles('admin_status_quick_update').catch(() => {});
+      showToast(`Statut mis à jour : "${newStatus === 'Published' ? 'Publié (Visible)' : 'Brouillon (Masqué)'}" !`);
+    } catch (error: any) {
+      console.error("Error updating article status:", error);
+      showToast("Erreur lors de la mise à jour du statut.", "error");
+    }
+  };
+
+  const handleQuickUpdateArticleCategory = async (articleId: string, newCategory: string, newSubCategory?: string) => {
+    try {
+      const art = articles.find(a => a && a.id === articleId);
+      if (!art) return;
+
+      const updatedArt = {
+        ...art,
+        category: newCategory,
+        subCategory: newSubCategory !== undefined ? newSubCategory : (art as any).subCategory || '',
+        updatedAt: new Date().toISOString()
+      };
+
+      saveLocalCustomArticle(updatedArt as any);
+
+      setArticles(prev => {
+        const next = prev.map(a => a.id === articleId ? updatedArt : a);
+        try {
+          saveCachedArticlesList(CACHED_ADMIN_ARTICLES_KEY, next);
+          saveCachedArticlesList(CACHED_ARTICLES_LIST_KEY, next);
+          saveCachedArticlesList(CACHED_EXPLORE_ARTICLES_KEY, next);
+        } catch (e) {}
+        return next;
+      });
+
+      if (selectedArticleForQuickControl?.id === articleId) {
+        setSelectedArticleForQuickControl(updatedArt);
+      }
+
+      try {
+        await setDoc(doc(db, 'articles', articleId), { 
+          category: newCategory, 
+          subCategory: newSubCategory !== undefined ? newSubCategory : (art as any).subCategory || '',
+          updatedAt: new Date().toISOString() 
+        }, { merge: true });
+      } catch (err) {
+        console.warn("[Admin] Firestore category update note (saved locally):", err);
+      }
+
+      revalidatePublishedArticles('admin_category_quick_update').catch(() => {});
+      showToast(`Article déplacé avec succès dans "${newCategory}" !`);
+    } catch (error: any) {
+      console.error("Error moving article category:", error);
+      showToast("Erreur lors du déplacement de la catégorie.", "error");
+    }
+  };
+
+  const handleQuickToggleArticlePremium = async (articleId: string) => {
+    try {
+      const art = articles.find(a => a && a.id === articleId);
+      if (!art) return;
+
+      const newIsPremium = !art.isPremium;
+      const updatedArt = {
+        ...art,
+        isPremium: newIsPremium,
+        updatedAt: new Date().toISOString()
+      };
+
+      saveLocalCustomArticle(updatedArt as any);
+
+      setArticles(prev => {
+        const next = prev.map(a => a.id === articleId ? updatedArt : a);
+        try {
+          saveCachedArticlesList(CACHED_ADMIN_ARTICLES_KEY, next);
+          saveCachedArticlesList(CACHED_ARTICLES_LIST_KEY, next);
+          saveCachedArticlesList(CACHED_EXPLORE_ARTICLES_KEY, next);
+        } catch (e) {}
+        return next;
+      });
+
+      if (selectedArticleForQuickControl?.id === articleId) {
+        setSelectedArticleForQuickControl(updatedArt);
+      }
+
+      try {
+        await setDoc(doc(db, 'articles', articleId), { isPremium: newIsPremium, updatedAt: new Date().toISOString() }, { merge: true });
+      } catch (err) {
+        console.warn("[Admin] Firestore premium toggle note (saved locally):", err);
+      }
+
+      revalidatePublishedArticles('admin_premium_quick_update').catch(() => {});
+      showToast(newIsPremium ? "Article configuré comme VIP Premium ★ !" : "Article configuré en Accès Standard (Gratuit) !");
+    } catch (error: any) {
+      console.error("Error toggling premium:", error);
+      showToast("Erreur lors de la modification de l'accès.", "error");
+    }
+  };
+
+  const handleDuplicateArticle = async (article: Article) => {
+    try {
+      const newId = `art_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+      const duplicatedArt: any = {
+        ...article,
+        id: newId,
+        title: `[Copie] ${article.title || (article as any).title_fr || 'Article sans titre'}`,
+        status: 'Draft',
+        createdAt: Date.now(),
+        updatedAt: new Date().toISOString()
+      };
+
+      saveLocalCustomArticle(duplicatedArt);
+
+      setArticles(prev => {
+        const next = [duplicatedArt, ...prev];
+        try {
+          saveCachedArticlesList(CACHED_ADMIN_ARTICLES_KEY, next);
+          saveCachedArticlesList(CACHED_ARTICLES_LIST_KEY, next);
+          saveCachedArticlesList(CACHED_EXPLORE_ARTICLES_KEY, next);
+        } catch (e) {}
+        return next;
+      });
+
+      try {
+        await setDoc(doc(db, 'articles', newId), duplicatedArt);
+      } catch (err) {
+        console.warn("[Admin] Firestore duplicate add note (saved locally):", err);
+      }
+
+      showToast("Article dupliqué avec succès (enregistré en Brouillon) !");
+    } catch (error: any) {
+      console.error("Error duplicating article:", error);
+      showToast("Erreur lors de la duplication de l'article.", "error");
+    }
+  };
+
+  const handleBulkArticleAction = async (
+    action: 'publish' | 'draft' | 'premium' | 'free' | 'move_category' | 'delete', 
+    targetCategory?: string
+  ) => {
+    if (selectedArticleIds.length === 0) {
+      showToast("Veuillez sélectionner au moins un article.", "error");
+      return;
+    }
+
+    if (action === 'delete') {
+      if (!window.confirm(`Êtes-vous sûr de vouloir supprimer définitivement les ${selectedArticleIds.length} articles sélectionnés ?`)) {
+        return;
+      }
+    }
+
+    setIsBulkArticleActionRunning(true);
+    try {
+      if (action === 'delete') {
+        for (const id of selectedArticleIds) {
+          await handleDeleteArticle(id);
+        }
+        setSelectedArticleIds([]);
+        showToast(`${selectedArticleIds.length} articles supprimés.`);
+        return;
+      }
+
+      const updatedArticles = articles.map(art => {
+        if (!selectedArticleIds.includes(art.id)) return art;
+        const updated = { ...art, updatedAt: new Date().toISOString() };
+        if (action === 'publish') updated.status = 'Published';
+        if (action === 'draft') updated.status = 'Draft';
+        if (action === 'premium') updated.isPremium = true;
+        if (action === 'free') updated.isPremium = false;
+        if (action === 'move_category' && targetCategory) updated.category = targetCategory;
+        saveLocalCustomArticle(updated as any);
+        return updated;
+      });
+
+      setArticles(updatedArticles);
+      try {
+        saveCachedArticlesList(CACHED_ADMIN_ARTICLES_KEY, updatedArticles);
+        saveCachedArticlesList(CACHED_ARTICLES_LIST_KEY, updatedArticles);
+        saveCachedArticlesList(CACHED_EXPLORE_ARTICLES_KEY, updatedArticles);
+      } catch (e) {}
+
+      const promises = selectedArticleIds.map(async id => {
+        const updatePayload: any = { updatedAt: new Date().toISOString() };
+        if (action === 'publish') updatePayload.status = 'Published';
+        if (action === 'draft') updatePayload.status = 'Draft';
+        if (action === 'premium') updatePayload.isPremium = true;
+        if (action === 'free') updatePayload.isPremium = false;
+        if (action === 'move_category' && targetCategory) updatePayload.category = targetCategory;
+        return setDoc(doc(db, 'articles', id), updatePayload, { merge: true });
+      });
+
+      await Promise.allSettled(promises);
+      revalidatePublishedArticles('admin_bulk_update').catch(() => {});
+
+      const actionLabels: Record<string, string> = {
+        publish: 'publiés',
+        draft: 'passés en brouillon',
+        premium: 'définis comme VIP Premium',
+        free: 'définis en accès standard',
+        move_category: `déplacés vers "${targetCategory}"`
+      };
+
+      showToast(`${selectedArticleIds.length} article(s) ${actionLabels[action] || 'mis à jour'} avec succès !`);
+      setSelectedArticleIds([]);
+    } catch (err: any) {
+      console.error("Bulk article action error:", err);
+      showToast("Erreur lors de l'action groupée.", "error");
+    } finally {
+      setIsBulkArticleActionRunning(false);
+    }
   };
 
   const renderTabNavigation = () => {
@@ -5200,6 +5531,33 @@ export const AdminDashboard: React.FC = () => {
       extraFields['maintenance'] = newValue;
       extraFields['globalMaintenance'] = newValue;
       extraFields['isMaintenance'] = newValue;
+    } else if (featureId === 'home_announcement_enabled') {
+      extraFields['announcementVisible'] = newValue;
+      extraFields['announcement_enabled'] = newValue;
+    } else if (featureId === 'home_announcement_text') {
+      extraFields['announcementText'] = newValue;
+      extraFields['home_announcement_text_fr'] = newValue;
+    } else if (featureId === 'home_announcement_title') {
+      extraFields['announcementTitle'] = newValue;
+      extraFields['home_announcement_title_fr'] = newValue;
+    } else if (featureId === 'home_articles_layout_free') {
+      const isFree = newValue !== false;
+      extraFields['home_articles_layout_free'] = isFree;
+      extraFields['lockArticlesDisplayMode'] = !isFree;
+      extraFields['home_articles_layout_locked'] = !isFree;
+    } else if (featureId === 'home_articles_layout' || featureId === 'articles_layout_mode' || featureId === 'articlesDisplayMode') {
+      extraFields['home_articles_layout'] = newValue;
+      extraFields['articles_layout_mode'] = newValue;
+      extraFields['articlesDisplayMode'] = newValue;
+    } else if (featureId === 'article_reading_mode_locked') {
+      extraFields['article_reading_mode_locked'] = newValue;
+      extraFields['lockArticleReadingMode'] = newValue;
+    } else if (featureId === 'article_reading_mode') {
+      extraFields['article_reading_mode'] = newValue;
+      extraFields['reading_mode_default'] = newValue;
+    } else if (featureId === 'store_layout_mode') {
+      extraFields['store_layout_mode'] = newValue;
+      extraFields['store_display_mode'] = newValue;
     }
 
     const fullPayload = { [featureId]: newValue, ...extraFields };
@@ -5403,7 +5761,20 @@ export const AdminDashboard: React.FC = () => {
   };
 
   const renderFeatures = () => {
-    const filteredTools = ALL_USER_TOOLS.filter(tool => {
+    const navOrderList: string[] = Array.isArray(featureToggles?.feature_nav_order)
+      ? featureToggles.feature_nav_order
+      : (Array.isArray(featureToggles?.tools_order) ? featureToggles.tools_order : []);
+
+    const fullOrderedTools = [...ALL_USER_TOOLS].sort((a, b) => {
+      if (navOrderList.length === 0) return 0;
+      const indexA = navOrderList.indexOf(a.id);
+      const indexB = navOrderList.indexOf(b.id);
+      const posA = indexA === -1 ? 9999 : indexA;
+      const posB = indexB === -1 ? 9999 : indexB;
+      return posA - posB;
+    });
+
+    const filteredTools = fullOrderedTools.filter(tool => {
       const matchesSearch = (tool.label || '').toLowerCase().includes(featureSearch.toLowerCase()) ||
         (tool.desc || '').toLowerCase().includes(featureSearch.toLowerCase()) ||
         tool.id.toLowerCase().includes(featureSearch.toLowerCase());
@@ -5425,6 +5796,65 @@ export const AdminDashboard: React.FC = () => {
       else if (status === 'maintenance') countMaintenance++;
       else countDisabled++;
     });
+
+    const handleSaveNewOrder = async (newIds: string[]) => {
+      try {
+        await handleBatchToggleFeatures({
+          feature_nav_order: newIds,
+          tools_order: newIds
+        });
+        showToast("Ordre de navigation enregistré et synchronisé !", "success");
+      } catch (err) {
+        console.error("Error saving feature order:", err);
+        showToast("Erreur lors de l'enregistrement de l'ordre.", "error");
+      }
+    };
+
+    const handleReorderTools = (sourceId: string, targetId: string) => {
+      if (!sourceId || !targetId || sourceId === targetId) return;
+      const currentIds = fullOrderedTools.map(t => t.id);
+      const sourceIdx = currentIds.indexOf(sourceId);
+      const targetIdx = currentIds.indexOf(targetId);
+      if (sourceIdx === -1 || targetIdx === -1) return;
+      const updated = [...currentIds];
+      const [removed] = updated.splice(sourceIdx, 1);
+      updated.splice(targetIdx, 0, removed);
+      handleSaveNewOrder(updated);
+    };
+
+    const handleMoveFeature = (toolId: string, direction: 'up' | 'down') => {
+      const currentIds = fullOrderedTools.map(t => t.id);
+      const idx = currentIds.indexOf(toolId);
+      if (idx === -1) return;
+      const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
+      if (targetIdx < 0 || targetIdx >= currentIds.length) return;
+      const updated = [...currentIds];
+      const [removed] = updated.splice(idx, 1);
+      updated.splice(targetIdx, 0, removed);
+      handleSaveNewOrder(updated);
+    };
+
+    const handleMoveToTop = (toolId: string) => {
+      const currentIds = fullOrderedTools.map(t => t.id);
+      const idx = currentIds.indexOf(toolId);
+      if (idx <= 0) return;
+      const updated = [toolId, ...currentIds.filter(id => id !== toolId)];
+      handleSaveNewOrder(updated);
+    };
+
+    const handleMoveToBottom = (toolId: string) => {
+      const currentIds = fullOrderedTools.map(t => t.id);
+      const idx = currentIds.indexOf(toolId);
+      if (idx === -1 || idx === currentIds.length - 1) return;
+      const updated = [...currentIds.filter(id => id !== toolId), toolId];
+      handleSaveNewOrder(updated);
+    };
+
+    const handleResetDefaultOrder = () => {
+      const defaultIds = ALL_USER_TOOLS.map(t => t.id);
+      handleSaveNewOrder(defaultIds);
+      showToast("Ordre par défaut restauré avec succès !", "info");
+    };
 
     const handleBulkApplyStatus = async (targetStatus: 'active' | 'premium' | 'maintenance' | 'disabled') => {
       const targetTools = filteredTools.length > 0 ? filteredTools : ALL_USER_TOOLS;
@@ -5456,6 +5886,14 @@ export const AdminDashboard: React.FC = () => {
       }
     };
 
+    const categories = [
+      { id: 'all', label: 'Toutes les fonctionnalités', count: ALL_USER_TOOLS.length },
+      { id: 'nav', label: '🧭 Navigation Principale', count: ALL_USER_TOOLS.filter(t => t.category === 'nav').length },
+      { id: 'simple', label: '✨ Outils Simples', count: ALL_USER_TOOLS.filter(t => t.category === 'simple').length },
+      { id: 'advanced', label: '⚡ Outils Avancés', count: ALL_USER_TOOLS.filter(t => t.category === 'advanced').length },
+      { id: 'system', label: '🛡️ Système & Sécurité', count: ALL_USER_TOOLS.filter(t => t.category === 'system').length }
+    ];
+
     return (
       <div className="space-y-6 w-full max-w-full min-w-0">
         {/* Global Expand / Collapse Control Banner */}
@@ -5463,41 +5901,87 @@ export const AdminDashboard: React.FC = () => {
           <div className="flex items-center gap-2 min-w-0">
             <Settings size={18} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
             <span className="text-xs font-bold text-gray-800 dark:text-gray-200 break-words">
-              Toutes les sections sont fermées par défaut pour une meilleure visibilité.
+              Tous les paramètres sont développés et accessibles immédiatement. Vous pouvez les replier ou déplier à tout moment.
             </span>
           </div>
           <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto justify-end">
             <button
               type="button"
               onClick={() => setAllAdminSectionsCollapse(false)}
-              className="flex-1 sm:flex-initial px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer shadow-sm text-center"
+              className="flex-1 sm:flex-initial px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-sm text-center"
             >
               Tout déplier
             </button>
             <button
               type="button"
               onClick={() => setAllAdminSectionsCollapse(true)}
-              className="flex-1 sm:flex-initial px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-sm text-center"
+              className="flex-1 sm:flex-initial px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer shadow-sm text-center"
             >
               Tout replier
             </button>
           </div>
         </div>
 
-        {/* 1. User Tools Card */}
+        {/* 1. User Tools & Drag-and-Drop Navigation Reordering */}
         <CollapsibleAdminCard
           id="feat_user_tools"
-          title="Gestion des Outils Utilisateur"
-          subtitle="Gérez l'accès aux 38+ outils de l'application (Actif, Premium, Maintenance, Inactif, Bloqué)."
-          icon={<ToggleLeft size={22} className="text-emerald-500 shrink-0" />}
+          title="Réorganisation Drag & Drop et Statuts des Fonctionnalités"
+          subtitle="Glissez-déposez les cartes ou utilisez les flèches pour réordonner l'affichage dans la navigation et les dashboards. Modifiez le statut (Actif, Premium, Maintenance, Inactif, Bloqué) de chaque outil."
+          icon={<ArrowUpDown size={22} className="text-emerald-500 shrink-0" />}
         >
           <div className="space-y-4">
-            {/* Search & Category Filter */}
+            {/* Drag and Drop Instruction Banner */}
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3.5 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50 rounded-2xl">
+              <div className="flex items-center gap-2.5">
+                <GripVertical size={20} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <div>
+                  <p className="text-xs font-bold text-emerald-900 dark:text-emerald-200">
+                    Mode Réorganisation Active
+                  </p>
+                  <p className="text-[11px] text-emerald-700 dark:text-emerald-400 mt-0.5">
+                    Attrapez une carte par la poignée pour la glisser-déposer, ou utilisez les flèches Haut/Bas pour déplacer les éléments.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleResetDefaultOrder}
+                className="px-3 py-1.5 bg-white dark:bg-gray-800 border border-emerald-300 dark:border-emerald-700 text-emerald-700 dark:text-emerald-300 rounded-xl text-xs font-bold hover:bg-emerald-100 dark:hover:bg-gray-700 transition-colors shrink-0 flex items-center gap-1.5 shadow-sm"
+              >
+                <RotateCcw size={14} />
+                Réinitialiser l'ordre
+              </button>
+            </div>
+
+            {/* Category Filter Chips */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
+              {categories.map((cat) => (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => setFeatureCategoryFilter(cat.id)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                    featureCategoryFilter === cat.id
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'
+                  }`}
+                >
+                  <span>{cat.label}</span>
+                  <span className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                    featureCategoryFilter === cat.id ? 'bg-emerald-700 text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                  }`}>
+                    {cat.count}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            {/* Search and Summary */}
             <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 w-full max-w-full">
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                Sélectionnez le statut de chaque outil individuellement :
+                Affichage de <span className="font-bold text-gray-800 dark:text-gray-200">{filteredTools.length}</span> fonctionnalité(s) :
               </p>
-              <div className="relative w-full sm:w-64 shrink-0">
+              <div className="relative w-full sm:w-72 shrink-0">
                 <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
                   <Search size={16} />
                 </span>
@@ -5556,38 +6040,164 @@ export const AdminDashboard: React.FC = () => {
                 <p className="font-medium text-sm">Aucun outil ne correspond à votre recherche.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 sm:gap-4">
-                {filteredTools.map((tool) => {
+              <div className="space-y-2.5">
+                {filteredTools.map((tool, index) => {
                   const currentStatus = featureToggles[`tool_${tool.id}`] || (['inspector', 'quick_widget'].includes(tool.id) ? 'inactive' : 'active');
+                  const globalIndex = fullOrderedTools.findIndex(t => t.id === tool.id);
+                  const isFirst = globalIndex === 0;
+                  const isLast = globalIndex === fullOrderedTools.length - 1;
+                  const isDragging = draggedFeatureId === tool.id;
+                  const isDragOver = dragOverFeatureId === tool.id && !isDragging;
+
+                  const categoryLabel = 
+                    tool.category === 'nav' ? 'Navigation' :
+                    tool.category === 'simple' ? 'Outil Simple' :
+                    tool.category === 'advanced' ? 'Outil Avancé' : 'Système';
+
+                  const categoryBadgeColor = 
+                    tool.category === 'nav' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300' :
+                    tool.category === 'simple' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300' :
+                    tool.category === 'advanced' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300' :
+                    'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300';
+
                   return (
                     <div
                       key={tool.id}
-                      className="flex flex-col p-3.5 sm:p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-3 hover:border-gray-250 dark:hover:border-gray-650 transition-all min-w-0"
+                      draggable={true}
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData('text/plain', tool.id);
+                        setDraggedFeatureId(tool.id);
+                      }}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        if (dragOverFeatureId !== tool.id) {
+                          setDragOverFeatureId(tool.id);
+                        }
+                      }}
+                      onDragLeave={(e) => {
+                        if (dragOverFeatureId === tool.id) {
+                          setDragOverFeatureId(null);
+                        }
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        const sourceId = e.dataTransfer.getData('text/plain') || draggedFeatureId;
+                        if (sourceId) {
+                          handleReorderTools(sourceId, tool.id);
+                        }
+                        setDraggedFeatureId(null);
+                        setDragOverFeatureId(null);
+                      }}
+                      onDragEnd={() => {
+                        setDraggedFeatureId(null);
+                        setDragOverFeatureId(null);
+                      }}
+                      className={`flex flex-col sm:flex-row sm:items-center justify-between p-3 sm:p-4 rounded-2xl border transition-all gap-3 select-none ${
+                        isDragging
+                          ? 'opacity-40 border-dashed border-emerald-500 bg-emerald-50/20 dark:bg-emerald-950/20'
+                          : isDragOver
+                          ? 'border-emerald-500 bg-emerald-50/60 dark:bg-emerald-950/40 shadow-md ring-2 ring-emerald-400/40 scale-[1.01]'
+                          : 'bg-gray-50 dark:bg-gray-750 border-gray-100 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                      }`}
                     >
-                      <div className="min-w-0 flex-1">
-                        <h4 className="font-bold text-sm text-gray-900 dark:text-white break-words">{tool.label}</h4>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 break-words line-clamp-2">{tool.desc}</p>
-                      </div>
-                      <div className="flex items-center gap-2 mt-auto">
-                        <select
-                          value={currentStatus}
-                          onChange={(e) => handleToggleFeature(`tool_${tool.id}`, e.target.value)}
-                          className={`text-xs font-semibold px-3 py-1.5 rounded-lg border-0 cursor-pointer w-full ${
-                            currentStatus === "active"
-                              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400"
-                              : currentStatus === "premium"
-                              ? "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-400"
-                              : currentStatus === "maintenance"
-                              ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400"
-                              : "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400"
-                          }`}
+                      {/* Left: Drag Handle, Rank Badge, Title & Details */}
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        {/* Drag Handle */}
+                        <div 
+                          className="cursor-grab active:cursor-grabbing p-1 text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors shrink-0"
+                          title="Glisser pour réordonner"
                         >
-                          <option value="active">Actif (Tous)</option>
-                          <option value="premium">Premium (VIP)</option>
-                          <option value="maintenance">Maintenance</option>
-                          <option value="inactive">Inactif</option>
-                          <option value="disabled">Désactivé (Bloqué)</option>
-                        </select>
+                          <GripVertical size={20} />
+                        </div>
+
+                        {/* Rank Badge */}
+                        <div className="w-8 h-8 rounded-xl bg-gray-200/80 dark:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs font-black flex items-center justify-center shrink-0 border border-gray-300 dark:border-gray-600 shadow-inner">
+                          #{globalIndex + 1}
+                        </div>
+
+                        {/* Feature Info */}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <h4 className="font-bold text-sm text-gray-900 dark:text-white break-words">
+                              {tool.label}
+                            </h4>
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${categoryBadgeColor}`}>
+                              {categoryLabel}
+                            </span>
+                            <span className="text-[10px] text-gray-400 font-mono">
+                              ({tool.id})
+                            </span>
+                          </div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 break-words line-clamp-1">
+                            {tool.desc}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Right: Quick Reorder Arrows & Status Select */}
+                      <div className="flex items-center gap-2 shrink-0 self-end sm:self-center w-full sm:w-auto justify-between sm:justify-end">
+                        {/* Up / Down Reorder Buttons */}
+                        <div className="flex items-center gap-1 bg-white dark:bg-gray-800 p-1 rounded-xl border border-gray-200 dark:border-gray-700">
+                          <button
+                            type="button"
+                            disabled={isFirst}
+                            onClick={() => handleMoveFeature(tool.id, 'up')}
+                            className="p-1.5 rounded-lg text-gray-500 hover:text-emerald-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                            title="Monter d'une position"
+                          >
+                            <ArrowUp size={15} />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isLast}
+                            onClick={() => handleMoveFeature(tool.id, 'down')}
+                            className="p-1.5 rounded-lg text-gray-500 hover:text-emerald-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                            title="Descendre d'une position"
+                          >
+                            <ArrowDown size={15} />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isFirst}
+                            onClick={() => handleMoveToTop(tool.id)}
+                            className="px-1.5 py-1 text-[10px] font-bold text-gray-500 hover:text-emerald-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed rounded-md transition-colors"
+                            title="Placer tout en haut (#1)"
+                          >
+                            Top
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isLast}
+                            onClick={() => handleMoveToBottom(tool.id)}
+                            className="px-1.5 py-1 text-[10px] font-bold text-gray-500 hover:text-emerald-600 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:cursor-not-allowed rounded-md transition-colors"
+                            title="Placer tout en bas"
+                          >
+                            Bas
+                          </button>
+                        </div>
+
+                        {/* Status Select */}
+                        <div className="w-40 sm:w-44">
+                          <select
+                            value={currentStatus}
+                            onChange={(e) => handleToggleFeature(`tool_${tool.id}`, e.target.value, tool.label)}
+                            className={`text-xs font-semibold px-3 py-2 rounded-xl border-0 cursor-pointer w-full shadow-sm ${
+                              currentStatus === "active"
+                                ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400"
+                                : currentStatus === "premium"
+                                ? "bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-400"
+                                : currentStatus === "maintenance"
+                                ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400"
+                                : "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400"
+                            }`}
+                          >
+                            <option value="active">🟢 Actif (Tous)</option>
+                            <option value="premium">👑 Premium (VIP)</option>
+                            <option value="maintenance">🛠️ Maintenance</option>
+                            <option value="inactive">⚪ Inactif</option>
+                            <option value="disabled">🚫 Désactivé / Bloqué</option>
+                          </select>
+                        </div>
                       </div>
                     </div>
                   );
@@ -5926,124 +6536,1407 @@ export const AdminDashboard: React.FC = () => {
       return <AdminStoreManager featureToggles={featureToggles} handleToggleFeature={handleToggleFeature} />;
     }
 
+    const currentTitle = activeLangTab === 'fr' ? (newArticle.title || '') : activeLangTab === 'en' ? ((newArticle as any).title_en || '') : ((newArticle as any).title_ha || '');
+    const currentHook = activeLangTab === 'fr' ? (newArticle.hook || '') : activeLangTab === 'en' ? ((newArticle as any).hook_en || '') : ((newArticle as any).hook_ha || '');
+    const currentContent = activeLangTab === 'fr' ? (newArticle.content || '') : activeLangTab === 'en' ? ((newArticle as any).content_en || '') : ((newArticle as any).content_ha || '');
+
+    const handleTitleChange = (val: string) => {
+      if (activeLangTab === 'fr') setNewArticle(prev => ({ ...prev, title: val }));
+      else if (activeLangTab === 'en') setNewArticle(prev => ({ ...prev, title_en: val } as any));
+      else setNewArticle(prev => ({ ...prev, title_ha: val } as any));
+    };
+
+    const handleHookChange = (val: string) => {
+      if (activeLangTab === 'fr') setNewArticle(prev => ({ ...prev, hook: val }));
+      else if (activeLangTab === 'en') setNewArticle(prev => ({ ...prev, hook_en: val } as any));
+      else setNewArticle(prev => ({ ...prev, hook_ha: val } as any));
+    };
+
+    const handleContentChange = (val: string) => {
+      if (activeLangTab === 'fr') setNewArticle(prev => ({ ...prev, content: val }));
+      else if (activeLangTab === 'en') setNewArticle(prev => ({ ...prev, content_en: val } as any));
+      else setNewArticle(prev => ({ ...prev, content_ha: val } as any));
+    };
+
+    const insertSacredSnippet = (snippet: string) => {
+      const updated = currentContent ? `${currentContent}<p>${snippet}</p>` : `<p>${snippet}</p>`;
+      handleContentChange(updated);
+      showToast("Formule insérée dans l'éditeur !", "success");
+    };
+
+    const handleAddBenefit = (bText: string) => {
+      if (!bText.trim()) return;
+      const currentBenefits = (newArticle as any).benefits || [];
+      setNewArticle(prev => ({
+        ...prev,
+        benefits: [...currentBenefits, bText.trim()]
+      } as any));
+    };
+
+    const handleRemoveBenefit = (index: number) => {
+      const currentBenefits = (newArticle as any).benefits || [];
+      setNewArticle(prev => ({
+        ...prev,
+        benefits: currentBenefits.filter((_: any, i: number) => i !== index)
+      } as any));
+    };
+
+    const resolvedThumbnail = getArticleImageUrl(newArticle);
+
     return (
-      <div className="space-y-6 w-full max-w-full min-w-0">
-        {/* Quick action banner */}
-        <div className="flex flex-wrap items-center justify-between gap-3 p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm">
-          <div className="flex items-center gap-2">
-            <FileText size={20} className="text-emerald-500 shrink-0" />
-            <h3 className="font-bold text-gray-900 dark:text-white text-base">
-              {activeTab === "categories" ? "Gestion des Catégories" : "Gestion des Articles & Publications"}
-            </h3>
+      <div className="space-y-8 w-full max-w-full min-w-0">
+        {/* Studio / Editor Container */}
+        <div id="article_editor_form_top" className="bg-white dark:bg-gray-800 rounded-3xl p-4 sm:p-7 shadow-sm border border-gray-100 dark:border-gray-700 space-y-6">
+          
+          {/* Header Banner */}
+          <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-gray-100 dark:border-gray-700">
+            <div className="flex items-center gap-3">
+              <div className={`p-2.5 rounded-2xl ${editingArticle ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300' : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300'}`}>
+                {editingArticle ? <Edit3 size={22} /> : <Sparkles size={22} />}
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-extrabold text-gray-900 dark:text-white text-lg sm:text-xl">
+                    {editingArticle ? "Modifier l'Article / Secret" : "Créer un Nouvel Article / Secret"}
+                  </h3>
+                  <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider ${
+                    editingArticle ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300' : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300'
+                  }`}>
+                    {editingArticle ? 'Édition' : 'Nouveau'}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                  Rédigez les textes, configurez la vignette recadrée, ajoutez l'audio et publiez instantanément.
+                </p>
+              </div>
+            </div>
+
+            {/* Top Action Buttons */}
+            <div className="flex items-center flex-wrap gap-2">
+              {draftSavedMessage && (
+                <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-3 py-1.5 rounded-xl border border-emerald-200 dark:border-emerald-800 flex items-center gap-1.5 animate-pulse">
+                  <CheckCircle2 size={13} /> {draftSavedMessage}
+                </span>
+              )}
+
+              <button
+                type="button"
+                onClick={() => {
+                  setEditingArticle(null);
+                  setNewArticle({
+                    title: '',
+                    title_en: '',
+                    title_ha: '',
+                    hook: '',
+                    hook_en: '',
+                    hook_ha: '',
+                    thumbnail: '',
+                    imageUrl: '',
+                    content: '',
+                    content_en: '',
+                    content_ha: '',
+                    type: 'richtext',
+                    status: 'Published',
+                    publishDate: '',
+                    benefits: [],
+                    category: categories[0]?.name || 'Secrets & Pratiques',
+                    subCategory: '',
+                    isPremium: false,
+                    audioUrl: '',
+                    audio_url: '',
+                  } as any);
+                  setImgSrc('');
+                  setCrop(undefined);
+                  setCompletedCrop(null);
+                  try { localStorage.removeItem('asrarhub_article_draft'); } catch(e) {}
+                  showToast("Formulaire réinitialisé pour un nouvel article.");
+                }}
+                className="px-3.5 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <RotateCcw size={14} /> Nouveau / Réinitialiser
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowPreview(!showPreview)}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
+                  showPreview ? 'bg-indigo-600 text-white shadow-md' : 'bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800'
+                }`}
+              >
+                <Eye size={14} /> {showPreview ? "Masquer l'Aperçu" : "Aperçu en Direct"}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSaveArticle}
+                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-extrabold flex items-center gap-2 transition-all shadow-md hover:shadow-lg cursor-pointer"
+              >
+                <Save size={16} /> {editingArticle ? "Mettre à jour l'Article" : "Publier l'Article"}
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => {
-                setEditingArticle(null);
-                setNewArticle({
-                  title: '',
-                  content: '',
-                  category: 'Secrets & Pratiques',
-                  isPremium: false,
-                  status: 'Published',
-                  image: '',
-                  audioUrl: ''
-                } as any);
-              }}
-              className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-2 transition-colors shadow-sm"
-            >
-              <Plus size={16} /> Nouvel Article
-            </button>
-            <button
-              onClick={handleSeedDefaultArticles}
-              className="px-3 py-2 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors border border-indigo-200 dark:border-indigo-800"
-            >
-              <Database size={14} /> Restaurer Articles par Défaut
-            </button>
+
+          {/* Main 2-Column Editor Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            {/* Left Column: Language Tabs, Title, Hook, Content & Benefits (2 cols) */}
+            <div className="lg:col-span-2 space-y-5">
+              
+              {/* Language Selector */}
+              <div className="flex items-center justify-between gap-2 p-1.5 bg-gray-50 dark:bg-gray-900/60 rounded-2xl border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setActiveLangTab('fr')}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all ${
+                      activeLangTab === 'fr' 
+                        ? 'bg-white dark:bg-gray-800 text-emerald-600 dark:text-emerald-400 shadow-sm border border-gray-200 dark:border-gray-700' 
+                        : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
+                    }`}
+                  >
+                    🇫🇷 Français (Principal)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveLangTab('en')}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all ${
+                      activeLangTab === 'en' 
+                        ? 'bg-white dark:bg-gray-800 text-emerald-600 dark:text-emerald-400 shadow-sm border border-gray-200 dark:border-gray-700' 
+                        : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
+                    }`}
+                  >
+                    🇬🇧 English
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setActiveLangTab('ha')}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-black transition-all ${
+                      activeLangTab === 'ha' 
+                        ? 'bg-white dark:bg-gray-800 text-emerald-600 dark:text-emerald-400 shadow-sm border border-gray-200 dark:border-gray-700' 
+                        : 'text-gray-500 hover:text-gray-900 dark:hover:text-white'
+                    }`}
+                  >
+                    🇳🇬 Hausa
+                  </button>
+                </div>
+                <span className="text-[10px] text-gray-400 font-medium hidden sm:inline px-2">
+                  {activeLangTab === 'fr' ? 'Version par défaut (traduction auto)' : `Version traduite en ${activeLangTab.toUpperCase()}`}
+                </span>
+              </div>
+
+              {/* Title Field */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300">
+                  Titre de l'Article / Secret <span className="text-red-500">*</span> ({activeLangTab.toUpperCase()})
+                </label>
+                <input
+                  type="text"
+                  placeholder="ex: Secret du Verset Al-Kursi pour la Protection Absolue..."
+                  value={currentTitle}
+                  onChange={(e) => handleTitleChange(e.target.value)}
+                  className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl p-3.5 text-sm font-bold text-gray-900 dark:text-white outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500"
+                />
+              </div>
+
+              {/* Hook / Subtitle Field */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300">
+                  Accroche / Résumé Court (Hook) ({activeLangTab.toUpperCase()})
+                </label>
+                <input
+                  type="text"
+                  placeholder="ex: Découvrez la méthode mystique éprouvée pour désarmer tout ennemi..."
+                  value={currentHook}
+                  onChange={(e) => handleHookChange(e.target.value)}
+                  className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl p-3 text-xs text-gray-900 dark:text-white outline-none focus:border-emerald-500"
+                />
+              </div>
+
+              {/* Sacred Snippets Insertion Bar */}
+              <div className="p-3 bg-emerald-50/70 dark:bg-emerald-950/30 rounded-2xl border border-emerald-100 dark:border-emerald-900/50 space-y-2">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-800 dark:text-emerald-300">
+                  <Sparkles size={14} />
+                  <span>Insertion Rapide de Textes & Formules Sacrées dans l'Éditeur :</span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => insertSacredSnippet('بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ')}
+                    className="px-2.5 py-1 bg-white dark:bg-gray-800 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded-lg text-xs font-medium hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors"
+                  >
+                    ﷽ Bismillah
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => insertSacredSnippet('اللَّهُمَّ صَلِّ عَلَى سَيِّدِنَا مُحَمَّدٍ وَعَلَى آلِهِ وَصَحْبِهِ وَسَلِّمْ')}
+                    className="px-2.5 py-1 bg-white dark:bg-gray-800 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded-lg text-xs font-medium hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors"
+                  >
+                    ✨ Salawat
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => insertSacredSnippet('اللَّهُ لَا إِلَٰهَ إِلَّا هُوَ الْحَيُّ الْقَيُّومُ')}
+                    className="px-2.5 py-1 bg-white dark:bg-gray-800 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded-lg text-xs font-medium hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors"
+                  >
+                    🛡️ Ayat Al-Kursi
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => insertSacredSnippet('<strong>Nombre de récitations recommandé :</strong> 313 fois après la prière du Fajr.')}
+                    className="px-2.5 py-1 bg-white dark:bg-gray-800 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded-lg text-xs font-medium hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors"
+                  >
+                    📿 Zikr & Compte
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => insertSacredSnippet('<blockquote><strong>Talasam / Formule Sacrée :</strong> À tracer avec de l\'encre de safran sur papier blanc.</blockquote>')}
+                    className="px-2.5 py-1 bg-white dark:bg-gray-800 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded-lg text-xs font-medium hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors"
+                  >
+                    📜 Talasam / Carré
+                  </button>
+                </div>
+              </div>
+
+              {/* Rich Content Editor */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300">
+                    Contenu Complet du Secret / Recette <span className="text-red-500">*</span> ({activeLangTab.toUpperCase()})
+                  </label>
+                  <span className="text-[10px] text-gray-400">Éditeur enrichi TipTap</span>
+                </div>
+                <div className="rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-white dark:bg-gray-900 focus-within:border-emerald-500">
+                  <TipTapEditor
+                    key={`editor_${activeLangTab}_${articleFormKey}`}
+                    value={currentContent}
+                    onChange={handleContentChange}
+                    className="min-h-[280px] p-4 text-gray-900 dark:text-gray-100"
+                  />
+                </div>
+              </div>
+
+              {/* Embedded Media Gallery in Content */}
+              {currentContent && (
+                <div className="pt-2">
+                  <ArticleMediaGallery
+                    content={currentContent}
+                    onChangeContent={handleContentChange}
+                  />
+                </div>
+              )}
+
+              {/* Benefits & Virtues (Bienfaits) */}
+              <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
+                    <Award size={15} className="text-amber-500" />
+                    <span>Bienfaits & Vertus Spirituelles (Puces affichées en haut de l'article)</span>
+                  </label>
+                  <span className="text-[10px] text-gray-500">{((newArticle as any).benefits || []).length} bienfaits ajoutés</span>
+                </div>
+
+                <div className="flex gap-2">
+                  <input
+                    id="new_benefit_input"
+                    type="text"
+                    placeholder="ex: Protection contre les mauvais sorts et le mauvais œil..."
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const val = (e.target as HTMLInputElement).value;
+                        handleAddBenefit(val);
+                        (e.target as HTMLInputElement).value = '';
+                      }
+                    }}
+                    className="flex-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white outline-none focus:border-emerald-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const input = document.getElementById('new_benefit_input') as HTMLInputElement;
+                      if (input && input.value) {
+                        handleAddBenefit(input.value);
+                        input.value = '';
+                      }
+                    }}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                  >
+                    <Plus size={14} /> Ajouter
+                  </button>
+                </div>
+
+                {((newArticle as any).benefits || []).length > 0 && (
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {((newArticle as any).benefits || []).map((b: string, idx: number) => (
+                      <span
+                        key={idx}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 text-xs font-medium rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm"
+                      >
+                        <CheckCircle size={13} className="text-emerald-500 shrink-0" />
+                        <span>{b}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveBenefit(idx)}
+                          className="p-0.5 hover:text-red-500 transition-colors ml-1"
+                        >
+                          <X size={12} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+            </div>
+
+            {/* Right Column: Cover Image & Crop, Audio File, Categories, Status, Premium (1 col) */}
+            <div className="space-y-5">
+              
+              {/* Cover Image & Interactive Crop Card */}
+              <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-3.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
+                    <ImageIcon size={15} className="text-emerald-500" />
+                    <span>Image de Couverture / Vignette</span>
+                  </label>
+                  {resolvedThumbnail && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNewArticle(prev => ({ ...prev, thumbnail: '', imageUrl: '', image: '', coverImage: '' }));
+                        setImgSrc('');
+                      }}
+                      className="text-[10px] text-red-500 hover:underline font-bold"
+                    >
+                      Effacer
+                    </button>
+                  )}
+                </div>
+
+                {/* Thumbnail Preview Box */}
+                {resolvedThumbnail ? (
+                  <div className="relative rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 aspect-video group">
+                    <img
+                      src={resolvedThumbnail}
+                      alt="Aperçu couverture"
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                      <label className="px-3 py-1.5 bg-white text-gray-900 rounded-lg text-xs font-bold cursor-pointer hover:bg-gray-100 shadow-md">
+                        Changer l'image
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={onSelectFile}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
+                  </div>
+                ) : (
+                  <label className="flex flex-col items-center justify-center p-5 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-2xl hover:border-emerald-500 hover:bg-emerald-50/20 dark:hover:bg-emerald-950/20 transition-all cursor-pointer group text-center">
+                    <Upload size={24} className="text-gray-400 group-hover:text-emerald-500 mb-2 transition-colors" />
+                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Importer une image</span>
+                    <span className="text-[10px] text-gray-400 mt-0.5">JPG, PNG, WebP (Compression auto)</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={onSelectFile}
+                      className="hidden"
+                    />
+                  </label>
+                )}
+
+                {/* Direct Image URL input */}
+                <div className="space-y-1">
+                  <span className="text-[11px] text-gray-500 font-semibold">Ou collez une URL d'image directe :</span>
+                  <input
+                    type="text"
+                    placeholder="https://images.unsplash.com/..."
+                    value={resolvedThumbnail.startsWith('data:') ? '' : resolvedThumbnail}
+                    onChange={(e) => {
+                      const url = e.target.value;
+                      setNewArticle(prev => ({ ...prev, thumbnail: url, imageUrl: url, image: url, coverImage: url }));
+                    }}
+                    className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2 text-xs text-gray-900 dark:text-white outline-none focus:border-emerald-500"
+                  />
+                </div>
+
+                {/* Crop Interface (shown when a file is selected for cropping) */}
+                {imgSrc && (
+                  <div className="p-3 bg-white dark:bg-gray-800 rounded-xl border border-emerald-200 dark:border-emerald-800 space-y-3">
+                    <div className="flex items-center justify-between text-xs font-bold text-emerald-700 dark:text-emerald-300">
+                      <span className="flex items-center gap-1"><CropIcon size={14} /> Recadrage Interactif</span>
+                      <button
+                        type="button"
+                        onClick={() => setImgSrc('')}
+                        className="text-gray-400 hover:text-gray-600"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+
+                    {/* Aspect Ratio Buttons */}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => handleAspectChange(16 / 9)}
+                        className={`px-2 py-1 rounded-lg text-[10px] font-bold ${cropAspect === 16 / 9 ? 'bg-emerald-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}
+                      >
+                        16:9 (Paysage)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleAspectChange(1)}
+                        className={`px-2 py-1 rounded-lg text-[10px] font-bold ${cropAspect === 1 ? 'bg-emerald-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}
+                      >
+                        1:1 (Carré)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleAspectChange(4 / 5)}
+                        className={`px-2 py-1 rounded-lg text-[10px] font-bold ${cropAspect === 4 / 5 ? 'bg-emerald-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}
+                      >
+                        4:5 (Portrait)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleAspectChange(undefined)}
+                        className={`px-2 py-1 rounded-lg text-[10px] font-bold ${!cropAspect ? 'bg-emerald-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}
+                      >
+                        Libre
+                      </button>
+                    </div>
+
+                    {/* ReactCrop Container */}
+                    <div className="max-h-60 overflow-auto flex justify-center bg-black/5 rounded-lg p-1">
+                      <ReactCrop
+                        crop={crop}
+                        onChange={(_, percentCrop) => setCrop(percentCrop)}
+                        onComplete={(c) => setCompletedCrop(c)}
+                        aspect={cropAspect}
+                      >
+                        <img
+                          ref={imageRef}
+                          alt="Crop preview"
+                          src={imgSrc}
+                          onLoad={onImageCropLoad}
+                          className="max-w-full h-auto max-h-52 object-contain"
+                        />
+                      </ReactCrop>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleCropComplete}
+                      className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+                    >
+                      <Check size={14} /> Valider le Recadrage
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Audio File / Recitation Card */}
+              <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
+                    <Headphones size={15} className="text-blue-500" />
+                    <span>Fichier Audio / Récitation</span>
+                  </label>
+                  {((newArticle as any).audioUrl || (newArticle as any).audio_url) && (
+                    <button
+                      type="button"
+                      onClick={() => setNewArticle(prev => ({ ...prev, audioUrl: '', audio_url: '', audioTitle: '' }))}
+                      className="text-[10px] text-red-500 hover:underline font-bold"
+                    >
+                      Effacer
+                    </button>
+                  )}
+                </div>
+
+                <label className="flex items-center justify-center gap-2 p-2.5 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-xl text-xs font-bold text-gray-700 dark:text-gray-200 hover:border-blue-500 cursor-pointer transition-colors">
+                  <Upload size={14} className="text-blue-500" />
+                  <span>Importer fichier MP3 (Max 25 Mo)</span>
+                  <input
+                    type="file"
+                    accept="audio/*"
+                    onChange={handleAudioFileUploadArticle}
+                    className="hidden"
+                  />
+                </label>
+
+                <div className="space-y-1">
+                  <span className="text-[11px] text-gray-500 font-semibold">Ou URL Audio (HTTPS / MP3) :</span>
+                  <input
+                    type="text"
+                    placeholder="https://..."
+                    value={(newArticle as any).audioUrl || (newArticle as any).audio_url || ''}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setNewArticle(prev => ({ ...prev, audioUrl: val, audio_url: val }));
+                    }}
+                    className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2 text-xs text-gray-900 dark:text-white outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                {((newArticle as any).audioUrl || (newArticle as any).audio_url) && (
+                  <div className="pt-1 space-y-2">
+                    <audio
+                      src={(newArticle as any).audioUrl || (newArticle as any).audio_url}
+                      controls
+                      className="w-full h-8"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Titre de la récitation audio..."
+                      value={(newArticle as any).audioTitle || ''}
+                      onChange={(e) => setNewArticle(prev => ({ ...prev, audioTitle: e.target.value } as any))}
+                      className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2 text-xs text-gray-900 dark:text-white outline-none"
+                    />
+                  </div>
+                )}
+              </div>
+
+              {/* Categorization & Metadata Card */}
+              <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-3.5">
+                <label className="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
+                  <FolderOpen size={15} className="text-amber-500" />
+                  <span>Catégorisation & Paramètres</span>
+                </label>
+
+                {/* Category Selection */}
+                <div className="space-y-1">
+                  <span className="text-[11px] font-semibold text-gray-600 dark:text-gray-400">Catégorie Principale :</span>
+                  <select
+                    value={newArticle.category || 'Secrets & Pratiques'}
+                    onChange={(e) => setNewArticle(prev => ({ ...prev, category: e.target.value }))}
+                    className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white font-bold outline-none cursor-pointer"
+                  >
+                    <option value="Secrets & Pratiques">Secrets & Pratiques</option>
+                    <option value="Protection & Ruqyah">Protection & Ruqyah</option>
+                    <option value="Richesse & Ouverture">Richesse & Ouverture</option>
+                    <option value="Invocations & Douas">Invocations & Douas</option>
+                    <option value="Sciences Spirituelles">Sciences Spirituelles</option>
+                    <option value="Coran & Sourates">Coran & Sourates</option>
+                    {categories.map((c: any) => (
+                      <option key={c.id || c.name} value={c.name}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Subcategory */}
+                <div className="space-y-1">
+                  <span className="text-[11px] font-semibold text-gray-600 dark:text-gray-400">Sous-Catégorie :</span>
+                  <input
+                    type="text"
+                    placeholder="ex: Sourate Al-Waqi'a, Verset Al-Kursi..."
+                    value={(newArticle as any).subCategory || ''}
+                    onChange={(e) => setNewArticle(prev => ({ ...prev, subCategory: e.target.value } as any))}
+                    className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2 text-xs text-gray-900 dark:text-white outline-none"
+                  />
+                </div>
+
+                {/* Publication Status & VIP Premium Toggles */}
+                <div className="pt-2 border-t border-gray-200 dark:border-gray-700 space-y-3">
+                  
+                  {/* Status */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-xs font-bold text-gray-800 dark:text-gray-200">Statut de Publication :</span>
+                      <p className="text-[10px] text-gray-400">{newArticle.status === 'Published' ? 'Visible par les utilisateurs' : 'Masqué (Brouillon)'}</p>
+                    </div>
+                    <select
+                      value={newArticle.status || 'Published'}
+                      onChange={(e) => setNewArticle(prev => ({ ...prev, status: e.target.value as any }))}
+                      className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-2.5 py-1.5 text-xs font-bold text-gray-900 dark:text-white outline-none cursor-pointer"
+                    >
+                      <option value="Published">Publié</option>
+                      <option value="Draft">Brouillon</option>
+                    </select>
+                  </div>
+
+                  {/* Premium VIP Switch */}
+                  <div className="flex items-center justify-between p-2.5 bg-amber-500/10 rounded-xl border border-amber-500/20">
+                    <div className="flex items-center gap-2">
+                      <Crown size={16} className="text-amber-500 shrink-0" />
+                      <div>
+                        <span className="text-xs font-bold text-gray-800 dark:text-gray-200">Accès VIP Premium :</span>
+                        <p className="text-[10px] text-gray-500 dark:text-gray-400">Réservé aux abonnés Premium</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setNewArticle(prev => ({ ...prev, isPremium: !prev.isPremium }))}
+                      className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors cursor-pointer ${
+                        newArticle.isPremium ? 'bg-amber-500' : 'bg-gray-300 dark:bg-gray-600'
+                      }`}
+                    >
+                      <div className={`w-4 h-4 rounded-full bg-white transition-transform ${newArticle.isPremium ? 'translate-x-6' : 'translate-x-0'}`} />
+                    </button>
+                  </div>
+
+                </div>
+
+                {/* Big Action Save Button */}
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={handleSaveArticle}
+                    className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-2xl text-xs flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all cursor-pointer"
+                  >
+                    <Save size={16} />
+                    <span>{editingArticle ? "Mettre à jour et Enregistrer" : "Publier l'Article Immédiatement"}</span>
+                  </button>
+                </div>
+
+              </div>
+
+            </div>
+
           </div>
+
+          {/* Live Preview Modal / Inline Drawer */}
+          {showPreview && (
+            <div className="p-5 bg-gray-50 dark:bg-gray-900 rounded-2xl border-2 border-indigo-200 dark:border-indigo-800 space-y-4">
+              <div className="flex items-center justify-between pb-2 border-b border-gray-200 dark:border-gray-700">
+                <span className="text-xs font-black text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5 uppercase tracking-wider">
+                  <Eye size={16} /> Aperçu en direct du secret pour l'utilisateur ({activeLangTab.toUpperCase()})
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setShowPreview(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div className="max-w-2xl mx-auto bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-md border border-gray-100 dark:border-gray-700 space-y-4">
+                {resolvedThumbnail && (
+                  <div className="aspect-video w-full rounded-2xl overflow-hidden shadow-sm">
+                    <img src={resolvedThumbnail} alt="Preview" className="w-full h-full object-cover" />
+                  </div>
+                )}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 text-[10px] font-bold rounded-full">
+                      {newArticle.category || 'Général'}
+                    </span>
+                    {newArticle.isPremium && (
+                      <span className="px-2.5 py-0.5 bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 text-[10px] font-bold rounded-full">
+                        ★ Premium VIP
+                      </span>
+                    )}
+                  </div>
+                  <h1 className="text-xl font-black text-gray-900 dark:text-white">
+                    {currentTitle || "(Titre de l'article)"}
+                  </h1>
+                  {currentHook && (
+                    <p className="text-xs text-gray-600 dark:text-gray-300 italic">
+                      {currentHook}
+                    </p>
+                  )}
+                </div>
+
+                {((newArticle as any).benefits || []).length > 0 && (
+                  <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/40 rounded-2xl border border-emerald-100 dark:border-emerald-900 space-y-1.5">
+                    <h4 className="text-xs font-bold text-emerald-900 dark:text-emerald-200">Vertus & Bienfaits :</h4>
+                    <ul className="space-y-1">
+                      {((newArticle as any).benefits || []).map((b: string, i: number) => (
+                        <li key={i} className="text-xs text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
+                          <CheckCircle2 size={13} className="shrink-0" /> {b}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                <div 
+                  className="prose dark:prose-invert max-w-none text-xs text-gray-800 dark:text-gray-200 pt-2"
+                  dangerouslySetInnerHTML={{ __html: currentContent || "<p class='text-gray-400'>Aucun contenu rédigé pour le moment.</p>" }}
+                />
+              </div>
+            </div>
+          )}
+
         </div>
 
-        {/* Thumbnail validator */}
+        {/* Thumbnail diagnostic widget */}
         <ThumbnailValidatorWidget articles={articles} />
 
-        {/* Articles List / Table */}
-        <div className="bg-white dark:bg-gray-800 rounded-3xl p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700 space-y-4">
-          <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Total: {articles.length} articles</span>
+        {/* Articles Management Table & Grid List */}
+        <div className="bg-white dark:bg-gray-800 rounded-3xl p-4 sm:p-7 shadow-sm border border-gray-100 dark:border-gray-700 space-y-5">
+          
+          {/* List Header & Controls */}
+          <div className="flex flex-col lg:flex-row justify-between lg:items-center gap-4 pb-3 border-b border-gray-100 dark:border-gray-700">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="p-2 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                  <FileText size={20} />
+                </span>
+                <div>
+                  <h3 className="font-extrabold text-gray-900 dark:text-white text-base sm:text-lg flex items-center gap-2">
+                    <span>Gestion Complète des Articles & Secrets ({articles.length})</span>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">
+                      Accès Admin Total
+                    </span>
+                  </h3>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                    Modifiez instantanément les statuts, déplacez les articles dans d'autres catégories, passez en VIP Premium ou effectuez des actions groupées.
+                  </p>
+                </div>
+              </div>
             </div>
-            <div className="relative w-full sm:w-64">
-              <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+
+            {/* Quick Actions & Seeding */}
+            <div className="flex items-center flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={handleSeedDefaultArticles}
+                disabled={isSeedingArticles}
+                className="px-3 py-2 bg-indigo-50 dark:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors border border-indigo-200 dark:border-indigo-800 cursor-pointer"
+              >
+                <Database size={14} /> {isSeedingArticles ? 'Importation...' : 'Restaurer Articles par Défaut'}
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDeleteMockArticles}
+                className="px-3 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-750 text-gray-700 dark:text-gray-300 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Trash2 size={13} /> Masquer Démo
+              </button>
+
+              {/* Grid / Table layout switch */}
+              <div className="flex items-center bg-gray-100 dark:bg-gray-750 p-1 rounded-xl">
+                <button
+                  type="button"
+                  onClick={() => setArticlesLayoutMode('grid')}
+                  className={`p-1.5 rounded-lg transition-colors cursor-pointer ${articlesLayoutMode === 'grid' ? 'bg-white dark:bg-gray-800 text-emerald-600 shadow-xs' : 'text-gray-500'}`}
+                  title="Vue Grille"
+                >
+                  <Grid size={15} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setArticlesLayoutMode('list')}
+                  className={`p-1.5 rounded-lg transition-colors cursor-pointer ${articlesLayoutMode === 'list' ? 'bg-white dark:bg-gray-800 text-emerald-600 shadow-xs' : 'text-gray-500'}`}
+                  title="Vue Tableau (Recommandée pour la gestion)"
+                >
+                  <List size={15} />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Search & Filters Bar */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {/* Search Input */}
+            <div className="relative sm:col-span-2">
+              <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-gray-400">
                 <Search size={16} />
               </span>
               <input
                 type="text"
-                placeholder="Rechercher un article..."
+                placeholder="Rechercher par titre, catégorie, mot-clé ou ID..."
                 value={adminArticleSearch}
                 onChange={(e) => setAdminArticleSearch(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-xs text-gray-900 dark:text-white outline-none"
+                className="w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-xs text-gray-900 dark:text-white outline-none focus:border-emerald-500"
               />
             </div>
+
+            {/* Category Filter */}
+            <select
+              value={adminArticleFilterCategory}
+              onChange={(e) => setAdminArticleFilterCategory(e.target.value)}
+              className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-xs text-gray-900 dark:text-white outline-none cursor-pointer"
+            >
+              <option value="all">Toutes les Catégories</option>
+              <option value="Secrets & Pratiques">Secrets & Pratiques</option>
+              <option value="Protection & Ruqyah">Protection & Ruqyah</option>
+              <option value="Richesse & Ouverture">Richesse & Ouverture</option>
+              <option value="Invocations & Douas">Invocations & Douas</option>
+              <option value="Sciences Spirituelles">Sciences Spirituelles</option>
+              <option value="Coran & Sourates">Coran & Sourates</option>
+              <option value="Amour & Harmonie">Amour & Harmonie</option>
+              <option value="Santé & Guérison">Santé & Guérison</option>
+              <option value="Zikr & Méditation">Zikr & Méditation</option>
+              {categories.map((c: any) => (
+                <option key={c.id || c.name} value={c.name}>{c.name}</option>
+              ))}
+            </select>
+
+            {/* Status & Premium Filter */}
+            <select
+              value={adminArticleFilterStatus}
+              onChange={(e) => setAdminArticleFilterStatus(e.target.value)}
+              className="bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2.5 text-xs text-gray-900 dark:text-white outline-none cursor-pointer"
+            >
+              <option value="all">Tous les Statuts & Niveaux</option>
+              <option value="Published">Publiés uniquement</option>
+              <option value="Draft">Brouillons masqués uniquement</option>
+              <option value="Premium">VIP Premium uniquement</option>
+              <option value="Free">Accès Standard (Gratuits) uniquement</option>
+            </select>
           </div>
 
-          <div className="overflow-x-auto rounded-2xl border border-gray-100 dark:border-gray-700">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-gray-50 dark:bg-gray-900 text-gray-500 uppercase tracking-wider font-bold">
-                <tr>
-                  <th className="p-3">Titre</th>
-                  <th className="p-3">Catégorie</th>
-                  <th className="p-3">Statut</th>
-                  <th className="p-3">Premium</th>
-                  <th className="p-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                {articles.filter(a => ((a as any).title || (a as any).title_fr || '').toLowerCase().includes(adminArticleSearch.toLowerCase())).map((art) => (
-                  <tr key={art.id} className="hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
-                    <td className="p-3 font-bold text-gray-900 dark:text-white max-w-[200px] truncate">
-                      {(art as any).title || (art as any).title_fr || '(Sans titre)'}
-                    </td>
-                    <td className="p-3 text-gray-500">{art.category || 'Général'}</td>
-                    <td className="p-3">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                        art.status === 'Published' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
-                      }`}>
-                        {art.status === 'Published' ? 'Publié' : 'Brouillon'}
-                      </span>
-                    </td>
-                    <td className="p-3">
-                      {art.isPremium ? (
-                        <span className="text-amber-500 font-bold">★ Premium</span>
-                      ) : (
-                        <span className="text-gray-400">Standard</span>
-                      )}
-                    </td>
-                    <td className="p-3 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          onClick={() => {
-                            setEditingArticle(art);
-                          }}
-                          className="p-1.5 text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/30 rounded-lg transition-colors"
-                          title="Modifier"
+          {/* Filtered Articles Calculation & Total Control Interface */}
+          {(() => {
+            const categoryOptionList = [
+              'Secrets & Pratiques',
+              'Protection & Ruqyah',
+              'Richesse & Ouverture',
+              'Invocations & Douas',
+              'Sciences Spirituelles',
+              'Coran & Sourates',
+              'Amour & Harmonie',
+              'Santé & Guérison',
+              'Zikr & Méditation',
+              ...categories.map((c: any) => c.name || c.title).filter(Boolean)
+            ].filter((v, i, a) => a.indexOf(v) === i);
+
+            const filtered = articles.filter(art => {
+              const artTitle = ((art as any).title || (art as any).title_fr || '').toLowerCase();
+              const artId = (art.id || '').toLowerCase();
+              const matchesSearch = !adminArticleSearch || 
+                artTitle.includes(adminArticleSearch.toLowerCase()) || 
+                ((art as any).category || '').toLowerCase().includes(adminArticleSearch.toLowerCase()) ||
+                artId.includes(adminArticleSearch.toLowerCase());
+              const matchesCategory = adminArticleFilterCategory === 'all' || art.category === adminArticleFilterCategory;
+              let matchesStatus = true;
+              if (adminArticleFilterStatus === 'Published') matchesStatus = art.status === 'Published';
+              else if (adminArticleFilterStatus === 'Draft') matchesStatus = art.status === 'Draft';
+              else if (adminArticleFilterStatus === 'Premium') matchesStatus = Boolean(art.isPremium);
+              else if (adminArticleFilterStatus === 'Free') matchesStatus = !art.isPremium;
+              return matchesSearch && matchesCategory && matchesStatus;
+            });
+
+            const isAllFilteredSelected = filtered.length > 0 && filtered.every(a => selectedArticleIds.includes(a.id));
+
+            const toggleSelectAllFiltered = () => {
+              if (isAllFilteredSelected) {
+                const filteredIdSet = new Set(filtered.map(a => a.id));
+                setSelectedArticleIds(prev => prev.filter(id => !filteredIdSet.has(id)));
+              } else {
+                const newIds = Array.from(new Set([...selectedArticleIds, ...filtered.map(a => a.id)]));
+                setSelectedArticleIds(newIds);
+              }
+            };
+
+            const toggleSelectArticle = (articleId: string) => {
+              setSelectedArticleIds(prev => 
+                prev.includes(articleId) ? prev.filter(id => id !== articleId) : [...prev, articleId]
+              );
+            };
+
+            return (
+              <div className="space-y-4">
+                {/* Bulk Actions Bar if articles selected */}
+                {selectedArticleIds.length > 0 && (
+                  <div className="p-3.5 sm:p-4 bg-emerald-500/10 dark:bg-emerald-950/40 border border-emerald-500/30 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-3 shadow-sm animate-in fade-in duration-200">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-extrabold text-xs shadow-xs">
+                        {selectedArticleIds.length}
+                      </div>
+                      <div>
+                        <span className="text-xs font-black text-gray-900 dark:text-white">
+                          {selectedArticleIds.length} article(s) sélectionné(s)
+                        </span>
+                        <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                          Appliquez des modifications globales en un seul clic :
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                      {/* Bulk Publish */}
+                      <button
+                        type="button"
+                        onClick={() => handleBulkArticleAction('publish')}
+                        disabled={isBulkArticleActionRunning}
+                        className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl flex items-center gap-1 shadow-xs transition-colors cursor-pointer"
+                        title="Rendre tous ces articles visibles publiquement"
+                      >
+                        <CheckCircle2 size={13} /> Tout Publier
+                      </button>
+
+                      {/* Bulk Draft */}
+                      <button
+                        type="button"
+                        onClick={() => handleBulkArticleAction('draft')}
+                        disabled={isBulkArticleActionRunning}
+                        className="px-2.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold rounded-xl flex items-center gap-1 shadow-xs transition-colors cursor-pointer"
+                        title="Masquer tous ces articles (Passer en Brouillon)"
+                      >
+                        <Tag size={13} /> Passer en Brouillon
+                      </button>
+
+                      {/* Bulk VIP Premium */}
+                      <button
+                        type="button"
+                        onClick={() => handleBulkArticleAction('premium')}
+                        disabled={isBulkArticleActionRunning}
+                        className="px-2.5 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold rounded-xl flex items-center gap-1 shadow-xs transition-colors cursor-pointer"
+                        title="Réserver l'accès aux abonnés VIP Premium"
+                      >
+                        <Crown size={13} /> Rendre VIP
+                      </button>
+
+                      {/* Bulk Free */}
+                      <button
+                        type="button"
+                        onClick={() => handleBulkArticleAction('free')}
+                        disabled={isBulkArticleActionRunning}
+                        className="px-2.5 py-1.5 bg-gray-600 hover:bg-gray-700 text-white text-xs font-bold rounded-xl flex items-center gap-1 shadow-xs transition-colors cursor-pointer"
+                        title="Rendre ces articles accessibles gratuitement"
+                      >
+                        <Unlock size={13} /> Accès Standard
+                      </button>
+
+                      {/* Bulk Move Category */}
+                      <div className="flex items-center gap-1 bg-white dark:bg-gray-850 border border-gray-200 dark:border-gray-700 rounded-xl p-1 shadow-2xs">
+                        <select
+                          value={bulkArticleTargetCategory}
+                          onChange={(e) => setBulkArticleTargetCategory(e.target.value)}
+                          className="bg-transparent text-xs font-bold text-gray-800 dark:text-gray-200 outline-none px-1.5 cursor-pointer max-w-[140px] truncate"
+                          title="Sélectionner la destination"
                         >
-                          <Edit3 size={15} />
-                        </button>
+                          {categoryOptionList.map(cName => (
+                            <option key={cName} value={cName}>{cName}</option>
+                          ))}
+                        </select>
                         <button
-                          onClick={() => handleDeleteArticle(art.id)}
-                          className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors"
-                          title="Supprimer"
+                          type="button"
+                          onClick={() => handleBulkArticleAction('move_category', bulkArticleTargetCategory)}
+                          disabled={isBulkArticleActionRunning}
+                          className="px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold rounded-lg transition-colors cursor-pointer"
+                          title="Déplacer les articles sélectionnés vers cette catégorie"
                         >
-                          <Trash2 size={15} />
+                          Déplacer
                         </button>
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+
+                      {/* Bulk Delete */}
+                      <button
+                        type="button"
+                        onClick={() => handleBulkArticleAction('delete')}
+                        disabled={isBulkArticleActionRunning}
+                        className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-xl transition-colors cursor-pointer"
+                        title="Supprimer la sélection"
+                      >
+                        <Trash2 size={15} />
+                      </button>
+
+                      {/* Deselect All */}
+                      <button
+                        type="button"
+                        onClick={() => setSelectedArticleIds([])}
+                        className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-xl transition-colors cursor-pointer"
+                        title="Désélectionner tout"
+                      >
+                        <X size={15} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {filtered.length === 0 ? (
+                  <div className="py-12 text-center text-gray-400 space-y-2">
+                    <FileText size={32} className="mx-auto text-gray-300 dark:text-gray-600" />
+                    <p className="text-xs font-semibold">Aucun article ne correspond à votre recherche.</p>
+                  </div>
+                ) : articlesLayoutMode === 'grid' ? (
+                  /* Grid View with Admin Quick Controls */
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
+                    {filtered.map(art => {
+                      const img = getArticleImageUrl(art);
+                      const isSelected = editingArticle?.id === art.id;
+                      const isChecked = selectedArticleIds.includes(art.id);
+                      return (
+                        <div
+                          key={art.id}
+                          className={`bg-white dark:bg-gray-850 rounded-2xl border p-4 flex flex-col justify-between transition-all group relative ${
+                            isChecked 
+                              ? 'border-emerald-500 ring-2 ring-emerald-500/30 shadow-md bg-emerald-50/10' 
+                              : isSelected 
+                                ? 'border-indigo-500 ring-2 ring-indigo-500/20 shadow-md' 
+                                : 'border-gray-100 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                          }`}
+                        >
+                          <div className="space-y-3">
+                            {/* Image & Quick Overlays */}
+                            <div className="aspect-video w-full rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 relative">
+                              {img ? (
+                                <img src={img} alt={art.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center text-gray-400">
+                                  <FileText size={24} />
+                                </div>
+                              )}
+                              
+                              {/* Selection Checkbox on Card */}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleSelectArticle(art.id);
+                                }}
+                                className={`absolute top-2 left-2 w-6 h-6 rounded-lg flex items-center justify-center transition-all cursor-pointer shadow-md ${
+                                  isChecked ? 'bg-emerald-600 text-white ring-2 ring-white' : 'bg-black/60 text-white hover:bg-black/80'
+                                }`}
+                                title={isChecked ? 'Désélectionner' : 'Sélectionner'}
+                              >
+                                {isChecked ? <Check size={14} strokeWidth={3} /> : <div className="w-2.5 h-2.5 rounded-xs border border-white/80" />}
+                              </button>
+
+                              {/* Interactive Quick Status Toggle Badge */}
+                              <div className="absolute top-2 right-2 flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleQuickToggleArticlePremium(art.id);
+                                  }}
+                                  className={`px-2 py-0.5 font-bold text-[10px] rounded-full shadow-md transition-all cursor-pointer ${
+                                    art.isPremium 
+                                      ? 'bg-amber-500 text-white hover:bg-amber-600' 
+                                      : 'bg-black/50 hover:bg-black/70 text-gray-200'
+                                  }`}
+                                  title="Cliquer pour basculer VIP Premium / Standard"
+                                >
+                                  {art.isPremium ? '★ VIP' : 'Gratuit'}
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleQuickUpdateArticleStatus(art.id, art.status === 'Published' ? 'Draft' : 'Published');
+                                  }}
+                                  className={`px-2 py-0.5 rounded-full text-[10px] font-bold shadow-md transition-all cursor-pointer ${
+                                    art.status === 'Published' ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : 'bg-amber-600 hover:bg-amber-700 text-white'
+                                  }`}
+                                  title="Cliquer pour basculer Publié / Brouillon"
+                                >
+                                  {art.status === 'Published' ? 'Publié' : 'Brouillon'}
+                                </button>
+                              </div>
+                            </div>
+
+                            {/* Category Selector & Title */}
+                            <div>
+                              <div className="flex items-center justify-between gap-1 mb-1">
+                                <select
+                                  value={art.category || 'Secrets & Pratiques'}
+                                  onChange={(e) => handleQuickUpdateArticleCategory(art.id, e.target.value)}
+                                  className="text-[10px] font-extrabold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-lg px-2 py-0.5 uppercase tracking-wider outline-none cursor-pointer hover:border-emerald-500"
+                                  title="Changer instantanément de catégorie"
+                                >
+                                  {categoryOptionList.map(cName => (
+                                    <option key={cName} value={cName}>{cName}</option>
+                                  ))}
+                                </select>
+                                {(art as any).subCategory && (
+                                  <span className="text-[9px] font-medium text-gray-500 dark:text-gray-400 truncate max-w-[100px]">
+                                    › {(art as any).subCategory}
+                                  </span>
+                                )}
+                              </div>
+
+                              <h4 className="font-extrabold text-sm text-gray-900 dark:text-white line-clamp-2 mt-0.5">
+                                {(art as any).title || (art as any).title_fr || '(Sans titre)'}
+                              </h4>
+                              {(art as any).hook && (
+                                <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mt-1">
+                                  {(art as any).hook}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Action Buttons Toolbar */}
+                          <div className="flex items-center justify-between pt-3 mt-3 border-t border-gray-100 dark:border-gray-700">
+                            <div className="flex items-center gap-1.5">
+                              {((art as any).audioUrl || (art as any).audio_url) && (
+                                <span className="text-blue-500" title="Audio disponible">
+                                  <Headphones size={14} />
+                                </span>
+                              )}
+                              <span className="text-[10px] text-gray-400 font-mono">
+                                ID: {art.id.slice(0, 6)}...
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-1">
+                              {/* Quick Control Center Modal */}
+                              <button
+                                type="button"
+                                onClick={() => setSelectedArticleForQuickControl(art)}
+                                className="p-1.5 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 rounded-xl transition-colors cursor-pointer"
+                                title="Contrôle Total de l'article"
+                              >
+                                <Sliders size={14} />
+                              </button>
+
+                              {/* Edit Article */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  editArticle(art);
+                                  document.getElementById('article_editor_form_top')?.scrollIntoView({ behavior: 'smooth' });
+                                }}
+                                className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 rounded-xl text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                                title="Modifier le contenu"
+                              >
+                                <Edit3 size={13} /> Modifier
+                              </button>
+
+                              {/* Duplicate */}
+                              <button
+                                type="button"
+                                onClick={() => handleDuplicateArticle(art)}
+                                className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-750 rounded-xl transition-colors cursor-pointer"
+                                title="Dupliquer"
+                              >
+                                <Copy size={14} />
+                              </button>
+
+                              {/* Delete */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  if (window.confirm("Êtes-vous sûr de vouloir supprimer cet article ?")) {
+                                    handleDeleteArticle(art.id);
+                                  }
+                                }}
+                                className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl transition-colors cursor-pointer"
+                                title="Supprimer l'article"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  /* Table View with Inline Real-time Controls */
+                  <div className="overflow-x-auto rounded-2xl border border-gray-100 dark:border-gray-700 shadow-2xs">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400 uppercase tracking-wider font-bold">
+                        <tr>
+                          <th className="p-3 w-10 text-center">
+                            <input
+                              type="checkbox"
+                              checked={isAllFilteredSelected}
+                              onChange={toggleSelectAllFiltered}
+                              className="rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                              title="Tout sélectionner / désélectionner"
+                            />
+                          </th>
+                          <th className="p-3">Aperçu</th>
+                          <th className="p-3 min-w-[200px]">Titre du Secret & ID</th>
+                          <th className="p-3 min-w-[170px]">Catégorie (Déplacer)</th>
+                          <th className="p-3">Statut (Changer)</th>
+                          <th className="p-3">Accès VIP</th>
+                          <th className="p-3">Audio</th>
+                          <th className="p-3 text-right min-w-[160px]">Contrôle & Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                        {filtered.map((art) => {
+                          const img = getArticleImageUrl(art);
+                          const isChecked = selectedArticleIds.includes(art.id);
+                          return (
+                            <tr 
+                              key={art.id} 
+                              className={`transition-colors ${
+                                isChecked 
+                                  ? 'bg-emerald-50/40 dark:bg-emerald-950/20' 
+                                  : 'hover:bg-gray-50 dark:hover:bg-gray-750'
+                              }`}
+                            >
+                              <td className="p-3 text-center">
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={() => toggleSelectArticle(art.id)}
+                                  className="rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                                />
+                              </td>
+                              <td className="p-3">
+                                <div className="w-12 h-9 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 relative">
+                                  {img ? (
+                                    <img src={img} alt="" className="w-full h-full object-cover" />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center text-gray-400">
+                                      <FileText size={14} />
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="p-3">
+                                <div className="font-extrabold text-gray-900 dark:text-white max-w-[260px] truncate">
+                                  {(art as any).title || (art as any).title_fr || '(Sans titre)'}
+                                </div>
+                                <div className="text-[10px] text-gray-400 font-mono mt-0.5">
+                                  ID: {art.id}
+                                </div>
+                              </td>
+
+                              {/* Interactive Category Selector */}
+                              <td className="p-3">
+                                <div className="flex items-center gap-1.5">
+                                  <select
+                                    value={art.category || 'Secrets & Pratiques'}
+                                    onChange={(e) => handleQuickUpdateArticleCategory(art.id, e.target.value)}
+                                    className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2.5 py-1 text-xs font-semibold text-gray-800 dark:text-gray-200 outline-none cursor-pointer hover:border-emerald-500 focus:border-emerald-500 max-w-[150px] truncate"
+                                    title="Déplacer vers une autre catégorie"
+                                  >
+                                    {categoryOptionList.map(cName => (
+                                      <option key={cName} value={cName}>{cName}</option>
+                                    ))}
+                                  </select>
+                                  {(art as any).subCategory && (
+                                    <span className="text-[10px] text-gray-400 truncate max-w-[80px]" title={(art as any).subCategory}>
+                                      ({(art as any).subCategory})
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+
+                              {/* Interactive Status Switcher */}
+                              <td className="p-3">
+                                <select
+                                  value={art.status || 'Published'}
+                                  onChange={(e) => handleQuickUpdateArticleStatus(art.id, e.target.value as any)}
+                                  className={`px-2.5 py-1 rounded-lg text-xs font-bold border cursor-pointer outline-none transition-colors ${
+                                    art.status === 'Published'
+                                      ? 'bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
+                                      : 'bg-amber-50 text-amber-700 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800'
+                                  }`}
+                                  title="Changer le statut de l'article"
+                                >
+                                  <option value="Published">✓ Publié</option>
+                                  <option value="Draft">✎ Brouillon</option>
+                                </select>
+                              </td>
+
+                              {/* Interactive VIP Toggle */}
+                              <td className="p-3">
+                                <button
+                                  type="button"
+                                  onClick={() => handleQuickToggleArticlePremium(art.id)}
+                                  className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                                    art.isPremium
+                                      ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 border border-amber-300 dark:border-amber-700'
+                                      : 'bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:border-amber-400'
+                                  }`}
+                                  title="Cliquer pour basculer VIP Premium / Standard"
+                                >
+                                  {art.isPremium ? '★ VIP Premium' : 'Standard'}
+                                </button>
+                              </td>
+
+                              {/* Audio Indicator */}
+                              <td className="p-3">
+                                {((art as any).audioUrl || (art as any).audio_url) ? (
+                                  <span className="text-blue-500 font-bold flex items-center gap-1">
+                                    <Headphones size={13} /> Oui
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-300 dark:text-gray-600">-</span>
+                                )}
+                              </td>
+
+                              {/* Actions Toolbar */}
+                              <td className="p-3 text-right">
+                                <div className="flex items-center justify-end gap-1.5">
+                                  {/* Quick Control Center Modal Button */}
+                                  <button
+                                    type="button"
+                                    onClick={() => setSelectedArticleForQuickControl(art)}
+                                    className="p-1.5 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 rounded-lg transition-colors cursor-pointer"
+                                    title="Contrôle Total & Déplacer"
+                                  >
+                                    <Sliders size={14} />
+                                  </button>
+
+                                  {/* Edit Article */}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      editArticle(art);
+                                      document.getElementById('article_editor_form_top')?.scrollIntoView({ behavior: 'smooth' });
+                                    }}
+                                    className="px-2.5 py-1.5 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 rounded-lg font-bold flex items-center gap-1 transition-colors cursor-pointer text-xs"
+                                    title="Modifier dans l'éditeur complet"
+                                  >
+                                    <Edit3 size={13} /> Modifier
+                                  </button>
+
+                                  {/* Duplicate */}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDuplicateArticle(art)}
+                                    className="p-1.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors cursor-pointer"
+                                    title="Dupliquer l'article"
+                                  >
+                                    <Copy size={14} />
+                                  </button>
+
+                                  {/* Delete */}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      if (window.confirm("Êtes-vous sûr de vouloir supprimer cet article ?")) {
+                                        handleDeleteArticle(art.id);
+                                      }
+                                    }}
+                                    className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors cursor-pointer"
+                                    title="Supprimer l'article"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+
         </div>
+
+        {/* Modal Contrôle Total & Gestion Rapide de l'Article */}
+        {selectedArticleForQuickControl && (
+          <ArticleQuickControlModal
+            isOpen={Boolean(selectedArticleForQuickControl)}
+            onClose={() => setSelectedArticleForQuickControl(null)}
+            article={selectedArticleForQuickControl}
+            categories={categories}
+            onUpdateStatus={handleQuickUpdateArticleStatus}
+            onUpdateCategory={handleQuickUpdateArticleCategory}
+            onTogglePremium={handleQuickToggleArticlePremium}
+            onDuplicate={handleDuplicateArticle}
+            onDelete={async (id) => {
+              await handleDeleteArticle(id);
+              setSelectedArticleForQuickControl(null);
+            }}
+            onOpenFullEditor={(art) => {
+              setSelectedArticleForQuickControl(null);
+              editArticle(art);
+              document.getElementById('article_editor_form_top')?.scrollIntoView({ behavior: 'smooth' });
+            }}
+          />
+        )}
       </div>
     );
   };
@@ -6208,327 +8101,18 @@ export const AdminDashboard: React.FC = () => {
 
   const renderSettings = () => (
     <div className="space-y-6 w-full max-w-full min-w-0">
-      {/* Global Expand / Collapse Control Banner */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3.5 sm:p-4 bg-emerald-500/10 border border-emerald-500/20 dark:bg-emerald-950/20 dark:border-emerald-800/30 rounded-2xl w-full max-w-full">
-        <div className="flex items-center gap-2 min-w-0">
-          <Settings size={18} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
-          <span className="text-xs font-bold text-gray-800 dark:text-gray-200 break-words">
-            Toutes les sections sont fermées par défaut pour une meilleure visibilité.
-          </span>
-        </div>
-        <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto justify-end">
-          <button
-            type="button"
-            onClick={() => setAllAdminSectionsCollapse(false)}
-            className="flex-1 sm:flex-initial px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-bold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors cursor-pointer shadow-sm text-center"
-          >
-            Tout déplier
-          </button>
-          <button
-            type="button"
-            onClick={() => setAllAdminSectionsCollapse(true)}
-            className="flex-1 sm:flex-initial px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-sm text-center"
-          >
-            Tout replier
-          </button>
-        </div>
-      </div>
-
-      <div className="bg-white dark:bg-gray-800 rounded-2xl sm:rounded-3xl p-3.5 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700 w-full max-w-full min-w-0">
-        <h3 className="font-bold text-gray-900 dark:text-white mb-4 sm:mb-6 text-base sm:text-lg">Paramètres Globaux</h3>
-        
-        <div className="space-y-4 mb-8">
-          {/* Logo, Icône & Écran de Chargement */}
-          <CollapsibleAdminCard
-            id="set_branding"
-            title="Personnalisation du Logo, de l'Icône & de l'Écran de Chargement"
-            description="Personnalisez le logo principal, l'icône de l'application (PWA, mobile & favicon) et l'écran de chargement avec aperçu en temps réel."
-            icon={<Sparkles size={18} className="text-amber-500 shrink-0" />}
-            headerRight={
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setActiveTab('branding');
-                }}
-                className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 rounded-xl text-xs font-bold transition-colors"
-              >
-                Ouvrir
-              </button>
-            }
-          >
-            <BrandingSettings />
-          </CollapsibleAdminCard>
-
-          {/* Bouton Retour Flottant */}
-          <CollapsibleAdminCard
-            id="set_floating_back_button"
-            title="Bouton Retour Flottant (Activation, 22 Couleurs Translucides, 21 Formes & Modes)"
-            description="Activez et personnalisez entièrement le bouton retour flottant présent sur tous les écrans."
-            icon={<ArrowLeft size={18} className="text-emerald-500 shrink-0" />}
-            headerRight={
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setActiveTab('floating_button');
-                }}
-                className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400 rounded-xl text-xs font-bold transition-colors"
-              >
-                Ouvrir
-              </button>
-            }
-          >
-            <FloatingBackButtonSettings featureToggles={featureToggles} onShowToast={showToast} />
-          </CollapsibleAdminCard>
-
-          {/* Points Spirituels */}
-          <CollapsibleAdminCard
-            id="set_spiritual_points"
-            title="Paramètres & Gestion du Système de Points Spirituels"
-            description="Activez/désactivez les points, ajustez la fréquence d'affichage des notifications et la durée requise."
-            icon={<Gift size={18} className="text-amber-500 shrink-0" />}
-          >
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Activer le Système de Points :</span>
-                <button
-                  type="button"
-                  onClick={() => handleToggleFeature('spiritual_points_enabled', featureToggles.spiritual_points_enabled !== false ? false : true)}
-                  className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors ${
-                    featureToggles.spiritual_points_enabled !== false ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
-                  }`}
-                >
-                  <div className={`w-4 h-4 rounded-full bg-white transition-transform ${featureToggles.spiritual_points_enabled !== false ? 'translate-x-6' : 'translate-x-0'}`} />
-                </button>
-              </div>
-            </div>
-          </CollapsibleAdminCard>
-
-          {/* New User Premium */}
-          <CollapsibleAdminCard
-            id="set_new_user_premium"
-            title="Attribution Automatique du Premium aux Nouveaux Inscrits"
-            description="Offrez automatiquement l'abonnement Premium à tous les nouveaux utilisateurs inscrits."
-            icon={<Sparkles size={18} className="text-amber-500 shrink-0" />}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Premium Automatique :</span>
-              <button
-                type="button"
-                onClick={() => handleToggleFeature('new_user_premium_auto', !featureToggles.new_user_premium_auto)}
-                className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors ${
-                  featureToggles.new_user_premium_auto ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
-                }`}
-              >
-                <div className={`w-4 h-4 rounded-full bg-white transition-transform ${featureToggles.new_user_premium_auto ? 'translate-x-6' : 'translate-x-0'}`} />
-              </button>
-            </div>
-          </CollapsibleAdminCard>
-
-          {/* Hijri Calendar */}
-          <CollapsibleAdminCard
-            id="set_hijri"
-            title="Ajustement du Calendrier Hijri (Décalage Lunaire)"
-            description="Ajustez manuellement le décalage de jours (-2 à +2 jours) pour synchroniser avec l'observation locale de la lune."
-            icon={<Moon size={18} className="text-indigo-500 shrink-0" />}
-          >
-            <div className="flex flex-wrap items-center gap-2">
-              {[-2, -1, 0, 1, 2].map((offset) => (
-                <button
-                  key={offset}
-                  type="button"
-                  onClick={() => handleToggleFeature('hijri_offset', offset)}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                    (featureToggles.hijri_offset || 0) === offset
-                      ? 'bg-indigo-600 text-white shadow-md'
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
-                  }`}
-                >
-                  {offset > 0 ? `+${offset}` : offset} {offset === 0 ? 'Jour (Normal)' : 'Jours'}
-                </button>
-              ))}
-            </div>
-          </CollapsibleAdminCard>
-
-          {/* Calendar Card Scale */}
-          <CollapsibleAdminCard
-            id="set_calendar_scale"
-            title="Taille des Cartes du Calendrier"
-            description="Ajustez la taille visuelle des cartes du calendrier mystique."
-            icon={<Sliders size={18} className="text-emerald-500 shrink-0" />}
-          >
-            <div className="space-y-4">
-              <div className="space-y-1">
-                <div className="flex justify-between text-xs font-bold text-gray-700 dark:text-gray-300">
-                  <span>Échelle Globale :</span>
-                  <span>{Math.round(calendarGlobalScale * 100)}%</span>
-                </div>
-                <input
-                  type="range"
-                  min="0.5"
-                  max="1.5"
-                  step="0.05"
-                  value={calendarGlobalScale}
-                  onChange={(e) => {
-                    const val = parseFloat(e.target.value);
-                    setCalendarGlobalScale(val);
-                    saveCalendarScales(val, calendarSubCardScale);
-                  }}
-                  className="w-full accent-emerald-500"
-                />
-              </div>
-            </div>
-          </CollapsibleAdminCard>
-
-          {/* Reciter Default */}
-          <CollapsibleAdminCard
-            id="set_reciter"
-            title="Récitateur du Coran par Défaut (Système)"
-            description="Choisissez le récitateur par défaut utilisé pour la lecture des versets et sourates."
-            icon={<Headphones size={18} className="text-blue-500 shrink-0" />}
-          >
-            <select
-              value={featureToggles.default_reciter || 'alafasy'}
-              onChange={(e) => handleToggleFeature('default_reciter', e.target.value)}
-              className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-xs text-gray-900 dark:text-white"
-            >
-              {QURAN_RECITERS.map((rec) => (
-                <option key={rec.id} value={rec.id}>{rec.name}</option>
-              ))}
-            </select>
-          </CollapsibleAdminCard>
-
-          {/* Home Announcement */}
-          <CollapsibleAdminCard
-            id="set_announcement"
-            title="Annonce de l'Accueil"
-            description="Affichez un bandeau d'information ou de rappel en haut de la page d'accueil pour tous les utilisateurs."
-            icon={<Bell size={18} className="text-amber-500 shrink-0" />}
-          >
-            <div className="space-y-3">
-              <input
-                type="text"
-                value={featureToggles.home_announcement_text || ''}
-                onChange={(e) => handleToggleFeature('home_announcement_text', e.target.value)}
-                placeholder="Texte de l'annonce..."
-                className="w-full bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white"
-              />
-              <div className="flex items-center justify-between">
-                <span className="text-xs text-gray-600 dark:text-gray-400">Activer le bandeau :</span>
-                <button
-                  type="button"
-                  onClick={() => handleToggleFeature('home_announcement_enabled', !featureToggles.home_announcement_enabled)}
-                  className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors ${
-                    featureToggles.home_announcement_enabled ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
-                  }`}
-                >
-                  <div className={`w-4 h-4 rounded-full bg-white transition-transform ${featureToggles.home_announcement_enabled ? 'translate-x-6' : 'translate-x-0'}`} />
-                </button>
-              </div>
-            </div>
-          </CollapsibleAdminCard>
-
-          {/* Screenshot & Print Protection */}
-          <CollapsibleAdminCard
-            id="set_screenshot_protection"
-            title="Sécurité des Captures d'Écran & Impressions"
-            description="Protégez les secrets, talasams et contenus sacrés contre la copie et la capture d'écran."
-            icon={<Shield size={18} className="text-red-500 shrink-0" />}
-          >
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Protection Anti-Capture :</span>
-                <button
-                  type="button"
-                  onClick={() => handleToggleFeature('anti_screenshot', !featureToggles.anti_screenshot)}
-                  className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors ${
-                    featureToggles.anti_screenshot ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
-                  }`}
-                >
-                  <div className={`w-4 h-4 rounded-full bg-white transition-transform ${featureToggles.anti_screenshot ? 'translate-x-6' : 'translate-x-0'}`} />
-                </button>
-              </div>
-            </div>
-          </CollapsibleAdminCard>
-
-          {/* Dua Copy Protection */}
-          <CollapsibleAdminCard
-            id="set_dua_copy"
-            title="Sécurité de la Copie des Textes & Sélections"
-            description="Désactivez la sélection et la copie brute de texte sur les invocations et wirds sacrés."
-            icon={<Lock size={18} className="text-amber-500 shrink-0" />}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Bloquer la Copie du Texte :</span>
-              <button
-                type="button"
-                onClick={() => handleToggleFeature('disable_dua_copy', !featureToggles.disable_dua_copy)}
-                className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors ${
-                  featureToggles.disable_dua_copy ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
-                }`}
-              >
-                <div className={`w-4 h-4 rounded-full bg-white transition-transform ${featureToggles.disable_dua_copy ? 'translate-x-6' : 'translate-x-0'}`} />
-              </button>
-            </div>
-          </CollapsibleAdminCard>
-
-          {/* Backend URL */}
-          <CollapsibleAdminCard
-            id="set_backend_url"
-            title="URL de l'API Backend (Capacitor / Mobile)"
-            description="Configurez l'adresse IP ou le domaine de l'API serveur pour l'application mobile installée."
-            icon={<Globe size={18} className="text-emerald-500 shrink-0" />}
-          >
-            <div className="space-y-3">
-              <div className="flex flex-col sm:flex-row gap-2">
-                <input
-                  type="text"
-                  value={localBackendUrl}
-                  onChange={(e) => setLocalBackendUrl(e.target.value)}
-                  placeholder="https://votre-domaine.com"
-                  className="flex-1 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    handleToggleFeature('backend_url', localBackendUrl);
-                    showToast("URL du backend mise à jour avec succès !");
-                  }}
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs transition-colors cursor-pointer"
-                >
-                  Enregistrer
-                </button>
-              </div>
-            </div>
-          </CollapsibleAdminCard>
-
-          {/* Global Audio Ruqyah */}
-          <CollapsibleAdminCard
-            id="set_global_audio"
-            title="Lecture Audio Globale (Ruqyah)"
-            description="Activer ou désactiver la synthèse vocale pour tous les utilisateurs."
-            icon={<Volume2 size={18} className="text-emerald-500 shrink-0" />}
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Audio Synthèse Vocale :</span>
-              <button
-                type="button"
-                onClick={toggleAudio}
-                className={`w-14 h-8 flex items-center rounded-full p-1 transition-colors ${
-                  audioEnabled ? "bg-emerald-500" : "bg-gray-300 dark:bg-gray-600"
-                }`}
-              >
-                <div
-                  className={`w-6 h-6 rounded-full bg-white transition-transform ${
-                    audioEnabled ? "translate-x-6" : "translate-x-0"
-                  }`}
-                />
-              </button>
-            </div>
-          </CollapsibleAdminCard>
-        </div>
-      </div>
+      <AdminDeepSettingsManager
+        featureToggles={featureToggles}
+        handleToggleFeature={handleToggleFeature}
+        showToast={showToast}
+        setActiveTab={setActiveTab}
+        activeTab={activeTab}
+        users={users}
+        securityAlerts={securityAlerts}
+        isSecurityAlertTrackingEnabled={isSecurityAlertTrackingEnabled}
+        handleSetUserStatus={handleSetUserStatus}
+        promoCodes={promoCodes}
+      />
     </div>
   );
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Calculator,
   Clock,
@@ -34,7 +34,6 @@ import { motion, AnimatePresence } from "motion/react";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { useAuth } from "../../contexts/AuthContext";
 import { useFeatures } from "../../contexts/FeatureContext";
-import { useNavigate } from "react-router-dom";
 
 import { db, isAutoSaveEnabled } from "../../lib/firebase";
 import { tools } from "../../data/tools";
@@ -247,7 +246,7 @@ export const ToolsDashboard: React.FC = () => {
 
   const displayedTools = tools.filter((tool) => {
     const status = featureToggles[`tool_${tool.id}`] || "active";
-    if (status === "inactive") return false;
+    if (status === "inactive" || status === "disabled") return false;
     if (searchQuery) {
       const q = searchQuery.toLowerCase();
       const title = (
@@ -265,6 +264,18 @@ export const ToolsDashboard: React.FC = () => {
       if (tool.level !== activeTab) return false;
     }
     return true;
+  }).sort((a, b) => {
+    const orderList: string[] = Array.isArray(featureToggles?.feature_nav_order)
+      ? featureToggles.feature_nav_order
+      : (Array.isArray(featureToggles?.tools_order) ? featureToggles.tools_order : []);
+    if (orderList.length > 0) {
+      const indexA = orderList.indexOf(a.id);
+      const indexB = orderList.indexOf(b.id);
+      const posA = indexA === -1 ? 9999 : indexA;
+      const posB = indexB === -1 ? 9999 : indexB;
+      if (posA !== posB) return posA - posB;
+    }
+    return 0;
   });
 
   const handleShareTool = async (e: React.MouseEvent, tool: any) => {
