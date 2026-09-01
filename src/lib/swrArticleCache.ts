@@ -111,37 +111,61 @@ export async function revalidatePublishedArticles(sourceTag = 'manual'): Promise
       return cached;
     }
 
-    // 1. Attempt Firestore SDK fetch with timeout
-    try {
-      const q = collection(db, 'articles');
-      const snapshot = await Promise.race([
-        getDocs(q),
-        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Firestore SDK timeout')), 6000))
-      ]);
+    // 1. Concurrent fast-path fetch: Launch REST API and Firestore SDK simultaneously
+    // REST API returns in ~150-250ms with zero WebSocket/long-poll overhead.
+    const fetchPromises: Promise<any[]>[] = [];
 
-      snapshot.forEach((docSnap) => {
-        fetchedItems.push({ id: docSnap.id, ...docSnap.data() });
-      });
-      console.log(`[SWR Revalidate] Firestore SDK returned ${fetchedItems.length} articles.`);
-    } catch (sdkErr: any) {
-      console.warn(`[SWR Revalidate] Firestore SDK fetch skipped/failed (${sdkErr?.message}), trying HTTPS REST fallback...`);
-      networkErrorMessage = sdkErr?.message || 'Firestore unreachable';
-      fetchedItems = [];
-    }
+    // REST API task (Fastest and most reliable for immediate display across all mobile/web environments)
+    fetchPromises.push(
+      fetchArticlesFromRest()
+        .then(res => (Array.isArray(res) ? res : []))
+        .catch(err => {
+          console.warn('[SWR Revalidate] REST API fetch note:', err);
+          return [];
+        })
+    );
 
-    // 2. If SDK returned empty or failed, attempt HTTPS REST API fallback
-    if (fetchedItems.length === 0) {
-      try {
-        const restItems = await fetchArticlesFromRest();
-        if (Array.isArray(restItems) && restItems.length > 0) {
-          fetchedItems = restItems;
-          networkErrorMessage = null;
-          console.log(`[SWR Revalidate] HTTPS REST API returned ${fetchedItems.length} articles.`);
+    // Firestore SDK task with short non-blocking timeout
+    fetchPromises.push(
+      (async () => {
+        try {
+          const q = collection(db, 'articles');
+          const snapshot = await Promise.race([
+            getDocs(q),
+            new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Firestore SDK timeout')), 2500))
+          ]);
+          const docs: any[] = [];
+          snapshot.forEach((docSnap) => {
+            docs.push({ id: docSnap.id, ...docSnap.data() });
+          });
+          return docs;
+        } catch (sdkErr: any) {
+          console.warn(`[SWR Revalidate] Firestore SDK note:`, sdkErr?.message || sdkErr);
+          return [];
         }
-      } catch (restErr: any) {
-        console.warn('[SWR Revalidate] REST API fallback error:', restErr);
-        networkErrorMessage = restErr?.message || 'REST API unreachable';
+      })()
+    );
+
+    // Wait for all concurrent fetchers to return
+    const [restItems, sdkItems] = await Promise.all(fetchPromises);
+
+    // Merge results to ensure the most complete and fresh collection
+    const combinedMap = new Map<string, any>();
+    [...(restItems || []), ...(sdkItems || [])].forEach((item) => {
+      if (item && item.id) {
+        const existing = combinedMap.get(item.id);
+        combinedMap.set(item.id, { ...existing, ...item });
       }
+    });
+
+    fetchedItems = Array.from(combinedMap.values());
+    console.log(`[SWR Revalidate] Concurrent fetch finished: ${fetchedItems.length} total articles gathered (REST: ${restItems?.length || 0}, SDK: ${sdkItems?.length || 0}).`);
+
+    // Fallback: If network returned nothing, fallback to local stale cache
+    if (fetchedItems.length === 0) {
+      console.log('[SWR Revalidate] Network returned 0 items; falling back to local stale cache.');
+      const cached = await getStalePublishedArticles();
+      return cached;
     }
 
     // 3. Strict data-level validation: filter only truly published items

@@ -24,7 +24,7 @@ import { fetchArticlesFromRest } from '../../lib/firestoreRest';
 import { isPubliclyVisibleArticle, getTranslatedArticleTitle, getTranslatedArticleHook, sortArticlesInOrder } from '../../lib/articleUtils';
 import { ArticleService } from '../../services/ArticleService';
 import { mergeWithLocalArticles, saveCachedArticlesList, combineWithDefaultArticles, setHideMockArticles, isMockArticlesHidden, getCachedArticlesListAsync } from '../../lib/localArticles';
-import { SWR_EVENT_NAME } from '../../lib/swrArticleCache';
+import { SWR_EVENT_NAME, revalidatePublishedArticles } from '../../lib/swrArticleCache';
 import { useBackButton } from '../../hooks/useBackButton';
 import { getArticleImageUrl } from '../../utils/articleImageUtils';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
@@ -260,8 +260,19 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
     // Master in-memory accumulator to prevent any flicker or disappearances
     const articleMapRef = useRef<Map<string, AsrarItem>>(new Map());
 
+    // Pre-populate articleMapRef with initial items
+    useEffect(() => {
+      if (items && items.length > 0) {
+        items.forEach(it => {
+          if (it?.id && !articleMapRef.current.has(it.id)) {
+            articleMapRef.current.set(it.id, it);
+          }
+        });
+      }
+    }, []);
+
     const applyAccumulatedArticles = useCallback((incoming: AsrarItem[]) => {
-      if (!Array.isArray(incoming)) return;
+      if (!Array.isArray(incoming) || incoming.length === 0) return;
       for (const it of incoming) {
         if (it && it.id && ArticleService.isPublished(it)) {
           const existing = articleMapRef.current.get(it.id);
@@ -445,7 +456,19 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
 
     restoreCachedArticles();
 
-    // 2. Direct REST API fetch to ensure all articles load instantly on mobile / Capacitor WebViews
+    // 2. Direct fast-path fetch & revalidation in background
+    revalidatePublishedArticles('dashboard_mount').then(freshItems => {
+      if (Array.isArray(freshItems) && freshItems.length > 0) {
+        const parsed = freshItems
+          .map(d => processRawObject(d, d.id))
+          .filter((item): item is AsrarItem => item !== null);
+        if (parsed.length > 0) {
+          applyAccumulatedArticles(parsed);
+        }
+      }
+    }).catch(() => {});
+
+    // Direct REST API fetch to ensure all articles load instantly on mobile / Capacitor WebViews
     fetchArticlesFromRest().then(restDocs => {
       if (Array.isArray(restDocs) && restDocs.length > 0) {
         const parsed = restDocs

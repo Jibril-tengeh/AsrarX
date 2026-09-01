@@ -4,8 +4,8 @@
  * and size constraints (< 1MB) for optimal app performance and storage efficiency.
  */
 
-export const MAX_BRANDING_FILE_SIZE_BYTES = 1024 * 1024; // 1MB limit
-export const MAX_BRANDING_FILE_SIZE_MB = 1;
+export const MAX_BRANDING_FILE_SIZE_BYTES = 5 * 1024 * 1024; // Allow up to 5MB upload with auto-compression
+export const MAX_BRANDING_FILE_SIZE_MB = 5;
 
 export const SUPPORTED_MIME_TYPES = [
   'image/png',
@@ -63,7 +63,7 @@ export function validateBrandingFile(file: File): ValidationResult {
     };
   }
 
-  // 2. Check file size (must be <= 1MB)
+  // 2. Check file size (must be <= 5MB)
   if (file.size > MAX_BRANDING_FILE_SIZE_BYTES) {
     return {
       isValid: false,
@@ -80,6 +80,68 @@ export function validateBrandingFile(file: File): ValidationResult {
       type: file.type
     }
   };
+}
+
+/**
+ * Compresses and converts an image file to an optimized Base64 string for instant loading
+ */
+export function compressAndOptimizeImage(file: File, maxDimension = 512, quality = 0.85): Promise<string> {
+  return new Promise((resolve, reject) => {
+    // Preserve SVG and animated GIF as original data URLs
+    if (file.type === 'image/svg+xml' || file.type === 'image/gif') {
+      convertFileToBase64(file).then(resolve).catch(reject);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+
+        if (width > maxDimension || height > maxDimension) {
+          if (width > height) {
+            height = Math.round((height * maxDimension) / width);
+            width = maxDimension;
+          } else {
+            width = Math.round((width * maxDimension) / height);
+            height = maxDimension;
+          }
+        }
+
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          convertFileToBase64(file).then(resolve).catch(reject);
+          return;
+        }
+
+        ctx.clearRect(0, 0, width, height);
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // Export as WebP if supported, otherwise PNG
+        try {
+          const optimizedDataUrl = canvas.toDataURL('image/webp', quality);
+          if (optimizedDataUrl && optimizedDataUrl.startsWith('data:image/webp')) {
+            resolve(optimizedDataUrl);
+            return;
+          }
+        } catch {
+          // Fallback to PNG
+        }
+        resolve(canvas.toDataURL('image/png'));
+      };
+      img.onerror = () => {
+        convertFileToBase64(file).then(resolve).catch(reject);
+      };
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = (err) => reject(err);
+    reader.readAsDataURL(file);
+  });
 }
 
 /**

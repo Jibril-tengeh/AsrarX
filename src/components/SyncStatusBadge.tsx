@@ -474,19 +474,32 @@ export const SyncStatusBadge: React.FC = () => {
               )}
 
               {/* Actions Button */}
-              <div className="relative">
+              <div className="relative space-y-2">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => {
+                    setShowPopover(false);
+                    window.dispatchEvent(new CustomEvent('asrarhub_open_article_sync_video_modal'));
+                  }}
+                  className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 via-teal-600 to-amber-500 hover:from-emerald-500 hover:to-amber-400 text-white text-xs font-black py-2.5 px-4 rounded-xl shadow-lg transition-all cursor-pointer"
+                >
+                  <RefreshCw size={14} />
+                  <span>⚡ Synchronisation Vidéo Instantanée</span>
+                </motion.button>
+
                 <motion.button
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={handleForceSync}
                   disabled={isForcingSync}
-                  className={`w-full flex items-center justify-center gap-2 text-white text-xs font-bold py-2.5 px-4 rounded-xl shadow-md transition-all cursor-pointer ${
+                  className={`w-full flex items-center justify-center gap-2 text-white text-xs font-bold py-2 px-4 rounded-xl shadow-xs transition-all cursor-pointer ${
                     !isOnline 
-                      ? 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700' 
-                      : 'bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700'
+                      ? 'bg-amber-600/80 hover:bg-amber-700' 
+                      : 'bg-slate-700 hover:bg-slate-600'
                   } disabled:opacity-50`}
                 >
-                  <RefreshCw size={14} className={`${isForcingSync ? 'animate-spin' : ''}`} />
+                  <RefreshCw size={12} className={`${isForcingSync ? 'animate-spin' : ''}`} />
                   <span>
                     {isForcingSync 
                       ? tStr.testing 

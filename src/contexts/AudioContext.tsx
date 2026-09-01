@@ -120,7 +120,11 @@ export const AudioProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     if (webAudioInitialized.current || !audioRef.current) return;
     try {
       const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) return;
       const ctx = new AudioContextClass();
+      if (ctx.state === 'suspended') {
+        ctx.resume().catch(() => {});
+      }
       audioContextRef.current = ctx;
       
       const source = ctx.createMediaElementSource(audioRef.current);
@@ -151,22 +155,12 @@ export const AudioProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       
       webAudioInitialized.current = true;
     } catch (e) {
-      console.warn("Web Audio API not supported or failed to init", e);
+      console.warn("Web Audio API not supported or failed to init (falling back to direct audio element):", e);
     }
   };
 
   const applyEffect = (effect: AudioEffect) => {
     if (!audioRef.current) return;
-    
-    // Always init context if possible when setting effect
-    if (!webAudioInitialized.current) {
-      initWebAudio();
-    }
-    
-    const ctx = audioContextRef.current;
-    const source = sourceNodeRef.current;
-    const delay = delayNodeRef.current;
-    const filter = filterNodeRef.current;
     
     // Playback rate for slow
     if (effect === 'slow') {
@@ -174,25 +168,52 @@ export const AudioProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     } else {
       audioRef.current.playbackRate = 1.0;
     }
+
+    // If normal or slow, no WebAudio graph needed unless already initialized
+    if (effect === 'normal' || effect === 'slow') {
+      if (sourceNodeRef.current && audioContextRef.current) {
+        try {
+          sourceNodeRef.current.disconnect();
+          delayNodeRef.current?.disconnect();
+          filterNodeRef.current?.disconnect();
+          sourceNodeRef.current.connect(audioContextRef.current.destination);
+        } catch (_) {}
+      }
+      return;
+    }
+    
+    // For echo / clarity, initialize context if possible
+    if (!webAudioInitialized.current) {
+      initWebAudio();
+    }
+    
+    const ctx = audioContextRef.current;
+    if (ctx && ctx.state === 'suspended') {
+      ctx.resume().catch(() => {});
+    }
+    const source = sourceNodeRef.current;
+    const delay = delayNodeRef.current;
+    const filter = filterNodeRef.current;
     
     if (!ctx || !source || !delay || !filter) return;
     
-    // Disconnect everything
-    source.disconnect();
-    delay.disconnect();
-    filter.disconnect();
-    
-    // Reconnect based on effect
-    if (effect === 'echo') {
-      source.connect(delay);
-      delay.connect(ctx.destination);
-      source.connect(ctx.destination); // original audio + echo
-    } else if (effect === 'clarity') {
-      source.connect(filter);
-      filter.connect(ctx.destination);
-    } else {
-      // Normal or slow (just playbackRate)
-      source.connect(ctx.destination);
+    try {
+      // Disconnect everything
+      source.disconnect();
+      delay.disconnect();
+      filter.disconnect();
+      
+      // Reconnect based on effect
+      if (effect === 'echo') {
+        source.connect(delay);
+        delay.connect(ctx.destination);
+        source.connect(ctx.destination); // original audio + echo
+      } else if (effect === 'clarity') {
+        source.connect(filter);
+        filter.connect(ctx.destination);
+      }
+    } catch (err) {
+      console.warn("Error applying audio effect:", err);
     }
   };
 
@@ -364,8 +385,9 @@ export const AudioProvider: React.FC<{ children: ReactNode }> = ({ children }) =
           console.warn("[AudioContext] Cache Storage check failed:", cacheErr);
         }
 
-        // 2. Device is offline and track is not downloaded
-        if (!navigator.onLine) {
+        // 2. Device is offline and track is not downloaded or data/blob
+        const isLocalOrDataUrl = activeUrl.startsWith('data:') || activeUrl.startsWith('blob:');
+        if (!navigator.onLine && !isLocalOrDataUrl) {
           console.warn("[AudioContext] Device is offline and track is not cached:", activeUrl);
           setIsPlaying(false);
           window.dispatchEvent(new CustomEvent('asrarhub_offline_audio_missing', {

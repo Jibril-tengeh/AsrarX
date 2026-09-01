@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Compass, Book, Shield, Heart, Sparkles, Moon, Sun, ArrowRight, Wallet, Activity, Share2, HelpCircle, FileText, Download, Eye, X, Star } from 'lucide-react';
+import { Compass, Book, Shield, Heart, Sparkles, Moon, Sun, ArrowRight, Wallet, Activity, Share2, HelpCircle, FileText, Download, Eye, X, Star, RefreshCw } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useFeatures } from '../../contexts/FeatureContext';
@@ -19,7 +19,7 @@ import { fetchArticlesFromRest } from '../../lib/firestoreRest';
 import { isPubliclyVisibleArticle, getTranslatedArticleTitle, getTranslatedArticleHook, sortArticlesInOrder } from '../../lib/articleUtils';
 import { ArticleService } from '../../services/ArticleService';
 import { mergeWithLocalArticles, saveCachedArticlesList, combineWithDefaultArticles, getCachedArticlesListAsync } from '../../lib/localArticles';
-import { SWR_EVENT_NAME } from '../../lib/swrArticleCache';
+import { SWR_EVENT_NAME, revalidatePublishedArticles } from '../../lib/swrArticleCache';
 import { useBackButton } from '../../hooks/useBackButton';
 import { getArticleImageUrl } from '../../utils/articleImageUtils';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
@@ -169,8 +169,17 @@ export const ExploreDashboard: React.FC = () => {
     // Master in-memory accumulator to prevent any flicker or disappearances
     const exploreArticleMap = new Map<string, any>();
 
+    // Seed exploreArticleMap with initial articles if present
+    if (articles && articles.length > 0) {
+      articles.forEach(it => {
+        if (it?.id && !exploreArticleMap.has(it.id)) {
+          exploreArticleMap.set(it.id, it);
+        }
+      });
+    }
+
     const applyAccumulatedExploreArticles = (incoming: any[]) => {
-      if (!Array.isArray(incoming)) return;
+      if (!Array.isArray(incoming) || incoming.length === 0) return;
       for (const it of incoming) {
         if (it && it.id && (isAdmin || isPublishedStatus(it.status))) {
           const existing = exploreArticleMap.get(it.id);
@@ -250,7 +259,19 @@ export const ExploreDashboard: React.FC = () => {
 
     restoreCachedExploreArticles();
 
-    // 2. Direct REST API fetch
+    // 2. Fast-path background revalidation
+    revalidatePublishedArticles('explore_mount').then(fresh => {
+      if (Array.isArray(fresh) && fresh.length > 0) {
+        const processed = fresh
+          .map(d => processExploreRaw(d, d.id))
+          .filter((art: any) => art !== null && (isAdmin || isPublishedStatus(art.status)));
+        if (processed.length > 0) {
+          applyAccumulatedExploreArticles(processed);
+        }
+      }
+    }).catch(() => {});
+
+    // Direct REST API fetch
     fetchArticlesFromRest().then(restDocs => {
       if (Array.isArray(restDocs) && restDocs.length > 0) {
         const fresh = restDocs
@@ -592,7 +613,18 @@ export const ExploreDashboard: React.FC = () => {
         </div>
       ) : articles.length > 0 && (
         <div className="mt-12">
-          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Derniers Articles</h2>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Derniers Articles</h2>
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent('asrarhub_open_article_sync_video_modal'))}
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600/10 via-teal-600/10 to-amber-500/10 hover:from-emerald-600/20 hover:to-amber-500/20 border border-emerald-500/20 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-xs font-bold transition-all shadow-xs cursor-pointer"
+              title="Ouvrir la synchronisation vidéo des articles"
+            >
+              <RefreshCw size={13} className="text-emerald-600 dark:text-emerald-400" />
+              <span>⚡ Synchroniser les articles</span>
+            </button>
+          </div>
           
           {(() => {
             const displayMode = featureToggles?.articlesDisplayMode || 'grid';

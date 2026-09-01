@@ -1,6 +1,8 @@
 // IndexedDB Offline Vault for Spiritual Tools in AsrarHub
 // Enables complete offline caching and instant offline access to AsrarHub tools.
 
+import { tools as allToolsList } from '../data/tools';
+
 export interface OfflineStoredTool {
   id: string;
   title: string;
@@ -66,162 +68,34 @@ function updateToolsMetaCache(list: { id: string; title: string; path: string; s
 }
 
 /**
- * Top default offline-capable spiritual tools in AsrarHub
+ * Complete list of all offline-capable spiritual tools in AsrarHub dynamically built from data/tools
  */
-export const DEFAULT_OFFLINE_TOOLS: OfflineStoredTool[] = [
-  {
-    id: 'abjad',
-    title: 'Moteur Abjad & Rūḥāniyya Master',
-    title_fr: 'Moteur Abjad & Rūḥāniyya Master',
-    title_en: 'Abjad Engine & Spiritual Master',
-    title_ha: 'Injin Lissafin Abjad',
-    description: 'Double système Abjad (Oriental & Maghrébin), anatomie élémentaire et calculs de poids mystique sans connexion.',
-    description_fr: 'Double système Abjad (Oriental & Maghrébin), anatomie élémentaire et calculs de poids mystique sans connexion.',
-    description_en: 'Dual Abjad system (Eastern & Western), elemental anatomy, and mystic gematria calculations offline.',
-    description_ha: 'Tsarin Abjad guda biyu da lissafin asrar ba tare da intanet ba.',
-    path: '/tools/abjad',
-    iconName: 'Calculator',
-    color: 'from-blue-600 via-indigo-600 to-purple-700',
-    level: 'simple',
-    isOfflineReady: true,
-    savedAt: Date.now(),
-    sizeBytes: 15400,
-  },
-  {
-    id: '99names',
-    title: "Les 99 Noms d'Allah (Asma al-Husna)",
-    title_fr: "Les 99 Noms d'Allah (Asma al-Husna)",
-    title_en: 'The 99 Divine Names of Allah',
-    title_ha: 'Sunayen Allah 99 Masu Albarka',
-    description: 'Catalogue complet des 99 Noms Sublimes avec valeurs numériques, vertus et secrets de récitation.',
-    description_fr: 'Catalogue complet des 99 Noms Sublimes avec valeurs numériques, vertus et secrets de récitation.',
-    description_en: 'Complete catalogue of the 99 Sublime Names with numerical values and recitation secrets.',
-    description_ha: 'Cikakken kundin sunayen Allah 99 tare da lissafin adadinsu.',
-    path: '/tools/99names',
-    iconName: 'ListTodo',
-    color: 'from-cyan-500 to-blue-600',
-    level: 'simple',
-    isOfflineReady: true,
-    savedAt: Date.now(),
-    sizeBytes: 28600,
-  },
-  {
-    id: 'tasbih',
-    title: 'Tasbih Virtuel & Chapelet Numérique',
-    title_fr: 'Tasbih Virtuel & Chapelet Numérique',
-    title_en: 'Virtual Tasbih & Digital Rosary',
-    title_ha: 'Tasbaha ta Dijital',
-    description: 'Compteur de zikr intelligent avec vibration haptique, paliers personnalisés et historique local.',
-    description_fr: 'Compteur de zikr intelligent avec vibration haptique, paliers personnalisés et historique local.',
-    description_en: 'Smart Dhikr counter with haptic feedback, customizable targets, and local history.',
-    description_ha: 'Kayan lissafin ambaton Allah mai aiki koda babu intanet.',
-    path: '/tools/tasbih',
-    iconName: 'Activity',
-    color: 'from-emerald-500 to-teal-600',
-    level: 'simple',
-    isOfflineReady: true,
-    savedAt: Date.now(),
-    sizeBytes: 12200,
-  },
-  {
-    id: 'planetary',
-    title: 'Heures Planétaires & Demeures Lunaires',
-    title_fr: 'Heures Planétaires & Demeures Lunaires',
-    title_en: 'Planetary Hours & Lunar Mansions',
-    title_ha: 'Sa’o’in Falaki da Matsugunan Wata',
-    description: 'Calculateur astronomique autonome (Sā‘āt Zamaniyyah) et 28 Demeures de la Lune.',
-    description_fr: 'Calculateur astronomique autonome (Sā‘āt Zamaniyyah) et 28 Demeures de la Lune.',
-    description_en: 'Astronomical planetary hours calculator and 28 Lunar Mansions.',
-    description_ha: 'Kayan lissafin lokutan falaki da manazil al-qamar.',
-    path: '/tools/planetary',
-    iconName: 'Clock',
-    color: 'from-amber-500 via-orange-600 to-indigo-700',
-    level: 'simple',
-    isOfflineReady: true,
-    savedAt: Date.now(),
-    sizeBytes: 34500,
-  },
-  {
-    id: 'seals-catalogue',
-    title: 'Catalogue des Sceaux & Khawatim',
-    title_fr: 'Catalogue des Sceaux & Khawatim',
-    title_en: 'Sacred Seals & Khawatim Catalogue',
-    title_ha: 'Kundin Hatimai da Khatam',
-    description: '17 Sceaux lunaires, diagrammes sacrés et figures géométriques protégées.',
-    description_fr: '17 Sceaux lunaires, diagrammes sacrés et figures géométriques protégées.',
-    description_en: '17 Lunar seals, sacred diagrams, and protected geometric figures.',
-    description_ha: 'Hatimai 17 da zane-zanen asrar masu tsarki.',
-    path: '/tools/seals-catalogue',
-    iconName: 'Moon',
-    color: 'from-amber-500 to-purple-600',
-    level: 'advanced',
-    isOfflineReady: true,
-    savedAt: Date.now(),
-    sizeBytes: 42000,
-  },
-  {
-    id: 'lunar-cycles',
-    title: 'Calculateur de Cycles & Phases Lunaires',
-    title_fr: 'Calculateur de Cycles & Phases Lunaires',
-    title_en: 'Lunar Cycles & Moon Phases Calculator',
-    title_ha: 'Lissafin Zagayowar Wata',
-    description: 'Éphémérides complètes, phases de nouvelle lune et pleine lune calculées localement.',
-    description_fr: 'Éphémérides complètes, phases de nouvelle lune et pleine lune calculées localement.',
-    description_en: 'Full ephemeris, new moon, and full moon phases calculated offline.',
-    description_ha: 'Hasken wata da lokutan dacewa na ruhaniya.',
-    path: '/tools/lunar-cycles',
-    iconName: 'Compass',
-    color: 'from-indigo-600 to-purple-800',
-    level: 'advanced',
-    isOfflineReady: true,
-    savedAt: Date.now(),
-    sizeBytes: 19800,
-  },
-  {
-    id: 'istikhara',
-    title: 'Consultation Mystique & Istikhara',
-    title_fr: 'Consultation Mystique & Istikhara',
-    title_en: 'Mystical Consultation & Istikhara',
-    title_ha: 'Istihara da Neman Zaɓin Alheri',
-    description: 'Calculs de compatibilité de projets, Noms et prédictions spirituelles selon la tradition.',
-    description_fr: 'Calculs de compatibilité de projets, Noms et prédictions spirituelles selon la tradition.',
-    description_en: 'Project compatibility calculations and spiritual discernment based on tradition.',
-    description_ha: 'Lissafin dacewar ayyuka da neman jagora.',
-    path: '/tools/istikhara',
-    iconName: 'Sparkles',
-    color: 'from-emerald-600 to-teal-800',
-    level: 'simple',
-    isOfflineReady: true,
-    savedAt: Date.now(),
-    sizeBytes: 24300,
-  },
-  {
-    id: 'advanced-raml-processing',
-    title: 'Traitement Avancé de Raml (Géomancie)',
-    title_fr: 'Traitement Avancé de Raml (Géomancie)',
-    title_en: 'Advanced Raml (Geomancy) Processing',
-    title_ha: 'Kayan Aikin Ramli na Musamman',
-    description: 'Sceau concentrique de Sable (Khatam al-Raml), Heure de Tracé et Analyse des 16 maisons.',
-    description_fr: 'Sceau concentrique de Sable (Khatam al-Raml), Heure de Tracé et Analyse des 16 maisons.',
-    description_en: 'Concentric Sand Seal (Khatam al-Raml), generation time, and 16 houses analysis.',
-    description_ha: 'Zana da nazarin gidajen ramli 16 koda ba a kan layi ba.',
-    path: '/tools/advanced-raml-processing',
-    iconName: 'Compass',
-    color: 'from-amber-600 via-yellow-600 to-stone-800',
-    level: 'advanced',
-    isOfflineReady: true,
-    savedAt: Date.now(),
-    sizeBytes: 31000,
-  }
-];
+export const DEFAULT_OFFLINE_TOOLS: OfflineStoredTool[] = allToolsList.map((tool) => ({
+  id: tool.id,
+  title: tool.title,
+  title_fr: tool.title,
+  title_en: tool.title,
+  title_ha: tool.title,
+  description: tool.description,
+  description_fr: tool.description,
+  description_en: tool.description,
+  description_ha: tool.description,
+  path: tool.path,
+  iconName: typeof tool.icon === 'function' ? tool.icon.name || 'Sparkles' : 'Sparkles',
+  color: tool.color,
+  level: tool.level,
+  isOfflineReady: true,
+  savedAt: Date.now(),
+  sizeBytes: 25000,
+}));
 
 /**
- * Initializes default offline tools into IndexedDB if empty
+ * Initializes all offline tools into IndexedDB if empty or if new tools are available
  */
 export async function ensureDefaultOfflineTools(): Promise<OfflineStoredTool[]> {
   try {
     const list = await getAllOfflineTools();
-    if (list.length === 0) {
+    if (list.length < DEFAULT_OFFLINE_TOOLS.length) {
       for (const tool of DEFAULT_OFFLINE_TOOLS) {
         await saveToolToOfflineVault(tool);
       }
@@ -382,3 +256,146 @@ export function formatStorageBytes(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} Ko`;
   return `${(bytes / (1024 * 1024)).toFixed(2)} Mo`;
 }
+
+export interface ToolIntegrityItem {
+  id: string;
+  title: string;
+  category?: string;
+  level?: string;
+  path: string;
+  isInstalled: boolean;
+  isOutdated: boolean;
+  sizeBytes: number;
+  savedAt?: number;
+}
+
+export interface ToolsIntegrityReport {
+  totalRegistered: number;
+  totalInstalled: number;
+  totalMissing: number;
+  totalOutdated: number;
+  isHealthy: boolean;
+  healthPercentage: number;
+  items: ToolIntegrityItem[];
+  missingIds: string[];
+  outdatedIds: string[];
+  checkedAt: number;
+}
+
+/**
+ * Checks the complete integrity of all registered tools against local offline vault
+ */
+export async function checkToolsIntegrity(): Promise<ToolsIntegrityReport> {
+  const registered = DEFAULT_OFFLINE_TOOLS;
+  const installed = await getAllOfflineTools();
+  const installedMap = new Map<string, OfflineStoredTool>();
+  
+  installed.forEach(t => {
+    installedMap.set(t.id, t);
+  });
+
+  const oneMonthAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  const missingIds: string[] = [];
+  const outdatedIds: string[] = [];
+
+  const items: ToolIntegrityItem[] = registered.map(reg => {
+    const local = installedMap.get(reg.id);
+    const isInstalled = !!local;
+    const isOutdated = local ? (!local.savedAt || local.savedAt < oneMonthAgo) : false;
+
+    if (!isInstalled) {
+      missingIds.push(reg.id);
+    } else if (isOutdated) {
+      outdatedIds.push(reg.id);
+    }
+
+    return {
+      id: reg.id,
+      title: reg.title,
+      level: reg.level,
+      path: reg.path,
+      isInstalled,
+      isOutdated,
+      sizeBytes: local?.sizeBytes || reg.sizeBytes || 25000,
+      savedAt: local?.savedAt,
+    };
+  });
+
+  const totalRegistered = registered.length;
+  const totalInstalled = installed.length;
+  const totalMissing = missingIds.length;
+  const totalOutdated = outdatedIds.length;
+  const healthPercentage = totalRegistered > 0 ? Math.round((Math.min(totalInstalled, totalRegistered) / totalRegistered) * 100) : 100;
+  const isHealthy = totalMissing === 0;
+
+  return {
+    totalRegistered,
+    totalInstalled,
+    totalMissing,
+    totalOutdated,
+    isHealthy,
+    healthPercentage,
+    items,
+    missingIds,
+    outdatedIds,
+    checkedAt: Date.now(),
+  };
+}
+
+/**
+ * Repairs and installs all missing tools in one bulk operation
+ */
+export async function repairMissingTools(
+  onProgress?: (current: number, total: number, toolTitle: string) => void
+): Promise<{ success: boolean; repairedCount: number }> {
+  try {
+    const report = await checkToolsIntegrity();
+    if (report.isHealthy && report.missingIds.length === 0) {
+      return { success: true, repairedCount: 0 };
+    }
+
+    const missingDefs = DEFAULT_OFFLINE_TOOLS.filter(t => report.missingIds.includes(t.id));
+    let count = 0;
+
+    for (let i = 0; i < missingDefs.length; i++) {
+      const tool = missingDefs[i];
+      if (onProgress) {
+        onProgress(i + 1, missingDefs.length, tool.title);
+      }
+      await saveToolToOfflineVault(tool);
+      count++;
+    }
+
+    return { success: true, repairedCount: count };
+  } catch (error) {
+    console.error('[ToolsOfflineVault] Error repairing missing tools:', error);
+    return { success: false, repairedCount: 0 };
+  }
+}
+
+/**
+ * Downloads or updates a specified list of tool IDs into the offline vault
+ */
+export async function downloadBulkTools(
+  toolIds: string[],
+  onProgress?: (current: number, total: number, toolTitle: string) => void
+): Promise<number> {
+  if (!toolIds || toolIds.length === 0) return 0;
+  const targetTools = DEFAULT_OFFLINE_TOOLS.filter(t => toolIds.includes(t.id));
+  let count = 0;
+
+  for (let i = 0; i < targetTools.length; i++) {
+    const tool = targetTools[i];
+    if (onProgress) {
+      onProgress(i + 1, targetTools.length, tool.title);
+    }
+    await saveToolToOfflineVault({
+      ...tool,
+      savedAt: Date.now(),
+    });
+    count++;
+  }
+
+  return count;
+}
+

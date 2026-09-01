@@ -86,6 +86,7 @@ import { BrandingSettings } from '../../components/admin/BrandingSettings';
 import { FloatingBackButtonSettings } from '../../components/admin/FloatingBackButtonSettings';
 import { AdminPdfDocumentsManager } from '../../components/admin/AdminPdfDocumentsManager';
 import { AdminPromoVideoAnnouncementManager } from '../../components/admin/AdminPromoVideoAnnouncementManager';
+import { AdminToolsHealthManager } from '../../components/admin/AdminToolsHealthManager';
 import { ArticleQuickControlModal } from '../../components/admin/ArticleQuickControlModal';
 import { PROMO_HOURS_OPTIONS, PROMO_HOURLY_OPTIONS, getPromoHourMessage, getPromoHourLabel, PromoDurationHours } from '../../utils/promoConfig';
 
@@ -301,8 +302,8 @@ const CollapsibleAdminCard: React.FC<{
   headerRight
 }) => {
   const { collapsedSections, toggleCollapse } = React.useContext(AdminSectionCollapseContext);
-  // By default, sections are CLOSED (collapsed) unless explicitly opened by the admin
-  const isCollapsed = collapsedSections[id] !== undefined ? collapsedSections[id] : true;
+  // By default, sections are OPEN (expanded) so all parameters and controls are fully visible
+  const isCollapsed = collapsedSections[id] !== undefined ? collapsedSections[id] : false;
   const cardSubtitle = subtitle || description;
 
   return (
@@ -402,7 +403,7 @@ export const AdminDashboard: React.FC = () => {
 
   const toggleAdminSectionCollapse = (sectionId: string) => {
     setCollapsedAdminSections(prev => {
-      const current = prev[sectionId] !== undefined ? prev[sectionId] : true;
+      const current = prev[sectionId] !== undefined ? prev[sectionId] : false;
       return {
         ...prev,
         [sectionId]: !current
@@ -5922,6 +5923,9 @@ export const AdminDashboard: React.FC = () => {
           </div>
         </div>
 
+        {/* 0. Dedicated Tool Integrity & Bulk Download Manager */}
+        <AdminToolsHealthManager onNotify={(msg, type) => showToast(msg, type || 'info')} />
+
         {/* 1. User Tools & Drag-and-Drop Navigation Reordering */}
         <CollapsibleAdminCard
           id="feat_user_tools"
@@ -6752,6 +6756,287 @@ export const AdminDashboard: React.FC = () => {
                 />
               </div>
 
+              {/* Cover Image / Thumbnail Card (Image 2 style: Simple, Fast, Beautiful) */}
+              <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
+                    <ImageIcon size={15} className="text-emerald-500" />
+                    <span>Image de couverture (Thumbnail)</span>
+                  </label>
+                  {resolvedThumbnail && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNewArticle(prev => ({ ...prev, thumbnail: '', imageUrl: '', image: '', coverImage: '', coverImageUrl: '' }));
+                        setImgSrc('');
+                      }}
+                      className="text-[10px] text-red-500 hover:underline font-bold"
+                    >
+                      Effacer
+                    </button>
+                  )}
+                </div>
+
+                {/* Thumbnail Preview Box if loaded */}
+                {resolvedThumbnail ? (
+                  <div className="space-y-2.5">
+                    <div className="relative rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 aspect-video shadow-sm group">
+                      <img
+                        src={resolvedThumbnail}
+                        alt="Aperçu couverture"
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute top-2.5 right-2.5 flex items-center gap-1.5 bg-black/60 backdrop-blur-sm rounded-lg p-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setNewArticle(prev => ({ ...prev, thumbnail: '', imageUrl: '', image: '', coverImage: '', coverImageUrl: '' }));
+                            setImgSrc('');
+                          }}
+                          className="p-1.5 text-red-400 hover:text-red-300 hover:bg-white/10 rounded-md transition-colors"
+                          title="Supprimer la couverture"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <label className="py-2.5 px-4 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold text-xs rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-colors border border-gray-200 dark:border-gray-700 shadow-sm">
+                        <Upload size={15} className="text-gray-700 dark:text-gray-300" />
+                        <span>Changer l'image</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={onSelectFile}
+                          className="hidden"
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setShowBookCoverStudioModal(true)}
+                        className="py-2.5 px-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-md transition-all active:scale-95"
+                      >
+                        <Sparkles size={15} />
+                        <span>Créer Couverture IA / Studio</span>
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    {/* Button 1: Télécharger une image */}
+                    <label className="w-full py-2.5 px-4 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold text-xs rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-colors border border-gray-200 dark:border-gray-700 shadow-sm">
+                      <Upload size={16} className="text-gray-700 dark:text-gray-300" />
+                      <span>Télécharger une image</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={onSelectFile}
+                        className="hidden"
+                      />
+                    </label>
+
+                    {/* Button 2: Créer Couverture IA / Studio */}
+                    <button
+                      type="button"
+                      onClick={() => setShowBookCoverStudioModal(true)}
+                      className="w-full py-2.5 px-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-md transition-all active:scale-95"
+                    >
+                      <Sparkles size={16} />
+                      <span>Créer Couverture IA / Studio</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* Interactive Crop (shown only when user is actively cropping an image) */}
+                {imgSrc && (
+                  <div className="p-3 bg-white dark:bg-gray-800 rounded-xl border border-emerald-200 dark:border-emerald-800 space-y-3 mt-2">
+                    <div className="flex items-center justify-between text-xs font-bold text-emerald-700 dark:text-emerald-300">
+                      <span className="flex items-center gap-1"><CropIcon size={14} /> Recadrage Optionnel</span>
+                      <button
+                        type="button"
+                        onClick={() => setImgSrc('')}
+                        className="text-gray-400 hover:text-gray-600"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => handleAspectChange(16 / 9)}
+                        className={`px-2 py-1 rounded-lg text-[10px] font-bold ${cropAspect === 16 / 9 ? 'bg-emerald-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}
+                      >
+                        16:9 (Paysage)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleAspectChange(1)}
+                        className={`px-2 py-1 rounded-lg text-[10px] font-bold ${cropAspect === 1 ? 'bg-emerald-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}
+                      >
+                        1:1 (Carré)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleAspectChange(4 / 5)}
+                        className={`px-2 py-1 rounded-lg text-[10px] font-bold ${cropAspect === 4 / 5 ? 'bg-emerald-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}
+                      >
+                        4:5 (Portrait)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleAspectChange(undefined)}
+                        className={`px-2 py-1 rounded-lg text-[10px] font-bold ${!cropAspect ? 'bg-emerald-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}
+                      >
+                        Libre
+                      </button>
+                    </div>
+
+                    <div className="max-h-60 overflow-auto flex justify-center bg-black/5 rounded-lg p-1">
+                      <ReactCrop
+                        crop={crop}
+                        onChange={(_, percentCrop) => setCrop(percentCrop)}
+                        onComplete={(c) => setCompletedCrop(c)}
+                        aspect={cropAspect}
+                      >
+                        <img
+                          ref={imageRef}
+                          alt="Crop preview"
+                          src={imgSrc}
+                          onLoad={onImageCropLoad}
+                          className="max-w-full h-auto max-h-52 object-contain"
+                        />
+                      </ReactCrop>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={handleCropComplete}
+                      className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-colors cursor-pointer"
+                    >
+                      <Check size={14} /> Valider le Recadrage
+                    </button>
+                  </div>
+                )}
+
+                {/* Direct URL input */}
+                <div className="pt-1">
+                  <input
+                    type="text"
+                    placeholder="Ou lien URL direct (ex: https://...)"
+                    value={resolvedThumbnail.startsWith('data:') ? '' : resolvedThumbnail}
+                    onChange={(e) => {
+                      const url = e.target.value;
+                      setNewArticle(prev => ({ ...prev, thumbnail: url, imageUrl: url, image: url, coverImage: url, coverImageUrl: url }));
+                    }}
+                    className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white outline-none focus:border-emerald-500 placeholder:text-gray-400"
+                  />
+                </div>
+              </div>
+
+              {/* VIP Access Option Card (Image 2 style) */}
+              <div className="p-4 bg-purple-50/40 dark:bg-purple-950/20 rounded-2xl border border-purple-100 dark:border-purple-900/40 space-y-2">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-gray-800 dark:text-gray-200">
+                  <Star size={14} className="text-purple-500" />
+                  <span>Option d'accès à l'article & à l'image</span>
+                </div>
+                <p className="text-xs text-gray-600 dark:text-gray-400">
+                  Définissez si cet article est accessible gratuitement ou réservé aux abonnés VIP
+                </p>
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setNewArticle(prev => ({ ...prev, isPremium: false }))}
+                    className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all border cursor-pointer ${
+                      !newArticle.isPremium
+                        ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900 border-transparent shadow-sm'
+                        : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-100'
+                    }`}
+                  >
+                    <span>☆ STANDARD (Gratuit)</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setNewArticle(prev => ({ ...prev, isPremium: true }))}
+                    className={`flex-1 py-2.5 px-3 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all border cursor-pointer ${
+                      newArticle.isPremium
+                        ? 'bg-amber-500 text-white border-transparent shadow-md'
+                        : 'bg-white dark:bg-gray-800 text-amber-600 dark:text-amber-400 border-gray-200 dark:border-gray-700 hover:bg-amber-50 dark:hover:bg-amber-950/30'
+                    }`}
+                  >
+                    <Crown size={14} className="text-amber-300" />
+                    <span>★ PREMIUM (VIP)</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Audio File / Recitation Card (Image 2 style) */}
+              <div className="p-4 bg-amber-50/40 dark:bg-amber-950/20 rounded-2xl border border-amber-100 dark:border-amber-900/40 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-gray-800 dark:text-gray-200">
+                    <Volume2 size={15} className="text-amber-600 dark:text-amber-400" />
+                    <span>Fichier Audio / Récitation de l'article</span>
+                  </div>
+                  <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300 text-[10px] font-bold rounded-lg">
+                    Optionnel
+                  </span>
+                </div>
+                <p className="text-xs text-gray-600 dark:text-gray-400">
+                  Attachez un enregistrement audio ou récitation (MP3, WAV) qui restera disponible dans l'article.
+                </p>
+
+                <label className="w-full py-2.5 px-4 bg-white dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold text-xs rounded-xl flex items-center justify-center gap-2 cursor-pointer transition-colors border border-gray-200 dark:border-gray-700 shadow-sm">
+                  <Upload size={15} className="text-amber-600 dark:text-amber-400" />
+                  <span>Importer un fichier Audio (MP3, WAV)</span>
+                  <input
+                    type="file"
+                    accept="audio/*"
+                    onChange={handleAudioFileUploadArticle}
+                    className="hidden"
+                  />
+                </label>
+
+                <div className="space-y-1">
+                  <input
+                    type="text"
+                    placeholder="Ou lien URL direct (ex: https://...mp3)"
+                    value={(newArticle as any).audioUrl || (newArticle as any).audio_url || ''}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setNewArticle(prev => ({ ...prev, audioUrl: val, audio_url: val }));
+                    }}
+                    className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white outline-none focus:border-amber-500 placeholder:text-gray-400"
+                  />
+                </div>
+
+                {((newArticle as any).audioUrl || (newArticle as any).audio_url) && (
+                  <div className="pt-1 space-y-2">
+                    <audio
+                      src={(newArticle as any).audioUrl || (newArticle as any).audio_url}
+                      controls
+                      className="w-full h-8"
+                    />
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        placeholder="Titre de la récitation audio..."
+                        value={(newArticle as any).audioTitle || ''}
+                        onChange={(e) => setNewArticle(prev => ({ ...prev, audioTitle: e.target.value } as any))}
+                        className="flex-1 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2 text-xs text-gray-900 dark:text-white outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setNewArticle(prev => ({ ...prev, audioUrl: '', audio_url: '', audioTitle: '' }))}
+                        className="px-3 py-1 text-xs text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl font-bold transition-colors"
+                      >
+                        Effacer
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Sacred Snippets Insertion Bar */}
               <div className="p-3 bg-emerald-50/70 dark:bg-emerald-950/30 rounded-2xl border border-emerald-100 dark:border-emerald-900/50 space-y-2">
                 <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-800 dark:text-emerald-300">
@@ -6889,220 +7174,53 @@ export const AdminDashboard: React.FC = () => {
 
             </div>
 
-            {/* Right Column: Cover Image & Crop, Audio File, Categories, Status, Premium (1 col) */}
+            {/* Right Column: Categorisation, Status & Publication (1 col) */}
             <div className="space-y-5">
               
-              {/* Cover Image & Interactive Crop Card */}
-              <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-3.5">
-                <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
-                    <ImageIcon size={15} className="text-emerald-500" />
-                    <span>Image de Couverture / Vignette</span>
-                  </label>
-                  {resolvedThumbnail && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setNewArticle(prev => ({ ...prev, thumbnail: '', imageUrl: '', image: '', coverImage: '' }));
-                        setImgSrc('');
-                      }}
-                      className="text-[10px] text-red-500 hover:underline font-bold"
-                    >
-                      Effacer
-                    </button>
-                  )}
-                </div>
-
-                {/* Thumbnail Preview Box */}
-                {resolvedThumbnail ? (
-                  <div className="relative rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800 aspect-video group">
-                    <img
-                      src={resolvedThumbnail}
-                      alt="Aperçu couverture"
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                      <label className="px-3 py-1.5 bg-white text-gray-900 rounded-lg text-xs font-bold cursor-pointer hover:bg-gray-100 shadow-md">
-                        Changer l'image
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={onSelectFile}
-                          className="hidden"
-                        />
-                      </label>
-                    </div>
-                  </div>
-                ) : (
-                  <label className="flex flex-col items-center justify-center p-5 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-2xl hover:border-emerald-500 hover:bg-emerald-50/20 dark:hover:bg-emerald-950/20 transition-all cursor-pointer group text-center">
-                    <Upload size={24} className="text-gray-400 group-hover:text-emerald-500 mb-2 transition-colors" />
-                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300">Importer une image</span>
-                    <span className="text-[10px] text-gray-400 mt-0.5">JPG, PNG, WebP (Compression auto)</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={onSelectFile}
-                      className="hidden"
-                    />
-                  </label>
-                )}
-
-                {/* Direct Image URL input */}
-                <div className="space-y-1">
-                  <span className="text-[11px] text-gray-500 font-semibold">Ou collez une URL d'image directe :</span>
-                  <input
-                    type="text"
-                    placeholder="https://images.unsplash.com/..."
-                    value={resolvedThumbnail.startsWith('data:') ? '' : resolvedThumbnail}
-                    onChange={(e) => {
-                      const url = e.target.value;
-                      setNewArticle(prev => ({ ...prev, thumbnail: url, imageUrl: url, image: url, coverImage: url }));
-                    }}
-                    className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2 text-xs text-gray-900 dark:text-white outline-none focus:border-emerald-500"
-                  />
-                </div>
-
-                {/* Crop Interface (shown when a file is selected for cropping) */}
-                {imgSrc && (
-                  <div className="p-3 bg-white dark:bg-gray-800 rounded-xl border border-emerald-200 dark:border-emerald-800 space-y-3">
-                    <div className="flex items-center justify-between text-xs font-bold text-emerald-700 dark:text-emerald-300">
-                      <span className="flex items-center gap-1"><CropIcon size={14} /> Recadrage Interactif</span>
-                      <button
-                        type="button"
-                        onClick={() => setImgSrc('')}
-                        className="text-gray-400 hover:text-gray-600"
-                      >
-                        <X size={14} />
-                      </button>
-                    </div>
-
-                    {/* Aspect Ratio Buttons */}
-                    <div className="flex items-center gap-1.5 flex-wrap">
-                      <button
-                        type="button"
-                        onClick={() => handleAspectChange(16 / 9)}
-                        className={`px-2 py-1 rounded-lg text-[10px] font-bold ${cropAspect === 16 / 9 ? 'bg-emerald-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}
-                      >
-                        16:9 (Paysage)
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleAspectChange(1)}
-                        className={`px-2 py-1 rounded-lg text-[10px] font-bold ${cropAspect === 1 ? 'bg-emerald-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}
-                      >
-                        1:1 (Carré)
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleAspectChange(4 / 5)}
-                        className={`px-2 py-1 rounded-lg text-[10px] font-bold ${cropAspect === 4 / 5 ? 'bg-emerald-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}
-                      >
-                        4:5 (Portrait)
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleAspectChange(undefined)}
-                        className={`px-2 py-1 rounded-lg text-[10px] font-bold ${!cropAspect ? 'bg-emerald-600 text-white' : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'}`}
-                      >
-                        Libre
-                      </button>
-                    </div>
-
-                    {/* ReactCrop Container */}
-                    <div className="max-h-60 overflow-auto flex justify-center bg-black/5 rounded-lg p-1">
-                      <ReactCrop
-                        crop={crop}
-                        onChange={(_, percentCrop) => setCrop(percentCrop)}
-                        onComplete={(c) => setCompletedCrop(c)}
-                        aspect={cropAspect}
-                      >
-                        <img
-                          ref={imageRef}
-                          alt="Crop preview"
-                          src={imgSrc}
-                          onLoad={onImageCropLoad}
-                          className="max-w-full h-auto max-h-52 object-contain"
-                        />
-                      </ReactCrop>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={handleCropComplete}
-                      className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 shadow-sm transition-colors cursor-pointer"
-                    >
-                      <Check size={14} /> Valider le Recadrage
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Audio File / Recitation Card */}
+              {/* Quick Article Card Preview */}
               <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-3">
                 <div className="flex items-center justify-between">
-                  <label className="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
-                    <Headphones size={15} className="text-blue-500" />
-                    <span>Fichier Audio / Récitation</span>
-                  </label>
-                  {((newArticle as any).audioUrl || (newArticle as any).audio_url) && (
-                    <button
-                      type="button"
-                      onClick={() => setNewArticle(prev => ({ ...prev, audioUrl: '', audio_url: '', audioTitle: '' }))}
-                      className="text-[10px] text-red-500 hover:underline font-bold"
-                    >
-                      Effacer
-                    </button>
-                  )}
+                  <span className="text-xs font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                    <Eye size={14} className="text-indigo-500" />
+                    <span>Aperçu de la Carte</span>
+                  </span>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${
+                    newArticle.isPremium ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300' : 'bg-gray-200 text-gray-800 dark:bg-gray-700 dark:text-gray-300'
+                  }`}>
+                    {newArticle.isPremium ? 'VIP' : 'STANDARD'}
+                  </span>
                 </div>
 
-                <label className="flex items-center justify-center gap-2 p-2.5 border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-xl text-xs font-bold text-gray-700 dark:text-gray-200 hover:border-blue-500 cursor-pointer transition-colors">
-                  <Upload size={14} className="text-blue-500" />
-                  <span>Importer fichier MP3 (Max 25 Mo)</span>
-                  <input
-                    type="file"
-                    accept="audio/*"
-                    onChange={handleAudioFileUploadArticle}
-                    className="hidden"
-                  />
-                </label>
-
-                <div className="space-y-1">
-                  <span className="text-[11px] text-gray-500 font-semibold">Ou URL Audio (HTTPS / MP3) :</span>
-                  <input
-                    type="text"
-                    placeholder="https://..."
-                    value={(newArticle as any).audioUrl || (newArticle as any).audio_url || ''}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setNewArticle(prev => ({ ...prev, audioUrl: val, audio_url: val }));
-                    }}
-                    className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2 text-xs text-gray-900 dark:text-white outline-none focus:border-blue-500"
-                  />
-                </div>
-
-                {((newArticle as any).audioUrl || (newArticle as any).audio_url) && (
-                  <div className="pt-1 space-y-2">
-                    <audio
-                      src={(newArticle as any).audioUrl || (newArticle as any).audio_url}
-                      controls
-                      className="w-full h-8"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Titre de la récitation audio..."
-                      value={(newArticle as any).audioTitle || ''}
-                      onChange={(e) => setNewArticle(prev => ({ ...prev, audioTitle: e.target.value } as any))}
-                      className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2 text-xs text-gray-900 dark:text-white outline-none"
-                    />
+                <div className="rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
+                  <div className="aspect-video w-full bg-gray-100 dark:bg-gray-700 relative overflow-hidden">
+                    {resolvedThumbnail ? (
+                      <img src={resolvedThumbnail} alt="Aperçu" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex flex-col items-center justify-center text-gray-400 p-4 text-center">
+                        <ImageIcon size={28} className="mb-1 opacity-50" />
+                        <span className="text-[11px] font-medium">Aucune vignette sélectionnée</span>
+                      </div>
+                    )}
                   </div>
-                )}
+                  <div className="p-3 space-y-1">
+                    <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+                      {newArticle.category || 'Secrets & Pratiques'}
+                    </span>
+                    <h4 className="text-xs font-black text-gray-900 dark:text-white line-clamp-1">
+                      {currentTitle || "Titre de l'article..."}
+                    </h4>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 line-clamp-2">
+                      {currentHook || "Accroche ou extrait court du secret..."}
+                    </p>
+                  </div>
+                </div>
               </div>
 
               {/* Categorization & Metadata Card */}
               <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-3.5">
                 <label className="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
                   <FolderOpen size={15} className="text-amber-500" />
-                  <span>Catégorisation & Paramètres</span>
+                  <span>Catégorisation & Publication</span>
                 </label>
 
                 {/* Category Selection */}
@@ -7154,26 +7272,6 @@ export const AdminDashboard: React.FC = () => {
                       <option value="Published">Publié</option>
                       <option value="Draft">Brouillon</option>
                     </select>
-                  </div>
-
-                  {/* Premium VIP Switch */}
-                  <div className="flex items-center justify-between p-2.5 bg-amber-500/10 rounded-xl border border-amber-500/20">
-                    <div className="flex items-center gap-2">
-                      <Crown size={16} className="text-amber-500 shrink-0" />
-                      <div>
-                        <span className="text-xs font-bold text-gray-800 dark:text-gray-200">Accès VIP Premium :</span>
-                        <p className="text-[10px] text-gray-500 dark:text-gray-400">Réservé aux abonnés Premium</p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setNewArticle(prev => ({ ...prev, isPremium: !prev.isPremium }))}
-                      className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors cursor-pointer ${
-                        newArticle.isPremium ? 'bg-amber-500' : 'bg-gray-300 dark:bg-gray-600'
-                      }`}
-                    >
-                      <div className={`w-4 h-4 rounded-full bg-white transition-transform ${newArticle.isPremium ? 'translate-x-6' : 'translate-x-0'}`} />
-                    </button>
                   </div>
 
                 </div>
@@ -8185,6 +8283,28 @@ export const AdminDashboard: React.FC = () => {
           {activeTab === "support" && <AdminEmailSupportManager />}
           {(activeTab === "settings" || activeTab === "security") && renderSettings()}
         </div>
+
+        {/* Studio Book Cover Modal for Article Thumbnail Creation */}
+        {showBookCoverStudioModal && (
+          <BookCoverStudio
+            isModal={true}
+            onClose={() => setShowBookCoverStudioModal(false)}
+            initialTitle={newArticle.title || "Titre du Secret"}
+            initialSubtitle={(newArticle as any).hook || ""}
+            onSelectCover={(coverUrl) => {
+              setNewArticle(prev => ({
+                ...prev,
+                thumbnail: coverUrl,
+                imageUrl: coverUrl,
+                image: coverUrl,
+                coverImage: coverUrl,
+                coverImageUrl: coverUrl
+              }));
+              setShowBookCoverStudioModal(false);
+              showToast("Couverture Studio appliquée à l'article avec succès !", "success");
+            }}
+          />
+        )}
       </div>
     </AdminSectionCollapseContext.Provider>
   );

@@ -102,10 +102,13 @@ export const SecretCard: React.FC<SecretCardProps> = ({ item, layoutMode = 'grid
     manualHook = item.hook_fr || item.hook || '';
   }
 
-  // 2. Check local storage cache or auto-translate if missing
+  const needsTitleTranslation = !manualTitle && Boolean(item.title);
+  const needsHookTranslation = !manualHook && Boolean(item.hook);
+
+  // 2. Check local storage cache or translate if missing
   useEffect(() => {
     if (language === 'fr') return;
-    if (manualTitle && manualHook) return;
+    if (!needsTitleTranslation && !needsHookTranslation) return;
 
     const cacheKey = `asrar_trans_${item.id}_${language}`;
     try {
@@ -123,27 +126,30 @@ export const SecretCard: React.FC<SecretCardProps> = ({ item, layoutMode = 'grid
     } catch (e) {}
 
     let isMounted = true;
-    // Add random jitter/stagger to avoid all cards hitting the backend simultaneously
+    // Add jitter/stagger to avoid all cards hitting the backend simultaneously
     const timer = setTimeout(async () => {
       try {
+        const textsToTranslate: Record<string, string> = {};
+        if (needsTitleTranslation && item.title) textsToTranslate.title = item.title;
+        if (needsHookTranslation && item.hook) textsToTranslate.hook = item.hook;
+
+        if (Object.keys(textsToTranslate).length === 0) return;
+
         const res = await fetch(getApiUrl('/api/translate-text'), {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            texts: {
-              title: item.title || '',
-              hook: item.hook || ''
-            },
+            texts: textsToTranslate,
             targetLanguage: language
           })
         });
 
         if (res.ok) {
           const data = await res.json();
-          if (data && (data.title || data.hook)) {
+          if (data) {
             const transResult = {
-              title: data.title || item.title,
-              hook: data.hook || item.hook
+              title: data.title || manualTitle || item.title,
+              hook: data.hook || manualHook || item.hook
             };
             localStorage.setItem(cacheKey, JSON.stringify(transResult));
             if (isMounted) {
@@ -152,15 +158,15 @@ export const SecretCard: React.FC<SecretCardProps> = ({ item, layoutMode = 'grid
           }
         }
       } catch (e) {
-        console.warn(`[SecretCard] Translation error for ${item.id} (${language}):`, e);
+        // Silent fallback
       }
-    }, Math.floor(Math.random() * 400));
+    }, Math.floor(Math.random() * 800) + 200);
 
     return () => {
       isMounted = false;
       clearTimeout(timer);
     };
-  }, [item.id, item.title, item.hook, language, manualTitle, manualHook]);
+  }, [item.id, item.title, item.hook, language, needsTitleTranslation, needsHookTranslation, manualTitle, manualHook]);
 
   // Final display title and hook
   const displayTitle = manualTitle || translated.title || item.title;

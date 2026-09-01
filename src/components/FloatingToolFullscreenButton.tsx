@@ -28,13 +28,13 @@ export const FloatingToolFullscreenButton: React.FC = () => {
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.8, y: 15 }}
         transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-        className="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-[990] flex items-center pointer-events-auto"
+        className="fixed bottom-20 left-1/2 -translate-x-1/2 sm:bottom-6 sm:left-1/2 sm:-translate-x-1/2 z-[990] flex items-center justify-center pointer-events-auto"
       >
         <motion.button
-          whileHover={{ scale: 1.08, y: -2 }}
-          whileTap={{ scale: 0.92 }}
+          whileHover={{ scale: 1.06, y: -2 }}
+          whileTap={{ scale: 0.94 }}
           onClick={enterFullscreen}
-          className="group relative flex items-center gap-2 px-3 sm:px-3.5 py-2 sm:py-2.5 rounded-full bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-xl shadow-emerald-900/25 border border-emerald-400/30 backdrop-blur-md transition-all duration-200 cursor-pointer"
+          className="group relative flex items-center gap-2 px-3.5 py-1.5 sm:py-2 rounded-full bg-zinc-950/40 hover:bg-zinc-950/70 dark:bg-zinc-900/40 dark:hover:bg-zinc-900/70 text-zinc-100 hover:text-white shadow-lg shadow-black/20 hover:shadow-emerald-950/30 border border-white/20 hover:border-emerald-400/50 backdrop-blur-md transition-all duration-200 cursor-pointer whitespace-nowrap"
           title={
             language === 'fr'
               ? 'Activer le mode Plein Écran (Immersion sans distraction)'
@@ -46,12 +46,13 @@ export const FloatingToolFullscreenButton: React.FC = () => {
         >
           <motion.div
             animate={{ scale: [1, 1.12, 1] }}
-            transition={{ repeat: Infinity, duration: 2.8, ease: 'easeInOut' }}
+            transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
+            className="flex items-center justify-center text-emerald-400 group-hover:text-emerald-300"
           >
-            <Maximize2 size={16} className="text-emerald-100 group-hover:text-white transition-colors" />
+            <Maximize2 size={15} className="transition-colors" />
           </motion.div>
           
-          <span className="text-xs font-bold tracking-tight pr-0.5">
+          <span className="text-[11px] sm:text-xs font-medium tracking-tight pr-0.5 text-zinc-200 group-hover:text-white">
             {language === 'fr' 
               ? 'Plein Écran' 
               : language === 'ha'

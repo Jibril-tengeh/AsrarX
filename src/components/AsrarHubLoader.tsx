@@ -13,6 +13,28 @@ export const AsrarHubLoader: React.FC<AsrarHubLoaderProps> = ({
   text
 }) => {
   const { branding } = useAppBranding();
+  const [imageError, setImageError] = React.useState(false);
+
+  // Reset image error if branding loading screen image changes
+  React.useEffect(() => {
+    setImageError(false);
+  }, [branding.loadingScreenImage]);
+
+  // If loading screen is completely disabled by admin
+  if (branding.loadingScreenEnabled === false) {
+    if (size === 'fullscreen') {
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-xs">
+          <div className="w-7 h-7 border-2 border-emerald-500/20 border-t-emerald-400 rounded-full animate-spin" />
+        </div>
+      );
+    }
+    return (
+      <div className="flex items-center justify-center p-2">
+        <div className="w-5 h-5 border-2 border-emerald-500/20 border-t-emerald-400 rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   const sizeClasses = {
     sm: 'w-16 h-16',
@@ -23,6 +45,7 @@ export const AsrarHubLoader: React.FC<AsrarHubLoaderProps> = ({
 
   const logoSize = size === 'fullscreen' ? 'fullscreen' : size;
   const displayText = text || (size === 'fullscreen' ? branding.loadingText : undefined);
+  const showImage = branding.showLoadingImage !== false;
 
   // Custom animation styles for custom branding loading screen
   const getCustomAnimation = () => {
@@ -67,33 +90,38 @@ export const AsrarHubLoader: React.FC<AsrarHubLoaderProps> = ({
 
   const loaderContent = (
     <div className="flex flex-col items-center justify-center select-none gap-5">
-      {branding.isEnabled && branding.loadingScreenImage ? (
-        <motion.div
-          initial={{ opacity: 0.6 }}
-          animate={anim.animate}
-          transition={anim.transition}
-          className="flex items-center justify-center"
-        >
-          <img
-            src={branding.loadingScreenImage}
-            alt="Loading..."
-            className={`object-contain max-w-full ${
-              size === 'sm' ? 'max-h-12' :
-              size === 'md' ? 'max-h-24' :
-              size === 'lg' ? 'max-h-36' :
-              'max-h-48'
-            }`}
-          />
-        </motion.div>
+      {showImage ? (
+        branding.isEnabled && branding.loadingScreenImage && !imageError ? (
+          <motion.div
+            initial={{ opacity: 0.6 }}
+            animate={anim.animate}
+            transition={anim.transition}
+            className="flex items-center justify-center"
+          >
+            <img
+              src={branding.loadingScreenImage}
+              alt="Loading..."
+              onError={() => setImageError(true)}
+              className={`object-contain max-w-full ${
+                size === 'sm' ? 'max-h-12' :
+                size === 'md' ? 'max-h-24' :
+                size === 'lg' ? 'max-h-36' :
+                'max-h-48'
+              }`}
+            />
+          </motion.div>
+        ) : (
+          <motion.div
+            initial={{ opacity: 0.6 }}
+            animate={{ opacity: [0.6, 1, 0.6] }}
+            transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+            className="flex items-center justify-center"
+          >
+            <AsrarLogo variant="stacked" size={logoSize} hideSymbol={size !== 'fullscreen'} />
+          </motion.div>
+        )
       ) : (
-        <motion.div
-          initial={{ opacity: 0.6 }}
-          animate={{ opacity: [0.6, 1, 0.6] }}
-          transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-          className="flex items-center justify-center"
-        >
-          <AsrarLogo variant="stacked" size={logoSize} hideSymbol={size !== 'fullscreen'} />
-        </motion.div>
+        <div className="w-10 h-10 border-3 border-amber-500/20 border-t-amber-400 rounded-full animate-spin" />
       )}
 
       {displayText && (

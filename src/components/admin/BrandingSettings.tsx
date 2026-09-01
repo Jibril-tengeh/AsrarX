@@ -4,13 +4,15 @@ import {
   Upload, Image as ImageIcon, Sparkles, RefreshCw, CheckCircle2, 
   AlertTriangle, Trash2, Eye, ShieldCheck, Download, Smartphone, 
   Monitor, Play, Maximize2, X, Sun, Moon, Info, Layout, Check,
-  AppWindow, Globe, Layers, Bell, MessageSquare, Compass, Settings
+  AppWindow, Globe, Layers, Bell, MessageSquare, Compass, Settings,
+  Link as LinkIcon, Power, EyeOff, Zap
 } from 'lucide-react';
 import { useAppBranding, AppBranding } from '../../contexts/BrandingContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { 
   validateBrandingFile, 
   convertFileToBase64, 
+  compressAndOptimizeImage,
   getImageDimensions, 
   formatBytes,
   MAX_BRANDING_FILE_SIZE_MB 
@@ -32,11 +34,14 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
   const [loadingImgDimensions, setLoadingImgDimensions] = useState<{ width: number; height: number } | null>(null);
 
   const [isSaving, setIsSaving] = useState(false);
+  const [isInstantApplying, setIsInstantApplying] = useState(false);
   const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
   const [fullscreenLoaderPreview, setFullscreenLoaderPreview] = useState(false);
   const [previewThemeMode, setPreviewThemeMode] = useState<'light' | 'dark'>('dark');
   const [previewActiveTab, setPreviewActiveTab] = useState<'all' | 'header' | 'appIcon' | 'splash' | 'browser'>('all');
   const [useIconAsFavicon, setUseIconAsFavicon] = useState(true);
+  const [loadingImageUrlInput, setLoadingImageUrlInput] = useState('');
+  const [showUrlInput, setShowUrlInput] = useState(false);
 
   // File input refs
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -58,6 +63,22 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
     }
   }, [branding]);
 
+  // Instant update helper: immediately saves to Firestore, localStorage & updates state
+  const handleInstantUpdate = async (patch: Partial<AppBranding>, successMessage: string) => {
+    setIsInstantApplying(true);
+    const updated = { ...draftBranding, ...patch };
+    setDraftBranding(updated);
+    try {
+      await updateBranding(patch, user?.email || 'admin@asrarhub.com');
+      onShowToast?.(successMessage, 'success');
+    } catch (err: any) {
+      console.error('Instant branding update error:', err);
+      onShowToast?.(`Erreur de synchronisation : ${err?.message || 'Erreur'}`, 'error');
+    } finally {
+      setIsInstantApplying(false);
+    }
+  };
+
   // Handle Logo Upload (Horizontal / Header)
   const handleLogoUpload = async (file: File) => {
     const validation = validateBrandingFile(file);
@@ -67,7 +88,7 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
     }
 
     try {
-      const base64 = await convertFileToBase64(file);
+      const base64 = await compressAndOptimizeImage(file, 600, 0.9);
       const dims = await getImageDimensions(base64);
       setLogoDimensions(dims);
 
@@ -76,7 +97,8 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
         appLogo: base64
       }));
 
-      onShowToast?.(`Logo principal "${file.name}" (${validation.fileDetails?.sizeFormatted}) prêt pour l'aperçu !`, 'success');
+      await updateBranding({ appLogo: base64 }, user?.email || 'admin@asrarhub.com');
+      onShowToast?.(`Logo principal "${file.name}" importé et appliqué instantanément !`, 'success');
     } catch (err: any) {
       onShowToast?.(err?.message || "Erreur de traitement du logo", 'error');
     }
@@ -91,23 +113,24 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
     }
 
     try {
-      const base64 = await convertFileToBase64(file);
+      const base64 = await compressAndOptimizeImage(file, 256, 0.9);
       const dims = await getImageDimensions(base64);
       setIconDimensions(dims);
 
-      setDraftBranding(prev => ({
-        ...prev,
+      const patch: Partial<AppBranding> = {
         appIcon: base64,
-        faviconUrl: useIconAsFavicon ? base64 : prev.faviconUrl
-      }));
+        ...(useIconAsFavicon ? { faviconUrl: base64 } : {})
+      };
 
-      onShowToast?.(`Icône d'application "${file.name}" (${validation.fileDetails?.sizeFormatted}) prête pour l'aperçu !`, 'success');
+      setDraftBranding(prev => ({ ...prev, ...patch }));
+      await updateBranding(patch, user?.email || 'admin@asrarhub.com');
+      onShowToast?.(`Icône d'application "${file.name}" importée et synchronisée avec succès !`, 'success');
     } catch (err: any) {
       onShowToast?.(err?.message || "Erreur de traitement de l'icône", 'error');
     }
   };
 
-  // Handle Loading Image Upload
+  // Handle Loading Image Upload with auto compression and instant sync
   const handleLoadingImageUpload = async (file: File) => {
     const validation = validateBrandingFile(file);
     if (!validation.isValid) {
@@ -116,18 +139,49 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
     }
 
     try {
-      const base64 = await convertFileToBase64(file);
+      const base64 = await compressAndOptimizeImage(file, 512, 0.9);
       const dims = await getImageDimensions(base64);
       setLoadingImgDimensions(dims);
 
-      setDraftBranding(prev => ({
-        ...prev,
-        loadingScreenImage: base64
-      }));
+      const patch: Partial<AppBranding> = {
+        loadingScreenImage: base64,
+        loadingScreenEnabled: true,
+        showLoadingImage: true
+      };
 
-      onShowToast?.(`Image de chargement "${file.name}" (${validation.fileDetails?.sizeFormatted}) prête pour l'aperçu !`, 'success');
+      setDraftBranding(prev => ({ ...prev, ...patch }));
+      await updateBranding(patch, user?.email || 'admin@asrarhub.com');
+      onShowToast?.(`Image de chargement mise à jour et active instantanément !`, 'success');
     } catch (err: any) {
       onShowToast?.(err?.message || "Erreur de traitement de l'image de chargement", 'error');
+    }
+  };
+
+  // Handle Loading Image URL direct submit
+  const handleApplyLoadingImageUrl = async () => {
+    if (!loadingImageUrlInput.trim()) {
+      onShowToast?.("Veuillez saisir une URL valide", "info");
+      return;
+    }
+
+    const url = loadingImageUrlInput.trim();
+    try {
+      const dims = await getImageDimensions(url);
+      setLoadingImgDimensions(dims);
+
+      const patch: Partial<AppBranding> = {
+        loadingScreenImage: url,
+        loadingScreenEnabled: true,
+        showLoadingImage: true
+      };
+
+      setDraftBranding(prev => ({ ...prev, ...patch }));
+      await updateBranding(patch, user?.email || 'admin@asrarhub.com');
+      setLoadingImageUrlInput('');
+      setShowUrlInput(false);
+      onShowToast?.("Image de chargement par URL appliquée et active instantanément !", "success");
+    } catch (err: any) {
+      onShowToast?.("Impossible de charger l'image depuis cette URL.", "error");
     }
   };
 
@@ -140,13 +194,14 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
     }
 
     try {
-      const base64 = await convertFileToBase64(file);
+      const base64 = await compressAndOptimizeImage(file, 64, 0.9);
       setDraftBranding(prev => ({
         ...prev,
         faviconUrl: base64
       }));
       setUseIconAsFavicon(false);
-      onShowToast?.(`Favicon spécifique "${file.name}" importée avec succès !`, 'success');
+      await updateBranding({ faviconUrl: base64 }, user?.email || 'admin@asrarhub.com');
+      onShowToast?.(`Favicon spécifique importée et synchronisée !`, 'success');
     } catch (err: any) {
       onShowToast?.(err?.message || "Erreur lors de l'import de la favicon", 'error');
     }
@@ -574,117 +629,266 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
             </div>
           </div>
 
-          {/* 3. Loading Screen & Animation Card */}
-          <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
-            <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-4 mb-5">
+          {/* 3. Loading Screen & Animation Card - WITH FULL INSTANT REACTIVITY & DISABLE CONTROLS */}
+          <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 space-y-6">
+            
+            {/* Header with Title and Quick Status */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-gray-100 dark:border-gray-700 pb-4 gap-4">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 rounded-2xl border border-amber-200/50 dark:border-amber-800/40">
                   <Sparkles size={20} />
                 </div>
                 <div>
-                  <h3 className="font-bold text-gray-900 dark:text-white text-base">
-                    3. Image & Animation du Loading Screen (Splash)
-                  </h3>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-bold text-gray-900 dark:text-white text-base">
+                      3. Écran de Chargement & Image de Loading (Splash)
+                    </h3>
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                      draftBranding.loadingScreenEnabled !== false 
+                        ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300'
+                        : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
+                    }`}>
+                      {draftBranding.loadingScreenEnabled !== false ? 'Activé' : 'Désactivé'}
+                    </span>
+                  </div>
                   <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                    Écran d'attente lors du démarrage de l'app, chargement de modules ou transitions
+                    Contrôlez l'affichage de l'écran d'attente, l'image centrale et les effets d'animation en temps réel.
                   </p>
                 </div>
               </div>
 
-              {draftBranding.loadingScreenImage && (
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => {
-                    setDraftBranding(prev => ({ ...prev, loadingScreenImage: '' }));
-                    setLoadingImgDimensions(null);
-                    onShowToast?.("Image de chargement personnalisée effacée du brouillon.", "info");
-                  }}
-                  className="p-2 hover:bg-red-50 dark:hover:bg-red-950/30 text-red-500 rounded-xl transition-colors text-xs font-bold flex items-center gap-1 cursor-pointer"
-                  title="Revenir au loader animé par défaut"
+                  onClick={triggerFullscreenPreview}
+                  className="px-3 py-1.5 bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 border border-amber-200 dark:border-amber-800/60 text-amber-700 dark:text-amber-300 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer"
                 >
-                  <Trash2 size={15} />
-                  <span>Effacer</span>
+                  <Play size={13} className="fill-current" />
+                  <span>Tester (3s)</span>
                 </button>
-              )}
+              </div>
             </div>
 
-            {/* Drag & Drop Area for Loading Screen */}
-            <div
-              onDragOver={handleDragOver}
-              onDrop={handleDropLoading}
-              onClick={() => loadingImgInputRef.current?.click()}
-              className={`border-2 border-dashed rounded-3xl p-6 text-center cursor-pointer transition-all ${
-                draftBranding.loadingScreenImage
-                  ? 'border-amber-300 dark:border-amber-700/60 bg-amber-50/20 dark:bg-amber-950/10 hover:border-amber-500'
-                  : 'border-gray-200 dark:border-gray-700 hover:border-amber-500 bg-gray-50/50 dark:bg-gray-850 hover:bg-amber-50/10'
-              }`}
-            >
-              <input
-                type="file"
-                ref={loadingImgInputRef}
-                accept="image/png,image/svg+xml,image/jpeg,image/webp,image/gif"
-                className="hidden"
-                onChange={(e) => {
-                  if (e.target.files && e.target.files[0]) {
-                    handleLoadingImageUpload(e.target.files[0]);
-                  }
-                }}
-              />
-
-              {draftBranding.loadingScreenImage ? (
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-6 py-2">
-                  <div className="w-24 h-24 p-2 bg-slate-950 rounded-2xl shadow-inner border border-gray-700 flex items-center justify-center overflow-hidden">
-                    <img
-                      src={draftBranding.loadingScreenImage}
-                      alt="Loading Image Aperçu"
-                      className={`max-h-20 max-w-full object-contain ${getAnimationClass(draftBranding.loadingAnimationType)}`}
+            {/* TOGGLE CONTROLS: 1. Complete Splash Toggle & 2. Loading Image Toggle */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              
+              {/* TOGGLE 1: Master Splash Screen Enable / Disable */}
+              <div className={`p-4 rounded-2xl border transition-all ${
+                draftBranding.loadingScreenEnabled !== false
+                  ? 'bg-emerald-50/40 dark:bg-emerald-950/20 border-emerald-200/80 dark:border-emerald-800/50'
+                  : 'bg-red-50/40 dark:bg-red-950/20 border-red-200/80 dark:border-red-800/50'
+              }`}>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                    <Power size={14} className={draftBranding.loadingScreenEnabled !== false ? 'text-emerald-500' : 'text-red-500'} />
+                    <span>Écran de Chargement Global</span>
+                  </span>
+                  
+                  {/* Switch Toggle */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const nextVal = !(draftBranding.loadingScreenEnabled !== false);
+                      handleInstantUpdate({ loadingScreenEnabled: nextVal }, nextVal ? "Écran de chargement activé !" : "Écran de chargement désactivé (accès direct sans splash) !");
+                    }}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      draftBranding.loadingScreenEnabled !== false ? 'bg-emerald-600' : 'bg-gray-300 dark:bg-gray-700'
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                        draftBranding.loadingScreenEnabled !== false ? 'translate-x-5' : 'translate-x-0'
+                      }`}
                     />
-                  </div>
-                  <div className="text-left space-y-1">
-                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 text-[11px] font-bold">
-                      <CheckCircle2 size={12} />
-                      <span>Image de loading personnalisée active</span>
-                    </div>
-                    {loadingImgDimensions && (
-                      <p className="text-xs text-gray-500 dark:text-gray-400 font-mono">
-                        Dimensions : {loadingImgDimensions.width} x {loadingImgDimensions.height} px
-                      </p>
-                    )}
-                    <p className="text-[11px] text-amber-600 dark:text-amber-400 font-semibold">
-                      Cliquez ou glissez une autre image pour remplacer (PNG, GIF animé, SVG acceptés)
-                    </p>
-                  </div>
+                  </button>
                 </div>
-              ) : (
-                <div className="py-4 space-y-3">
-                  <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 flex items-center justify-center shadow-inner">
-                    <Sparkles size={26} />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-gray-800 dark:text-gray-200">
-                      Uploadez le logo ou symbole central pour l'écran de chargement
-                    </p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                      Idéal : Emblème centré, GIF transparent, SVG doré ou PNG haute qualité (Max {MAX_BRANDING_FILE_SIZE_MB} Mo)
-                    </p>
-                  </div>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                  {draftBranding.loadingScreenEnabled !== false 
+                    ? "L'écran d'attente s'affiche lors du démarrage et des transitions."
+                    : "Désactivé : l'application s'ouvre instantanément sans écran d'attente."}
+                </p>
+              </div>
+
+              {/* TOGGLE 2: Show / Hide Central Image in Loader */}
+              <div className={`p-4 rounded-2xl border transition-all ${
+                draftBranding.showLoadingImage !== false
+                  ? 'bg-amber-50/40 dark:bg-amber-950/20 border-amber-200/80 dark:border-amber-800/50'
+                  : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800'
+              }`}>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                    {draftBranding.showLoadingImage !== false ? <ImageIcon size={14} className="text-amber-500" /> : <EyeOff size={14} className="text-gray-400" />}
+                    <span>Image / Logo au Chargement</span>
+                  </span>
+
+                  {/* Switch Toggle */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const nextVal = !(draftBranding.showLoadingImage !== false);
+                      handleInstantUpdate({ showLoadingImage: nextVal }, nextVal ? "Image de chargement activée !" : "Image de chargement masquée (mode spinner minimaliste) !");
+                    }}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                      draftBranding.showLoadingImage !== false ? 'bg-amber-500' : 'bg-gray-300 dark:bg-gray-700'
+                    }`}
+                  >
+                    <span
+                      className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                        draftBranding.showLoadingImage !== false ? 'translate-x-5' : 'translate-x-0'
+                      }`}
+                    />
+                  </button>
+                </div>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                  {draftBranding.showLoadingImage !== false 
+                    ? "Affiche votre image personnalisée ou le logo AsrarHub."
+                    : "Masqué : Affiche un indicateur circulaire minimaliste épuré."}
+                </p>
+              </div>
+
+            </div>
+
+            {/* Custom Loading Image Uploader */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                  Image personnalisée du Loading Screen
+                </label>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowUrlInput(!showUrlInput)}
+                    className="text-[11px] text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 font-bold flex items-center gap-1 cursor-pointer"
+                  >
+                    <LinkIcon size={12} />
+                    <span>{showUrlInput ? 'Masquer URL' : 'Utiliser une URL web'}</span>
+                  </button>
+                  {draftBranding.loadingScreenImage && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDraftBranding(prev => ({ ...prev, loadingScreenImage: '' }));
+                        setLoadingImgDimensions(null);
+                        handleInstantUpdate({ loadingScreenImage: '' }, "Image de chargement personnalisée supprimée. Retour au logo officiel.");
+                      }}
+                      className="text-[11px] text-red-500 hover:text-red-600 font-bold flex items-center gap-1 cursor-pointer ml-2"
+                    >
+                      <Trash2 size={12} />
+                      <span>Supprimer l'image</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Direct URL input bar if expanded */}
+              {showUrlInput && (
+                <div className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-750">
+                  <input
+                    type="url"
+                    placeholder="Coller l'URL directe de l'image (ex: https://.../loader.gif ou .png)"
+                    value={loadingImageUrlInput}
+                    onChange={(e) => setLoadingImageUrlInput(e.target.value)}
+                    className="flex-1 px-3 py-1.5 bg-white dark:bg-gray-800 rounded-xl text-xs text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleApplyLoadingImageUrl}
+                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
+                  >
+                    <Zap size={12} />
+                    <span>Appliquer</span>
+                  </button>
                 </div>
               )}
+
+              {/* Drag & Drop Area for Loading Screen */}
+              <div
+                onDragOver={handleDragOver}
+                onDrop={handleDropLoading}
+                onClick={() => loadingImgInputRef.current?.click()}
+                className={`border-2 border-dashed rounded-3xl p-6 text-center cursor-pointer transition-all ${
+                  draftBranding.loadingScreenImage
+                    ? 'border-amber-300 dark:border-amber-700/60 bg-amber-50/20 dark:bg-amber-950/10 hover:border-amber-500'
+                    : 'border-gray-200 dark:border-gray-700 hover:border-amber-500 bg-gray-50/50 dark:bg-gray-850 hover:bg-amber-50/10'
+                }`}
+              >
+                <input
+                  type="file"
+                  ref={loadingImgInputRef}
+                  accept="image/png,image/svg+xml,image/jpeg,image/webp,image/gif"
+                  className="hidden"
+                  onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                      handleLoadingImageUpload(e.target.files[0]);
+                    }
+                  }}
+                />
+
+                {draftBranding.loadingScreenImage ? (
+                  <div className="flex flex-col sm:flex-row items-center justify-center gap-6 py-2">
+                    <div className="w-24 h-24 p-2 bg-slate-950 rounded-2xl shadow-inner border border-gray-700 flex items-center justify-center overflow-hidden">
+                      <img
+                        src={draftBranding.loadingScreenImage}
+                        alt="Loading Image Aperçu"
+                        className={`max-h-20 max-w-full object-contain ${getAnimationClass(draftBranding.loadingAnimationType)}`}
+                      />
+                    </div>
+                    <div className="text-left space-y-1">
+                      <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 text-[11px] font-bold">
+                        <CheckCircle2 size={12} />
+                        <span>Image active instantanément</span>
+                      </div>
+                      {loadingImgDimensions && (
+                        <p className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+                          Dimensions : {loadingImgDimensions.width} x {loadingImgDimensions.height} px
+                        </p>
+                      )}
+                      <p className="text-[11px] text-amber-600 dark:text-amber-400 font-semibold">
+                        Cliquez ou glissez une autre image pour remplacer (PNG, GIF animé, SVG acceptés)
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="py-4 space-y-3">
+                    <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 flex items-center justify-center shadow-inner">
+                      <Sparkles size={26} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-gray-800 dark:text-gray-200">
+                        Uploadez une image ou GIF personnalisé pour le chargement
+                      </p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                        Idéal : GIF transparent animé, SVG doré ou PNG haute qualité (Optimisé automatiquement)
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Additional Loading Configurations */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-5 pt-5 border-t border-gray-100 dark:border-gray-700">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
               <div>
                 <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
                   Texte d'accompagnement (Sous le logo)
                 </label>
-                <input
-                  type="text"
-                  placeholder="Ex: AsrarHub - Connaissance & Sagesse"
-                  value={draftBranding.loadingText || ''}
-                  onChange={(e) => setDraftBranding({ ...draftBranding, loadingText: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl text-xs font-semibold text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500"
-                />
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder="Ex: AsrarHub - Connaissance & Sagesse"
+                    value={draftBranding.loadingText || ''}
+                    onChange={(e) => setDraftBranding({ ...draftBranding, loadingText: e.target.value })}
+                    className="flex-1 px-3.5 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl text-xs font-semibold text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleInstantUpdate({ loadingText: draftBranding.loadingText || 'AsrarHub' }, "Texte de chargement appliqué instantanément !")}
+                    className="px-3 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                    title="Sauvegarder ce texte immédiatement"
+                  >
+                    <Check size={14} />
+                  </button>
+                </div>
               </div>
 
               <div>
@@ -693,8 +897,12 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
                 </label>
                 <select
                   value={draftBranding.loadingAnimationType || 'pulse'}
-                  onChange={(e) => setDraftBranding({ ...draftBranding, loadingAnimationType: e.target.value as any })}
-                  className="w-full px-3.5 py-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl text-xs font-semibold text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                  onChange={(e) => {
+                    const animType = e.target.value as any;
+                    setDraftBranding({ ...draftBranding, loadingAnimationType: animType });
+                    handleInstantUpdate({ loadingAnimationType: animType }, `Animation "${animType}" appliquée instantanément !`);
+                  }}
+                  className="w-full px-3.5 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl text-xs font-semibold text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
                 >
                   <option value="pulse">Pulsation douce (Recommandé)</option>
                   <option value="glow">Lueur Dorée Mystique (Glow)</option>
@@ -704,6 +912,30 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
                 </select>
               </div>
             </div>
+
+            {/* Instant sync notice banner */}
+            <div className="p-3.5 bg-emerald-50/60 dark:bg-emerald-950/30 rounded-2xl border border-emerald-200/60 dark:border-emerald-800/40 flex items-center justify-between gap-3 text-xs text-emerald-800 dark:text-emerald-300">
+              <div className="flex items-center gap-2">
+                <Zap size={16} className="text-amber-500 shrink-0" />
+                <span>Tous les réglages de loading screen s'appliquent <strong>instantanément</strong> à la sélection.</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleInstantUpdate({
+                  loadingScreenImage: draftBranding.loadingScreenImage || '',
+                  loadingScreenEnabled: draftBranding.loadingScreenEnabled !== false,
+                  showLoadingImage: draftBranding.showLoadingImage !== false,
+                  loadingText: draftBranding.loadingText || 'AsrarHub',
+                  loadingAnimationType: draftBranding.loadingAnimationType || 'pulse'
+                }, "Loading Screen synchronisé immédiatement sur tous les appareils !")}
+                disabled={isInstantApplying}
+                className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold flex items-center gap-1 transition-all cursor-pointer shrink-0 shadow-xs"
+              >
+                {isInstantApplying ? <RefreshCw size={12} className="animate-spin" /> : <Check size={12} />}
+                <span>Synchroniser tout</span>
+              </button>
+            </div>
+
           </div>
 
           {/* Action Bar */}
@@ -938,6 +1170,11 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
                   <span className="flex items-center gap-1.5">
                     <Play size={13} className="text-amber-500" />
                     <span>Écran de Chargement (Splash Screen)</span>
+                    {draftBranding.loadingScreenEnabled === false && (
+                      <span className="text-[10px] text-red-500 font-bold bg-red-100 dark:bg-red-950/40 px-2 py-0.5 rounded-full">
+                        Désactivé
+                      </span>
+                    )}
                   </span>
                   <button
                     type="button"
@@ -955,7 +1192,9 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
 
                   {/* Loading Content */}
                   <div className="relative z-10 flex flex-col items-center text-center gap-3">
-                    {draftBranding.loadingScreenImage ? (
+                    {draftBranding.showLoadingImage === false ? (
+                      <div className="w-12 h-12 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin flex items-center justify-center my-2" />
+                    ) : draftBranding.loadingScreenImage ? (
                       <div className="max-w-[140px] max-h-[90px] flex items-center justify-center">
                         <img
                           src={draftBranding.loadingScreenImage}
@@ -1019,7 +1258,9 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
               exit={{ scale: 0.9, opacity: 0 }}
               className="flex flex-col items-center justify-center gap-6"
             >
-              {draftBranding.loadingScreenImage ? (
+              {draftBranding.showLoadingImage === false ? (
+                <div className="w-16 h-16 rounded-full border-3 border-emerald-400 border-t-transparent animate-spin my-4 shadow-[0_0_20px_rgba(16,185,129,0.4)]" />
+              ) : draftBranding.loadingScreenImage ? (
                 <div className="max-w-[280px] max-h-[220px] flex items-center justify-center">
                   <img
                     src={draftBranding.loadingScreenImage}

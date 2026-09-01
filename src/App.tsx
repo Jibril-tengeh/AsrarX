@@ -49,56 +49,250 @@ import { PremiumLockScreen } from './components/PremiumLockScreen';
 import { NavigationProgressBar } from './components/NavigationProgressBar';
 import { FloatingFullscreenExitButton } from './components/FloatingFullscreenExitButton';
 import { FloatingToolFullscreenButton } from './components/FloatingToolFullscreenButton';
+import { ArticleSyncVideoModal } from './components/ArticleSyncVideoModal';
+import { ToolsIntegrityNotification } from './components/ToolsIntegrityNotification';
 import { useFullscreen } from './contexts/FullscreenContext';
 import { clear as clearIdbKeyval } from 'idb-keyval';
 
 declare const __APP_VERSION__: string;
 
 /**
- * Utility function that compares current __APP_VERSION__ with localStorage 'app_version'.
- * If different, purges IndexedDB cache via idb-keyval cleanly to prevent cache conflicts.
+ * Detailed step-by-step cache & IndexedDB purge function.
+ * Compares current runtime version (__APP_VERSION__) with stored version in localStorage.
+ * Performs deep cleanup of IndexedDB, SWR keyval stores, ServiceWorker caches, and logs each step.
  */
-export async function checkVersionAndPurgeCache(): Promise<boolean> {
+export async function checkVersionAndPurgeCache(force = false): Promise<boolean> {
+  const timestamp = new Date().toISOString();
+  console.group(`[VersionPurge] [${timestamp}] Cache check & IndexedDB purge evaluation (force=${force})`);
+  
   try {
-    const currentVersion = typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : appVersionService.getCurrentVersion();
+    const currentVersion = typeof __APP_VERSION__ !== 'undefined' && __APP_VERSION__ 
+      ? __APP_VERSION__ 
+      : appVersionService.getCurrentVersion();
+    
+    console.log(`[VersionPurge] [Step 1/6] Runtime application version discovered: "${currentVersion}"`);
+
     let storedVersion: string | null = null;
+    let installedVersion: string | null = null;
     try {
       storedVersion = localStorage.getItem('app_version');
+      installedVersion = localStorage.getItem('asrarhub_installed_version');
+      console.log(`[VersionPurge] [Step 2/6] Storage version check - 'app_version': "${storedVersion}", 'asrarhub_installed_version': "${installedVersion}"`);
     } catch (e) {
-      console.warn('[VersionSync] Could not read app_version from localStorage', e);
+      console.warn('[VersionPurge] [Step 2/6 Warning] Could not read version keys from localStorage:', e);
     }
 
-    if (storedVersion && storedVersion !== currentVersion) {
-      console.log(`[VersionSync] Version upgrade detected: ${storedVersion} -> ${currentVersion}. Purging IndexedDB cache via idb-keyval...`);
+    const isVersionMismatch = storedVersion !== null && storedVersion !== currentVersion;
+    const shouldPurge = force || isVersionMismatch;
+
+    if (shouldPurge) {
+      console.log(`[VersionPurge] [Step 3/6] Purge condition triggered. (Mismatch: ${isVersionMismatch} [${storedVersion} -> ${currentVersion}], Force: ${force}). Initiating deep IndexedDB purge...`);
+
+      // 3a. Purge via idb-keyval (primary SWR and app key-value store)
       try {
+        console.log('[VersionPurge] [Step 3a/6] Clearing default idb-keyval store...');
         await clearIdbKeyval();
+        console.log('[VersionPurge] [Step 3a/6] -> idb-keyval default store cleared successfully.');
       } catch (idbErr) {
-        console.warn('[VersionSync] Error clearing IndexedDB via idb-keyval:', idbErr);
+        console.warn('[VersionPurge] [Step 3a/6 Error] Error clearing idb-keyval:', idbErr);
       }
 
-      // Update stored versions in localStorage immediately
+      // 3b. Enumerate and delete all custom/legacy IndexedDB databases if window.indexedDB is available
       try {
+        console.log('[VersionPurge] [Step 3b/6] Inspecting and purging custom/legacy IndexedDB databases...');
+        if (typeof window !== 'undefined' && window.indexedDB) {
+          if (typeof window.indexedDB.databases === 'function') {
+            const databases = await window.indexedDB.databases();
+            console.log(`[VersionPurge] [Step 3b/6] Found ${databases.length} IndexedDB databases:`, databases.map(d => d.name));
+            for (const dbInfo of databases) {
+              if (dbInfo.name && dbInfo.name !== 'firebaseLocalStorageDb') {
+                try {
+                  console.log(`[VersionPurge] [Step 3b/6] Purging IndexedDB database: "${dbInfo.name}"...`);
+                  window.indexedDB.deleteDatabase(dbInfo.name);
+                } catch (delErr) {
+                  console.warn(`[VersionPurge] [Step 3b/6] Failed to delete database "${dbInfo.name}":`, delErr);
+                }
+              }
+            }
+          } else {
+            const knownDbs = ['keyval-store', 'workbox-expiration', 'asrar_db_cache', 'asrarhub_offline_cache'];
+            for (const dbName of knownDbs) {
+              try {
+                window.indexedDB.deleteDatabase(dbName);
+              } catch (_) {}
+            }
+          }
+        }
+        console.log('[VersionPurge] [Step 3b/6] -> IndexedDB databases purge step completed.');
+      } catch (dbErr) {
+        console.warn('[VersionPurge] [Step 3b/6 Error] Error purging IndexedDB databases:', dbErr);
+      }
+
+      // 4. Purge Service Worker Cache API storage
+      try {
+        console.log('[VersionPurge] [Step 4/6] Inspecting Service Worker Cache Storage (window.caches)...');
+        if (typeof window !== 'undefined' && 'caches' in window) {
+          const cacheKeys = await window.caches.keys();
+          console.log(`[VersionPurge] [Step 4/6] Found ${cacheKeys.length} Cache API buckets:`, cacheKeys);
+          for (const key of cacheKeys) {
+            console.log(`[VersionPurge] [Step 4/6] Deleting Cache bucket: "${key}"...`);
+            await window.caches.delete(key);
+          }
+          console.log('[VersionPurge] [Step 4/6] -> All Cache API storage buckets deleted.');
+        }
+      } catch (cacheErr) {
+        console.warn('[VersionPurge] [Step 4/6 Error] Error clearing Cache API storage:', cacheErr);
+      }
+
+      // 5. Update stored versions & diagnostic timestamps in localStorage
+      try {
+        console.log(`[VersionPurge] [Step 5/6] Updating localStorage version flags to "${currentVersion}"...`);
         localStorage.setItem('app_version', currentVersion);
         localStorage.setItem('asrarhub_installed_version', currentVersion);
+        localStorage.setItem('asrarhub_last_cache_purge_timestamp', new Date().toISOString());
+        localStorage.setItem('asrarhub_last_purge_version', currentVersion);
+        sessionStorage.setItem('asrarhub_cache_purged_session', 'true');
+        console.log('[VersionPurge] [Step 5/6] -> Storage version markers updated successfully.');
       } catch (e) {
-        // Safe fallback
+        console.warn('[VersionPurge] [Step 5/6 Error] Could not update storage flags:', e);
       }
 
-      // Note: We do NOT call window.location.reload() inside iframes or on initial mount
-      // to avoid blank screen loops and render disruptions in preview frames.
+      console.log(`[VersionPurge] [Step 6/6] Purge routine successfully completed for version "${currentVersion}".`);
+      console.groupEnd();
       return true;
     } else if (!storedVersion) {
+      console.log(`[VersionPurge] [Step 3/6] First-time install detected. Initializing storage markers to version "${currentVersion}".`);
       try {
         localStorage.setItem('app_version', currentVersion);
         localStorage.setItem('asrarhub_installed_version', currentVersion);
+        localStorage.setItem('asrarhub_last_cache_purge_timestamp', new Date().toISOString());
       } catch (e) {
         // Safe fallback
       }
+    } else {
+      console.log(`[VersionPurge] [Step 3/6] App version is up to date ("${storedVersion}"). No purge required.`);
     }
   } catch (error) {
-    console.warn('[VersionSync] Error executing checkVersionAndPurgeCache:', error);
+    console.warn('[VersionPurge] Error executing checkVersionAndPurgeCache:', error);
   }
+
+  console.groupEnd();
   return false;
+}
+
+/**
+ * Hidden Version Diagnostic Helper:
+ * Regularly checks the current running app version against the compiled package.json version (__APP_VERSION__).
+ * If a persistent mismatch is detected even after a cache purge, logs a warning and stores diagnostic feedback
+ * for consumption by the Admin Dashboard.
+ */
+function useHiddenVersionDiagnosticHelper() {
+  React.useEffect(() => {
+    let checkCount = 0;
+    const runDiagnosticCheck = async () => {
+      try {
+        checkCount++;
+        const targetPackageVersion = typeof __APP_VERSION__ !== 'undefined' && __APP_VERSION__
+          ? __APP_VERSION__
+          : appVersionService.getCurrentVersion();
+        const storedVersion = localStorage.getItem('app_version') || localStorage.getItem('asrarhub_installed_version');
+        const runtimeVersion = appVersionService.getCurrentVersion();
+        const lastPurgeTimestamp = localStorage.getItem('asrarhub_last_cache_purge_timestamp');
+        
+        let hasMismatch = false;
+        let mismatchReason = '';
+
+        if (storedVersion && storedVersion !== targetPackageVersion) {
+          hasMismatch = true;
+          mismatchReason = `Stored version (${storedVersion}) differs from target package.json version (${targetPackageVersion})`;
+        } else if (runtimeVersion && targetPackageVersion && runtimeVersion !== targetPackageVersion) {
+          hasMismatch = true;
+          mismatchReason = `Runtime version (${runtimeVersion}) differs from target package.json version (${targetPackageVersion})`;
+        }
+
+        if (hasMismatch) {
+          // If mismatch detected, attempt a background purge verification
+          await checkVersionAndPurgeCache(false);
+          const recheckedStored = localStorage.getItem('app_version');
+
+          // If mismatch still persists after purge attempt
+          if (recheckedStored && recheckedStored !== targetPackageVersion) {
+            const warningPayload = {
+              diagnosticType: 'VERSION_MISMATCH_PERSISTENT',
+              timestamp: new Date().toISOString(),
+              targetPackageVersion,
+              storedVersion: recheckedStored,
+              runtimeVersion,
+              lastPurgeTimestamp,
+              checkCount,
+              reason: mismatchReason,
+              suggestion: 'Admin should recommend a Force Refresh or hard reload to clear stale service worker / browser cache.'
+            };
+
+            console.warn(
+              `%c[AdminVersionDiagnostic] WARNING: Persistent version mismatch detected after cache purge!`,
+              'background: #7f1d1d; color: #fecaca; font-weight: bold; padding: 4px 8px; border-radius: 4px;',
+              warningPayload
+            );
+
+            // Store diagnostic feedback in localStorage for the Admin Dashboard
+            localStorage.setItem('asrarhub_admin_version_diagnostic', JSON.stringify({
+              hasPersistentMismatch: true,
+              lastChecked: new Date().toISOString(),
+              targetPackageVersion,
+              storedVersion: recheckedStored,
+              runtimeVersion,
+              reason: mismatchReason,
+              warningCount: checkCount
+            }));
+
+            // Attach to window for immediate admin console inspection
+            if (typeof window !== 'undefined') {
+              (window as any).__asrarhub_version_diagnostic = warningPayload;
+            }
+          }
+        } else {
+          // Healthy state: clear warning flag or store healthy diagnostic status
+          localStorage.setItem('asrarhub_admin_version_diagnostic', JSON.stringify({
+            hasPersistentMismatch: false,
+            lastChecked: new Date().toISOString(),
+            targetPackageVersion,
+            storedVersion: storedVersion || targetPackageVersion,
+            runtimeVersion,
+            status: 'HEALTHY'
+          }));
+          if (typeof window !== 'undefined') {
+            (window as any).__asrarhub_version_diagnostic = {
+              status: 'HEALTHY',
+              version: targetPackageVersion,
+              timestamp: new Date().toISOString()
+            };
+          }
+        }
+      } catch (err) {
+        console.debug('[VersionDiagnostic] Diagnostic check error:', err);
+      }
+    };
+
+    // Run initial diagnostic check after short settle time
+    const initialTimer = setTimeout(runDiagnosticCheck, 3000);
+
+    // Regularly re-run diagnostic check every 60 seconds
+    const interval = setInterval(runDiagnosticCheck, 60000);
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        runDiagnosticCheck();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    return () => {
+      clearTimeout(initialTimer);
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, []);
 }
 
 function lazyWithRetry<T extends React.ComponentType<any> = React.ComponentType<any>>(
@@ -686,8 +880,12 @@ export default function App() {
   const [backExitToast, setBackExitToast] = React.useState(false);
   const lastBackPressTimeRef = React.useRef<number>(0);
 
+  // Hidden background version diagnostic helper (monitors mismatch and updates Admin Dashboard)
+  useHiddenVersionDiagnosticHelper();
+
   // App version check and upgrade prompt
   const [showVersionUpgradeModal, setShowVersionUpgradeModal] = React.useState(false);
+  const [showArticleSyncModal, setShowArticleSyncModal] = React.useState(false);
   const [versionUpgradeData, setVersionUpgradeData] = React.useState<{
     currentVersion: string;
     previousVersion: string | null;
@@ -695,6 +893,19 @@ export default function App() {
     currentVersion: appVersionService.getCurrentVersion(),
     previousVersion: null
   });
+
+  React.useEffect(() => {
+    const handleOpenArticleSync = () => {
+      setShowArticleSyncModal(true);
+    };
+    window.addEventListener('asrarhub_open_article_sync_video_modal', handleOpenArticleSync);
+    if (typeof window !== 'undefined') {
+      (window as any).asrarhub_open_article_sync_video_modal = () => setShowArticleSyncModal(true);
+    }
+    return () => {
+      window.removeEventListener('asrarhub_open_article_sync_video_modal', handleOpenArticleSync);
+    };
+  }, []);
 
   React.useEffect(() => {
     // Check version and purge IndexedDB cache if upgrade detected
@@ -1181,7 +1392,7 @@ export default function App() {
       </main>
         {featureToggles['tool_inspector'] === 'active' && <LayoutTester />}
         <FaqButton />
-        {featureToggles['sacredAudioPlayerVisible'] === true && <SacredAudioPlayer />}
+        {featureToggles?.sacredAudioPlayerVisible !== false && <SacredAudioPlayer />}
         {!isFullscreen && <BottomNav />}
 
         {/* Global Floating Repeat Mode (visible only when Quran is playing and NOT on the Quran page itself) */}
@@ -1294,6 +1505,15 @@ export default function App() {
 
         {/* Promo Code Video Announcement Interactive Modal */}
         <PromoVideoModal />
+
+        {/* Video Article Synchronization Modal */}
+        <ArticleSyncVideoModal
+          isOpen={showArticleSyncModal}
+          onClose={() => setShowArticleSyncModal(false)}
+        />
+
+        {/* Automatic Initial Tools Integrity Monitor & 1-Click Repair */}
+        <ToolsIntegrityNotification />
       </div>
     </MaintenanceOverlay>
   );

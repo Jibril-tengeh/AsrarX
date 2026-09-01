@@ -505,6 +505,19 @@ export const Header: React.FC = () => {
               <Search size={18} />
             </motion.button>
 
+            {/* Transparent Fullscreen Button in Header */}
+            <motion.button
+              id="header-fullscreen-toggle"
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={toggleFullscreen}
+              className="p-1 min-[375px]:p-1.5 sm:p-2 rounded-full bg-transparent hover:bg-emerald-700/60 dark:hover:bg-emerald-900/60 text-white transition-colors cursor-pointer"
+              title={isFullscreen ? (language === 'fr' ? 'Quitter le Plein Écran' : 'Exit Fullscreen') : (language === 'fr' ? 'Mode Plein Écran' : 'Enter Fullscreen')}
+              aria-label="Fullscreen Toggle"
+            >
+              {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+            </motion.button>
+
 
 
             {featureToggles['tool_community'] !== 'inactive' && (

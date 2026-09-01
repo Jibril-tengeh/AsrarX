@@ -6,6 +6,8 @@ export interface AppBranding {
   appLogo?: string; // base64 or url (horizontal header logo)
   appIcon?: string; // base64 or url (square 1:1 icon for PWA, mobile home screen, app badge)
   loadingScreenImage?: string; // base64 or url
+  loadingScreenEnabled?: boolean; // toggle to enable/disable loading screen completely (default: true)
+  showLoadingImage?: boolean; // toggle to show or hide the central image in loader (default: true)
   loadingText?: string;
   loadingAnimationType?: 'pulse' | 'spin' | 'bounce' | 'glow' | 'fade';
   faviconUrl?: string; // base64 or url
@@ -27,6 +29,8 @@ const defaultBranding: AppBranding = {
   appLogo: '',
   appIcon: '',
   loadingScreenImage: '',
+  loadingScreenEnabled: true,
+  showLoadingImage: true,
   loadingText: 'AsrarHub',
   loadingAnimationType: 'pulse',
   faviconUrl: '',
@@ -167,6 +171,8 @@ export const BrandingProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       appLogo: '',
       appIcon: '',
       loadingScreenImage: '',
+      loadingScreenEnabled: true,
+      showLoadingImage: true,
       loadingText: 'AsrarHub',
       loadingAnimationType: 'pulse',
       faviconUrl: '',

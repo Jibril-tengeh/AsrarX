@@ -46,7 +46,7 @@ export const AdminDeepSettingsManager: React.FC<AdminDeepSettingsManagerProps> =
   handleSetUserStatus = async () => {},
   promoCodes = []
 }) => {
-  // Collapsed sections tracking (closed/collapsed by default)
+  // Collapsed sections tracking (open by default so all settings are immediately visible)
   const [collapsedCards, setCollapsedCards] = useState<Record<string, boolean>>(() => {
     try {
       const saved = localStorage.getItem('asrarhub_admin_settings_collapsed');
@@ -58,7 +58,7 @@ export const AdminDeepSettingsManager: React.FC<AdminDeepSettingsManagerProps> =
 
   const toggleCard = (id: string) => {
     setCollapsedCards(prev => {
-      const current = prev[id] !== undefined ? prev[id] : true;
+      const current = prev[id] !== undefined ? prev[id] : false;
       const next = { ...prev, [id]: !current };
       try {
         localStorage.setItem('asrarhub_admin_settings_collapsed', JSON.stringify(next));
@@ -74,7 +74,7 @@ export const AdminDeepSettingsManager: React.FC<AdminDeepSettingsManagerProps> =
       'set_article_reading_mode', 'set_store_layout', 'set_pricing_paystack', 'set_firestore_diag',
       'set_assistant_prompts', 'set_reciter', 'set_announcement', 'set_screenshot_protection',
       'set_dua_copy', 'set_backend_url', 'set_version_control', 'set_promo_videos', 'set_referrals',
-      'set_support_emails', 'set_security_alerts', 'set_reciters_mgmt', 'set_media_storage',
+      'set_support_emails', 'set_security_alerts', 'set_reciters_mgmt', 'set_sacred_audio', 'set_media_storage',
       'set_maintenance_cache'
     ];
     const newState: Record<string, boolean> = {};
@@ -214,8 +214,8 @@ export const AdminDeepSettingsManager: React.FC<AdminDeepSettingsManagerProps> =
     headerRight?: React.ReactNode;
     children: React.ReactNode;
   }> = ({ id, title, description, icon, badge, headerRight, children }) => {
-    // By default, all settings sections are CLOSED (collapsed) unless explicitly expanded
-    const isCollapsed = collapsedCards[id] !== undefined ? !!collapsedCards[id] : true;
+    // By default, all settings sections are OPEN (expanded) so all parameters are immediately visible
+    const isCollapsed = collapsedCards[id] !== undefined ? !!collapsedCards[id] : false;
     
     // Check if card matches search query
     if (searchQuery.trim()) {
@@ -1643,6 +1643,61 @@ export const AdminDeepSettingsManager: React.FC<AdminDeepSettingsManagerProps> =
           badge="Bibliothèque Audio"
         >
           <AdminRecitersManager featureToggles={featureToggles} handleToggleFeature={handleToggleFeature} />
+        </SettingCard>
+
+        {/* 25b. Sacred Audio & Background Music Player */}
+        <SettingCard
+          id="set_sacred_audio"
+          title="Musiques d'Arrière-Plan, Fréquences Sacrées & Lecteur Flottant"
+          description="Activez ou désactivez le bouton flottant de musique de fond, ajustez l'échelle de taille et les volumes par défaut."
+          icon={<Volume2 size={18} className="text-amber-500 shrink-0" />}
+          badge="Fond Sonore"
+        >
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-3.5 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800">
+              <div>
+                <span className="text-xs font-bold text-gray-900 dark:text-white block">Afficher le lecteur flottant de musique de fond :</span>
+                <span className="text-[11px] text-gray-500 dark:text-gray-400">Bouton d'accès rapide aux musiques d'ambiance et fréquences solfèges en bas d'écran.</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleToggleFeature('sacredAudioPlayerVisible', featureToggles.sacredAudioPlayerVisible !== false ? false : true)}
+                className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors cursor-pointer shrink-0 ml-3 ${
+                  featureToggles.sacredAudioPlayerVisible !== false ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
+                }`}
+              >
+                <div className={`w-4 h-4 rounded-full bg-white transition-transform ${featureToggles.sacredAudioPlayerVisible !== false ? 'translate-x-6' : 'translate-x-0'}`} />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 space-y-1.5">
+                <div className="flex justify-between items-center text-xs font-bold text-gray-700 dark:text-gray-300">
+                  <span>Taille du lecteur flottant :</span>
+                  <span className="text-amber-500 font-mono">{featureToggles.sacredAudioPlayerScale || 100}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="70"
+                  max="140"
+                  step="5"
+                  value={featureToggles.sacredAudioPlayerScale || 100}
+                  onChange={(e) => handleToggleFeature('sacredAudioPlayerScale', parseInt(e.target.value) || 100)}
+                  className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-amber-500"
+                />
+              </div>
+
+              <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-bold text-gray-700 dark:text-gray-300 block">Fréquence recommandée par défaut :</span>
+                  <span className="text-[11px] text-gray-500 dark:text-gray-400">Harmonie universelle</span>
+                </div>
+                <span className="px-3 py-1 bg-amber-500/20 text-amber-500 dark:text-amber-300 rounded-xl text-xs font-mono font-bold border border-amber-500/30">
+                  432 Hz
+                </span>
+              </div>
+            </div>
+          </div>
         </SettingCard>
 
         {/* 26. Media Storage Manager */}

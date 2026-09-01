@@ -94,10 +94,39 @@ export const AdminVersionControlManager: React.FC = () => {
   const [isSavingAppRelease, setIsSavingAppRelease] = useState<boolean>(false);
   const [isSyncingDefaults, setIsSyncingDefaults] = useState<boolean>(false);
   const [isPurgingCache, setIsPurgingCache] = useState<boolean>(false);
+  const [versionDiagnostic, setVersionDiagnostic] = useState<{
+    hasPersistentMismatch?: boolean;
+    lastChecked?: string;
+    targetPackageVersion?: string;
+    storedVersion?: string;
+    runtimeVersion?: string;
+    reason?: string;
+    warningCount?: number;
+    status?: string;
+  } | null>(() => {
+    try {
+      const raw = localStorage.getItem('asrarhub_admin_version_diagnostic');
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  useEffect(() => {
+    const updateDiag = () => {
+      try {
+        const raw = localStorage.getItem('asrarhub_admin_version_diagnostic');
+        if (raw) setVersionDiagnostic(JSON.parse(raw));
+      } catch {}
+    };
+    const interval = setInterval(updateDiag, 4000);
+    return () => clearInterval(interval);
+  }, []);
   const [showVideoStudioModal, setShowVideoStudioModal] = useState<boolean>(false);
   const [studioSelectedPresetId, setStudioSelectedPresetId] = useState<VideoCardThemeId>('cosmic-nebula');
   const [studioIsForceUpdateTest, setStudioIsForceUpdateTest] = useState<boolean>(true);
   const [studioActiveLang, setStudioActiveLang] = useState<'fr' | 'en' | 'ha'>('fr');
+  const [isAdvancedCreateOpen, setIsAdvancedCreateOpen] = useState<boolean>(false);
   const [newAppReleaseForm, setNewAppReleaseForm] = useState<{
     version: string;
     versionCode: number;
@@ -128,11 +157,11 @@ export const AdminVersionControlManager: React.FC = () => {
     title: '',
     titleEn: '',
     titleHa: '',
-    type: 'minor',
-    isCurrent: false,
+    type: 'patch',
+    isCurrent: true,
     disabled: false,
     forceUpdate: false,
-    disableVideoCard: false,
+    disableVideoCard: true, // Désactivée par défaut
     minSupportedVersionCode: 1,
     downloadUrl: '',
     apkDownloadUrl: '',
@@ -535,27 +564,37 @@ export const AdminVersionControlManager: React.FC = () => {
     }
   };
 
-  // 5. Open Create App Release Modal
+  // 5. Open Create App Release Modal (Simplified & Automatic)
   const handleOpenCreateAppReleaseModal = () => {
     const todayFr = new Date().toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
     const todayEn = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
     const todayHa = `${new Date().getDate()} ${new Date().toLocaleString('ha-NG', { month: 'long' })}, ${new Date().getFullYear()}`;
 
+    // Auto-calculate the next suggested version from current releases
+    const latestVersion = appReleases[0]?.version || APP_VERSION_CONFIG.currentVersion || '1.1.2';
+    const cleanVersion = latestVersion.replace(/^v/, '');
+    const parts = cleanVersion.split('.').map(p => parseInt(p, 10) || 0);
+    const major = parts[0] ?? 1;
+    const minor = parts[1] ?? 1;
+    const patch = parts[2] ?? 0;
+    const suggestedVersion = `${major}.${minor}.${patch + 1}`;
+    const nextVersionCode = (appReleases[0]?.versionCode || 1) + 1;
+
     setNewAppReleaseForm({
-      version: '',
-      versionCode: (appReleases[0]?.versionCode || 1) + 1,
+      version: suggestedVersion,
+      versionCode: nextVersionCode,
       releaseDate: todayFr,
       releaseDateEn: todayEn,
       releaseDateHa: todayHa,
-      title: '',
-      titleEn: '',
-      titleHa: '',
-      type: 'minor',
-      isCurrent: false,
+      title: `Mise à jour v${suggestedVersion}`,
+      titleEn: `Update v${suggestedVersion}`,
+      titleHa: `Sabuntawa v${suggestedVersion}`,
+      type: 'patch',
+      isCurrent: true,
       disabled: false,
       forceUpdate: false,
-      disableVideoCard: false,
-      minSupportedVersionCode: (appReleases[0]?.versionCode || 1),
+      disableVideoCard: true, // Désactivée par défaut
+      minSupportedVersionCode: appReleases[0]?.versionCode || 1,
       downloadUrl: '',
       apkDownloadUrl: '',
       videoCardTheme: 'cyber-emerald',
@@ -563,9 +602,14 @@ export const AdminVersionControlManager: React.FC = () => {
       highlightsEn: [''],
       highlightsHa: ['']
     });
-    setRawHighlightsText({ fr: '', en: '', ha: '' });
+    setRawHighlightsText({ 
+      fr: 'Optimisation de la vitesse et des performances\nAmélioration de la stabilité générale et de l\'interface', 
+      en: 'Speed and performance optimizations\nGeneral stability and interface improvements', 
+      ha: 'Inganta sauri da sabunta ayyuka\nGyare-gyare don sauƙaƙa amfani' 
+    });
     setActiveEditorLangTab('fr');
-    setEditorRawMode(false);
+    setEditorRawMode(true);
+    setIsAdvancedCreateOpen(false);
     setShowCreateAppReleaseModal(true);
   };
 
@@ -1441,6 +1485,52 @@ export const AdminVersionControlManager: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {/* Real-time Version & Cache Diagnostic Feedback */}
+          {versionDiagnostic?.hasPersistentMismatch ? (
+            <div className="p-4 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+              <div className="flex items-start gap-3">
+                <div className="p-2 bg-rose-500 text-white rounded-xl shrink-0 mt-0.5">
+                  <AlertTriangle size={18} />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-rose-900 dark:text-rose-200">
+                    Alerte Diagnostic Version : Conflit de Cache Détecté
+                  </h4>
+                  <p className="text-xs text-rose-700 dark:text-rose-300 mt-0.5">
+                    {versionDiagnostic.reason || 'Une discordance persiste entre la version installée et la version cible.'}
+                  </p>
+                  <div className="text-[11px] text-rose-600 dark:text-rose-400 mt-1 font-mono">
+                    Version cible: <strong>v{versionDiagnostic.targetPackageVersion}</strong> • Stockée: <strong>v{versionDiagnostic.storedVersion}</strong> • Dernière vérification: {versionDiagnostic.lastChecked ? new Date(versionDiagnostic.lastChecked).toLocaleTimeString() : 'Récent'}
+                  </div>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleFlushCaches}
+                disabled={isPurgingCache}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-md cursor-pointer transition-all active:scale-95 shrink-0 disabled:opacity-50"
+              >
+                <RefreshCw size={14} className={isPurgingCache ? 'animate-spin' : ''} />
+                <span>Purger Caches & Corriger</span>
+              </button>
+            </div>
+          ) : (
+            <div className="p-3 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/40 rounded-2xl flex items-center justify-between gap-3 text-xs">
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-lg">
+                  <ShieldCheck size={16} />
+                </div>
+                <span className="text-emerald-900 dark:text-emerald-300 font-medium">
+                  Diagnostic Diagnostic Version : <strong>Optimal</strong> • Runtime v{APP_VERSION_CONFIG.currentVersion} en parfaite cohérence avec le cache IndexedDB.
+                </span>
+              </div>
+              <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-mono hidden sm:inline">
+                Dernier contrôle : {versionDiagnostic?.lastChecked ? new Date(versionDiagnostic.lastChecked).toLocaleTimeString() : 'En direct'}
+              </span>
+            </div>
+          )}
 
           {/* Search & Filter Toolbar */}
           <div className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm flex flex-col md:flex-row items-center justify-between gap-4">
@@ -3012,26 +3102,26 @@ export const AdminVersionControlManager: React.FC = () => {
       )}
 
       {/* ========================================================================= */}
-      {/* MODAL 8: CREATE NEW APP VERSION (FIRESTORE)                               */}
+      {/* MODAL 8: CREATE NEW APP VERSION (FIRESTORE) - SIMPLIFIED & INTUITIVE     */}
       {/* ========================================================================= */}
       {showCreateAppReleaseModal && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
           <form
             onSubmit={handleCreateAppReleaseSubmit}
-            className="bg-white dark:bg-gray-800 w-full max-w-2xl rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden max-h-[90vh] flex flex-col animate-fadeIn"
+            className="bg-white dark:bg-gray-800 w-full max-w-xl rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-700 overflow-hidden max-h-[92vh] flex flex-col animate-fadeIn"
           >
             {/* Header */}
-            <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-purple-500/10">
+            <div className="p-5 sm:p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between bg-gradient-to-r from-emerald-500/15 to-teal-500/10 dark:from-emerald-950/40 dark:to-teal-950/20">
               <div className="flex items-center gap-3">
-                <span className="p-2.5 bg-purple-600 text-white rounded-2xl">
-                  <Plus size={20} />
+                <span className="p-2.5 bg-emerald-600 text-white rounded-2xl shadow-sm">
+                  <Sparkles size={20} />
                 </span>
                 <div>
-                  <h3 className="text-xl font-black text-gray-900 dark:text-white">
-                    Créer une Nouvelle Version App (Firestore)
+                  <h3 className="text-lg sm:text-xl font-black text-gray-900 dark:text-white">
+                    Publier une Nouvelle Version
                   </h3>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Ajoutez une version officielle avec son changelog complet.
+                    Créez et déployez une mise à jour en toute simplicité.
                   </p>
                 </div>
               </div>
@@ -3039,242 +3129,350 @@ export const AdminVersionControlManager: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowCreateAppReleaseModal(false)}
-                className="p-2 text-gray-400 hover:text-gray-600 text-lg leading-none"
+                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-lg leading-none rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700"
               >
                 ✕
               </button>
             </div>
 
             {/* Form Fields */}
-            <div className="p-6 overflow-y-auto space-y-4 flex-1 text-xs sm:text-sm">
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block font-bold text-gray-700 dark:text-gray-300 mb-1">
-                    Numéro de Version *
+            <div className="p-5 sm:p-6 overflow-y-auto space-y-4 flex-1 text-xs sm:text-sm">
+              {/* 1. Version Number & Quick Bump Buttons */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-gray-800 dark:text-gray-200">
+                    1. Numéro de Version *
                   </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="1.2.0"
-                    value={newAppReleaseForm.version}
-                    onChange={e => setNewAppReleaseForm({ ...newAppReleaseForm, version: e.target.value })}
-                    className="w-full bg-gray-50 dark:bg-gray-750 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 font-mono font-bold text-purple-600 dark:text-purple-400 outline-none focus:border-purple-500"
-                  />
+                  <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                    Actuelle: <strong className="text-emerald-600 dark:text-emerald-400 font-mono">v{appReleases[0]?.version || '1.1.2'}</strong>
+                  </span>
                 </div>
 
-                <div>
-                  <label className="block font-bold text-gray-700 dark:text-gray-300 mb-1">
-                    Version Code *
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    min={1}
-                    value={newAppReleaseForm.versionCode}
-                    onChange={e => setNewAppReleaseForm({ ...newAppReleaseForm, versionCode: Number(e.target.value) || 1 })}
-                    className="w-full bg-gray-50 dark:bg-gray-750 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 font-mono font-bold text-gray-800 dark:text-gray-100 outline-none focus:border-purple-500"
-                  />
-                </div>
+                {/* Quick Auto-Increment Buttons */}
+                {(() => {
+                  const base = appReleases[0]?.version || APP_VERSION_CONFIG.currentVersion || '1.1.2';
+                  const parts = base.replace(/^v/, '').split('.').map(p => parseInt(p, 10) || 0);
+                  const maj = parts[0] ?? 1;
+                  const min = parts[1] ?? 1;
+                  const pat = parts[2] ?? 0;
+                  const patchOption = `${maj}.${min}.${pat + 1}`;
+                  const minorOption = `${maj}.${min + 1}.0`;
+                  const majorOption = `${maj + 1}.0.0`;
 
-                <div>
-                  <label className="block font-bold text-gray-700 dark:text-gray-300 mb-1">
-                    Type
-                  </label>
-                  <select
-                    value={newAppReleaseForm.type}
-                    onChange={e => setNewAppReleaseForm({ ...newAppReleaseForm, type: e.target.value as any })}
-                    className="w-full bg-gray-50 dark:bg-gray-750 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 font-bold text-gray-800 dark:text-gray-100 outline-none focus:border-purple-500"
-                  >
-                    <option value="major">Majeure</option>
-                    <option value="minor">Mineure</option>
-                    <option value="patch">Correctif</option>
-                  </select>
+                  return (
+                    <div className="grid grid-cols-3 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNewAppReleaseForm({
+                            ...newAppReleaseForm,
+                            version: patchOption,
+                            type: 'patch',
+                            title: `Mise à jour v${patchOption} - Correctifs`
+                          });
+                        }}
+                        className={`p-2 rounded-xl border text-center transition-all cursor-pointer ${
+                          newAppReleaseForm.version === patchOption
+                            ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-bold ring-2 ring-emerald-500/20'
+                            : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-750 text-gray-700 dark:text-gray-300 hover:border-emerald-300'
+                        }`}
+                      >
+                        <span className="block font-mono text-xs font-bold">v{patchOption}</span>
+                        <span className="block text-[10px] text-gray-500 dark:text-gray-400">Correctif (+0.0.1)</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNewAppReleaseForm({
+                            ...newAppReleaseForm,
+                            version: minorOption,
+                            type: 'minor',
+                            title: `Mise à jour v${minorOption} - Nouveautés`
+                          });
+                        }}
+                        className={`p-2 rounded-xl border text-center transition-all cursor-pointer ${
+                          newAppReleaseForm.version === minorOption
+                            ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-bold ring-2 ring-emerald-500/20'
+                            : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-750 text-gray-700 dark:text-gray-300 hover:border-emerald-300'
+                        }`}
+                      >
+                        <span className="block font-mono text-xs font-bold">v{minorOption}</span>
+                        <span className="block text-[10px] text-gray-500 dark:text-gray-400">Nouveautés (+0.1.0)</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNewAppReleaseForm({
+                            ...newAppReleaseForm,
+                            version: majorOption,
+                            type: 'major',
+                            title: `Version Majeure v${majorOption}`
+                          });
+                        }}
+                        className={`p-2 rounded-xl border text-center transition-all cursor-pointer ${
+                          newAppReleaseForm.version === majorOption
+                            ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 font-bold ring-2 ring-emerald-500/20'
+                            : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-750 text-gray-700 dark:text-gray-300 hover:border-emerald-300'
+                        }`}
+                      >
+                        <span className="block font-mono text-xs font-bold">v{majorOption}</span>
+                        <span className="block text-[10px] text-gray-500 dark:text-gray-400">Majeure (+1.0.0)</span>
+                      </button>
+                    </div>
+                  );
+                })()}
+
+                <div className="grid grid-cols-2 gap-3 pt-1">
+                  <div>
+                    <label className="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-1">
+                      Numéro personnalisé
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="1.2.0"
+                      value={newAppReleaseForm.version}
+                      onChange={e => setNewAppReleaseForm({ ...newAppReleaseForm, version: e.target.value })}
+                      className="w-full bg-gray-50 dark:bg-gray-750 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 font-mono font-bold text-emerald-600 dark:text-emerald-400 outline-none focus:border-emerald-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-gray-600 dark:text-gray-400 mb-1">
+                      Version Code (Build)
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      min={1}
+                      value={newAppReleaseForm.versionCode}
+                      onChange={e => setNewAppReleaseForm({ ...newAppReleaseForm, versionCode: Number(e.target.value) || 1 })}
+                      className="w-full bg-gray-50 dark:bg-gray-750 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 font-mono font-bold text-gray-800 dark:text-gray-100 outline-none focus:border-emerald-500"
+                    />
+                  </div>
                 </div>
               </div>
 
+              {/* 2. Version Title */}
               <div>
-                <label className="block font-bold text-gray-700 dark:text-gray-300 mb-1">
-                  Titre de la Version (Français) *
+                <label className="block font-bold text-gray-800 dark:text-gray-200 mb-1">
+                  2. Titre de la Version *
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="Ex: Version 1.2.0 - Suite Audio & Performances"
+                  placeholder="Ex: Mise à jour v1.2.0 - Optimisations & Stabilité"
                   value={newAppReleaseForm.title}
                   onChange={e => setNewAppReleaseForm({ ...newAppReleaseForm, title: e.target.value })}
-                  className="w-full bg-gray-50 dark:bg-gray-750 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 font-bold text-gray-800 dark:text-gray-100 outline-none focus:border-purple-500"
+                  className="w-full bg-gray-50 dark:bg-gray-750 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 font-bold text-gray-800 dark:text-gray-100 outline-none focus:border-emerald-500"
                 />
               </div>
 
+              {/* 3. Highlights / Changes */}
               <div>
-                <label className="block font-bold text-gray-700 dark:text-gray-300 mb-1">
-                  Fonctionnalités (1 puce par ligne) *
+                <label className="block font-bold text-gray-800 dark:text-gray-200 mb-1">
+                  3. Nouveautés & Corrections (1 ligne par point)
                 </label>
                 <textarea
                   rows={4}
                   required
-                  placeholder={`- Optimisation de la mémoire et réactivité\n- Nouveaux versets et récitateurs Saint Coran\n- Amélioration de l'expérience hors-ligne`}
+                  placeholder={`- Optimisation de la fluidité et des performances\n- Amélioration de l'expérience utilisateur et corrections\n- Mise à jour des contenus`}
                   value={rawHighlightsText.fr}
                   onChange={e => setRawHighlightsText({ ...rawHighlightsText, fr: e.target.value })}
-                  className="w-full bg-gray-50 dark:bg-gray-750 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-gray-800 dark:text-gray-100 outline-none focus:border-purple-500 font-sans leading-relaxed"
+                  className="w-full bg-gray-50 dark:bg-gray-750 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-gray-800 dark:text-gray-100 outline-none focus:border-emerald-500 font-sans leading-relaxed"
                 />
               </div>
 
-              <div className="flex items-center gap-4 pt-2">
-                <label className="flex items-center gap-2 cursor-pointer">
+              {/* 4. Publication and Video Card Options */}
+              <div className="space-y-3 pt-1">
+                {/* Published Toggle */}
+                <label className="flex items-center justify-between p-3 rounded-2xl bg-gray-50 dark:bg-gray-750 border border-gray-200 dark:border-gray-700 cursor-pointer">
+                  <div>
+                    <span className="font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                      <Sparkles size={15} className="text-emerald-500" />
+                      <span>Publier immédiatement la version</span>
+                    </span>
+                    <span className="text-[11px] text-gray-500 dark:text-gray-400 block mt-0.5">
+                      La version sera visible et active pour tous les utilisateurs.
+                    </span>
+                  </div>
                   <input
                     type="checkbox"
                     checked={!newAppReleaseForm.disabled}
                     onChange={e => setNewAppReleaseForm({ ...newAppReleaseForm, disabled: !e.target.checked })}
-                    className="w-4 h-4 text-purple-600 rounded"
+                    className="w-5 h-5 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer shrink-0"
                   />
-                  <span className="font-bold text-gray-800 dark:text-gray-200">
-                    Publier immédiatement (Visible)
-                  </span>
                 </label>
 
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={newAppReleaseForm.isCurrent}
-                    onChange={e => setNewAppReleaseForm({ ...newAppReleaseForm, isCurrent: e.target.checked })}
-                    className="w-4 h-4 text-purple-600 rounded"
-                  />
-                  <span className="font-bold text-gray-800 dark:text-gray-200">
-                    Définir comme version actuelle
-                  </span>
-                </label>
-
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={newAppReleaseForm.forceUpdate}
-                    onChange={e => setNewAppReleaseForm({ ...newAppReleaseForm, forceUpdate: e.target.checked })}
-                    className="w-4 h-4 text-amber-600 rounded"
-                  />
-                  <span className="font-bold text-amber-700 dark:text-amber-400 flex items-center gap-1.5">
-                    <ShieldAlert size={14} />
-                    Mise à jour obligatoire (Bloquer les versions antérieures)
-                  </span>
-                </label>
-              </div>
-
-              {/* Force update inputs if enabled */}
-              {newAppReleaseForm.forceUpdate && (
-                <div className="p-4 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60 rounded-2xl space-y-3 animate-fadeIn">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block font-bold text-amber-900 dark:text-amber-300 text-xs mb-1">
-                        Build Code Minimal Requis
-                      </label>
-                      <input
-                        type="number"
-                        min={1}
-                        value={newAppReleaseForm.minSupportedVersionCode}
-                        onChange={e => setNewAppReleaseForm({ ...newAppReleaseForm, minSupportedVersionCode: Number(e.target.value) || 1 })}
-                        className="w-full bg-white dark:bg-gray-900 border border-amber-300 dark:border-amber-700 rounded-xl px-3 py-2 text-xs font-mono font-bold text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-amber-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block font-bold text-amber-900 dark:text-amber-300 text-xs mb-1">
-                        Lien APK de téléchargement
-                      </label>
-                      <input
-                        type="url"
-                        value={newAppReleaseForm.apkDownloadUrl}
-                        onChange={e => setNewAppReleaseForm({ ...newAppReleaseForm, apkDownloadUrl: e.target.value })}
-                        placeholder="https://.../AsrarHub.apk"
-                        className="w-full bg-white dark:bg-gray-900 border border-amber-300 dark:border-amber-700 rounded-xl px-3 py-2 text-xs font-mono text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-amber-500"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Video Card Theme Selector & Disable Toggle */}
-              <div className="bg-gray-100/70 dark:bg-gray-800/80 p-4 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-4">
-                {/* Disable Video Card Toggle */}
-                <label className="flex items-center justify-between gap-3 p-3 rounded-xl bg-white dark:bg-gray-750 border border-gray-200 dark:border-gray-650 cursor-pointer shadow-sm">
-                  <div>
-                    <span className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
-                      <Film size={15} className={newAppReleaseForm.disableVideoCard ? 'text-amber-500' : 'text-purple-500'} />
-                      <span>Désactiver la carte vidéo animée pour cette version</span>
+                {/* Video Card Toggle (DISABLED BY DEFAULT AS REQUESTED) */}
+                <label className="flex items-center justify-between p-3 rounded-2xl bg-gray-50 dark:bg-gray-750 border border-gray-200 dark:border-gray-700 cursor-pointer">
+                  <div className="pr-3">
+                    <span className="font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                      <Film size={15} className={!newAppReleaseForm.disableVideoCard ? 'text-purple-500' : 'text-gray-400'} />
+                      <span>Activer la Carte Vidéo Animée pour cette version</span>
                     </span>
                     <span className="text-[11px] text-gray-500 dark:text-gray-400 block mt-0.5">
-                      {newAppReleaseForm.disableVideoCard 
-                        ? '🚫 La carte vidéo est désactivée : l\'utilisateur recevra un affichage standard sans animations vidéo.'
-                        : '🎥 La carte vidéo est active : l\'utilisateur verra le modèle vidéo sélectionné ci-dessous.'}
+                      {!newAppReleaseForm.disableVideoCard 
+                        ? '🎥 Carte vidéo active : l\'utilisateur verra une présentation vidéo animée.'
+                        : '🚫 Désactivée par défaut : l\'utilisateur recevra une bannière discrète sans vidéo.'}
                     </span>
                   </div>
                   <input
                     type="checkbox"
-                    checked={!!newAppReleaseForm.disableVideoCard}
-                    onChange={(e) => setNewAppReleaseForm({ ...newAppReleaseForm, disableVideoCard: e.target.checked })}
+                    checked={!newAppReleaseForm.disableVideoCard}
+                    onChange={e => setNewAppReleaseForm({ ...newAppReleaseForm, disableVideoCard: !e.target.checked })}
                     className="w-5 h-5 rounded text-purple-600 focus:ring-purple-500 cursor-pointer shrink-0"
                   />
                 </label>
 
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Film size={16} className="text-purple-500" />
-                    <span className="font-bold text-gray-800 dark:text-gray-200">
-                      Style Vidéo de Mise à Jour (Carte Unique Utilisateur)
-                    </span>
+                {/* If video card is enabled by admin, show preset style picker */}
+                {!newAppReleaseForm.disableVideoCard && (
+                  <div className="p-3.5 bg-purple-50/70 dark:bg-purple-950/30 rounded-2xl border border-purple-200 dark:border-purple-800/50 space-y-2.5 animate-fadeIn">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-purple-900 dark:text-purple-200 flex items-center gap-1.5">
+                        <Film size={14} className="text-purple-600 dark:text-purple-400" />
+                        Choisir le Style Vidéo
+                      </span>
+                      <span className="text-[11px] text-purple-700 dark:text-purple-300 font-bold">
+                        {getPresetById(newAppReleaseForm.videoCardTheme || 'cyber-emerald').titleFr}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5">
+                      {VIDEO_CARD_PRESETS.map((p) => {
+                        const isSelected = (newAppReleaseForm.videoCardTheme || 'cyber-emerald') === p.id;
+                        return (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => setNewAppReleaseForm({ ...newAppReleaseForm, videoCardTheme: p.id })}
+                            className={`p-2 rounded-xl border text-left transition-all cursor-pointer ${
+                              isSelected
+                                ? 'border-purple-500 bg-white dark:bg-gray-800 text-purple-900 dark:text-white font-bold ring-2 ring-purple-500/30'
+                                : 'border-purple-100 dark:border-purple-900/40 bg-white/60 dark:bg-gray-800/60 hover:bg-white text-gray-700 dark:text-gray-300'
+                            }`}
+                          >
+                            <span className="block text-[11px] font-bold truncate">{p.titleFr.split(' ')[0]}</span>
+                            <span className="block text-[9px] text-gray-500 dark:text-gray-400 truncate">{p.badgeFr}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
-                  <span className="text-[11px] text-purple-600 dark:text-purple-400 font-bold">
-                    {getPresetById(newAppReleaseForm.videoCardTheme || 'cyber-emerald').titleFr}
+                )}
+              </div>
+
+              {/* 5. Advanced Options (Collapsible to keep form simple) */}
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={() => setIsAdvancedCreateOpen(!isAdvancedCreateOpen)}
+                  className="w-full py-2 px-3 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-750 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold text-xs flex items-center justify-between transition-colors cursor-pointer"
+                >
+                  <span className="flex items-center gap-1.5">
+                    <Sparkles size={13} className="text-gray-500" />
+                    <span>Options Avancées (Traductions, Mise à jour forcée APK)</span>
                   </span>
-                </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Sélectionnez le modèle visuel et vidéo unique qui sera affiché à l'utilisateur pour cette version.
-                </p>
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-1">
-                  {VIDEO_CARD_PRESETS.map((p) => {
-                    const isSelected = (newAppReleaseForm.videoCardTheme || 'cyber-emerald') === p.id;
-                    return (
-                      <button
-                        key={p.id}
-                        type="button"
-                        onClick={() => setNewAppReleaseForm({ ...newAppReleaseForm, videoCardTheme: p.id })}
-                        className={`p-2.5 rounded-xl border text-left transition-all flex flex-col gap-1 relative overflow-hidden cursor-pointer ${
-                          isSelected
-                            ? 'border-purple-500 bg-purple-50 dark:bg-purple-950/40 ring-2 ring-purple-500/30'
-                            : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between w-full">
-                          <span className="text-[10px] font-mono font-bold text-gray-400">#{p.index}</span>
-                          {isSelected && <Check size={12} className="text-purple-600 dark:text-purple-400 font-bold" />}
+                  <span className="text-xs">{isAdvancedCreateOpen ? '▲ Masquer' : '▼ Déplier'}</span>
+                </button>
+
+                {isAdvancedCreateOpen && (
+                  <div className="mt-3 p-4 bg-gray-50 dark:bg-gray-750 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-4 animate-fadeIn">
+                    {/* Force Update APK Checkbox */}
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={newAppReleaseForm.forceUpdate}
+                        onChange={e => setNewAppReleaseForm({ ...newAppReleaseForm, forceUpdate: e.target.checked })}
+                        className="w-4 h-4 text-amber-600 rounded cursor-pointer"
+                      />
+                      <span className="font-bold text-amber-800 dark:text-amber-300 text-xs flex items-center gap-1">
+                        <ShieldAlert size={14} />
+                        Mise à jour obligatoire (Bloque les versions antérieures sur APK)
+                      </span>
+                    </label>
+
+                    {newAppReleaseForm.forceUpdate && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                        <div>
+                          <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 mb-1">
+                            Build Code Minimal Requis
+                          </label>
+                          <input
+                            type="number"
+                            min={1}
+                            value={newAppReleaseForm.minSupportedVersionCode}
+                            onChange={e => setNewAppReleaseForm({ ...newAppReleaseForm, minSupportedVersionCode: Number(e.target.value) || 1 })}
+                            className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-1.5 text-xs font-mono font-bold outline-none"
+                          />
                         </div>
-                        <span className="text-xs font-bold text-gray-900 dark:text-gray-100 truncate w-full">
-                          {p.titleFr.split(' ')[0]} {p.titleFr.split(' ')[1] || ''}
-                        </span>
-                        <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate w-full">
-                          {p.badgeFr}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
+
+                        <div>
+                          <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 mb-1">
+                            Lien de téléchargement APK
+                          </label>
+                          <input
+                            type="url"
+                            value={newAppReleaseForm.apkDownloadUrl}
+                            onChange={e => setNewAppReleaseForm({ ...newAppReleaseForm, apkDownloadUrl: e.target.value })}
+                            placeholder="https://.../AsrarHub.apk"
+                            className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-1.5 text-xs font-mono outline-none"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Multilingual inputs */}
+                    <div className="space-y-3 pt-1">
+                      <div>
+                        <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 mb-1">
+                          🇬🇧 Nouveautés en Anglais (Optionnel)
+                        </label>
+                        <textarea
+                          rows={2}
+                          value={rawHighlightsText.en}
+                          onChange={e => setRawHighlightsText({ ...rawHighlightsText, en: e.target.value })}
+                          placeholder="General updates and performance improvements"
+                          className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2.5 text-xs outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 mb-1">
+                          🇳🇬 Nouveautés en Hausa (Optionnel)
+                        </label>
+                        <textarea
+                          rows={2}
+                          value={rawHighlightsText.ha}
+                          onChange={e => setRawHighlightsText({ ...rawHighlightsText, ha: e.target.value })}
+                          placeholder="Sabuntawa da inganta sauri"
+                          className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2.5 text-xs outline-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Footer */}
-            <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-750 flex items-center justify-end gap-3">
+            <div className="p-4 sm:p-5 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-750 flex items-center justify-end gap-3">
               <button
                 type="button"
                 onClick={() => setShowCreateAppReleaseModal(false)}
-                className="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold text-xs px-4 py-2.5 rounded-xl"
+                className="bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold text-xs px-4 py-2.5 rounded-xl hover:bg-gray-300 dark:hover:bg-gray-650 transition-colors"
               >
                 Annuler
               </button>
               <button
                 type="submit"
                 disabled={isSavingAppRelease}
-                className="bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs px-6 py-2.5 rounded-xl shadow transition-all active:scale-95 disabled:opacity-50"
+                className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs sm:text-sm px-6 py-2.5 rounded-xl shadow-md transition-all active:scale-95 disabled:opacity-50 flex items-center gap-2 cursor-pointer"
               >
-                {isSavingAppRelease ? 'Création...' : 'Créer la Version'}
+                <Sparkles size={15} />
+                <span>{isSavingAppRelease ? 'Publication...' : `Publier la Version v${newAppReleaseForm.version || ''}`}</span>
               </button>
             </div>
           </form>

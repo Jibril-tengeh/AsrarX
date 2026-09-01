@@ -1,10 +1,11 @@
 // Offline App Manager for AsrarHub
 // Manages complete offline pre-caching of assets, tools, articles, and PWA installation
 
-import { DEFAULT_OFFLINE_TOOLS, saveToolToOfflineVault, getAllOfflineTools, formatStorageBytes } from './offlineToolsVault';
+import { DEFAULT_OFFLINE_TOOLS, saveToolToOfflineVault, getAllOfflineTools, ensureDefaultOfflineTools, formatStorageBytes } from './offlineToolsVault';
 import { getAllOfflineSecrets, saveSecretToOfflineVault } from './secretOfflineVault';
 import { getAsrarItems } from '../data/store';
 import { INITIAL_DEFAULT_ARTICLES } from '../data/defaultArticles';
+import { tools as allAppTools } from '../data/tools';
 
 export interface OfflineAppStatus {
   isFullySaved: boolean;
@@ -104,7 +105,7 @@ export async function getOfflineAppStatus(): Promise<OfflineAppStatus> {
 
   try {
     const [storedTools, storedSecrets] = await Promise.all([
-      getAllOfflineTools(),
+      ensureDefaultOfflineTools(),
       getAllOfflineSecrets()
     ]);
     cachedToolsCount = storedTools.length;
@@ -140,7 +141,7 @@ export async function getOfflineAppStatus(): Promise<OfflineAppStatus> {
 /**
  * Core critical URLs to pre-cache in Cache Storage for instant offline navigation
  */
-const CRITICAL_OFFLINE_ROUTES = [
+const BASE_CRITICAL_ROUTES = [
   '/',
   '/user/dashboard',
   '/explore',
@@ -148,21 +149,20 @@ const CRITICAL_OFFLINE_ROUTES = [
   '/saved',
   '/tools',
   '/profile',
-  '/tools/abjad',
-  '/tools/99names',
-  '/tools/istikhara',
-  '/tools/quran',
-  '/tools/wafq',
-  '/tools/falak',
-  '/tools/tasbih',
-  '/tools/ruqyah',
-  '/tools/celestial',
-  '/tools/muraqabah',
-  '/tools/lunar-phases',
+  '/community',
+  '/store',
+  '/faq',
   '/manifest.webmanifest',
   '/icon-192.png',
   '/icon-512.png',
 ];
+
+const CRITICAL_OFFLINE_ROUTES = Array.from(
+  new Set([
+    ...BASE_CRITICAL_ROUTES,
+    ...allAppTools.map(t => t.path),
+  ])
+);
 
 /**
  * Save and pre-cache the entire application for complete offline use

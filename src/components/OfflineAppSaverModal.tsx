@@ -341,7 +341,18 @@ export const OfflineAppSaverModal: React.FC<OfflineAppSaverModalProps> = ({
               </p>
               <ul className="text-xs text-gray-500 dark:text-gray-400 space-y-1.5 pl-5 list-disc leading-relaxed">
                 <li>
-                  <strong className="text-gray-700 dark:text-gray-200">Tous les outils spirituels :</strong> Calculateur Abjad Oriental & Maghrébin, 99 Noms d'Allah, Générateur de Wafq, Istikhara, Tasbih digital, Heures planétaires.
+                  <strong className="text-gray-700 dark:text-gray-200">
+                    {language === 'en'
+                      ? `All Spiritual Tools (${status?.cachedToolsCount || '60+'} tools) :`
+                      : language === 'ha'
+                      ? `Dukkan Kayan Aiki (${status?.cachedToolsCount || '60+'} kayan aiki) :`
+                      : `Tous les Outils Spirituels (${status?.cachedToolsCount || '60+'} outils) :`}
+                  </strong>{' '}
+                  {language === 'en'
+                    ? 'Abjad Engine, 99 Names of Allah, Awfaq 3x3 to 10x10, Istikhara & Faal, Geomancy (Arabic, Zanati, Ifa), Planetary Hours & Lunar Mansions, Shams al-Ma’arif, Sacred Books Library, Talismans, Sā‘ah al-Ijābah, and all calculators.'
+                    : language === 'ha'
+                    ? 'Injin Abjad, Sunayen Allah 99, Hatimai da Awfaq, Istihara, Ramli (Larabci da Ifa), Falaki da Manazil, Shams al-Ma’arif, da dukkan lissafin asrar.'
+                    : 'Moteurs Abjad (Oriental & Maghrébin), 99 Noms d\'Allah, Awfaq 3x3 à 10x10, Istikhara & Faal, Géomancie (Arabe, Zanati, Ifa), Heures Planétaires GPS, Demeures Lunaires, Dā\'ira As-Sirr, Sceaux des 7 Rois, Shams al-Ma\'arif, Bibliothèque des Manuscrits Sacrés, Diagnostics et l\'ensemble des modules de calculs.'}
                 </li>
                 <li>
                   <strong className="text-gray-700 dark:text-gray-200">Secrets & Articles :</strong> Vos articles favoris, versets de protection Ruqyah et invocations sauvegardées.

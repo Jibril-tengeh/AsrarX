@@ -30,11 +30,11 @@ const dynamicVersion = (typeof __APP_VERSION__ !== 'undefined' && __APP_VERSION_
 
 export const APP_VERSION_CONFIG = {
   currentVersion: dynamicVersion,
-  currentVersionCode: 10,
-  buildNumber: '2026.08.20.10',
-  releaseDate: '17 Août 2026',
-  releaseDateEn: 'August 17, 2026',
-  releaseDateHa: '17 ga Agusta, 2026',
+  currentVersionCode: 12,
+  buildNumber: '2026.08.31.12',
+  releaseDate: '31 Août 2026',
+  releaseDateEn: 'August 31, 2026',
+  releaseDateHa: '31 ga Agusta, 2026',
   appTitle: 'AsrarHub',
   bundleId: 'com.asrarhub.app',
   releases: [
@@ -49,6 +49,7 @@ export const APP_VERSION_CONFIG = {
       titleHa: `Sabuntawa v${dynamicVersion}: Sarrafa Siga & Gyaran Hotuna`,
       isCurrent: true,
       type: 'minor',
+      disableVideoCard: true,
       highlights: [
         'Mises à jour fluides et simplifiées sans désinstallation',
         'Système dynamique de gestion et affichage des versions d\'application',
@@ -85,6 +86,7 @@ export const APP_VERSION_CONFIG = {
       titleHa: 'Siga ta Farko v1.0: Kaddamar da AsrarHub a Hukumance',
       isCurrent: false,
       type: 'major',
+      disableVideoCard: true,
       highlights: [
         'Sanctuaire spirituel complet avec 6 grands Wirds et secrets sacrés',
         'Corpus Shams al-Ma\'arif & calculs ésotériques (Abjad, Asma al-Husna, Raml)',
