@@ -448,7 +448,7 @@ export const ExploreDashboard: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {categories.map((cat, index) => (
           <motion.div
-            key={cat.id}
+            key={cat.id ? `cat-${cat.id}-${index}` : `cat-${index}`}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
@@ -640,9 +640,9 @@ export const ExploreDashboard: React.FC = () => {
             if (displayMode === 'list') {
               return (
                 <div className="space-y-4">
-                  {displayedArticles.map((article) => (
+                  {displayedArticles.map((article, artIdx) => (
                     <div 
-                      key={article.id} 
+                      key={article.id ? `explore-list-${article.id}-${artIdx}` : `explore-list-${artIdx}`} 
                       className="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow flex flex-col sm:flex-row cursor-pointer group" 
                       onClick={() => setSelectedArticle(article)}
                     >
@@ -675,9 +675,9 @@ export const ExploreDashboard: React.FC = () => {
             if (displayMode === 'large' || displayMode === 'grid1') {
               return (
                 <div className="grid grid-cols-1 gap-8">
-                  {displayedArticles.map((article) => (
+                  {displayedArticles.map((article, artIdx) => (
                     <div 
-                      key={article.id} 
+                      key={article.id ? `explore-large-${article.id}-${artIdx}` : `explore-large-${artIdx}`} 
                       className="bg-white dark:bg-gray-800 rounded-3xl overflow-hidden border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow flex flex-col cursor-pointer group" 
                       onClick={() => setSelectedArticle(article)}
                     >
@@ -710,9 +710,9 @@ export const ExploreDashboard: React.FC = () => {
             if (displayMode === 'carousel') {
               return (
                 <div className="flex gap-6 overflow-x-auto pb-4 custom-scrollbar snap-x snap-mandatory">
-                  {displayedArticles.map((article) => (
+                  {displayedArticles.map((article, artIdx) => (
                     <div 
-                      key={article.id} 
+                      key={article.id ? `explore-car-${article.id}-${artIdx}` : `explore-car-${artIdx}`} 
                       className="min-w-[280px] sm:min-w-[320px] max-w-[320px] bg-white dark:bg-gray-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow flex flex-col cursor-pointer snap-start group" 
                       onClick={() => setSelectedArticle(article)}
                     >
@@ -743,8 +743,8 @@ export const ExploreDashboard: React.FC = () => {
             // Default 'grid'
             return (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {displayedArticles.map((article) => (
-                  <div key={article.id} className="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow flex flex-col cursor-pointer group" onClick={() => setSelectedArticle(article)}>
+                {displayedArticles.map((article, artIdx) => (
+                  <div key={article.id ? `explore-grid-${article.id}-${artIdx}` : `explore-grid-${artIdx}`} className="bg-white dark:bg-gray-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow flex flex-col cursor-pointer group" onClick={() => setSelectedArticle(article)}>
                     {article.thumbnail ? (
                       <div className="h-48 overflow-hidden">
                         <img src={article.thumbnail} alt={article.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />

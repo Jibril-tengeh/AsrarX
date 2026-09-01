@@ -419,12 +419,12 @@ export const Header: React.FC = () => {
                         <div className="p-4 text-sm text-gray-500 text-center">{language === 'fr' ? 'Aucune notification' : language === 'ha' ? 'Babu sanarwa' : 'No notifications'}</div>
                       ) : (
                         <div className="max-h-60 overflow-y-auto">
-                          {notifications.map(notif => {
+                          {notifications.map((notif, notifIdx) => {
                             const lang = language;
                             const title = (notif as any)[`title_${lang}`] || notif.title || (notif as any).title_fr || '';
                             const message = (notif as any)[`message_${lang}`] || notif.message || (notif as any).message_fr || '';
                             return (
-                            <div key={notif.id} className="p-3 border-b border-gray-50 dark:border-gray-750 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
+                            <div key={notif.id ? `hdr-notif-${notif.id}-${notifIdx}` : `hdr-notif-${notifIdx}`} className="p-3 border-b border-gray-50 dark:border-gray-750 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
                               <h4 className="text-xs font-bold text-gray-900 dark:text-white">{title}</h4>
                               <p className="text-[10px] text-gray-500 mt-0.5">{new Date(notif.date).toLocaleDateString(lang === 'fr' ? 'fr-FR' : lang === 'ha' ? 'ha-GH' : 'en-US')}</p>
                               <p className="text-xs text-gray-600 dark:text-gray-300 mt-1 line-clamp-2">{message}</p>

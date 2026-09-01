@@ -426,12 +426,12 @@ export const AdminToolsHealthManager: React.FC<AdminToolsHealthManagerProps> = (
               Aucun outil ne correspond aux critères sélectionnés.
             </div>
           ) : (
-            filteredItems.map((item) => {
+            filteredItems.map((item, itemIdx) => {
               const isSelected = selectedIds.includes(item.id);
 
               return (
                 <div
-                  key={item.id}
+                  key={item.id ? `tool-health-${item.id}-${itemIdx}` : `tool-health-${itemIdx}`}
                   className={`flex flex-col sm:flex-row sm:items-center justify-between p-3.5 sm:p-4 transition-colors gap-3 ${
                     isSelected
                       ? 'bg-emerald-50/50 dark:bg-emerald-950/20'

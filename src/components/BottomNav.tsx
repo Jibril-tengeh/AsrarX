@@ -88,11 +88,11 @@ export const BottomNav: React.FC = () => {
       isHidden ? 'translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'
     }`}>
       <nav className="flex justify-around items-center px-1 h-16 max-w-md mx-auto">
-        {displayItems.map((item) => {
+        {displayItems.map((item, itemIdx) => {
           const label = t(item.labelKey) !== item.labelKey ? t(item.labelKey) : item.defaultLabel;
           return (
             <NavLink
-              key={item.id}
+              key={item.id ? `bnav-${item.id}-${itemIdx}` : `bnav-${itemIdx}`}
               to={item.to}
               id={item.tourId}
               className={({ isActive }) =>

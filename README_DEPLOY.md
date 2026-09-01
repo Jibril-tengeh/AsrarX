@@ -133,9 +133,9 @@ android/app/build/outputs/apk/release/app-release.apk
 
 Le fichier `android/asrarhub.keystore` est préconfiguré dans `android/app/build.gradle` :
 - **Chemin du fichier :** `android/asrarhub.keystore`
-- **Mot de passe Keystore :** `asrarhub2026`
+- **Mot de passe Keystore :** `AsrarHub1492`
 - **Alias de la clé :** `asrarhub`
-- **Mot de passe de la clé :** `asrarhub2026`
+- **Mot de passe de la clé :** `AsrarHub1492`
 
 Si vous devez régénérer une nouvelle clé :
 ```bash
@@ -145,9 +145,9 @@ keytool -genkeypair -v \
   -keyalg RSA \
   -keysize 2048 \
   -validity 10000 \
-  -storepass asrarhub2026 \
-  -keypass asrarhub2026 \
-  -dname "CN=AsrarHub, OU=App, O=AsrarHub, L=Dakar, ST=DK, C=SN"
+  -storepass AsrarHub1492 \
+  -keypass AsrarHub1492 \
+  -dname "CN=AsrarHub1492i, OU=AsrarHub, O=AsrarHub, L=Nsawam, ST=Adoadjyri, C=GH"
 ```
 
 ---

@@ -744,7 +744,7 @@ export const ToolsDashboard: React.FC = () => {
                 return (
                   <motion.div
                     layout
-                    key={tool.id}
+                    key={tool.id ? `user-tool-${tool.id}-${index}` : `user-tool-${index}`}
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.9 }}

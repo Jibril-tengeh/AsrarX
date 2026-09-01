@@ -720,7 +720,7 @@ export const ToolsVideoSlider: React.FC<ToolsVideoSliderProps> = ({ className = 
             const isActive = idx === currentIndex;
             return (
               <button
-                key={tool.id}
+                key={tool.id ? `slider-dot-${tool.id}-${idx}` : `slider-dot-${idx}`}
                 onClick={() => setCurrentIndex(idx)}
                 className={`transition-all duration-300 rounded-full ${
                   isActive

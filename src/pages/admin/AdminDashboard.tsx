@@ -5959,9 +5959,9 @@ export const AdminDashboard: React.FC = () => {
 
             {/* Category Filter Chips */}
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-              {categories.map((cat) => (
+              {categories.map((cat, catIdx) => (
                 <button
-                  key={cat.id}
+                  key={cat.id ? `feat-cat-${cat.id}-${catIdx}` : `feat-cat-${catIdx}`}
                   type="button"
                   onClick={() => setFeatureCategoryFilter(cat.id)}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
@@ -6066,7 +6066,7 @@ export const AdminDashboard: React.FC = () => {
 
                   return (
                     <div
-                      key={tool.id}
+                      key={tool.id ? `admin-tool-item-${tool.id}-${index}` : `admin-tool-item-${index}`}
                       draggable={true}
                       onDragStart={(e) => {
                         e.dataTransfer.setData('text/plain', tool.id);
@@ -7237,8 +7237,8 @@ export const AdminDashboard: React.FC = () => {
                     <option value="Invocations & Douas">Invocations & Douas</option>
                     <option value="Sciences Spirituelles">Sciences Spirituelles</option>
                     <option value="Coran & Sourates">Coran & Sourates</option>
-                    {categories.map((c: any) => (
-                      <option key={c.id || c.name} value={c.name}>{c.name}</option>
+                    {categories.map((c: any, cIdx: number) => (
+                      <option key={c.id ? `newart-cat-${c.id}-${cIdx}` : `newart-cat-${c.name || cIdx}-${cIdx}`} value={c.name}>{c.name}</option>
                     ))}
                   </select>
                 </div>
@@ -7460,8 +7460,8 @@ export const AdminDashboard: React.FC = () => {
               <option value="Amour & Harmonie">Amour & Harmonie</option>
               <option value="Santé & Guérison">Santé & Guérison</option>
               <option value="Zikr & Méditation">Zikr & Méditation</option>
-              {categories.map((c: any) => (
-                <option key={c.id || c.name} value={c.name}>{c.name}</option>
+              {categories.map((c: any, cIdx: number) => (
+                <option key={c.id ? `filter-cat-${c.id}-${cIdx}` : `filter-cat-${c.name || cIdx}-${cIdx}`} value={c.name}>{c.name}</option>
               ))}
             </select>
 
@@ -7600,8 +7600,8 @@ export const AdminDashboard: React.FC = () => {
                           className="bg-transparent text-xs font-bold text-gray-800 dark:text-gray-200 outline-none px-1.5 cursor-pointer max-w-[140px] truncate"
                           title="Sélectionner la destination"
                         >
-                          {categoryOptionList.map(cName => (
-                            <option key={cName} value={cName}>{cName}</option>
+                          {categoryOptionList.map((cName, cIdx) => (
+                            <option key={`bulk-cat-opt-${cName}-${cIdx}`} value={cName}>{cName}</option>
                           ))}
                         </select>
                         <button
@@ -7647,13 +7647,13 @@ export const AdminDashboard: React.FC = () => {
                 ) : articlesLayoutMode === 'grid' ? (
                   /* Grid View with Admin Quick Controls */
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
-                    {filtered.map(art => {
+                    {filtered.map((art, artIdx) => {
                       const img = getArticleImageUrl(art);
                       const isSelected = editingArticle?.id === art.id;
                       const isChecked = selectedArticleIds.includes(art.id);
                       return (
                         <div
-                          key={art.id}
+                          key={art.id ? `admin-grid-art-${art.id}-${artIdx}` : `admin-grid-art-${artIdx}`}
                           className={`bg-white dark:bg-gray-850 rounded-2xl border p-4 flex flex-col justify-between transition-all group relative ${
                             isChecked 
                               ? 'border-emerald-500 ring-2 ring-emerald-500/30 shadow-md bg-emerald-50/10' 
@@ -7731,8 +7731,8 @@ export const AdminDashboard: React.FC = () => {
                                   className="text-[10px] font-extrabold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 rounded-lg px-2 py-0.5 uppercase tracking-wider outline-none cursor-pointer hover:border-emerald-500"
                                   title="Changer instantanément de catégorie"
                                 >
-                                  {categoryOptionList.map(cName => (
-                                    <option key={cName} value={cName}>{cName}</option>
+                                  {categoryOptionList.map((cName, cIdx) => (
+                                    <option key={`quick-cat-opt-${art.id}-${cName}-${cIdx}`} value={cName}>{cName}</option>
                                   ))}
                                 </select>
                                 {(art as any).subCategory && (
@@ -7844,12 +7844,12 @@ export const AdminDashboard: React.FC = () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-                        {filtered.map((art) => {
+                        {filtered.map((art, artIdx) => {
                           const img = getArticleImageUrl(art);
                           const isChecked = selectedArticleIds.includes(art.id);
                           return (
                             <tr 
-                              key={art.id} 
+                              key={art.id ? `admin-table-art-${art.id}-${artIdx}` : `admin-table-art-${artIdx}`} 
                               className={`transition-colors ${
                                 isChecked 
                                   ? 'bg-emerald-50/40 dark:bg-emerald-950/20' 
@@ -7893,8 +7893,8 @@ export const AdminDashboard: React.FC = () => {
                                     className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg px-2.5 py-1 text-xs font-semibold text-gray-800 dark:text-gray-200 outline-none cursor-pointer hover:border-emerald-500 focus:border-emerald-500 max-w-[150px] truncate"
                                     title="Déplacer vers une autre catégorie"
                                   >
-                                    {categoryOptionList.map(cName => (
-                                      <option key={cName} value={cName}>{cName}</option>
+                                    {categoryOptionList.map((cName, cIdx) => (
+                                      <option key={`table-cat-opt-${art.id}-${cName}-${cIdx}`} value={cName}>{cName}</option>
                                     ))}
                                   </select>
                                   {(art as any).subCategory && (

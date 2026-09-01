@@ -125,7 +125,7 @@ const keystorePassed = checkItem(
 
     return { ok: false, message: 'Aucun fichier asrarhub.keystore trouvé dans android/ ou android/app/.' };
   },
-  'Générez la clé via keytool : keytool -genkeypair -v -keystore android/asrarhub.keystore -alias asrarhub -keyalg RSA -keysize 2048 -validity 10000 -storepass asrarhub2026 -keypass asrarhub2026'
+  'Générez la clé via keytool : keytool -genkeypair -v -keystore android/asrarhub.keystore -alias asrarhub -keyalg RSA -keysize 2048 -validity 10000 -storepass AsrarHub1492 -keypass AsrarHub1492'
 );
 
 if (!keystorePassed) allPassed = false;
