@@ -4,6 +4,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useLanguage } from '../../../contexts/LanguageContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
+import { hapticDhikrCount, hapticImpact, hapticNotification, getHapticsConfig } from '../../../utils/haptics';
 import { db } from '../../../lib/firebase';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { getZikrCache, setZikrCache, syncTasbihSessionOffline } from '../../../utils/zikrSyncEngine';
@@ -650,21 +651,15 @@ export const Tasbih: React.FC = () => {
 
   const triggerVibration = async (type: 'tap' | 'success' | 'hundred') => {
     if (!vibrationEnabled) return;
-    try {
-      if (type === 'tap') {
-        await Haptics.impact({ style: ImpactStyle.Light });
-      } else if (type === 'success') {
-        await Haptics.notification({ type: 'SUCCESS' as any });
-      } else if (type === 'hundred') {
-        await Haptics.notification({ type: 'HEAVY' as any });
-      }
-    } catch (e) {
-      // Fallback to web API if Capacitor is not available
-      if (navigator.vibrate) {
-        if (type === 'tap') navigator.vibrate(40);
-        if (type === 'success') navigator.vibrate([100, 50, 100, 50, 100]);
-        if (type === 'hundred') navigator.vibrate([150, 80, 150]); // Distinct vibration for every 100 counts
-      }
+    const config = getHapticsConfig();
+    if (!config.enabled || !config.dhikrFeedback) return;
+
+    if (type === 'tap') {
+      await hapticImpact(config.intensity);
+    } else if (type === 'success') {
+      await hapticNotification('success');
+    } else if (type === 'hundred') {
+      await hapticNotification('warning');
     }
   };
 

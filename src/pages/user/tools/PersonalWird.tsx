@@ -1202,12 +1202,12 @@ export const PersonalWird: React.FC = () => {
             { id: 'purification', label: dict.ghazaliTabPurification, icon: Heart },
             { id: 'times', label: dict.ghazaliTabTimes, icon: Clock },
             { id: 'litanies', label: dict.ghazaliTabLitanies, icon: Key },
-          ].map((tab) => {
+          ].map((tab, tabIdx) => {
             const Icon = tab.icon;
             const isActive = ghazaliActiveTab === tab.id;
             return (
               <button
-                key={tab.id}
+                key={`ghazali-tab-${tab.id}-${tabIdx}`}
                 onClick={() => setGhazaliActiveTab(tab.id as any)}
                 className={`px-3.5 sm:px-4 py-2 sm:py-2.5 rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2 whitespace-nowrap transition-all cursor-pointer shrink-0 ${
                   isActive
@@ -1230,7 +1230,7 @@ export const PersonalWird: React.FC = () => {
             </p>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full min-w-0">
-              {GHAZALI_WEEKLY_WORDS.map((w) => {
+              {GHAZALI_WEEKLY_WORDS.map((w, wIdx) => {
                 const dayName = language === 'en' ? w.dayEn : language === 'ha' ? w.dayHa : w.dayFr;
                 const title = language === 'en' ? w.titleEn : language === 'ha' ? w.titleHa : w.titleFr;
                 const translation = language === 'en' ? w.translationEn : language === 'ha' ? w.translationHa : w.translationFr;
@@ -1238,7 +1238,7 @@ export const PersonalWird: React.FC = () => {
                 const isCopied = copiedTextId === w.id;
 
                 return (
-                  <div key={w.id} className="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-5 border border-amber-200/60 dark:border-gray-700 shadow-sm flex flex-col justify-between space-y-4 hover:border-amber-400 transition-all min-w-0 w-full">
+                  <div key={`ghazali-word-${w.id}-${wIdx}`} className="bg-white dark:bg-gray-800 rounded-2xl p-4 sm:p-5 border border-amber-200/60 dark:border-gray-700 shadow-sm flex flex-col justify-between space-y-4 hover:border-amber-400 transition-all min-w-0 w-full">
                     <div className="space-y-2 min-w-0 w-full">
                       <div className="flex items-center justify-between gap-2">
                         <span className="px-3 py-1 bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 text-xs font-bold rounded-full truncate">
@@ -1343,13 +1343,13 @@ export const PersonalWird: React.FC = () => {
               </h3>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full min-w-0">
-                {GHAZALI_PURIFICATION_STEPS.map((s) => {
+                {GHAZALI_PURIFICATION_STEPS.map((s, sIdx) => {
                   const Icon = s.icon;
                   const name = language === 'en' ? s.nameEn : language === 'ha' ? s.nameHa : s.nameFr;
                   const desc = language === 'en' ? s.descEn : language === 'ha' ? s.descHa : s.descFr;
 
                   return (
-                    <div key={s.step} className="bg-white dark:bg-gray-800 p-4 sm:p-5 rounded-2xl border border-amber-200/60 dark:border-gray-700 shadow-sm space-y-2 w-full min-w-0">
+                    <div key={`ghazali-step-${s.step}-${sIdx}`} className="bg-white dark:bg-gray-800 p-4 sm:p-5 rounded-2xl border border-amber-200/60 dark:border-gray-700 shadow-sm space-y-2 w-full min-w-0">
                       <div className="flex items-center gap-2.5">
                         <span className="w-7 h-7 rounded-full bg-amber-500 text-white font-bold text-xs flex items-center justify-center shrink-0">
                           {s.step}
@@ -1381,7 +1381,7 @@ export const PersonalWird: React.FC = () => {
                   const remedy = language === 'en' ? d.remedyEn : language === 'ha' ? d.remedyHa : d.remedyFr;
 
                   return (
-                    <div key={i} className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-rose-100 dark:border-gray-700 shadow-sm space-y-2 w-full min-w-0">
+                    <div key={`ghazali-heart-disease-${i}`} className="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-rose-100 dark:border-gray-700 shadow-sm space-y-2 w-full min-w-0">
                       <span className="text-xs font-bold text-rose-600 dark:text-rose-400 uppercase tracking-wider block break-words">
                         Maladie #0{i+1} : {disease}
                       </span>
@@ -1410,7 +1410,7 @@ export const PersonalWird: React.FC = () => {
                 const activity = language === 'en' ? t.activityEn : language === 'ha' ? t.activityHa : t.activityFr;
 
                 return (
-                  <div key={idx} className="bg-white dark:bg-gray-800 p-4 sm:p-5 rounded-2xl border border-amber-200/60 dark:border-gray-700 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 w-full min-w-0">
+                  <div key={`ghazali-time-${idx}`} className="bg-white dark:bg-gray-800 p-4 sm:p-5 rounded-2xl border border-amber-200/60 dark:border-gray-700 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 w-full min-w-0">
                     <div className="space-y-1.5 flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className={`px-3 py-1 rounded-full text-xs font-bold border flex items-center gap-1.5 ${t.badgeColor}`}>
@@ -1443,14 +1443,14 @@ export const PersonalWird: React.FC = () => {
             </p>
 
             <div className="space-y-4 w-full min-w-0">
-              {GHAZALI_MAJOR_LITANIES.map((lit) => {
+              {GHAZALI_MAJOR_LITANIES.map((lit, litIdx) => {
                 const title = language === 'en' ? lit.titleEn : language === 'ha' ? lit.titleHa : lit.titleFr;
                 const translation = language === 'en' ? lit.translationEn : language === 'ha' ? lit.translationHa : lit.translationFr;
                 const benefit = language === 'en' ? lit.benefitEn : language === 'ha' ? lit.benefitHa : lit.benefitFr;
                 const isCopied = copiedTextId === lit.id;
 
                 return (
-                  <div key={lit.id} className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-2xl border border-amber-200/60 dark:border-gray-700 shadow-sm space-y-4 w-full min-w-0">
+                  <div key={`ghazali-litany-${lit.id}-${litIdx}`} className="bg-white dark:bg-gray-800 p-4 sm:p-6 rounded-2xl border border-amber-200/60 dark:border-gray-700 shadow-sm space-y-4 w-full min-w-0">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-100 dark:border-gray-700 pb-3 w-full min-w-0">
                       <h3 className="font-bold text-gray-900 dark:text-white text-base flex items-center gap-2 break-words">
                         <Sparkles className="text-amber-500 shrink-0" size={18} />
@@ -1558,11 +1558,11 @@ export const PersonalWird: React.FC = () => {
 
         {/* Board of Folders */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 w-full min-w-0">
-          {folders.map(folder => {
+          {folders.map((folder, folderIdx) => {
             const folderWirds = savedWirds.filter(w => w.folderId === folder.id);
             return (
               <div
-                key={folder.id}
+                key={`folder-board-${folder.id}-${folderIdx}`}
                 onDragOver={(e) => e.preventDefault()}
                 onDrop={(e) => {
                   const itemId = e.dataTransfer.getData('text/plain');
@@ -1598,9 +1598,9 @@ export const PersonalWird: React.FC = () => {
                       {dict.dragHere}
                     </div>
                   ) : (
-                    folderWirds.map(wird => (
+                    folderWirds.map((wird, wirdIdx) => (
                       <div
-                        key={wird.id}
+                        key={`saved-wird-${wird.id}-${wirdIdx}`}
                         draggable
                         onDragStart={(e) => {
                           e.dataTransfer.setData('text/plain', wird.id);
@@ -1664,8 +1664,8 @@ export const PersonalWird: React.FC = () => {
                             className="bg-transparent border-0 font-semibold text-[10px] text-emerald-600 dark:text-emerald-400 outline-none cursor-pointer hover:underline p-0 m-0"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            {folders.map(f => (
-                              <option key={f.id} value={f.id} className="text-gray-800 dark:text-gray-200">
+                            {folders.map((f, fIdx) => (
+                              <option key={`opt-wird-f-${f.id}-${fIdx}`} value={f.id} className="text-gray-800 dark:text-gray-200">
                                 {dict.moveTo} : {getFolderName(f.id, f.name)}
                               </option>
                             ))}

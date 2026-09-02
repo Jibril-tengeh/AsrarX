@@ -182,9 +182,9 @@ export const WafqValidator: React.FC = () => {
       {/* Grid Dimension Selector */}
       <div className="flex flex-wrap items-center gap-3 bg-gray-50 dark:bg-gray-900 p-3 rounded-2xl border border-gray-100 dark:border-gray-800">
         <span className="text-xs font-bold text-gray-700 dark:text-gray-300">{t.sizeLabel}</span>
-        {[3, 4, 5, 6, 7].map(size => (
+        {[3, 4, 5, 6, 7].map((size, sIdx) => (
           <button
-            key={size}
+            key={`wafq-val-sz-${size}-${sIdx}`}
             type="button"
             onClick={() => handleSizeChange(size)}
             className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${

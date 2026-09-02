@@ -254,7 +254,7 @@ export const FirstOpenPermissionsModal: React.FC = () => {
               <div className="flex items-center justify-center gap-1.5 mb-6">
                 {permissionList.map((key, idx) => (
                   <div
-                    key={key}
+                    key={`perm-dot-${key}-${idx}`}
                     className={`h-2 rounded-full transition-all duration-300 ${
                       idx === currentStepIndex
                         ? 'w-6 bg-emerald-500'
@@ -293,14 +293,14 @@ export const FirstOpenPermissionsModal: React.FC = () => {
           ) : (
             /* List / Overview Mode */
             <div className="space-y-3 my-2">
-              {permissionList.map((key) => {
+              {permissionList.map((key, pIdx) => {
                 const item = t[key];
                 const ItemIcon = item.icon;
                 const state = grantedState[key];
 
                 return (
                   <div
-                    key={key}
+                    key={`perm-card-${key}-${pIdx}`}
                     className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-750 flex items-start gap-3"
                   >
                     <div className={`p-2 rounded-xl shrink-0 ${item.color}`}>

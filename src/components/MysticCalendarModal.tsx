@@ -2453,9 +2453,9 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                             {t('mysticCalendar.focusDurationLabel')}
                           </label>
                           <div className="grid grid-cols-3 gap-2">
-                            {[15, 25, 45].map((mins) => (
+                            {[15, 25, 45].map((mins, mIdx) => (
                               <button
-                                key={mins}
+                                key={`focus-mins-${mins}-${mIdx}`}
                                 onClick={() => setFocusDuration(mins * 60)}
                                 className={`py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                                   focusDuration === mins * 60
@@ -2551,9 +2551,9 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                               { id: 'creative', label: t('mysticCalendar.cosmicTaskCreative'), icon: '🎨' },
                               { id: 'introspection', label: t('mysticCalendar.cosmicTaskIntrospection'), icon: '👁️' },
                               { id: 'rest', label: t('mysticCalendar.cosmicTaskRest'), icon: '💤' },
-                            ].map((cat) => (
+                            ].map((cat, catIdx) => (
                               <button
-                                key={cat.id}
+                                key={`cal-task-cat-${cat.id}-${catIdx}`}
                                 onClick={() => setSelectedCategory(cat.id)}
                                 className={`p-2 rounded-xl text-[11px] font-bold transition-all flex items-center gap-1 cursor-pointer justify-center ${
                                   selectedCategory === cat.id
@@ -2732,9 +2732,9 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                               { id: 'energized', label: t('mysticCalendar.moodEnergized') },
                               { id: 'contemplative', label: t('mysticCalendar.moodContemplative') },
                               { id: 'tired', label: t('mysticCalendar.moodTired') },
-                            ].map((moodItem) => (
+                            ].map((moodItem, miIdx) => (
                               <button
-                                key={moodItem.id}
+                                key={`mood-item-${moodItem.id}-${miIdx}`}
                                 onClick={() => setJournalMood(moodItem.id)}
                                 className={`py-1.5 px-1 rounded-xl text-[10px] font-bold transition-all cursor-pointer ${
                                   journalMood === moodItem.id
@@ -2782,12 +2782,12 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
 
                           {/* Beautiful miniature grid timeline */}
                           <div className="flex gap-1 overflow-x-auto pb-1 mt-1.5 max-w-full">
-                            {Array.from({ length: getDaysInHijriMonth(hijriYear, hijriMonthIndex) }, (_, i) => i + 1).map((dayNum) => {
+                            {Array.from({ length: getDaysInHijriMonth(hijriYear, hijriMonthIndex) }, (_, i) => i + 1).map((dayNum, dnIdx) => {
                               const dayLog = journalLogs[`${hijriYear}-${hijriMonthIndex}-${dayNum}`];
                               const isToday = dayNum === selectedHijriDay;
                               return (
                                 <div 
-                                  key={dayNum}
+                                  key={`hijri-day-dot-${dayNum}-${dnIdx}`}
                                   onClick={() => setSelectedHijriDay(dayNum)}
                                   className={`w-4 h-6 rounded flex flex-col items-center justify-center text-[8px] font-bold cursor-pointer transition-all shrink-0 ${
                                     isToday
@@ -2903,8 +2903,8 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                           { id: 'zenith', icon: '☀️', label: t('mysticCalendar.zenithLabel'), time: solarTimes.zenith },
                           { id: 'goldenHour', icon: '🌟', label: t('mysticCalendar.goldenHourLabel'), time: solarTimes.goldenHour },
                           { id: 'sunset', icon: '🌇', label: t('mysticCalendar.sunsetLabel'), time: solarTimes.sunset },
-                        ].map((item) => (
-                          <div key={item.id} className={`rounded-xl p-2.5 border text-center transition-all ${
+                        ].map((item, itmIdx) => (
+                          <div key={`solar-time-${item.id}-${itmIdx}`} className={`rounded-xl p-2.5 border text-center transition-all ${
                             isReadingMode
                               ? 'bg-amber-950/20 border-amber-950/40 text-amber-100'
                               : 'bg-white dark:bg-gray-850 border-gray-100 dark:border-gray-800 shadow-sm'
@@ -3405,9 +3405,9 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                               {/* Version Switcher Tabs V1..V12 */}
                               <div className="w-full bg-black/80 p-1.5 rounded-xl border border-purple-500/30 shadow-md">
                                 <div className="flex items-center gap-1 overflow-x-auto pb-1.5 max-w-full no-scrollbar">
-                                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((vNum) => (
+                                  {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((vNum, vnIdx) => (
                                     <button
-                                      key={vNum}
+                                      key={`seal-ver-btn-${vNum}-${vnIdx}`}
                                       type="button"
                                       onClick={(e) => {
                                         e.stopPropagation();

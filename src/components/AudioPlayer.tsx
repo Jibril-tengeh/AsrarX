@@ -109,9 +109,9 @@ export const AudioPlayer: React.FC = () => {
                     { id: 'slow', label: 'Récitation Lente' },
                     { id: 'echo', label: 'Écho (Méditation)' },
                     { id: 'clarity', label: 'Clarté Vocale' }
-                  ].map(effect => (
+                  ].map((effect, effIdx) => (
                     <button
-                      key={effect.id}
+                      key={`audio-fx-${effect.id}-${effIdx}`}
                       onClick={() => { setAudioEffect(effect.id as any); setShowSettings(false); }}
                       className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${currentEffect === effect.id ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-400 font-medium' : 'hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300'}`}
                     >

@@ -601,8 +601,8 @@ export const ExploreDashboard: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3].map((n) => (
-              <div key={n} className="rounded-2xl border border-gray-100 dark:border-gray-700/80 p-4 space-y-4 bg-slate-50/50 dark:bg-slate-800/40">
+            {[1, 2, 3].map((n, sIdx) => (
+              <div key={`explore-skeleton-${n}-${sIdx}`} className="rounded-2xl border border-gray-100 dark:border-gray-700/80 p-4 space-y-4 bg-slate-50/50 dark:bg-slate-800/40">
                 <div className="w-full h-36 bg-gray-200 dark:bg-gray-700/80 rounded-xl" />
                 <div className="h-5 w-3/4 bg-gray-200 dark:bg-gray-700/80 rounded-md" />
                 <div className="h-4 w-5/6 bg-gray-100 dark:bg-gray-700/50 rounded-md" />

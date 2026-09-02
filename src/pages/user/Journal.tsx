@@ -121,8 +121,8 @@ export const Journal: React.FC = () => {
                 </div>
                 {currentWirds.length > 0 && (
                   <div className="flex flex-wrap gap-2">
-                    {currentWirds.map(w => (
-                      <span key={w} className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 px-3 py-1 rounded-full text-xs font-bold border border-emerald-100 dark:border-emerald-800">
+                    {currentWirds.map((w, wIdx) => (
+                      <span key={`current-wird-${w}-${wIdx}`} className="bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 px-3 py-1 rounded-full text-xs font-bold border border-emerald-100 dark:border-emerald-800">
                         {w}
                       </span>
                     ))}
@@ -179,11 +179,11 @@ export const Journal: React.FC = () => {
           </div>
         )}
 
-        {entries.map(entry => {
+        {entries.map((entry, eIdx) => {
           const isExpanded = expandedEntryIds.has(entry.id);
           return (
           <motion.div 
-            key={entry.id}
+            key={entry.id ? `journal-entry-${entry.id}-${eIdx}` : `journal-entry-${eIdx}`}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 cursor-pointer hover:shadow-md transition-shadow"

@@ -1786,7 +1786,7 @@ export const Community: React.FC = () => {
                 const currentReactionCount = (rx.like?.length || 0) + (rx.love?.length || 0) + (rx.haha?.length || 0) + (rx.wow?.length || 0) + (rx.sad?.length || 0) + (rx.angry?.length || 0);
 
                 return (
-                  <div key={post.id} className="space-y-3">
+                  <div key={post.id ? `community-post-${post.id}-${idx}` : `community-post-${idx}`} className="space-y-3">
                     {/* Centered Date Separator */}
                     {showDateHeader && (
                       <div className="flex justify-center my-4">
@@ -2127,7 +2127,7 @@ export const Community: React.FC = () => {
                                 📊 {post.poll.question}
                               </h4>
                               <div className="space-y-2.5">
-                                {post.poll.options.map((opt) => {
+                                {post.poll.options.map((opt, optIdx) => {
                                   const totalVotes = post.poll!.options.reduce((sum, o) => sum + (o.votes?.length || 0), 0);
                                   const vCount = opt.votes ? opt.votes.length : 0;
                                   const pct = totalVotes > 0 ? Math.round((vCount / totalVotes) * 100) : 0;
@@ -2135,7 +2135,7 @@ export const Community: React.FC = () => {
 
                                   return (
                                     <button
-                                      key={opt.id}
+                                      key={`poll-opt-${opt.id}-${optIdx}`}
                                       onClick={() => handlePollVote(post.id, opt.id)}
                                       className={`w-full text-left relative p-2.5 rounded-xl border text-xs font-bold transition-all overflow-hidden flex items-center justify-between cursor-pointer ${
                                         userHasVotedThis
@@ -3002,9 +3002,9 @@ export const Community: React.FC = () => {
               {/* Tab 2: Members List */}
               {activeSidebarTab === "members" && (
                 <div className="space-y-3.5 text-left">
-                  {membersList.map((m) => (
+                  {membersList.map((m, mIdx) => (
                     <div
-                      key={m.id}
+                      key={`comm-member-${m.id}-${mIdx}`}
                       onClick={() => setSelectedProfileMember(m)}
                       className="flex items-center justify-between gap-3 p-2 rounded-2xl hover:bg-gray-50 dark:hover:bg-gray-800/50 cursor-pointer transition-colors"
                     >
@@ -3062,9 +3062,9 @@ export const Community: React.FC = () => {
                     {posts
                       .filter((p) => p.codeSnippet)
                       .slice(0, 5)
-                      .map((p) => (
+                      .map((p, pIdx) => (
                         <div
-                          key={p.id}
+                          key={`comm-code-post-${p.id}-${pIdx}`}
                           onClick={() => {
                             document.getElementById(`msg-${p.id}`)?.scrollIntoView({ behavior: "smooth" });
                           }}
@@ -3131,11 +3131,11 @@ export const Community: React.FC = () => {
                           "Un wird pour la paix",
                           "Interpréter un rêve de Lion",
                           "Secrets de Salat al-Fatih"
-                        ].map((qStr) => (
+                        ].map((qStr, qIdx) => (
                           <button
-                            key={qStr}
+                            key={`comm-ai-q-${qIdx}`}
                             onClick={() => handleSendAiMessage(qStr)}
-                            className="shrink-0 px-2.5 py-1.5 bg-gray-50 hover:bg-gray-100 dark:bg-[#1c2a39] dark:hover:bg-[#233547] border border-gray-150 dark:border-gray-750/50 rounded-xl text-[9.5px] text-gray-500 dark:text-gray-300 font-bold transition-all cursor-pointer"
+                            className="shrink-0 px-2.5 py-1.5 bg-gray-50 hover:bg-gray-100 dark:bg-[#1c2a39] dark:hover:bg-[#233547] border border-gray-150 dark:border-gray-755/50 rounded-xl text-[9.5px] text-gray-500 dark:text-gray-300 font-bold transition-all cursor-pointer"
                           >
                             {qStr}
                           </button>
@@ -3197,9 +3197,9 @@ export const Community: React.FC = () => {
                   { icon: "😮", type: "wow" },
                   { icon: "😢", type: "sad" },
                   { icon: "😡", type: "angry" }
-                ].map((item) => (
+                ].map((item, itIdx) => (
                   <button
-                    key={item.type}
+                    key={`ctx-reaction-${item.type}-${itIdx}`}
                     onClick={() => handleAddReaction(activeContextMenuPostId, item.type as any)}
                     className="hover:scale-125 text-base cursor-pointer active:scale-95 transition-transform"
                   >

@@ -12,7 +12,7 @@ import { useNetworkStatus } from '../hooks/useNetworkStatus';
 export const SyncStatusBadge: React.FC = () => {
   const { user } = useAuth();
   const { language } = useLanguage();
-  const { isOnline, recheckNetwork } = useNetworkStatus();
+  const { isOnline, isChecking, recheckNetwork } = useNetworkStatus();
   const [syncState, setSyncState] = useState<'synced' | 'syncing' | 'offline' | 'guest' | 'cache'>('synced');
   const [showPopover, setShowPopover] = useState(false);
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(new Date());
@@ -30,6 +30,7 @@ export const SyncStatusBadge: React.FC = () => {
       syncedTooltip: 'Vos données sont sauvegardées en toute sécurité sur Firebase.',
       syncing: 'Synchronisation...',
       syncingTooltip: 'Sauvegarde de vos modifications sur Firebase...',
+      verifying: 'Vérification de la connexion...',
       offline: 'Hors ligne (Local)',
       offlineTooltip: 'Vous êtes hors ligne. Vos données et articles restent accessibles via le Cache local (IndexedDB).',
       cache: 'Cache (Local)',
@@ -68,6 +69,7 @@ export const SyncStatusBadge: React.FC = () => {
       syncedTooltip: 'Your data is securely backed up to Firebase.',
       syncing: 'Syncing...',
       syncingTooltip: 'Saving your changes to Firebase...',
+      verifying: 'Verifying connection...',
       offline: 'Offline (Local)',
       offlineTooltip: 'You are offline. Your articles and changes remain accessible via local Cache (IndexedDB).',
       cache: 'Cache (Local)',
@@ -106,6 +108,7 @@ export const SyncStatusBadge: React.FC = () => {
       syncedTooltip: 'Ana adana bayananku lami lafiya a Firebase.',
       syncing: 'Ana daidaitawa...',
       syncingTooltip: 'Ana adana canje-canjenku a Firebase...',
+      verifying: 'Tabbatar da haɗin yanar gizo...',
       offline: 'Ba ya kan layi (Cache)',
       offlineTooltip: 'Ba kwa kan layi. An adana bayananku a wayarku (Cache), kuma za su daidaita idan kun shiga layi.',
       cache: 'Cache (Ajiye a waya)',
@@ -245,12 +248,15 @@ export const SyncStatusBadge: React.FC = () => {
     }
   };
 
+  const isVerifying = isChecking || isForcingSync || syncState === 'syncing' || testResult === tStr.testing;
+
   const getStatusColor = () => {
+    if (isVerifying) {
+      return 'bg-blue-500 text-white hover:bg-blue-600 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 ring-blue-400/40';
+    }
     switch (syncState) {
       case 'synced':
         return 'bg-emerald-500 text-white hover:bg-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-300 dark:hover:bg-emerald-500/30 ring-emerald-400/30';
-      case 'syncing':
-        return 'bg-blue-500 text-white hover:bg-blue-600 dark:bg-blue-500/20 dark:text-blue-300 dark:hover:bg-blue-500/30 ring-blue-400/30';
       case 'cache':
         return 'bg-gradient-to-r from-amber-600 to-amber-500 text-white hover:from-amber-700 hover:to-amber-600 ring-2 ring-amber-400/60 shadow-md shadow-amber-500/20';
       case 'offline':
@@ -261,11 +267,12 @@ export const SyncStatusBadge: React.FC = () => {
   };
 
   const getStatusIcon = () => {
+    if (isVerifying) {
+      return <RefreshCw size={16} className="animate-spin shrink-0" />;
+    }
     switch (syncState) {
       case 'synced':
         return <Cloud size={16} className="shrink-0" />;
-      case 'syncing':
-        return <RefreshCw size={16} className="animate-spin shrink-0" />;
       case 'cache':
         return <HardDrive size={15} className="shrink-0 text-amber-100 animate-pulse" />;
       case 'offline':
@@ -276,11 +283,12 @@ export const SyncStatusBadge: React.FC = () => {
   };
 
   const getStatusLabel = () => {
+    if (isVerifying) {
+      return tStr.verifying;
+    }
     switch (syncState) {
       case 'synced':
         return tStr.synced;
-      case 'syncing':
-        return tStr.syncing;
       case 'cache':
         return tStr.cache;
       case 'offline':
@@ -298,33 +306,55 @@ export const SyncStatusBadge: React.FC = () => {
 
   return (
     <div className="relative inline-block" ref={popoverRef}>
-      {/* Small badge trigger with distinct offline pulse animation */}
+      {/* Small badge trigger with subtle framer-motion breathing animation when verifying connection */}
       <motion.button
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
+        animate={
+          isVerifying
+            ? {
+                scale: [1, 1.05, 1],
+                opacity: [0.88, 1, 0.88],
+                boxShadow: [
+                  '0 0 0 0px rgba(59, 130, 246, 0.45)',
+                  '0 0 0 6px rgba(59, 130, 246, 0)',
+                  '0 0 0 0px rgba(59, 130, 246, 0)',
+                ],
+              }
+            : undefined
+        }
+        transition={
+          isVerifying
+            ? {
+                duration: 1.6,
+                repeat: Infinity,
+                ease: 'easeInOut',
+              }
+            : undefined
+        }
         onClick={() => {
           refreshCacheStats();
           setShowPopover(!showPopover);
         }}
         className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-semibold shadow-sm transition-all duration-300 cursor-pointer border border-transparent backdrop-blur-sm ${getStatusColor()} ${
-          syncState === 'offline' || syncState === 'cache' ? 'animate-pulse' : ''
+          !isVerifying && (syncState === 'offline' || syncState === 'cache') ? 'animate-pulse' : ''
         }`}
         title={getStatusLabel()}
         id="firebase-sync-status-badge"
       >
         <span className="relative flex h-2 w-2 items-center justify-center">
-          {syncState === 'syncing' && (
+          {isVerifying && (
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-75"></span>
           )}
-          {syncState === 'synced' && (
+          {!isVerifying && syncState === 'synced' && (
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-40"></span>
           )}
-          {(syncState === 'offline' || syncState === 'cache') && (
+          {!isVerifying && (syncState === 'offline' || syncState === 'cache') && (
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-amber-200 opacity-90"></span>
           )}
           <span className={`relative inline-flex h-2 w-2 rounded-full ${
+            isVerifying ? 'bg-blue-400 animate-pulse' :
             syncState === 'synced' ? 'bg-emerald-400' :
-            syncState === 'syncing' ? 'bg-blue-400 animate-pulse' :
             syncState === 'cache' ? 'bg-amber-300' :
             syncState === 'offline' ? 'bg-amber-100' :
             'bg-gray-400'
@@ -335,7 +365,7 @@ export const SyncStatusBadge: React.FC = () => {
         
         {/* Status chip with Cache emphasis */}
         <span className="hidden md:inline-block max-w-[130px] truncate">
-          {syncState === 'cache' ? 'Cache' : getStatusLabel()}
+          {isVerifying ? tStr.verifying : (syncState === 'cache' ? 'Cache' : getStatusLabel())}
         </span>
       </motion.button>
 

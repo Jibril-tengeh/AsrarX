@@ -12,6 +12,7 @@ import { TextScaleProvider } from './contexts/TextScaleContext';
 import { FeatureProvider } from './contexts/FeatureContext';
 import { BrandingProvider } from './contexts/BrandingContext';
 import { FullscreenProvider } from './contexts/FullscreenContext';
+import { SettingsProvider } from './contexts/SettingsContext';
 import { ErrorBoundary } from './components/ErrorBoundary';
 
 // Detect Capacitor / Native Mobile environment
@@ -77,7 +78,9 @@ if (rootElement) {
                     <FeatureProvider>
                       <BrandingProvider>
                         <FullscreenProvider>
-                          <App />
+                          <SettingsProvider>
+                            <App />
+                          </SettingsProvider>
                         </FullscreenProvider>
                       </BrandingProvider>
                     </FeatureProvider>

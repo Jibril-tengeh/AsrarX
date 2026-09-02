@@ -52,6 +52,7 @@ import { FloatingToolFullscreenButton } from './components/FloatingToolFullscree
 import { ArticleSyncVideoModal } from './components/ArticleSyncVideoModal';
 import { ToolsIntegrityNotification } from './components/ToolsIntegrityNotification';
 import { useFullscreen } from './contexts/FullscreenContext';
+import { useSettings } from './contexts/SettingsContext';
 import { clear as clearIdbKeyval } from 'idb-keyval';
 
 declare const __APP_VERSION__: string;
@@ -181,12 +182,120 @@ export async function checkVersionAndPurgeCache(force = false): Promise<boolean>
 }
 
 /**
+ * Global Image Lazy-Loading Strategy using Intersection Observer
+ * Automatically intercepts and progressively loads images across the entire application.
+ * Optimizes mobile memory footprint, reduces data consumption, and respects Battery Saver mode.
+ */
+function useGlobalImageLazyLoader(batterySaver: boolean, lazyLoadRootMargin: string) {
+  const location = useLocation();
+
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    // Check IntersectionObserver support
+    if (!('IntersectionObserver' in window)) {
+      // Fallback: eagerly resolve images if IntersectionObserver is not available
+      const allImgs = document.querySelectorAll<HTMLImageElement>('img[data-src]');
+      allImgs.forEach((img) => {
+        const dataSrc = img.getAttribute('data-src');
+        if (dataSrc) {
+          img.src = dataSrc;
+          img.removeAttribute('data-src');
+          img.setAttribute('data-lazy-loaded', 'true');
+        }
+      });
+      return;
+    }
+
+    const imageObserver = new IntersectionObserver(
+      (entries, observer) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const img = entry.target as HTMLImageElement;
+            const dataSrc = img.getAttribute('data-src');
+            const dataSrcSet = img.getAttribute('data-srcset');
+
+            if (dataSrc) {
+              img.src = dataSrc;
+              img.removeAttribute('data-src');
+            }
+            if (dataSrcSet) {
+              img.srcset = dataSrcSet;
+              img.removeAttribute('data-srcset');
+            }
+
+            img.setAttribute('data-lazy-loaded', 'true');
+            img.classList.add('lazy-loaded', 'lazy-fade-in');
+
+            // Cease observing once loaded into memory
+            observer.unobserve(img);
+          }
+        });
+      },
+      {
+        root: null, // screen viewport
+        rootMargin: lazyLoadRootMargin || (batterySaver ? '50px 0px' : '250px 0px'),
+        threshold: 0.01,
+      }
+    );
+
+    const processImageElement = (img: HTMLImageElement) => {
+      // Ensure native asynchronous decoding and lazy loading are enabled
+      if (!img.hasAttribute('loading')) {
+        img.loading = 'lazy';
+      }
+      if (!img.hasAttribute('decoding')) {
+        img.decoding = 'async';
+      }
+
+      // If image has data-src, attach to IntersectionObserver
+      if (img.hasAttribute('data-src') && img.getAttribute('data-lazy-loaded') !== 'true') {
+        imageObserver.observe(img);
+      }
+    };
+
+    // Scan all existing images in the DOM
+    const initialImages = document.querySelectorAll<HTMLImageElement>('img');
+    initialImages.forEach(processImageElement);
+
+    // Continuous dynamic observer for new images rendered via client-side routing, infinite scroll, modals
+    const mutationObserver = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        mutation.addedNodes.forEach((node) => {
+          if (node.nodeType === Node.ELEMENT_NODE) {
+            const element = node as HTMLElement;
+            if (element.tagName === 'IMG') {
+              processImageElement(element as HTMLImageElement);
+            } else if (element.querySelectorAll) {
+              const nestedImgs = element.querySelectorAll<HTMLImageElement>('img');
+              nestedImgs.forEach(processImageElement);
+            }
+          }
+        });
+      });
+    });
+
+    mutationObserver.observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
+
+    return () => {
+      imageObserver.disconnect();
+      mutationObserver.disconnect();
+    };
+  }, [location.pathname, location.search, batterySaver, lazyLoadRootMargin]);
+}
+
+/**
  * Hidden Version Diagnostic Helper:
  * Regularly checks the current running app version against the compiled package.json version (__APP_VERSION__).
  * If a persistent mismatch is detected even after a cache purge, logs a warning and stores diagnostic feedback
  * for consumption by the Admin Dashboard.
  */
 function useHiddenVersionDiagnosticHelper() {
+  const { batterySaver, diagnosticCheckFrequencyMs } = useSettings();
+
   React.useEffect(() => {
     let checkCount = 0;
     const runDiagnosticCheck = async () => {
@@ -277,8 +386,8 @@ function useHiddenVersionDiagnosticHelper() {
     // Run initial diagnostic check after short settle time
     const initialTimer = setTimeout(runDiagnosticCheck, 3000);
 
-    // Regularly re-run diagnostic check every 60 seconds
-    const interval = setInterval(runDiagnosticCheck, 60000);
+    // Regularly re-run diagnostic check respecting battery saver frequency (e.g. 5m in Battery Saver vs 1m normal)
+    const interval = setInterval(runDiagnosticCheck, diagnosticCheckFrequencyMs || (batterySaver ? 300000 : 60000));
 
     const onVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
@@ -292,7 +401,7 @@ function useHiddenVersionDiagnosticHelper() {
       clearInterval(interval);
       document.removeEventListener('visibilitychange', onVisibilityChange);
     };
-  }, []);
+  }, [batterySaver, diagnosticCheckFrequencyMs]);
 }
 
 function lazyWithRetry<T extends React.ComponentType<any> = React.ComponentType<any>>(
@@ -461,6 +570,7 @@ const FaqButton = () => {
 };
 
 const NetworkStatus = () => {
+  const { batterySaver, backgroundSyncFrequencyMs } = useSettings();
   const [isOnline, setIsOnline] = React.useState(navigator.onLine);
   const [checking, setChecking] = React.useState(false);
   const [statusFeedback, setStatusFeedback] = React.useState<string | null>(null);
@@ -568,16 +678,21 @@ const NetworkStatus = () => {
       handleSWRRevalidate('app_start', { isSilent: true });
     }
 
-    // Periodic background sync every 10 minutes
+    // Periodic background sync respecting Battery Saver frequency (30m in battery saver vs 10m normal)
+    const syncIntervalMs = backgroundSyncFrequencyMs || (batterySaver ? 30 * 60 * 1000 : 10 * 60 * 1000);
     const periodicSyncInterval = setInterval(() => {
       if (navigator.onLine) {
         handleSWRRevalidate('periodic_bg', { isSilent: true });
       }
-    }, 10 * 60 * 1000);
+    }, syncIntervalMs);
 
-    // Sync on tab visibility change
+    // Sync on tab visibility change (throttled in Battery Saver mode)
+    let lastTabSyncTime = 0;
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && navigator.onLine) {
+      const now = Date.now();
+      const minInterval = batterySaver ? 15 * 60 * 1000 : 60 * 1000;
+      if (document.visibilityState === 'visible' && navigator.onLine && (now - lastTabSyncTime > minInterval)) {
+        lastTabSyncTime = now;
         handleSWRRevalidate('tab_visible', { isSilent: true });
       }
     };
@@ -619,7 +734,7 @@ const NetworkStatus = () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       clearInterval(periodicSyncInterval);
     };
-  }, [handleSWRRevalidate, loadSwrStats]);
+  }, [handleSWRRevalidate, loadSwrStats, batterySaver, backgroundSyncFrequencyMs]);
 
   const handleCheckStatus = async () => {
     setChecking(true);
@@ -870,7 +985,12 @@ export default function App() {
   const { language } = useLanguage();
   const { isFullscreen } = useFullscreen();
   const { featureToggles } = useFeatures();
+  const { batterySaver, lazyLoadRootMargin } = useSettings();
   const { isPlaying: globalIsPlaying, currentTrack, quranRepeatCount: repeatCount, setQuranRepeatCount: setRepeatCount } = useAudio();
+
+  // Global Image Lazy Loading Strategy using Intersection Observer
+  useGlobalImageLazyLoader(batterySaver, lazyLoadRootMargin);
+
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = React.useState(
     localStorage.getItem('hasCompletedOnboarding') === 'true'
   );

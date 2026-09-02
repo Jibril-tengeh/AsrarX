@@ -318,9 +318,9 @@ export const Store: React.FC = () => {
       {/* Category Filter & Sort */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div className="flex overflow-x-auto hide-scrollbar pb-2 sm:pb-0 gap-2 w-full sm:w-auto">
-          {categories.map((category) => (
+          {categories.map((category, catIdx) => (
             <button
-              key={category}
+              key={`store-cat-${category}-${catIdx}`}
               onClick={() => setSelectedCategory(category)}
               className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
                 selectedCategory === category
@@ -381,7 +381,7 @@ export const Store: React.FC = () => {
           {isLoading ? renderSkeletons() : filteredProducts.map((product, index) => (
             <motion.div
               layout
-              key={product.id}
+              key={product.id ? `store-prod-${product.id}-${index}` : `store-prod-${index}`}
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
@@ -561,7 +561,7 @@ export const Store: React.FC = () => {
                   <div className="flex gap-2">
                     {[1, 2, 3, 4, 5].map((star) => (
                       <button
-                        key={star}
+                        key={`product-star-${selectedProduct.id}-${star}`}
                         onClick={() => handleRate(selectedProduct.id, star)}
                         className={`p-1 transition-colors ${
                           (productRatings[selectedProduct.id] || 0) >= star

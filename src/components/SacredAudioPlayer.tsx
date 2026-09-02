@@ -397,11 +397,11 @@ export const SacredAudioPlayer: React.FC = () => {
                 </div>
 
                 <div className="space-y-2">
-                  {PRESET_BACKGROUND_MUSIC.map((track) => {
+                  {PRESET_BACKGROUND_MUSIC.map((track, trIdx) => {
                     const active = isPlaying && engineState.activeTrackId === track.id;
                     return (
                       <div
-                        key={track.id}
+                        key={`preset-track-${track.id}-${trIdx}`}
                         onClick={() => handleToggleTrack(track)}
                         className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
                           active
@@ -458,9 +458,9 @@ export const SacredAudioPlayer: React.FC = () => {
                       { hz: 4, label: 'Theta (4Hz)', desc: 'Zikr' },
                       { hz: 8, label: 'Alpha (8Hz)', desc: 'Calme' },
                       { hz: 14, label: 'Beta (14Hz)', desc: 'Focus' }
-                    ].map((b) => (
+                    ].map((b, bIdx) => (
                       <button
-                        key={b.hz}
+                        key={`binaural-${b.hz}-${bIdx}`}
                         onClick={() => setSelectedBinaural(b.hz)}
                         className={`px-2 py-1 rounded-lg text-[10px] font-mono transition-colors cursor-pointer ${
                           selectedBinaural === b.hz
@@ -481,11 +481,11 @@ export const SacredAudioPlayer: React.FC = () => {
                     Bibliothèque Solfèges & Harmoniques ({sacredFrequencies.length})
                   </span>
                   <div className={`grid gap-2 ${isExpandedModal ? 'grid-cols-2 sm:grid-cols-3' : 'grid-cols-1 sm:grid-cols-2'}`}>
-                    {sacredFrequencies.map((item) => {
+                    {sacredFrequencies.map((item, freqIdx) => {
                       const active = isPlaying && engineState.mode === 'frequency' && engineState.currentFreq === item.freq;
                       return (
                         <div
-                          key={item.freq}
+                          key={`freq-${item.freq}-${freqIdx}`}
                           className={`p-3 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between ${
                             active
                               ? 'bg-gradient-to-r from-amber-500/20 via-zinc-900 to-yellow-600/20 border-amber-400 shadow-lg scale-[0.99]'
@@ -522,11 +522,11 @@ export const SacredAudioPlayer: React.FC = () => {
                 </p>
 
                 <div className="space-y-2">
-                  {soundscapes.map((sc) => {
+                  {soundscapes.map((sc, scIdx) => {
                     const active = isPlaying && engineState.mode === 'soundscape' && engineState.currentSoundscapeId === sc.id;
                     return (
                       <div
-                        key={sc.id}
+                        key={`soundscape-${sc.id}-${scIdx}`}
                         onClick={() => handleToggleSoundscape(sc.id)}
                         className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
                           active
@@ -645,11 +645,11 @@ export const SacredAudioPlayer: React.FC = () => {
                     </div>
                   ) : (
                     <div className="space-y-2">
-                      {customAudios.map((item) => {
+                      {customAudios.map((item, caIdx) => {
                         const active = isPlaying && engineState.activeTrackId === item.id;
                         return (
                           <div
-                            key={item.id}
+                            key={`custom-audio-${item.id}-${caIdx}`}
                             onClick={() => handleToggleTrack(item)}
                             className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center justify-between ${
                               active
@@ -775,9 +775,9 @@ export const SacredAudioPlayer: React.FC = () => {
                     { m: 30, label: '30m' },
                     { m: 45, label: '45m' },
                     { m: 60, label: '1h' }
-                  ].map((tOpt) => (
+                  ].map((tOpt, toIdx) => (
                     <button
-                      key={tOpt.m}
+                      key={`timer-opt-${tOpt.m}-${toIdx}`}
                       onClick={() => handleTimerChange(tOpt.m)}
                       className={`px-2 py-0.5 rounded-lg text-[10px] font-mono transition-colors cursor-pointer ${
                         timerMinutes === tOpt.m

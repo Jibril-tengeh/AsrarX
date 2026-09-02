@@ -207,9 +207,9 @@ export const FloatingBackButtonSettings: React.FC<Props> = ({
           {/* Preview Background Toggle */}
           <div className="flex items-center gap-1.5 bg-gray-200 dark:bg-gray-900 p-1 rounded-xl">
             <span className="text-[10px] font-bold text-gray-500 px-2">Fond test :</span>
-            {(['dark', 'light', 'gradient'] as const).map((mode) => (
+            {(['dark', 'light', 'gradient'] as const).map((mode, mIdx) => (
               <button
-                key={mode}
+                key={`preview-mode-${mode}-${mIdx}`}
                 type="button"
                 onClick={() => setPreviewTheme(mode)}
                 className={`px-2.5 py-1 rounded-lg text-xs font-bold capitalize transition-all cursor-pointer ${
@@ -298,9 +298,9 @@ export const FloatingBackButtonSettings: React.FC<Props> = ({
               { id: 'red', label: 'Rubis' },
               { id: 'purple', label: 'Violet' },
               { id: 'light', label: 'Claires' },
-            ].map((cat) => (
+            ].map((cat, catIdx) => (
               <button
-                key={cat.id}
+                key={`cat-filter-${cat.id}-${catIdx}`}
                 type="button"
                 onClick={() => setSelectedColorCategory(cat.id)}
                 className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
@@ -317,11 +317,11 @@ export const FloatingBackButtonSettings: React.FC<Props> = ({
 
         {/* Colors Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-          {filteredColors.map((color) => {
+          {filteredColors.map((color, clrIdx) => {
             const isSelected = config.colorPreset === color.id;
             return (
               <button
-                key={color.id}
+                key={`btn-clr-${color.id}-${clrIdx}`}
                 type="button"
                 onClick={() => updateConfig('colorPreset', color.id)}
                 className={`p-3 rounded-2xl border text-left transition-all relative flex flex-col items-center justify-between gap-2.5 cursor-pointer group ${
@@ -375,11 +375,11 @@ export const FloatingBackButtonSettings: React.FC<Props> = ({
 
         {/* Shapes Grid */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2.5">
-          {FLOATING_BACK_SHAPES.map((shape) => {
+          {FLOATING_BACK_SHAPES.map((shape, shpIdx) => {
             const isSelected = config.shape === shape.id;
             return (
               <button
-                key={shape.id}
+                key={`btn-shape-${shape.id}-${shpIdx}`}
                 type="button"
                 onClick={() => updateConfig('shape', shape.id)}
                 className={`p-3 rounded-2xl border text-center transition-all relative flex flex-col items-center justify-between gap-2 cursor-pointer group ${
@@ -432,11 +432,11 @@ export const FloatingBackButtonSettings: React.FC<Props> = ({
 
           {/* Icons Grid */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            {FLOATING_BACK_ICONS.map((ico) => {
+            {FLOATING_BACK_ICONS.map((ico, icoIdx) => {
               const isSelected = config.iconStyle === ico.id;
               return (
                 <button
-                  key={ico.id}
+                  key={`ico-style-${ico.id}-${icoIdx}`}
                   type="button"
                   onClick={() => updateConfig('iconStyle', ico.id)}
                   className={`p-2.5 rounded-xl border text-center transition-all cursor-pointer flex flex-col items-center justify-center gap-1 ${
@@ -458,9 +458,9 @@ export const FloatingBackButtonSettings: React.FC<Props> = ({
               Couleur de la Flèche (Icône) :
             </label>
             <div className="flex flex-wrap items-center gap-2">
-              {ICON_COLOR_PRESETS.map((ic) => (
+              {ICON_COLOR_PRESETS.map((ic, icIdx) => (
                 <button
-                  key={ic.value}
+                  key={`ico-clr-preset-${ic.value}-${icIdx}`}
                   type="button"
                   onClick={() => updateConfig('iconColor', ic.value)}
                   className={`w-7 h-7 rounded-full flex items-center justify-center transition-transform cursor-pointer shadow-xs border ${

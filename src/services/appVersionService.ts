@@ -20,6 +20,12 @@ export interface FirestoreVersionDoc {
   disabled?: boolean;
   forceUpdate?: boolean;
   disableVideoCard?: boolean;
+  enable3DVideoPopup?: boolean;
+  customVideoUrl?: string;
+  videoPoster?: string;
+  forceVideoModal?: boolean;
+  videoTitle?: string;
+  videoSubtitle?: string;
   videoCardTheme?: any;
   minSupportedVersionCode?: number;
   downloadUrl?: string;
@@ -159,7 +165,13 @@ class AppVersionService {
       isCurrent: data.isCurrent ?? (data.version === this.getCurrentVersion()),
       disabled: data.disabled === true,
       forceUpdate: !!data.forceUpdate,
-      disableVideoCard: data.disableVideoCard !== undefined ? !!data.disableVideoCard : true,
+      disableVideoCard: data.disableVideoCard !== undefined ? !!data.disableVideoCard : false,
+      enable3DVideoPopup: data.enable3DVideoPopup !== undefined ? !!data.enable3DVideoPopup : true,
+      customVideoUrl: data.customVideoUrl || undefined,
+      videoPoster: data.videoPoster || undefined,
+      forceVideoModal: !!data.forceVideoModal,
+      videoTitle: data.videoTitle || undefined,
+      videoSubtitle: data.videoSubtitle || undefined,
       videoCardTheme: data.videoCardTheme || undefined,
       minSupportedVersionCode: data.minSupportedVersionCode ? Number(data.minSupportedVersionCode) : undefined,
       downloadUrl: data.downloadUrl || undefined,
@@ -267,9 +279,15 @@ class AppVersionService {
         isCurrent: !!release.isCurrent,
         forceUpdate: !!release.forceUpdate,
         disableVideoCard: !!release.disableVideoCard,
+        enable3DVideoPopup: release.enable3DVideoPopup !== undefined ? !!release.enable3DVideoPopup : true,
+        forceVideoModal: !!release.forceVideoModal,
         updatedAt: new Date().toISOString()
       };
 
+      if (release.customVideoUrl !== undefined) payload.customVideoUrl = release.customVideoUrl;
+      if (release.videoPoster !== undefined) payload.videoPoster = release.videoPoster;
+      if (release.videoTitle !== undefined) payload.videoTitle = release.videoTitle;
+      if (release.videoSubtitle !== undefined) payload.videoSubtitle = release.videoSubtitle;
       if (release.videoCardTheme) payload.videoCardTheme = release.videoCardTheme;
       if (release.minSupportedVersionCode !== undefined) payload.minSupportedVersionCode = Number(release.minSupportedVersionCode);
       if (release.downloadUrl) payload.downloadUrl = release.downloadUrl;
@@ -287,6 +305,37 @@ class AppVersionService {
     } catch (err) {
       console.error("Error saving version to Firestore:", err);
       throw err;
+    }
+  }
+
+  /**
+   * Quick toggle enable3DVideoPopup or disableVideoCard status of a version
+   */
+  async toggle3DVideoPopup(versionOrId: string, enabled: boolean): Promise<boolean> {
+    try {
+      const docId = versionOrId.replace(/\./g, '_');
+      const docRef = doc(db, 'app_versions', docId);
+      await updateDoc(docRef, {
+        enable3DVideoPopup: enabled,
+        disableVideoCard: !enabled,
+        updatedAt: new Date().toISOString()
+      });
+      return true;
+    } catch (err) {
+      console.error("Error toggling 3D video popup state:", err);
+      try {
+        const docId = versionOrId.replace(/\./g, '_');
+        const docRef = doc(db, 'app_versions', docId);
+        await setDoc(docRef, {
+          version: versionOrId,
+          enable3DVideoPopup: enabled,
+          disableVideoCard: !enabled,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+        return true;
+      } catch (innerErr) {
+        throw innerErr;
+      }
     }
   }
 

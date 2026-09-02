@@ -69,7 +69,7 @@ export const ToolsIntegrityNotification: React.FC = () => {
           initial={{ opacity: 0, y: 50, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 30, scale: 0.95 }}
-          className="fixed bottom-20 left-4 right-4 sm:left-auto sm:right-6 sm:max-w-md z-[999] p-4 rounded-2xl bg-slate-900/95 dark:bg-slate-950/95 text-white border border-amber-500/40 shadow-2xl backdrop-blur-md"
+          className="fixed bottom-28 sm:bottom-24 left-4 right-4 sm:left-auto sm:right-6 sm:max-w-md z-[999] p-4 rounded-2xl bg-slate-900/95 dark:bg-slate-950/95 text-white border border-amber-500/40 shadow-2xl backdrop-blur-md"
         >
           <div className="flex items-start justify-between gap-3">
             <div className="flex items-start gap-3">

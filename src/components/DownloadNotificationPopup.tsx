@@ -39,9 +39,8 @@ export const DownloadNotificationPopup: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
-  if (!notification) return null;
-
   const getTitle = () => {
+    if (!notification) return '';
     if (notification.type === 'start') {
       if (language === 'ha') return 'An Fara Zazzagewa';
       if (language === 'en') return 'Download Started';
@@ -58,6 +57,7 @@ export const DownloadNotificationPopup: React.FC = () => {
   };
 
   const getMessage = () => {
+    if (!notification) return '';
     if (notification.customMessage) return notification.customMessage;
 
     if (notification.type === 'start') {
@@ -77,7 +77,7 @@ export const DownloadNotificationPopup: React.FC = () => {
   };
 
   const handleOpenPreview = () => {
-    if (notification.type === 'success') {
+    if (notification && notification.type === 'success') {
       openDownloadPreviewModal(notification);
       setNotification(null);
     }
@@ -85,26 +85,27 @@ export const DownloadNotificationPopup: React.FC = () => {
 
   return (
     <AnimatePresence>
-      <motion.div
-        key={notification.id}
-        initial={{ opacity: 0, y: -50, scale: 0.9 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: -30, scale: 0.95 }}
-        transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-        className="fixed top-5 left-1/2 -translate-x-1/2 z-[9999] w-[92%] max-w-md pointer-events-auto"
-      >
-        <div
-          onClick={notification.type === 'success' ? handleOpenPreview : undefined}
-          className={`relative overflow-hidden p-4 rounded-3xl border shadow-2xl backdrop-blur-xl transition-all ${
-            notification.type === 'success' ? 'cursor-pointer hover:scale-[1.01] active:scale-[0.99]' : ''
-          } ${
-            notification.type === 'start'
-              ? 'bg-amber-950/90 dark:bg-amber-950/95 border-amber-500/40 text-amber-100 shadow-amber-900/30'
-              : notification.type === 'success'
-              ? 'bg-emerald-950/95 dark:bg-emerald-950/95 border-emerald-500/50 text-emerald-100 shadow-emerald-900/40 ring-1 ring-emerald-400/30'
-              : 'bg-red-950/90 dark:bg-red-950/95 border-red-500/40 text-red-100 shadow-red-900/30'
-          }`}
+      {notification && (
+        <motion.div
+          key={`dl-popup-notif-${notification.id || notification.fileName || 'active'}`}
+          initial={{ opacity: 0, y: -50, scale: 0.9 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -30, scale: 0.95 }}
+          transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+          className="fixed top-5 left-1/2 -translate-x-1/2 z-[9999] w-[92%] max-w-md pointer-events-auto"
         >
+          <div
+            onClick={notification.type === 'success' ? handleOpenPreview : undefined}
+            className={`relative overflow-hidden p-4 rounded-3xl border shadow-2xl backdrop-blur-xl transition-all ${
+              notification.type === 'success' ? 'cursor-pointer hover:scale-[1.01] active:scale-[0.99]' : ''
+            } ${
+              notification.type === 'start'
+                ? 'bg-amber-950/90 dark:bg-amber-950/95 border-amber-500/40 text-amber-100 shadow-amber-900/30'
+                : notification.type === 'success'
+                ? 'bg-emerald-950/95 dark:bg-emerald-950/95 border-emerald-500/50 text-emerald-100 shadow-emerald-900/40 ring-1 ring-emerald-400/30'
+                : 'bg-red-950/90 dark:bg-red-950/95 border-red-500/40 text-red-100 shadow-red-900/30'
+            }`}
+          >
           {/* Ambient Glow Background */}
           <div
             className={`absolute -top-10 -right-10 w-32 h-32 rounded-full blur-2xl opacity-30 ${
@@ -201,6 +202,7 @@ export const DownloadNotificationPopup: React.FC = () => {
           )}
         </div>
       </motion.div>
-    </AnimatePresence>
-  );
+    )}
+  </AnimatePresence>
+);
 };

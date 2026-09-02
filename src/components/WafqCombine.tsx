@@ -340,9 +340,9 @@ export const WafqCombine: React.FC = () => {
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-gray-50 dark:bg-gray-900 p-4 rounded-2xl border border-gray-100 dark:border-gray-800">
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold text-gray-700 dark:text-gray-300">{t.gridSizeLabel}</span>
-          {[3, 4, 5, 6, 7].map(sz => (
+          {[3, 4, 5, 6, 7].map((sz, szIdx) => (
             <button
-              key={sz}
+              key={`wafq-combine-sz-${sz}-${szIdx}`}
               type="button"
               onClick={() => setGridSize(sz)}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${

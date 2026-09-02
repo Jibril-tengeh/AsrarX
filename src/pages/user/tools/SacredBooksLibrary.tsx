@@ -622,9 +622,9 @@ export const SacredBooksLibrary: React.FC = () => {
                   { id: 'lettres', label: language === 'en' ? 'Letter Science' : language === 'ha' ? 'Ilimin Haruffa' : 'Science des Lettres' },
                   { id: 'sufie', label: language === 'en' ? 'Sufi Gnosis' : language === 'ha' ? 'Tassawuf' : 'Gnose Sufie' },
                   { id: 'awfaq', label: language === 'en' ? 'Awfaq & Squares' : language === 'ha' ? 'Khatimai & Awfaq' : 'Awfaq & Carrés' },
-                ].map((cat) => (
+                ].map((cat, catIdx) => (
                   <button
-                    key={cat.id}
+                    key={`book-cat-${cat.id}-${catIdx}`}
                     onClick={() => setSelectedCategory(cat.id)}
                     className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
                       selectedCategory === cat.id
@@ -640,7 +640,7 @@ export const SacredBooksLibrary: React.FC = () => {
 
             {/* 12 Books Grid with 3D Animated Video Icons */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-5">
-              {filteredBooks.map((book) => {
+              {filteredBooks.map((book, bIdx) => {
                 const status = featureToggles[book.id] || 'active';
                 const isLocked = status === 'premium' && !isPremium && user?.role !== 'admin';
                 const isMaintenance = status === 'maintenance';
@@ -648,7 +648,7 @@ export const SacredBooksLibrary: React.FC = () => {
 
                 return (
                   <motion.div
-                    key={book.id}
+                    key={`sacred-book-${book.id}-${bIdx}`}
                     whileHover={{ scale: 1.015 }}
                     onHoverStart={() => setHoveredBookId(book.id)}
                     onHoverEnd={() => setHoveredBookId(null)}
@@ -901,9 +901,9 @@ export const SacredBooksLibrary: React.FC = () => {
                           >
                             {language === 'en' ? 'All Chapters' : language === 'ha' ? 'Duk Babobi' : 'Tous les Chapitres'}
                           </button>
-                          {selectedBook.chapters.map((ch) => (
+                          {selectedBook.chapters.map((ch, chIdx) => (
                             <button
-                              key={ch.id}
+                              key={`ch-btn-${ch.id}-${ch.chapterNumber}-${chIdx}`}
                               onClick={() => setActiveChapterNumber(ch.chapterNumber)}
                               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
                                 activeChapterNumber === ch.chapterNumber
@@ -1041,9 +1041,9 @@ export const SacredBooksLibrary: React.FC = () => {
                       ) : (
                         /* Overview grid of all chapters */
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {selectedBook.chapters.map((ch) => (
+                          {selectedBook.chapters.map((ch, chIdx) => (
                             <div
-                              key={ch.id}
+                              key={`ch-overview-${ch.id}-${chIdx}`}
                               onClick={() => setActiveChapterNumber(ch.chapterNumber)}
                               className="p-5 bg-white dark:bg-gray-900/80 hover:bg-gray-50 dark:bg-gray-800/90 rounded-2xl border border-gray-750 hover:border-amber-500/50 transition-all cursor-pointer group space-y-3 flex flex-col justify-between"
                             >
@@ -1118,9 +1118,9 @@ export const SacredBooksLibrary: React.FC = () => {
                         { id: 'search', label: language === 'en' ? 'Smart Search' : language === 'ha' ? 'Neman Magani' : 'Recherche Intelligente' },
                         { id: 'recipes', label: language === 'en' ? 'Grand Recipes' : language === 'ha' ? 'Babban Aiki' : 'Grandes Recettes' },
                         { id: 'invocations', label: language === 'en' ? 'Invocations' : language === 'ha' ? 'Addu\'o\'i' : 'Invocations & Serment' },
-                      ].map((sub) => (
+                      ].map((sub, sIdx) => (
                         <button
-                          key={sub.id}
+                          key={`secrets-subtab-${sub.id}-${sIdx}`}
                           onClick={() => setSecretsSubTab(sub.id as any)}
                           className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
                             secretsSubTab === sub.id
@@ -1183,13 +1183,13 @@ export const SacredBooksLibrary: React.FC = () => {
                             item.secretHa.toLowerCase().includes(q) ||
                             item.recipeFr.toLowerCase().includes(q)
                           );
-                        }).map((item) => {
+                        }).map((item, itemIdx) => {
                           const itemId = `name_${item.id}`;
                           const isExpanded = !!expandedSecrets[itemId];
 
                           return (
                             <div
-                              key={item.id}
+                              key={`barhatiah-name-${item.id}-${itemIdx}`}
                               className="bg-white dark:bg-gray-900/90 rounded-2xl border border-gray-750 hover:border-amber-500/40 shadow-lg transition-all overflow-hidden flex flex-col justify-between"
                             >
                               {/* Header (Clickable Accordion) */}
@@ -1426,12 +1426,12 @@ export const SacredBooksLibrary: React.FC = () => {
                         </button>
                       </div>
 
-                      {BARHATIAH_GRAND_RECIPES.map((rec) => {
+                      {BARHATIAH_GRAND_RECIPES.map((rec, recIdx) => {
                         const recipeId = `recipe_${rec.id}`;
                         const isExpanded = !!expandedSecrets[recipeId];
 
                         return (
-                          <div key={rec.id} className="bg-white dark:bg-gray-900/90 rounded-2xl border border-amber-500/30 shadow-xl overflow-hidden transition-all">
+                          <div key={`grand-recipe-${rec.id}-${recIdx}`} className="bg-white dark:bg-gray-900/90 rounded-2xl border border-amber-500/30 shadow-xl overflow-hidden transition-all">
                             {/* Accordion Header */}
                             <div
                               onClick={() => toggleSecretExpand(recipeId)}
@@ -1557,12 +1557,12 @@ export const SacredBooksLibrary: React.FC = () => {
                         </button>
                       </div>
 
-                      {BARHATIAH_INVOCATIONS.map((inv) => {
+                      {BARHATIAH_INVOCATIONS.map((inv, invIdx) => {
                         const invId = `invocation_${inv.id}`;
                         const isExpanded = !!expandedSecrets[invId];
 
                         return (
-                          <div key={inv.id} className="bg-white dark:bg-gray-900/90 rounded-2xl border border-amber-500/30 shadow-xl overflow-hidden transition-all">
+                          <div key={`sacred-invocation-${inv.id}-${invIdx}`} className="bg-white dark:bg-gray-900/90 rounded-2xl border border-amber-500/30 shadow-xl overflow-hidden transition-all">
                             {/* Accordion Header */}
                             <div
                               onClick={() => toggleSecretExpand(invId)}

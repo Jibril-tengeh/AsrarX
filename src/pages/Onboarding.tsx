@@ -806,11 +806,11 @@ export const Onboarding: React.FC<{ onComplete: () => void }> = ({ onComplete })
                 { lang: 'fr' as const, label: 'Français', sub: 'Version originale', flag: '🇫🇷' },
                 { lang: 'en' as const, label: 'English', sub: 'Global edition', flag: '🇬🇧' },
                 { lang: 'ha' as const, label: 'Hausa', sub: 'Tsarin Hausa', flag: '🇳🇬' }
-              ].map((item) => {
+              ].map((item, itemIdx) => {
                 const isSelected = language === item.lang;
                 return (
                   <Card3D
-                    key={item.lang}
+                    key={`onboarding-lang-${item.lang}-${itemIdx}`}
                     onClick={() => handleLanguageSelect(item.lang)}
                     bgGlow={isSelected ? 'rgba(16,185,129,0.4)' : 'rgba(255,255,255,0.08)'}
                     className="cursor-pointer"

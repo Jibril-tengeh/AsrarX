@@ -51,12 +51,16 @@ export const ArticleQuickControlModal: React.FC<ArticleQuickControlModalProps> =
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [isUpdatingPremium, setIsUpdatingPremium] = useState(false);
   const [isDuplicating, setIsDuplicating] = useState(false);
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (article) {
       setSelectedCategory(article.category || 'Secrets & Pratiques');
       setSelectedSubCategory(article.subCategory || '');
       setCustomSubCategory(article.subCategory || '');
+      setIsConfirmingDelete(false);
+      setIsDeleting(false);
     }
   }, [article]);
 
@@ -386,19 +390,44 @@ export const ArticleQuickControlModal: React.FC<ArticleQuickControlModalProps> =
                 <span>{isDuplicating ? 'Duplication...' : 'Dupliquer'}</span>
               </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  if (window.confirm("Êtes-vous sûr de vouloir supprimer définitivement cet article ?")) {
-                    onDelete(article.id);
-                    onClose();
-                  }
-                }}
-                className="px-3 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
-              >
-                <Trash2 size={14} />
-                <span>Supprimer</span>
-              </button>
+              {!isConfirmingDelete ? (
+                <button
+                  type="button"
+                  onClick={() => setIsConfirmingDelete(true)}
+                  className="px-3 py-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                  title="Supprimer définitivement ce secret"
+                >
+                  <Trash2 size={14} />
+                  <span>Supprimer</span>
+                </button>
+              ) : (
+                <div className="flex items-center gap-1.5 p-1 bg-red-50 dark:bg-red-950/40 rounded-xl border border-red-200 dark:border-red-800">
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      setIsDeleting(true);
+                      try {
+                        await onDelete(article.id);
+                        onClose();
+                      } finally {
+                        setIsDeleting(false);
+                      }
+                    }}
+                    disabled={isDeleting}
+                    className="px-2.5 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-black transition-colors cursor-pointer disabled:opacity-50"
+                  >
+                    {isDeleting ? 'Suppression...' : 'Confirmer ?'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsConfirmingDelete(false)}
+                    disabled={isDeleting}
+                    className="px-2 py-1.5 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-xs font-bold transition-colors cursor-pointer"
+                  >
+                    Annuler
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="flex items-center gap-2">

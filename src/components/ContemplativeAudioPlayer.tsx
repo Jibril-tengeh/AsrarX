@@ -493,8 +493,8 @@ export const ContemplativeAudioPlayer: React.FC<ContemplativeAudioPlayerProps> =
               }}
               className="bg-transparent text-amber-200 font-bold focus:outline-none cursor-pointer pr-1 shrink-0"
             >
-              {sacredRecitersList.map(r => (
-                <option key={r.id} value={r.id} className="bg-slate-900 text-gray-200">
+              {sacredRecitersList.map((r, rIdx) => (
+                <option key={`reciter-opt-${r.id}-${rIdx}`} value={r.id} className="bg-slate-900 text-gray-200">
                   {language === 'fr' ? r.nameFr : r.nameEn}
                 </option>
               ))}
@@ -504,9 +504,9 @@ export const ContemplativeAudioPlayer: React.FC<ContemplativeAudioPlayerProps> =
           {/* Repeat Loop Mode Selector (Taqrar Zikr) - Horizontally Scrollable */}
           <div className="flex bg-black/50 p-1 rounded-xl border border-emerald-500/30 text-[9px] font-bold items-center gap-1 overflow-x-auto hide-scrollbar shrink-0 max-w-[220px] sm:max-w-none touch-pan-x">
             <Repeat size={11} className="text-amber-400 mx-1 shrink-0" />
-            {(['1x', '3x', '7x', '11x', '33x', '111x', 'infinite'] as const).map(mode => (
+            {(['1x', '3x', '7x', '11x', '33x', '111x', 'infinite'] as const).map((mode, mIdx) => (
               <button
-                key={mode}
+                key={`repeat-mode-btn-${mode}-${mIdx}`}
                 onClick={() => { setRepeatMode(mode); }}
                 className={`px-2 py-1 rounded-lg transition-all cursor-pointer shrink-0 whitespace-nowrap ${
                   repeatMode === mode ? 'bg-amber-500 text-black font-black shadow-sm' : 'text-gray-400 hover:text-white'

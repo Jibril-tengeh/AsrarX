@@ -8,7 +8,7 @@ import { useFeatures } from "../../contexts/FeatureContext";
 import { INITIAL_DEFAULT_ARTICLES } from "../../data/defaultArticles";
 import { fetchSingleArticleFromRest } from "../../lib/firestoreRest";
 import { isPubliclyVisibleArticle } from "../../lib/articleUtils";
-import { getLocalCustomArticles } from "../../lib/localArticles";
+import { getLocalCustomArticles, getDeletedArticleIds } from "../../lib/localArticles";
 import { getOfflineData, setOfflineData } from "../../lib/offlineStorage";
 import { getArticleImageUrl, getArticleFallbackImage, getThematicSvgPlaceholder } from "../../utils/articleImageUtils";
 import { reportImageError } from "../../utils/imageDebugger";
@@ -939,6 +939,13 @@ export const SecretDetail: React.FC = () => {
     }
 
     if (id) {
+      if (getDeletedArticleIds().has(id)) {
+        setNotFound(true);
+        setItem(null);
+        setIsCheckingPremium(false);
+        return;
+      }
+
       // Check offline vault status & load full offline record immediately if present
       isSecretSavedOffline(id).then(saved => {
         setIsOfflineSaved(saved);
@@ -1542,8 +1549,8 @@ export const SecretDetail: React.FC = () => {
             className="bg-white dark:bg-gray-850 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium cursor-pointer"
           >
             <option value="">📁 Aucun dossier</option>
-            {bookmarkFolders.map((f: any) => (
-              <option key={f.id} value={f.id}>{f.name}</option>
+            {bookmarkFolders.map((f: any, fIdx: number) => (
+              <option key={f.id ? `detail-bm-folder-${f.id}-${fIdx}` : `detail-bm-folder-${fIdx}`} value={f.id}>{f.name}</option>
             ))}
             <option value="__new__" className="text-emerald-600 dark:text-emerald-400 font-bold">+ Nouveau dossier...</option>
           </select>
@@ -2000,7 +2007,7 @@ export const SecretDetail: React.FC = () => {
                 <div className="flex items-center gap-2">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <button
-                      key={star}
+                      key={`secret-rating-star-${id || 'current'}-${star}`}
                       onClick={() => {
                         if (!user) {
                           setShowAuthModal(true);
@@ -2190,9 +2197,9 @@ export const SecretDetail: React.FC = () => {
                           { id: 'indopak', label: 'IndoPak (Ar)' },
                           { id: 'serif', label: 'Sérif (Fr)' },
                           { id: 'sans', label: 'Sans-Sérif' }
-                        ].map((f) => (
+                        ].map((f, fIdx) => (
                           <button
-                            key={f.id}
+                            key={`zen-font-btn-${f.id}-${fIdx}`}
                             onClick={() => setZenFont(f.id as any)}
                             className={`py-1.5 px-2 rounded-lg font-medium border text-center transition-all ${
                               zenFont === f.id

@@ -318,14 +318,14 @@ export const CalculationHistoryModal: React.FC<CalculationHistoryModalProps> = (
 
           {/* Category Tabs */}
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-            {categories.map((cat) => {
+            {categories.map((cat, cIdx) => {
               const Icon = cat.icon;
               const isActive = activeCategory === cat.id;
               const label = language === 'ha' ? cat.labelHa : language === 'en' ? cat.labelEn : cat.labelFr;
 
               return (
                 <button
-                  key={cat.id}
+                  key={`calc-hist-cat-${cat.id}-${cIdx}`}
                   onClick={() => setActiveCategory(cat.id)}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap flex items-center gap-1.5 transition-all cursor-pointer ${
                     isActive
@@ -397,13 +397,13 @@ export const CalculationHistoryModal: React.FC<CalculationHistoryModalProps> = (
               </p>
             </div>
           ) : (
-            filteredItems.map((item) => {
+            filteredItems.map((item, itmIdx) => {
               const ToolIcon = getToolIcon(item.toolId);
               const badgeClass = getToolBadgeColor(item.toolId);
 
               return (
                 <div
-                  key={item.id}
+                  key={`calc-hist-item-${item.id}-${itmIdx}`}
                   onClick={() => onSelectCalculation && onSelectCalculation(item)}
                   className={`p-4 rounded-2xl bg-slate-950/80 border border-slate-800/80 hover:border-slate-700 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 group shadow-md ${
                     onSelectCalculation ? 'cursor-pointer hover:bg-slate-950' : ''

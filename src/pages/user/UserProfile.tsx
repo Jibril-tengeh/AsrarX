@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { User, Bell, Clock, Save, Shield, Moon, Sun, Smartphone, Laptop, Tablet, Globe, Trash2, Award, Medal, Star, Target, LogOut, Camera, Image as ImageIcon, RefreshCw, Sparkles, LogIn, ChevronDown, Plus, XCircle, CheckCircle, FileText, BookOpen, ScrollText, Heart, X, Share2, Wifi, Database, HardDrive, HardDriveDownload, Mic, MapPin, FolderCheck, Mail, MessageSquare, Info, Tag, ExternalLink, Check, Gift, HelpCircle, Compass, AlertTriangle } from 'lucide-react';
+import { User, Bell, Clock, Save, Shield, Moon, Sun, Smartphone, Laptop, Tablet, Globe, Trash2, Award, Medal, Star, Target, LogOut, Camera, Image as ImageIcon, RefreshCw, Sparkles, LogIn, ChevronDown, Plus, XCircle, CheckCircle, FileText, BookOpen, ScrollText, Heart, X, Share2, Wifi, Database, HardDrive, HardDriveDownload, Mic, MapPin, FolderCheck, Mail, MessageSquare, Info, Tag, ExternalLink, Check, Gift, HelpCircle, Compass, AlertTriangle, Vibrate, BatteryCharging, Zap, ZapOff, Gauge } from 'lucide-react';
+import { useHaptics } from '../../utils/haptics';
 import { 
   getAllOfflineSecrets, 
   removeSecretFromOfflineVault, 
@@ -23,6 +24,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth, handleFirestoreError, OperationType } from '../../contexts/AuthContext';
 import { useFeatures } from '../../contexts/FeatureContext';
+import { useSettings } from '../../contexts/SettingsContext';
 import { PremiumBadge } from '../../components/PremiumBadge';
 import { Premium12hCountdownWidget } from '../../components/Premium12hCountdownWidget';
 import { AuthModal } from '../../components/AuthModal';
@@ -167,9 +169,9 @@ const GamificationBadges = () => {
       </p>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {badges.map(badge => (
+        {badges.map((badge, bIdx) => (
           <div 
-            key={badge.id}
+            key={`profile-badge-${badge.id}-${bIdx}`}
             className={`flex flex-col items-center text-center gap-2 p-4 rounded-2xl border-2 transition-all ${
               badge.earned 
                 ? `border-${badge.bg.split(' ')[0].replace('bg-', '')} ${badge.bg}` 
@@ -192,6 +194,8 @@ export const UserProfile: React.FC = () => {
   const { theme, setTheme } = useTheme();
   const { user } = useAuth();
   const { featureToggles } = useFeatures();
+  const { batterySaver, setBatterySaver, toggleBatterySaver, backgroundSyncFrequencyMs } = useSettings();
+  const { config: hapticsConfig, updateConfig: updateHapticsConfig, triggerTest: testHaptics } = useHaptics();
   const navigate = useNavigate();
   
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -1099,7 +1103,7 @@ export const UserProfile: React.FC = () => {
         {loadingFavorites ? (
           <div className="flex flex-col gap-3">
             {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="h-16 w-full bg-gray-100 dark:bg-gray-800/50 rounded-2xl animate-pulse"></div>
+              <div key={`profile-fav-skel-${i}`} className="h-16 w-full bg-gray-100 dark:bg-gray-800/50 rounded-2xl animate-pulse"></div>
             ))}
           </div>
         ) : favorites.length === 0 ? (
@@ -1193,7 +1197,7 @@ export const UserProfile: React.FC = () => {
         {loadingOfflineSecrets ? (
           <div className="flex flex-col gap-3">
             {Array.from({ length: 2 }).map((_, i) => (
-              <div key={i} className="h-16 w-full bg-gray-100 dark:bg-gray-800/50 rounded-2xl animate-pulse"></div>
+              <div key={`profile-offline-skel-${i}`} className="h-16 w-full bg-gray-100 dark:bg-gray-800/50 rounded-2xl animate-pulse"></div>
             ))}
           </div>
         ) : offlineSecrets.length === 0 ? (
@@ -1533,8 +1537,8 @@ export const UserProfile: React.FC = () => {
                       onChange={e => setSelectedZikrId(e.target.value)}
                       className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-emerald-500 focus:outline-none dark:text-white h-10 w-full"
                     >
-                      {PRESET_ZIKRS.map(z => (
-                        <option key={z.id} value={z.id}>
+                      {PRESET_ZIKRS.map((z, zIdx) => (
+                        <option key={`preset-zikr-${z.id}-${zIdx}`} value={z.id}>
                           {z.text} {z.arabic ? `(${z.arabic})` : ''} {z.id !== 'custom' ? ` - ${z.target}x` : ''}
                         </option>
                       ))}
@@ -1835,6 +1839,347 @@ export const UserProfile: React.FC = () => {
             <span className={`font-medium text-sm ${theme === 'system' ? 'text-emerald-700 dark:text-emerald-300' : 'text-gray-700 dark:text-gray-300'}`}>{t('profile.theme.auto', 'Automatique')}</span>
           </button>
         </div>
+      </CollapsibleSection>
+
+      <CollapsibleSection
+        id="battery-saver-section"
+        title={t('profile.batterySaver.title', 'Économiseur de Batterie & Performances')}
+        icon={<BatteryCharging className="text-emerald-500" size={20} />}
+      >
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-5 leading-relaxed">
+          {t('profile.batterySaver.subtitle', "Optimisez l'autonomie de votre batterie et réduisez la consommation de données mobiles en allégeant les animations et en espaçant les synchronisations en arrière-plan.")}
+        </p>
+
+        {/* Master Battery Saver Toggle */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between border border-gray-100 dark:border-gray-700 rounded-2xl p-4 bg-gray-50 dark:bg-gray-800/50 gap-4 mb-4">
+          <div className="flex items-center gap-3">
+            <div className={`p-2.5 rounded-xl transition-colors ${batterySaver ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400' : 'bg-gray-100 dark:bg-gray-700 text-gray-400'}`}>
+              {batterySaver ? <BatteryCharging size={22} /> : <ZapOff size={22} />}
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold text-gray-900 dark:text-white text-sm sm:text-base">
+                  {t('profile.batterySaver.toggleTitle', "Mode Économie d'Énergie")}
+                </h3>
+                {batterySaver && (
+                  <span className="text-[10px] uppercase font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full">
+                    {t('profile.batterySaver.activeBadge', 'Actif')}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                {t('profile.batterySaver.toggleDesc', "Réduit l'intensité des animations et espace les synchronisations en arrière-plan à 30 minutes")}
+              </p>
+            </div>
+          </div>
+          <div
+            role="button"
+            aria-label="Toggle battery saver"
+            tabIndex={0}
+            onClick={() => toggleBatterySaver()}
+            className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors shrink-0 ${batterySaver ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+          >
+            <motion.div
+              className="w-4 h-4 bg-white rounded-full shadow-sm"
+              animate={{ x: batterySaver ? 24 : 0 }}
+              transition={{ type: "spring", stiffness: 500, damping: 30 }}
+            />
+          </div>
+        </div>
+
+        {/* Feature Breakdown Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+          {/* Background Sync Setting */}
+          <div className="p-3.5 bg-white dark:bg-gray-900/40 border border-gray-100 dark:border-gray-800 rounded-xl flex items-start gap-3">
+            <div className="p-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg shrink-0 mt-0.5">
+              <RefreshCw size={18} />
+            </div>
+            <div>
+              <h4 className="font-semibold text-gray-900 dark:text-white text-xs sm:text-sm">
+                {t('profile.batterySaver.syncTitle', 'Fréquence de Synchronisation')}
+              </h4>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                {batterySaver
+                  ? t('profile.batterySaver.syncEco', 'Mode Éco : Synchro espacée toutes les 30 minutes')
+                  : t('profile.batterySaver.syncNormal', 'Mode Standard : Synchro régulière toutes les 10 minutes')}
+              </p>
+              <span className="inline-block mt-1.5 text-[10px] font-bold px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
+                {batterySaver ? '30 min interval' : '10 min interval'}
+              </span>
+            </div>
+          </div>
+
+          {/* Animation & GPU Optimization */}
+          <div className="p-3.5 bg-white dark:bg-gray-900/40 border border-gray-100 dark:border-gray-800 rounded-xl flex items-start gap-3">
+            <div className="p-2 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-lg shrink-0 mt-0.5">
+              <Sparkles size={18} />
+            </div>
+            <div>
+              <h4 className="font-semibold text-gray-900 dark:text-white text-xs sm:text-sm">
+                {t('profile.batterySaver.animationTitle', 'Intensité des Animations')}
+              </h4>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                {batterySaver
+                  ? t('profile.batterySaver.animationEco', 'Allégée : Boucles infinies et effets GPU minimisés')
+                  : t('profile.batterySaver.animationNormal', 'Complète : Transitions et effets dynamiques fluides')}
+              </p>
+              <span className="inline-block mt-1.5 text-[10px] font-bold px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
+                {batterySaver ? t('profile.batterySaver.animLow', 'Faible impact GPU') : t('profile.batterySaver.animHigh', 'Haute fluidité')}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Global Image Lazy-Loading Info */}
+        <div className="p-3.5 bg-emerald-50/60 dark:bg-emerald-950/20 rounded-2xl border border-emerald-100 dark:border-emerald-900/30">
+          <div className="flex items-center gap-2 mb-1">
+            <Zap size={14} className="text-emerald-600 dark:text-emerald-400" />
+            <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300">
+              {t('profile.batterySaver.lazyLoadTitle', 'Chargement Différé des Images (Lazy-Loading Global)')}
+            </span>
+          </div>
+          <p className="text-[11px] text-emerald-700/80 dark:text-emerald-300/80 leading-relaxed">
+            {t('profile.batterySaver.lazyLoadDesc', "Les images des livres, articles et galeries sont chargées via un Intersection Observer uniquement lorsqu'elles approchent de l'écran, réduisant l'utilisation de la mémoire RAM et des données mobiles.")}
+          </p>
+        </div>
+      </CollapsibleSection>
+
+      <CollapsibleSection
+        id="haptics-control-section"
+        title={t('profile.haptics.title', 'Contrôle des Vibrations & Haptique')}
+        icon={<Vibrate className="text-emerald-500" size={20} />}
+      >
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-5 leading-relaxed">
+          {t('profile.haptics.subtitle', 'Personnalisez le retour de vibration tactile pour les compteurs de Dhikr, le Tasbih et les actions de l\'interface.')}
+        </p>
+
+        {/* Master Haptic Toggle */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between border border-gray-100 dark:border-gray-700 rounded-2xl p-4 bg-gray-50 dark:bg-gray-800/50 gap-4 mb-4">
+          <div className="flex items-center gap-3">
+            <div className={`p-2.5 rounded-xl transition-colors ${hapticsConfig.enabled ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400' : 'bg-gray-100 dark:bg-gray-700 text-gray-400'}`}>
+              <Vibrate size={22} />
+            </div>
+            <div>
+              <h3 className="font-bold text-gray-900 dark:text-white text-sm sm:text-base">
+                {t('profile.haptics.masterToggle', 'Vibrations & Retour Haptique')}
+              </h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                {t('profile.haptics.masterDesc', "Activer ou désactiver l'ensemble des retours tactiles dans l'application")}
+              </p>
+            </div>
+          </div>
+          <div
+            id="haptics-master-toggle"
+            role="button"
+            aria-label="Toggle haptic vibration"
+            tabIndex={0}
+            onClick={() => {
+              const next = !hapticsConfig.enabled;
+              updateHapticsConfig({ enabled: next });
+              if (next) testHaptics('medium');
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                const next = !hapticsConfig.enabled;
+                updateHapticsConfig({ enabled: next });
+                if (next) testHaptics('medium');
+              }
+            }}
+            className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors shrink-0 ${hapticsConfig.enabled ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+          >
+            <motion.div
+              className="w-4 h-4 bg-white rounded-full shadow-sm"
+              animate={{ x: hapticsConfig.enabled ? 24 : 0 }}
+              transition={{ type: "spring", stiffness: 500, damping: 30 }}
+            />
+          </div>
+        </div>
+
+        {/* Detailed Options when Enabled */}
+        {hapticsConfig.enabled && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-4"
+          >
+            {/* Dhikr Tracker / Tasbih feedback */}
+            <div className="flex items-center justify-between p-3.5 bg-white dark:bg-gray-900/40 border border-gray-100 dark:border-gray-800 rounded-xl">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-lg">
+                  <Target size={18} />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-gray-900 dark:text-white text-xs sm:text-sm">
+                    {t('profile.haptics.dhikrToggle', 'Compteur de Dhikr & Tasbih')}
+                  </h4>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                    {t('profile.haptics.dhikrDesc', 'Vibration subtile à chaque incrémentation et lors des paliers spirituels')}
+                  </p>
+                </div>
+              </div>
+              <div
+                role="button"
+                aria-label="Toggle dhikr haptics"
+                tabIndex={0}
+                onClick={() => {
+                  const next = !hapticsConfig.dhikrFeedback;
+                  updateHapticsConfig({ dhikrFeedback: next });
+                  if (next) testHaptics('light');
+                }}
+                className={`w-10 h-5 flex items-center rounded-full p-0.5 cursor-pointer transition-colors shrink-0 ${hapticsConfig.dhikrFeedback ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+              >
+                <motion.div
+                  className="w-4 h-4 bg-white rounded-full shadow-sm"
+                  animate={{ x: hapticsConfig.dhikrFeedback ? 20 : 0 }}
+                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                />
+              </div>
+            </div>
+
+            {/* Button press feedback */}
+            <div className="flex items-center justify-between p-3.5 bg-white dark:bg-gray-900/40 border border-gray-100 dark:border-gray-800 rounded-xl">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-lg">
+                  <Smartphone size={18} />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-gray-900 dark:text-white text-xs sm:text-sm">
+                    {t('profile.haptics.buttonToggle', 'Boutons & Actions UI')}
+                  </h4>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                    {t('profile.haptics.buttonDesc', 'Léger retour haptique lors des clics sur les boutons et onglets')}
+                  </p>
+                </div>
+              </div>
+              <div
+                role="button"
+                aria-label="Toggle button press haptics"
+                tabIndex={0}
+                onClick={() => {
+                  const next = !hapticsConfig.buttonFeedback;
+                  updateHapticsConfig({ buttonFeedback: next });
+                  if (next) testHaptics('light');
+                }}
+                className={`w-10 h-5 flex items-center rounded-full p-0.5 cursor-pointer transition-colors shrink-0 ${hapticsConfig.buttonFeedback ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+              >
+                <motion.div
+                  className="w-4 h-4 bg-white rounded-full shadow-sm"
+                  animate={{ x: hapticsConfig.buttonFeedback ? 20 : 0 }}
+                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                />
+              </div>
+            </div>
+
+            {/* Target Goal Celebration */}
+            <div className="flex items-center justify-between p-3.5 bg-white dark:bg-gray-900/40 border border-gray-100 dark:border-gray-800 rounded-xl">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 rounded-lg">
+                  <Sparkles size={18} />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-gray-900 dark:text-white text-xs sm:text-sm">
+                    {t('profile.haptics.celebrationToggle', "Célébration d'Objectif Spirituel")}
+                  </h4>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                    {t('profile.haptics.celebrationDesc', 'Vibration festive rythmée lors de la complétion d’un objectif')}
+                  </p>
+                </div>
+              </div>
+              <div
+                role="button"
+                aria-label="Toggle target celebration haptics"
+                tabIndex={0}
+                onClick={() => {
+                  const next = !hapticsConfig.targetCelebration;
+                  updateHapticsConfig({ targetCelebration: next });
+                  if (next) testHaptics('success');
+                }}
+                className={`w-10 h-5 flex items-center rounded-full p-0.5 cursor-pointer transition-colors shrink-0 ${hapticsConfig.targetCelebration ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+              >
+                <motion.div
+                  className="w-4 h-4 bg-white rounded-full shadow-sm"
+                  animate={{ x: hapticsConfig.targetCelebration ? 20 : 0 }}
+                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                />
+              </div>
+            </div>
+
+            {/* Intensity Selector */}
+            <div className="pt-2">
+              <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">
+                {t('profile.haptics.intensity', 'Intensité de la vibration')}
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                {(['light', 'medium', 'heavy'] as const).map((level, lIdx) => {
+                  const isSelected = hapticsConfig.intensity === level;
+                  return (
+                    <button
+                      key={`haptic-lvl-btn-${level}-${lIdx}`}
+                      type="button"
+                      onClick={() => {
+                        updateHapticsConfig({ intensity: level });
+                        testHaptics(level);
+                      }}
+                      className={`py-2.5 px-3 rounded-xl border text-xs font-bold transition-all flex flex-col items-center gap-1 cursor-pointer ${
+                        isSelected
+                          ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 shadow-sm'
+                          : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600'
+                      }`}
+                    >
+                      <span>{t(`profile.haptics.${level}`, level === 'light' ? 'Léger' : level === 'medium' ? 'Moyen' : 'Fort')}</span>
+                      <span className="text-[10px] font-normal opacity-75">
+                        {level === 'light' ? '15ms' : level === 'medium' ? '35ms' : '60ms'}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Interactive Testing Ground */}
+            <div className="p-3.5 bg-gray-50 dark:bg-gray-900/60 rounded-2xl border border-gray-100 dark:border-gray-800 mt-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                  <Vibrate size={14} className="text-emerald-500" />
+                  {t('profile.haptics.testTitle', 'Tester les vibrations :')}
+                </span>
+                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-100 dark:bg-emerald-950/60 px-2 py-0.5 rounded-full">
+                  @capacitor/haptics
+                </span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <button
+                  type="button"
+                  onClick={() => testHaptics('light')}
+                  className="px-2.5 py-2 rounded-lg bg-white dark:bg-gray-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400 border border-gray-200 dark:border-gray-700 text-xs font-medium transition-all shadow-xs cursor-pointer"
+                >
+                  {t('profile.haptics.testLight', 'Test Léger')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => testHaptics('medium')}
+                  className="px-2.5 py-2 rounded-lg bg-white dark:bg-gray-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400 border border-gray-200 dark:border-gray-700 text-xs font-medium transition-all shadow-xs cursor-pointer"
+                >
+                  {t('profile.haptics.testMedium', 'Test Moyen')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => testHaptics('heavy')}
+                  className="px-2.5 py-2 rounded-lg bg-white dark:bg-gray-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-gray-700 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400 border border-gray-200 dark:border-gray-700 text-xs font-medium transition-all shadow-xs cursor-pointer"
+                >
+                  {t('profile.haptics.testHeavy', 'Test Fort')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => testHaptics('success')}
+                  className="px-2.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
+                >
+                  {t('profile.haptics.testCelebration', 'Test Célébration')}
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
       </CollapsibleSection>
 
       <CollapsibleSection

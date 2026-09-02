@@ -2,6 +2,9 @@ import { INITIAL_DEFAULT_ARTICLES } from '../data/defaultArticles';
 import { setOfflineData, getOfflineData, removeOfflineData } from './offlineStorage';
 import { getArticleImageUrl } from '../utils/articleImageUtils';
 import { sortArticlesInOrder, isPubliclyVisibleArticle } from './articleUtils';
+import { deleteArticleFromRest } from './firestoreRest';
+import { removeSecretFromOfflineVault } from '../utils/secretOfflineVault';
+import { dispatchSystemNotification, getLocalizedNotificationText } from '../utils/notificationLocalization';
 
 export const LOCAL_CUSTOM_ARTICLES_KEY = 'asrarhub_custom_local_articles';
 export const CACHED_ADMIN_ARTICLES_KEY = 'asrarhub_cached_admin_articles';
@@ -10,19 +13,27 @@ export const CACHED_EXPLORE_ARTICLES_KEY = 'asrarhub_cached_explore_articles';
 export const CACHED_ARTICLE_DETAILS_KEY = 'asrarhub_cached_article_details';
 export const DELETED_ARTICLES_KEY = 'asrarhub_deleted_articles_set';
 
+// In-memory set mirror for super-fast synchronous lookup
+let memoryDeletedArticleIds: Set<string> | null = null;
+
 /**
  * Gets the set of article IDs that have been explicitly deleted by the admin or user.
  */
 export const getDeletedArticleIds = (): Set<string> => {
+  if (memoryDeletedArticleIds) {
+    return new Set(memoryDeletedArticleIds);
+  }
   try {
     const raw = localStorage.getItem(DELETED_ARTICLES_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
+        memoryDeletedArticleIds = new Set(parsed);
         return new Set(parsed);
       }
     }
   } catch (e) {}
+  memoryDeletedArticleIds = new Set();
   return new Set();
 };
 
@@ -34,6 +45,7 @@ export const addDeletedArticleId = (id: string): void => {
   try {
     const set = getDeletedArticleIds();
     set.add(id);
+    memoryDeletedArticleIds = new Set(set);
     localStorage.setItem(DELETED_ARTICLES_KEY, JSON.stringify(Array.from(set)));
   } catch (e) {}
 };
@@ -47,6 +59,7 @@ export const removeDeletedArticleId = (id: string): void => {
     const set = getDeletedArticleIds();
     if (set.has(id)) {
       set.delete(id);
+      memoryDeletedArticleIds = new Set(set);
       localStorage.setItem(DELETED_ARTICLES_KEY, JSON.stringify(Array.from(set)));
     }
   } catch (e) {}
@@ -257,6 +270,23 @@ export const getCachedArticlesListAsync = async (key: string): Promise<any[]> =>
 };
 
 /**
+ * Synchronously retrieves cached article list from localStorage.
+ */
+export const getCachedArticlesList = (key: string): any[] => {
+  const deletedIds = getDeletedArticleIds();
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed.filter(a => a && a.id && !deletedIds.has(a.id));
+      }
+    }
+  } catch (e) {}
+  return [];
+};
+
+/**
  * Saves or updates an article in local persistent storage so it is NEVER lost,
  * even when offline on Capacitor or when Firestore cache resets, and
  * automatically syncs it to Firestore in the background and broadcasts the update.
@@ -323,64 +353,294 @@ export const saveLocalCustomArticle = (article: LocalArticle): LocalArticle[] =>
   }
 };
 
+export interface DeleteArticleResult {
+  success: boolean;
+  id: string;
+  title: string;
+  firestoreSdkDeleted: boolean;
+  firestoreRestDeleted: boolean;
+  localCachePurged: boolean;
+  offlineVaultPurged: boolean;
+  message: string;
+}
+
+/**
+ * Removes an article ID from all cached article lists (localStorage, IndexedDB, Offline Vault, and translation caches).
+ */
+export const removeFromCachedLists = (articleId: string): void => {
+  if (!articleId) return;
+  addDeletedArticleId(articleId);
+
+  // 1. Purge from localStorage list caches
+  const keys = [CACHED_ADMIN_ARTICLES_KEY, CACHED_ARTICLES_LIST_KEY, CACHED_EXPLORE_ARTICLES_KEY];
+  keys.forEach(key => {
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const list: any[] = JSON.parse(raw);
+        if (Array.isArray(list)) {
+          const nextList = list.filter(item => item && item.id !== articleId);
+          saveCachedArticlesList(key, nextList);
+        }
+      }
+    } catch (e) {}
+  });
+
+  // 2. Purge from localStorage details cache
+  try {
+    const detailsRaw = localStorage.getItem(CACHED_ARTICLE_DETAILS_KEY);
+    if (detailsRaw) {
+      const details = JSON.parse(detailsRaw);
+      delete details[articleId];
+      safeSetItem(CACHED_ARTICLE_DETAILS_KEY, JSON.stringify(details));
+    }
+  } catch (e) {}
+
+  // 3. Purge from translation caches
+  try {
+    ['fr', 'en', 'ha'].forEach(lng => {
+      localStorage.removeItem(`asrar_trans_${articleId}_${lng}`);
+    });
+  } catch (e) {}
+
+  // 4. Asynchronously purge from IndexedDB stores and Offline Vault
+  if (typeof window !== 'undefined') {
+    // Purge list from IndexedDB
+    getOfflineData<any[]>(CACHED_ARTICLES_LIST_KEY).then(list => {
+      if (Array.isArray(list)) {
+        const filtered = list.filter(item => item && item.id !== articleId);
+        setOfflineData(CACHED_ARTICLES_LIST_KEY, filtered).catch(() => {});
+      }
+    }).catch(() => {});
+
+    getOfflineData<any[]>(CACHED_EXPLORE_ARTICLES_KEY).then(list => {
+      if (Array.isArray(list)) {
+        const filtered = list.filter(item => item && item.id !== articleId);
+        setOfflineData(CACHED_EXPLORE_ARTICLES_KEY, filtered).catch(() => {});
+      }
+    }).catch(() => {});
+
+    // Purge details from IndexedDB
+    getOfflineData<Record<string, any>>(CACHED_ARTICLE_DETAILS_KEY).then(details => {
+      if (details && typeof details === 'object') {
+        delete details[articleId];
+        setOfflineData(CACHED_ARTICLE_DETAILS_KEY, details).catch(() => {});
+      }
+    }).catch(() => {});
+
+    // Purge from Secret Offline Vault
+    removeSecretFromOfflineVault(articleId).catch(() => {});
+  }
+};
+
+/**
+ * Permanently deletes an article from:
+ * 1. Firebase Firestore database via SDK deleteDoc
+ * 2. Firebase Firestore REST API via deleteArticleFromRest (with Auth headers)
+ * 3. Local Custom Articles storage
+ * 4. All in-memory and disk caches (localStorage & IndexedDB)
+ * 5. Secret Offline Vault
+ * 6. Dispatches real-time events to all UI subscribers and optional system notification.
+ */
+export const permanentlyDeleteArticle = async (
+  articleId: string,
+  options?: {
+    title?: string;
+    idToken?: string;
+    notify?: boolean;
+    lang?: 'fr' | 'en' | 'ha';
+  }
+): Promise<DeleteArticleResult> => {
+  if (!articleId) {
+    return {
+      success: false,
+      id: '',
+      title: '',
+      firestoreSdkDeleted: false,
+      firestoreRestDeleted: false,
+      localCachePurged: false,
+      offlineVaultPurged: false,
+      message: 'ID d\'article manquant'
+    };
+  }
+
+  // 1. Determine title
+  let articleTitle = options?.title || '';
+  if (!articleTitle) {
+    try {
+      const locals = getLocalCustomArticles();
+      const match = locals.find(a => a.id === articleId);
+      if (match) articleTitle = match.title || match.title_fr || '';
+    } catch (_) {}
+  }
+  if (!articleTitle) {
+    try {
+      const cached = getCachedArticlesList(CACHED_ADMIN_ARTICLES_KEY);
+      const match = cached.find(a => a && a.id === articleId);
+      if (match) articleTitle = match.title || match.title_fr || '';
+    } catch (_) {}
+  }
+  if (!articleTitle) articleTitle = `Secret #${articleId.slice(-6)}`;
+
+  // 2. Mark ID in deleted tombstones immediately
+  addDeletedArticleId(articleId);
+
+  // 3. Purge from local custom articles storage
+  const current = getLocalCustomArticles();
+  const filtered = current.filter(a => a && a.id !== articleId);
+  safeSetItem(LOCAL_CUSTOM_ARTICLES_KEY, JSON.stringify(filtered));
+
+  // 4. Purge from all caches (localStorage & IndexedDB & Vault)
+  removeFromCachedLists(articleId);
+
+  let firestoreSdkDeleted = false;
+  let firestoreRestDeleted = false;
+  let offlineVaultPurged = false;
+
+  // 5. Delete from Secret Offline Vault
+  try {
+    offlineVaultPurged = await removeSecretFromOfflineVault(articleId);
+  } catch (e) {
+    offlineVaultPurged = true;
+  }
+
+  // 6. Delete from Firebase Firestore (SDK + REST in parallel)
+  const isMockArt = String(articleId).startsWith('default_art_');
+  if (!isMockArt) {
+    try {
+      const { db, auth } = await import('./firebase');
+      const { doc, deleteDoc, setDoc } = await import('firebase/firestore');
+
+      // Acquire token if needed
+      let token = options?.idToken;
+      if (!token && auth && auth.currentUser) {
+        try {
+          token = await auth.currentUser.getIdToken();
+        } catch (_) {}
+      }
+
+      const [sdkRes, restRes] = await Promise.allSettled([
+        db ? deleteDoc(doc(db, 'articles', articleId)) : Promise.resolve(),
+        deleteArticleFromRest(articleId, token)
+      ]);
+
+      firestoreSdkDeleted = sdkRes.status === 'fulfilled';
+      firestoreRestDeleted = restRes.status === 'fulfilled' && !!(restRes as PromiseFulfilledResult<boolean>).value;
+
+      // Also record tombstone in Firestore config if possible so multi-device offline syncs drop it
+      if (db) {
+        setDoc(doc(db, 'system_config', 'deleted_articles_tombstones'), {
+          [articleId]: {
+            deletedAt: new Date().toISOString(),
+            title: articleTitle
+          }
+        }, { merge: true }).catch(() => {});
+      }
+    } catch (fsErr) {
+      console.warn(`[permanentlyDeleteArticle] Firestore delete note for ${articleId}:`, fsErr);
+    }
+  } else {
+    firestoreSdkDeleted = true;
+    firestoreRestDeleted = true;
+  }
+
+  // 7. Broadcast live removal event across components
+  try {
+    const mergedPublic = mergeWithLocalArticles(filtered, false);
+    const eventDetail = {
+      articles: mergedPublic,
+      count: mergedPublic.length,
+      deletedId: articleId,
+      timestamp: Date.now(),
+      source: 'permanent_deletion'
+    };
+    window.dispatchEvent(new CustomEvent('asrarhub_swr_articles_updated', { detail: eventDetail }));
+    window.dispatchEvent(new CustomEvent('asrarhub_articles_revalidated', { detail: eventDetail }));
+    window.dispatchEvent(new CustomEvent('asrarhub_articles_updated', { detail: { deletedId: articleId } }));
+    window.dispatchEvent(new CustomEvent('asrarhub_article_permanently_deleted', { detail: { id: articleId, title: articleTitle } }));
+  } catch (e) {}
+
+  // 8. Notification feedback if requested
+  if (options?.notify !== false) {
+    const lang = options?.lang || 'fr';
+    const notif = getLocalizedNotificationText('articleDeleted', lang, { articleTitle });
+    dispatchSystemNotification(notif.title, notif.body, { articleId, action: 'deleted' }).catch(() => {});
+  }
+
+  console.log(`[PermanentlyDeleteArticle] Successfully permanently deleted "${articleTitle}" (${articleId}).`);
+
+  return {
+    success: true,
+    id: articleId,
+    title: articleTitle,
+    firestoreSdkDeleted,
+    firestoreRestDeleted,
+    localCachePurged: true,
+    offlineVaultPurged,
+    message: `Article "${articleTitle}" définitivement supprimé.`
+  };
+};
+
+/**
+ * Permanently deletes multiple articles sequentially and in batch.
+ */
+export const permanentlyDeleteMultipleArticles = async (
+  articleIds: string[],
+  options?: {
+    idToken?: string;
+    notify?: boolean;
+    lang?: 'fr' | 'en' | 'ha';
+    onProgress?: (completed: number, total: number) => void;
+  }
+): Promise<{ total: number; deletedCount: number; results: DeleteArticleResult[] }> => {
+  if (!Array.isArray(articleIds) || articleIds.length === 0) {
+    return { total: 0, deletedCount: 0, results: [] };
+  }
+
+  const results: DeleteArticleResult[] = [];
+  const total = articleIds.length;
+
+  for (let i = 0; i < total; i++) {
+    const id = articleIds[i];
+    const res = await permanentlyDeleteArticle(id, {
+      idToken: options?.idToken,
+      notify: false, // will notify once at the end
+      lang: options?.lang
+    });
+    results.push(res);
+    if (options?.onProgress) {
+      options.onProgress(i + 1, total);
+    }
+  }
+
+  // Dispatch batch notification
+  if (options?.notify !== false && total > 0) {
+    const lang = options?.lang || 'fr';
+    const notif = getLocalizedNotificationText('articleBulkDeleted', lang, { count: total });
+    dispatchSystemNotification(notif.title, notif.body, { count: total, action: 'bulk_deleted' }).catch(() => {});
+  }
+
+  return {
+    total,
+    deletedCount: results.filter(r => r.success).length,
+    results
+  };
+};
+
 /**
  * Removes an article from local custom storage and cached lists,
  * and automatically deletes it from Firestore in the background.
  */
 export const deleteLocalCustomArticle = (articleId: string): void => {
-  try {
-    if (articleId) {
-      addDeletedArticleId(articleId);
-    }
-    const current = getLocalCustomArticles();
-    const filtered = current.filter(a => a.id !== articleId);
-    safeSetItem(LOCAL_CUSTOM_ARTICLES_KEY, JSON.stringify(filtered));
-
-    // Remove from cached lists
-    removeFromCachedLists(articleId);
-
-    // Automatically delete from Firestore in the background
-    if (typeof window !== 'undefined' && articleId) {
-      import('./firebase').then(({ db }) => {
-        import('firebase/firestore').then(({ doc, deleteDoc }) => {
-          if (db) {
-            deleteDoc(doc(db, 'articles', articleId)).catch(err => {
-              console.warn('[AutoSync] Background Firestore deleteDoc warning:', err);
-            });
-          }
-        }).catch(() => {});
-      }).catch(() => {});
-
-      // Broadcast removal event
-      try {
-        const mergedPublic = mergeWithLocalArticles(filtered, false);
-        window.dispatchEvent(new CustomEvent('asrarhub_swr_articles_updated', {
-          detail: {
-            articles: mergedPublic,
-            count: mergedPublic.length,
-            timestamp: Date.now(),
-            source: 'delete_local_auto'
-          }
-        }));
-        window.dispatchEvent(new CustomEvent('asrarhub_articles_revalidated', {
-          detail: {
-            articles: mergedPublic,
-            count: mergedPublic.length,
-            timestamp: Date.now(),
-            source: 'delete_local_auto'
-          }
-        }));
-        window.dispatchEvent(new CustomEvent('asrarhub_articles_updated', { detail: { deletedId: articleId } }));
-      } catch (e) {}
-    }
-  } catch (e) {
-    console.error("Error deleting local custom article:", e);
-  }
+  permanentlyDeleteArticle(articleId, { notify: false }).catch(err => {
+    console.warn('[deleteLocalCustomArticle] Error during background permanent deletion:', err);
+  });
 };
 
 /**
  * Automatically synchronizes all local custom articles to Firestore in the background.
  * Ensures that published articles are immediately persisted without needing manual action.
+ * Strictly ignores any article marked as deleted!
  */
 export const autoSyncLocalArticlesToFirestore = async (): Promise<number> => {
   try {
@@ -389,12 +649,23 @@ export const autoSyncLocalArticlesToFirestore = async (): Promise<number> => {
     const { doc, setDoc } = await import('firebase/firestore');
     if (!db) return 0;
 
+    const deletedIds = getDeletedArticleIds();
     const locals = getLocalCustomArticles();
     if (!Array.isArray(locals) || locals.length === 0) return 0;
 
+    // Strictly filter out deleted articles so they are NEVER resurrected
+    const validLocals = locals.filter(
+      art => art && art.id && !deletedIds.has(art.id) && !String(art.id).startsWith('default_art_')
+    );
+
+    // Prune deleted articles from local custom storage if found
+    if (validLocals.length !== locals.length) {
+      safeSetItem(LOCAL_CUSTOM_ARTICLES_KEY, JSON.stringify(validLocals));
+    }
+
     let syncedCount = 0;
-    for (const art of locals) {
-      if (art && art.id && !String(art.id).startsWith('default_art_')) {
+    for (const art of validLocals) {
+      if (art && art.id) {
         await setDoc(doc(db, 'articles', art.id), art, { merge: true }).catch(err => {
           console.warn(`[AutoSync] Error syncing article ${art.id} to Firestore:`, err);
         });
@@ -402,7 +673,7 @@ export const autoSyncLocalArticlesToFirestore = async (): Promise<number> => {
       }
     }
     if (syncedCount > 0) {
-      console.log(`[AutoSync] Automatically synced ${syncedCount} articles to Firestore.`);
+      console.log(`[AutoSync] Automatically synced ${syncedCount} valid articles to Firestore.`);
     }
     return syncedCount;
   } catch (err) {
@@ -491,37 +762,6 @@ export const updateCachedArticleLists = (article: LocalArticle): void => {
     const details = detailsRaw ? JSON.parse(detailsRaw) : {};
     details[article.id] = article;
     safeSetItem(CACHED_ARTICLE_DETAILS_KEY, JSON.stringify(details));
-  } catch (e) {}
-};
-
-/**
- * Removes an article ID from all cached article lists.
- */
-export const removeFromCachedLists = (articleId: string): void => {
-  if (articleId) {
-    addDeletedArticleId(articleId);
-  }
-  const keys = [CACHED_ADMIN_ARTICLES_KEY, CACHED_ARTICLES_LIST_KEY, CACHED_EXPLORE_ARTICLES_KEY];
-  keys.forEach(key => {
-    try {
-      const raw = localStorage.getItem(key);
-      if (raw) {
-        const list: any[] = JSON.parse(raw);
-        if (Array.isArray(list)) {
-          const nextList = list.filter(item => item && item.id !== articleId);
-          saveCachedArticlesList(key, nextList);
-        }
-      }
-    } catch (e) {}
-  });
-
-  try {
-    const detailsRaw = localStorage.getItem(CACHED_ARTICLE_DETAILS_KEY);
-    if (detailsRaw) {
-      const details = JSON.parse(detailsRaw);
-      delete details[articleId];
-      safeSetItem(CACHED_ARTICLE_DETAILS_KEY, JSON.stringify(details));
-    }
   } catch (e) {}
 };
 

@@ -50,7 +50,8 @@ import { getInitialCalendarScales, saveCalendarScales, subscribeCalendarScales }
 import { INITIAL_DEFAULT_ARTICLES } from '../../data/defaultArticles';
 import { fetchArticlesFromRest, fetchUsersFromRest, fetchCategoriesFromRest, deleteArticleFromRest, deleteCategoryFromRest } from '../../lib/firestoreRest';
 import { isPubliclyVisibleArticle } from '../../lib/articleUtils';
-import { saveLocalCustomArticle, deleteLocalCustomArticle, clearAllLocalCustomArticles, mergeWithLocalArticles, saveCachedArticlesList, setHideMockArticles, isMockArticlesHidden, autoSyncLocalArticlesToFirestore, CACHED_ADMIN_ARTICLES_KEY, CACHED_ARTICLES_LIST_KEY, CACHED_EXPLORE_ARTICLES_KEY, addDeletedArticleId } from '../../lib/localArticles';
+import { saveLocalCustomArticle, deleteLocalCustomArticle, clearAllLocalCustomArticles, mergeWithLocalArticles, saveCachedArticlesList, setHideMockArticles, isMockArticlesHidden, autoSyncLocalArticlesToFirestore, CACHED_ADMIN_ARTICLES_KEY, CACHED_ARTICLES_LIST_KEY, CACHED_EXPLORE_ARTICLES_KEY, addDeletedArticleId, permanentlyDeleteArticle, permanentlyDeleteMultipleArticles, removeFromCachedLists } from '../../lib/localArticles';
+import { dispatchSystemNotification, getLocalizedNotificationText } from '../../utils/notificationLocalization';
 import { revalidatePublishedArticles } from '../../lib/swrArticleCache';
 import { AdminRecitersManager } from '../../components/admin/AdminRecitersManager';
 import { BookCoverStudio } from '../../components/admin/BookCoverStudio';
@@ -88,6 +89,7 @@ import { AdminPdfDocumentsManager } from '../../components/admin/AdminPdfDocumen
 import { AdminPromoVideoAnnouncementManager } from '../../components/admin/AdminPromoVideoAnnouncementManager';
 import { AdminToolsHealthManager } from '../../components/admin/AdminToolsHealthManager';
 import { ArticleQuickControlModal } from '../../components/admin/ArticleQuickControlModal';
+import { ArticleDeleteConfirmationModal } from '../../components/admin/ArticleDeleteConfirmationModal';
 import { PROMO_HOURS_OPTIONS, PROMO_HOURLY_OPTIONS, getPromoHourMessage, getPromoHourLabel, PromoDurationHours } from '../../utils/promoConfig';
 
 const LayoutSelector = ({ value, onChange, activeColor = 'emerald' }: { value: string, onChange: (val: string) => void, activeColor?: string }) => {
@@ -504,9 +506,25 @@ export const AdminDashboard: React.FC = () => {
   const [lexiqueLimit, setLexiqueLimit] = useState(15);
   const [blockingToolsUser, setBlockingToolsUser] = useState<User | null>(null);
 
+  // Article Delete Confirmation Modal State (replaces blocked window.confirm)
+  const [articleDeleteModalState, setArticleDeleteModalState] = useState<{
+    isOpen: boolean;
+    type: 'single' | 'bulk' | 'all';
+    article?: Article | null;
+    count?: number;
+    isDeleting?: boolean;
+  }>({
+    isOpen: false,
+    type: 'single',
+    article: null,
+    count: 1,
+    isDeleting: false
+  });
+
   useBackButton(() => setSelectedUserDetail(null), !!selectedUserDetail);
   useBackButton(() => setBlockingToolsUser(null), !!blockingToolsUser);
   useBackButton(() => setIsAddUserModalOpen(false), isAddUserModalOpen);
+  useBackButton(() => setArticleDeleteModalState(prev => ({ ...prev, isOpen: false })), articleDeleteModalState.isOpen);
 
   // Feature Search & Drag-and-Drop Reordering States
   const [featureSearch, setFeatureSearch] = useState('');
@@ -2781,60 +2799,114 @@ export const AdminDashboard: React.FC = () => {
 
   const handleDeleteArticle = async (id: string) => {
     try {
-      addDeletedArticleId(id);
-      deleteLocalCustomArticle(id);
-      setArticles(prev => {
-        const updated = prev.filter(a => a && a.id !== id);
-        try {
-          saveCachedArticlesList(CACHED_ADMIN_ARTICLES_KEY, updated);
-          saveCachedArticlesList(CACHED_ARTICLES_LIST_KEY, updated);
-          saveCachedArticlesList(CACHED_EXPLORE_ARTICLES_KEY, updated);
-        } catch (e) {}
-        return updated;
+      const art = articles.find(a => a && a.id === id);
+      const artTitle = art?.title || (art as any)?.title_fr || 'Article';
+
+      // 1. Instantly update React state for zero-latency UI removal
+      setArticles(prev => prev.filter(a => a && a.id !== id));
+      if (selectedArticleForQuickControl?.id === id) {
+        setSelectedArticleForQuickControl(null);
+      }
+
+      // 2. Perform deep multi-layer permanent deletion across Firestore SDK, REST API, Vault & Caches
+      const result = await permanentlyDeleteArticle(id, {
+        title: artTitle,
+        notify: true,
+        lang: (language as any) || 'fr'
       });
 
-      if (!String(id).startsWith('default_art_')) {
-        try {
-          await Promise.allSettled([
-            deleteDoc(doc(db, 'articles', id)),
-            deleteArticleFromRest(id)
-          ]);
-        } catch (fsErr) {
-          console.warn("[Delete Article] Firestore delete note:", fsErr);
-        }
+      // 3. Revalidate global SWR caches to sync explore feeds and user screens
+      revalidatePublishedArticles('admin_article_deleted').catch(() => {});
+
+      if (result.success) {
+        showToast(`Article "${artTitle}" définitivement supprimé de la base de données et du stockage !`, "success");
+      } else {
+        showToast("Article supprimé du cache local.", "info");
       }
-      showToast("Article supprimé avec succès.");
-    } catch (error) {
-      console.error("Error deleting article", error);
-      showToast("Erreur lors de la suppression.", "error");
+    } catch (error: any) {
+      console.error("Error permanently deleting article:", error);
+      showToast(`Erreur lors de la suppression : ${error?.message || 'Erreur inconnue'}`, "error");
     }
   };
 
-  const handleDeleteAllArticles = async () => {
-    if (!window.confirm("Êtes-vous sûr de vouloir supprimer TOUS les articles ? Cette action est irréversible.")) return;
+  const handleDeleteAllArticles = () => {
+    if (articles.length === 0) {
+      showToast("Aucun article à supprimer.", "info");
+      return;
+    }
+    setArticleDeleteModalState({
+      isOpen: true,
+      type: 'all',
+      count: articles.length,
+      isDeleting: false
+    });
+  };
+
+  const executeArticleDeletion = async () => {
+    if (!articleDeleteModalState.isOpen) return;
+
+    setArticleDeleteModalState(prev => ({ ...prev, isDeleting: true }));
     try {
-      setHideMockArticles(true);
-      articles.forEach(a => {
-        if (a && a.id) {
-          addDeletedArticleId(a.id);
+      if (articleDeleteModalState.type === 'single' && articleDeleteModalState.article) {
+        const artId = articleDeleteModalState.article.id;
+        const artTitle = articleDeleteModalState.article.title || (articleDeleteModalState.article as any)?.title_fr || 'Secret';
+
+        // 1. Close modal and update UI immediately
+        setArticleDeleteModalState({ isOpen: false, type: 'single', article: null, isDeleting: false });
+        setArticles(prev => prev.filter(a => a && a.id !== artId));
+        if (selectedArticleForQuickControl?.id === artId) {
+          setSelectedArticleForQuickControl(null);
         }
-      });
-      clearAllLocalCustomArticles();
-      setArticles([]);
-      const promises = articles.map(article => {
-        if (article && article.id && !String(article.id).startsWith('default_art_')) {
-          return Promise.allSettled([
-            deleteDoc(doc(db, 'articles', article.id)),
-            deleteArticleFromRest(article.id)
-          ]).catch(err => console.warn("Firestore delete err:", err));
+
+        // 2. Perform deep multi-layer permanent deletion
+        const result = await permanentlyDeleteArticle(artId, {
+          title: artTitle,
+          notify: true,
+          lang: (language as any) || 'fr'
+        });
+
+        // 3. Revalidate global SWR caches
+        revalidatePublishedArticles('admin_article_deleted').catch(() => {});
+
+        if (result.success) {
+          showToast(`Article "${artTitle}" définitivement supprimé de la base de données et du stockage !`, "success");
+        } else {
+          showToast("Article supprimé du cache local.", "info");
         }
-        return Promise.resolve();
-      });
-      await Promise.all(promises);
-      showToast("Tous les articles ont été supprimés.");
-    } catch (error) {
-      console.error("Error deleting all articles", error);
-      showToast("Tous les articles ont été supprimés.");
+      } else if (articleDeleteModalState.type === 'bulk') {
+        const idsToDelete = [...selectedArticleIds];
+        setSelectedArticleIds([]);
+        setArticleDeleteModalState({ isOpen: false, type: 'bulk', count: 0, isDeleting: false });
+
+        setArticles(prev => prev.filter(a => a && !idsToDelete.includes(a.id)));
+
+        await permanentlyDeleteMultipleArticles(idsToDelete, {
+          notify: true,
+          lang: (language as any) || 'fr'
+        });
+
+        revalidatePublishedArticles('admin_bulk_deleted').catch(() => {});
+        showToast(`${idsToDelete.length} secret(s) définitivement supprimés de la base de données et du stockage !`, "success");
+      } else if (articleDeleteModalState.type === 'all') {
+        const articleIds = articles.map(a => a && a.id).filter(Boolean);
+        setHideMockArticles(true);
+        setArticles([]);
+        clearAllLocalCustomArticles();
+        clearArticleCaches();
+        setArticleDeleteModalState({ isOpen: false, type: 'all', count: 0, isDeleting: false });
+
+        await permanentlyDeleteMultipleArticles(articleIds, {
+          notify: true,
+          lang: (language as any) || 'fr'
+        });
+
+        revalidatePublishedArticles('admin_all_articles_deleted').catch(() => {});
+        showToast(`Tous les articles (${articleIds.length}) ont été définitivement supprimés de la base de données et du stockage.`, "success");
+      }
+    } catch (error: any) {
+      console.error("Error executing article deletion:", error);
+      showToast(`Erreur lors de la suppression : ${error?.message || 'Erreur inconnue'}`, "error");
+      setArticleDeleteModalState(prev => ({ ...prev, isDeleting: false }));
     }
   };
 
@@ -3099,22 +3171,17 @@ export const AdminDashboard: React.FC = () => {
     }
 
     if (action === 'delete') {
-      if (!window.confirm(`Êtes-vous sûr de vouloir supprimer définitivement les ${selectedArticleIds.length} articles sélectionnés ?`)) {
-        return;
-      }
+      setArticleDeleteModalState({
+        isOpen: true,
+        type: 'bulk',
+        count: selectedArticleIds.length,
+        isDeleting: false
+      });
+      return;
     }
 
     setIsBulkArticleActionRunning(true);
     try {
-      if (action === 'delete') {
-        for (const id of selectedArticleIds) {
-          await handleDeleteArticle(id);
-        }
-        setSelectedArticleIds([]);
-        showToast(`${selectedArticleIds.length} articles supprimés.`);
-        return;
-      }
-
       const updatedArticles = articles.map(art => {
         if (!selectedArticleIds.includes(art.id)) return art;
         const updated = { ...art, updatedAt: new Date().toISOString() };
@@ -7618,12 +7685,23 @@ export const AdminDashboard: React.FC = () => {
                       {/* Bulk Delete */}
                       <button
                         type="button"
-                        onClick={() => handleBulkArticleAction('delete')}
+                        onClick={() => {
+                          if (selectedArticleIds.length === 0) {
+                            showToast("Veuillez sélectionner au moins un article.", "error");
+                            return;
+                          }
+                          setArticleDeleteModalState({
+                            isOpen: true,
+                            type: 'bulk',
+                            count: selectedArticleIds.length,
+                            isDeleting: false
+                          });
+                        }}
                         disabled={isBulkArticleActionRunning}
-                        className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-xl transition-colors cursor-pointer"
+                        className="p-2 min-w-[36px] min-h-[36px] flex items-center justify-center text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-xl transition-colors cursor-pointer"
                         title="Supprimer la sélection"
                       >
-                        <Trash2 size={15} />
+                        <Trash2 size={16} />
                       </button>
 
                       {/* Deselect All */}
@@ -7803,15 +7881,19 @@ export const AdminDashboard: React.FC = () => {
                               {/* Delete */}
                               <button
                                 type="button"
-                                onClick={() => {
-                                  if (window.confirm("Êtes-vous sûr de vouloir supprimer cet article ?")) {
-                                    handleDeleteArticle(art.id);
-                                  }
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setArticleDeleteModalState({
+                                    isOpen: true,
+                                    type: 'single',
+                                    article: art,
+                                    isDeleting: false
+                                  });
                                 }}
-                                className="p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl transition-colors cursor-pointer"
-                                title="Supprimer l'article"
+                                className="p-2 min-w-[36px] min-h-[36px] flex items-center justify-center text-red-500 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/40 active:scale-90 rounded-xl transition-all cursor-pointer"
+                                title="Supprimer définitivement l'article"
                               >
-                                <Trash2 size={14} />
+                                <Trash2 size={16} />
                               </button>
                             </div>
                           </div>
@@ -7988,15 +8070,19 @@ export const AdminDashboard: React.FC = () => {
                                   {/* Delete */}
                                   <button
                                     type="button"
-                                    onClick={() => {
-                                      if (window.confirm("Êtes-vous sûr de vouloir supprimer cet article ?")) {
-                                        handleDeleteArticle(art.id);
-                                      }
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setArticleDeleteModalState({
+                                        isOpen: true,
+                                        type: 'single',
+                                        article: art,
+                                        isDeleting: false
+                                      });
                                     }}
-                                    className="p-1.5 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg transition-colors cursor-pointer"
-                                    title="Supprimer l'article"
+                                    className="p-2 min-w-[36px] min-h-[36px] flex items-center justify-center text-red-600 hover:text-red-800 hover:bg-red-50 dark:hover:bg-red-950/40 active:scale-90 rounded-lg transition-all cursor-pointer"
+                                    title="Supprimer définitivement l'article"
                                   >
-                                    <Trash2 size={14} />
+                                    <Trash2 size={16} />
                                   </button>
                                 </div>
                               </td>
@@ -8305,6 +8391,17 @@ export const AdminDashboard: React.FC = () => {
             }}
           />
         )}
+
+        {/* Custom Delete Confirmation Modal (Bypasses iframe blocked window.confirm) */}
+        <ArticleDeleteConfirmationModal
+          isOpen={articleDeleteModalState.isOpen}
+          onClose={() => setArticleDeleteModalState(prev => ({ ...prev, isOpen: false }))}
+          onConfirm={executeArticleDeletion}
+          type={articleDeleteModalState.type}
+          article={articleDeleteModalState.article}
+          count={articleDeleteModalState.count}
+          isDeleting={articleDeleteModalState.isDeleting}
+        />
       </div>
     </AdminSectionCollapseContext.Provider>
   );

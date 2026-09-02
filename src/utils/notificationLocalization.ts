@@ -10,7 +10,9 @@ export type NotificationType =
   | 'customReminder'
   | 'widgetNotice'
   | 'meditationReminder'
-  | 'articleNew';
+  | 'articleNew'
+  | 'articleDeleted'
+  | 'articleBulkDeleted';
 
 export interface NotificationPayloadParams {
   planetName?: string;
@@ -224,6 +226,46 @@ export function getLocalizedNotificationText(
         body = `${body} Touchez pour ouvrir immédiatement ➔`;
       }
       return { title, body };
+    }
+
+    case 'articleDeleted': {
+      const { articleTitle = 'Article' } = params;
+      if (currentLang === 'en') {
+        return {
+          title: 'Article Permanently Deleted 🗑️',
+          body: `"${articleTitle}" was permanently erased from the database, caches, and storage.`,
+        };
+      }
+      if (currentLang === 'ha') {
+        return {
+          title: 'An Goge Makala Gaba Daya 🗑️',
+          body: `An goge "${articleTitle}" gaba daya daga rumbun bayanai da ma'ajiyar waya.`,
+        };
+      }
+      return {
+        title: 'Article Supprimé Définitivement 🗑️',
+        body: `"${articleTitle}" a été effacé avec succès de la base de données et de tous les caches.`,
+      };
+    }
+
+    case 'articleBulkDeleted': {
+      const { count = 1 } = params;
+      if (currentLang === 'en') {
+        return {
+          title: 'Articles Deleted 🗑️',
+          body: `${count} secret(s) have been permanently removed from the database and storage.`,
+        };
+      }
+      if (currentLang === 'ha') {
+        return {
+          title: 'An Goge Makaloli 🗑️',
+          body: `An goge sirruka ${count} gaba daya daga rumbun adana bayanai.`,
+        };
+      }
+      return {
+        title: 'Articles Supprimés Définitivement 🗑️',
+        body: `${count} article(s) ont été définitivement supprimés de la base de données et du stockage.`,
+      };
     }
 
     default:

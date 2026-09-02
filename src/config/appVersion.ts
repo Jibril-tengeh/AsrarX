@@ -18,6 +18,12 @@ export interface VersionRelease {
   apkDownloadUrl?: string; // Lien direct de téléchargement du fichier APK
   videoCardTheme?: VideoCardThemeId; // Modèle de style vidéo défini par l'administrateur
   disableVideoCard?: boolean; // Désactiver l'affichage de la carte vidéo animée pour cette version
+  enable3DVideoPopup?: boolean; // Activer la Pop-up 3D Vidéo centrée pour cette version
+  customVideoUrl?: string; // URL personnalisée de la vidéo (MP4, WebM, Cloud, YouTube)
+  videoPoster?: string; // Image de couverture de la vidéo
+  forceVideoModal?: boolean; // Clic forcé obligatoire (sans bouton fermer avant action)
+  videoTitle?: string; // Titre personnalisé de la vidéo
+  videoSubtitle?: string; // Sous-titre personnalisé de la vidéo
   highlights: string[];
   highlightsEn?: string[];
   highlightsHa?: string[];

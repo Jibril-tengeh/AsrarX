@@ -158,7 +158,10 @@ export async function revalidatePublishedArticles(sourceTag = 'manual'): Promise
       }
     });
 
-    fetchedItems = Array.from(combinedMap.values());
+    const deletedIds = getDeletedArticleIds();
+    fetchedItems = Array.from(combinedMap.values()).filter(
+      item => item && item.id && !deletedIds.has(item.id)
+    );
     console.log(`[SWR Revalidate] Concurrent fetch finished: ${fetchedItems.length} total articles gathered (REST: ${restItems?.length || 0}, SDK: ${sdkItems?.length || 0}).`);
 
     // Fallback: If network returned nothing, fallback to local stale cache
@@ -171,12 +174,13 @@ export async function revalidatePublishedArticles(sourceTag = 'manual'): Promise
     // 3. Strict data-level validation: filter only truly published items
     const validPublished = ArticleService.filterPublishedArticles(fetchedItems);
 
-    // Evict any non-published or draft items from public caches if returned
-    const nonPublicIds = new Set(
-      fetchedItems
+    // Evict any non-published, draft, or deleted items from public caches if returned
+    const nonPublicIds = new Set([
+      ...fetchedItems
         .filter((art: any) => art && art.id && !ArticleService.isPublished(art))
-        .map((art: any) => art.id)
-    );
+        .map((art: any) => art.id),
+      ...Array.from(deletedIds)
+    ]);
 
     if (validPublished.length > 0) {
       lastKnownCacheState = { isServingFromCache: false, lastError: null };
@@ -186,12 +190,12 @@ export async function revalidatePublishedArticles(sourceTag = 'manual'): Promise
       saveCachedArticlesList(CACHED_EXPLORE_ARTICLES_KEY, validPublished);
       await setOfflineData(CACHED_ARTICLES_LIST_KEY, validPublished);
 
-      // 5. Populate article details store in IndexedDB (and remove non-published items)
+      // 5. Populate article details store in IndexedDB (and remove non-published/deleted items)
       try {
         const existingDetails = (await getOfflineData<Record<string, any>>(CACHED_ARTICLE_DETAILS_KEY)) || {};
         const now = Date.now();
         
-        // Remove non-public articles
+        // Remove non-public or deleted articles
         if (nonPublicIds.size > 0) {
           nonPublicIds.forEach(id => {
             delete existingDetails[id];

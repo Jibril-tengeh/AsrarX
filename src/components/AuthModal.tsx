@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { useLanguage } from '../contexts/LanguageContext';
-import { X, Mail, Lock, User as UserIcon, AlertCircle, Eye, EyeOff, KeyRound, CheckCircle, CheckCircle2, Globe, Phone, Search, ExternalLink, Sparkles, ShieldAlert, Zap, Gift } from 'lucide-react';
+import { X, Mail, Lock, User as UserIcon, AlertCircle, Eye, EyeOff, KeyRound, CheckCircle, CheckCircle2, Globe, Phone, Search, ExternalLink, Sparkles, ShieldAlert, Zap, Gift, History, UserCheck, Plus, Check } from 'lucide-react';
 import { signInWithGoogle, signInWithEmail, signUpWithEmail, sendVerificationEmail, auth, db, signOut } from '../lib/firebase';
 import { doc, getDoc, updateDoc, setDoc } from 'firebase/firestore';
 import { useAuth, setLocalUserSession } from '../contexts/AuthContext';
@@ -12,6 +12,7 @@ import { sendPasswordResetEmail } from 'firebase/auth';
 import { useBackButton } from '../hooks/useBackButton';
 import { findUserByReferralCode, processReferralRegistration } from '../services/referralService';
 import { ReferralWelcomeModal } from './ReferralWelcomeModal';
+import { getSavedLoginAccounts, saveLoginAccount, removeSavedLoginAccount, clearAllSavedLoginAccounts, SavedLoginAccount } from '../utils/loginHistory';
 
 const countriesData = [
   { name: 'Afghanistan', code: '+93', flag: '🇦🇫' },
@@ -247,6 +248,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
   const [showWelcomeCelebration, setShowWelcomeCelebration] = useState(false);
   const [welcomeCelebrationData, setWelcomeCelebrationData] = useState<{ referrerName?: string; hoursAwarded?: number } | null>(null);
 
+  // Login History & Saved Accounts State
+  const [savedAccounts, setSavedAccounts] = useState<SavedLoginAccount[]>([]);
+  const [selectedAccountEmail, setSelectedAccountEmail] = useState<string>('');
+  const [showAllSavedAccounts, setShowAllSavedAccounts] = useState(false);
+
   const backdropRef = React.useRef<HTMLDivElement>(null);
   const modalContentRef = React.useRef<HTMLDivElement>(null);
 
@@ -265,20 +271,67 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
         setReferralCode(urlRef.toUpperCase());
         setIsLogin(false);
       }
-      const savedEmail = localStorage.getItem('asrarhub_saved_email');
-      const savedPassword = localStorage.getItem('asrarhub_saved_password');
-      if (savedEmail) {
-        setEmail(savedEmail);
+      
+      const accounts = getSavedLoginAccounts();
+      setSavedAccounts(accounts);
+
+      if (accounts.length > 0) {
+        const latest = accounts[0];
+        setEmail(latest.email);
+        setSelectedAccountEmail(latest.email.toLowerCase());
+        if (latest.password) {
+          setPassword(latest.password);
+        } else {
+          setPassword('');
+        }
       } else {
-        setEmail('');
-      }
-      if (savedPassword) {
-        setPassword(savedPassword);
-      } else {
-        setPassword('');
+        const savedEmail = localStorage.getItem('asrarhub_saved_email');
+        const savedPassword = localStorage.getItem('asrarhub_saved_password');
+        if (savedEmail) {
+          setEmail(savedEmail);
+          setSelectedAccountEmail(savedEmail.toLowerCase());
+        } else {
+          setEmail('');
+          setSelectedAccountEmail('');
+        }
+        if (savedPassword) {
+          setPassword(savedPassword);
+        } else {
+          setPassword('');
+        }
       }
     }
   }, [isOpen]);
+
+  const handleSelectSavedAccount = (acc: SavedLoginAccount) => {
+    setEmail(acc.email);
+    setPassword(acc.password || '');
+    setSelectedAccountEmail(acc.email.toLowerCase());
+    setError('');
+    setEmailFieldError('');
+  };
+
+  const handleRemoveSavedAccount = (e: React.MouseEvent, accEmail: string) => {
+    e.stopPropagation();
+    const updated = removeSavedLoginAccount(accEmail);
+    setSavedAccounts(updated);
+    if (selectedAccountEmail.toLowerCase() === accEmail.toLowerCase() || email.toLowerCase() === accEmail.toLowerCase()) {
+      if (updated.length > 0) {
+        handleSelectSavedAccount(updated[0]);
+      } else {
+        setEmail('');
+        setPassword('');
+        setSelectedAccountEmail('');
+      }
+    }
+  };
+
+  const handleManualAccountEntry = () => {
+    setEmail('');
+    setPassword('');
+    setSelectedAccountEmail('');
+    setError('');
+  };
 
   // Real-time debounced check of referral code
   React.useEffect(() => {
@@ -473,14 +526,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
       }
 
       if (result?.user) {
-        if (rememberMe) {
-          localStorage.setItem('asrarhub_saved_email', email);
-          localStorage.setItem('asrarhub_saved_password', password);
-        } else {
-          localStorage.removeItem('asrarhub_saved_email');
-          localStorage.removeItem('asrarhub_saved_password');
-        }
-
         let isUserAdmin = false;
         const adminEmails = ['jibriltengeh4@gmail.com', 'sbireino@gmail.com', 'tenibawwal10@gmail.com', 'jibriltengeh57@gmail.com'];
 
@@ -504,6 +549,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
             isUserAdmin = true;
           }
         }
+
+        // Save account into login history
+        saveLoginAccount({
+          email: email.trim(),
+          password: rememberMe ? password : undefined,
+          name: name || result.user.displayName || email.split('@')[0],
+          role: isUserAdmin ? 'admin' : undefined,
+          photoURL: result.user.photoURL || undefined,
+          savePassword: rememberMe
+        });
         
         if (adminOnly) {
           if (isUserAdmin) {
@@ -576,6 +631,17 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
           if (result.user.email && adminEmails.includes(result.user.email.toLowerCase())) {
             isUserAdmin = true;
           }
+        }
+
+        // Save account into login history
+        if (result.user.email) {
+          saveLoginAccount({
+            email: result.user.email,
+            name: result.user.displayName || result.user.email.split('@')[0],
+            role: isUserAdmin ? 'admin' : undefined,
+            photoURL: result.user.photoURL || undefined,
+            savePassword: false
+          });
         }
         
         if (adminOnly) {
@@ -672,9 +738,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
                   {/* Countries scrollable list */}
                   <div className="flex-1 overflow-y-auto space-y-1 pr-1 custom-scrollbar">
                     {filteredCountries.length > 0 ? (
-                      filteredCountries.map((c) => (
+                      filteredCountries.map((c, cIdx) => (
                         <button
-                          key={c.name}
+                          key={`auth-country-${c.code}-${c.name}-${cIdx}`}
                           type="button"
                           onClick={() => {
                             setCountry(c.name);
@@ -904,6 +970,126 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
                       </div>
                     )}
 
+                    {/* Saved Accounts / Login History Quick Switcher */}
+                    {isLogin && savedAccounts.length > 0 && (
+                      <div className="mb-2 p-3 bg-gradient-to-br from-emerald-50/80 via-slate-50 to-emerald-50/50 dark:from-emerald-950/30 dark:via-gray-800/80 dark:to-emerald-950/20 rounded-2xl border border-emerald-200/70 dark:border-emerald-800/50 shadow-sm space-y-2.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
+                            <History size={14} className="text-emerald-600 dark:text-emerald-400" />
+                            <span>{t('auth.savedAccounts', 'Comptes mémorisés / Connexion rapide')}</span>
+                          </span>
+                          {savedAccounts.length > 2 && (
+                            <button
+                              type="button"
+                              onClick={() => setShowAllSavedAccounts(!showAllSavedAccounts)}
+                              className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
+                            >
+                              {showAllSavedAccounts ? t('common.showLess', 'Voir moins') : `+${savedAccounts.length - 2} ${t('common.more', 'autres')}`}
+                            </button>
+                          )}
+                        </div>
+
+                        <div className="space-y-1.5">
+                          {(showAllSavedAccounts ? savedAccounts : savedAccounts.slice(0, 2)).map((acc, accIdx) => {
+                            const isSelected = selectedAccountEmail.toLowerCase() === acc.email.toLowerCase() && email.toLowerCase() === acc.email.toLowerCase();
+                            return (
+                              <div
+                                key={`saved-acc-${acc.id || acc.email}-${accIdx}`}
+                                onClick={() => handleSelectSavedAccount(acc)}
+                                className={`group flex items-center justify-between p-2 rounded-xl border transition-all cursor-pointer ${
+                                  isSelected
+                                    ? 'bg-white dark:bg-gray-800 border-emerald-500 shadow-sm ring-2 ring-emerald-500/25'
+                                    : 'bg-white/80 dark:bg-gray-800/60 border-gray-200/80 dark:border-gray-700 hover:bg-white dark:hover:bg-gray-800 hover:border-emerald-300'
+                                }`}
+                              >
+                                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                                  <div
+                                    className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 shadow-sm ${
+                                      acc.avatarColor || 'bg-emerald-600 text-white'
+                                    }`}
+                                  >
+                                    {(acc.name || acc.email).charAt(0).toUpperCase()}
+                                  </div>
+
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-1.5">
+                                      <p className="text-xs font-bold text-gray-900 dark:text-white truncate">
+                                        {acc.name || acc.email.split('@')[0]}
+                                      </p>
+                                      {acc.role === 'admin' && (
+                                        <span className="px-1.5 py-0.2 text-[9px] font-extrabold uppercase bg-amber-500/20 text-amber-600 dark:text-amber-300 rounded">
+                                          Admin
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate">
+                                      {acc.email}
+                                    </p>
+                                  </div>
+
+                                  {acc.password ? (
+                                    <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300/60 dark:border-emerald-700/60 flex items-center gap-1">
+                                      <KeyRound size={11} className="text-emerald-600" />
+                                      <span className="hidden sm:inline">{t('auth.autoFilled', '1-clic')}</span>
+                                    </span>
+                                  ) : (
+                                    <span className="shrink-0 text-[10px] text-gray-400">
+                                      {t('auth.emailOnly', 'Email seul')}
+                                    </span>
+                                  )}
+                                </div>
+
+                                <div className="flex items-center gap-1 ml-2 shrink-0">
+                                  {isSelected && (
+                                    <span className="w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] shadow-sm">
+                                      <Check size={12} />
+                                    </span>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={(e) => handleRemoveSavedAccount(e, acc.email)}
+                                    title={t('auth.removeSavedAccount', 'Oublier ce compte')}
+                                    className="p-1 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors opacity-60 group-hover:opacity-100 cursor-pointer"
+                                  >
+                                    <X size={14} />
+                                  </button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        <div className="pt-1.5 border-t border-emerald-100 dark:border-emerald-900/40 flex items-center justify-between text-[11px]">
+                          <button
+                            type="button"
+                            onClick={handleManualAccountEntry}
+                            className={`flex items-center gap-1 font-semibold transition-colors cursor-pointer ${
+                              !selectedAccountEmail || (email === '' && password === '')
+                                ? 'text-emerald-600 dark:text-emerald-400 underline'
+                                : 'text-gray-500 dark:text-gray-400 hover:text-emerald-600 dark:hover:text-emerald-400'
+                            }`}
+                          >
+                            <Plus size={13} />
+                            <span>{t('auth.useAnotherAccount', 'Entrer un autre compte')}</span>
+                          </button>
+
+                          {savedAccounts.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                clearAllSavedLoginAccounts();
+                                setSavedAccounts([]);
+                                handleManualAccountEntry();
+                              }}
+                              className="text-gray-400 hover:text-red-500 dark:hover:text-red-400 transition-colors cursor-pointer"
+                            >
+                              {t('auth.clearHistory', 'Effacer historique')}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
                     {!isLogin && (
                       <>
                         <div>
@@ -1001,8 +1187,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
                           type="email"
                           value={email}
                           onChange={(e) => {
-                            setEmail(e.target.value);
+                            const val = e.target.value;
+                            setEmail(val);
+                            setSelectedAccountEmail(val.toLowerCase());
                             if (emailFieldError) setEmailFieldError('');
+                            
+                            // Check if typed email matches a saved account and autofill password
+                            const match = savedAccounts.find(a => a.email.toLowerCase() === val.trim().toLowerCase());
+                            if (match?.password) {
+                              setPassword(match.password);
+                            }
                           }}
                           required
                           className={`w-full pl-10 pr-4 py-2.5 bg-gray-50 dark:bg-gray-800 border ${
@@ -1013,6 +1207,25 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
                           placeholder={!isLogin ? 'exemple@gmail.com' : t('auth.emailPlaceholder', 'votre@email.com')}
                         />
                       </div>
+                      {/* Saved Accounts quick chips */}
+                      {isLogin && savedAccounts.length > 0 && !savedAccounts.some(a => a.email.toLowerCase() === email.toLowerCase()) && (
+                        <div className="flex flex-wrap gap-1.5 mt-2">
+                          <span className="text-[11px] text-gray-400 dark:text-gray-500 flex items-center gap-1">
+                            <History size={12} /> Suggestions :
+                          </span>
+                          {savedAccounts.slice(0, 3).map((acc, aIdx) => (
+                            <button
+                              key={`quick-chip-${acc.email}-${aIdx}`}
+                              type="button"
+                              onClick={() => handleSelectSavedAccount(acc)}
+                              className="text-[11px] px-2 py-0.5 rounded-full bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/50 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200/80 dark:border-emerald-800/60 font-medium transition-colors cursor-pointer flex items-center gap-1"
+                            >
+                              <span>{acc.name || acc.email.split('@')[0]}</span>
+                              {acc.password && <KeyRound size={10} className="text-emerald-600 dark:text-emerald-400" />}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                       {!isLogin && !emailFieldError && (
                         <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">
                           {t('auth.gmailHint', 'Seules les adresses @gmail.com sont acceptées pour créer un compte.')}
@@ -1106,7 +1319,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, adminOnly
                           onChange={(e) => setRememberMe(e.target.checked)}
                           className="rounded border-gray-300 dark:border-gray-700 text-emerald-600 focus:ring-emerald-500 mr-2 h-4 w-4 bg-gray-50 dark:bg-gray-800"
                         />
-                        {t('auth.rememberMe', 'Se souvenir de moi')}
+                        <span className="text-xs sm:text-sm font-medium">
+                          {t('auth.rememberMeAndPass', 'Se souvenir de moi & du mot de passe')}
+                        </span>
                       </label>
 
                       {isLogin && (

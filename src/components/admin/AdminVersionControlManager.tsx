@@ -71,6 +71,7 @@ import { appVersionService } from '../../services/appVersionService';
 import { APP_VERSION_CONFIG, VersionRelease, getLocalizedRelease } from '../../config/appVersion';
 import { VIDEO_CARD_PRESETS, getPresetById, VideoCardThemeId } from '../../types/updateCards';
 import { UpdateVideoCard } from '../videoCards/UpdateVideoCard';
+import { Version3DVideoNotificationModal } from '../videoCards/Version3DVideoNotificationModal';
 
 export const AdminVersionControlManager: React.FC = () => {
   const [vcsState, setVcsState] = useState<VersionControlState>(versionControlService.getState());
@@ -82,6 +83,7 @@ export const AdminVersionControlManager: React.FC = () => {
   const [releaseSearchQuery, setReleaseSearchQuery] = useState<string>('');
   const [releaseStatusFilter, setReleaseStatusFilter] = useState<'all' | 'active' | 'disabled' | 'major' | 'minor' | 'patch'>('all');
   const [previewCardLangs, setPreviewCardLangs] = useState<Record<string, 'fr' | 'en' | 'ha'>>({});
+  const [preview3DVideoRelease, setPreview3DVideoRelease] = useState<VersionRelease | null>(null);
   
   // App Version Editor & Creator Modals
   const [editingAppRelease, setEditingAppRelease] = useState<VersionRelease | null>(null);
@@ -141,6 +143,12 @@ export const AdminVersionControlManager: React.FC = () => {
     disabled: boolean;
     forceUpdate: boolean;
     disableVideoCard: boolean;
+    enable3DVideoPopup?: boolean;
+    customVideoUrl?: string;
+    videoPoster?: string;
+    forceVideoModal?: boolean;
+    videoTitle?: string;
+    videoSubtitle?: string;
     minSupportedVersionCode: number;
     downloadUrl: string;
     apkDownloadUrl: string;
@@ -161,7 +169,13 @@ export const AdminVersionControlManager: React.FC = () => {
     isCurrent: true,
     disabled: false,
     forceUpdate: false,
-    disableVideoCard: true, // Désactivée par défaut
+    disableVideoCard: false,
+    enable3DVideoPopup: true,
+    customVideoUrl: '',
+    videoPoster: '',
+    forceVideoModal: false,
+    videoTitle: '',
+    videoSubtitle: '',
     minSupportedVersionCode: 1,
     downloadUrl: '',
     apkDownloadUrl: '',
@@ -475,10 +489,24 @@ export const AdminVersionControlManager: React.FC = () => {
     try {
       await appVersionService.toggleVideoCardDisabled(rel.version, newDisabledState);
       showFeedback(
-        `Carte vidéo pour v${rel.version} ${newDisabledState ? '🚫 désactivée (affichage standard sans vidéo)' : '🎥 activée (carte vidéo animée active)'}.`
+        `Pop-up 3D Vidéo pour v${rel.version} ${newDisabledState ? '🚫 désactivée (affichage standard discret)' : '🎬 activée (Pop-up 3D centrée avec vidéo active)'}.`
       );
     } catch (err: any) {
       showFeedback(err.message || 'Erreur lors du changement de statut vidéo.', true);
+    }
+  };
+
+  // 1c. Quick Toggle 3D Video Popup
+  const handleToggle3DVideoPopup = async (rel: VersionRelease) => {
+    const isCurrentlyActive = rel.enable3DVideoPopup !== false && !rel.disableVideoCard;
+    const newEnabledState = !isCurrentlyActive;
+    try {
+      await appVersionService.toggle3DVideoPopup(rel.version, newEnabledState);
+      showFeedback(
+        `Pop-up 3D Vidéo v${rel.version} : ${newEnabledState ? '🎬 Activée (Les utilisateurs recevront la pop-up 3D vidéo centrée)' : '🚫 Désactivée (Bannière discrète standard)'}.`
+      );
+    } catch (err: any) {
+      showFeedback(err.message || 'Erreur lors du changement de statut de la Pop-up 3D Vidéo.', true);
     }
   };
 
@@ -509,6 +537,12 @@ export const AdminVersionControlManager: React.FC = () => {
     setEditingAppRelease({
       ...rel,
       disableVideoCard: !!rel.disableVideoCard,
+      enable3DVideoPopup: rel.enable3DVideoPopup !== undefined ? rel.enable3DVideoPopup : true,
+      customVideoUrl: rel.customVideoUrl || '',
+      videoPoster: rel.videoPoster || '',
+      forceVideoModal: !!rel.forceVideoModal,
+      videoTitle: rel.videoTitle || '',
+      videoSubtitle: rel.videoSubtitle || '',
       videoCardTheme: rel.videoCardTheme || 'cyber-emerald',
       highlights: [...(rel.highlights || [])],
       highlightsEn: [...(rel.highlightsEn || [])],
@@ -1697,25 +1731,35 @@ export const AdminVersionControlManager: React.FC = () => {
 
                         {/* Status Toggle Switch Controls */}
                         <div className="flex flex-wrap items-center gap-2">
-                          {/* Video Card Toggle Button */}
+                          {/* 3D Video Pop-up Modal Toggle Button */}
                           <button
-                            onClick={() => handleToggleVideoCardAppVersion(rel)}
-                            title={rel.disableVideoCard ? 'Cliquer pour réactiver la carte vidéo animée' : 'Cliquer pour désactiver la carte vidéo pour cette version'}
-                            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all border shadow-sm ${
-                              rel.disableVideoCard
-                                ? 'bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/40 dark:hover:bg-amber-900/50 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700'
-                                : 'bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/40 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 border-purple-300 dark:border-purple-700'
+                            type="button"
+                            onClick={() => handleToggle3DVideoPopup(rel)}
+                            title={
+                              rel.enable3DVideoPopup !== false && !rel.disableVideoCard
+                                ? 'Cliquer pour désactiver la Pop-up 3D Vidéo (bannière discrète)'
+                                : 'Cliquer pour activer la Pop-up 3D Vidéo centrée'
+                            }
+                            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all border shadow-sm cursor-pointer ${
+                              rel.enable3DVideoPopup !== false && !rel.disableVideoCard
+                                ? 'bg-purple-600/15 hover:bg-purple-600/25 text-purple-700 dark:text-purple-300 border-purple-400/40 ring-1 ring-purple-500/20'
+                                : 'bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-750 text-gray-500 dark:text-gray-400 border-gray-200 dark:border-gray-700'
                             }`}
                           >
-                            <Film size={15} className={rel.disableVideoCard ? 'text-amber-500' : 'text-purple-500'} />
-                            <span>{rel.disableVideoCard ? 'Carte Vidéo : Désactivée' : 'Carte Vidéo : Active'}</span>
+                            <Film size={15} className={rel.enable3DVideoPopup !== false && !rel.disableVideoCard ? 'text-purple-500 animate-pulse' : 'text-gray-400'} />
+                            <span>
+                              {rel.enable3DVideoPopup !== false && !rel.disableVideoCard 
+                                ? 'Pop-up 3D Vidéo : Active 🟢' 
+                                : 'Pop-up 3D Vidéo : Désactivée 🚫'}
+                            </span>
                           </button>
 
                           {/* Version Disabled Toggle Button */}
                           <button
+                            type="button"
                             onClick={() => handleToggleDisableAppVersion(rel)}
                             title={rel.disabled ? 'Cliquer pour activer cette version' : 'Cliquer pour désactiver et masquer cette version'}
-                            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all border shadow-sm ${
+                            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all border shadow-sm cursor-pointer ${
                               rel.disabled
                                 ? 'bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-900/50 text-red-700 dark:text-red-300 border-red-300 dark:border-red-700'
                                 : 'bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:hover:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700'
@@ -1789,20 +1833,33 @@ export const AdminVersionControlManager: React.FC = () => {
 
                       {/* Action Buttons Footer */}
                       <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 flex flex-wrap items-center justify-between gap-3">
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                           <button
+                            type="button"
                             onClick={() => handleOpenEditModal(rel)}
-                            className="flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs sm:text-sm px-4 py-2 rounded-xl transition-all shadow-sm active:scale-95"
+                            className="flex items-center gap-2 bg-purple-600 hover:bg-purple-500 text-white font-bold text-xs sm:text-sm px-4 py-2 rounded-xl transition-all shadow-sm active:scale-95 cursor-pointer"
                           >
                             <Edit2 size={15} />
-                            <span>Éditer Fonctionnalités</span>
+                            <span>Éditer Configuration & Vidéo</span>
+                          </button>
+
+                          {/* Interactive 3D Video Modal Live Test */}
+                          <button
+                            type="button"
+                            onClick={() => setPreview3DVideoRelease(rel)}
+                            className="flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs sm:text-sm px-3.5 py-2 rounded-xl transition-all shadow-sm active:scale-95 cursor-pointer"
+                            title="Ouvrir la pop-up 3D vidéo réelle pour tester le rendu utilisateur"
+                          >
+                            <Play size={14} className="fill-white" />
+                            <span>👁️ Tester Pop-up 3D Vidéo</span>
                           </button>
 
                           {!rel.isCurrent && (
                             <button
+                              type="button"
                               onClick={() => handleSetCurrentAppVersion(rel)}
                               disabled={isSavingAppRelease}
-                              className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-650 text-gray-800 dark:text-gray-200 font-bold text-xs sm:text-sm px-4 py-2 rounded-xl transition-all active:scale-95"
+                              className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-650 text-gray-800 dark:text-gray-200 font-bold text-xs sm:text-sm px-4 py-2 rounded-xl transition-all active:scale-95 cursor-pointer"
                             >
                               <Star size={15} className="text-amber-500" />
                               <span>Définir comme Version Actuelle</span>
@@ -2612,70 +2669,170 @@ export const AdminVersionControlManager: React.FC = () => {
                   </div>
                 )}
 
-                {/* Video Card Theme Selector & Disable Toggle */}
-                <div className="bg-gray-100/70 dark:bg-gray-800/80 p-4 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-4">
-                  {/* Disable Video Card Toggle */}
-                  <label className="flex items-center justify-between gap-3 p-3 rounded-xl bg-white dark:bg-gray-750 border border-gray-200 dark:border-gray-650 cursor-pointer shadow-sm">
+                {/* 3D Video Notification & Pop-up Configuration */}
+                <div className="bg-gradient-to-br from-purple-900/10 via-gray-100/70 to-emerald-900/10 dark:from-purple-950/30 dark:via-gray-800/80 dark:to-emerald-950/30 p-5 rounded-2xl border border-purple-300/40 dark:border-purple-700/40 space-y-4">
+                  <div className="flex items-center justify-between border-b border-purple-200/50 dark:border-purple-800/50 pb-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-purple-600 flex items-center justify-center text-white shadow-md">
+                        <Film size={16} />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-black text-gray-900 dark:text-white flex items-center gap-2">
+                          <span>Configuration de la Pop-up 3D Vidéo Professionnelle</span>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-purple-500/20 text-purple-600 dark:text-purple-300 border border-purple-500/30">
+                            3D CINEMA
+                          </span>
+                        </h4>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Pop-up centrée au milieu de l'écran avec vidéo pro, effets 3D et boutons d'action forcés.
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Test Preview Button */}
+                    <button
+                      type="button"
+                      onClick={() => setPreview3DVideoRelease(editingAppRelease)}
+                      className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-bold shadow-md transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer shrink-0"
+                      title="Tester l'aperçu de la pop-up 3D vidéo en direct"
+                    >
+                      <Play size={12} className="fill-white" />
+                      <span>Tester l'Aperçu 3D</span>
+                    </button>
+                  </div>
+
+                  {/* 1. Enable / Disable 3D Video Popup */}
+                  <label className="flex items-center justify-between gap-3 p-3.5 rounded-xl bg-white dark:bg-gray-750 border border-purple-200 dark:border-purple-800/50 cursor-pointer shadow-sm">
                     <div>
                       <span className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
-                        <Film size={15} className={editingAppRelease.disableVideoCard ? 'text-amber-500' : 'text-purple-500'} />
-                        <span>Désactiver la carte vidéo animée pour cette version</span>
+                        <Sparkles size={15} className={editingAppRelease.enable3DVideoPopup !== false && !editingAppRelease.disableVideoCard ? 'text-purple-500' : 'text-gray-400'} />
+                        <span>Activer la Pop-up 3D Vidéo pour cette version</span>
                       </span>
                       <span className="text-[11px] text-gray-500 dark:text-gray-400 block mt-0.5">
-                        {editingAppRelease.disableVideoCard 
-                          ? '🚫 La carte vidéo est désactivée : l\'utilisateur recevra un affichage standard sans animations vidéo.'
-                          : '🎥 La carte vidéo est active : l\'utilisateur verra le modèle vidéo sélectionné ci-dessous.'}
+                        {editingAppRelease.enable3DVideoPopup !== false && !editingAppRelease.disableVideoCard 
+                          ? '🟢 Active : L\'utilisateur verra la magnifique pop-up 3D vidéo centrée au milieu de son écran.'
+                          : '🚫 Désactivée : L\'utilisateur verra une simple bannière discrète en haut sans vidéo.'}
                       </span>
                     </div>
                     <input
                       type="checkbox"
-                      checked={!!editingAppRelease.disableVideoCard}
-                      onChange={(e) => setEditingAppRelease({ ...editingAppRelease, disableVideoCard: e.target.checked })}
+                      checked={editingAppRelease.enable3DVideoPopup !== false && !editingAppRelease.disableVideoCard}
+                      onChange={(e) => setEditingAppRelease({ 
+                        ...editingAppRelease, 
+                        enable3DVideoPopup: e.target.checked,
+                        disableVideoCard: !e.target.checked
+                      })}
                       className="w-5 h-5 rounded text-purple-600 focus:ring-purple-500 cursor-pointer shrink-0"
                     />
                   </label>
 
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <Film size={16} className="text-purple-500" />
-                      <span className="font-bold text-gray-800 dark:text-gray-200">
-                        Style Vidéo de Mise à Jour (Carte Unique Utilisateur)
+                  {/* 2. Force Click Modal Toggle */}
+                  <label className="flex items-center justify-between gap-3 p-3.5 rounded-xl bg-white dark:bg-gray-750 border border-amber-200 dark:border-amber-800/50 cursor-pointer shadow-sm">
+                    <div>
+                      <span className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                        <ShieldAlert size={15} className={editingAppRelease.forceVideoModal ? 'text-amber-500' : 'text-gray-400'} />
+                        <span>Mode Forcé : Interaction obligatoire pour les utilisateurs</span>
+                      </span>
+                      <span className="text-[11px] text-gray-500 dark:text-gray-400 block mt-0.5">
+                        {editingAppRelease.forceVideoModal
+                          ? '⚡ L\'utilisateur est obligé de cliquer sur l\'action (bouton de fermeture masqué).'
+                          : 'L\'utilisateur peut fermer la pop-up ou cliquer sur l\'action.'}
                       </span>
                     </div>
-                    <span className="text-[11px] text-purple-600 dark:text-purple-400 font-bold">
-                      {getPresetById(editingAppRelease.videoCardTheme || 'cyber-emerald').titleFr}
-                    </span>
+                    <input
+                      type="checkbox"
+                      checked={!!editingAppRelease.forceVideoModal}
+                      onChange={(e) => setEditingAppRelease({ ...editingAppRelease, forceVideoModal: e.target.checked })}
+                      className="w-5 h-5 rounded text-amber-600 focus:ring-amber-500 cursor-pointer shrink-0"
+                    />
+                  </label>
+
+                  {/* 3. Custom Video Stream URL */}
+                  <div className="space-y-1.5">
+                    <label className="block text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
+                        <Video size={14} className="text-purple-500" />
+                        <span>URL de la Vidéo Professionnelle (MP4, WebM, Cloud Storage, ou lien YouTube)</span>
+                      </span>
+                      <span className="text-[10px] text-gray-400 font-normal">Optionnel (utilise la vidéo du thème par défaut si vide)</span>
+                    </label>
+                    <input
+                      type="url"
+                      value={editingAppRelease.customVideoUrl || ''}
+                      onChange={e => setEditingAppRelease({ ...editingAppRelease, customVideoUrl: e.target.value })}
+                      placeholder="https://votre-domaine.com/video-demo.mp4 ou https://youtu.be/..."
+                      className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-xs font-mono text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-purple-500"
+                    />
                   </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Sélectionnez le modèle visuel et vidéo unique qui sera affiché à l'utilisateur pour cette version.
-                  </p>
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-1">
-                    {VIDEO_CARD_PRESETS.map((p) => {
-                      const isSelected = (editingAppRelease.videoCardTheme || 'cyber-emerald') === p.id;
-                      return (
-                        <button
-                          key={p.id}
-                          type="button"
-                          onClick={() => setEditingAppRelease({ ...editingAppRelease, videoCardTheme: p.id })}
-                          className={`p-2.5 rounded-xl border text-left transition-all flex flex-col gap-1 relative overflow-hidden cursor-pointer ${
-                            isSelected
-                              ? 'border-purple-500 bg-purple-50 dark:bg-purple-950/40 ring-2 ring-purple-500/30'
-                              : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between w-full">
-                            <span className="text-[10px] font-mono font-bold text-gray-400">#{p.index}</span>
-                            {isSelected && <Check size={12} className="text-purple-600 dark:text-purple-400 font-bold" />}
-                          </div>
-                          <span className="text-xs font-bold text-gray-900 dark:text-gray-100 truncate w-full">
-                            {p.titleFr.split(' ')[0]} {p.titleFr.split(' ')[1] || ''}
-                          </span>
-                          <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate w-full">
-                            {p.badgeFr}
-                          </span>
-                        </button>
-                      );
-                    })}
+
+                  {/* 4. Custom Titles for Video Pop-up */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 mb-1">
+                        Titre personnalisé de l'en-tête vidéo
+                      </label>
+                      <input
+                        type="text"
+                        value={editingAppRelease.videoTitle || ''}
+                        onChange={e => setEditingAppRelease({ ...editingAppRelease, videoTitle: e.target.value })}
+                        placeholder="Ex: NOUVELLE VERSION 3D DISPONIBLE"
+                        className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-xs text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-purple-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 mb-1">
+                        Sous-titre / Message d'accroche vidéo
+                      </label>
+                      <input
+                        type="text"
+                        value={editingAppRelease.videoSubtitle || ''}
+                        onChange={e => setEditingAppRelease({ ...editingAppRelease, videoSubtitle: e.target.value })}
+                        placeholder="Ex: Fluidité 120Hz et nouvelles fonctionnalités exclusives !"
+                        className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-2 text-xs text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-purple-500"
+                      />
+                    </div>
+                  </div>
+
+                  {/* 5. Theme and Holographic Style Picker */}
+                  <div className="pt-2">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
+                        <Sparkles size={14} className="text-purple-500" />
+                        <span>Thème Visuel 3D & Hologramme ({VIDEO_CARD_PRESETS.length} modèles disponibles)</span>
+                      </span>
+                      <span className="text-[11px] text-purple-600 dark:text-purple-400 font-black">
+                        {getPresetById(editingAppRelease.videoCardTheme || 'cyber-emerald').titleFr}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+                      {VIDEO_CARD_PRESETS.map((p) => {
+                        const isSelected = (editingAppRelease.videoCardTheme || 'cyber-emerald') === p.id;
+                        return (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => setEditingAppRelease({ ...editingAppRelease, videoCardTheme: p.id })}
+                            className={`p-2.5 rounded-xl border text-left transition-all flex flex-col gap-1 relative overflow-hidden cursor-pointer ${
+                              isSelected
+                                ? 'border-purple-500 bg-purple-50 dark:bg-purple-950/40 ring-2 ring-purple-500/30 shadow-md'
+                                : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between w-full">
+                              <span className="text-[10px] font-mono font-bold text-gray-400">#{p.index}</span>
+                              {isSelected && <Check size={12} className="text-purple-600 dark:text-purple-400 font-bold" />}
+                            </div>
+                            <span className="text-xs font-bold text-gray-900 dark:text-gray-100 truncate w-full">
+                              {p.titleFr.split(' ')[0]} {p.titleFr.split(' ')[1] || ''}
+                            </span>
+                            <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate w-full">
+                              {p.badgeFr}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -3306,62 +3463,114 @@ export const AdminVersionControlManager: React.FC = () => {
                   />
                 </label>
 
-                {/* Video Card Toggle (DISABLED BY DEFAULT AS REQUESTED) */}
-                <label className="flex items-center justify-between p-3 rounded-2xl bg-gray-50 dark:bg-gray-750 border border-gray-200 dark:border-gray-700 cursor-pointer">
-                  <div className="pr-3">
-                    <span className="font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
-                      <Film size={15} className={!newAppReleaseForm.disableVideoCard ? 'text-purple-500' : 'text-gray-400'} />
-                      <span>Activer la Carte Vidéo Animée pour cette version</span>
+                {/* 3D Video Notification Pop-up Configuration */}
+                <div className="p-4 bg-gradient-to-br from-purple-900/10 via-purple-50/50 to-emerald-900/10 dark:from-purple-950/30 dark:via-purple-900/20 dark:to-emerald-950/30 rounded-2xl border border-purple-200 dark:border-purple-800/50 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-gray-900 dark:text-white flex items-center gap-1.5 text-xs sm:text-sm">
+                      <Film size={15} className="text-purple-600 dark:text-purple-400" />
+                      <span>Pop-up 3D Vidéo Professionnelle (Centrée & Immersive)</span>
                     </span>
-                    <span className="text-[11px] text-gray-500 dark:text-gray-400 block mt-0.5">
-                      {!newAppReleaseForm.disableVideoCard 
-                        ? '🎥 Carte vidéo active : l\'utilisateur verra une présentation vidéo animée.'
-                        : '🚫 Désactivée par défaut : l\'utilisateur recevra une bannière discrète sans vidéo.'}
+                    <span className="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-purple-600/20 text-purple-700 dark:text-purple-300">
+                      3D POP-UP
                     </span>
                   </div>
-                  <input
-                    type="checkbox"
-                    checked={!newAppReleaseForm.disableVideoCard}
-                    onChange={e => setNewAppReleaseForm({ ...newAppReleaseForm, disableVideoCard: !e.target.checked })}
-                    className="w-5 h-5 rounded text-purple-600 focus:ring-purple-500 cursor-pointer shrink-0"
-                  />
-                </label>
 
-                {/* If video card is enabled by admin, show preset style picker */}
-                {!newAppReleaseForm.disableVideoCard && (
-                  <div className="p-3.5 bg-purple-50/70 dark:bg-purple-950/30 rounded-2xl border border-purple-200 dark:border-purple-800/50 space-y-2.5 animate-fadeIn">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-purple-900 dark:text-purple-200 flex items-center gap-1.5">
-                        <Film size={14} className="text-purple-600 dark:text-purple-400" />
-                        Choisir le Style Vidéo
+                  {/* Enable 3D Video Popup Toggle */}
+                  <label className="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-gray-750 border border-purple-100 dark:border-purple-900/40 cursor-pointer shadow-sm">
+                    <div className="pr-2">
+                      <span className="font-bold text-gray-900 dark:text-white text-xs flex items-center gap-1.5">
+                        <Sparkles size={14} className={newAppReleaseForm.enable3DVideoPopup !== false && !newAppReleaseForm.disableVideoCard ? 'text-purple-500' : 'text-gray-400'} />
+                        <span>Activer la Pop-up 3D Vidéo pour cette version</span>
                       </span>
-                      <span className="text-[11px] text-purple-700 dark:text-purple-300 font-bold">
-                        {getPresetById(newAppReleaseForm.videoCardTheme || 'cyber-emerald').titleFr}
+                      <span className="text-[10px] text-gray-500 dark:text-gray-400 block mt-0.5">
+                        {newAppReleaseForm.enable3DVideoPopup !== false && !newAppReleaseForm.disableVideoCard
+                          ? '🟢 Active : L\'utilisateur verra une magnifique boîte 3D centrée avec vidéo.'
+                          : '🚫 Désactivée : Affichage discret standard.'}
                       </span>
                     </div>
-
-                    <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5">
-                      {VIDEO_CARD_PRESETS.map((p) => {
-                        const isSelected = (newAppReleaseForm.videoCardTheme || 'cyber-emerald') === p.id;
-                        return (
-                          <button
-                            key={p.id}
-                            type="button"
-                            onClick={() => setNewAppReleaseForm({ ...newAppReleaseForm, videoCardTheme: p.id })}
-                            className={`p-2 rounded-xl border text-left transition-all cursor-pointer ${
-                              isSelected
-                                ? 'border-purple-500 bg-white dark:bg-gray-800 text-purple-900 dark:text-white font-bold ring-2 ring-purple-500/30'
-                                : 'border-purple-100 dark:border-purple-900/40 bg-white/60 dark:bg-gray-800/60 hover:bg-white text-gray-700 dark:text-gray-300'
-                            }`}
-                          >
-                            <span className="block text-[11px] font-bold truncate">{p.titleFr.split(' ')[0]}</span>
-                            <span className="block text-[9px] text-gray-500 dark:text-gray-400 truncate">{p.badgeFr}</span>
-                          </button>
-                        );
+                    <input
+                      type="checkbox"
+                      checked={newAppReleaseForm.enable3DVideoPopup !== false && !newAppReleaseForm.disableVideoCard}
+                      onChange={e => setNewAppReleaseForm({ 
+                        ...newAppReleaseForm, 
+                        enable3DVideoPopup: e.target.checked,
+                        disableVideoCard: !e.target.checked 
                       })}
+                      className="w-5 h-5 rounded text-purple-600 focus:ring-purple-500 cursor-pointer shrink-0"
+                    />
+                  </label>
+
+                  {/* Force User Action Toggle */}
+                  <label className="flex items-center justify-between p-3 rounded-xl bg-white dark:bg-gray-750 border border-amber-100 dark:border-amber-900/40 cursor-pointer shadow-sm">
+                    <div className="pr-2">
+                      <span className="font-bold text-amber-900 dark:text-amber-300 text-xs flex items-center gap-1.5">
+                        <ShieldAlert size={14} className={newAppReleaseForm.forceVideoModal ? 'text-amber-500' : 'text-gray-400'} />
+                        <span>Mode Forcé (Oblige l'utilisateur à interagir)</span>
+                      </span>
+                      <span className="text-[10px] text-gray-500 dark:text-gray-400 block mt-0.5">
+                        {newAppReleaseForm.forceVideoModal 
+                          ? '⚡ L\'utilisateur DOIT cliquer pour continuer.' 
+                          : 'L\'utilisateur peut fermer la boîte.'}
+                      </span>
                     </div>
+                    <input
+                      type="checkbox"
+                      checked={!!newAppReleaseForm.forceVideoModal}
+                      onChange={e => setNewAppReleaseForm({ ...newAppReleaseForm, forceVideoModal: e.target.checked })}
+                      className="w-5 h-5 rounded text-amber-600 focus:ring-amber-500 cursor-pointer shrink-0"
+                    />
+                  </label>
+
+                  {/* Custom Video URL */}
+                  <div>
+                    <label className="block text-[11px] font-bold text-gray-700 dark:text-gray-300 mb-1">
+                      URL de la Vidéo Personnalisée (Optionnel)
+                    </label>
+                    <input
+                      type="url"
+                      value={newAppReleaseForm.customVideoUrl || ''}
+                      onChange={e => setNewAppReleaseForm({ ...newAppReleaseForm, customVideoUrl: e.target.value })}
+                      placeholder="https://.../video.mp4 ou lien YouTube"
+                      className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-1.5 text-xs font-mono text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-purple-500"
+                    />
                   </div>
-                )}
+
+                  {/* If video card is enabled by admin, show preset style picker */}
+                  {newAppReleaseForm.enable3DVideoPopup !== false && !newAppReleaseForm.disableVideoCard && (
+                    <div className="pt-1 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-purple-900 dark:text-purple-200 flex items-center gap-1.5">
+                          <Film size={13} className="text-purple-600 dark:text-purple-400" />
+                          Choisir le Style Visuel 3D
+                        </span>
+                        <span className="text-[10px] text-purple-700 dark:text-purple-300 font-bold">
+                          {getPresetById(newAppReleaseForm.videoCardTheme || 'cyber-emerald').titleFr}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-5 gap-1.5">
+                        {VIDEO_CARD_PRESETS.map((p) => {
+                          const isSelected = (newAppReleaseForm.videoCardTheme || 'cyber-emerald') === p.id;
+                          return (
+                            <button
+                              key={p.id}
+                              type="button"
+                              onClick={() => setNewAppReleaseForm({ ...newAppReleaseForm, videoCardTheme: p.id })}
+                              className={`p-2 rounded-xl border text-left transition-all cursor-pointer ${
+                                isSelected
+                                  ? 'border-purple-500 bg-white dark:bg-gray-800 text-purple-900 dark:text-white font-bold ring-2 ring-purple-500/30'
+                                  : 'border-purple-100 dark:border-purple-900/40 bg-white/60 dark:bg-gray-800/60 hover:bg-white text-gray-700 dark:text-gray-300'
+                              }`}
+                            >
+                              <span className="block text-[11px] font-bold truncate">{p.titleFr.split(' ')[0]}</span>
+                              <span className="block text-[9px] text-gray-500 dark:text-gray-400 truncate">{p.badgeFr}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* 5. Advanced Options (Collapsible to keep form simple) */}
@@ -3695,6 +3904,24 @@ export const AdminVersionControlManager: React.FC = () => {
 
           </div>
         </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 3D VIDEO NOTIFICATION MODAL PREVIEW / LIVE TEST (ADMIN TOOL)              */}
+      {/* ========================================================================= */}
+      {preview3DVideoRelease && (
+        <Version3DVideoNotificationModal
+          release={preview3DVideoRelease}
+          onClose={() => setPreview3DVideoRelease(null)}
+          onExplore={() => {
+            showFeedback(`Action explorée avec succès pour la v${preview3DVideoRelease.version}.`);
+            setPreview3DVideoRelease(null);
+          }}
+          onForceDownload={() => {
+            showFeedback(`Action de téléchargement déclenchée pour la v${preview3DVideoRelease.version}.`);
+            setPreview3DVideoRelease(null);
+          }}
+        />
       )}
     </div>
   );

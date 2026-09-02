@@ -434,14 +434,14 @@ export const OfflineDashboardSection: React.FC<OfflineDashboardSectionProps> = (
               </div>
 
               <div className={viewMode === 'grid' ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" : "space-y-2"}>
-                {filteredArticles.map((article) => {
+                {filteredArticles.map((article, artIdx) => {
                   const title = article[`title_${language}`] || article.title_fr || article.title;
                   const hook = article[`hook_${language}`] || article.hook_fr || article.hook;
                   const savedDateStr = article.savedAt ? new Date(article.savedAt).toLocaleDateString(language === 'fr' ? 'fr-FR' : 'en-US') : '';
 
                   return (
                     <motion.div
-                      key={`offline-art-${article.id}`}
+                      key={article.id ? `offline-art-${article.id}-${artIdx}` : `offline-art-${artIdx}`}
                       layout
                       initial={{ opacity: 0, scale: 0.96 }}
                       animate={{ opacity: 1, scale: 1 }}
@@ -521,13 +521,13 @@ export const OfflineDashboardSection: React.FC<OfflineDashboardSectionProps> = (
               </div>
 
               <div className={viewMode === 'grid' ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3" : "space-y-2"}>
-                {filteredTools.map((tool) => {
+                {filteredTools.map((tool, toolIdx) => {
                   const title = tool[`title_${language}`] || tool.title_fr || tool.title;
                   const desc = tool[`description_${language}`] || tool.description_fr || tool.description;
 
                   return (
                     <motion.div
-                      key={`offline-tool-${tool.id}`}
+                      key={tool.id ? `offline-tool-${tool.id}-${toolIdx}` : `offline-tool-${toolIdx}`}
                       layout
                       initial={{ opacity: 0, scale: 0.96 }}
                       animate={{ opacity: 1, scale: 1 }}

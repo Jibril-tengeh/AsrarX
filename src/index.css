@@ -394,3 +394,71 @@ html.has-custom-book-text-align .book-reading-content,
 html.has-custom-book-text-align .book-reading-content p {
   text-align: var(--app-book-text-align) !important;
 }
+
+/* ==========================================================================
+   Global Image Lazy Loading & Progressive Hydration
+   ========================================================================== */
+img[data-src] {
+  opacity: 0;
+  transition: opacity 0.35s ease-in-out;
+  will-change: opacity;
+}
+
+img[data-src].lazy-loaded,
+img[data-lazy-loaded="true"] {
+  opacity: 1 !important;
+}
+
+img.lazy-fade-in {
+  animation: lazyFadeIn 0.3s ease-in-out forwards;
+}
+
+@keyframes lazyFadeIn {
+  from {
+    opacity: 0.15;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ==========================================================================
+   Battery Saver Mode: Low-Power UI & Reduced Animation Intensity
+   ========================================================================== */
+html.battery-saver .animate-spin {
+  animation-duration: 4s !important;
+}
+
+html.battery-saver .animate-pulse {
+  animation: none !important;
+  opacity: 0.85 !important;
+}
+
+html.battery-saver .animate-bounce {
+  animation: none !important;
+}
+
+html.battery-saver .animate-ping {
+  animation: none !important;
+}
+
+html.battery-saver [data-glow] {
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
+html.battery-saver .backdrop-blur-2xl,
+html.battery-saver .backdrop-blur-xl {
+  backdrop-filter: blur(4px) !important;
+  -webkit-backdrop-filter: blur(4px) !important;
+}
+
+html.reduce-motion *,
+html.reduce-motion *::before,
+html.reduce-motion *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+

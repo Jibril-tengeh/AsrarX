@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Moon, Sun, Languages, User, Users, Shield, LogOut, LogIn, Bell, BellOff, Store, ChevronDown, ChevronUp, Megaphone, X, ExternalLink, MessageCircle, Search, Inbox, MessageSquare, Vote, Radio, Maximize2, Minimize2, HardDrive, HardDriveDownload, Settings, CheckCircle2 } from 'lucide-react';
+import { Moon, Sun, Languages, User, Users, Shield, LogOut, LogIn, Bell, BellOff, Store, ChevronDown, ChevronUp, Megaphone, X, ExternalLink, MessageCircle, Search, Inbox, MessageSquare, Vote, Radio, Maximize2, Minimize2, HardDrive, HardDriveDownload, Settings, CheckCircle2, Sparkles } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useFeatures } from '../contexts/FeatureContext';
@@ -14,6 +14,7 @@ import { GlobalSearchModal } from './GlobalSearchModal';
 import { OfflineAppSaverModal } from './OfflineAppSaverModal';
 import { AsrarLogo } from './AsrarLogo';
 import { SyncStatusBadge } from './SyncStatusBadge';
+import { AuthModal } from './AuthModal';
 
 interface Notification {
   id: string;
@@ -41,6 +42,7 @@ export const Header: React.FC = () => {
   const [communityMenuOpen, setCommunityMenuOpen] = useState(false);
   const [isOfflineSaverOpen, setIsOfflineSaverOpen] = useState(false);
   const [showLoginSuccessNotification, setShowLoginSuccessNotification] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
   const prevUserRef = useRef<any>(null);
   const initialLoadTime = useRef(Date.now());
 
@@ -647,32 +649,96 @@ export const Header: React.FC = () => {
                 )}
               </motion.button>
 
+              {/* Mobile backdrop for high visibility and dismissability */}
               <AnimatePresence>
                 {userMenuOpen && (
                   <motion.div
-                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 bg-black/40 backdrop-blur-xs z-40 sm:hidden"
+                    onClick={() => setUserMenuOpen(false)}
+                  />
+                )}
+              </AnimatePresence>
+
+              <AnimatePresence>
+                {userMenuOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 12, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
-                    transition={{ duration: 0.15 }}
-                    className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-700/80 py-2 z-50 overflow-hidden text-gray-800 dark:text-gray-200"
+                    exit={{ opacity: 0, y: 12, scale: 0.95 }}
+                    transition={{ duration: 0.18, ease: 'easeOut' }}
+                    className="fixed inset-x-3 top-16 sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2.5 w-auto max-w-[340px] sm:w-76 mx-auto sm:mx-0 bg-white dark:bg-gray-800 rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-700/80 p-2 z-50 overflow-hidden text-gray-800 dark:text-gray-200"
                   >
                     {/* User info preview */}
-                    <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700/60 bg-gray-50/50 dark:bg-gray-800/50">
-                      <p className="text-sm font-bold truncate text-gray-900 dark:text-white">
-                        {user?.name || (language === 'fr' ? 'Chercheur Spirituel' : 'Spiritual Seeker')}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                        {user?.email || ''}
-                      </p>
-                      <div className="mt-2 flex items-center gap-1.5">
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300">
-                          {user?.role === 'admin' ? 'Admin' : (isPremium ? 'Membre Premium' : 'Membre')}
-                        </span>
+                    <div className="p-3.5 rounded-2xl bg-gray-50/80 dark:bg-gray-900/50 border border-gray-100/80 dark:border-gray-700/50 mb-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-10 h-10 rounded-full bg-emerald-500/15 dark:bg-emerald-500/25 flex items-center justify-center shrink-0 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 overflow-hidden">
+                            {user?.photoURL ? (
+                              <img src={user.photoURL} alt="Avatar" className="w-full h-full object-cover" />
+                            ) : (
+                              <User size={20} />
+                            )}
+                          </div>
+                          <div className="min-w-0">
+                            <p className="text-sm font-bold truncate text-gray-900 dark:text-white">
+                              {user ? (user.name || (user as any).displayName || user.email?.split('@')[0] || (language === 'fr' ? 'Chercheur Spirituel' : 'Spiritual Seeker')) : (language === 'fr' ? 'Mode Invité' : language === 'ha' ? 'Yanayin Bako' : 'Guest Mode')}
+                            </p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                              {user ? (user.email || '') : (language === 'fr' ? 'Non connecté' : language === 'ha' ? 'Ba a shiga ba' : 'Not signed in')}
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => setUserMenuOpen(false)}
+                          className="p-1 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-200/50 dark:hover:bg-gray-700/50 transition-colors sm:hidden"
+                          aria-label="Close menu"
+                        >
+                          <X size={16} />
+                        </button>
+                      </div>
+
+                      <div className="mt-2.5 flex items-center justify-between gap-2">
+                        {user ? (
+                          <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 ${
+                            user?.role === 'admin'
+                              ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300'
+                              : isPremium
+                              ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300'
+                              : 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300'
+                          }`}>
+                            {user?.role === 'admin' ? (
+                              <>
+                                <Shield size={10} />
+                                <span>Admin</span>
+                              </>
+                            ) : isPremium ? (
+                              <>
+                                <Sparkles size={10} />
+                                <span>{language === 'fr' ? 'Membre Premium' : language === 'ha' ? 'Mamba na Musamman' : 'Premium Member'}</span>
+                              </>
+                            ) : (
+                              <span>{language === 'fr' ? 'Membre' : language === 'ha' ? 'Mamba' : 'Member'}</span>
+                            )}
+                          </span>
+                        ) : (
+                          <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-gray-200/70 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
+                            {language === 'fr' ? 'Invité' : language === 'ha' ? 'Bako' : 'Guest'}
+                          </span>
+                        )}
+
+                        {!user && (
+                          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">
+                            {language === 'fr' ? 'Prêt à synchroniser' : language === 'ha' ? 'A shirye don ajiya' : 'Ready to sync'}
+                          </span>
+                        )}
                       </div>
                     </div>
 
                     {/* Quick Menu Options */}
-                    <div className="p-1.5 space-y-1">
+                    <div className="p-1 space-y-1">
                       {/* Mode Plein Écran Switch */}
                       <button
                         onClick={async () => {
@@ -776,23 +842,42 @@ export const Header: React.FC = () => {
 
                       <div className="h-px bg-gray-100 dark:bg-gray-700/60 my-1" />
 
-                      {/* Sign Out */}
-                      <button
-                        onClick={async () => {
-                          setUserMenuOpen(false);
-                          await signOut();
-                        }}
-                        className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 transition-colors"
-                      >
-                        <LogOut size={16} />
-                        <span>
-                          {language === 'fr' 
-                            ? 'Se Déconnecter' 
-                            : language === 'ha'
-                            ? 'Fita daga Asusun'
-                            : 'Sign Out'}
-                        </span>
-                      </button>
+                      {/* Auth action: Sign In when guest, Sign Out when authenticated */}
+                      {user ? (
+                        <button
+                          onClick={async () => {
+                            setUserMenuOpen(false);
+                            await signOut();
+                          }}
+                          className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 transition-colors cursor-pointer"
+                        >
+                          <LogOut size={16} />
+                          <span>
+                            {language === 'fr' 
+                              ? 'Se Déconnecter' 
+                              : language === 'ha'
+                              ? 'Fita daga Asusun'
+                              : 'Sign Out'}
+                          </span>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            setUserMenuOpen(false);
+                            setShowAuthModal(true);
+                          }}
+                          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-md hover:shadow-lg transition-all transform active:scale-95 cursor-pointer"
+                        >
+                          <LogIn size={16} />
+                          <span>
+                            {language === 'fr' 
+                              ? 'Se Connecter / S\'inscrire' 
+                              : language === 'ha'
+                              ? 'Shiga / Buɗe Asusu'
+                              : 'Sign In / Sign Up'}
+                          </span>
+                        </button>
+                      )}
                     </div>
                   </motion.div>
                 )}
@@ -928,6 +1013,9 @@ export const Header: React.FC = () => {
 
       {/* Complete Offline App Saver Modal */}
       <OfflineAppSaverModal isOpen={isOfflineSaverOpen} onClose={() => setIsOfflineSaverOpen(false)} />
+
+      {/* Authentication Modal */}
+      <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
     </>
   );
 };

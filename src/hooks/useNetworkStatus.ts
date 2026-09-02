@@ -34,29 +34,35 @@ async function probeHttpConnectivity(): Promise<boolean> {
 
 export function useNetworkStatus() {
   const [isOnline, setIsOnline] = useState<boolean>(true);
+  const [isChecking, setIsChecking] = useState<boolean>(false);
 
   const performCheck = useCallback(async (): Promise<boolean> => {
-    // 1. Check Capacitor Network plugin first if on native platform
-    let capacitorConnected = true;
-    if (Capacitor.isNativePlatform()) {
-      try {
-        const status = await Network.getStatus();
-        capacitorConnected = status.connected;
-      } catch (e) {
-        capacitorConnected = true;
+    setIsChecking(true);
+    try {
+      // 1. Check Capacitor Network plugin first if on native platform
+      let capacitorConnected = true;
+      if (Capacitor.isNativePlatform()) {
+        try {
+          const status = await Network.getStatus();
+          capacitorConnected = status.connected;
+        } catch (e) {
+          capacitorConnected = true;
+        }
       }
-    }
 
-    // 2. If Capacitor says connected or navigator says online, verify with HTTP probe if needed
-    if (capacitorConnected && (typeof navigator === 'undefined' || navigator.onLine)) {
-      setIsOnline(true);
-      return true;
-    }
+      // 2. If Capacitor says connected or navigator says online, verify with HTTP probe if needed
+      if (capacitorConnected && (typeof navigator === 'undefined' || navigator.onLine)) {
+        setIsOnline(true);
+        return true;
+      }
 
-    // 3. If either reported false, do an active HTTP probe because Android WebView often gives false negatives
-    const actuallyReachable = await probeHttpConnectivity();
-    setIsOnline(actuallyReachable);
-    return actuallyReachable;
+      // 3. If either reported false, do an active HTTP probe because Android WebView often gives false negatives
+      const actuallyReachable = await probeHttpConnectivity();
+      setIsOnline(actuallyReachable);
+      return actuallyReachable;
+    } finally {
+      setIsChecking(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -131,6 +137,7 @@ export function useNetworkStatus() {
   return {
     isOnline,
     isOffline: !isOnline,
+    isChecking,
     recheckNetwork,
   };
 }

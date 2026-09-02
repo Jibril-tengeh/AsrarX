@@ -187,9 +187,9 @@ export const AsrarQuickWidget: React.FC<AsrarQuickWidgetProps> = ({
           {searchQuery.trim() !== '' && (
             <div className="absolute top-full left-0 right-0 mt-1.5 z-20 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden p-2 max-h-60 overflow-y-auto">
               {filteredFavorites.length > 0 ? (
-                filteredFavorites.map((item) => (
+                filteredFavorites.map((item, itemIdx) => (
                   <button
-                    key={item.id}
+                    key={item.id ? `quick-fav-${item.id}-${itemIdx}` : `quick-fav-${itemIdx}`}
                     onClick={() => {
                       navigate(`/secret/${item.id}`);
                       setSearchQuery('');

@@ -8,6 +8,7 @@ import { collection, query, where, onSnapshot, setDoc, deleteDoc, doc, updateDoc
 import { getApiUrl } from '../../../lib/api';
 import { getZikrCache, setZikrCache, syncDhikrGoalOffline } from '../../../utils/zikrSyncEngine';
 import { RitualDhikrCalculator } from '../../../components/RitualDhikrCalculator';
+import { hapticDhikrCount, hapticButtonPress } from '../../../utils/haptics';
 
 interface DhikrGoal {
   id: string;
@@ -243,6 +244,7 @@ export const DailyDhikrTracker: React.FC = () => {
 
     const updated = [...goals, newGoal];
     setGoals(updated);
+    hapticButtonPress();
 
     try {
       await syncDhikrGoalOffline(goalId, { ...newGoal, userId: user?.uid });
@@ -264,6 +266,9 @@ export const DailyDhikrTracker: React.FC = () => {
     const updatedGoal = { ...targetGoal, progress: newProgress, lastUpdated: new Date().toISOString() };
     const updatedGoals = goals.map(g => g.id === id ? updatedGoal : g);
 
+    // Trigger haptic feedback for dhikr increment / goal completion
+    hapticDhikrCount(newProgress, targetGoal.target);
+
     // Optimistically update local state
     setGoals(updatedGoals);
 
@@ -283,6 +288,7 @@ export const DailyDhikrTracker: React.FC = () => {
     const updatedGoal = { ...targetGoal, progress: 0, lastUpdated: new Date().toISOString() };
     const updatedGoals = goals.map(g => g.id === id ? updatedGoal : g);
 
+    hapticButtonPress();
     setGoals(updatedGoals);
 
     try {
@@ -296,6 +302,7 @@ export const DailyDhikrTracker: React.FC = () => {
 
   const deleteGoal = async (id: string) => {
     const updated = goals.filter(g => g.id !== id);
+    hapticButtonPress();
     setGoals(updated);
 
     try {

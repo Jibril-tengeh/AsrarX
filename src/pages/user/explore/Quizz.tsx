@@ -129,7 +129,7 @@ export const Quizz: React.FC = () => {
 
                 return (
                   <button
-                    key={index}
+                    key={`quiz-opt-${currentQuestion}-${index}`}
                     onClick={() => handleOptionClick(index)}
                     disabled={isAnswered}
                     className={`w-full p-4 rounded-xl border-2 text-left font-medium transition-all flex justify-between items-start ${btnStyle}`}

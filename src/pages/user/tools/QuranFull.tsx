@@ -53,7 +53,7 @@ const highlightTranslationText = (text: string, search: string) => {
     <>
       {parts.map((part, i) => 
         part.toLowerCase() === search.toLowerCase() ? (
-          <mark key={i} className="bg-amber-100 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 px-0.5 rounded font-semibold">
+          <mark key={`trans-part-${i}`} className="bg-amber-100 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 px-0.5 rounded font-semibold">
             {part}
           </mark>
         ) : (
@@ -2847,9 +2847,9 @@ export const QuranFull: React.FC = () => {
           </div>
 
           <div className="flex overflow-x-auto hide-scrollbar bg-gray-100 dark:bg-gray-800 rounded-xl p-1 mb-6">
-            {(['surah', 'page', 'juz', 'hizb', 'rub'] as const).map(mode => (
+            {(['surah', 'page', 'juz', 'hizb', 'rub'] as const).map((mode, mIdx) => (
               <button 
-                key={mode}
+                key={`quran-viewmode-${mode}-${mIdx}`}
                 onClick={() => setViewMode(mode)}
                 className={`flex-1 min-w-[70px] px-4 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300 ${viewMode === mode ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:text-gray-300 dark:hover:text-gray-300'}`}
               >
@@ -2901,7 +2901,7 @@ export const QuranFull: React.FC = () => {
                       <div className="flex flex-col bg-white dark:bg-gray-900 rounded-none sm:rounded-2xl shadow-sm sm:border border-gray-100 dark:border-gray-800 overflow-hidden">
                         {filteredSurahs.map((surah, i) => (
                           <motion.div
-                            key={surah.number}
+                            key={`searched-surah-${surah.number}-${i}`}
                             initial={{ opacity: 0, y: 10 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: Math.min(i * 0.02, 0.2) }}
@@ -3032,7 +3032,7 @@ export const QuranFull: React.FC = () => {
                 <div className="flex flex-col bg-white dark:bg-gray-900 rounded-none sm:rounded-2xl shadow-sm sm:border border-gray-100 dark:border-gray-800 overflow-hidden">
                   {filteredSurahs.map((surah, i) => (
                     <motion.div
-                      key={surah.number}
+                      key={`main-surah-${surah.number}-${i}`}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: Math.min(i * 0.02, 0.2) }}
@@ -3211,8 +3211,8 @@ export const QuranFull: React.FC = () => {
                       title="Mode Répétition"
                     >
                       <option value={0}>Sans répétition</option>
-                      {ROQYA_REPEAT_COUNTS.filter(c => c > 0).map(c => (
-                        <option key={c} value={c}>{c} fois</option>
+                      {ROQYA_REPEAT_COUNTS.filter(c => c > 0).map((c, cIdx) => (
+                        <option key={`roqya-rep-${c}-${cIdx}`} value={c}>{c} fois</option>
                       ))}
                     </select>
                   </motion.div>

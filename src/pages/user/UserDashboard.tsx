@@ -1252,7 +1252,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
                         if (language === 'ha' && cat.name_ha) displayName = cat.name_ha;
 
                         return (
-                          <div key={cat.id ? `cat-${cat.id}` : `cat-${catIdx}`} className={`rounded-2xl border transition-all ${
+                          <div key={cat.id ? `cat-${cat.id}-${catIdx}` : `cat-${catIdx}`} className={`rounded-2xl border transition-all ${
                             isSelected 
                               ? 'border-emerald-200 dark:border-emerald-800 bg-emerald-50/10 dark:bg-emerald-900/5'
                               : 'border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30'
@@ -1309,7 +1309,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
 
                                   return (
                                     <button
-                                      key={sub.id ? `sub-${cat.id}-${sub.id}` : `sub-${catIdx}-${subIdx}`}
+                                      key={sub.id ? `sub-${cat.id}-${sub.id}-${subIdx}` : `sub-${catIdx}-${subIdx}`}
                                       onClick={() => {
                                         setSelectedSubCategory(sub.id);
                                         setIsCategoryModalOpen(false);
@@ -1781,7 +1781,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
               </button>
               {bookmarkFolders.map((folder, fIdx) => (
                 <button
-                  key={folder.id ? `folder-btn-${folder.id}` : `folder-btn-${fIdx}`}
+                  key={folder.id ? `folder-btn-${folder.id}-${fIdx}` : `folder-btn-${fIdx}`}
                   onClick={() => setActiveFolder(folder.id)}
                   className={`px-4 py-2 rounded-xl flex items-center gap-2 whitespace-nowrap transition-colors border ${
                     activeFolder === folder.id 
@@ -1863,7 +1863,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
         }`}>
         {isLoading ? (
           Array.from({ length: 6 }).map((_, idx) => (
-            <div key={idx} className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700/80 p-4 animate-pulse h-48 flex flex-col justify-between shadow-sm">
+            <div key={`dash-skeleton-${idx}`} className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700/80 p-4 animate-pulse h-48 flex flex-col justify-between shadow-sm">
               <div className="space-y-3">
                 <div className="flex justify-between items-center">
                   <div className="h-4 bg-gray-200 dark:bg-gray-750 rounded-md w-1/4"></div>
@@ -1926,7 +1926,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
                     >
                       <option value="">📁 Aucun dossier</option>
                       {bookmarkFolders.map((f, optIdx) => (
-                        <option key={f.id ? `f-opt-${f.id}` : `f-opt-${optIdx}`} value={f.id}>{f.name}</option>
+                        <option key={f.id ? `f-opt-${f.id}-${optIdx}` : `f-opt-${optIdx}`} value={f.id}>{f.name}</option>
                       ))}
                       <option value="__new__" className="text-emerald-600 dark:text-emerald-400 font-semibold">+ Nouveau dossier...</option>
                     </select>

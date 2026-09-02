@@ -205,16 +205,36 @@ export const fetchCategoriesFromRest = async (): Promise<any[]> => {
 
 /**
  * Direct HTTPS REST API deletion for an article document in Firestore.
+ * Supports passing Firebase Auth ID token to comply with security rules.
  */
-export const deleteArticleFromRest = async (id: string): Promise<boolean> => {
+export const deleteArticleFromRest = async (id: string, idToken?: string): Promise<boolean> => {
   if (!id) return false;
   try {
     const config = firebaseConfig;
     if (!config || !config.projectId || !config.apiKey) return false;
+    
+    // Acquire Firebase Auth token if not supplied
+    let authToken = idToken;
+    if (!authToken && typeof window !== 'undefined') {
+      try {
+        const { auth } = await import('./firebase');
+        if (auth && auth.currentUser) {
+          authToken = await auth.currentUser.getIdToken();
+        }
+      } catch (authErr) {}
+    }
+
+    const headers: Record<string, string> = {};
+    if (authToken) {
+      headers['Authorization'] = `Bearer ${authToken}`;
+    }
+
     const url = `https://firestore.googleapis.com/v1/projects/${config.projectId}/databases/(default)/documents/articles/${id}?key=${config.apiKey}`;
-    const res = await fetch(url, { method: 'DELETE' });
-    if (res.ok) {
-      console.log(`[Firestore REST] Article ${id} deleted successfully from Firebase Firestore via REST API.`);
+    const res = await fetch(url, { method: 'DELETE', headers });
+    
+    // 200/204 or 404 (document already deleted / does not exist) are considered successful
+    if (res.ok || res.status === 404) {
+      console.log(`[Firestore REST] Article ${id} permanently deleted or verified absent from Firestore via REST API (status: ${res.status}).`);
       return true;
     } else {
       console.warn(`[Firestore REST] Delete article ${id} REST request returned status ${res.status}`);

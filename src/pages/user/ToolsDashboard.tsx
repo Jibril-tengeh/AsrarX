@@ -588,7 +588,7 @@ export const ToolsDashboard: React.FC = () => {
                 <div className="flex gap-2 items-center">
                   {guideSteps.map((_, i) => (
                     <motion.div
-                      key={i}
+                      key={`tools-guide-step-${i}`}
                       animate={{
                         width: i === guideStep ? 24 : 8,
                         backgroundColor: i === guideStep ? "#10B981" : "#D1D5DB"
@@ -634,7 +634,7 @@ export const ToolsDashboard: React.FC = () => {
         {isLoading ? (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             {Array.from({ length: 6 }).map((_, idx) => (
-              <div key={idx} className="h-[180px] rounded-2xl bg-white dark:bg-gray-800 shadow-sm border border-gray-150 dark:border-gray-700 p-5 flex flex-col justify-between">
+              <div key={`tools-dash-skel-${idx}`} className="h-[180px] rounded-2xl bg-white dark:bg-gray-800 shadow-sm border border-gray-150 dark:border-gray-700 p-5 flex flex-col justify-between">
                 <div>
                   <div className="flex items-center gap-3 mb-4">
                     <div className="w-10 h-10 rounded-xl bg-gray-200 dark:bg-gray-700 animate-pulse shrink-0"></div>
