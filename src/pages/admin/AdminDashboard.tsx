@@ -10,7 +10,7 @@ import {
   FolderOpen, Copy, Radio, Type, Sliders, Maximize2, Activity, Terminal, RefreshCw, RotateCcw, AlertTriangle, Moon, ChevronDown, ChevronUp, Layout,
   AlignLeft, AlignCenter, AlignRight, AlignJustify, Camera, ShieldBan, Tag, Ticket, Check, ArrowLeft, Calculator,
   ArrowUp, ArrowDown, MoveVertical, Compass, Gift, AlertCircle, Share2, Edit3, Video, HardDrive,
-  GripVertical, ArrowUpDown, Move
+  GripVertical, ArrowUpDown, Move, Layers, LayoutGrid, LayoutList, Square
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 
@@ -38,7 +38,7 @@ import { normalizeEmail, normalizePhone } from '../../lib/validationUtils';
 import ReactCrop, { type Crop, type PixelCrop, centerCrop, makeAspectCrop, convertToPixelCrop } from 'react-image-crop';
 import 'react-image-crop/dist/ReactCrop.css';
 import { getApiUrl } from '../../lib/api';
-import { getArticleImageUrl } from '../../utils/articleImageUtils';
+import { getArticleImageUrl, sanitizeImageSource } from '../../utils/articleImageUtils';
 import { ThumbnailValidatorWidget } from '../../components/admin/ThumbnailValidatorWidget';
 import { pingFirestore, getNetworkLogs, clearNetworkLogs, addNetworkLog, triggerBackgroundReconnect, NetworkLog, PingResult } from '../../utils/networkLogger';
 import { DauAreaChart, ToolUsageBarChart, UserDistributionDonut } from '../../components/admin/AdminAnalyticsCharts';
@@ -90,6 +90,19 @@ import { AdminPromoVideoAnnouncementManager } from '../../components/admin/Admin
 import { AdminToolsHealthManager } from '../../components/admin/AdminToolsHealthManager';
 import { ArticleQuickControlModal } from '../../components/admin/ArticleQuickControlModal';
 import { ArticleDeleteConfirmationModal } from '../../components/admin/ArticleDeleteConfirmationModal';
+import { AdminUserDetailModal } from '../../components/admin/AdminUserDetailModal';
+import { AdminUserDeleteModal } from '../../components/admin/AdminUserDeleteModal';
+import { AdminCategoriesManager } from '../../components/admin/AdminCategoriesManager';
+import { CategoryEditModal } from '../../components/admin/CategoryEditModal';
+import { SubCategoryEditModal } from '../../components/admin/SubCategoryEditModal';
+import { 
+  DEFAULT_CATEGORIES_PRESETS,
+  getCategoryFallbackThumbnail, 
+  getCategoryFallbackHook, 
+  getSubCategoryFallbackHook,
+  normalizeCategoryId,
+  normalizeSubCategoryId
+} from '../../data/defaultCategories';
 import { PROMO_HOURS_OPTIONS, PROMO_HOURLY_OPTIONS, getPromoHourMessage, getPromoHourLabel, PromoDurationHours } from '../../utils/promoConfig';
 
 const LayoutSelector = ({ value, onChange, activeColor = 'emerald' }: { value: string, onChange: (val: string) => void, activeColor?: string }) => {
@@ -522,6 +535,8 @@ export const AdminDashboard: React.FC = () => {
   });
 
   useBackButton(() => setSelectedUserDetail(null), !!selectedUserDetail);
+  useBackButton(() => setUserToDeleteConfirm(null), !!userToDeleteConfirm);
+  useBackButton(() => setIsBatchDeleteConfirmOpen(false), isBatchDeleteConfirmOpen);
   useBackButton(() => setBlockingToolsUser(null), !!blockingToolsUser);
   useBackButton(() => setIsAddUserModalOpen(false), isAddUserModalOpen);
   useBackButton(() => setArticleDeleteModalState(prev => ({ ...prev, isOpen: false })), articleDeleteModalState.isOpen);
@@ -887,6 +902,8 @@ export const AdminDashboard: React.FC = () => {
   const [newSubCategory, setNewSubCategory] = useState({ categoryId: '', name: '', name_en: '', name_ha: '' });
   const [showQuickCategoryForm, setShowQuickCategoryForm] = useState(false);
   const [showQuickSubCategoryForm, setShowQuickSubCategoryForm] = useState(false);
+  const [isInlineCatModalOpen, setIsInlineCatModalOpen] = useState(false);
+  const [isInlineSubCatModalOpen, setIsInlineSubCatModalOpen] = useState(false);
   const [quickCat, setQuickCat] = useState({ name: '', name_en: '', name_ha: '' });
   const [quickSub, setQuickSub] = useState({ name: '', name_en: '', name_ha: '' });
 
@@ -912,6 +929,51 @@ export const AdminDashboard: React.FC = () => {
   const [selectedArticleIds, setSelectedArticleIds] = useState<string[]>([]);
   const [bulkArticleTargetCategory, setBulkArticleTargetCategory] = useState<string>('Secrets & Pratiques');
   const [isBulkArticleActionRunning, setIsBulkArticleActionRunning] = useState(false);
+
+  const handleSaveInlineCategory = async (catObj: any) => {
+    try {
+      await setDoc(doc(db, 'categories', catObj.id), catObj, { merge: true });
+      setCategories(prev => {
+        const exists = prev.some(c => c.id === catObj.id);
+        const updated = exists ? prev.map(c => c.id === catObj.id ? catObj : c) : [...prev, catObj];
+        try { localStorage.setItem('asrarhub_cached_categories', JSON.stringify(updated)); } catch (e) {}
+        return updated;
+      });
+      setNewArticle(prev => ({
+        ...prev,
+        category: catObj.name,
+        subCategory: catObj.subCategories?.[0]?.name || ''
+      }));
+      showToast("Nouvelle catégorie créée et sélectionnée pour l'article !", "success");
+      setIsInlineCatModalOpen(false);
+    } catch (err: any) {
+      showToast("Erreur: " + err.message, "error");
+    }
+  };
+
+  const handleSaveInlineSubCategory = async (subObj: any, parentCatId: string) => {
+    try {
+      const parentCat = categories.find(c => c.id === parentCatId);
+      if (!parentCat) return;
+      const existingSubs = parentCat.subCategories || [];
+      const updatedSubs = [...existingSubs.filter(s => s.id !== subObj.id), subObj];
+      await setDoc(doc(db, 'categories', parentCatId), { subCategories: updatedSubs }, { merge: true });
+      setCategories(prev => {
+        const updated = prev.map(c => c.id === parentCatId ? { ...c, subCategories: updatedSubs } : c);
+        try { localStorage.setItem('asrarhub_cached_categories', JSON.stringify(updated)); } catch (e) {}
+        return updated;
+      });
+      setNewArticle(prev => ({
+        ...prev,
+        category: parentCat.name,
+        subCategory: subObj.name
+      }));
+      showToast("Nouvelle sous-catégorie créée et sélectionnée pour l'article !", "success");
+      setIsInlineSubCatModalOpen(false);
+    } catch (err: any) {
+      showToast("Erreur: " + err.message, "error");
+    }
+  };
   
   // Crop state
   const [imgSrc, setImgSrc] = useState('');
@@ -1312,43 +1374,7 @@ export const AdminDashboard: React.FC = () => {
       });
     });
 
-    const defaultCatsList = [
-      {
-        id: 'wird',
-        name: 'Versets & Wirds',
-        name_en: 'Verses & Wirds',
-        name_ha: 'Wirdoshi & Ayoyi',
-        iconName: 'BookOpen',
-        subCategories: [
-          { id: 'wird-protection', name: 'Protection', name_en: 'Protection', name_ha: 'Kariya' },
-          { id: 'wird-guerison', name: 'Guérison', name_en: 'Healing', name_ha: 'Waraka' }
-        ],
-        createdAt: 1000
-      },
-      {
-        id: 'secret',
-        name: "Secrets d'Asrar",
-        name_en: 'Secrets of Asrar',
-        name_ha: 'Asrarai',
-        iconName: 'Sparkles',
-        subCategories: [
-          { id: 'secret-richesse', name: 'Prospérité', name_en: 'Prosperity', name_ha: 'Arziki' },
-          { id: 'secret-amour', name: 'Affection', name_en: 'Affection', name_ha: 'Soyayya' }
-        ],
-        createdAt: 1001
-      },
-      {
-        id: 'recette',
-        name: 'Recettes Spirituelles',
-        name_en: 'Spiritual Recipes',
-        name_ha: 'Hanyoyi',
-        iconName: 'Shield',
-        subCategories: [
-          { id: 'recette-sante', name: 'Santé', name_en: 'Health', name_ha: 'Lafiya' }
-        ],
-        createdAt: 1002
-      }
-    ];
+    const defaultCatsList = DEFAULT_CATEGORIES_PRESETS;
 
     const unsubscribeCategories = onSnapshot(collection(db, 'categories'), (snapshot) => {
       let deletedIds: string[] = [];
@@ -1356,7 +1382,23 @@ export const AdminDashboard: React.FC = () => {
 
       if (!snapshot.empty) {
         const list = snapshot.docs
-          .map(doc => ({ ...doc.data(), id: doc.id }))
+          .map(doc => {
+            const data = doc.data();
+            const catName = data.name || '';
+            const resolvedThumb = data.thumbnail || getCategoryFallbackThumbnail(catName);
+            const resolvedHook = data.hook || getCategoryFallbackHook(catName);
+            return {
+              ...data,
+              id: doc.id,
+              thumbnail: resolvedThumb,
+              hook: resolvedHook,
+              subCategories: (data.subCategories || []).map((s: any) => ({
+                ...s,
+                thumbnail: s.thumbnail || resolvedThumb,
+                hook: s.hook || getSubCategoryFallbackHook(s.name, catName)
+              }))
+            };
+          })
           .filter((cat: any) => !deletedIds.includes(cat.id));
         list.sort((a: any, b: any) => (a.createdAt || 0) - (b.createdAt || 0));
         setCategories(list);
@@ -1385,7 +1427,23 @@ export const AdminDashboard: React.FC = () => {
 
       fetchCategoriesFromRest().then(restCats => {
         if (Array.isArray(restCats) && restCats.length > 0) {
-          const list = restCats.filter((c: any) => !deletedIds.includes(c.id));
+          const list = restCats
+            .map((c: any) => {
+              const catName = c.name || '';
+              const resolvedThumb = c.thumbnail || getCategoryFallbackThumbnail(catName);
+              const resolvedHook = c.hook || getCategoryFallbackHook(catName);
+              return {
+                ...c,
+                thumbnail: resolvedThumb,
+                hook: resolvedHook,
+                subCategories: (c.subCategories || []).map((s: any) => ({
+                  ...s,
+                  thumbnail: s.thumbnail || resolvedThumb,
+                  hook: s.hook || getSubCategoryFallbackHook(s.name, catName)
+                }))
+              };
+            })
+            .filter((c: any) => !deletedIds.includes(c.id));
           list.sort((a: any, b: any) => (a.createdAt || 0) - (b.createdAt || 0));
           setCategories(list);
           try { localStorage.setItem('asrarhub_cached_categories', JSON.stringify(list)); } catch (e) {}
@@ -1754,30 +1812,32 @@ export const AdminDashboard: React.FC = () => {
     }
   };
 
-  const handleSaveUserDetail = async () => {
+  const handleSaveUserDetail = async (customData?: Partial<User>) => {
     if (!selectedUserDetail) return;
+    const dataToUse = customData || editUserData;
     const userRef = doc(db, 'users', selectedUserDetail.id);
-    const isPrem = (editUserData as any).subscriptionTier === 'premium' || (editUserData as any).subscriptionTier === 'pro' || (editUserData as any).isPremium === true;
-    const tier = (editUserData as any).subscriptionTier || (isPrem ? 'premium' : 'free');
-    const isBan = editUserData.isBanned !== undefined ? editUserData.isBanned : selectedUserDetail.isBanned;
+    const isPrem = (dataToUse as any).subscriptionTier === 'premium' || (dataToUse as any).subscriptionTier === 'pro' || (dataToUse as any).isPremium === true;
+    const tier = (dataToUse as any).subscriptionTier || (isPrem ? 'premium' : 'free');
+    const isBan = dataToUse.isBanned !== undefined ? dataToUse.isBanned : selectedUserDetail.isBanned;
 
     const payload = {
-      name: editUserData.name !== undefined ? editUserData.name : selectedUserDetail.name,
-      email: editUserData.email !== undefined ? editUserData.email : selectedUserDetail.email,
-      phone: editUserData.phone !== undefined ? editUserData.phone : (selectedUserDetail.phone || ''),
-      country: editUserData.country !== undefined ? editUserData.country : (selectedUserDetail.country || ''),
-      role: (editUserData as any).role || (selectedUserDetail as any).role || 'user',
+      name: dataToUse.name !== undefined ? dataToUse.name : selectedUserDetail.name,
+      email: dataToUse.email !== undefined ? dataToUse.email : selectedUserDetail.email,
+      phone: dataToUse.phone !== undefined ? dataToUse.phone : (selectedUserDetail.phone || ''),
+      country: dataToUse.country !== undefined ? dataToUse.country : (selectedUserDetail.country || ''),
+      role: (dataToUse as any).role || (selectedUserDetail as any).role || 'user',
       isBanned: isBan,
       banned: isBan,
-      isTrusted: editUserData.isTrusted !== undefined ? editUserData.isTrusted : selectedUserDetail.isTrusted,
-      mysteryToolsDisabled: editUserData.mysteryToolsDisabled !== undefined ? editUserData.mysteryToolsDisabled : selectedUserDetail.mysteryToolsDisabled,
+      isTrusted: dataToUse.isTrusted !== undefined ? dataToUse.isTrusted : selectedUserDetail.isTrusted,
+      mysteryToolsDisabled: dataToUse.mysteryToolsDisabled !== undefined ? dataToUse.mysteryToolsDisabled : selectedUserDetail.mysteryToolsDisabled,
+      allToolsDisabled: dataToUse.allToolsDisabled !== undefined ? dataToUse.allToolsDisabled : selectedUserDetail.allToolsDisabled,
       isPremium: isPrem,
       subscriptionTier: tier,
       plan: tier,
       status: isBan ? 'banned' : (isPrem ? 'premium' : 'active'),
       accountStatus: isBan ? 'banned' : (isPrem ? 'premium' : 'active'),
-      spiritualPoints: (editUserData as any).spiritualPoints !== undefined ? Number((editUserData as any).spiritualPoints) : (selectedUserDetail.spiritualPoints || 0),
-      blockedTools: editUserData.blockedTools || selectedUserDetail.blockedTools || []
+      spiritualPoints: (dataToUse as any).spiritualPoints !== undefined ? Number((dataToUse as any).spiritualPoints) : (selectedUserDetail.spiritualPoints || 0),
+      blockedTools: dataToUse.blockedTools || selectedUserDetail.blockedTools || []
     };
 
     const updatedUser = { ...selectedUserDetail, ...payload };
@@ -3955,7 +4015,9 @@ export const AdminDashboard: React.FC = () => {
 
                     <div className="flex flex-wrap items-center gap-1.5">
                       <button
-                        onClick={() => {
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
                           setSelectedUserDetail(user);
                           setEditUserData({ ...user });
                           setIsEditingUser(false);
@@ -3967,7 +4029,11 @@ export const AdminDashboard: React.FC = () => {
                         <span>Détails</span>
                       </button>
                       <button
-                        onClick={() => handleToggleUserTrusted(user.id)}
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleToggleUserTrusted(user.id);
+                        }}
                         className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
                           user.isTrusted 
                             ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400'
@@ -3978,7 +4044,11 @@ export const AdminDashboard: React.FC = () => {
                         {user.isTrusted ? '⭐ Confiance' : 'Confiance'}
                       </button>
                       <button
-                        onClick={() => handleDeleteUserAccount(user.id, user.email, user.name)}
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteUserAccount(user.id, user.email, user.name);
+                        }}
                         className="p-1.5 bg-red-50 hover:bg-red-100 text-red-600 dark:bg-red-950/30 dark:hover:bg-red-900/40 dark:text-red-400 rounded-xl text-xs transition-colors flex items-center cursor-pointer"
                         title="Supprimer définitivement cet utilisateur"
                       >
@@ -6366,6 +6436,163 @@ export const AdminDashboard: React.FC = () => {
           </div>
         </CollapsibleAdminCard>
 
+        {/* Affichage Accueil : Modèles de Catégories (3 Formats) */}
+        <CollapsibleAdminCard
+          id="feat_home_categories_grid"
+          title="Affichage Accueil : Modèles de Catégories (3 Formats)"
+          subtitle="Permet d'afficher les catégories sur la page d'accueil avec 3 modèles au choix (Grille 2 Colonnes, Grande Carte Bannière ou Liste Horizontale)."
+          icon={<FolderOpen size={22} className="text-amber-500 shrink-0" />}
+        >
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-xs font-bold text-gray-700 dark:text-gray-300 block">
+                  Activer l'Affichage Exclusif des Catégories :
+                </span>
+                <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                  {featureToggles?.home_only_categories_grid === true
+                    ? "Activé : Seules les catégories sont visibles sur la page d'accueil (selon le modèle sélectionné)."
+                    : "Désactivé : Flux standard complet d'articles affiché."}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleToggleFeature('home_only_categories_grid', !featureToggles?.home_only_categories_grid, "Affichage Accueil Catégories")}
+                className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors cursor-pointer ${
+                  featureToggles?.home_only_categories_grid === true ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
+                }`}
+              >
+                <div
+                  className={`w-4 h-4 rounded-full bg-white transition-transform ${
+                    featureToggles?.home_only_categories_grid === true ? 'translate-x-6' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* 3 Models Selector */}
+            <div className="pt-2 border-t border-gray-100 dark:border-gray-700">
+              <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">
+                Modèle d'Affichage Sélectionné (3 Modèles) :
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                {/* Mode 1 */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleToggleFeature('home_categories_layout_mode', 'grid2', "Modèle Grille 2 Cols");
+                    if (featureToggles?.home_only_categories_grid !== true) {
+                      handleToggleFeature('home_only_categories_grid', true);
+                    }
+                  }}
+                  className={`p-3 rounded-xl border-2 text-left transition-all cursor-pointer ${
+                    (featureToggles?.home_categories_layout_mode || 'grid2') === 'grid2'
+                      ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/30'
+                      : 'border-gray-200 dark:border-gray-700 hover:border-emerald-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <LayoutGrid size={16} className="text-emerald-600 dark:text-emerald-400" />
+                    <span className="text-xs font-bold text-gray-900 dark:text-white">Modèle 1 : 2 Colonnes</span>
+                  </div>
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                    Grille équilibrée à 2 colonnes avec miniatures immersives.
+                  </p>
+                </button>
+
+                {/* Mode 2 */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleToggleFeature('home_categories_layout_mode', 'banner', "Modèle Grande Carte");
+                    if (featureToggles?.home_only_categories_grid !== true) {
+                      handleToggleFeature('home_only_categories_grid', true);
+                    }
+                  }}
+                  className={`p-3 rounded-xl border-2 text-left transition-all cursor-pointer ${
+                    featureToggles?.home_categories_layout_mode === 'banner'
+                      ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/30'
+                      : 'border-gray-200 dark:border-gray-700 hover:border-emerald-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <Square size={16} className="text-amber-600 dark:text-amber-400" />
+                    <span className="text-xs font-bold text-gray-900 dark:text-white">Modèle 2 : Grande Carte</span>
+                  </div>
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                    Bannière pleine largeur avec image en haut et texte en bas (Capture 1).
+                  </p>
+                </button>
+
+                {/* Mode 3 */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleToggleFeature('home_categories_layout_mode', 'list', "Modèle Liste Horizontale");
+                    if (featureToggles?.home_only_categories_grid !== true) {
+                      handleToggleFeature('home_only_categories_grid', true);
+                    }
+                  }}
+                  className={`p-3 rounded-xl border-2 text-left transition-all cursor-pointer ${
+                    featureToggles?.home_categories_layout_mode === 'list'
+                      ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/30'
+                      : 'border-gray-200 dark:border-gray-700 hover:border-emerald-300'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <LayoutList size={16} className="text-indigo-600 dark:text-indigo-400" />
+                    <span className="text-xs font-bold text-gray-900 dark:text-white">Modèle 3 : Liste</span>
+                  </div>
+                  <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                    Carte horizontale avec vignette à gauche et texte à droite (Capture 2).
+                  </p>
+                </button>
+              </div>
+            </div>
+
+            {featureToggles?.home_only_categories_grid === true && (
+              <div className="pt-3 border-t border-gray-100 dark:border-gray-700 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-gray-750 dark:text-gray-200">Afficher le slider des outils :</span>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleFeature('home_categories_show_slider', featureToggles?.home_categories_show_slider === false ? true : false, "Slider Outils sur Accueil Catégories")}
+                    className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors cursor-pointer ${
+                      featureToggles?.home_categories_show_slider !== false ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
+                    }`}
+                  >
+                    <div className={`w-4 h-4 rounded-full bg-white transition-transform ${featureToggles?.home_categories_show_slider !== false ? 'translate-x-5' : 'translate-x-0'}`} />
+                  </button>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-600 dark:text-gray-300">Afficher les phrases d'accroche (hooks) :</span>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleFeature('home_categories_show_hooks', featureToggles?.home_categories_show_hooks === false ? true : false)}
+                    className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors ${
+                      featureToggles?.home_categories_show_hooks !== false ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
+                    }`}
+                  >
+                    <div className={`w-4 h-4 rounded-full bg-white transition-transform ${featureToggles?.home_categories_show_hooks !== false ? 'translate-x-5' : 'translate-x-0'}`} />
+                  </button>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-600 dark:text-gray-300">Afficher le nombre d'articles :</span>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleFeature('home_categories_show_counts', featureToggles?.home_categories_show_counts === false ? true : false)}
+                    className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors ${
+                      featureToggles?.home_categories_show_counts !== false ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
+                    }`}
+                  >
+                    <div className={`w-4 h-4 rounded-full bg-white transition-transform ${featureToggles?.home_categories_show_counts !== false ? 'translate-x-5' : 'translate-x-0'}`} />
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </CollapsibleAdminCard>
+
         {/* 4. Downloads & Documents */}
         <CollapsibleAdminCard
           id="feat_downloads"
@@ -7284,78 +7511,240 @@ export const AdminDashboard: React.FC = () => {
               </div>
 
               {/* Categorization & Metadata Card */}
-              <div className="p-4 bg-gray-50 dark:bg-gray-900/50 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-3.5">
-                <label className="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
-                  <FolderOpen size={15} className="text-amber-500" />
-                  <span>Catégorisation & Publication</span>
-                </label>
+              {(() => {
+                const activeSelectedCatName = newArticle.category || (categories[0]?.name || 'Secrets & Pratiques');
+                const currentCatObj = categories.find((c: any) => c.name === activeSelectedCatName || c.id === activeSelectedCatName) || categories[0];
+                const activeSelectedSubName = (newArticle as any).subCategory || '';
+                const currentSubObj = currentCatObj?.subCategories?.find((s: any) => s.name === activeSelectedSubName || s.id === activeSelectedSubName);
+                const resolvedCatThumb = currentCatObj ? (sanitizeImageSource(currentCatObj.thumbnail) || getCategoryFallbackThumbnail(currentCatObj.name)) : '';
+                const resolvedCatHook = currentCatObj ? (currentCatObj.hook || getCategoryFallbackHook(currentCatObj.name)) : '';
+                const resolvedSubThumb = currentSubObj ? (sanitizeImageSource(currentSubObj.thumbnail) || resolvedCatThumb) : '';
+                const resolvedSubHook = currentSubObj ? (currentSubObj.hook || getSubCategoryFallbackHook(currentSubObj.name, currentCatObj?.name)) : '';
 
-                {/* Category Selection */}
-                <div className="space-y-1">
-                  <span className="text-[11px] font-semibold text-gray-600 dark:text-gray-400">Catégorie Principale :</span>
-                  <select
-                    value={newArticle.category || 'Secrets & Pratiques'}
-                    onChange={(e) => setNewArticle(prev => ({ ...prev, category: e.target.value }))}
-                    className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white font-bold outline-none cursor-pointer"
-                  >
-                    <option value="Secrets & Pratiques">Secrets & Pratiques</option>
-                    <option value="Protection & Ruqyah">Protection & Ruqyah</option>
-                    <option value="Richesse & Ouverture">Richesse & Ouverture</option>
-                    <option value="Invocations & Douas">Invocations & Douas</option>
-                    <option value="Sciences Spirituelles">Sciences Spirituelles</option>
-                    <option value="Coran & Sourates">Coran & Sourates</option>
-                    {categories.map((c: any, cIdx: number) => (
-                      <option key={c.id ? `newart-cat-${c.id}-${cIdx}` : `newart-cat-${c.name || cIdx}-${cIdx}`} value={c.name}>{c.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Subcategory */}
-                <div className="space-y-1">
-                  <span className="text-[11px] font-semibold text-gray-600 dark:text-gray-400">Sous-Catégorie :</span>
-                  <input
-                    type="text"
-                    placeholder="ex: Sourate Al-Waqi'a, Verset Al-Kursi..."
-                    value={(newArticle as any).subCategory || ''}
-                    onChange={(e) => setNewArticle(prev => ({ ...prev, subCategory: e.target.value } as any))}
-                    className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2 text-xs text-gray-900 dark:text-white outline-none"
-                  />
-                </div>
-
-                {/* Publication Status & VIP Premium Toggles */}
-                <div className="pt-2 border-t border-gray-200 dark:border-gray-700 space-y-3">
-                  
-                  {/* Status */}
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="text-xs font-bold text-gray-800 dark:text-gray-200">Statut de Publication :</span>
-                      <p className="text-[10px] text-gray-400">{newArticle.status === 'Published' ? 'Visible par les utilisateurs' : 'Masqué (Brouillon)'}</p>
+                return (
+                  <div className="p-4 sm:p-5 bg-gray-50 dark:bg-gray-900/50 rounded-3xl border border-gray-200 dark:border-gray-700 space-y-4">
+                    <div className="flex items-center justify-between pb-2 border-b border-gray-200 dark:border-gray-700/80">
+                      <label className="text-xs font-black text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
+                        <FolderOpen size={16} className="text-amber-500" />
+                        <span>Catégorisation & Thématique</span>
+                      </label>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setActiveTab('categories');
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                          }}
+                          className="px-2 py-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl text-[10px] font-bold flex items-center gap-1 transition-colors cursor-pointer"
+                          title="Gérer toutes les catégories"
+                        >
+                          <Layers size={11} /> Gérer tout
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setIsInlineCatModalOpen(true)}
+                          className="px-2.5 py-1 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 rounded-xl text-[10px] font-extrabold flex items-center gap-1 transition-colors cursor-pointer shadow-2xs"
+                          title="Créer une nouvelle catégorie avec vignette et accroche"
+                        >
+                          <Plus size={12} /> + Catégorie
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setIsInlineSubCatModalOpen(true)}
+                          className="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 rounded-xl text-[10px] font-extrabold flex items-center gap-1 transition-colors cursor-pointer shadow-2xs"
+                          title="Créer une nouvelle sous-catégorie avec vignette et accroche"
+                        >
+                          <Plus size={12} /> + Sous-Cat.
+                        </button>
+                      </div>
                     </div>
-                    <select
-                      value={newArticle.status || 'Published'}
-                      onChange={(e) => setNewArticle(prev => ({ ...prev, status: e.target.value as any }))}
-                      className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-2.5 py-1.5 text-xs font-bold text-gray-900 dark:text-white outline-none cursor-pointer"
-                    >
-                      <option value="Published">Publié</option>
-                      <option value="Draft">Brouillon</option>
-                    </select>
+
+                    {/* Category Selection */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-gray-700 dark:text-gray-300">Catégorie Principale :</span>
+                        <button
+                          type="button"
+                          onClick={() => setIsInlineCatModalOpen(true)}
+                          className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 hover:underline cursor-pointer"
+                        >
+                          + Nouvelle catégorie
+                        </button>
+                      </div>
+                      <select
+                        value={newArticle.category || 'Secrets & Pratiques'}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          const found = categories.find((c: any) => c.name === val || c.id === val);
+                          setNewArticle(prev => ({
+                            ...prev,
+                            category: val,
+                            subCategory: found?.subCategories?.[0]?.name || ''
+                          }));
+                        }}
+                        className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white font-bold outline-none cursor-pointer focus:border-emerald-500"
+                      >
+                        {categories.map((c: any, cIdx: number) => (
+                          <option key={c.id ? `newart-cat-${c.id}-${cIdx}` : `newart-cat-${c.name || cIdx}-${cIdx}`} value={c.name}>
+                            {c.name} {c.subCategories?.length ? `(${c.subCategories.length} sous-cat.)` : ''}
+                          </option>
+                        ))}
+                      </select>
+
+                      {/* Optimal Visual Preview Card of the Selected Category */}
+                      {currentCatObj && (
+                        <div className="p-3 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200/80 dark:border-gray-700/80 flex items-center gap-3 shadow-2xs">
+                          <div className="w-14 h-14 rounded-xl overflow-hidden bg-gray-900 shrink-0 relative border border-gray-200 dark:border-gray-700">
+                            <img
+                              src={resolvedCatThumb}
+                              alt={currentCatObj.name}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = getCategoryFallbackThumbnail(currentCatObj.name);
+                              }}
+                            />
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs font-black text-gray-900 dark:text-white truncate">
+                                {currentCatObj.name}
+                              </span>
+                              <span className="text-[9px] px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300 font-extrabold shrink-0">
+                                Hook & Vignette
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-gray-500 dark:text-gray-400 italic line-clamp-2 mt-0.5">
+                              "{resolvedCatHook}"
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Subcategory */}
+                    <div className="space-y-2 pt-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-gray-700 dark:text-gray-300">Sous-Catégorie :</span>
+                        <button
+                          type="button"
+                          onClick={() => setIsInlineSubCatModalOpen(true)}
+                          className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+                        >
+                          + Ajouter sous-catégorie
+                        </button>
+                      </div>
+
+                      {currentCatObj?.subCategories && currentCatObj.subCategories.length > 0 ? (
+                        <div className="space-y-2">
+                          <select
+                            value={(newArticle as any).subCategory || ''}
+                            onChange={(e) => setNewArticle(prev => ({ ...prev, subCategory: e.target.value } as any))}
+                            className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white font-bold outline-none cursor-pointer focus:border-indigo-500"
+                          >
+                            <option value="">-- Sélectionner une sous-catégorie --</option>
+                            {currentCatObj.subCategories.map((s: any, sIdx: number) => (
+                              <option key={`sub-opt-${s.id || sIdx}`} value={s.name}>
+                                {s.name}
+                              </option>
+                            ))}
+                            <option value="__custom__">Autre / Saisie personnalisée...</option>
+                          </select>
+
+                          {/* If custom is selected or if entered value doesn't match list */}
+                          {((newArticle as any).subCategory === '__custom__' || 
+                            ((newArticle as any).subCategory && !currentCatObj.subCategories.some((s: any) => s.name === (newArticle as any).subCategory))) && (
+                            <input
+                              type="text"
+                              placeholder="Nom personnalisé de la sous-catégorie..."
+                              value={(newArticle as any).subCategory === '__custom__' ? '' : ((newArticle as any).subCategory || '')}
+                              onChange={(e) => setNewArticle(prev => ({ ...prev, subCategory: e.target.value } as any))}
+                              className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2 text-xs text-gray-900 dark:text-white outline-none focus:border-indigo-500"
+                            />
+                          )}
+
+                          {/* Optimal Visual Preview Card of the Selected Subcategory */}
+                          {currentSubObj && (
+                            <div className="p-2.5 bg-indigo-50/50 dark:bg-indigo-950/20 rounded-2xl border border-indigo-150 dark:border-indigo-900/50 flex items-center gap-3">
+                              <div className="w-12 h-12 rounded-xl overflow-hidden bg-gray-900 shrink-0 relative border border-indigo-200 dark:border-indigo-800">
+                                <img
+                                  src={resolvedSubThumb}
+                                  alt={currentSubObj.name}
+                                  className="w-full h-full object-cover"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).src = resolvedCatThumb;
+                                  }}
+                                />
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <span className="text-xs font-extrabold text-indigo-950 dark:text-indigo-200 truncate block">
+                                  {currentSubObj.name}
+                                </span>
+                                <p className="text-[10px] text-gray-600 dark:text-gray-400 italic line-clamp-1 mt-0.5">
+                                  "{resolvedSubHook}"
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          <div className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-xl border border-amber-200 dark:border-amber-800/60 flex items-center justify-between gap-2">
+                            <div className="text-[11px] text-amber-800 dark:text-amber-300 font-medium">
+                              Aucune sous-catégorie pour {currentCatObj?.name || 'cette catégorie'}.
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => setIsInlineSubCatModalOpen(true)}
+                              className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-[10px] font-extrabold shrink-0 cursor-pointer"
+                            >
+                              + En créer une
+                            </button>
+                          </div>
+                          <input
+                            type="text"
+                            placeholder="Saisie directe (ex: Sourate Al-Waqi'a, Verset Al-Kursi...)"
+                            value={(newArticle as any).subCategory || ''}
+                            onChange={(e) => setNewArticle(prev => ({ ...prev, subCategory: e.target.value } as any))}
+                            className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2 text-xs text-gray-900 dark:text-white outline-none focus:border-indigo-500"
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Publication Status & VIP Premium Toggles */}
+                    <div className="pt-2 border-t border-gray-200 dark:border-gray-700 space-y-3">
+                      {/* Status */}
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <span className="text-xs font-bold text-gray-800 dark:text-gray-200">Statut de Publication :</span>
+                          <p className="text-[10px] text-gray-400">{newArticle.status === 'Published' ? 'Visible par les utilisateurs' : 'Masqué (Brouillon)'}</p>
+                        </div>
+                        <select
+                          value={newArticle.status || 'Published'}
+                          onChange={(e) => setNewArticle(prev => ({ ...prev, status: e.target.value as any }))}
+                          className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl px-2.5 py-1.5 text-xs font-bold text-gray-900 dark:text-white outline-none cursor-pointer"
+                        >
+                          <option value="Published">Publié</option>
+                          <option value="Draft">Brouillon</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Big Action Save Button */}
+                    <div className="pt-2">
+                      <button
+                        type="button"
+                        onClick={handleSaveArticle}
+                        className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-2xl text-xs flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all cursor-pointer"
+                      >
+                        <Save size={16} />
+                        <span>{editingArticle ? "Mettre à jour et Enregistrer" : "Publier l'Article Immédiatement"}</span>
+                      </button>
+                    </div>
+
                   </div>
-
-                </div>
-
-                {/* Big Action Save Button */}
-                <div className="pt-2">
-                  <button
-                    type="button"
-                    onClick={handleSaveArticle}
-                    className="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-2xl text-xs flex items-center justify-center gap-2 shadow-md hover:shadow-lg transition-all cursor-pointer"
-                  >
-                    <Save size={16} />
-                    <span>{editingArticle ? "Mettre à jour et Enregistrer" : "Publier l'Article Immédiatement"}</span>
-                  </button>
-                </div>
-
-              </div>
+                );
+              })()}
 
             </div>
 
@@ -8354,7 +8743,17 @@ export const AdminDashboard: React.FC = () => {
           {activeTab === "ruqyah" && renderRuqyah()}
           {activeTab === "features" && renderFeatures()}
           {activeTab === "content" && renderContent()}
-          {(activeTab === "articles" || activeTab === "pdf_documents" || activeTab === "categories" || activeTab === "store") && renderArticles()}
+          {(activeTab === "articles" || activeTab === "pdf_documents" || activeTab === "store") && renderArticles()}
+          {activeTab === "categories" && (
+            <AdminCategoriesManager
+              categories={categories}
+              setCategories={setCategories}
+              articles={articles}
+              onShowToast={showToast}
+              featureToggles={featureToggles}
+              handleToggleFeature={handleToggleFeature}
+            />
+          )}
           {activeTab === "community" && renderCommunity()}
           {activeTab === "notifications" && renderNotifications()}
           {activeTab === "grand_oaths" && renderGrandOaths()}
@@ -8401,6 +8800,60 @@ export const AdminDashboard: React.FC = () => {
           article={articleDeleteModalState.article}
           count={articleDeleteModalState.count}
           isDeleting={articleDeleteModalState.isDeleting}
+        />
+
+        {/* User Detail & Edit Modal */}
+        <AdminUserDetailModal
+          isOpen={!!selectedUserDetail}
+          user={selectedUserDetail}
+          onClose={() => {
+            setSelectedUserDetail(null);
+            setIsEditingUser(false);
+          }}
+          onSave={handleSaveUserDetail}
+          onDelete={handleDeleteUserAccount}
+          onStatusChange={handleSetUserStatus}
+          onToggleTrusted={handleToggleUserTrusted}
+          onToggleBan={handleToggleUserBan}
+          onToggleAllTools={handleToggleUserAllTools}
+        />
+
+        {/* Single User Delete Confirmation Modal */}
+        <AdminUserDeleteModal
+          isOpen={!!userToDeleteConfirm}
+          onClose={() => setUserToDeleteConfirm(null)}
+          onConfirm={executeConfirmDeleteUser}
+          user={userToDeleteConfirm}
+          isBatch={false}
+        />
+
+        {/* Batch Users Delete Confirmation Modal */}
+        <AdminUserDeleteModal
+          isOpen={isBatchDeleteConfirmOpen}
+          onClose={() => setIsBatchDeleteConfirmOpen(false)}
+          onConfirm={executeConfirmBatchDeleteUsers}
+          count={selectedUserIds.length}
+          isBatch={true}
+        />
+
+        {/* Inline Category Edit Modal from Article Editor */}
+        <CategoryEditModal
+          isOpen={isInlineCatModalOpen}
+          categoryToEdit={null}
+          onClose={() => setIsInlineCatModalOpen(false)}
+          onSave={handleSaveInlineCategory}
+          onShowToast={showToast}
+        />
+
+        {/* Inline SubCategory Edit Modal from Article Editor */}
+        <SubCategoryEditModal
+          isOpen={isInlineSubCatModalOpen}
+          categories={categories}
+          defaultParentId={categories.find(c => c.name === newArticle.category || c.id === newArticle.category)?.id || categories[0]?.id}
+          subToEdit={null}
+          onClose={() => setIsInlineSubCatModalOpen(false)}
+          onSave={(subObj, parentCatId) => handleSaveInlineSubCategory(subObj, parentCatId)}
+          onShowToast={showToast}
         />
       </div>
     </AdminSectionCollapseContext.Provider>

@@ -186,6 +186,7 @@ export const Version3DVideoNotificationModal: React.FC<Version3DVideoNotificatio
     setIsRefreshing(true);
     setRefreshStep(language === 'fr' ? 'Nettoyage des données et rechargement...' : 'Purging caches & reloading...');
     appVersionService.markVersionInstalled(targetRelease.version);
+    appVersionService.markVersionNotified(targetRelease.version);
     try {
       if (onForceRefresh) {
         onForceRefresh();
@@ -201,6 +202,7 @@ export const Version3DVideoNotificationModal: React.FC<Version3DVideoNotificatio
 
   const handleDismiss = () => {
     appVersionService.markVersionInstalled(targetRelease.version);
+    appVersionService.markVersionNotified(targetRelease.version);
     onDismiss();
   };
 

@@ -5,9 +5,16 @@ import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 export interface AppBranding {
   appLogo?: string; // base64 or url (horizontal header logo)
   appIcon?: string; // base64 or url (square 1:1 icon for PWA, mobile home screen, app badge)
+  loadingScreenType?: 'image' | 'video'; // 'image' or 'video' (default: 'image')
   loadingScreenImage?: string; // base64 or url
+  loadingScreenVideo?: string; // base64, url, or path like /videos/loading.mp4
   loadingScreenEnabled?: boolean; // toggle to enable/disable loading screen completely (default: true)
-  showLoadingImage?: boolean; // toggle to show or hide the central image in loader (default: true)
+  showLoadingImage?: boolean; // toggle to show or hide the central image/video in loader (default: true)
+  loadingVideoAutoplay?: boolean; // autoplay video (default: true)
+  loadingVideoLoop?: boolean; // loop video or play once (default: false)
+  loadingVideoMuted?: boolean; // muted for browser autoplay (default: true)
+  loadingVideoCanSkip?: boolean; // display skip button (default: true)
+  loadingVideoFit?: 'cover' | 'contain'; // video scaling mode (default: 'contain')
   loadingText?: string;
   loadingAnimationType?: 'pulse' | 'spin' | 'bounce' | 'glow' | 'fade';
   faviconUrl?: string; // base64 or url
@@ -28,9 +35,16 @@ const LOCAL_STORAGE_KEY = 'asrarhub_custom_branding';
 const defaultBranding: AppBranding = {
   appLogo: '',
   appIcon: '',
+  loadingScreenType: 'image',
   loadingScreenImage: '',
+  loadingScreenVideo: '/videos/loading.mp4',
   loadingScreenEnabled: true,
   showLoadingImage: true,
+  loadingVideoAutoplay: true,
+  loadingVideoLoop: false,
+  loadingVideoMuted: true,
+  loadingVideoCanSkip: true,
+  loadingVideoFit: 'contain',
   loadingText: 'AsrarHub',
   loadingAnimationType: 'pulse',
   faviconUrl: '',
@@ -41,11 +55,44 @@ const defaultBranding: AppBranding = {
 
 const BrandingContext = createContext<BrandingContextType | undefined>(undefined);
 
+/**
+ * Ensures no property exceeds Firestore's 1MB single-field ceiling (1,048,487 bytes)
+ */
+function sanitizeBrandingForFirestore(data: AppBranding): AppBranding {
+  const sanitized: AppBranding = { ...data };
+  const MAX_SAFE_FIELD_LEN = 500000; // ~500KB safe ceiling
+
+  if (sanitized.loadingScreenVideo && sanitized.loadingScreenVideo.length > MAX_SAFE_FIELD_LEN) {
+    console.warn('[Branding] loadingScreenVideo data URL was oversized for Firestore (>500KB). Sanitized to fallback path.');
+    sanitized.loadingScreenVideo = '/videos/loading.mp4';
+  }
+
+  if (sanitized.loadingScreenImage && sanitized.loadingScreenImage.length > MAX_SAFE_FIELD_LEN) {
+    console.warn('[Branding] loadingScreenImage was oversized for Firestore (>500KB). Sanitized.');
+    sanitized.loadingScreenImage = '';
+  }
+
+  if (sanitized.appLogo && sanitized.appLogo.length > MAX_SAFE_FIELD_LEN) {
+    sanitized.appLogo = '';
+  }
+
+  if (sanitized.appIcon && sanitized.appIcon.length > MAX_SAFE_FIELD_LEN) {
+    sanitized.appIcon = '';
+  }
+
+  return sanitized;
+}
+
 function getInitialBranding(): AppBranding {
   try {
     const cached = localStorage.getItem(LOCAL_STORAGE_KEY);
     if (cached) {
-      return { ...defaultBranding, ...JSON.parse(cached) };
+      const parsed = JSON.parse(cached);
+      // Clean up any stale oversized video string from cache
+      if (parsed.loadingScreenVideo && parsed.loadingScreenVideo.length > 500000) {
+        parsed.loadingScreenVideo = '/videos/loading.mp4';
+      }
+      return { ...defaultBranding, ...parsed };
     }
   } catch (e) {
     console.warn('[Branding] Failed to read initial branding from cache', e);
@@ -137,12 +184,24 @@ export const BrandingProvider: React.FC<{ children: React.ReactNode }> = ({ chil
   }, []);
 
   const updateBranding = useCallback(async (newBranding: Partial<AppBranding>, authorEmail?: string) => {
+    let cleanNewBranding = { ...newBranding };
+    // If incoming payload has an oversized loadingScreenVideo dataUrl, prevent memory blowout
+    if (cleanNewBranding.loadingScreenVideo && cleanNewBranding.loadingScreenVideo.length > 500000) {
+      console.warn('[Branding] Oversized loadingScreenVideo detected in updateBranding. Cleaned to safe fallback.');
+      cleanNewBranding.loadingScreenVideo = '/videos/loading.mp4';
+    }
+
     const updated: AppBranding = {
       ...branding,
-      ...newBranding,
+      ...cleanNewBranding,
       updatedAt: Date.now(),
       updatedBy: authorEmail || branding.updatedBy || 'admin'
     };
+
+    // Guarantee current branding does not carry an oversized video string
+    if (updated.loadingScreenVideo && updated.loadingScreenVideo.length > 500000) {
+      updated.loadingScreenVideo = '/videos/loading.mp4';
+    }
 
     // 1. Optimistically update state & local cache for instant UI feedback
     setBranding(updated);
@@ -156,10 +215,11 @@ export const BrandingProvider: React.FC<{ children: React.ReactNode }> = ({ chil
       window.dispatchEvent(new CustomEvent('app_branding_updated', { detail: updated }));
     }
 
-    // 2. Persist to Firestore
+    // 2. Persist to Firestore with strict size sanitization
     try {
+      const sanitizedForFirestore = sanitizeBrandingForFirestore(updated);
       const brandingDocRef = doc(db, 'settings', 'branding');
-      await setDoc(brandingDocRef, updated, { merge: true });
+      await setDoc(brandingDocRef, sanitizedForFirestore, { merge: true });
     } catch (firestoreErr) {
       console.error('[Branding] Error saving branding to Firestore:', firestoreErr);
       throw firestoreErr;
@@ -170,9 +230,16 @@ export const BrandingProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const resetData: AppBranding = {
       appLogo: '',
       appIcon: '',
+      loadingScreenType: 'image',
       loadingScreenImage: '',
+      loadingScreenVideo: '/videos/loading.mp4',
       loadingScreenEnabled: true,
       showLoadingImage: true,
+      loadingVideoAutoplay: true,
+      loadingVideoLoop: false,
+      loadingVideoMuted: true,
+      loadingVideoCanSkip: true,
+      loadingVideoFit: 'contain',
       loadingText: 'AsrarHub',
       loadingAnimationType: 'pulse',
       faviconUrl: '',
@@ -212,7 +279,7 @@ export const useAppBranding = (): BrandingContextType => {
   const context = useContext(BrandingContext);
   if (!context) {
     return {
-      branding: defaultBranding,
+      branding: getInitialBranding(),
       isLoading: false,
       updateBranding: async () => {},
       resetBranding: async () => {}

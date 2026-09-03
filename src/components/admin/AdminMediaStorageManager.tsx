@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { db, storage } from '../../lib/firebase';
 import { collection, getDocs, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from 'firebase/firestore';
-import { ref, deleteObject } from 'firebase/storage';
+import { ref, deleteObject, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 export interface StoredMediaFile {
   id: string;
@@ -111,47 +111,63 @@ export const AdminMediaStorageManager: React.FC = () => {
       else if (mimeType.startsWith('video/')) mediaKind = 'video';
       else if (mimeType.includes('pdf') || mimeType.includes('text')) mediaKind = 'document';
 
-      // Read file into DataURL for high compatibility
-      const reader = new FileReader();
-      reader.onprogress = (e) => {
-        if (e.lengthComputable) {
-          const pct = Math.round((e.loaded / e.total) * 80) + 10;
-          setUploadProgress(pct);
+      let fileUrl = '';
+      const safeFileName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+      const storagePath = `media_uploads/${Date.now()}_${safeFileName}`;
+
+      // 1. Try Firebase Storage first (ideal for cloud hosting and bypasses Firestore document limits)
+      try {
+        const fileRef = ref(storage, storagePath);
+        await uploadBytes(fileRef, file);
+        fileUrl = await getDownloadURL(fileRef);
+      } catch (storageErr) {
+        console.warn('[Storage Manager] Firebase Storage upload skipped or unavailable:', storageErr);
+      }
+
+      // 2. Fallback if storage not available
+      if (!fileUrl) {
+        if (file.size < 600000) {
+          // Small file (< 600KB) can safely be stored as base64 without exceeding Firestore's 1MB limit
+          fileUrl = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = (e) => resolve((e.target?.result as string) || '');
+            reader.onerror = () => resolve('');
+            reader.readAsDataURL(file);
+          });
+        } else {
+          // Large file without storage: create local URL to prevent Firestore 1MB error
+          fileUrl = URL.createObjectURL(file);
         }
-      };
+      }
 
-      await new Promise<void>((resolve) => {
-        reader.onload = async (e) => {
-          const dataUrl = e.target?.result as string;
-          if (dataUrl) {
-            const newDoc: Omit<StoredMediaFile, 'id'> = {
-              name: file.name,
-              url: dataUrl,
-              type: mediaKind,
-              sizeBytes: file.size,
-              uploadedAt: new Date().toISOString(),
-              storagePath: `media_uploads/${Date.now()}_${file.name}`,
-            };
-
-            try {
-              const docRef = await addDoc(collection(db, 'media_storage'), newDoc);
-              const fileWithId: StoredMediaFile = { id: docRef.id, ...newDoc };
-              setFiles((prev) => [fileWithId, ...prev]);
-            } catch (err) {
-              console.warn('[Storage Manager] Firestore write failed, saving locally:', err);
-              const localId = `local-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
-              const fileWithId: StoredMediaFile = { id: localId, ...newDoc };
-              setFiles((prev) => {
-                const updated = [fileWithId, ...prev];
-                localStorage.setItem(LOCAL_STORAGE_MEDIA_KEY, JSON.stringify(updated));
-                return updated;
-              });
-            }
-          }
-          resolve();
+      if (fileUrl) {
+        const newDoc: Omit<StoredMediaFile, 'id'> = {
+          name: file.name,
+          url: fileUrl.length > 600000 ? `/media/${safeFileName}` : fileUrl,
+          type: mediaKind,
+          sizeBytes: file.size,
+          uploadedAt: new Date().toISOString(),
+          storagePath: storagePath,
         };
-        reader.readAsDataURL(file);
-      });
+
+        try {
+          // Only save to Firestore if the URL is not a massive base64 string
+          if (newDoc.url.length <= 600000) {
+            const docRef = await addDoc(collection(db, 'media_storage'), newDoc);
+            const fileWithId: StoredMediaFile = { id: docRef.id, ...newDoc, url: fileUrl };
+            setFiles((prev) => [fileWithId, ...prev]);
+          } else {
+            throw new Error('File data too large for Firestore direct storage');
+          }
+        } catch (err) {
+          console.warn('[Storage Manager] Firestore write skipped/failed, keeping in local session:', err);
+          const localId = `local-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`;
+          const fileWithId: StoredMediaFile = { id: localId, ...newDoc, url: fileUrl };
+          setFiles((prev) => [fileWithId, ...prev]);
+        }
+      }
+
+      setUploadProgress(Math.round(((i + 1) / uploadedFiles.length) * 100));
     }
 
     setUploadProgress(100);

@@ -627,7 +627,13 @@ export const AdminVersionControlManager: React.FC = () => {
       isCurrent: true,
       disabled: false,
       forceUpdate: false,
-      disableVideoCard: true, // Désactivée par défaut
+      disableVideoCard: false,
+      enable3DVideoPopup: true,
+      customVideoUrl: '',
+      videoPoster: '',
+      forceVideoModal: false,
+      videoTitle: '',
+      videoSubtitle: '',
       minSupportedVersionCode: appReleases[0]?.versionCode || 1,
       downloadUrl: '',
       apkDownloadUrl: '',
@@ -703,6 +709,12 @@ export const AdminVersionControlManager: React.FC = () => {
         disabled: newAppReleaseForm.disabled,
         forceUpdate: newAppReleaseForm.forceUpdate,
         disableVideoCard: newAppReleaseForm.disableVideoCard,
+        enable3DVideoPopup: newAppReleaseForm.enable3DVideoPopup !== undefined ? newAppReleaseForm.enable3DVideoPopup : true,
+        customVideoUrl: newAppReleaseForm.customVideoUrl?.trim() || undefined,
+        videoPoster: newAppReleaseForm.videoPoster?.trim() || undefined,
+        forceVideoModal: !!newAppReleaseForm.forceVideoModal,
+        videoTitle: newAppReleaseForm.videoTitle?.trim() || undefined,
+        videoSubtitle: newAppReleaseForm.videoSubtitle?.trim() || undefined,
         minSupportedVersionCode: newAppReleaseForm.forceUpdate ? Number(newAppReleaseForm.minSupportedVersionCode) : undefined,
         downloadUrl: newAppReleaseForm.downloadUrl.trim() || undefined,
         apkDownloadUrl: newAppReleaseForm.apkDownloadUrl.trim() || undefined,
@@ -3911,14 +3923,14 @@ export const AdminVersionControlManager: React.FC = () => {
       {/* ========================================================================= */}
       {preview3DVideoRelease && (
         <Version3DVideoNotificationModal
-          release={preview3DVideoRelease}
-          onClose={() => setPreview3DVideoRelease(null)}
-          onExplore={() => {
-            showFeedback(`Action explorée avec succès pour la v${preview3DVideoRelease.version}.`);
-            setPreview3DVideoRelease(null);
-          }}
-          onForceDownload={() => {
-            showFeedback(`Action de téléchargement déclenchée pour la v${preview3DVideoRelease.version}.`);
+          isOpen={!!preview3DVideoRelease}
+          targetRelease={preview3DVideoRelease}
+          currentInstalledVersion={APP_VERSION_CONFIG.currentVersion}
+          previousVersion="1.1.1"
+          isForceUpdate={!!preview3DVideoRelease.forceVideoModal || !!preview3DVideoRelease.forceUpdate}
+          onDismiss={() => setPreview3DVideoRelease(null)}
+          onForceRefresh={() => {
+            showFeedback(`⚡ Simulation du rechargement forcé pour la v${preview3DVideoRelease.version}.`);
             setPreview3DVideoRelease(null);
           }}
         />

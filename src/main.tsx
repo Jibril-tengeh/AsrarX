@@ -41,9 +41,8 @@ if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
         try {
           const updateSW = registerSW({
             onNeedRefresh() {
-              if (confirm('Une nouvelle version est disponible. Recharger ?')) {
-                updateSW(true);
-              }
+              // Silently activate latest service worker to ensure older apps receive the update
+              updateSW(true);
             },
             onOfflineReady() {
               console.log('Application prête pour une utilisation hors ligne.');
@@ -70,25 +69,25 @@ if (rootElement) {
     <StrictMode>
       <ErrorBoundary>
         <HashRouter>
-          <AuthProvider>
-            <LanguageProvider>
-              <ThemeProvider>
-                <TextScaleProvider>
-                  <AudioProvider>
-                    <FeatureProvider>
-                      <BrandingProvider>
+          <BrandingProvider>
+            <AuthProvider>
+              <LanguageProvider>
+                <ThemeProvider>
+                  <TextScaleProvider>
+                    <AudioProvider>
+                      <FeatureProvider>
                         <FullscreenProvider>
                           <SettingsProvider>
                             <App />
                           </SettingsProvider>
                         </FullscreenProvider>
-                      </BrandingProvider>
-                    </FeatureProvider>
-                  </AudioProvider>
-                </TextScaleProvider>
-              </ThemeProvider>
-            </LanguageProvider>
-          </AuthProvider>
+                      </FeatureProvider>
+                    </AudioProvider>
+                  </TextScaleProvider>
+                </ThemeProvider>
+              </LanguageProvider>
+            </AuthProvider>
+          </BrandingProvider>
         </HashRouter>
       </ErrorBoundary>
     </StrictMode>,

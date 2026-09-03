@@ -5,7 +5,7 @@ import {
   AlertTriangle, Trash2, Eye, ShieldCheck, Download, Smartphone, 
   Monitor, Play, Maximize2, X, Sun, Moon, Info, Layout, Check,
   AppWindow, Globe, Layers, Bell, MessageSquare, Compass, Settings,
-  Link as LinkIcon, Power, EyeOff, Zap
+  Link as LinkIcon, Power, EyeOff, Zap, Film, Video, Volume2, VolumeX, FileVideo
 } from 'lucide-react';
 import { useAppBranding, AppBranding } from '../../contexts/BrandingContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -17,6 +17,12 @@ import {
   formatBytes,
   MAX_BRANDING_FILE_SIZE_MB 
 } from '../../utils/brandingValidation';
+import { 
+  storeVideoInIndexedDb, 
+  getVideoFromIndexedDb,
+  uploadVideoToFirebaseStorage,
+  uploadImageToFirebaseStorage
+} from '../../utils/videoStorageHelper';
 import { AsrarLogo } from '../AsrarLogo';
 
 interface BrandingSettingsProps {
@@ -42,16 +48,59 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
   const [useIconAsFavicon, setUseIconAsFavicon] = useState(true);
   const [loadingImageUrlInput, setLoadingImageUrlInput] = useState('');
   const [showUrlInput, setShowUrlInput] = useState(false);
+  const [loadingVideoUrlInput, setLoadingVideoUrlInput] = useState('');
+  const [showVideoUrlInput, setShowVideoUrlInput] = useState(false);
+  const [isVideoUploading, setIsVideoUploading] = useState(false);
+  const [videoUploadProgress, setVideoUploadProgress] = useState(0);
+  const [localVideoBlobUrl, setLocalVideoBlobUrl] = useState<string>('');
+  const [activePreviewMediaType, setActivePreviewMediaType] = useState<'image' | 'video'>(
+    draftBranding.loadingScreenType || 'image'
+  );
 
   // File input refs
   const logoInputRef = useRef<HTMLInputElement>(null);
   const iconInputRef = useRef<HTMLInputElement>(null);
   const loadingImgInputRef = useRef<HTMLInputElement>(null);
+  const loadingVideoInputRef = useRef<HTMLInputElement>(null);
   const faviconInputRef = useRef<HTMLInputElement>(null);
+
+  // Load locally cached video from IndexedDB for preview if available
+  useEffect(() => {
+    let isMounted = true;
+    const checkIdbVideo = async () => {
+      try {
+        const idbBlob = await getVideoFromIndexedDb();
+        if (idbBlob && isMounted) {
+          const blobUrl = URL.createObjectURL(idbBlob);
+          setLocalVideoBlobUrl(blobUrl);
+        }
+      } catch (e) {
+        console.warn('[BrandingSettings] IndexedDB check note:', e);
+      }
+    };
+    checkIdbVideo();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Synchronize draft when branding loads from Firestore
   useEffect(() => {
-    setDraftBranding(branding);
+    let cleanBranding = { ...branding };
+    if (cleanBranding.loadingScreenVideo && cleanBranding.loadingScreenVideo.length > 500000) {
+      cleanBranding.loadingScreenVideo = '/videos/loading.mp4';
+    }
+    setDraftBranding(prev => ({
+      ...cleanBranding,
+      // Retain live blob URLs currently being previewed by admin
+      ...(prev.appLogo?.startsWith('blob:') ? { appLogo: prev.appLogo } : {}),
+      ...(prev.appIcon?.startsWith('blob:') ? { appIcon: prev.appIcon } : {}),
+      ...(prev.loadingScreenImage?.startsWith('blob:') ? { loadingScreenImage: prev.loadingScreenImage } : {}),
+      ...(prev.loadingScreenVideo?.startsWith('blob:') ? { loadingScreenVideo: prev.loadingScreenVideo } : {})
+    }));
+    if (cleanBranding.loadingScreenType) {
+      setActivePreviewMediaType(cleanBranding.loadingScreenType);
+    }
     if (branding.appLogo) {
       getImageDimensions(branding.appLogo).then(setLogoDimensions);
     }
@@ -62,6 +111,9 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
       getImageDimensions(branding.loadingScreenImage).then(setLoadingImgDimensions);
     }
   }, [branding]);
+
+  // Derived effective video source for previews
+  const effectiveVideoSrc = localVideoBlobUrl || draftBranding.loadingScreenVideo || '/videos/loading.mp4';
 
   // Instant update helper: immediately saves to Firestore, localStorage & updates state
   const handleInstantUpdate = async (patch: Partial<AppBranding>, successMessage: string) => {
@@ -87,8 +139,15 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
       return;
     }
 
+    // INSTANT PREVIEW (0ms latency): show image immediately in all preview areas
+    const localUrl = URL.createObjectURL(file);
+    setDraftBranding(prev => ({
+      ...prev,
+      appLogo: localUrl
+    }));
+
     try {
-      const base64 = await compressAndOptimizeImage(file, 600, 0.9);
+      const base64 = await compressAndOptimizeImage(file, 480, 0.85);
       const dims = await getImageDimensions(base64);
       setLogoDimensions(dims);
 
@@ -112,8 +171,16 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
       return;
     }
 
+    // INSTANT PREVIEW (0ms latency): show icon immediately in all preview areas
+    const localUrl = URL.createObjectURL(file);
+    setDraftBranding(prev => ({
+      ...prev,
+      appIcon: localUrl,
+      ...(useIconAsFavicon ? { faviconUrl: localUrl } : {})
+    }));
+
     try {
-      const base64 = await compressAndOptimizeImage(file, 256, 0.9);
+      const base64 = await compressAndOptimizeImage(file, 256, 0.85);
       const dims = await getImageDimensions(base64);
       setIconDimensions(dims);
 
@@ -138,20 +205,44 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
       return;
     }
 
+    // INSTANT PREVIEW (0ms latency): show loading image immediately in preview areas & switch preview to image mode!
+    const localUrl = URL.createObjectURL(file);
+    setDraftBranding(prev => ({
+      ...prev,
+      loadingScreenImage: localUrl,
+      loadingScreenType: 'image',
+      loadingScreenEnabled: true,
+      showLoadingImage: true
+    }));
+    setActivePreviewMediaType('image');
+
     try {
-      const base64 = await compressAndOptimizeImage(file, 512, 0.9);
-      const dims = await getImageDimensions(base64);
+      let finalImageUrl = '';
+      // 1. Try uploading to Firebase Storage first for optimal URL performance across all clients
+      try {
+        finalImageUrl = await uploadImageToFirebaseStorage(file, 'branding/loading_image');
+      } catch (storageErr) {
+        console.warn('Firebase Storage upload note (using optimized base64):', storageErr);
+      }
+
+      // 2. If storage upload is unavailable, compress to lightweight optimized base64
+      if (!finalImageUrl) {
+        finalImageUrl = await compressAndOptimizeImage(file, 400, 0.82);
+      }
+
+      const dims = await getImageDimensions(finalImageUrl);
       setLoadingImgDimensions(dims);
 
       const patch: Partial<AppBranding> = {
-        loadingScreenImage: base64,
+        loadingScreenImage: finalImageUrl,
+        loadingScreenType: 'image', // Explicitly switch to image mode so older/all apps display it immediately
         loadingScreenEnabled: true,
         showLoadingImage: true
       };
 
       setDraftBranding(prev => ({ ...prev, ...patch }));
       await updateBranding(patch, user?.email || 'admin@asrarhub.com');
-      onShowToast?.(`Image de chargement mise à jour et active instantanément !`, 'success');
+      onShowToast?.(`Image de chargement mise à jour et synchronisée avec succès !`, 'success');
     } catch (err: any) {
       onShowToast?.(err?.message || "Erreur de traitement de l'image de chargement", 'error');
     }
@@ -165,24 +256,130 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
     }
 
     const url = loadingImageUrlInput.trim();
+    const patch: Partial<AppBranding> = {
+      loadingScreenImage: url,
+      loadingScreenType: 'image', // Explicitly switch to image mode
+      loadingScreenEnabled: true,
+      showLoadingImage: true
+    };
+
+    setDraftBranding(prev => ({ ...prev, ...patch }));
+    setActivePreviewMediaType('image');
+
     try {
       const dims = await getImageDimensions(url);
       setLoadingImgDimensions(dims);
+    } catch (_) {}
 
-      const patch: Partial<AppBranding> = {
-        loadingScreenImage: url,
-        loadingScreenEnabled: true,
-        showLoadingImage: true
-      };
-
-      setDraftBranding(prev => ({ ...prev, ...patch }));
+    try {
       await updateBranding(patch, user?.email || 'admin@asrarhub.com');
       setLoadingImageUrlInput('');
       setShowUrlInput(false);
       onShowToast?.("Image de chargement par URL appliquée et active instantanément !", "success");
     } catch (err: any) {
-      onShowToast?.("Impossible de charger l'image depuis cette URL.", "error");
+      onShowToast?.("Erreur lors de l'enregistrement de l'image URL.", "error");
     }
+  };
+
+  // Handle Loading Video Upload (MP4, WebM)
+  const handleLoadingVideoUpload = async (file: File) => {
+    if (!file.type.startsWith('video/') && !file.name.endsWith('.mp4') && !file.name.endsWith('.webm')) {
+      onShowToast?.("Veuillez sélectionner un fichier vidéo valide (MP4 ou WebM)", "error");
+      return;
+    }
+
+    if (file.size > 50 * 1024 * 1024) {
+      onShowToast?.("Vidéo volumineuse (> 50 Mo). Pour des performances optimales, compressez la vidéo ou placez-la dans /public/videos/loading.mp4.", "error");
+      return;
+    }
+
+    // INSTANT PREVIEW (0ms latency): show video immediately in preview areas & switch preview to video mode!
+    const localBlobUrl = URL.createObjectURL(file);
+    setLocalVideoBlobUrl(localBlobUrl);
+    setDraftBranding(prev => ({
+      ...prev,
+      loadingScreenType: 'video',
+      loadingScreenVideo: localBlobUrl,
+      loadingScreenEnabled: true,
+      showLoadingImage: true
+    }));
+    setActivePreviewMediaType('video');
+
+    try {
+      setIsVideoUploading(true);
+      setVideoUploadProgress(15);
+      onShowToast?.(`Traitement de la vidéo "${file.name}"...`, "info");
+
+      // 1. Store in local IndexedDB first for instant preview & offline playback
+      try {
+        await storeVideoInIndexedDb(file);
+      } catch (idbErr) {
+        console.warn('[Branding] IndexedDB video store note:', idbErr);
+      }
+
+      // 2. Upload to Firebase Cloud Storage for universal cross-device CDN delivery
+      try {
+        setVideoUploadProgress(30);
+        const downloadUrl = await uploadVideoToFirebaseStorage(file, (pct) => {
+          setVideoUploadProgress(Math.max(30, pct));
+        });
+
+        if (downloadUrl) {
+          const patch: Partial<AppBranding> = {
+            loadingScreenType: 'video',
+            loadingScreenVideo: downloadUrl,
+            loadingScreenEnabled: true,
+            showLoadingImage: true
+          };
+          setDraftBranding(prev => ({ ...prev, ...patch }));
+          await updateBranding(patch, user?.email || 'admin@asrarhub.com');
+          onShowToast?.(`Vidéo "${file.name}" téléversée et activée sur le cloud !`, "success");
+        }
+      } catch (storageErr: any) {
+        console.warn('[Branding] Firebase Storage upload unavailable, keeping local preview and safe fallback in Firestore:', storageErr);
+        // Persist safe URL in Firestore (never oversized base64 to avoid 1MB document limit)
+        const patch: Partial<AppBranding> = {
+          loadingScreenType: 'video',
+          loadingScreenVideo: '/videos/loading.mp4',
+          loadingScreenEnabled: true,
+          showLoadingImage: true
+        };
+        await updateBranding(patch, user?.email || 'admin@asrarhub.com');
+        onShowToast?.(`Vidéo enregistrée localement avec succès ! Aperçu en direct actif.`, "success");
+      }
+    } catch (err: any) {
+      console.error('Video upload error:', err);
+      onShowToast?.(err?.message || "Erreur lors du traitement de la vidéo", "error");
+    } finally {
+      setIsVideoUploading(false);
+      setVideoUploadProgress(0);
+      if (loadingVideoInputRef.current) {
+        loadingVideoInputRef.current.value = '';
+      }
+    }
+  };
+
+  // Handle Loading Video URL / Path
+  const handleApplyLoadingVideoUrl = async (presetUrl?: string) => {
+    const url = (presetUrl || loadingVideoUrlInput).trim();
+    if (!url) {
+      onShowToast?.("Veuillez saisir une URL ou chemin de vidéo valide", "info");
+      return;
+    }
+
+    const patch: Partial<AppBranding> = {
+      loadingScreenType: 'video',
+      loadingScreenVideo: url,
+      loadingScreenEnabled: true,
+      showLoadingImage: true
+    };
+
+    setDraftBranding(prev => ({ ...prev, ...patch }));
+    setActivePreviewMediaType('video');
+    await updateBranding(patch, user?.email || 'admin@asrarhub.com');
+    setLoadingVideoUrlInput('');
+    setShowVideoUrlInput(false);
+    onShowToast?.(`Vidéo de chargement configurée (${url}) !`, "success");
   };
 
   // Handle Custom Favicon Upload
@@ -237,6 +434,14 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
     }
   };
 
+  const handleDropLoadingVideo = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleLoadingVideoUpload(e.dataTransfer.files[0]);
+    }
+  };
+
   // Save all branding changes to Firestore
   const handleSaveBranding = async () => {
     setIsSaving(true);
@@ -263,6 +468,12 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
         appLogo: '',
         appIcon: '',
         loadingScreenImage: '',
+        loadingScreenType: 'image',
+        loadingScreenVideo: '',
+        loadingVideoMuted: true,
+        loadingVideoLoop: true,
+        loadingVideoCanSkip: true,
+        loadingVideoFit: 'contain',
         loadingText: 'AsrarHub',
         loadingAnimationType: 'pulse',
         faviconUrl: '',
@@ -278,12 +489,12 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
     }
   };
 
-  // Trigger Fullscreen Loader Preview for 3.5 seconds
+  // Trigger Fullscreen Loader Preview (5s)
   const triggerFullscreenPreview = () => {
     setFullscreenLoaderPreview(true);
     setTimeout(() => {
       setFullscreenLoaderPreview(false);
-    }, 3500);
+    }, 5000);
   };
 
   // Render Loader Animation variant classes
@@ -741,136 +952,483 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
                 </div>
                 <p className="text-[11px] text-gray-500 dark:text-gray-400">
                   {draftBranding.showLoadingImage !== false 
-                    ? "Affiche votre image personnalisée ou le logo AsrarHub."
+                    ? "Affiche votre image personnalisée, vidéo ou logo AsrarHub."
                     : "Masqué : Affiche un indicateur circulaire minimaliste épuré."}
                 </p>
               </div>
 
             </div>
 
-            {/* Custom Loading Image Uploader */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-bold text-gray-700 dark:text-gray-300">
-                  Image personnalisée du Loading Screen
-                </label>
-                <div className="flex items-center gap-2">
+            {/* Media Type Switcher: Image / Logo vs Vidéo */}
+            <div className="pt-2 border-t border-gray-100 dark:border-gray-750">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
+                <span className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                  Format du média d'introduction :
+                </span>
+                <div className="flex items-center gap-1.5 p-1 bg-gray-100 dark:bg-gray-750 rounded-2xl w-fit">
                   <button
                     type="button"
-                    onClick={() => setShowUrlInput(!showUrlInput)}
-                    className="text-[11px] text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 font-bold flex items-center gap-1 cursor-pointer"
+                    onClick={() => {
+                      setDraftBranding(prev => ({ ...prev, loadingScreenType: 'image' }));
+                      handleInstantUpdate({ loadingScreenType: 'image' }, "Mode Image / Logo activé pour le chargement");
+                    }}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      draftBranding.loadingScreenType !== 'video'
+                        ? 'bg-white dark:bg-gray-850 text-gray-900 dark:text-white shadow-xs'
+                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                    }`}
                   >
-                    <LinkIcon size={12} />
-                    <span>{showUrlInput ? 'Masquer URL' : 'Utiliser une URL web'}</span>
+                    <ImageIcon size={13} />
+                    <span>Image / Logo</span>
                   </button>
-                  {draftBranding.loadingScreenImage && (
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDraftBranding(prev => ({ ...prev, loadingScreenType: 'video' }));
+                      handleInstantUpdate({ loadingScreenType: 'video' }, "Mode Vidéo MP4 / WebM activé !");
+                    }}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                      draftBranding.loadingScreenType === 'video'
+                        ? 'bg-amber-500 text-slate-950 shadow-xs'
+                        : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                    }`}
+                  >
+                    <Film size={13} />
+                    <span>Vidéo Splash</span>
+                    <span className="px-1.5 py-0.2 rounded-full text-[9px] font-black bg-amber-400 text-slate-950 uppercase">
+                      MP4
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* VIDEO MODE CONFIGURATION */}
+            {draftBranding.loadingScreenType === 'video' ? (
+              <div className="space-y-4 bg-slate-900/40 dark:bg-slate-950/60 p-4 rounded-3xl border border-amber-500/20">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center">
+                      <Film size={16} />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-extrabold text-white flex items-center gap-1.5">
+                        <span>Vidéo d'Introduction Splash</span>
+                        {draftBranding.loadingScreenVideo ? (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                            Vidéo configurée
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                            En attente de fichier
+                          </span>
+                        )}
+                      </h4>
+                      <p className="text-[11px] text-gray-400">
+                        Diffuse une animation vidéo fluide au chargement de l'application
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowVideoUrlInput(!showVideoUrlInput)}
+                      className="text-[11px] text-amber-400 hover:text-amber-300 font-bold flex items-center gap-1 cursor-pointer bg-slate-800/80 px-2.5 py-1 rounded-xl border border-slate-700"
+                    >
+                      <LinkIcon size={12} />
+                      <span>{showVideoUrlInput ? 'Masquer URL' : 'URL directe'}</span>
+                    </button>
+
+                    {draftBranding.loadingScreenVideo && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDraftBranding(prev => ({ ...prev, loadingScreenVideo: '' }));
+                          handleInstantUpdate({ loadingScreenVideo: '' }, "Vidéo de chargement supprimée.");
+                        }}
+                        className="text-[11px] text-red-400 hover:text-red-300 font-bold flex items-center gap-1 cursor-pointer bg-red-950/40 px-2.5 py-1 rounded-xl border border-red-800/40"
+                      >
+                        <Trash2 size={12} />
+                        <span>Supprimer</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Quick Presets for Video */}
+                <div className="flex flex-wrap items-center gap-2 p-3 bg-slate-800/60 rounded-2xl border border-slate-700/60">
+                  <span className="text-[11px] font-semibold text-gray-300 flex items-center gap-1">
+                    <Sparkles size={12} className="text-amber-400" />
+                    <span>Action rapide :</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleApplyLoadingVideoUrl('/videos/loading.mp4')}
+                    className="px-3 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 rounded-xl text-xs font-bold border border-amber-500/30 transition-all flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <FileVideo size={13} />
+                    <span>Utiliser "/videos/loading.mp4" (dossier local)</span>
+                  </button>
+                  <span className="text-[10px] text-gray-400">
+                    (Déposez votre vidéo dans public/videos/loading.mp4)
+                  </span>
+                </div>
+
+                {/* Video URL input bar if expanded */}
+                {showVideoUrlInput && (
+                  <div className="flex items-center gap-2 p-2 bg-slate-800 rounded-2xl border border-slate-700">
+                    <input
+                      type="text"
+                      placeholder="Coller l'URL de la vidéo (ex: /videos/loading.mp4 ou https://.../intro.mp4)"
+                      value={loadingVideoUrlInput}
+                      onChange={(e) => setLoadingVideoUrlInput(e.target.value)}
+                      className="flex-1 px-3 py-1.5 bg-slate-900 rounded-xl text-xs text-white border border-slate-700 outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleApplyLoadingVideoUrl()}
+                      className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-slate-950 rounded-xl text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
+                    >
+                      <Zap size={12} />
+                      <span>Appliquer</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* Drag & Drop Area for Video */}
+                <div
+                  onDragOver={handleDragOver}
+                  onDrop={handleDropLoadingVideo}
+                  onClick={() => loadingVideoInputRef.current?.click()}
+                  className={`border-2 border-dashed rounded-3xl p-6 text-center cursor-pointer transition-all ${
+                    draftBranding.loadingScreenVideo
+                      ? 'border-amber-500/50 bg-amber-500/5 hover:border-amber-400'
+                      : 'border-slate-700 hover:border-amber-500/80 bg-slate-900/40 hover:bg-slate-900/70'
+                  }`}
+                >
+                  <input
+                    type="file"
+                    ref={loadingVideoInputRef}
+                    accept="video/mp4,video/webm,video/ogg"
+                    className="hidden"
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        handleLoadingVideoUpload(e.target.files[0]);
+                      }
+                    }}
+                  />
+
+                  {isVideoUploading ? (
+                    <div className="py-6 space-y-3">
+                      <div className="w-10 h-10 border-3 border-amber-500 border-t-transparent rounded-full animate-spin mx-auto" />
+                      <div>
+                        <p className="text-sm font-bold text-white">
+                          Téléversement de la vidéo ({videoUploadProgress}%)...
+                        </p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          Hébergement cloud en cours pour une lecture ultra-fluide
+                        </p>
+                      </div>
+                      <div className="w-48 h-2 bg-slate-800 rounded-full mx-auto overflow-hidden border border-slate-700">
+                        <div
+                          className="h-full bg-gradient-to-r from-amber-500 to-amber-400 transition-all duration-300"
+                          style={{ width: `${videoUploadProgress}%` }}
+                        />
+                      </div>
+                    </div>
+                  ) : (draftBranding.loadingScreenVideo || localVideoBlobUrl) ? (
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-6 py-2">
+                      <div className="w-48 aspect-video bg-black rounded-2xl shadow-xl border border-amber-500/30 overflow-hidden relative group">
+                        <video
+                          key={effectiveVideoSrc}
+                          src={effectiveVideoSrc}
+                          autoPlay
+                          loop={draftBranding.loadingVideoLoop !== false}
+                          muted={draftBranding.loadingVideoMuted !== false}
+                          playsInline
+                          className={`w-full h-full ${draftBranding.loadingVideoFit === 'cover' ? 'object-cover' : 'object-contain'}`}
+                        />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-bold">
+                          Cliquez pour changer la vidéo
+                        </div>
+                      </div>
+
+                      <div className="text-left space-y-2 max-w-sm">
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[11px] font-bold border border-amber-500/30">
+                          <CheckCircle2 size={12} />
+                          <span>Vidéo active et prête pour l'accueil</span>
+                        </div>
+                        <p className="text-xs text-gray-300 truncate">
+                          Source : <span className="font-mono text-gray-400">{draftBranding.loadingScreenVideo.slice(0, 45)}...</span>
+                        </p>
+                        <div className="flex items-center gap-2 pt-1">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              triggerFullscreenPreview();
+                            }}
+                            className="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+                          >
+                            <Play size={12} />
+                            <span>Tester en plein écran</span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="py-4 space-y-3">
+                      <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center shadow-inner">
+                        <Film size={26} />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-white">
+                          Glissez-déposez ou cliquez pour importer votre vidéo MP4
+                        </p>
+                        <p className="text-xs text-gray-400 mt-1">
+                          Formats : MP4, WebM (Animation 3D de livre recommandée)
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Video Playback Options */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2">
+                  {/* Option 1: Object Fit */}
+                  <div className="p-3 bg-slate-800/80 rounded-2xl border border-slate-700/80">
+                    <label className="block text-[11px] font-bold text-gray-300 mb-1">
+                      Cadrage vidéo
+                    </label>
+                    <select
+                      value={draftBranding.loadingVideoFit || 'contain'}
+                      onChange={(e) => {
+                        const fit = e.target.value as 'contain' | 'cover';
+                        setDraftBranding(prev => ({ ...prev, loadingVideoFit: fit }));
+                        handleInstantUpdate({ loadingVideoFit: fit }, `Cadrage vidéo mis à jour (${fit})`);
+                      }}
+                      className="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-700 rounded-xl text-xs font-semibold text-white outline-none cursor-pointer"
+                    >
+                      <option value="contain">Proportions d'origine (contain)</option>
+                      <option value="cover">Plein écran immersif (cover)</option>
+                    </select>
+                  </div>
+
+                  {/* Option 2: Allow Skip */}
+                  <div className="p-3 bg-slate-800/80 rounded-2xl border border-slate-700/80 flex items-center justify-between">
+                    <div>
+                      <span className="block text-[11px] font-bold text-gray-300">
+                        Bouton "Passer"
+                      </span>
+                      <span className="text-[10px] text-gray-400">
+                        Permet de sauter la vidéo
+                      </span>
+                    </div>
                     <button
                       type="button"
                       onClick={() => {
-                        setDraftBranding(prev => ({ ...prev, loadingScreenImage: '' }));
-                        setLoadingImgDimensions(null);
-                        handleInstantUpdate({ loadingScreenImage: '' }, "Image de chargement personnalisée supprimée. Retour au logo officiel.");
+                        const nextVal = draftBranding.loadingVideoCanSkip === false ? true : false;
+                        setDraftBranding(prev => ({ ...prev, loadingVideoCanSkip: nextVal }));
+                        handleInstantUpdate({ loadingVideoCanSkip: nextVal }, nextVal ? "Bouton Passer activé" : "Bouton Passer masqué");
                       }}
-                      className="text-[11px] text-red-500 hover:text-red-600 font-bold flex items-center gap-1 cursor-pointer ml-2"
+                      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ${
+                        draftBranding.loadingVideoCanSkip !== false ? 'bg-amber-500' : 'bg-gray-700'
+                      }`}
                     >
-                      <Trash2 size={12} />
-                      <span>Supprimer l'image</span>
+                      <span
+                        className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ${
+                          draftBranding.loadingVideoCanSkip !== false ? 'translate-x-4' : 'translate-x-0'
+                        }`}
+                      />
                     </button>
+                  </div>
+
+                  {/* Option 3: Loop */}
+                  <div className="p-3 bg-slate-800/80 rounded-2xl border border-slate-700/80 flex items-center justify-between">
+                    <div>
+                      <span className="block text-[11px] font-bold text-gray-300">
+                        Lecture en Boucle
+                      </span>
+                      <span className="text-[10px] text-gray-400">
+                        Répéter continuellement
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nextVal = draftBranding.loadingVideoLoop === false ? true : false;
+                        setDraftBranding(prev => ({ ...prev, loadingVideoLoop: nextVal }));
+                        handleInstantUpdate({ loadingVideoLoop: nextVal }, nextVal ? "Boucle vidéo activée" : "Boucle désactivée (1 seule lecture)");
+                      }}
+                      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ${
+                        draftBranding.loadingVideoLoop !== false ? 'bg-amber-500' : 'bg-gray-700'
+                      }`}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ${
+                          draftBranding.loadingVideoLoop !== false ? 'translate-x-4' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Option 4: Muted */}
+                  <div className="p-3 bg-slate-800/80 rounded-2xl border border-slate-700/80 flex items-center justify-between">
+                    <div>
+                      <span className="block text-[11px] font-bold text-gray-300">
+                        Muet au lancement
+                      </span>
+                      <span className="text-[10px] text-gray-400">
+                        Requis pour l'Autoplay
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const nextVal = draftBranding.loadingVideoMuted === false ? true : false;
+                        setDraftBranding(prev => ({ ...prev, loadingVideoMuted: nextVal }));
+                        handleInstantUpdate({ loadingVideoMuted: nextVal }, nextVal ? "Vidéo en sourdine par défaut" : "Audio activé par défaut (peut bloquer l'autoplay)");
+                      }}
+                      className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ${
+                        draftBranding.loadingVideoMuted !== false ? 'bg-amber-500' : 'bg-gray-700'
+                      }`}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow ring-0 transition duration-200 ${
+                          draftBranding.loadingVideoMuted !== false ? 'translate-x-4' : 'translate-x-0'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* IMAGE MODE CONFIGURATION */
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                    Image personnalisée du Loading Screen
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShowUrlInput(!showUrlInput)}
+                      className="text-[11px] text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 font-bold flex items-center gap-1 cursor-pointer"
+                    >
+                      <LinkIcon size={12} />
+                      <span>{showUrlInput ? 'Masquer URL' : 'Utiliser une URL web'}</span>
+                    </button>
+                    {draftBranding.loadingScreenImage && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDraftBranding(prev => ({ ...prev, loadingScreenImage: '' }));
+                          setLoadingImgDimensions(null);
+                          handleInstantUpdate({ loadingScreenImage: '' }, "Image de chargement personnalisée supprimée. Retour au logo officiel.");
+                        }}
+                        className="text-[11px] text-red-500 hover:text-red-600 font-bold flex items-center gap-1 cursor-pointer ml-2"
+                      >
+                        <Trash2 size={12} />
+                        <span>Supprimer l'image</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Direct URL input bar if expanded */}
+                {showUrlInput && (
+                  <div className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-750">
+                    <input
+                      type="url"
+                      placeholder="Coller l'URL directe de l'image (ex: https://.../loader.gif ou .png)"
+                      value={loadingImageUrlInput}
+                      onChange={(e) => setLoadingImageUrlInput(e.target.value)}
+                      className="flex-1 px-3 py-1.5 bg-white dark:bg-gray-800 rounded-xl text-xs text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleApplyLoadingImageUrl}
+                      className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
+                    >
+                      <Zap size={12} />
+                      <span>Appliquer</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* Drag & Drop Area for Loading Screen */}
+                <div
+                  onDragOver={handleDragOver}
+                  onDrop={handleDropLoading}
+                  onClick={() => loadingImgInputRef.current?.click()}
+                  className={`border-2 border-dashed rounded-3xl p-6 text-center cursor-pointer transition-all ${
+                    draftBranding.loadingScreenImage
+                      ? 'border-amber-300 dark:border-amber-700/60 bg-amber-50/20 dark:bg-amber-950/10 hover:border-amber-500'
+                      : 'border-gray-200 dark:border-gray-700 hover:border-amber-500 bg-gray-50/50 dark:bg-gray-850 hover:bg-amber-50/10'
+                  }`}
+                >
+                  <input
+                    type="file"
+                    ref={loadingImgInputRef}
+                    accept="image/png,image/svg+xml,image/jpeg,image/webp,image/gif"
+                    className="hidden"
+                    onChange={(e) => {
+                      if (e.target.files && e.target.files[0]) {
+                        handleLoadingImageUpload(e.target.files[0]);
+                      }
+                    }}
+                  />
+
+                  {draftBranding.loadingScreenImage ? (
+                    <div className="flex flex-col sm:flex-row items-center justify-center gap-6 py-2">
+                      <div className="w-24 h-24 p-2 bg-slate-950 rounded-2xl shadow-inner border border-gray-700 flex items-center justify-center overflow-hidden">
+                        <img
+                          src={draftBranding.loadingScreenImage}
+                          alt="Loading Image Aperçu"
+                          className={`max-h-20 max-w-full object-contain ${getAnimationClass(draftBranding.loadingAnimationType)}`}
+                        />
+                      </div>
+                      <div className="text-left space-y-1">
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 text-[11px] font-bold">
+                          <CheckCircle2 size={12} />
+                          <span>Image active instantanément</span>
+                        </div>
+                        {loadingImgDimensions && (
+                          <p className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+                            Dimensions : {loadingImgDimensions.width} x {loadingImgDimensions.height} px
+                          </p>
+                        )}
+                        <p className="text-[11px] text-amber-600 dark:text-amber-400 font-semibold">
+                          Cliquez ou glissez une autre image pour remplacer (PNG, GIF animé, SVG acceptés)
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="py-4 space-y-3">
+                      <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 flex items-center justify-center shadow-inner">
+                        <Sparkles size={26} />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-gray-800 dark:text-gray-200">
+                          Uploadez une image ou GIF personnalisé pour le chargement
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                          Idéal : GIF transparent animé, SVG doré ou PNG haute qualité (Optimisé automatiquement)
+                        </p>
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>
-
-              {/* Direct URL input bar if expanded */}
-              {showUrlInput && (
-                <div className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-750">
-                  <input
-                    type="url"
-                    placeholder="Coller l'URL directe de l'image (ex: https://.../loader.gif ou .png)"
-                    value={loadingImageUrlInput}
-                    onChange={(e) => setLoadingImageUrlInput(e.target.value)}
-                    className="flex-1 px-3 py-1.5 bg-white dark:bg-gray-800 rounded-xl text-xs text-gray-900 dark:text-white border border-gray-200 dark:border-gray-700 outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleApplyLoadingImageUrl}
-                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold flex items-center gap-1 transition-all cursor-pointer"
-                  >
-                    <Zap size={12} />
-                    <span>Appliquer</span>
-                  </button>
-                </div>
-              )}
-
-              {/* Drag & Drop Area for Loading Screen */}
-              <div
-                onDragOver={handleDragOver}
-                onDrop={handleDropLoading}
-                onClick={() => loadingImgInputRef.current?.click()}
-                className={`border-2 border-dashed rounded-3xl p-6 text-center cursor-pointer transition-all ${
-                  draftBranding.loadingScreenImage
-                    ? 'border-amber-300 dark:border-amber-700/60 bg-amber-50/20 dark:bg-amber-950/10 hover:border-amber-500'
-                    : 'border-gray-200 dark:border-gray-700 hover:border-amber-500 bg-gray-50/50 dark:bg-gray-850 hover:bg-amber-50/10'
-                }`}
-              >
-                <input
-                  type="file"
-                  ref={loadingImgInputRef}
-                  accept="image/png,image/svg+xml,image/jpeg,image/webp,image/gif"
-                  className="hidden"
-                  onChange={(e) => {
-                    if (e.target.files && e.target.files[0]) {
-                      handleLoadingImageUpload(e.target.files[0]);
-                    }
-                  }}
-                />
-
-                {draftBranding.loadingScreenImage ? (
-                  <div className="flex flex-col sm:flex-row items-center justify-center gap-6 py-2">
-                    <div className="w-24 h-24 p-2 bg-slate-950 rounded-2xl shadow-inner border border-gray-700 flex items-center justify-center overflow-hidden">
-                      <img
-                        src={draftBranding.loadingScreenImage}
-                        alt="Loading Image Aperçu"
-                        className={`max-h-20 max-w-full object-contain ${getAnimationClass(draftBranding.loadingAnimationType)}`}
-                      />
-                    </div>
-                    <div className="text-left space-y-1">
-                      <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 text-[11px] font-bold">
-                        <CheckCircle2 size={12} />
-                        <span>Image active instantanément</span>
-                      </div>
-                      {loadingImgDimensions && (
-                        <p className="text-xs text-gray-500 dark:text-gray-400 font-mono">
-                          Dimensions : {loadingImgDimensions.width} x {loadingImgDimensions.height} px
-                        </p>
-                      )}
-                      <p className="text-[11px] text-amber-600 dark:text-amber-400 font-semibold">
-                        Cliquez ou glissez une autre image pour remplacer (PNG, GIF animé, SVG acceptés)
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="py-4 space-y-3">
-                    <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 flex items-center justify-center shadow-inner">
-                      <Sparkles size={26} />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-gray-800 dark:text-gray-200">
-                        Uploadez une image ou GIF personnalisé pour le chargement
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                        Idéal : GIF transparent animé, SVG doré ou PNG haute qualité (Optimisé automatiquement)
-                      </p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
+            )}
 
             {/* Additional Loading Configurations */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
               <div>
                 <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
-                  Texte d'accompagnement (Sous le logo)
+                  Texte d'accompagnement (Sous le média)
                 </label>
                 <div className="flex gap-2">
                   <input
@@ -891,26 +1449,42 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
                 </div>
               </div>
 
-              <div>
-                <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
-                  Effet d'Animation au Chargement
-                </label>
-                <select
-                  value={draftBranding.loadingAnimationType || 'pulse'}
-                  onChange={(e) => {
-                    const animType = e.target.value as any;
-                    setDraftBranding({ ...draftBranding, loadingAnimationType: animType });
-                    handleInstantUpdate({ loadingAnimationType: animType }, `Animation "${animType}" appliquée instantanément !`);
-                  }}
-                  className="w-full px-3.5 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl text-xs font-semibold text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
-                >
-                  <option value="pulse">Pulsation douce (Recommandé)</option>
-                  <option value="glow">Lueur Dorée Mystique (Glow)</option>
-                  <option value="fade">Fondu Enchaîné (Fade)</option>
-                  <option value="bounce">Rebond Énergique (Bounce)</option>
-                  <option value="spin">Rotation Orbitale (Spin)</option>
-                </select>
-              </div>
+              {draftBranding.loadingScreenType !== 'video' ? (
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
+                    Effet d'Animation au Chargement
+                  </label>
+                  <select
+                    value={draftBranding.loadingAnimationType || 'pulse'}
+                    onChange={(e) => {
+                      const animType = e.target.value as any;
+                      setDraftBranding({ ...draftBranding, loadingAnimationType: animType });
+                      handleInstantUpdate({ loadingAnimationType: animType }, `Animation "${animType}" appliquée instantanément !`);
+                    }}
+                    className="w-full px-3.5 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-xl text-xs font-semibold text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
+                  >
+                    <option value="pulse">Pulsation douce (Recommandé)</option>
+                    <option value="glow">Lueur Dorée Mystique (Glow)</option>
+                    <option value="fade">Fondu Enchaîné (Fade)</option>
+                    <option value="bounce">Rebond Énergique (Bounce)</option>
+                    <option value="spin">Rotation Orbitale (Spin)</option>
+                  </select>
+                </div>
+              ) : (
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5">
+                    Aperçu Direct
+                  </label>
+                  <button
+                    type="button"
+                    onClick={triggerFullscreenPreview}
+                    className="w-full px-3.5 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl text-xs transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer"
+                  >
+                    <Play size={13} />
+                    <span>Lancer la prévisualisation en direct (5s)</span>
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Instant sync notice banner */}
@@ -922,7 +1496,13 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
               <button
                 type="button"
                 onClick={() => handleInstantUpdate({
+                  loadingScreenType: draftBranding.loadingScreenType || 'image',
                   loadingScreenImage: draftBranding.loadingScreenImage || '',
+                  loadingScreenVideo: draftBranding.loadingScreenVideo || '',
+                  loadingVideoFit: draftBranding.loadingVideoFit || 'contain',
+                  loadingVideoLoop: draftBranding.loadingVideoLoop !== false,
+                  loadingVideoMuted: draftBranding.loadingVideoMuted !== false,
+                  loadingVideoCanSkip: draftBranding.loadingVideoCanSkip !== false,
                   loadingScreenEnabled: draftBranding.loadingScreenEnabled !== false,
                   showLoadingImage: draftBranding.showLoadingImage !== false,
                   loadingText: draftBranding.loadingText || 'AsrarHub',
@@ -1176,14 +1756,53 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
                       </span>
                     )}
                   </span>
-                  <button
-                    type="button"
-                    onClick={triggerFullscreenPreview}
-                    className="text-[11px] text-amber-500 hover:text-amber-600 font-bold flex items-center gap-1 cursor-pointer"
-                  >
-                    <Maximize2 size={12} />
-                    <span>Plein écran</span>
-                  </button>
+
+                  <div className="flex items-center gap-2">
+                    {/* Quick tab to inspect Image vs Video in preview */}
+                    <div className="flex items-center bg-gray-100 dark:bg-slate-800 p-0.5 rounded-lg border border-gray-200 dark:border-slate-700">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActivePreviewMediaType('image');
+                          setDraftBranding(prev => ({ ...prev, loadingScreenType: 'image' }));
+                        }}
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                          activePreviewMediaType === 'image'
+                            ? 'bg-white dark:bg-slate-900 text-amber-600 dark:text-amber-400 shadow-xs'
+                            : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200'
+                        }`}
+                        title="Aperçu du mode Image / Logo"
+                      >
+                        <ImageIcon size={10} />
+                        <span>Image</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActivePreviewMediaType('video');
+                          setDraftBranding(prev => ({ ...prev, loadingScreenType: 'video' }));
+                        }}
+                        className={`px-2 py-0.5 rounded text-[10px] font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                          activePreviewMediaType === 'video'
+                            ? 'bg-amber-500 text-slate-950 font-extrabold shadow-xs'
+                            : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-200'
+                        }`}
+                        title="Aperçu du mode Vidéo Splash"
+                      >
+                        <Film size={10} />
+                        <span>Vidéo</span>
+                      </button>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={triggerFullscreenPreview}
+                      className="text-[11px] text-amber-500 hover:text-amber-600 font-bold flex items-center gap-1 cursor-pointer"
+                    >
+                      <Maximize2 size={12} />
+                      <span>Plein écran</span>
+                    </button>
+                  </div>
                 </div>
 
                 <div className="w-full bg-slate-950 rounded-2xl p-6 flex flex-col items-center justify-center min-h-[190px] relative border border-slate-800 shadow-inner overflow-hidden select-none">
@@ -1191,14 +1810,38 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
                   <div className="absolute inset-0 bg-radial from-emerald-500/10 via-transparent to-transparent pointer-events-none" />
 
                   {/* Loading Content */}
-                  <div className="relative z-10 flex flex-col items-center text-center gap-3">
+                  <div className="relative z-10 flex flex-col items-center text-center gap-3 w-full">
                     {draftBranding.showLoadingImage === false ? (
                       <div className="w-12 h-12 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin flex items-center justify-center my-2" />
+                    ) : activePreviewMediaType === 'video' ? (
+                      <div className="w-full max-w-[220px] aspect-video rounded-xl overflow-hidden border border-amber-500/30 bg-black shadow-lg relative group">
+                        <video
+                          key={effectiveVideoSrc}
+                          src={effectiveVideoSrc}
+                          autoPlay
+                          loop={draftBranding.loadingVideoLoop !== false}
+                          muted={draftBranding.loadingVideoMuted !== false}
+                          playsInline
+                          className={`w-full h-full ${draftBranding.loadingVideoFit === 'cover' ? 'object-cover' : 'object-contain'}`}
+                        />
+                        <div className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded-full bg-black/70 backdrop-blur-xs text-[9px] text-amber-400 font-bold flex items-center gap-1">
+                          <Film size={9} />
+                          <span>Vidéo Splash</span>
+                        </div>
+                      </div>
                     ) : draftBranding.loadingScreenImage ? (
                       <div className="max-w-[140px] max-h-[90px] flex items-center justify-center">
                         <img
                           src={draftBranding.loadingScreenImage}
                           alt="Loading Preview"
+                          className={`max-h-20 max-w-full object-contain ${getAnimationClass(draftBranding.loadingAnimationType)}`}
+                        />
+                      </div>
+                    ) : activeIconSrc ? (
+                      <div className="max-w-[140px] max-h-[90px] flex items-center justify-center">
+                        <img
+                          src={activeIconSrc}
+                          alt="Loading Preview Fallback"
                           className={`max-h-20 max-w-full object-contain ${getAnimationClass(draftBranding.loadingAnimationType)}`}
                         />
                       </div>
@@ -1241,7 +1884,7 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
             {/* Top Close / Info notice */}
             <div className="absolute top-6 right-6 flex items-center gap-3">
               <span className="text-xs text-slate-400 bg-slate-900/80 px-3 py-1.5 rounded-xl border border-slate-800">
-                Aperçu automatique (fermeture dans 3s)
+                Aperçu automatique (fermeture dans 5s)
               </span>
               <button
                 type="button"
@@ -1256,10 +1899,26 @@ export const BrandingSettings: React.FC<BrandingSettingsProps> = ({ onShowToast 
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="flex flex-col items-center justify-center gap-6"
+              className="flex flex-col items-center justify-center gap-6 w-full max-w-2xl"
             >
               {draftBranding.showLoadingImage === false ? (
                 <div className="w-16 h-16 rounded-full border-3 border-emerald-400 border-t-transparent animate-spin my-4 shadow-[0_0_20px_rgba(16,185,129,0.4)]" />
+              ) : draftBranding.loadingScreenType === 'video' && draftBranding.loadingScreenVideo ? (
+                <div className="w-full max-w-xl aspect-video rounded-2xl overflow-hidden shadow-2xl border border-amber-500/40 bg-black flex items-center justify-center relative">
+                  <video
+                    src={draftBranding.loadingScreenVideo}
+                    autoPlay
+                    loop={draftBranding.loadingVideoLoop !== false}
+                    muted={draftBranding.loadingVideoMuted !== false}
+                    playsInline
+                    className={`w-full h-full ${draftBranding.loadingVideoFit === 'cover' ? 'object-cover' : 'object-contain'}`}
+                  />
+                  {draftBranding.loadingVideoCanSkip !== false && (
+                    <div className="absolute bottom-3 right-3 px-3 py-1.5 rounded-xl bg-black/60 backdrop-blur-md text-white text-xs font-bold border border-white/20">
+                      Passer ✕
+                    </div>
+                  )}
+                </div>
               ) : draftBranding.loadingScreenImage ? (
                 <div className="max-w-[280px] max-h-[220px] flex items-center justify-center">
                   <img

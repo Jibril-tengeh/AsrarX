@@ -65,93 +65,100 @@ export const ToolsIntegrityNotification: React.FC = () => {
   return (
     <AnimatePresence>
       {isOpen && (
-        <motion.div
-          initial={{ opacity: 0, y: 50, scale: 0.95 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 30, scale: 0.95 }}
-          className="fixed bottom-28 sm:bottom-24 left-4 right-4 sm:left-auto sm:right-6 sm:max-w-md z-[999] p-4 rounded-2xl bg-slate-900/95 dark:bg-slate-950/95 text-white border border-amber-500/40 shadow-2xl backdrop-blur-md"
+        <div 
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-xs"
+          onClick={handleDismiss}
         >
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0 mt-0.5">
-                {isFixedSuccess ? (
-                  <CheckCircle2 size={20} className="text-emerald-400" />
-                ) : (
-                  <Wrench size={20} className="animate-pulse" />
-                )}
-              </div>
-
-              <div className="space-y-1">
-                <div className="flex items-center gap-2">
-                  <h4 className="font-bold text-xs sm:text-sm text-white">
-                    {isFixedSuccess
-                      ? (language === 'en' ? 'Tools Repaired!' : language === 'ha' ? 'An gyara kayan aiki!' : 'Outils Réparés avec Succès !')
-                      : (language === 'en' ? 'Tools Integrity Alert' : language === 'ha' ? 'Sanarwar Kayan Aiki' : 'Vérification d\'Intégrité des Outils')}
-                  </h4>
-                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300">
-                    {report.totalInstalled}/{report.totalRegistered}
-                  </span>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: 15 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 15 }}
+            transition={{ type: 'spring', damping: 26, stiffness: 320 }}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-sm sm:max-w-md p-5 sm:p-6 rounded-3xl bg-slate-900/98 dark:bg-slate-950/98 text-white border border-amber-500/40 shadow-2xl backdrop-blur-xl relative"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0 mt-0.5 shadow-xs">
+                  {isFixedSuccess ? (
+                    <CheckCircle2 size={22} className="text-emerald-400" />
+                  ) : (
+                    <Wrench size={22} className="animate-pulse" />
+                  )}
                 </div>
 
-                <p className="text-xs text-slate-300 leading-relaxed">
-                  {isFixedSuccess ? (
-                    language === 'en'
-                      ? `All ${fixedCount} missing tools have been installed offline.`
-                      : language === 'ha'
-                      ? `An shigar da dukkan kayan aiki ${fixedCount} da suka bace.`
-                      : `Les ${fixedCount} outils manquants ont été installés et mis en cache.`
-                  ) : (
-                    language === 'en'
-                      ? `${report.totalMissing} tool(s) are missing from local offline cache.`
-                      : language === 'ha'
-                      ? `Kayan aiki ${report.totalMissing} basu cikin wayarka don aiki offline.`
-                      : `${report.totalMissing} outil(s) spirituel(s) ne sont pas encore enregistrés hors-ligne.`
-                  )}
-                </p>
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h4 className="font-bold text-sm sm:text-base text-white">
+                      {isFixedSuccess
+                        ? (language === 'en' ? 'Tools Repaired!' : language === 'ha' ? 'An gyara kayan aiki!' : 'Outils Réparés avec Succès !')
+                        : (language === 'en' ? 'Tools Integrity Alert' : language === 'ha' ? 'Sanarwar Kayan Aiki' : 'Vérification d\'Intégrité des Outils')}
+                    </h4>
+                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                      {report.totalInstalled}/{report.totalRegistered}
+                    </span>
+                  </div>
+
+                  <p className="text-xs sm:text-[13px] text-slate-300 leading-relaxed pt-0.5">
+                    {isFixedSuccess ? (
+                      language === 'en'
+                        ? `All ${fixedCount} missing tools have been installed offline.`
+                        : language === 'ha'
+                        ? `An shigar da dukkan kayan aiki ${fixedCount} da suka bace.`
+                        : `Les ${fixedCount} outils manquants ont été installés et mis en cache.`
+                    ) : (
+                      language === 'en'
+                        ? `${report.totalMissing} tool(s) are missing from local offline cache.`
+                        : language === 'ha'
+                        ? `Kayan aiki ${report.totalMissing} basu cikin wayarka don aiki offline.`
+                        : `${report.totalMissing} outil(s) spirituel(s) ne sont pas encore enregistrés hors-ligne.`
+                    )}
+                  </p>
+                </div>
               </div>
-            </div>
 
-            <button
-              type="button"
-              onClick={handleDismiss}
-              className="p-1 rounded-lg text-slate-400 hover:text-white transition-colors cursor-pointer"
-              title="Fermer"
-            >
-              <X size={16} />
-            </button>
-          </div>
-
-          {!isFixedSuccess && (
-            <div className="mt-3 pt-3 border-t border-slate-800 flex items-center justify-end gap-2">
               <button
                 type="button"
                 onClick={handleDismiss}
-                className="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-400 hover:text-slate-200 transition-colors"
+                className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+                title="Fermer"
               >
-                {language === 'en' ? 'Later' : language === 'ha' ? 'Daga baya' : 'Plus tard'}
-              </button>
-
-              <button
-                type="button"
-                disabled={isFixing}
-                onClick={handleQuickFix}
-                className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-emerald-600 hover:from-amber-400 hover:to-emerald-500 text-slate-950 font-bold text-xs flex items-center gap-1.5 shadow-md transition-all cursor-pointer"
-              >
-                {isFixing ? (
-                  <>
-                    <RefreshCw size={13} className="animate-spin" />
-                    <span>{language === 'en' ? 'Installing...' : language === 'ha' ? 'Ana shigarwa...' : 'Correction...'}</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles size={13} />
-                    <span>{language === 'en' ? 'Quick Fix (1-Click)' : language === 'ha' ? 'Gyara Nan Take' : 'Corriger & Télécharger (1-Clic)'}</span>
-                  </>
-                )}
+                <X size={18} />
               </button>
             </div>
-          )}
-        </motion.div>
+
+            {!isFixedSuccess && (
+              <div className="mt-4 pt-4 border-t border-slate-800/80 flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={handleDismiss}
+                  className="px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-800/50 transition-colors cursor-pointer"
+                >
+                  {language === 'en' ? 'Later' : language === 'ha' ? 'Daga baya' : 'Plus tard'}
+                </button>
+
+                <button
+                  type="button"
+                  disabled={isFixing}
+                  onClick={handleQuickFix}
+                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-emerald-600 hover:from-amber-400 hover:to-emerald-500 text-slate-950 font-bold text-xs sm:text-sm flex items-center gap-2 shadow-lg hover:shadow-emerald-500/20 active:scale-95 transition-all cursor-pointer"
+                >
+                  {isFixing ? (
+                    <>
+                      <RefreshCw size={14} className="animate-spin" />
+                      <span>{language === 'en' ? 'Installing...' : language === 'ha' ? 'Ana shigarwa...' : 'Correction...'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles size={14} />
+                      <span>{language === 'en' ? 'Quick Fix (1-Click)' : language === 'ha' ? 'Gyara Nan Take' : 'Corriger (1-Clic)'}</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+          </motion.div>
+        </div>
       )}
     </AnimatePresence>
   );

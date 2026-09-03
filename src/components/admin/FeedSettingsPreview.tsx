@@ -44,7 +44,7 @@ export const FeedSettingsPreview: React.FC<FeedSettingsPreviewProps> = ({
       icon: <Layout size={16} />,
       color: 'emerald',
       description: 'Flux principal des secrets, wirds quotidiens, bannières et carrousels.',
-      defaultTopPadding: 42,
+      defaultTopPadding: 60,
       hasSliderOffset: true
     },
     tools: {

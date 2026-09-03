@@ -1,5 +1,32 @@
 export type Category = string;
 
+export interface SubCategoryItem {
+  id: string;
+  name: string;
+  name_en?: string;
+  name_ha?: string;
+  hook?: string; // Phrase d'accroche captivante
+  hook_en?: string;
+  hook_ha?: string;
+  thumbnail?: string; // Vignette / image cover
+  iconName?: string;
+  createdAt?: number;
+}
+
+export interface CategoryItem {
+  id: string;
+  name: string;
+  name_en?: string;
+  name_ha?: string;
+  hook?: string; // Phrase d'accroche captivante
+  hook_en?: string;
+  hook_ha?: string;
+  thumbnail?: string; // Vignette / image cover
+  iconName?: string;
+  subCategories?: SubCategoryItem[];
+  createdAt?: number;
+}
+
 export interface AsrarItem {
   id: string;
   title: string;

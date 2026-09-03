@@ -38,11 +38,14 @@ export const NewVersionBannerModal: React.FC<NewVersionBannerModalProps> = ({
 
   const handleDismissOnly = () => {
     appVersionService.markVersionInstalled(currentVersion);
+    appVersionService.markVersionNotified(currentVersion);
     onDismiss();
   };
 
   const handleForceRefresh = async () => {
     setIsForceRefreshing(true);
+    appVersionService.markVersionInstalled(currentVersion);
+    appVersionService.markVersionNotified(currentVersion);
     try {
       if (onForceRefresh) {
         onForceRefresh();

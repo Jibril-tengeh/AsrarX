@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth, handleFirestoreError, OperationType } from '../../contexts/AuthContext';
 import { useFeatures } from '../../contexts/FeatureContext';
 import { db } from '../../lib/firebase';
-import { collection, query, orderBy, onSnapshot, doc, getDocsFromServer, getDocs, where, limit } from 'firebase/firestore';
-import { Search, LayoutGrid, Square, List, Filter, X, BookOpen, Store, Award, MapPin, Trophy, ShieldCheck, ChevronDown, Bookmark, Flame, Shield, RefreshCw, Quote, Folder, Plus, Library, Music, Pencil, Trash2, Sliders, Sparkles, Calendar, FolderOpen, Star, FileText, HardDrive, ArrowRight } from 'lucide-react';
+import { collection, query, orderBy, onSnapshot, doc, setDoc, getDocsFromServer, getDocs, where, limit } from 'firebase/firestore';
+import { Search, LayoutGrid, Square, List, Filter, X, BookOpen, Store, Award, MapPin, Trophy, ShieldCheck, ChevronDown, Bookmark, Flame, Shield, RefreshCw, Quote, Folder, Plus, Library, Music, Pencil, Trash2, Sliders, Sparkles, Calendar, FolderOpen, Star, FileText, HardDrive, ArrowRight, ArrowLeft, Layers } from 'lucide-react';
 import * as Icons from 'lucide-react';
 import { SecretCard, LayoutMode } from '../../components/SecretCard';
 import { HabitTracker } from '../../components/HabitTracker';
@@ -18,6 +18,9 @@ import { ToolsVideoSlider } from '../../components/ToolsVideoSlider';
 import { PullToRefresh } from '../../components/PullToRefresh';
 import { OfflineDashboardSection } from '../../components/OfflineDashboardSection';
 import { PromoAnnouncementBanner } from '../../components/videoCards/PromoAnnouncementBanner';
+import { HomeCategoriesGrid } from '../../components/home/HomeCategoriesGrid';
+import { getCategoryFallbackThumbnail, getCategoryFallbackHook } from '../../data/defaultCategories';
+import { sanitizeImageSource } from '../../utils/articleImageUtils';
 
 import { INITIAL_DEFAULT_ARTICLES, DefaultArticle } from '../../data/defaultArticles';
 import { fetchArticlesFromRest } from '../../lib/firestoreRest';
@@ -78,7 +81,14 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
     if (locState === 'offline') return 'offline';
     return initialFilter;
   });
-  const [layoutMode, setLayoutMode] = useState<LayoutMode>('grid2');
+  const [layoutMode, setLayoutMode] = useState<LayoutMode>(() => {
+    try {
+      const saved = localStorage.getItem('asrar_preferred_layout');
+      if (saved === 'grid2' || saved === 'grid1' || saved === 'list') return saved as LayoutMode;
+    } catch (e) {}
+    return 'grid2';
+  });
+  const [layoutToast, setLayoutToast] = useState<string | null>(null);
   const [lastToolId, setLastToolId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -98,13 +108,63 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
     }
   }, []);
 
-  
   const isLayoutFree = featureToggles?.home_articles_layout_free !== false && 
                        !featureToggles?.lockArticlesDisplayMode && 
                        !featureToggles?.home_articles_layout_locked;
 
+  const handleSetLayoutMode = (mode: LayoutMode) => {
+    setLayoutMode(mode);
+    try {
+      localStorage.setItem('asrar_preferred_layout', mode);
+    } catch (e) {}
+  };
+
+  const handleAdminSetDefaultLayout = async (mode: LayoutMode) => {
+    handleSetLayoutMode(mode);
+    const dbValue = mode === 'grid2' ? 'grid' : mode === 'grid1' ? 'large' : 'list';
+    try {
+      await setDoc(doc(db, 'settings', 'features'), {
+        home_articles_layout: dbValue,
+        articles_layout_mode: dbValue
+      }, { merge: true });
+      const localFontSaved = localStorage.getItem('asrar_font_toggles');
+      let localObj = localFontSaved ? JSON.parse(localFontSaved) : {};
+      localObj.home_articles_layout = dbValue;
+      localObj.articles_layout_mode = dbValue;
+      localStorage.setItem('asrar_font_toggles', JSON.stringify(localObj));
+      window.dispatchEvent(new Event('asrar_font_updated'));
+      setLayoutToast(
+        mode === 'grid2' ? "✓ Modèle Grille 2 Colonnes défini par défaut pour tous !" :
+        mode === 'grid1' ? "✓ Modèle Grand Format défini par défaut pour tous !" :
+        "✓ Modèle Liste Compacte défini par défaut pour tous !"
+      );
+      setTimeout(() => setLayoutToast(null), 4000);
+    } catch (e) {
+      console.error("Admin save layout error:", e);
+    }
+  };
+
   useEffect(() => {
     const layoutSetting = featureToggles?.home_articles_layout || featureToggles?.articles_layout_mode || featureToggles?.articlesDisplayMode;
+    
+    // If layout is strictly locked by admin, enforce admin's layout
+    if (!isLayoutFree && layoutSetting) {
+      if (layoutSetting === 'grid' || layoutSetting === 'grid2') setLayoutMode('grid2');
+      else if (layoutSetting === 'large' || layoutSetting === 'grid1') setLayoutMode('grid1');
+      else if (layoutSetting === 'list') setLayoutMode('list');
+      return;
+    }
+
+    // If user has a saved personal preference, respect it
+    try {
+      const savedLayout = localStorage.getItem('asrar_preferred_layout');
+      if (savedLayout && (savedLayout === 'grid2' || savedLayout === 'grid1' || savedLayout === 'list')) {
+        setLayoutMode(savedLayout as LayoutMode);
+        return;
+      }
+    } catch (e) {}
+
+    // Otherwise use default from admin
     if (layoutSetting) {
       if (layoutSetting === 'grid' || layoutSetting === 'grid2') {
         setLayoutMode('grid2');
@@ -116,7 +176,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
         setLayoutMode('grid2');
       }
     }
-  }, [featureToggles?.home_articles_layout, featureToggles?.articles_layout_mode, featureToggles?.articlesDisplayMode, featureToggles?.home_articles_layout_free, featureToggles?.lockArticlesDisplayMode]);
+  }, [featureToggles?.home_articles_layout, featureToggles?.articles_layout_mode, featureToggles?.articlesDisplayMode, isLayoutFree]);
 
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -165,6 +225,21 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
   useBackButton(() => setIsTopContributorsOpen(false), isTopContributorsOpen);
   useBackButton(() => setIsGlobalSearchOpen(false), isGlobalSearchOpen);
   useBackButton(() => setIsCalendarOpen(false), isCalendarOpen);
+
+  const isOnlyCategoriesMode = featureToggles?.home_only_categories_grid === true;
+
+  const activeCategoryObj = useMemo(() => {
+    if (!filter || filter === 'all' || filter === 'favoris' || filter === 'offline') return null;
+    const filterCat = (filter || '').toString().toLowerCase().trim();
+    return categories.find(c => c.id === filter || c.id?.toLowerCase() === filterCat || (c.name && c.name.toLowerCase() === filterCat));
+  }, [categories, filter]);
+
+  useBackButton(() => {
+    if (filter !== 'all') {
+      setFilter('all');
+      setSelectedSubCategory('');
+    }
+  }, isOnlyCategoriesMode && filter !== 'all');
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -1350,21 +1425,21 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
         {isLayoutFree && (
           <div id="tour-layout" className={`flex bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-0.5 sm:p-1 flex-shrink-0 h-[34px] sm:h-[42px] items-center transition-opacity duration-200 ${isSearchOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
             <button 
-              onClick={() => setLayoutMode('grid2')}
+              onClick={() => handleSetLayoutMode('grid2')}
               className={`p-1 sm:p-1.5 rounded-md sm:rounded-lg transition-colors ${layoutMode === 'grid2' ? 'bg-gray-100 dark:bg-gray-700 text-emerald-600 dark:text-emerald-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
               title="2 Colonnes"
             >
               <LayoutGrid className="w-[15px] h-[15px] sm:w-[18px] sm:h-[18px]" />
             </button>
             <button 
-              onClick={() => setLayoutMode('grid1')}
+              onClick={() => handleSetLayoutMode('grid1')}
               className={`p-1 sm:p-1.5 rounded-md sm:rounded-lg transition-colors ${layoutMode === 'grid1' ? 'bg-gray-100 dark:bg-gray-700 text-emerald-600 dark:text-emerald-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
               title="1 Colonne"
             >
               <Square className="w-[15px] h-[15px] sm:w-[18px] sm:h-[18px]" />
             </button>
             <button 
-              onClick={() => setLayoutMode('list')}
+              onClick={() => handleSetLayoutMode('list')}
               className={`p-1 sm:p-1.5 rounded-md sm:rounded-lg transition-colors ${layoutMode === 'list' ? 'bg-gray-100 dark:bg-gray-700 text-emerald-600 dark:text-emerald-400' : 'text-gray-400 hover:text-gray-600 dark:hover:text-gray-300'}`}
               title="Liste"
             >
@@ -1377,8 +1452,9 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
 
       {/* Spacer for fixed second toolbar with scroll-margin compensation & Admin Dynamic Feed Offset */}
       <div 
+        className="w-full shrink-0"
         style={{ 
-          height: `max(0px, calc(42px + var(--feed-home-offset, 0px) + var(--feed-global-offset, 0px)))` 
+          height: `max(52px, calc(60px + var(--feed-home-offset, 0px) + var(--feed-global-offset, 0px)))` 
         }} 
         aria-hidden="true" 
       />
@@ -1392,6 +1468,390 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
         refreshingText={t('pullToRefresh.refreshing', 'Actualisation...')}
         successText={t('pullToRefresh.success', 'À jour')}
       >
+      {isOnlyCategoriesMode ? (
+        /* ================= ONLY CATEGORIES 2-COLUMN GRID MODE ================= */
+        <div className="w-full">
+          {/* Tools Video Animated Slider on Root Categories Home View */}
+          {filter === 'all' && !searchQuery && featureToggles?.home_categories_show_slider !== false && (
+            <div 
+              className="scroll-mt-[88px] snap-start mb-2 sm:mb-3"
+              style={{
+                marginTop: `calc(var(--feed-home-slider-offset, 0px))`
+              }}
+            >
+              <ToolsVideoSlider />
+            </div>
+          )}
+
+          {filter === 'all' && !searchQuery ? (
+            /* Root Home Page: ONLY 2-column categories grid */
+            <HomeCategoriesGrid
+              categories={categories}
+              articles={items}
+              onSelectCategory={(cat) => {
+                setFilter(cat.id);
+                setSelectedSubCategory('');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              language={language}
+              searchQuery={searchQuery}
+              featureToggles={featureToggles}
+            />
+          ) : filter === 'offline' ? (
+            /* Offline section with back button */
+            <div className="space-y-4 pt-1 sm:pt-2">
+              <div className="flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => { setFilter('all'); setSelectedSubCategory(''); }}
+                  className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-750 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700 text-xs font-bold shadow-xs transition-all cursor-pointer"
+                >
+                  <ArrowLeft size={16} />
+                  <span>{language === 'en' ? 'All Categories' : language === 'ha' ? 'Duk Bangarori' : 'Toutes les catégories'}</span>
+                </button>
+              </div>
+              <OfflineDashboardSection />
+            </div>
+          ) : filter === 'favoris' ? (
+            /* Favoris section with back button */
+            <div className="space-y-4 pt-1 sm:pt-2">
+              <div className="flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => { setFilter('all'); setSelectedSubCategory(''); }}
+                  className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-750 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700 text-xs font-bold shadow-xs transition-all cursor-pointer"
+                >
+                  <ArrowLeft size={16} />
+                  <span>{language === 'en' ? 'All Categories' : language === 'ha' ? 'Duk Bangarori' : 'Toutes les catégories'}</span>
+                </button>
+              </div>
+              
+              {/* Favoris folders bar */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+                  <button
+                    type="button"
+                    onClick={() => setActiveFolder(null)}
+                    className={`px-4 py-2 rounded-xl flex items-center gap-2 whitespace-nowrap transition-colors border text-xs font-bold ${
+                      activeFolder === null 
+                        ? 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-900/40 dark:border-emerald-800 dark:text-emerald-300' 
+                        : 'bg-white border-gray-200 text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300'
+                    }`}
+                  >
+                    <Bookmark size={14} /> Tous les favoris
+                  </button>
+                  {bookmarkFolders.map((folder, fIdx) => (
+                    <button
+                      key={folder.id ? `folder-btn-${folder.id}-${fIdx}` : `folder-btn-${fIdx}`}
+                      type="button"
+                      onClick={() => setActiveFolder(folder.id)}
+                      className={`px-4 py-2 rounded-xl flex items-center gap-2 whitespace-nowrap transition-colors border text-xs font-bold ${
+                        activeFolder === folder.id 
+                          ? 'bg-emerald-50 border-emerald-200 text-emerald-700 dark:bg-emerald-900/40 dark:border-emerald-800 dark:text-emerald-300' 
+                          : 'bg-white border-gray-200 text-gray-700 dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300'
+                      }`}
+                    >
+                      <Folder size={14} /> {folder.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Favoris items grid */}
+              {filteredItems.length > 0 ? (
+                <div className={`grid gap-3 sm:gap-6 lg:gap-8 w-full max-w-full min-w-0 ${
+                  layoutMode === 'grid2' ? 'grid-cols-2 lg:grid-cols-3' : 
+                  layoutMode === 'list' ? 'grid-cols-1 lg:grid-cols-2' : 
+                  'grid-cols-1'
+                }`}>
+                  {filteredItems.map((item, itemIdx) => (
+                    <div key={item.id ? `card-fav-${item.id}-${itemIdx}` : `card-fav-${itemIdx}`} className="flex flex-col h-full">
+                      <SecretCard item={item} layoutMode={layoutMode} categories={categories} />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-10 text-center bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 space-y-3">
+                  <Bookmark size={30} className="mx-auto text-gray-400" />
+                  <p className="text-xs text-gray-500">Aucun favori enregistré pour le moment.</p>
+                </div>
+              )}
+            </div>
+          ) : (
+            /* Category Detailed View OR Search Query Active */
+            <div className="space-y-4 sm:space-y-5 pt-1 sm:pt-2">
+              {/* Back to all categories button */}
+              <div className="flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setFilter('all');
+                    setSelectedSubCategory('');
+                    if (searchQuery) setSearchQuery('');
+                  }}
+                  className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-750 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700 text-xs sm:text-sm font-bold shadow-xs hover:shadow-sm transition-all cursor-pointer"
+                >
+                  <ArrowLeft size={16} />
+                  <span>{language === 'en' ? 'All Categories' : language === 'ha' ? 'Duk Bangarori' : 'Toutes les catégories'}</span>
+                </button>
+
+                {activeCategoryObj && (
+                  <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">
+                    {filteredItems.length} {filteredItems.length > 1 ? (language === 'en' ? 'articles' : 'articles') : (language === 'en' ? 'article' : 'article')}
+                  </span>
+                )}
+              </div>
+
+              {/* If activeCategoryObj: Category Hero Banner */}
+              {activeCategoryObj && (
+                <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-gray-200 dark:border-gray-800 bg-gray-950 text-white shadow-md">
+                  {/* Banner Image */}
+                  <div className="absolute inset-0 z-0">
+                    <img
+                      src={sanitizeImageSource(activeCategoryObj.thumbnail || getCategoryFallbackThumbnail(activeCategoryObj.name))}
+                      alt={activeCategoryObj.name}
+                      className="w-full h-full object-cover opacity-35"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-950/70 to-black/30" />
+                  </div>
+
+                  <div className="relative z-10 p-4 sm:p-6 space-y-2.5 sm:space-y-3">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-white/20 backdrop-blur-md text-emerald-300 border border-white/20 shadow-xs">
+                        <LucideIcon name={activeCategoryObj.iconName || 'FolderOpen'} size={22} />
+                      </div>
+                      <div>
+                        <h2 className="text-lg sm:text-2xl font-black text-white">
+                          {language === 'en' && activeCategoryObj.name_en ? activeCategoryObj.name_en :
+                           language === 'ha' && activeCategoryObj.name_ha ? activeCategoryObj.name_ha :
+                           activeCategoryObj.name}
+                        </h2>
+                        <p className="text-[11px] sm:text-xs text-emerald-300 font-bold">
+                          {filteredItems.length} {language === 'en' ? 'articles available' : language === 'ha' ? 'rubuce-rubuce' : 'articles disponibles'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {(activeCategoryObj.hook || getCategoryFallbackHook(activeCategoryObj.name)) && (
+                      <p className="text-xs sm:text-sm text-gray-200 italic border-l-2 border-emerald-400 pl-3 py-0.5 leading-relaxed bg-black/25 rounded-r max-w-2xl">
+                        « {language === 'en' && activeCategoryObj.hook_en ? activeCategoryObj.hook_en :
+                           language === 'ha' && activeCategoryObj.hook_ha ? activeCategoryObj.hook_ha :
+                           (activeCategoryObj.hook || getCategoryFallbackHook(activeCategoryObj.name))} »
+                      </p>
+                    )}
+
+                    {/* Sub-categories horizontal pill bar if any */}
+                    {activeCategoryObj.subCategories && activeCategoryObj.subCategories.length > 0 && (
+                      <div className="pt-2">
+                        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedSubCategory('')}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+                              !selectedSubCategory
+                                ? 'bg-emerald-500 text-white shadow-xs'
+                                : 'bg-white/15 hover:bg-white/25 text-white/90 border border-white/20'
+                            }`}
+                          >
+                            {language === 'en' ? 'All' : language === 'ha' ? 'Duk' : 'Tout'}
+                          </button>
+                          {activeCategoryObj.subCategories.map((sub, sIdx) => {
+                            const isSubActive = selectedSubCategory === sub.id || selectedSubCategory === sub.name;
+                            const subArticlesCount = items.filter(a => {
+                              const s = ((a as any).subCategory || '').toLowerCase();
+                              return s === sub.id.toLowerCase() || s === sub.name.toLowerCase();
+                            }).length;
+
+                            let subDisplayName = sub.name;
+                            if (language === 'en' && sub.name_en) subDisplayName = sub.name_en;
+                            if (language === 'ha' && sub.name_ha) subDisplayName = sub.name_ha;
+
+                            return (
+                              <button
+                                key={sub.id || `sub-pill-${sIdx}`}
+                                type="button"
+                                onClick={() => setSelectedSubCategory(isSubActive ? '' : sub.id)}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                                  isSubActive
+                                    ? 'bg-emerald-500 text-white shadow-xs'
+                                    : 'bg-white/15 hover:bg-white/25 text-white/90 border border-white/20'
+                                }`}
+                              >
+                                <span>{subDisplayName}</span>
+                                {subArticlesCount > 0 && (
+                                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-black/30 font-semibold">
+                                    {subArticlesCount}
+                                  </span>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* If search query is active, show search banner */}
+              {searchQuery && (
+                <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 rounded-2xl border border-emerald-200/60 dark:border-emerald-800/60 flex items-center justify-between">
+                  <span className="text-xs text-emerald-800 dark:text-emerald-300 font-semibold">
+                    Recherche : « {searchQuery} » ({filteredItems.length} article{filteredItems.length > 1 ? 's' : ''})
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="text-xs font-bold text-emerald-600 hover:text-emerald-700 underline cursor-pointer"
+                  >
+                    Effacer
+                  </button>
+                </div>
+              )}
+
+              {/* Category Articles Subheader with 3 Layout Models Bar */}
+              <div className="flex flex-wrap items-center justify-between gap-2.5 pt-2 pb-1 border-b border-gray-100 dark:border-gray-800">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                    {filteredItems.length} {filteredItems.length > 1 ? (language === 'en' ? 'articles' : 'articles') : (language === 'en' ? 'article' : 'article')}
+                  </span>
+                  {selectedSubCategory && (
+                    <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300 font-bold truncate max-w-[150px]">
+                      {selectedSubCategory}
+                    </span>
+                  )}
+                </div>
+
+                {/* 3 Display Models Toggle */}
+                {isLayoutFree && (
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <div className="flex items-center bg-gray-100 dark:bg-gray-800 p-0.5 rounded-xl border border-gray-200 dark:border-gray-700 shadow-xs">
+                      <button
+                        type="button"
+                        onClick={() => handleSetLayoutMode('grid2')}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                          layoutMode === 'grid2'
+                            ? 'bg-emerald-600 text-white shadow-xs'
+                            : 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white'
+                        }`}
+                        title="Modèle 1 : Grille 2 Colonnes"
+                      >
+                        <LayoutGrid size={14} />
+                        <span className="text-[11px]">Grille</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSetLayoutMode('grid1')}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                          layoutMode === 'grid1'
+                            ? 'bg-emerald-600 text-white shadow-xs'
+                            : 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white'
+                        }`}
+                        title="Modèle 2 : Grand Format (1 Colonne)"
+                      >
+                        <Square size={14} />
+                        <span className="text-[11px]">Grand Format</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSetLayoutMode('list')}
+                        className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                          layoutMode === 'list'
+                            ? 'bg-emerald-600 text-white shadow-xs'
+                            : 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white'
+                        }`}
+                        title="Modèle 3 : Liste Compacte"
+                      >
+                        <List size={14} />
+                        <span className="text-[11px]">Liste</span>
+                      </button>
+                    </div>
+
+                    {/* Admin default setter */}
+                    {user?.role === 'admin' && (
+                      <button
+                        type="button"
+                        onClick={() => handleAdminSetDefaultLayout(layoutMode)}
+                        className="px-2 py-1 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/50 border border-amber-200 dark:border-amber-800 text-[10px] font-bold flex items-center gap-1 shadow-2xs transition-colors cursor-pointer"
+                        title="Admin : Enregistrer ce modèle comme affichage par défaut pour tous les utilisateurs"
+                      >
+                        <Shield size={12} className="shrink-0 text-amber-500" />
+                        <span className="hidden sm:inline">Par défaut</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Feedback toast for layout save */}
+              {layoutToast && (
+                <div className="p-2.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 rounded-xl text-xs font-bold flex items-center justify-between shadow-xs">
+                  <span>{layoutToast}</span>
+                  <button onClick={() => setLayoutToast(null)} className="text-emerald-600 hover:text-emerald-900 dark:hover:text-white p-0.5 cursor-pointer">
+                    <X size={14} />
+                  </button>
+                </div>
+              )}
+
+              {/* Render Articles Grid */}
+              {filteredItems.length > 0 ? (
+                <div className={`grid gap-3 sm:gap-6 lg:gap-8 w-full max-w-full min-w-0 ${
+                  layoutMode === 'grid2' ? 'grid-cols-2 lg:grid-cols-3' : 
+                  layoutMode === 'list' ? 'grid-cols-1 lg:grid-cols-2' : 
+                  'grid-cols-1'
+                }`}>
+                  {filteredItems.map((item, itemIdx) => (
+                    <div key={item.id ? `card-item-${item.id}-${itemIdx}` : `card-item-${itemIdx}`} className="flex flex-col h-full">
+                      <div className="flex-1">
+                        <SecretCard item={item} layoutMode={layoutMode} categories={categories} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-8 sm:p-10 text-center bg-white dark:bg-gray-800/80 rounded-3xl border border-gray-100 dark:border-gray-700 space-y-4 my-4">
+                  <div className="w-14 h-14 mx-auto rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-500 flex items-center justify-center">
+                    <BookOpen size={26} />
+                  </div>
+                  <h4 className="text-base font-bold text-gray-900 dark:text-white">
+                    {language === 'en' ? 'No articles yet in this category' : language === 'ha' ? 'Babu rubuce-rubuce a wannan bangare tukuna' : 'Aucun article dans cette catégorie pour le moment'}
+                  </h4>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
+                    {language === 'en' ? 'New secrets and publications will be added soon by the administration.' : 'De nouveaux secrets et publications seront bientôt ajoutés par l\'administration.'}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => { setFilter('all'); setSelectedSubCategory(''); }}
+                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold shadow-sm transition-all cursor-pointer"
+                  >
+                    {language === 'en' ? '← Back to categories' : language === 'ha' ? '← Koma bangarori' : '← Retour aux catégories'}
+                  </button>
+                </div>
+              )}
+
+              {/* Bottom return button */}
+              {filteredItems.length > 4 && (
+                <div className="pt-6 pb-2 text-center">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFilter('all');
+                      setSelectedSubCategory('');
+                      window.scrollTo({ top: 0, behavior: 'smooth' });
+                    }}
+                    className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-750 text-gray-800 dark:text-gray-200 text-xs font-extrabold transition-all cursor-pointer"
+                  >
+                    <ArrowLeft size={16} />
+                    <span>{language === 'en' ? 'Back to all categories' : language === 'ha' ? 'Koma duk bangarori' : 'Retour à toutes les catégories'}</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      ) : (
+        /* ================= STANDARD HOME FEED MODE ================= */
+        <>
         {/* Onboarding Tour */}
         <OnboardingTour />
 
@@ -2001,6 +2461,8 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
           </div>
         )}
       </div>
+      )}
+      </>
       )}
       </PullToRefresh>
       <GlobalSearchModal isOpen={isGlobalSearchOpen} onClose={() => setIsGlobalSearchOpen(false)} />

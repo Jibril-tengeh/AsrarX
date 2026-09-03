@@ -150,6 +150,8 @@ export async function checkVersionAndPurgeCache(force = false): Promise<boolean>
         console.log(`[VersionPurge] [Step 5/6] Updating localStorage version flags to "${currentVersion}"...`);
         localStorage.setItem('app_version', currentVersion);
         localStorage.setItem('asrarhub_installed_version', currentVersion);
+        localStorage.setItem('asrarhub_installed_app_version', currentVersion);
+        localStorage.setItem(`asrarhub_version_notified_${currentVersion}`, 'true');
         localStorage.setItem('asrarhub_last_cache_purge_timestamp', new Date().toISOString());
         localStorage.setItem('asrarhub_last_purge_version', currentVersion);
         sessionStorage.setItem('asrarhub_cache_purged_session', 'true');
@@ -166,6 +168,8 @@ export async function checkVersionAndPurgeCache(force = false): Promise<boolean>
       try {
         localStorage.setItem('app_version', currentVersion);
         localStorage.setItem('asrarhub_installed_version', currentVersion);
+        localStorage.setItem('asrarhub_installed_app_version', currentVersion);
+        localStorage.setItem(`asrarhub_version_notified_${currentVersion}`, 'true');
         localStorage.setItem('asrarhub_last_cache_purge_timestamp', new Date().toISOString());
       } catch (e) {
         // Safe fallback
@@ -1031,19 +1035,36 @@ export default function App() {
     // Check version and purge IndexedDB cache if upgrade detected
     checkVersionAndPurgeCache();
 
-    // Check if new version detected compared to local storage
+    // 1. Check if new local bundle version detected compared to local storage
     const check = appVersionService.checkVersionUpgrade();
     if (check.isNewVersion) {
-      const notifiedKey = `asrarhub_version_notified_${check.currentVersion}`;
-      if (!sessionStorage.getItem(notifiedKey)) {
+      if (!appVersionService.isVersionNotified(check.currentVersion)) {
         setVersionUpgradeData({
           currentVersion: check.currentVersion,
           previousVersion: check.previousVersion
         });
         setShowVersionUpgradeModal(true);
-        sessionStorage.setItem(notifiedKey, 'true');
+        appVersionService.markVersionNotified(check.currentVersion);
       }
     }
+
+    // 2. Subscribe to database releases from Firestore collection 'app_versions'
+    // Shows the notification ONCE only if there is a genuinely new release published in the database
+    const unsubscribeReleases = appVersionService.subscribeReleases((releases) => {
+      const dbCheck = appVersionService.checkDatabaseUpgrade(releases);
+      if (dbCheck.hasDbUpdate && dbCheck.dbRelease) {
+        setVersionUpgradeData({
+          currentVersion: dbCheck.dbRelease.version,
+          previousVersion: appVersionService.getCurrentVersion()
+        });
+        setShowVersionUpgradeModal(true);
+        appVersionService.markVersionNotified(dbCheck.dbRelease.version);
+      }
+    }, false);
+
+    return () => {
+      unsubscribeReleases();
+    };
   }, []);
 
   React.useEffect(() => {
@@ -1349,8 +1370,8 @@ export default function App() {
         <DailyRewardHandler />
         <main className={`flex flex-col flex-1 w-full max-w-full text-gray-900 dark:text-gray-100 pb-20 m-0 p-0 ${isFullscreen ? 'pt-0' : 'pt-[48px] sm:pt-[54px]'} min-w-0 overflow-x-hidden`}>
           <React.Suspense fallback={
-            <div className="flex items-center justify-center min-h-[60vh] w-full">
-              <div className="w-10 h-10 border-4 border-emerald-500/10 border-t-emerald-600 rounded-full animate-spin" />
+            <div className="flex items-center justify-center min-h-[60vh] w-full py-12">
+              <AsrarHubLoader size="lg" text="Chargement..." />
             </div>
           }>
             <AnimatePresence mode="wait">
@@ -1614,7 +1635,11 @@ export default function App() {
           isOpen={showVersionUpgradeModal}
           currentVersion={versionUpgradeData.currentVersion}
           previousVersion={versionUpgradeData.previousVersion}
-          onDismiss={() => setShowVersionUpgradeModal(false)}
+          onDismiss={() => {
+            appVersionService.markVersionInstalled(versionUpgradeData.currentVersion);
+            appVersionService.markVersionNotified(versionUpgradeData.currentVersion);
+            setShowVersionUpgradeModal(false);
+          }}
         />
 
         {/* Mandatory / Force Update Modal for APK & Web users */}

@@ -4,7 +4,10 @@ import { APP_VERSION_CONFIG, VersionRelease } from '../config/appVersion';
 import { clearAllArticlesCache } from '../lib/swrArticleCache';
 
 export const APP_VERSION_STORAGE_KEY = 'asrarhub_installed_app_version';
+export const APP_VERSION_LEGACY_KEY = 'asrarhub_installed_version';
+export const APP_VERSION_BASE_KEY = 'app_version';
 export const APP_VERSION_DISMISSED_UPDATE_KEY = 'asrarhub_dismissed_update_version';
+export const APP_VERSION_NOTIFIED_PREFIX = 'asrarhub_version_notified_';
 
 export interface FirestoreVersionDoc {
   id?: string;
@@ -57,7 +60,50 @@ class AppVersionService {
   }
 
   /**
-   * Check if the user has upgraded from a previous version
+   * Compare two semantic version strings (e.g. "1.1.2" vs "1.1.1")
+   * Returns: 1 if v1 > v2, -1 if v1 < v2, 0 if v1 === v2
+   */
+  compareVersions(v1: string, v2: string): number {
+    const clean1 = (v1 || '').replace(/^v/i, '').trim();
+    const clean2 = (v2 || '').replace(/^v/i, '').trim();
+    const p1 = clean1.split('.').map(n => parseInt(n, 10) || 0);
+    const p2 = clean2.split('.').map(n => parseInt(n, 10) || 0);
+    const len = Math.max(p1.length, p2.length);
+    for (let i = 0; i < len; i++) {
+      const a = p1[i] || 0;
+      const b = p2[i] || 0;
+      if (a > b) return 1;
+      if (a < b) return -1;
+    }
+    return 0;
+  }
+
+  /**
+   * Check if a specific version has already been displayed to the user
+   */
+  isVersionNotified(version: string): boolean {
+    try {
+      return localStorage.getItem(`${APP_VERSION_NOTIFIED_PREFIX}${version}`) === 'true';
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Mark a version as already notified in persistent localStorage
+   */
+  markVersionNotified(version: string) {
+    try {
+      localStorage.setItem(`${APP_VERSION_NOTIFIED_PREFIX}${version}`, 'true');
+    } catch (e) {
+      console.warn('Could not mark version notified in localStorage:', e);
+    }
+  }
+
+  /**
+   * Check if the user has upgraded from a previous version.
+   * Ensures that on a fresh first-install, or if the user has already seen this version,
+   * no notification is displayed on subsequent app opens.
    */
   checkVersionUpgrade(): {
     isNewVersion: boolean;
@@ -65,38 +111,102 @@ class AppVersionService {
     currentVersion: string;
   } {
     const current = this.getCurrentVersion();
-    const stored = localStorage.getItem(APP_VERSION_STORAGE_KEY);
+    const stored = localStorage.getItem(APP_VERSION_STORAGE_KEY)
+      || localStorage.getItem(APP_VERSION_LEGACY_KEY)
+      || localStorage.getItem(APP_VERSION_BASE_KEY);
 
+    // 1. First-time install: mark current version directly without prompting upgrade
     if (!stored) {
-      // First install or upgrade from unversioned
+      this.markVersionInstalled(current);
       return {
-        isNewVersion: true,
+        isNewVersion: false,
         previousVersion: null,
         currentVersion: current
       };
     }
 
-    if (stored !== current) {
+    // 2. Already up to date
+    if (stored === current) {
+      // Ensure sync across all keys
+      if (!localStorage.getItem(APP_VERSION_STORAGE_KEY)) {
+        localStorage.setItem(APP_VERSION_STORAGE_KEY, current);
+      }
       return {
-        isNewVersion: true,
+        isNewVersion: false,
         previousVersion: stored,
         currentVersion: current
       };
     }
 
+    // 3. User upgraded from older version: only show if not already notified
+    const alreadyNotified = this.isVersionNotified(current);
     return {
-      isNewVersion: false,
+      isNewVersion: !alreadyNotified,
       previousVersion: stored,
       currentVersion: current
     };
   }
 
   /**
-   * Save the current version into local storage once acknowledged/upgraded
+   * Check if Firestore database contains a newer active release than what the user currently has,
+   * ensuring that the notification is only shown ONCE per new release if there's an update in the database.
+   */
+  checkDatabaseUpgrade(releases: VersionRelease[]): {
+    hasDbUpdate: boolean;
+    dbRelease: VersionRelease | null;
+  } {
+    const currentVer = this.getCurrentVersion();
+    const currentCode = this.getCurrentVersionCode();
+
+    if (!releases || releases.length === 0) {
+      return { hasDbUpdate: false, dbRelease: null };
+    }
+
+    // Filter out disabled releases
+    const activeReleases = releases.filter(r => !r.disabled);
+    if (activeReleases.length === 0) {
+      return { hasDbUpdate: false, dbRelease: null };
+    }
+
+    // Sort by versionCode descending, then semantic version descending
+    const sorted = [...activeReleases].sort((a, b) => {
+      if (b.versionCode !== a.versionCode) {
+        return b.versionCode - a.versionCode;
+      }
+      return this.compareVersions(b.version, a.version);
+    });
+
+    const latest = sorted[0];
+
+    // Check if latest release in database is strictly greater than current version
+    const isNewer = (latest.versionCode > currentCode) || (this.compareVersions(latest.version, currentVer) > 0);
+
+    if (isNewer) {
+      // Check if user was already notified of this database release
+      const alreadyNotified = this.isVersionNotified(latest.version);
+      return {
+        hasDbUpdate: !alreadyNotified,
+        dbRelease: latest
+      };
+    }
+
+    return { hasDbUpdate: false, dbRelease: null };
+  }
+
+  /**
+   * Save the current version into local storage once acknowledged/upgraded,
+   * keeping all version storage markers unified.
    */
   markVersionInstalled(version?: string) {
     const ver = version || this.getCurrentVersion();
-    localStorage.setItem(APP_VERSION_STORAGE_KEY, ver);
+    try {
+      localStorage.setItem(APP_VERSION_STORAGE_KEY, ver);
+      localStorage.setItem(APP_VERSION_LEGACY_KEY, ver);
+      localStorage.setItem(APP_VERSION_BASE_KEY, ver);
+      localStorage.setItem(`${APP_VERSION_NOTIFIED_PREFIX}${ver}`, 'true');
+    } catch (e) {
+      console.warn('Could not mark version installed in localStorage:', e);
+    }
   }
 
   /**

@@ -122,17 +122,44 @@ export function compressAndOptimizeImage(file: File, maxDimension = 512, quality
         ctx.clearRect(0, 0, width, height);
         ctx.drawImage(img, 0, 0, width, height);
 
-        // Export as WebP if supported, otherwise PNG
+        // Export as WebP if supported, otherwise JPEG or PNG
+        let result = '';
         try {
           const optimizedDataUrl = canvas.toDataURL('image/webp', quality);
           if (optimizedDataUrl && optimizedDataUrl.startsWith('data:image/webp')) {
-            resolve(optimizedDataUrl);
-            return;
+            result = optimizedDataUrl;
           }
         } catch {
-          // Fallback to PNG
+          // Fallback to PNG / JPEG
         }
-        resolve(canvas.toDataURL('image/png'));
+
+        if (!result) {
+          try {
+            result = canvas.toDataURL('image/png');
+          } catch {
+            result = canvas.toDataURL();
+          }
+        }
+
+        // If oversized (> 420,000 chars), resize down to fit comfortably in Firestore
+        if (result.length > 420000) {
+          try {
+            const smallerCanvas = document.createElement('canvas');
+            const scale = Math.sqrt(350000 / result.length);
+            smallerCanvas.width = Math.max(64, Math.round(width * scale));
+            smallerCanvas.height = Math.max(64, Math.round(height * scale));
+            const sCtx = smallerCanvas.getContext('2d');
+            if (sCtx) {
+              sCtx.drawImage(canvas, 0, 0, smallerCanvas.width, smallerCanvas.height);
+              const compactWebp = smallerCanvas.toDataURL('image/webp', 0.75);
+              if (compactWebp && compactWebp.length < result.length) {
+                result = compactWebp;
+              }
+            }
+          } catch (_) {}
+        }
+
+        resolve(result);
       };
       img.onerror = () => {
         convertFileToBase64(file).then(resolve).catch(reject);
