@@ -9,6 +9,7 @@ import {
   PRESET_THUMBNAILS, 
   normalizeCategoryId, getCategoryFallbackThumbnail, getCategoryFallbackHook 
 } from '../../data/defaultCategories';
+import { getCategoryFallbackVideo } from '../../data/categoryIconsData';
 import { sanitizeImageSource } from '../../utils/articleImageUtils';
 import { CategoryDynamicIcon, CategoryVideoOrIconBadge } from '../common/CategoryDynamicIcon';
 import { CategoryIconPickerModal } from './CategoryIconPickerModal';
@@ -125,6 +126,7 @@ export const CategoryEditModal: React.FC<CategoryEditModalProps> = ({
 
     const resolvedThumbnail = formData.thumbnail.trim() || getCategoryFallbackThumbnail(trimmedName);
     const resolvedHook = formData.hook.trim() || getCategoryFallbackHook(trimmedName);
+    const resolvedVideo = formData.videoUrl.trim() || getCategoryFallbackVideo(trimmedName);
 
     const categoryObj: CategoryItem = {
       id: catId,
@@ -135,8 +137,8 @@ export const CategoryEditModal: React.FC<CategoryEditModalProps> = ({
       hook_en: formData.hook_en.trim() || resolvedHook,
       hook_ha: formData.hook_ha.trim() || resolvedHook,
       thumbnail: resolvedThumbnail,
-      iconName: formData.iconName || 'FolderOpen',
-      videoUrl: formData.videoUrl.trim() || undefined,
+      iconName: formData.iconName || 'Sparkles',
+      videoUrl: resolvedVideo,
       subCategories: categoryToEdit?.subCategories || [],
       createdAt: categoryToEdit?.createdAt || Date.now()
     };
@@ -369,7 +371,7 @@ export const CategoryEditModal: React.FC<CategoryEditModalProps> = ({
             <div className="flex items-center gap-3.5 bg-white dark:bg-gray-900 p-2.5 rounded-xl border border-gray-200 dark:border-gray-700/80 shadow-xs">
               <CategoryVideoOrIconBadge
                 iconName={formData.iconName}
-                videoUrl={formData.videoUrl}
+                videoUrl={formData.videoUrl || (formData.name ? getCategoryFallbackVideo(formData.name) : undefined)}
                 categoryName={formData.name || 'Aperçu'}
                 size="md"
               />
@@ -379,40 +381,40 @@ export const CategoryEditModal: React.FC<CategoryEditModalProps> = ({
                     {formData.iconName || 'Sparkles'}
                   </span>
                   <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-300/40">
-                    {formData.videoUrl ? '🎬 Vidéo Looping Active' : '✨ Badge SVG Animé'}
+                    {formData.videoUrl ? '🎬 Vidéo Looping Personnalisée' : '✨ Vidéo & Aura Sacrée'}
                   </span>
                 </div>
                 <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate mt-0.5">
-                  {formData.videoUrl ? `Source : ${formData.videoUrl}` : 'Rendu dynamique avec aura émeraude & halo radiant'}
+                  {formData.videoUrl ? `Source : ${formData.videoUrl}` : 'Badge animé en boucle avec halo radiant haute visibilité'}
                 </p>
               </div>
 
               <button
                 type="button"
                 onClick={() => setShowIconPickerModal(true)}
-                className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shrink-0 transition-all cursor-pointer shadow-xs"
+                className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shrink-0 transition-all cursor-pointer shadow-xs active:scale-95"
               >
                 Parcourir
               </button>
             </div>
 
             {/* Quick Strip of Essential Icons */}
-            <div className="space-y-1">
-              <div className="text-[10px] font-semibold text-gray-400">Sélection rapide :</div>
-              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+            <div className="space-y-1.5">
+              <div className="text-[10px] font-bold text-gray-500 dark:text-gray-400">Sélection rapide :</div>
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
                 {QUICK_ICONS.map((icon) => (
                   <button
                     key={`cat-icon-${icon}`}
                     type="button"
                     onClick={() => setFormData(prev => ({ ...prev, iconName: icon }))}
-                    className={`p-2 rounded-xl transition-all cursor-pointer shrink-0 ${
+                    className={`p-2.5 rounded-xl transition-all cursor-pointer shrink-0 ${
                       formData.iconName === icon
-                        ? 'bg-emerald-600 text-white shadow-sm'
-                        : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 bg-white dark:bg-gray-900 border border-gray-200/60 dark:border-gray-700'
+                        ? 'bg-emerald-600 text-white shadow-md ring-2 ring-emerald-400 scale-105'
+                        : 'bg-emerald-50/80 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200/60 dark:border-emerald-800/50'
                     }`}
                     title={icon}
                   >
-                    <CategoryDynamicIcon name={icon} size={16} />
+                    <CategoryDynamicIcon name={icon} size={22} className={formData.iconName === icon ? 'text-white' : ''} />
                   </button>
                 ))}
               </div>
@@ -423,6 +425,7 @@ export const CategoryEditModal: React.FC<CategoryEditModalProps> = ({
           <div className="pt-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-end gap-2.5">
             <button
               type="button"
+              disabled={isSaving}
               onClick={onClose}
               className="px-4 py-2 rounded-xl text-xs font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors cursor-pointer"
             >
@@ -431,30 +434,30 @@ export const CategoryEditModal: React.FC<CategoryEditModalProps> = ({
             <button
               type="submit"
               disabled={isSaving}
-              className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-xs flex items-center gap-1.5 shadow transition-all cursor-pointer"
+              className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl text-xs flex items-center gap-1.5 shadow transition-all cursor-pointer disabled:opacity-60"
             >
               <Check size={14} />
-              <span>{categoryToEdit ? "Mettre à jour la Catégorie" : "Créer la Catégorie"}</span>
+              <span>{isSaving ? "Enregistrement..." : (categoryToEdit ? "Mettre à jour la Catégorie" : "Créer la Catégorie")}</span>
             </button>
           </div>
         </form>
-
-        {/* 520+ Icons and HD Video Looping Picker Modal */}
-        <CategoryIconPickerModal
-          isOpen={showIconPickerModal}
-          onClose={() => setShowIconPickerModal(false)}
-          selectedIcon={formData.iconName}
-          selectedVideoUrl={formData.videoUrl}
-          categoryName={formData.name}
-          onSelect={(iconName, videoUrl) => {
-            setFormData(prev => ({
-              ...prev,
-              iconName,
-              videoUrl: videoUrl || ''
-            }));
-          }}
-        />
       </motion.div>
+
+      {/* 520+ Icons and HD Video Looping Picker Modal */}
+      <CategoryIconPickerModal
+        isOpen={showIconPickerModal}
+        onClose={() => setShowIconPickerModal(false)}
+        selectedIcon={formData.iconName}
+        selectedVideoUrl={formData.videoUrl}
+        categoryName={formData.name}
+        onSelect={(iconName, videoUrl) => {
+          setFormData(prev => ({
+            ...prev,
+            iconName,
+            videoUrl: videoUrl || ''
+          }));
+        }}
+      />
     </div>
   );
 };

@@ -248,14 +248,14 @@ export const AdminSecurityAlertsManager: React.FC<AdminSecurityAlertsManagerProp
           </div>
         ) : (
           <div className="space-y-3">
-            {filteredAlerts.map((alert) => {
+            {filteredAlerts.map((alert, aIdx) => {
               const matchingUser = users.find(u => u.id === alert.userId || u.email === alert.userEmail);
               const resolvedStatus = matchingUser ? getResolvedUserStatus(matchingUser) : 'active';
               const isCritical = (alert.attemptCount || 1) >= 3 || alert.severity === 'critical';
 
               return (
                 <div
-                  key={alert.id}
+                  key={alert.id ? `sec-alert-${alert.id}-${aIdx}` : `sec-alert-${aIdx}`}
                   className={`p-4 sm:p-5 rounded-2xl border transition-all flex flex-col lg:flex-row lg:items-center justify-between gap-4 ${
                     isCritical
                       ? 'bg-red-50/70 dark:bg-red-950/20 border-red-300 dark:border-red-800/80 shadow-xs'

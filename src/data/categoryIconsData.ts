@@ -3405,3 +3405,29 @@ export function getCategoryVideoPreset(idOrUrl: string): CategoryVideoPreset | u
   const clean = idOrUrl.toLowerCase();
   return PRESET_CATEGORY_VIDEOS.find(p => p.id === clean || p.url.toLowerCase() === clean || p.mp4Url.toLowerCase() === clean);
 }
+
+export function getCategoryFallbackVideo(nameOrId?: string): string {
+  const str = (nameOrId || '').toLowerCase().trim();
+  if (!str) return '/videos/categories/secrets-asrar.mp4';
+  if (str.includes('verset') && str.includes('protect')) return '/videos/categories/versets-protection.mp4';
+  if (str.includes('verset')) return '/videos/categories/versets-protection.mp4';
+  if (str.includes('azkar') || str.includes('dhikr') || str.includes('zikr')) return '/videos/categories/azkar.mp4';
+  if (str.includes('wird') || str.includes('awrad')) return '/videos/categories/wird.mp4';
+  if (str.includes('ruqyah') || str.includes('guerison') || str.includes('healing')) return '/videos/categories/ruqyah.mp4';
+  if (str.includes('doua') || str.includes('du\'a') || str.includes('dua') || str.includes('invocation')) return '/videos/categories/douas.mp4';
+  if (str.includes('ouverture') || str.includes('opening') || str.includes('bude') || str.includes('fath')) return '/videos/categories/ouvertures.mp4';
+  if (str.includes('elevation') || str.includes('daukaka')) return '/videos/categories/elevation.mp4';
+  if (str.includes('sihr') || str.includes('oeil') || str.includes('evil') || str.includes('sorcellerie')) return '/videos/categories/sihr-mauvais-oeil.mp4';
+  if (str.includes('provision') || str.includes('richesse') || str.includes('argent') || str.includes('arziki') || str.includes('rizq')) return '/videos/categories/provisions.mp4';
+  if (str.includes('deblocage') || str.includes('uncrossing') || str.includes('warware')) return '/videos/categories/deblocage.mp4';
+  if (str.includes('favori') || str.includes('favorite')) return '/videos/categories/favoris.mp4';
+  if (str.includes('asrar') || str.includes('secret') || str.includes('khatim')) return '/videos/categories/secrets-asrar.mp4';
+  if (str.includes('recette') || str.includes('spirituelle') || str.includes('pratique')) return '/videos/categories/recettes-spirituelles.mp4';
+  if (str.includes('protect')) return '/videos/categories/protection.mp4';
+
+  const clean = str.replace(/[^a-z0-9]/g, '');
+  const match = PRESET_CATEGORY_VIDEOS.find(p => clean.includes(p.id.replace(/[^a-z0-9]/g, '')));
+  if (match) return match.mp4Url;
+
+  return '/videos/categories/secrets-asrar.mp4';
+}

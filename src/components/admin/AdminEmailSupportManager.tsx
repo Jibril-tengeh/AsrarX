@@ -445,7 +445,7 @@ export const AdminEmailSupportManager: React.FC = () => {
                 <p className="text-xs text-gray-400 mt-1">Aucune correspondance avec les filtres appliqués.</p>
               </div>
             ) : (
-              filteredMessages.map((msg) => {
+              filteredMessages.map((msg, mIdx) => {
                 const isSelected = selectedMessage?.id === msg.id;
 
                 const statusBadges = {
@@ -464,7 +464,7 @@ export const AdminEmailSupportManager: React.FC = () => {
 
                 return (
                   <div
-                    key={msg.id}
+                    key={msg.id ? `support-msg-${msg.id}-${mIdx}` : `support-msg-${mIdx}`}
                     onClick={() => handleSelectMessage(msg)}
                     className={`p-4 cursor-pointer transition-all ${
                       isSelected
@@ -667,9 +667,9 @@ export const AdminEmailSupportManager: React.FC = () => {
                     Fil des Réponses ({selectedMessage.replies.length})
                   </h4>
                   <div className="space-y-2.5">
-                    {selectedMessage.replies.map((reply) => (
+                    {selectedMessage.replies.map((reply, rIdx) => (
                       <div
-                        key={reply.id}
+                        key={reply.id ? `reply-${reply.id}-${rIdx}` : `reply-${rIdx}`}
                         className={`p-3.5 rounded-2xl text-xs space-y-1 ${
                           reply.sender === 'admin'
                             ? 'bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800 text-emerald-950 dark:text-emerald-200 ml-4'
@@ -708,7 +708,7 @@ export const AdminEmailSupportManager: React.FC = () => {
                   <span className="text-[10px] text-gray-400 font-bold uppercase">Modèles :</span>
                   {quickTemplates.map((tpl, i) => (
                     <button
-                      key={i}
+                      key={`quick-tpl-${tpl.title}-${i}`}
                       type="button"
                       onClick={() => setReplyText(tpl.text)}
                       className="px-2.5 py-1 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg text-[11px] text-gray-700 dark:text-gray-300 font-bold transition-colors cursor-pointer"

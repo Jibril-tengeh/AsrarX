@@ -111,12 +111,12 @@ export const SmartProblemSearchWidget: React.FC<SmartProblemSearchWidgetProps> =
 
       {/* Quick Category Chips */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-        {categories.map((cat) => {
+        {categories.map((cat, cIdx) => {
           const Icon = cat.icon;
           const isSelected = activeCategory === cat.id;
           return (
             <button
-              key={cat.id}
+              key={`barh-cat-${cat.id}-${cIdx}`}
               onClick={() => setActiveCategory(cat.id)}
               className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
                 isSelected
@@ -141,9 +141,9 @@ export const SmartProblemSearchWidget: React.FC<SmartProblemSearchWidgetProps> =
             </span>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {filteredRecipes.map((rec) => (
+              {filteredRecipes.map((rec, rIdx) => (
                 <div
-                  key={rec.id}
+                  key={rec.id ? `barh-rec-${rec.id}-${rIdx}` : `barh-rec-${rIdx}`}
                   onClick={() => onSelectRecipe && onSelectRecipe(rec)}
                   className="p-4 rounded-2xl bg-gradient-to-r from-gray-950 via-amber-950/20 to-black border border-amber-500/30 hover:border-amber-400 transition-all cursor-pointer space-y-2 shadow-lg group"
                 >
@@ -183,9 +183,9 @@ export const SmartProblemSearchWidget: React.FC<SmartProblemSearchWidgetProps> =
             </span>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {filteredNames.map((item) => (
+              {filteredNames.map((item, nIdx) => (
                 <div
-                  key={item.id}
+                  key={item.id ? `barh-item-${item.id}-${nIdx}` : `barh-item-${nIdx}`}
                   className="p-4 rounded-2xl bg-gradient-to-r from-gray-950 via-gray-900 to-black border border-amber-500/30 space-y-2.5 shadow-lg"
                 >
                   <div className="flex items-center justify-between border-b border-gray-800 pb-2">

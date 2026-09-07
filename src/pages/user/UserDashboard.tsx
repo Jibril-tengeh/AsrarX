@@ -5,7 +5,7 @@ import { useFeatures } from '../../contexts/FeatureContext';
 import { db } from '../../lib/firebase';
 import { collection, query, orderBy, onSnapshot, doc, setDoc, getDocsFromServer, getDocs, where, limit } from 'firebase/firestore';
 import { Search, LayoutGrid, Square, List, Filter, X, BookOpen, Store, Award, MapPin, Trophy, ShieldCheck, ChevronDown, Bookmark, Flame, Shield, RefreshCw, Quote, Folder, Plus, Library, Music, Pencil, Trash2, Sliders, Sparkles, Calendar, FolderOpen, Star, FileText, HardDrive, ArrowRight, ArrowLeft, Layers, Newspaper } from 'lucide-react';
-import { CategoryDynamicIcon } from '../../components/common/CategoryDynamicIcon';
+import { CategoryDynamicIcon, CategoryVideoOrIconBadge } from '../../components/common/CategoryDynamicIcon';
 import { SecretCard, LayoutMode } from '../../components/SecretCard';
 import { HabitTracker } from '../../components/HabitTracker';
 import { DailyGoalsTracker } from '../../components/DailyGoalsTracker';
@@ -1489,12 +1489,13 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
                               className="w-full p-4 flex items-center justify-between text-left transition-colors hover:bg-emerald-50/5 dark:hover:bg-emerald-900/5 rounded-t-2xl"
                             >
                               <div className="flex items-center gap-3">
-                                <div className={`p-2.5 rounded-xl ${
-                                  isSelected 
-                                    ? 'bg-emerald-500 text-white' 
-                                    : 'bg-white dark:bg-gray-850 text-gray-500 dark:text-gray-400 border border-gray-100 dark:border-gray-700'
-                                }`}>
-                                  <LucideIcon name={cat.iconName || 'FolderOpen'} size={20} />
+                                <div className="shrink-0">
+                                  <CategoryVideoOrIconBadge
+                                    iconName={cat.iconName || 'FolderOpen'}
+                                    categoryName={displayName}
+                                    theme={cat.theme || cat.id}
+                                    size="sm"
+                                  />
                                 </div>
                                 <div>
                                   <span className={`text-sm font-bold block ${isSelected ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-800 dark:text-gray-200'}`}>
@@ -1867,9 +1868,12 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
 
                   <div className="relative z-10 p-4 sm:p-6 space-y-2.5 sm:space-y-3">
                     <div className="flex items-center gap-3">
-                      <div className="p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-white/20 backdrop-blur-md text-emerald-300 border border-white/20 shadow-xs">
-                        <LucideIcon name={activeCategoryObj.iconName || 'FolderOpen'} size={22} />
-                      </div>
+                      <CategoryVideoOrIconBadge
+                        iconName={activeCategoryObj.iconName || 'FolderOpen'}
+                        categoryName={activeCategoryObj.name}
+                        theme={activeCategoryObj.theme || activeCategoryObj.id}
+                        size="md"
+                      />
                       <div>
                         <h2 className="text-lg sm:text-2xl font-black text-white">
                           {language === 'en' && activeCategoryObj.name_en ? activeCategoryObj.name_en :

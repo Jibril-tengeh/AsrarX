@@ -220,7 +220,7 @@ export const ArticleMediaGallery: React.FC<ArticleMediaGalleryProps> = ({ conten
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredList.map((item) => {
+          {filteredList.map((item, mIdx) => {
             const validation = checkMediaUrlValidity(
               item.src,
               item.type === 'embed' ? 'embed' : item.type === 'video' ? 'video' : item.type === 'audio' ? 'audio' : 'video'
@@ -228,7 +228,7 @@ export const ArticleMediaGallery: React.FC<ArticleMediaGalleryProps> = ({ conten
 
             return (
               <div
-                key={item.id}
+                key={item.id ? `art-media-${item.id}-${mIdx}` : `art-media-${mIdx}`}
                 className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden shadow-xs hover:shadow-md transition-shadow flex flex-col justify-between"
               >
                 {/* Media Preview Box */}

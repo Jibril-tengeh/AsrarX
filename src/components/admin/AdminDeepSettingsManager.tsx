@@ -484,9 +484,9 @@ export const AdminDeepSettingsManager: React.FC<AdminDeepSettingsManagerProps> =
                     { days: 7, label: '7 Jours' },
                     { days: 14, label: '14 Jours' },
                     { days: 30, label: '30 Jours' }
-                  ].map(item => (
+                  ].map((item, dIdx) => (
                     <button
-                      key={item.days}
+                      key={`new-user-prem-day-${item.days}-${dIdx}`}
                       type="button"
                       onClick={() => handleToggleFeature('new_user_premium_days', item.days)}
                       className={`py-1.5 px-2 rounded-lg text-xs font-bold transition-colors cursor-pointer ${
@@ -557,9 +557,9 @@ export const AdminDeepSettingsManager: React.FC<AdminDeepSettingsManagerProps> =
             <div className="space-y-2">
               <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Décalage Lunaire Manuel :</label>
               <div className="flex flex-wrap items-center gap-2">
-                {[-3, -2, -1, 0, 1, 2, 3].map((offset) => (
+                {[-3, -2, -1, 0, 1, 2, 3].map((offset, oIdx) => (
                   <button
-                    key={offset}
+                    key={`hijri-offset-${offset}-${oIdx}`}
                     type="button"
                     onClick={() => handleToggleFeature('hijri_offset', offset)}
                     className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
@@ -754,9 +754,9 @@ export const AdminDeepSettingsManager: React.FC<AdminDeepSettingsManagerProps> =
                   { id: 'standard', label: 'Standard (14px)', icon: '⚖️' },
                   { id: 'comfort', label: 'Confort (16px)', icon: '📖' },
                   { id: 'large', label: 'Grand (18px)', icon: '🔍' }
-                ].map(preset => (
+                ].map((preset, pIdx) => (
                   <button
-                    key={preset.id}
+                    key={`arabic-preset-${preset.id}-${pIdx}`}
                     type="button"
                     disabled={fontSizeLocked}
                     onClick={() => applyFontPreset(preset.id as any)}
@@ -812,6 +812,25 @@ export const AdminDeepSettingsManager: React.FC<AdminDeepSettingsManagerProps> =
                   max="44"
                   value={featureToggles.textSizeArabic || 22}
                   onChange={(e) => handleToggleFeature('textSizeArabic', parseInt(e.target.value))}
+                  className="w-full accent-emerald-500 cursor-pointer"
+                />
+              </div>
+
+              <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 space-y-1.5">
+                <div className="flex justify-between text-xs font-bold text-gray-700 dark:text-gray-300">
+                  <span>Titres des Catégories (Accueil) :</span>
+                  <span className="text-emerald-600 dark:text-emerald-400">{featureToggles.home_categories_title_size || 13}px</span>
+                </div>
+                <input
+                  type="range"
+                  min="10"
+                  max="24"
+                  value={featureToggles.home_categories_title_size || 13}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value);
+                    handleToggleFeature('home_categories_title_size', val);
+                    handleToggleFeature('textSizeCategoryTitle', val);
+                  }}
                   className="w-full accent-emerald-500 cursor-pointer"
                 />
               </div>
@@ -895,12 +914,12 @@ export const AdminDeepSettingsManager: React.FC<AdminDeepSettingsManagerProps> =
                   { id: 'large', label: 'Grand Format (Card)', icon: Layout },
                   { id: 'grid', label: 'Grille 2 Colonnes', icon: Grid },
                   { id: 'list', label: 'Liste Compacte', icon: List }
-                ].map(layout => {
+                ].map((layout, lIdx) => {
                   const IconComp = layout.icon;
                   const isSelected = (featureToggles.home_articles_layout || 'large') === layout.id;
                   return (
                     <button
-                      key={layout.id}
+                      key={`article-layout-${layout.id}-${lIdx}`}
                       type="button"
                       onClick={() => handleToggleFeature('home_articles_layout', layout.id)}
                       className={`p-3 rounded-xl border text-xs font-bold flex flex-col items-center justify-center gap-1.5 transition-all cursor-pointer ${
@@ -923,8 +942,8 @@ export const AdminDeepSettingsManager: React.FC<AdminDeepSettingsManagerProps> =
               <div className="p-4 bg-gray-900 rounded-2xl border border-gray-800">
                 {(featureToggles.home_articles_layout || 'large') === 'grid' && (
                   <div className="grid grid-cols-2 gap-2.5">
-                    {[1, 2].map(i => (
-                      <div key={i} className="p-3 bg-gray-800 rounded-xl border border-gray-700 space-y-1.5">
+                    {[1, 2].map((i, pGridIdx) => (
+                      <div key={`preview-grid-i-${i}-${pGridIdx}`} className="p-3 bg-gray-800 rounded-xl border border-gray-700 space-y-1.5">
                         <div className="w-full h-14 bg-emerald-500/15 rounded-lg flex items-center justify-center text-emerald-400 font-bold text-xs">
                           📖 Secret #{i}
                         </div>
@@ -949,8 +968,8 @@ export const AdminDeepSettingsManager: React.FC<AdminDeepSettingsManagerProps> =
 
                 {(featureToggles.home_articles_layout || 'large') === 'list' && (
                   <div className="space-y-2">
-                    {[1, 2].map(i => (
-                      <div key={i} className="p-2.5 bg-gray-800 rounded-xl border border-gray-700 flex items-center gap-3">
+                    {[1, 2].map((i, pListIdx) => (
+                      <div key={`preview-list-i-${i}-${pListIdx}`} className="p-2.5 bg-gray-800 rounded-xl border border-gray-700 flex items-center gap-3">
                         <div className="w-9 h-9 bg-emerald-500/15 rounded-lg flex items-center justify-center text-emerald-400 font-bold text-xs shrink-0">
                           #{i}
                         </div>
@@ -984,9 +1003,9 @@ export const AdminDeepSettingsManager: React.FC<AdminDeepSettingsManagerProps> =
                   {[
                     { id: 'full', label: 'Texte Entier' },
                     { id: 'accordion', label: 'Par Sections' }
-                  ].map(m => (
+                  ].map((m, mIdx) => (
                     <button
-                      key={m.id}
+                      key={`read-mode-${m.id}-${mIdx}`}
                       type="button"
                       onClick={() => handleToggleFeature('reading_mode_default', m.id)}
                       className={`py-2 px-3 rounded-lg text-xs font-bold transition-all cursor-pointer ${
@@ -1004,9 +1023,9 @@ export const AdminDeepSettingsManager: React.FC<AdminDeepSettingsManagerProps> =
               <div className="p-3 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 space-y-1.5">
                 <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Police par défaut (Lecteur) :</label>
                 <div className="grid grid-cols-3 gap-1.5">
-                  {[14, 16, 18].map(size => (
+                  {[14, 16, 18].map((size, sIdx) => (
                     <button
-                      key={size}
+                      key={`art-font-size-${size}-${sIdx}`}
                       type="button"
                       onClick={() => handleToggleFeature('article_default_font_size', size)}
                       className={`py-2 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
@@ -1057,9 +1076,9 @@ export const AdminDeepSettingsManager: React.FC<AdminDeepSettingsManagerProps> =
                 { cols: 1, label: '1 Colonne (Grande Fiche)' },
                 { cols: 2, label: '2 Colonnes (Standard)' },
                 { cols: 3, label: '3 Colonnes (Compacte)' }
-              ].map(item => (
+              ].map((item, cIdx) => (
                 <button
-                  key={item.cols}
+                  key={`store-cols-${item.cols}-${cIdx}`}
                   type="button"
                   onClick={() => handleToggleFeature('store_grid_cols', item.cols)}
                   className={`p-3 rounded-xl border text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-2 ${
@@ -1081,8 +1100,8 @@ export const AdminDeepSettingsManager: React.FC<AdminDeepSettingsManagerProps> =
                 <div className={`grid gap-3 ${
                   (featureToggles.store_grid_cols || 2) === 1 ? 'grid-cols-1' : (featureToggles.store_grid_cols || 2) === 3 ? 'grid-cols-3' : 'grid-cols-2'
                 }`}>
-                  {[1, 2].map(i => (
-                    <div key={i} className="p-3 bg-gray-800 rounded-xl border border-gray-700 space-y-2">
+                  {[1, 2].map((i, pStoreIdx) => (
+                    <div key={`preview-store-item-${i}-${pStoreIdx}`} className="p-3 bg-gray-800 rounded-xl border border-gray-700 space-y-2">
                       <div className="w-full h-16 bg-amber-500/10 rounded-lg flex items-center justify-center text-amber-400 font-bold text-xs">
                         📦 Talisman #{i}
                       </div>
@@ -1234,11 +1253,11 @@ export const AdminDeepSettingsManager: React.FC<AdminDeepSettingsManagerProps> =
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Devise Principale :</label>
               <div className="flex flex-wrap gap-2">
-                {['GHS (Cedi)', 'USD ($)', 'EUR (€)', 'XOF (FCFA)', 'NGN (₦)'].map(curr => {
+                {['GHS (Cedi)', 'USD ($)', 'EUR (€)', 'XOF (FCFA)', 'NGN (₦)'].map((curr, currIdx) => {
                   const code = curr.split(' ')[0];
                   return (
                     <button
-                      key={code}
+                      key={`cur-code-${code}-${currIdx}`}
                       type="button"
                       onClick={() => handleToggleFeature('pricing_currency', code)}
                       className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
@@ -1260,8 +1279,8 @@ export const AdminDeepSettingsManager: React.FC<AdminDeepSettingsManagerProps> =
                 { id: 'price_quarterly', label: 'Trimestriel (3 Mois)', def: 120 },
                 { id: 'price_yearly', label: 'Annuel (1 An)', def: 350 },
                 { id: 'price_lifetime', label: 'Pass À Vie', def: 900 }
-              ].map(tier => (
-                <div key={tier.id} className="p-3 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 space-y-1">
+              ].map((tier, tIdx) => (
+                <div key={`pricing-tier-${tier.id}-${tIdx}`} className="p-3 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 space-y-1">
                   <label className="text-xs font-bold text-gray-700 dark:text-gray-300">{tier.label}</label>
                   <div className="flex items-center gap-1">
                     <input
@@ -1285,8 +1304,8 @@ export const AdminDeepSettingsManager: React.FC<AdminDeepSettingsManagerProps> =
                   { name: '3 Mois', price: featureToggles.price_quarterly ?? 120, tag: 'Économique' },
                   { name: '1 An', price: featureToggles.price_yearly ?? 350, tag: 'Recommandé', highlight: true },
                   { name: 'À Vie', price: featureToggles.price_lifetime ?? 900, tag: 'VIP Ultime' }
-                ].map(p => (
-                  <div key={p.name} className={`p-3 rounded-2xl border text-center space-y-1.5 transition-all ${
+                ].map((p, pIdx) => (
+                  <div key={`preview-pricing-${p.name}-${pIdx}`} className={`p-3 rounded-2xl border text-center space-y-1.5 transition-all ${
                     p.highlight 
                       ? 'bg-gradient-to-b from-emerald-600 to-teal-700 text-white border-emerald-500 shadow-md' 
                       : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white'
@@ -1360,9 +1379,9 @@ export const AdminDeepSettingsManager: React.FC<AdminDeepSettingsManagerProps> =
                   { id: 'soufi', label: 'Sage Soufi Traditionnel', desc: 'Poétique, bienveillant, invocations' },
                   { id: 'scholarly', label: 'Érudit Asrar Rigoureux', desc: 'Références Hadiths, rigueur fiqh' },
                   { id: 'gentle', label: 'Guide Pratique & Concis', desc: 'Instructions claires et directes' }
-                ].map(p => (
+                ].map((p, pIdx) => (
                   <button
-                    key={p.id}
+                    key={`ai-persona-${p.id}-${pIdx}`}
                     type="button"
                     onClick={() => handleToggleFeature('ai_persona', p.id)}
                     className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
@@ -1444,9 +1463,9 @@ export const AdminDeepSettingsManager: React.FC<AdminDeepSettingsManagerProps> =
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-1">
-              {filteredReciters.map(rec => (
+              {filteredReciters.map((rec, rIdx) => (
                 <button
-                  key={rec.id}
+                  key={`reciter-${rec.id}-${rIdx}`}
                   type="button"
                   onClick={() => {
                     handleToggleFeature('default_reciter', rec.id);

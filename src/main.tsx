@@ -74,6 +74,7 @@ const rootElement = document.getElementById('root');
 if (rootElement) {
   try {
     const root = createRoot(rootElement);
+    (window as any).__ASRAR_APP_MOUNTED__ = true;
     root.render(
       <StrictMode>
         <ErrorBoundary>

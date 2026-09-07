@@ -200,8 +200,8 @@ export const SubCategoryEditModal: React.FC<SubCategoryEditModalProps> = ({
               }}
               className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2.5 text-xs sm:text-sm text-gray-900 dark:text-white font-bold outline-none cursor-pointer"
             >
-              {categories.map((c) => (
-                <option key={`sub-modal-parent-${c.id}`} value={c.id}>
+              {categories.map((c, cIdx) => (
+                <option key={`sub-modal-parent-${c.id}-${cIdx}`} value={c.id}>
                   {c.name} ({c.subCategories?.length || 0} sous-catégories)
                 </option>
               ))}

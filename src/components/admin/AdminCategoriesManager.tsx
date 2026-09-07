@@ -6,7 +6,7 @@ import {
   Heart, Key, Compass, Moon, Sun, Flame, Feather, Coins,
   Star, Volume2, ChevronDown, ChevronUp, RefreshCw, Upload,
   AlertTriangle, CheckCircle2, Copy, LayoutGrid, Square, LayoutList, Crown,
-  Grid2X2, Lock, Unlock, Newspaper, Pin, Film
+  Grid2X2, Lock, Unlock, Newspaper, Pin, Film, Loader2, Type, Minus
 } from 'lucide-react';
 import { doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
@@ -16,6 +16,7 @@ import {
   normalizeCategoryId, normalizeSubCategoryId,
   getCategoryFallbackThumbnail, getCategoryFallbackHook, getSubCategoryFallbackHook
 } from '../../data/defaultCategories';
+import { getCategoryFallbackVideo } from '../../data/categoryIconsData';
 import { sanitizeImageSource } from '../../utils/articleImageUtils';
 import { CategoryDynamicIcon, CategoryVideoOrIconBadge } from '../common/CategoryDynamicIcon';
 import { CategoryIconPickerModal } from './CategoryIconPickerModal';
@@ -70,6 +71,12 @@ export const AdminCategoriesManager: React.FC<AdminCategoriesManagerProps> = ({
   const showCountsOnHome = featureToggles?.home_categories_show_counts !== false;
   const showSubCountsOnHome = featureToggles?.home_categories_show_sub_counts !== false;
   const showSliderOnHome = featureToggles?.home_categories_show_slider !== false;
+  const showTextsOnHome = featureToggles?.home_categories_show_texts !== false && featureToggles?.home_categories_show_header !== false;
+  const showBadgeOnHome = featureToggles?.home_categories_show_badge !== false;
+  const showTitleOnHome = featureToggles?.home_categories_show_title !== false;
+  const showSubtitleOnHome = featureToggles?.home_categories_show_subtitle !== false;
+  const showCategoryNamesOnHome = featureToggles?.home_categories_show_names !== false;
+  const homeCategoryTitleSize: number = Number(featureToggles?.home_categories_title_size || featureToggles?.textSizeCategoryTitle) || 13;
 
   const [isUpdatingToggle, setIsUpdatingToggle] = useState(false);
 
@@ -303,25 +310,70 @@ export const AdminCategoriesManager: React.FC<AdminCategoriesManagerProps> = ({
   const handleToggleHomeSubOption = async (optionKey: string, currentVal: boolean) => {
     const nextVal = !currentVal;
     try {
-      if (handleToggleFeature) {
-        await handleToggleFeature(optionKey, nextVal);
+      if (optionKey === 'home_categories_show_texts' || optionKey === 'home_categories_show_header') {
+        if (handleToggleFeature) {
+          await handleToggleFeature('home_categories_show_texts', nextVal, "Textes d'en-tête Catégories");
+        }
+        await setDoc(doc(db, 'settings', 'features'), { 
+          home_categories_show_texts: nextVal,
+          home_categories_show_header: nextVal 
+        }, { merge: true });
+        const localFontSaved = localStorage.getItem('asrar_font_toggles');
+        let localObj = localFontSaved ? JSON.parse(localFontSaved) : {};
+        localObj['home_categories_show_texts'] = nextVal;
+        localObj['home_categories_show_header'] = nextVal;
+        localStorage.setItem('asrar_font_toggles', JSON.stringify(localObj));
       } else {
+        if (handleToggleFeature) {
+          await handleToggleFeature(optionKey, nextVal);
+        }
         await setDoc(doc(db, 'settings', 'features'), { [optionKey]: nextVal }, { merge: true });
         const localFontSaved = localStorage.getItem('asrar_font_toggles');
         let localObj = localFontSaved ? JSON.parse(localFontSaved) : {};
         localObj[optionKey] = nextVal;
         localStorage.setItem('asrar_font_toggles', JSON.stringify(localObj));
-        window.dispatchEvent(new Event('asrar_font_updated'));
       }
-      onShowToast("Option d'affichage mise à jour.", "success");
+      window.dispatchEvent(new Event('asrar_font_updated'));
+      onShowToast(
+        nextVal
+          ? "Élément textuel activé sur l'accueil."
+          : "Élément textuel désactivé de l'accueil.",
+        "success"
+      );
     } catch (e) {
       console.warn("Option error:", e);
+      onShowToast("Erreur lors de la mise à jour de l'option.", "error");
+    }
+  };
+
+  const handleUpdateCategoryTitleSize = async (newSize: number) => {
+    const clamped = Math.max(10, Math.min(24, Math.round(newSize)));
+    try {
+      if (handleToggleFeature) {
+        await handleToggleFeature('home_categories_title_size', clamped, `Taille titres catégories : ${clamped}px`);
+      }
+      await setDoc(doc(db, 'settings', 'features'), { 
+        home_categories_title_size: clamped,
+        textSizeCategoryTitle: clamped
+      }, { merge: true });
+
+      const localFontSaved = localStorage.getItem('asrar_font_toggles');
+      let localObj = localFontSaved ? JSON.parse(localFontSaved) : {};
+      localObj['home_categories_title_size'] = clamped;
+      localObj['textSizeCategoryTitle'] = clamped;
+      localStorage.setItem('asrar_font_toggles', JSON.stringify(localObj));
+      window.dispatchEvent(new Event('asrar_font_updated'));
+      onShowToast(`Taille des titres définie à ${clamped}px`, "success");
+    } catch (e) {
+      console.warn("Category title size error:", e);
+      onShowToast("Erreur lors de la modification de la taille.", "error");
     }
   };
 
   // Category Edit Modal State
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isIconPickerModalOpen, setIsIconPickerModalOpen] = useState(false);
+  const [isSavingCategory, setIsSavingCategory] = useState(false);
   const [editingCategory, setEditingCategory] = useState<CategoryItem | null>(null);
   const [categoryFormData, setCategoryFormData] = useState({
     name: '',
@@ -369,8 +421,8 @@ export const AdminCategoriesManager: React.FC<AdminCategoriesManagerProps> = ({
     }));
   };
 
-  // Helper icon renderer - dynamically resolves 520+ icons
-  const renderIcon = (name: string, size = 18, className = '') => {
+  // Helper icon renderer - dynamically resolves 520+ icons with vibrant non-black colors
+  const renderIcon = (name: string, size = 24, className = '') => {
     return <CategoryDynamicIcon name={name} size={size} className={className} />;
   };
 
@@ -511,7 +563,7 @@ export const AdminCategoriesManager: React.FC<AdminCategoriesManagerProps> = ({
       return;
     }
 
-    const catId = editingCategory ? editingCategory.id : normalizeCategoryId(trimmedName);
+    const catId = editingCategory ? editingCategory.id : (normalizeCategoryId(trimmedName) || ('cat-' + Date.now()));
     if (!catId) {
       onShowToast("Nom de catégorie invalide", "error");
       return;
@@ -519,6 +571,7 @@ export const AdminCategoriesManager: React.FC<AdminCategoriesManagerProps> = ({
 
     const resolvedThumbnail = categoryFormData.thumbnail.trim() || getCategoryFallbackThumbnail(trimmedName);
     const resolvedHook = categoryFormData.hook.trim() || getCategoryFallbackHook(trimmedName);
+    const resolvedVideo = categoryFormData.videoUrl.trim() || getCategoryFallbackVideo(trimmedName);
 
     const categoryObj: CategoryItem = {
       id: catId,
@@ -529,14 +582,31 @@ export const AdminCategoriesManager: React.FC<AdminCategoriesManagerProps> = ({
       hook_en: categoryFormData.hook_en.trim() || resolvedHook,
       hook_ha: categoryFormData.hook_ha.trim() || resolvedHook,
       thumbnail: resolvedThumbnail,
-      iconName: categoryFormData.iconName || 'FolderOpen',
-      videoUrl: categoryFormData.videoUrl.trim() || undefined,
+      iconName: categoryFormData.iconName || 'Sparkles',
+      videoUrl: resolvedVideo,
       subCategories: editingCategory?.subCategories || [],
       createdAt: editingCategory?.createdAt || Date.now()
     };
 
+    // Clean data payload for Firestore (ensure no field is undefined)
+    const firestorePayload: Record<string, any> = {
+      id: categoryObj.id,
+      name: categoryObj.name,
+      name_en: categoryObj.name_en || categoryObj.name,
+      name_ha: categoryObj.name_ha || categoryObj.name,
+      hook: categoryObj.hook || '',
+      hook_en: categoryObj.hook_en || '',
+      hook_ha: categoryObj.hook_ha || '',
+      thumbnail: categoryObj.thumbnail || '',
+      iconName: categoryObj.iconName || 'Sparkles',
+      videoUrl: categoryObj.videoUrl || '',
+      subCategories: categoryObj.subCategories || [],
+      createdAt: categoryObj.createdAt || Date.now()
+    };
+
+    setIsSavingCategory(true);
     try {
-      await setDoc(doc(db, 'categories', catId), categoryObj, { merge: true });
+      await setDoc(doc(db, 'categories', catId), firestorePayload, { merge: true });
 
       setCategories(prev => {
         const exists = prev.some(c => c.id === catId);
@@ -549,7 +619,9 @@ export const AdminCategoriesManager: React.FC<AdminCategoriesManagerProps> = ({
       setIsCategoryModalOpen(false);
     } catch (err: any) {
       console.error("Error saving category:", err);
-      onShowToast("Erreur lors de l'enregistrement: " + err.message, "error");
+      onShowToast("Erreur lors de l'enregistrement: " + (err?.message || "Erreur inconnue"), "error");
+    } finally {
+      setIsSavingCategory(false);
     }
   };
 
@@ -1248,20 +1320,81 @@ export const AdminCategoriesManager: React.FC<AdminCategoriesManagerProps> = ({
               </div>
             </div>
 
-            {/* Sub-options */}
-            {isHomeOnlyCategories && (
-              <div className="pt-3 border-t border-emerald-200/60 dark:border-emerald-800/60 flex flex-wrap items-center gap-4 text-xs">
-                <span className="text-[11px] font-bold text-gray-600 dark:text-gray-400">Options d'affichage :</span>
+            {/* Sub-options for Home Categories */}
+            <div className="pt-3.5 border-t border-emerald-200/60 dark:border-emerald-800/60 space-y-3 text-xs">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-xs font-black text-gray-800 dark:text-gray-200">
+                  Options d'affichage sur l'accueil :
+                </span>
+                <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                  Personnalisez la visibilité des textes et éléments de la section catégories
+                </span>
+              </div>
+
+              {/* Group 1: En-tête & Textes (Exclusive Classification, Titre, Sous-titre) */}
+              <div className="p-3 bg-white/80 dark:bg-gray-800/80 rounded-xl border border-gray-200/80 dark:border-gray-700/80 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="flex items-center gap-2 cursor-pointer select-none font-bold text-gray-900 dark:text-white">
+                    <input
+                      type="checkbox"
+                      checked={showTextsOnHome}
+                      onChange={() => handleToggleHomeSubOption('home_categories_show_texts', showTextsOnHome)}
+                      className="rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer w-4 h-4"
+                    />
+                    <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">
+                      Afficher les textes d'en-tête (Titre, Badge, Description)
+                    </span>
+                  </label>
+                  <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
+                    showTextsOnHome ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300' : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                  }`}>
+                    {showTextsOnHome ? 'Textes Actifs' : 'Textes Masqués'}
+                  </span>
+                </div>
+
+                {showTextsOnHome && (
+                  <div className="pl-6 pt-1 border-t border-dashed border-gray-200 dark:border-gray-700 grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px]">
+                    <label className="flex items-center gap-1.5 cursor-pointer select-none text-gray-700 dark:text-gray-300">
+                      <input
+                        type="checkbox"
+                        checked={showBadgeOnHome}
+                        onChange={() => handleToggleHomeSubOption('home_categories_show_badge', showBadgeOnHome)}
+                        className="rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                      />
+                      <span>Badge "Classification Exclusive"</span>
+                    </label>
+                    <label className="flex items-center gap-1.5 cursor-pointer select-none text-gray-700 dark:text-gray-300">
+                      <input
+                        type="checkbox"
+                        checked={showTitleOnHome}
+                        onChange={() => handleToggleHomeSubOption('home_categories_show_title', showTitleOnHome)}
+                        className="rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                      />
+                      <span>Titre "Catégories"</span>
+                    </label>
+                    <label className="flex items-center gap-1.5 cursor-pointer select-none text-gray-700 dark:text-gray-300">
+                      <input
+                        type="checkbox"
+                        checked={showSubtitleOnHome}
+                        onChange={() => handleToggleHomeSubOption('home_categories_show_subtitle', showSubtitleOnHome)}
+                        className="rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                      />
+                      <span>Description / Sous-titre</span>
+                    </label>
+                  </div>
+                )}
+              </div>
+
+              {/* Group 2: Eléments des cartes & Widgets */}
+              <div className="flex flex-wrap items-center gap-4 pt-1">
                 <label className="flex items-center gap-1.5 cursor-pointer select-none">
                   <input
                     type="checkbox"
-                    checked={showSliderOnHome}
-                    onChange={() => handleToggleHomeSubOption('home_categories_show_slider', showSliderOnHome)}
+                    checked={showCategoryNamesOnHome}
+                    onChange={() => handleToggleHomeSubOption('home_categories_show_names', showCategoryNamesOnHome)}
                     className="rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
                   />
-                  <span className="text-gray-750 dark:text-gray-250 font-bold text-emerald-700 dark:text-emerald-300">
-                    Afficher le Slider des outils
-                  </span>
+                  <span className="text-gray-700 dark:text-gray-300 font-medium">Noms des catégories</span>
                 </label>
                 <label className="flex items-center gap-1.5 cursor-pointer select-none">
                   <input
@@ -1270,7 +1403,7 @@ export const AdminCategoriesManager: React.FC<AdminCategoriesManagerProps> = ({
                     onChange={() => handleToggleHomeSubOption('home_categories_show_hooks', showHooksOnHome)}
                     className="rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
                   />
-                  <span className="text-gray-700 dark:text-gray-300 font-medium">Afficher les phrases d'accroche (hooks)</span>
+                  <span className="text-gray-700 dark:text-gray-300 font-medium">Phrases d'accroche (hooks)</span>
                 </label>
                 <label className="flex items-center gap-1.5 cursor-pointer select-none">
                   <input
@@ -1290,8 +1423,116 @@ export const AdminCategoriesManager: React.FC<AdminCategoriesManagerProps> = ({
                   />
                   <span className="text-gray-700 dark:text-gray-300 font-medium">Compteur sous-thèmes</span>
                 </label>
+                <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={showSliderOnHome}
+                    onChange={() => handleToggleHomeSubOption('home_categories_show_slider', showSliderOnHome)}
+                    className="rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                  />
+                  <span className="text-gray-750 dark:text-gray-250 font-medium">
+                    Slider des outils
+                  </span>
+                </label>
               </div>
-            )}
+
+              {/* Group 3: Réglage de la taille des titres des catégories (Augmenter / Réduire) */}
+              <div className="pt-3 mt-2 border-t border-gray-200/70 dark:border-gray-750/70 space-y-2.5">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400">
+                      <Type size={14} />
+                    </span>
+                    <div>
+                      <span className="text-xs font-bold text-gray-900 dark:text-white">
+                        Taille des titres des catégories sur l'accueil
+                      </span>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                        Agrandir ou réduire la taille du texte affiché sous chaque catégorie
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Boutons - et + avec affichage en pixels */}
+                  <div className="flex items-center gap-2 self-start sm:self-auto">
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateCategoryTitleSize(homeCategoryTitleSize - 1)}
+                      disabled={homeCategoryTitleSize <= 10}
+                      title="Réduire la taille"
+                      className="w-8 h-8 rounded-xl bg-gray-100 dark:bg-gray-750 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 text-gray-700 dark:text-gray-200 hover:text-emerald-700 dark:hover:text-emerald-300 font-bold flex items-center justify-center transition-all disabled:opacity-40 disabled:cursor-not-allowed border border-gray-200/80 dark:border-gray-700 cursor-pointer"
+                    >
+                      <Minus size={14} />
+                    </button>
+
+                    <span className="px-3 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 font-black text-xs min-w-[56px] text-center shadow-xs">
+                      {homeCategoryTitleSize} px
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateCategoryTitleSize(homeCategoryTitleSize + 1)}
+                      disabled={homeCategoryTitleSize >= 24}
+                      title="Augmenter la taille"
+                      className="w-8 h-8 rounded-xl bg-gray-100 dark:bg-gray-750 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 text-gray-700 dark:text-gray-200 hover:text-emerald-700 dark:hover:text-emerald-300 font-bold flex items-center justify-center transition-all disabled:opacity-40 disabled:cursor-not-allowed border border-gray-200/80 dark:border-gray-700 cursor-pointer"
+                    >
+                      <Plus size={14} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Curseur Slider & Boutons de présélection rapide */}
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                  <div className="flex items-center gap-2 flex-1">
+                    <span className="text-[10px] font-bold text-gray-400">10px</span>
+                    <input
+                      type="range"
+                      min={10}
+                      max={24}
+                      step={1}
+                      value={homeCategoryTitleSize}
+                      onChange={(e) => handleUpdateCategoryTitleSize(Number(e.target.value))}
+                      className="w-full accent-emerald-600 dark:accent-emerald-400 h-2 bg-gray-200 dark:bg-gray-700 rounded-lg cursor-pointer"
+                    />
+                    <span className="text-[10px] font-bold text-gray-400">24px</span>
+                  </div>
+
+                  {/* Presets rapides */}
+                  <div className="flex items-center gap-1 shrink-0 overflow-x-auto">
+                    {[
+                      { label: 'Compact (11px)', size: 11 },
+                      { label: 'Normal (13px)', size: 13 },
+                      { label: 'Grand (15px)', size: 15 },
+                      { label: 'Très grand (18px)', size: 18 },
+                    ].map((preset, pIdx) => (
+                      <button
+                        key={`cat-size-preset-${preset.size}-${pIdx}`}
+                        type="button"
+                        onClick={() => handleUpdateCategoryTitleSize(preset.size)}
+                        className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all border cursor-pointer ${
+                          homeCategoryTitleSize === preset.size
+                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-xs'
+                            : 'bg-gray-100 dark:bg-gray-750 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700'
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Mini Aperçu en direct */}
+                <div className="flex items-center justify-between p-2 rounded-xl bg-gray-50/80 dark:bg-gray-850/80 border border-gray-200/60 dark:border-gray-700/60">
+                  <span className="text-[10px] font-medium text-gray-500 dark:text-gray-400">Aperçu direct :</span>
+                  <span 
+                    style={{ fontSize: `${homeCategoryTitleSize}px` }} 
+                    className="font-extrabold text-gray-900 dark:text-gray-100 leading-tight"
+                  >
+                    Invocations & Douas
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         )}
         </div>
@@ -1546,8 +1787,8 @@ export const AdminCategoriesManager: React.FC<AdminCategoriesManagerProps> = ({
 
                     {/* Floating Badges */}
                     <div className="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none">
-                      <span className="px-2.5 py-1 rounded-xl bg-black/60 backdrop-blur-md text-white text-[11px] font-black flex items-center gap-1.5 border border-white/10 shadow-sm pointer-events-auto">
-                        {renderIcon(cat.iconName || 'FolderOpen', 13, 'text-emerald-400')}
+                      <span className="px-3 py-1.5 rounded-xl bg-black/65 backdrop-blur-md text-white text-xs font-black flex items-center gap-2 border border-white/15 shadow-sm pointer-events-auto">
+                        {renderIcon(cat.iconName || 'FolderOpen', 18, 'text-emerald-300')}
                         <span>{cat.name}</span>
                         {cat.videoUrl && (
                           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse ml-0.5" title="Badge vidéo HD actif" />
@@ -1565,15 +1806,23 @@ export const AdminCategoriesManager: React.FC<AdminCategoriesManagerProps> = ({
                     </div>
 
                     {/* Bottom Category Info Overlay */}
-                    <div className="absolute bottom-3 left-3 right-3 text-white">
-                      <h3 className="text-base sm:text-lg font-black tracking-tight drop-shadow-sm flex items-center gap-2">
-                        <span>{cat.name}</span>
-                      </h3>
-                      {cat.name_en && cat.name_en !== cat.name && (
-                        <p className="text-[11px] text-gray-300 font-medium line-clamp-1">
-                          EN: {cat.name_en} {cat.name_ha ? `• HA: ${cat.name_ha}` : ''}
-                        </p>
-                      )}
+                    <div className="absolute bottom-3 left-3 right-3 text-white flex items-center gap-3">
+                      <CategoryVideoOrIconBadge
+                        iconName={cat.iconName || 'FolderOpen'}
+                        videoUrl={cat.videoUrl}
+                        categoryName={cat.name}
+                        size="sm"
+                      />
+                      <div className="min-w-0 flex-1">
+                        <h3 className="text-base sm:text-lg font-black tracking-tight drop-shadow-sm flex items-center gap-2">
+                          <span>{cat.name}</span>
+                        </h3>
+                        {cat.name_en && cat.name_en !== cat.name && (
+                          <p className="text-[11px] text-gray-300 font-medium line-clamp-1">
+                            EN: {cat.name_en} {cat.name_ha ? `• HA: ${cat.name_ha}` : ''}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -1946,7 +2195,7 @@ export const AdminCategoriesManager: React.FC<AdminCategoriesManagerProps> = ({
                   <div className="flex items-center gap-3.5 bg-white dark:bg-gray-900 p-2.5 rounded-xl border border-gray-200 dark:border-gray-700/80 shadow-xs">
                     <CategoryVideoOrIconBadge
                       iconName={categoryFormData.iconName}
-                      videoUrl={categoryFormData.videoUrl}
+                      videoUrl={categoryFormData.videoUrl || (categoryFormData.name ? getCategoryFallbackVideo(categoryFormData.name) : undefined)}
                       categoryName={categoryFormData.name || 'Aperçu'}
                       size="md"
                     />
@@ -1956,40 +2205,40 @@ export const AdminCategoriesManager: React.FC<AdminCategoriesManagerProps> = ({
                           {categoryFormData.iconName || 'Sparkles'}
                         </span>
                         <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-300/40">
-                          {categoryFormData.videoUrl ? '🎬 Vidéo Looping Active' : '✨ Badge SVG Animé'}
+                          {categoryFormData.videoUrl ? '🎬 Vidéo Looping Personnalisée' : '✨ Vidéo & Aura Sacrée'}
                         </span>
                       </div>
                       <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate mt-0.5">
-                        {categoryFormData.videoUrl ? `Source : ${categoryFormData.videoUrl}` : 'Rendu dynamique avec aura émeraude & halo radiant'}
+                        {categoryFormData.videoUrl ? `Source : ${categoryFormData.videoUrl}` : 'Badge animé en boucle avec halo radiant haute visibilité'}
                       </p>
                     </div>
 
                     <button
                       type="button"
                       onClick={() => setIsIconPickerModalOpen(true)}
-                      className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shrink-0 transition-all cursor-pointer shadow-xs"
+                      className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shrink-0 transition-all cursor-pointer shadow-xs active:scale-95"
                     >
                       Parcourir
                     </button>
                   </div>
 
                   {/* Quick Strip of Essential Icons */}
-                  <div className="space-y-1">
-                    <div className="text-[10px] font-semibold text-gray-400">Sélection rapide :</div>
-                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-                      {PRESET_ICONS.map((icon) => (
+                  <div className="space-y-1.5">
+                    <div className="text-[10px] font-bold text-gray-500 dark:text-gray-400">Sélection rapide :</div>
+                    <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+                      {PRESET_ICONS.map((icon, iconIdx) => (
                         <button
-                          key={`icon-${icon}`}
+                          key={`icon-${icon}-${iconIdx}`}
                           type="button"
                           onClick={() => setCategoryFormData(prev => ({ ...prev, iconName: icon }))}
-                          className={`p-2 rounded-xl transition-all cursor-pointer shrink-0 ${
+                          className={`p-2.5 rounded-xl transition-all cursor-pointer shrink-0 ${
                             categoryFormData.iconName === icon
-                              ? 'bg-emerald-600 text-white shadow-sm'
-                              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 bg-white dark:bg-gray-900 border border-gray-200/60 dark:border-gray-700'
+                              ? 'bg-emerald-600 text-white shadow-md ring-2 ring-emerald-400 scale-105'
+                              : 'bg-emerald-50/80 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200/60 dark:border-emerald-800/50'
                           }`}
                           title={icon}
                         >
-                          {renderIcon(icon, 16)}
+                          {renderIcon(icon, 22, categoryFormData.iconName === icon ? 'text-white' : '')}
                         </button>
                       ))}
                     </div>
@@ -2001,18 +2250,28 @@ export const AdminCategoriesManager: React.FC<AdminCategoriesManagerProps> = ({
               <div className="p-4 sm:p-5 bg-gray-50 dark:bg-gray-800 border-t border-gray-150 dark:border-gray-700 flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-2.5 sm:gap-3 shrink-0 shadow-lg">
                 <button
                   type="button"
+                  disabled={isSavingCategory}
                   onClick={() => setIsCategoryModalOpen(false)}
-                  className="w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-center cursor-pointer"
+                  className="w-full sm:w-auto px-4 py-2.5 rounded-xl text-xs sm:text-sm font-bold text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors text-center cursor-pointer disabled:opacity-50"
                 >
                   Annuler
                 </button>
                 <button
                   type="button"
+                  disabled={isSavingCategory}
                   onClick={handleSaveCategory}
-                  className="w-full sm:w-auto px-6 py-3 sm:py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold rounded-xl text-sm sm:text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-900/25 hover:shadow-emerald-900/40 active:scale-98 transition-all cursor-pointer"
+                  className="w-full sm:w-auto px-6 py-3 sm:py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold rounded-xl text-sm sm:text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-900/25 hover:shadow-emerald-900/40 active:scale-98 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  <Check size={16} />
-                  <span>{editingCategory ? "Enregistrer les modifications" : "Créer la Catégorie"}</span>
+                  {isSavingCategory ? (
+                    <Loader2 size={16} className="animate-spin text-white" />
+                  ) : (
+                    <Check size={16} />
+                  )}
+                  <span>
+                    {isSavingCategory 
+                      ? "Enregistrement en cours..." 
+                      : (editingCategory ? "Enregistrer les modifications" : "Créer la Catégorie")}
+                  </span>
                 </button>
               </div>
             </motion.div>
@@ -2082,8 +2341,8 @@ export const AdminCategoriesManager: React.FC<AdminCategoriesManagerProps> = ({
                     onChange={(e) => setSubCategoryParentId(e.target.value)}
                     className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2.5 text-xs sm:text-sm text-gray-900 dark:text-white font-bold outline-none cursor-pointer"
                   >
-                    {categories.map((c) => (
-                      <option key={`parent-opt-${c.id}`} value={c.id}>
+                    {categories.map((c, cIdx) => (
+                      <option key={`parent-opt-${c.id}-${cIdx}`} value={c.id}>
                         {c.name} ({c.subCategories?.length || 0} sous-catégories)
                       </option>
                     ))}

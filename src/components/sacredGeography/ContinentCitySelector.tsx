@@ -254,12 +254,12 @@ export default function ContinentCitySelector({
             : '1. Classer / Filtrer par Continent:'}
         </label>
         <div className="flex flex-wrap gap-1.5 sm:gap-2">
-          {CONTINENTS.map((c) => {
+          {CONTINENTS.map((c, cIdx) => {
             const isSelected = selectedContinent === c.id;
             const label = language === 'en' ? c.nameEn : language === 'ha' ? c.nameHa : c.nameFr;
             return (
               <button
-                key={c.id}
+                key={`continent-${c.id}-${cIdx}`}
                 onClick={() => {
                   setSelectedContinent(c.id);
                   setSelectedCountry('all');
@@ -298,7 +298,7 @@ export default function ContinentCitySelector({
                 : `Tous les Pays (${availableCountries.length})`}
             </option>
             {availableCountries.map((country, idx) => (
-              <option key={idx} value={country}>
+              <option key={`country-${country}-${idx}`} value={country}>
                 {country}
               </option>
             ))}
@@ -365,12 +365,12 @@ export default function ContinentCitySelector({
 
               {searchSuggestions.length > 0 ? (
                 <div className="divide-y divide-gray-100 dark:divide-gray-800">
-                  {searchSuggestions.map((c) => {
+                  {searchSuggestions.map((c, sIdx) => {
                     const name = language === 'en' ? c.nameEn : language === 'ha' ? c.nameHa : c.nameFr;
                     const country = language === 'en' ? c.countryEn : c.countryFr;
                     return (
                       <button
-                        key={c.id}
+                        key={`sug-city-${c.id}-${sIdx}`}
                         onClick={() => handleSelectCity(c)}
                         className="w-full text-left px-3 py-2.5 hover:bg-amber-50 dark:hover:bg-amber-950/50 flex items-center justify-between gap-2 transition-all cursor-pointer group"
                       >
@@ -438,11 +438,11 @@ export default function ContinentCitySelector({
             <option value="">
               -- {language === 'en' ? 'Choose a city' : language === 'ha' ? 'Zabi birni' : 'Choisir une ville'} --
             </option>
-            {filteredCities.map((c) => {
+            {filteredCities.map((c, fcIdx) => {
               const name = language === 'en' ? c.nameEn : language === 'ha' ? c.nameHa : c.nameFr;
               const country = language === 'en' ? c.countryEn : c.countryFr;
               return (
-                <option key={c.id} value={c.id}>
+                <option key={`city-opt-${c.id}-${fcIdx}`} value={c.id}>
                   {c.flag} {name} ({c.arabicName}) - {country}
                 </option>
               );

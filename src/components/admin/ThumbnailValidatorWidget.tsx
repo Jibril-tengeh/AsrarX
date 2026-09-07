@@ -285,8 +285,8 @@ export const ThumbnailValidatorWidget: React.FC<ThumbnailValidatorWidgetProps> =
                     </td>
                   </tr>
                 ) : (
-                  filteredResults.map((r) => (
-                    <tr key={r.articleId} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition-colors">
+                  filteredResults.map((r, rIdx) => (
+                    <tr key={`th-val-${r.articleId}-${rIdx}`} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition-colors">
                       <td className="p-3 font-semibold text-slate-900 dark:text-slate-100 max-w-[180px] truncate">
                         {r.articleTitle}
                       </td>

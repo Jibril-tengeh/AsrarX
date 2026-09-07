@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no, viewport-fit=cover" />
+    <title>AsrarHub</title>
+    <script>
+      (function() {
+        var isAssertion = function(err) {
+          if (!err) return false;
+          var str = String((err && err.message) || (err && err.stack) || err || '');
+          return str.indexOf('c050') !== -1 || 
+                 str.indexOf('b815') !== -1 || 
+                 str.indexOf('ca9') !== -1 || 
+                 str.indexOf('targetId') !== -1 ||
+                 str.indexOf('Unexpected state') !== -1 ||
+                 str.indexOf('SnapshotVersion') !== -1 ||
+                 str.indexOf('fromVersion') !== -1 ||
+                 (str.indexOf('INTERNAL ASSERTION FAILED') !== -1 && str.indexOf('FIRESTORE') !== -1);
+        };
+
+        var origError = console.error;
+        console.error = function() {
+          for (var i = 0; i < arguments.length; i++) {
+            if (isAssertion(arguments[i])) {
+              console.warn('[Handled Firestore SDK assertion]', arguments[i]);
+              return;
+            }
+          }
+          return origError.apply(console, arguments);
+        };
+
+        window.__clearAsrarCachesAndReload = function() {
+          try {
+            if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+              navigator.serviceWorker.getRegistrations().then(function(regs) {
+                for (var i = 0; i < regs.length; i++) {
+                  try { regs[i].unregister(); } catch (_) {}
+                }
+              }).catch(function() {});
+            }
+            if (typeof window !== 'undefined' && 'caches' in window) {
+              caches.keys().then(function(keys) {
+                for (var i = 0; i < keys.length; i++) {
+                  try { caches.delete(keys[i]); } catch (_) {}
+                }
+              }).catch(function() {});
+            }
+          } catch (_) {}
+          setTimeout(function() {
+            window.location.reload();
+          }, 150);
+        };
+
+        // ONLY handle true unhandled fatal JavaScript errors on the window object
+        window.addEventListener('error', function(e) {
+          // 1. If error target is a DOM element (<img>, <video>, <audio>, <link>, <source>, etc.),
+          // it is a harmless resource load error (e.g. offline font/image), NOT a fatal JS crash!
+          if (e && e.target && e.target !== window && (e.target.nodeType === 1 || e.target.tagName || e.target.nodeName)) {
+            return;
+          }
+
+          // 2. Filter Firestore internal assertion errors
+          if (isAssertion(e.error) || isAssertion(e.message)) {
+            if (e.preventDefault) e.preventDefault();
+            if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+            return true;
+          }
+
+          // 3. Filter benign or external script errors
+          var msgStr = String(e.message || (e.error && (e.error.message || e.error.stack)) || '');
+          var lowerMsg = msgStr.toLowerCase();
+          if (!msgStr || lowerMsg.includes('script error') || lowerMsg.includes('resizeobserver') || lowerMsg.includes('non-passive')) {
+            return;
+          }
+
+          // 4. If React app is already mounted, ErrorBoundary handles UI gracefully
+          if (window.__ASRAR_APP_MOUNTED__ || !document.getElementById('initial-asrar-loader')) {
+            return;
+          }
+
+          // 5. Genuine fatal JS crash before app could mount:
+          var fallback = document.getElementById('initial-asrar-fallback');
+          if (fallback) {
+            fallback.style.display = 'block';
+            var msg = document.getElementById('initial-asrar-error-msg');
+            if (msg) {
+              msg.textContent = msgStr;
+            }
+          }
+        }, false);
+
+        window.addEventListener('unhandledrejection', function(e) {
+          if (isAssertion(e.reason)) {
+            if (e.preventDefault) e.preventDefault();
+            if (e.stopImmediatePropagation) e.stopImmediatePropagation();
+            return true;
+          }
+        });
+      })();
+    </script>
+    <meta name="description" content="Application dédiée aux wirds, secrets et ASRAR du Coran." />
+    <meta property="og:title" content="AsrarHub" />
+    <meta property="og:description" content="Application dédiée aux wirds, secrets et ASRAR du Coran." />
+    <meta name="theme-color" content="#10b981" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Amiri+Quran&family=Amiri:wght@400;700&family=Scheherazade+New:wght@400;700&family=Noto+Naskh+Arabic:wght@400;700&family=Lateef:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
+  </head>
+  <body style="margin:0;padding:0;background-color:#09120c;color:#f3f4f6;">
+    <div id="root">
+      <div id="initial-asrar-loader" style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background-color:#09120c;color:#ffffff;font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;padding:24px;box-sizing:border-box;text-align:center;">
+        <div style="width:68px;height:68px;border-radius:20px;background:linear-gradient(135deg,#059669,#0d9488);display:flex;align-items:center;justify-content:center;box-shadow:0 10px 30px rgba(5,150,105,0.45);margin-bottom:20px;">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+          </svg>
+        </div>
+        <div style="font-size:24px;font-weight:900;letter-spacing:-0.5px;margin-bottom:6px;background:linear-gradient(90deg,#34d399,#2dd4bf);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">AsrarHub</div>
+        <div id="initial-asrar-status-text" style="font-size:13px;color:#9ca3af;margin-bottom:24px;">Chargement de l'application...</div>
+        <div style="width:36px;height:36px;border:3px solid rgba(16,185,129,0.2);border-top-color:#10b981;border-radius:50%;animation:asrarSpin 1s linear infinite;"></div>
+        
+        <div id="initial-asrar-fallback" style="display:none;margin-top:24px;max-width:320px;">
+          <p id="initial-asrar-error-msg" style="font-size:12px;color:#f87171;margin-bottom:12px;word-break:break-word;"></p>
+          <button onclick="window.__clearAsrarCachesAndReload && window.__clearAsrarCachesAndReload()" style="background:#059669;color:#ffffff;border:none;padding:10px 20px;border-radius:12px;font-weight:700;font-size:13px;cursor:pointer;box-shadow:0 4px 12px rgba(5,150,105,0.4);">
+            Actualiser
+          </button>
+        </div>
+        
+        <style>
+          @keyframes asrarSpin { to { transform: rotate(360deg); } }
+        </style>
+      </div>
+    </div>
+    <script>
+      // Slow connection helper: if app hasn't mounted in 15 seconds, give user an explicit refresh button
+      setTimeout(function() {
+        if (!window.__ASRAR_APP_MOUNTED__ && document.getElementById('initial-asrar-loader')) {
+          var status = document.getElementById('initial-asrar-status-text');
+          if (status) status.textContent = "Connexion lente détectée. Synchronisation en cours...";
+          var fallback = document.getElementById('initial-asrar-fallback');
+          if (fallback) fallback.style.display = 'block';
+        }
+      }, 15000);
+    </script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

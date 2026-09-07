@@ -145,47 +145,50 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
     );
   }, [categories, language, searchQuery]);
 
-  // Helper to map category to its high-definition looping video asset (Seamless, zero-flicker WebP video stream)
+  // Helper to map category to its high-definition looping video asset (Seamless, zero-flicker video stream)
   const getCategoryVideoUrl = (cat: any): string => {
     if (cat.videoUrl) {
-      return cat.videoUrl.replace(/\.mp4$/, '.webp');
+      return cat.videoUrl;
     }
     const theme = (cat.theme || cat.id || cat.name || '').toString().toLowerCase().trim();
 
-    if (theme.includes('verset') && theme.includes('protect')) return '/videos/categories/versets-protection.webp';
-    if (theme.includes('verset')) return '/videos/categories/versets-protection.webp';
-    if (theme.includes('azkar') || theme.includes('dhikr') || theme.includes('zikr')) return '/videos/categories/azkar.webp';
-    if (theme.includes('wird') || theme.includes('awrad')) return '/videos/categories/wird.webp';
-    if (theme.includes('ruqyah') || theme.includes('guerison') || theme.includes('healing')) return '/videos/categories/ruqyah.webp';
-    if (theme.includes('doua') || theme.includes('du\'a') || theme.includes('dua') || theme.includes('addua') || theme.includes('invocation')) return '/videos/categories/douas.webp';
-    if (theme.includes('ouverture') || theme.includes('opening') || theme.includes('bude') || theme.includes('fath')) return '/videos/categories/ouvertures.webp';
-    if (theme.includes('elevation') || theme.includes('daukaka')) return '/videos/categories/elevation.webp';
-    if (theme.includes('sihr') || theme.includes('oeil') || theme.includes('evil') || theme.includes('sorcellerie')) return '/videos/categories/sihr-mauvais-oeil.webp';
-    if (theme.includes('provision') || theme.includes('richesse') || theme.includes('argent') || theme.includes('arziki') || theme.includes('rizq')) return '/videos/categories/provisions.webp';
-    if (theme.includes('deblocage') || theme.includes('uncrossing') || theme.includes('warware')) return '/videos/categories/deblocage.webp';
-    if (theme.includes('favori') || theme.includes('favorite')) return '/videos/categories/favoris.webp';
-    if (theme.includes('asrar') || theme.includes('secret') || theme.includes('khatim')) return '/videos/categories/secrets-asrar.webp';
-    if (theme.includes('recette') || theme.includes('spirituelle') || theme.includes('pratique') || theme.includes('formule')) return '/videos/categories/recettes-spirituelles.webp';
-    if (theme.includes('protect')) return '/videos/categories/protection.webp';
+    if (theme.includes('verset') && theme.includes('protect')) return '/videos/categories/versets-protection.mp4';
+    if (theme.includes('verset')) return '/videos/categories/versets-protection.mp4';
+    if (theme.includes('azkar') || theme.includes('dhikr') || theme.includes('zikr')) return '/videos/categories/azkar.mp4';
+    if (theme.includes('wird') || theme.includes('awrad')) return '/videos/categories/wird.mp4';
+    if (theme.includes('ruqyah') || theme.includes('guerison') || theme.includes('healing')) return '/videos/categories/ruqyah.mp4';
+    if (theme.includes('doua') || theme.includes('du\'a') || theme.includes('dua') || theme.includes('addua') || theme.includes('invocation')) return '/videos/categories/douas.mp4';
+    if (theme.includes('ouverture') || theme.includes('opening') || theme.includes('bude') || theme.includes('fath')) return '/videos/categories/ouvertures.mp4';
+    if (theme.includes('elevation') || theme.includes('daukaka')) return '/videos/categories/elevation.mp4';
+    if (theme.includes('sihr') || theme.includes('oeil') || theme.includes('evil') || theme.includes('sorcellerie')) return '/videos/categories/sihr-mauvais-oeil.mp4';
+    if (theme.includes('provision') || theme.includes('richesse') || theme.includes('argent') || theme.includes('arziki') || theme.includes('rizq')) return '/videos/categories/provisions.mp4';
+    if (theme.includes('deblocage') || theme.includes('uncrossing') || theme.includes('warware')) return '/videos/categories/deblocage.mp4';
+    if (theme.includes('favori') || theme.includes('favorite')) return '/videos/categories/favoris.mp4';
+    if (theme.includes('asrar') || theme.includes('secret') || theme.includes('khatim')) return '/videos/categories/secrets-asrar.mp4';
+    if (theme.includes('recette') || theme.includes('spirituelle') || theme.includes('pratique') || theme.includes('formule')) return '/videos/categories/recettes-spirituelles.mp4';
+    if (theme.includes('protect')) return '/videos/categories/protection.mp4';
 
     // Direct match against known category files
     const directId = (cat.id || '').toLowerCase();
     const knownIds = ['versets-protection', 'azkar', 'wird', 'ruqyah', 'douas', 'ouvertures', 'elevation', 'protection', 'sihr-mauvais-oeil', 'provisions', 'deblocage', 'favoris', 'secrets-asrar', 'recettes-spirituelles', 'protections'];
     if (knownIds.includes(directId)) {
-      return `/videos/categories/${directId}.webp`;
+      return `/videos/categories/${directId}.mp4`;
     }
 
-    return '/videos/categories/default.webp';
+    return '/videos/categories/default.mp4';
   };
 
-  // Category Badge Icon renderer: Professional video badge or animated SVG badge (100% fluid, zero flicker)
-  const renderCategoryBadge = (cat: any, size: 'sm' | 'md' | 'lg' = 'md') => {
-    const videoUrl = cat.videoUrl || getCategoryVideoUrl(cat);
+  // Category Badge Icon renderer: Luminous clear SVG jewel badge (or explicit HD video badge)
+  const renderCategoryBadge = (cat: any, size: 'xs' | 'sm' | 'md' | 'lg' | 'xl' = 'md') => {
+    // Categories display looping HD video presets by default unless explicitly disabled in admin settings
+    const showVideos = featureToggles?.home_categories_use_video_presets !== false;
+    const videoUrl = cat.videoUrl || (showVideos ? getCategoryVideoUrl(cat) : undefined);
     return (
       <CategoryVideoOrIconBadge
         iconName={cat.iconName}
         videoUrl={videoUrl}
         categoryName={cat.displayName || cat.name}
+        theme={cat.theme || cat.id}
         size={size}
       />
     );
@@ -194,6 +197,16 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
   const showHooks = featureToggles?.home_categories_show_hooks !== false;
   const showCounts = featureToggles?.home_categories_show_counts !== false;
   const showSubCounts = featureToggles?.home_categories_show_sub_counts !== false;
+  const showCategoryNames = featureToggles?.home_categories_show_names !== false;
+  // Dynamic category title font size set by admin (range 10-24px, default 13-14px)
+  const configuredTitleSize = Number(featureToggles?.home_categories_title_size || featureToggles?.textSizeCategoryTitle) || 0;
+
+  // Header Text Visibility Toggles (allows admin to completely disable or customize these texts)
+  const showTexts = featureToggles?.home_categories_show_texts !== false && featureToggles?.home_categories_show_header !== false;
+  const showBadge = showTexts && featureToggles?.home_categories_show_badge !== false;
+  const showTitle = showTexts && featureToggles?.home_categories_show_title !== false;
+  const showSubtitle = showTexts && featureToggles?.home_categories_show_subtitle !== false;
+  const hasAnyHeaderText = showBadge || showTitle || showSubtitle;
 
   const headerTitle = featureToggles?.home_categories_custom_title || (
     activeLayoutMode === 'grid4'
@@ -225,17 +238,25 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
                 onSelectCategory(cat as any);
               }
             }}
-            className="relative bg-white dark:bg-gray-850 rounded-2xl sm:rounded-3xl p-2 sm:p-2.5 pt-3 pb-2.5 border border-gray-200/90 dark:border-gray-700/80 hover:border-emerald-500/70 dark:hover:border-emerald-400/70 shadow-xs hover:shadow-md transition-all duration-300 flex flex-col items-center justify-between text-center cursor-pointer min-h-[114px] sm:min-h-[126px] group overflow-hidden"
+            className="relative bg-white dark:bg-gray-850 rounded-2xl sm:rounded-3xl p-1.5 sm:p-2.5 py-3 sm:py-3.5 border border-gray-200/90 dark:border-gray-700/80 hover:border-emerald-500/70 dark:hover:border-emerald-400/70 shadow-xs hover:shadow-md transition-all duration-300 flex flex-col items-center justify-center gap-1.5 sm:gap-2 text-center cursor-pointer min-h-[96px] sm:min-h-[112px] group overflow-hidden"
           >
-            {/* Vraie Vidéo Professionnelle */}
-            <div className="relative z-10 w-11 h-11 sm:w-12 sm:h-12 flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-110">
+            {/* Vraie Vidéo & Icône Lumineuse Agrandie */}
+            <div className="relative z-10 flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-108">
               {renderCategoryBadge(cat)}
             </div>
 
             {/* Titre */}
-            <span className="relative z-10 text-[11px] sm:text-xs font-extrabold text-gray-900 dark:text-gray-100 text-center leading-tight line-clamp-2 mt-1.5 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-              {cat.displayName}
-            </span>
+            {showCategoryNames && (
+              <span
+                style={{
+                  fontSize: configuredTitleSize ? `${configuredTitleSize}px` : undefined,
+                  lineHeight: '1.2'
+                }}
+                className="relative z-10 text-[13px] sm:text-sm font-extrabold text-gray-900 dark:text-gray-100 text-center line-clamp-2 px-0.5 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors"
+              >
+                {cat.displayName}
+              </span>
+            )}
           </motion.div>
         );
       })}
@@ -313,7 +334,12 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
                 </div>
               )}
 
-              <h3 className="font-extrabold text-xs xs:text-sm sm:text-base md:text-lg text-white line-clamp-2 leading-tight drop-shadow-sm group-hover:text-emerald-300 transition-colors">
+              <h3 
+                style={{
+                  fontSize: configuredTitleSize ? `${Math.round(configuredTitleSize * 1.25)}px` : undefined
+                }}
+                className="font-extrabold text-xs xs:text-sm sm:text-base md:text-lg text-white line-clamp-2 leading-tight drop-shadow-sm group-hover:text-emerald-300 transition-colors"
+              >
                 {displayName}
               </h3>
 
@@ -382,7 +408,7 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
 
               {/* Top-Left Badge: Video Badge + Floating Pill */}
               <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-10 flex items-center gap-2">
-                <div className="scale-90 origin-left">
+                <div className="shrink-0">
                   {renderCategoryBadge(cat, 'sm')}
                 </div>
                 <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/65 hover:bg-black/80 backdrop-blur-md text-white border border-white/20 text-xs sm:text-sm font-bold shadow-xs">
@@ -481,8 +507,8 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
 
               {/* Badge on Thumbnail: Video Badge + Pill */}
               <div className="absolute top-2 left-2 sm:top-2.5 sm:left-2.5 z-10 flex items-center gap-1.5">
-                <div className="scale-75 origin-left">
-                  {renderCategoryBadge(cat, 'sm')}
+                <div className="shrink-0">
+                  {renderCategoryBadge(cat, 'xs')}
                 </div>
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/65 backdrop-blur-md text-white border border-white/20 text-[10px] sm:text-[11px] font-bold shadow-xs max-w-[90px] xs:max-w-[120px] sm:max-w-none truncate">
                   <Crown size={11} className="text-emerald-400 shrink-0" />
@@ -502,7 +528,12 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
 
             {/* Right Content Area */}
             <div className="flex-1 p-3 sm:p-4 md:p-5 flex flex-col justify-center min-w-0">
-              <h3 className="text-xs xs:text-sm sm:text-base font-black text-gray-900 dark:text-white uppercase leading-tight line-clamp-2 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+              <h3 
+                style={{
+                  fontSize: configuredTitleSize ? `${configuredTitleSize}px` : undefined
+                }}
+                className="text-xs xs:text-sm sm:text-base font-black text-gray-900 dark:text-white uppercase leading-tight line-clamp-2 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors"
+              >
                 {displayName}
               </h3>
 
@@ -537,22 +568,30 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
   return (
     <div className="w-full space-y-4 sm:space-y-6 pb-6">
       {/* Header Section with Quick Layout Switcher */}
-      <div className="text-center sm:text-left pt-2 pb-2 border-b border-gray-100 dark:border-gray-800/80">
+      <div className={`text-center sm:text-left ${hasAnyHeaderText ? 'pt-2 pb-2 border-b border-gray-100 dark:border-gray-800/80' : 'pt-1 pb-1'}`}>
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
-          <div>
-            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/60 dark:border-emerald-800/50 text-[11px] font-bold text-emerald-700 dark:text-emerald-300 mb-1.5">
-              <Sparkles size={13} className="text-emerald-500" />
-              <span>{language === 'en' ? 'Exclusive Classification' : language === 'ha' ? 'Rabe-raben Ilimi' : 'Classification Exclusive'}</span>
+          {hasAnyHeaderText && (
+            <div>
+              {showBadge && (
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/60 dark:border-emerald-800/50 text-[11px] font-bold text-emerald-700 dark:text-emerald-300 mb-1.5">
+                  <Sparkles size={13} className="text-emerald-500" />
+                  <span>{language === 'en' ? 'Exclusive Classification' : language === 'ha' ? 'Rabe-raben Ilimi' : 'Classification Exclusive'}</span>
+                </div>
+              )}
+              {showTitle && (
+                <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white tracking-tight">
+                  {headerTitle}
+                </h2>
+              )}
+              {showSubtitle && (
+                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 max-w-2xl mt-0.5">
+                  {headerSubtitle}
+                </p>
+              )}
             </div>
-            <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white tracking-tight">
-              {headerTitle}
-            </h2>
-            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 max-w-2xl mt-0.5">
-              {headerSubtitle}
-            </p>
-          </div>
+          )}
 
-          <div className="flex flex-wrap items-center justify-center sm:justify-end gap-2 shrink-0">
+          <div className={`flex flex-wrap items-center justify-center sm:justify-end gap-2 shrink-0 ${!hasAnyHeaderText ? 'w-full justify-between sm:justify-between' : ''}`}>
             {/* Mode Switcher Buttons */}
             <div className="flex items-center bg-gray-100 dark:bg-gray-800 p-1 rounded-2xl border border-gray-200/70 dark:border-gray-700">
               <button

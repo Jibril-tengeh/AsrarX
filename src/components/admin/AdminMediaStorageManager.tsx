@@ -397,9 +397,9 @@ export const AdminMediaStorageManager: React.FC = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {filteredFiles.map((fileItem) => (
+          {filteredFiles.map((fileItem, fIdx) => (
             <div
-              key={fileItem.id}
+              key={fileItem.id ? `media-file-${fileItem.id}-${fIdx}` : `media-file-${fIdx}`}
               className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden shadow-xs hover:shadow-lg transition-all flex flex-col justify-between group"
             >
               {/* Media Thumbnail Container */}

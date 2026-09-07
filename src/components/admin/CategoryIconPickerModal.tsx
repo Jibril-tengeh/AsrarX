@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Search, X, Check, Film, Sparkles, Filter, Eye, Layers, 
   ExternalLink, Video, ChevronRight, Play
@@ -38,6 +38,19 @@ export const CategoryIconPickerModal: React.FC<CategoryIconPickerModalProps> = (
   const [tempVideoUrl, setTempVideoUrl] = useState<string>(selectedVideoUrl || '');
   const [previewMode, setPreviewMode] = useState<'video' | 'animated_badge' | 'svg'>('animated_badge');
 
+  // Sync state whenever modal opens or props change
+  useEffect(() => {
+    if (isOpen) {
+      setTempIcon(selectedIcon || 'Sparkles');
+      setTempVideoUrl(selectedVideoUrl || '');
+      if (selectedVideoUrl) {
+        setPreviewMode('video');
+      } else {
+        setPreviewMode('animated_badge');
+      }
+    }
+  }, [isOpen, selectedIcon, selectedVideoUrl]);
+
   // Filtered icons
   const filteredIcons = useMemo(() => {
     return searchCategoryIcons(searchQuery, activeGroup);
@@ -57,16 +70,10 @@ export const CategoryIconPickerModal: React.FC<CategoryIconPickerModalProps> = (
 
   const handleSelectIconOnly = (iconName: string) => {
     setTempIcon(iconName);
-    // Find if there's a suggested video hint
-    const iconDef = findCategoryIcon(iconName);
-    if (iconDef && !tempVideoUrl) {
-      // Keep it flexible or optionally link
-    }
   };
 
   const handleSelectVideo = (videoPreset: CategoryVideoPreset) => {
-    setTempVideoUrl(videoPreset.url);
-    // Switch to video preview
+    setTempVideoUrl(videoPreset.mp4Url || videoPreset.url);
     setPreviewMode('video');
   };
 
@@ -76,7 +83,7 @@ export const CategoryIconPickerModal: React.FC<CategoryIconPickerModalProps> = (
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/75 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[20000] flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-md animate-in fade-in duration-200">
       <div 
         className="relative w-full max-w-4xl max-h-[92vh] bg-white dark:bg-gray-900 rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-800 flex flex-col overflow-hidden text-gray-900 dark:text-gray-100"
         onClick={(e) => e.stopPropagation()}
@@ -221,20 +228,20 @@ export const CategoryIconPickerModal: React.FC<CategoryIconPickerModalProps> = (
                 >
                   Tous ({CATEGORY_ICONS_LIST.length})
                 </button>
-                {CATEGORY_ICON_GROUPS.map((grp) => {
+                {CATEGORY_ICON_GROUPS.map((grp, gIdx) => {
                   const countInGroup = CATEGORY_ICONS_LIST.filter(i => i.category === grp.id).length;
                   return (
                     <button
-                      key={`grp-${grp.id}`}
+                      key={`grp-${grp.id}-${gIdx}`}
                       type="button"
                       onClick={() => setActiveGroup(grp.id)}
                       className={`px-3 py-1.5 rounded-xl font-bold shrink-0 flex items-center gap-1.5 transition-all cursor-pointer ${
                         activeGroup === grp.id
                           ? 'bg-emerald-600 text-white shadow-xs'
-                          : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
+                          : 'bg-emerald-50/80 dark:bg-gray-800 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-gray-700 border border-emerald-200/50 dark:border-gray-700'
                       }`}
                     >
-                      <CategoryDynamicIcon name={grp.icon} size={13} />
+                      <CategoryDynamicIcon name={grp.icon} size={18} />
                       <span>{grp.name} ({countInGroup})</span>
                     </button>
                   );
@@ -242,42 +249,51 @@ export const CategoryIconPickerModal: React.FC<CategoryIconPickerModalProps> = (
               </div>
             </div>
 
-            {/* Icons Grid with 520+ items */}
-            <div className="flex-1 overflow-y-auto p-3 sm:p-4">
+            {/* Icons Grid with 520+ items: Enlarged, Vibrant & Crystal Clear */}
+            <div className="flex-1 overflow-y-auto p-3 sm:p-5">
               {filteredIcons.length === 0 ? (
-                <div className="p-8 text-center text-gray-500 space-y-2">
-                  <CategoryDynamicIcon name="Search" size={32} className="mx-auto text-gray-400" />
-                  <p className="text-sm font-bold">Aucune icône trouvée pour "{searchQuery}"</p>
-                  <p className="text-xs">Essayez un autre mot-clé ou réinitialisez les filtres.</p>
+                <div className="p-10 text-center text-gray-500 space-y-3">
+                  <CategoryDynamicIcon name="Search" size={44} className="mx-auto text-emerald-500" />
+                  <p className="text-sm font-bold text-gray-800 dark:text-gray-200">Aucune icône trouvée pour "{searchQuery}"</p>
+                  <p className="text-xs text-gray-500">Essayez un autre mot-clé ou réinitialisez les filtres.</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-4 xs:grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-2">
-                  {filteredIcons.map((ic) => {
+                <div className="grid grid-cols-3 xs:grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-3">
+                  {filteredIcons.map((ic, icIdx) => {
                     const isSelected = tempIcon === ic.name;
                     return (
                       <button
-                        key={`icon-btn-${ic.name}`}
+                        key={`icon-btn-${ic.name}-${icIdx}`}
                         type="button"
                         onClick={() => handleSelectIconOnly(ic.name)}
-                        className={`p-2.5 rounded-2xl flex flex-col items-center justify-center text-center gap-1.5 border transition-all cursor-pointer group/item relative ${
+                        className={`p-3 rounded-2xl flex flex-col items-center justify-center text-center gap-2 border transition-all cursor-pointer group/item relative ${
                           isSelected
-                            ? 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/60 ring-2 ring-emerald-500 shadow-sm'
-                            : 'border-gray-200 dark:border-gray-800 hover:border-emerald-400/80 bg-white dark:bg-gray-850 hover:shadow-xs'
+                            ? 'border-emerald-500 bg-emerald-50/80 dark:bg-emerald-950/60 ring-2 ring-emerald-500 shadow-md scale-[1.02]'
+                            : 'border-gray-200 dark:border-gray-800 hover:border-emerald-400 bg-white dark:bg-gray-850 hover:shadow-sm'
                         }`}
                         title={`${ic.name} - ${ic.label_fr}`}
                       >
-                        <div className={`transition-transform duration-200 group-hover/item:scale-115 ${
-                          isSelected ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-700 dark:text-gray-300'
+                        {/* Luminous Jewel Icon Container: Bold, Clear, Never Black */}
+                        <div className={`w-13 h-13 sm:w-14 sm:h-14 rounded-2xl flex items-center justify-center transition-all duration-300 ${
+                          isSelected
+                            ? 'bg-gradient-to-tr from-emerald-600 via-teal-500 to-emerald-500 text-white shadow-md'
+                            : 'bg-emerald-50/90 dark:bg-emerald-950/50 border border-emerald-200/60 dark:border-emerald-800/60 text-emerald-600 dark:text-emerald-400 group-hover/item:scale-108 group-hover/item:bg-emerald-100 dark:group-hover/item:bg-emerald-900/60'
                         }`}>
-                          <CategoryDynamicIcon name={ic.name} size={22} />
+                          <CategoryDynamicIcon 
+                            name={ic.name} 
+                            size={30} 
+                            strokeWidth={2.4} 
+                            className={isSelected ? 'text-white drop-shadow-sm' : ''} 
+                          />
                         </div>
-                        <span className="text-[10px] font-bold text-gray-700 dark:text-gray-300 line-clamp-1 max-w-full">
+
+                        <span className="text-[11px] font-bold text-gray-800 dark:text-gray-200 line-clamp-1 max-w-full">
                           {ic.label_fr || ic.name}
                         </span>
 
                         {isSelected && (
-                          <div className="absolute top-1 right-1 w-3.5 h-3.5 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-xs">
-                            <Check size={9} strokeWidth={3} />
+                          <div className="absolute top-1.5 right-1.5 w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center shadow-xs">
+                            <Check size={10} strokeWidth={3} />
                           </div>
                         )}
                       </button>
@@ -299,11 +315,11 @@ export const CategoryIconPickerModal: React.FC<CategoryIconPickerModalProps> = (
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-              {PRESET_CATEGORY_VIDEOS.map((vid) => {
+              {PRESET_CATEGORY_VIDEOS.map((vid, vIdx) => {
                 const isSelected = tempVideoUrl === vid.url || tempVideoUrl === vid.mp4Url;
                 return (
                   <div
-                    key={`preset-vid-${vid.id}`}
+                    key={`preset-vid-${vid.id}-${vIdx}`}
                     onClick={() => handleSelectVideo(vid)}
                     className={`p-3 rounded-2xl border transition-all cursor-pointer flex items-center gap-3.5 ${
                       isSelected
@@ -313,11 +329,14 @@ export const CategoryIconPickerModal: React.FC<CategoryIconPickerModalProps> = (
                   >
                     {/* Video loop thumbnail */}
                     <div className="w-14 h-14 rounded-2xl overflow-hidden shrink-0 border border-white/20 relative bg-black shadow-xs">
-                      <img
-                        src={vid.url}
-                        alt={vid.label}
+                      <video
+                        src={vid.mp4Url}
+                        autoPlay
+                        loop
+                        muted
+                        playsInline
+                        preload="metadata"
                         className="w-full h-full object-cover"
-                        loading="lazy"
                       />
                       <div className="absolute inset-0 ring-1 ring-inset ring-white/20 rounded-2xl pointer-events-none" />
                     </div>

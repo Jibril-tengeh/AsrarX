@@ -376,9 +376,9 @@ export const AdminPdfDocumentsManager: React.FC = () => {
         </div>
       ) : (
         <div className="space-y-3">
-          {filteredList.map((pdf) => (
+          {filteredList.map((pdf, pIdx) => (
             <div
-              key={pdf.id}
+              key={pdf.id ? `pdf-doc-${pdf.id}-${pIdx}` : `pdf-doc-${pIdx}`}
               className={`bg-white dark:bg-gray-800 rounded-2xl border p-4 shadow-xs transition-all flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 ${
                 pdf.isMaintenance 
                   ? 'border-rose-300 dark:border-rose-800/60 bg-rose-50/20 dark:bg-rose-950/10' 

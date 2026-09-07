@@ -74,6 +74,15 @@ export const FeatureProvider: React.FC<{ children: React.ReactNode }> = ({ child
       root.classList.remove('has-custom-arabic-size');
     }
 
+    const catTitleSize = Number(mergedData.home_categories_title_size || mergedData.textSizeCategoryTitle);
+    if (catTitleSize && catTitleSize >= 9 && catTitleSize <= 30) {
+      root.style.setProperty('--app-category-title-font-size', `${catTitleSize}px`);
+      root.classList.add('has-custom-category-title-size');
+    } else {
+      root.style.removeProperty('--app-category-title-font-size');
+      root.classList.remove('has-custom-category-title-size');
+    }
+
     if (mergedData.cardPadding && Number(mergedData.cardPadding) >= 10 && Number(mergedData.cardPadding) <= 50) {
       root.style.setProperty('--app-card-padding', `${mergedData.cardPadding}px`);
       root.classList.add('has-custom-card-padding');

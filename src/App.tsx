@@ -1,0 +1,1675 @@
+import React from 'react';
+import { Routes, Route, Navigate, useLocation, useNavigate, Outlet, Link } from 'react-router-dom';
+import { Header } from './components/Header';
+import { LayoutTester } from './components/LayoutTester';
+import { useAuth } from './contexts/AuthContext';
+import { useLanguage } from './contexts/LanguageContext';
+import { AuthModal } from './components/AuthModal';
+import { ShieldAlert, LogIn, RefreshCw, Sparkles, WifiOff, X, Database } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { db, isAutoSaveEnabled } from './lib/firebase';
+import { BottomNav } from './components/BottomNav';
+import { AsrarHubLoader } from './components/AsrarHubLoader';
+import { useAudio } from './contexts/AudioContext';
+import { AudioPlayer } from './components/AudioPlayer';
+import { SacredAudioPlayer } from './components/SacredAudioPlayer';
+import { requestNotificationPermission, requestAllPermissions, checkAndTriggerPlanetaryNotification } from './utils/planetaryNotifications';
+import { getLocalizedNotificationText, dispatchSystemNotification } from './utils/notificationLocalization';
+import { Onboarding } from './pages/Onboarding';
+import { DailyRewardHandler } from './components/DailyRewardHandler';
+import { ContentProtectionManager } from './components/ContentProtectionManager';
+import { MaintenanceOverlay } from './components/MaintenanceOverlay';
+import { getApiUrl } from './lib/api';
+import { FloatingBackButton } from './components/FloatingBackButton';
+import { ErrorToastContainer } from './components/ErrorToastContainer';
+import { DownloadNotificationPopup } from './components/DownloadNotificationPopup';
+import { NotificationModalManager } from './components/notifications/NotificationModalManager';
+import { FirstOpenPermissionsModal } from './components/FirstOpenPermissionsModal';
+import { CollapsibleFloatingWidget } from './components/CollapsibleFloatingWidget';
+import { FloatingTextResizer } from './components/FloatingTextResizer';
+import { FeatureProvider, useFeatures } from './contexts/FeatureContext';
+import { ImageDebugger } from './components/ImageDebugger';
+import UserDashboard from './pages/user/UserDashboard';
+import { FreeTrial24hModal } from './components/FreeTrial24hModal';
+import { UnverifiedEmailGuard } from './components/UnverifiedEmailGuard';
+import { App as CapacitorApp } from '@capacitor/app';
+import { Capacitor } from '@capacitor/core';
+import { executeStepByStepBack } from './utils/backNavigation';
+import { LocalNotifications } from '@capacitor/local-notifications';
+import { pingFirestore, addNetworkLog } from './utils/networkLogger';
+import { revalidatePublishedArticles, getSWRCacheStats, SWRCacheStats } from './lib/swrArticleCache';
+import { checkFeatureAccess } from './utils/featureAccess';
+import { getToolDisplayName } from './utils/toolNames';
+import { recordUnauthorizedToolAttempt } from './utils/securityAlerts';
+import { appVersionService } from './services/appVersionService';
+import { NewVersionBannerModal } from './components/NewVersionBannerModal';
+import { ForceUpdateModal } from './components/ForceUpdateModal';
+import { PromoVideoModal } from './components/videoCards/PromoVideoModal';
+import { PremiumLockScreen } from './components/PremiumLockScreen';
+import { NavigationProgressBar } from './components/NavigationProgressBar';
+import { FloatingFullscreenExitButton } from './components/FloatingFullscreenExitButton';
+import { FloatingToolFullscreenButton } from './components/FloatingToolFullscreenButton';
+import { ArticleSyncVideoModal } from './components/ArticleSyncVideoModal';
+import { ToolsIntegrityNotification } from './components/ToolsIntegrityNotification';
+import { useFullscreen } from './contexts/FullscreenContext';
+import { useSettings } from './contexts/SettingsContext';
+import { clear as clearIdbKeyval } from 'idb-keyval';
+
+declare const __APP_VERSION__: string;
+
+/**
+ * Detailed step-by-step cache & IndexedDB purge function.
+ * Compares current runtime version (__APP_VERSION__) with stored version in localStorage.
+ * Performs deep cleanup of IndexedDB, SWR keyval stores, ServiceWorker caches, and logs each step.
+ */
+export async function checkVersionAndPurgeCache(force = false): Promise<boolean> {
+  const timestamp = new Date().toISOString();
+  console.group(`[VersionPurge] [${timestamp}] Cache check & IndexedDB purge evaluation (force=${force})`);
+  
+  try {
+    const currentVersion = typeof __APP_VERSION__ !== 'undefined' && __APP_VERSION__ 
+      ? __APP_VERSION__ 
+      : appVersionService.getCurrentVersion();
+    
+    console.log(`[VersionPurge] [Step 1/6] Runtime application version discovered: "${currentVersion}"`);
+
+    let storedVersion: string | null = null;
+    let installedVersion: string | null = null;
+    try {
+      storedVersion = localStorage.getItem('app_version');
+      installedVersion = localStorage.getItem('asrarhub_installed_version');
+      console.log(`[VersionPurge] [Step 2/6] Storage version check - 'app_version': "${storedVersion}", 'asrarhub_installed_version': "${installedVersion}"`);
+    } catch (e) {
+      console.warn('[VersionPurge] [Step 2/6 Warning] Could not read version keys from localStorage:', e);
+    }
+
+    const isVersionMismatch = storedVersion !== null && storedVersion !== currentVersion;
+    const shouldPurge = force || isVersionMismatch;
+
+    if (shouldPurge) {
+      console.log(`[VersionPurge] [Step 3/6] Purge condition triggered. (Mismatch: ${isVersionMismatch} [${storedVersion} -> ${currentVersion}], Force: ${force}). Initiating deep IndexedDB purge...`);
+
+      // 3a. Purge via idb-keyval (primary SWR and app key-value store)
+      try {
+        console.log('[VersionPurge] [Step 3a/6] Clearing default idb-keyval store...');
+        await clearIdbKeyval();
+        console.log('[VersionPurge] [Step 3a/6] -> idb-keyval default store cleared successfully.');
+      } catch (idbErr) {
+        console.warn('[VersionPurge] [Step 3a/6 Error] Error clearing idb-keyval:', idbErr);
+      }
+
+      // 3b. Enumerate and delete all custom/legacy IndexedDB databases if window.indexedDB is available
+      try {
+        console.log('[VersionPurge] [Step 3b/6] Inspecting and purging custom/legacy IndexedDB databases...');
+        if (typeof window !== 'undefined' && window.indexedDB) {
+          if (typeof window.indexedDB.databases === 'function') {
+            const databases = await window.indexedDB.databases();
+            console.log(`[VersionPurge] [Step 3b/6] Found ${databases.length} IndexedDB databases:`, databases.map(d => d.name));
+            for (const dbInfo of databases) {
+              const dbName = dbInfo.name || '';
+              // CRITICAL: Never delete Firebase or Firestore IndexedDB databases!
+              // Deleting active Firestore databases leads to corrupt cache state and SDK assertion failures (ID: c050 / b815).
+              const isFirebaseDb = dbName.includes('firebase') || 
+                                   dbName.includes('firestore') || 
+                                   dbName.startsWith('[DEFAULT]');
+              if (dbName && !isFirebaseDb) {
+                try {
+                  console.log(`[VersionPurge] [Step 3b/6] Purging custom IndexedDB database: "${dbName}"...`);
+                  window.indexedDB.deleteDatabase(dbName);
+                } catch (delErr) {
+                  console.warn(`[VersionPurge] [Step 3b/6] Failed to delete database "${dbName}":`, delErr);
+                }
+              }
+            }
+          } else {
+            const knownDbs = ['keyval-store', 'workbox-expiration', 'asrar_db_cache', 'asrarhub_offline_cache'];
+            for (const dbName of knownDbs) {
+              try {
+                window.indexedDB.deleteDatabase(dbName);
+              } catch (_) {}
+            }
+          }
+        }
+        console.log('[VersionPurge] [Step 3b/6] -> IndexedDB databases purge step completed.');
+      } catch (dbErr) {
+        console.warn('[VersionPurge] [Step 3b/6 Error] Error purging IndexedDB databases:', dbErr);
+      }
+
+      // 4. Purge Service Worker Cache API storage
+      try {
+        console.log('[VersionPurge] [Step 4/6] Inspecting Service Worker Cache Storage (window.caches)...');
+        if (typeof window !== 'undefined' && 'caches' in window) {
+          const cacheKeys = await window.caches.keys();
+          console.log(`[VersionPurge] [Step 4/6] Found ${cacheKeys.length} Cache API buckets:`, cacheKeys);
+          for (const key of cacheKeys) {
+            console.log(`[VersionPurge] [Step 4/6] Deleting Cache bucket: "${key}"...`);
+            await window.caches.delete(key);
+          }
+          console.log('[VersionPurge] [Step 4/6] -> All Cache API storage buckets deleted.');
+        }
+      } catch (cacheErr) {
+        console.warn('[VersionPurge] [Step 4/6 Error] Error clearing Cache API storage:', cacheErr);
+      }
+
+      // 5. Update stored versions & diagnostic timestamps in localStorage
+      try {
+        console.log(`[VersionPurge] [Step 5/6] Updating localStorage version flags to "${currentVersion}"...`);
+        localStorage.setItem('app_version', currentVersion);
+        localStorage.setItem('asrarhub_installed_version', currentVersion);
+        localStorage.setItem('asrarhub_installed_app_version', currentVersion);
+        localStorage.setItem(`asrarhub_version_notified_${currentVersion}`, 'true');
+        localStorage.setItem('asrarhub_last_cache_purge_timestamp', new Date().toISOString());
+        localStorage.setItem('asrarhub_last_purge_version', currentVersion);
+        sessionStorage.setItem('asrarhub_cache_purged_session', 'true');
+        console.log('[VersionPurge] [Step 5/6] -> Storage version markers updated successfully.');
+      } catch (e) {
+        console.warn('[VersionPurge] [Step 5/6 Error] Could not update storage flags:', e);
+      }
+
+      console.log(`[VersionPurge] [Step 6/6] Purge routine successfully completed for version "${currentVersion}".`);
+      console.groupEnd();
+      return true;
+    } else if (!storedVersion) {
+      console.log(`[VersionPurge] [Step 3/6] First-time install detected. Initializing storage markers to version "${currentVersion}".`);
+      try {
+        localStorage.setItem('app_version', currentVersion);
+        localStorage.setItem('asrarhub_installed_version', currentVersion);
+        localStorage.setItem('asrarhub_installed_app_version', currentVersion);
+        localStorage.setItem(`asrarhub_version_notified_${currentVersion}`, 'true');
+        localStorage.setItem('asrarhub_last_cache_purge_timestamp', new Date().toISOString());
+      } catch (e) {
+        // Safe fallback
+      }
+    } else {
+      console.log(`[VersionPurge] [Step 3/6] App version is up to date ("${storedVersion}"). No purge required.`);
+    }
+  } catch (error) {
+    console.warn('[VersionPurge] Error executing checkVersionAndPurgeCache:', error);
+  }
+
+  console.groupEnd();
+  return false;
+}
+
+/**
+ * Global Image Lazy-Loading Strategy using Intersection Observer
+ * Automatically intercepts and progressively loads images across the entire application.
+ * Optimizes mobile memory footprint, reduces data consumption, and respects Battery Saver mode.
+ */
+function useGlobalImageLazyLoader(batterySaver: boolean, lazyLoadRootMargin: string) {
+  const location = useLocation();
+
+  React.useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    // Check IntersectionObserver support
+    if (!('IntersectionObserver' in window)) {
+      // Fallback: eagerly resolve images if IntersectionObserver is not available
+      const allImgs = document.querySelectorAll<HTMLImageElement>('img[data-src]');
+      allImgs.forEach((img) => {
+        const dataSrc = img.getAttribute('data-src');
+        if (dataSrc) {
+          img.src = dataSrc;
+          img.removeAttribute('data-src');
+          img.setAttribute('data-lazy-loaded', 'true');
+        }
+      });
+      return;
+    }
+
+    const imageObserver = new IntersectionObserver(
+      (entries, observer) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            const img = entry.target as HTMLImageElement;
+            const dataSrc = img.getAttribute('data-src');
+            const dataSrcSet = img.getAttribute('data-srcset');
+
+            if (dataSrc) {
+              img.src = dataSrc;
+              img.removeAttribute('data-src');
+            }
+            if (dataSrcSet) {
+              img.srcset = dataSrcSet;
+              img.removeAttribute('data-srcset');
+            }
+
+            img.setAttribute('data-lazy-loaded', 'true');
+            img.classList.add('lazy-loaded', 'lazy-fade-in');
+
+            // Cease observing once loaded into memory
+            observer.unobserve(img);
+          }
+        });
+      },
+      {
+        root: null, // screen viewport
+        rootMargin: lazyLoadRootMargin || (batterySaver ? '50px 0px' : '250px 0px'),
+        threshold: 0.01,
+      }
+    );
+
+    const processImageElement = (img: HTMLImageElement) => {
+      // Ensure native asynchronous decoding and lazy loading are enabled
+      if (!img.hasAttribute('loading')) {
+        img.loading = 'lazy';
+      }
+      if (!img.hasAttribute('decoding')) {
+        img.decoding = 'async';
+      }
+
+      // If image has data-src, attach to IntersectionObserver
+      if (img.hasAttribute('data-src') && img.getAttribute('data-lazy-loaded') !== 'true') {
+        imageObserver.observe(img);
+      }
+    };
+
+    // Scan all existing images in the DOM
+    const initialImages = document.querySelectorAll<HTMLImageElement>('img');
+    initialImages.forEach(processImageElement);
+
+    // Continuous dynamic observer for new images rendered via client-side routing, infinite scroll, modals
+    const mutationObserver = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        mutation.addedNodes.forEach((node) => {
+          if (node.nodeType === Node.ELEMENT_NODE) {
+            const element = node as HTMLElement;
+            if (element.tagName === 'IMG') {
+              processImageElement(element as HTMLImageElement);
+            } else if (element.querySelectorAll) {
+              const nestedImgs = element.querySelectorAll<HTMLImageElement>('img');
+              nestedImgs.forEach(processImageElement);
+            }
+          }
+        });
+      });
+    });
+
+    mutationObserver.observe(document.body, {
+      childList: true,
+      subtree: true,
+    });
+
+    return () => {
+      imageObserver.disconnect();
+      mutationObserver.disconnect();
+    };
+  }, [location.pathname, location.search, batterySaver, lazyLoadRootMargin]);
+}
+
+/**
+ * Hidden Version Diagnostic Helper:
+ * Regularly checks the current running app version against the compiled package.json version (__APP_VERSION__).
+ * If a persistent mismatch is detected even after a cache purge, logs a warning and stores diagnostic feedback
+ * for consumption by the Admin Dashboard.
+ */
+function useHiddenVersionDiagnosticHelper() {
+  const { batterySaver, diagnosticCheckFrequencyMs } = useSettings();
+
+  React.useEffect(() => {
+    let checkCount = 0;
+    const runDiagnosticCheck = async () => {
+      try {
+        checkCount++;
+        const targetPackageVersion = typeof __APP_VERSION__ !== 'undefined' && __APP_VERSION__
+          ? __APP_VERSION__
+          : appVersionService.getCurrentVersion();
+        const storedVersion = localStorage.getItem('app_version') || localStorage.getItem('asrarhub_installed_version');
+        const runtimeVersion = appVersionService.getCurrentVersion();
+        const lastPurgeTimestamp = localStorage.getItem('asrarhub_last_cache_purge_timestamp');
+        
+        let hasMismatch = false;
+        let mismatchReason = '';
+
+        if (storedVersion && storedVersion !== targetPackageVersion) {
+          hasMismatch = true;
+          mismatchReason = `Stored version (${storedVersion}) differs from target package.json version (${targetPackageVersion})`;
+        } else if (runtimeVersion && targetPackageVersion && runtimeVersion !== targetPackageVersion) {
+          hasMismatch = true;
+          mismatchReason = `Runtime version (${runtimeVersion}) differs from target package.json version (${targetPackageVersion})`;
+        }
+
+        if (hasMismatch) {
+          // If mismatch detected, attempt a background purge verification
+          await checkVersionAndPurgeCache(false);
+          const recheckedStored = localStorage.getItem('app_version');
+
+          // If mismatch still persists after purge attempt
+          if (recheckedStored && recheckedStored !== targetPackageVersion) {
+            const warningPayload = {
+              diagnosticType: 'VERSION_MISMATCH_PERSISTENT',
+              timestamp: new Date().toISOString(),
+              targetPackageVersion,
+              storedVersion: recheckedStored,
+              runtimeVersion,
+              lastPurgeTimestamp,
+              checkCount,
+              reason: mismatchReason,
+              suggestion: 'Admin should recommend a Force Refresh or hard reload to clear stale service worker / browser cache.'
+            };
+
+            console.warn(
+              `%c[AdminVersionDiagnostic] WARNING: Persistent version mismatch detected after cache purge!`,
+              'background: #7f1d1d; color: #fecaca; font-weight: bold; padding: 4px 8px; border-radius: 4px;',
+              warningPayload
+            );
+
+            // Store diagnostic feedback in localStorage for the Admin Dashboard
+            localStorage.setItem('asrarhub_admin_version_diagnostic', JSON.stringify({
+              hasPersistentMismatch: true,
+              lastChecked: new Date().toISOString(),
+              targetPackageVersion,
+              storedVersion: recheckedStored,
+              runtimeVersion,
+              reason: mismatchReason,
+              warningCount: checkCount
+            }));
+
+            // Attach to window for immediate admin console inspection
+            if (typeof window !== 'undefined') {
+              (window as any).__asrarhub_version_diagnostic = warningPayload;
+            }
+          }
+        } else {
+          // Healthy state: clear warning flag or store healthy diagnostic status
+          localStorage.setItem('asrarhub_admin_version_diagnostic', JSON.stringify({
+            hasPersistentMismatch: false,
+            lastChecked: new Date().toISOString(),
+            targetPackageVersion,
+            storedVersion: storedVersion || targetPackageVersion,
+            runtimeVersion,
+            status: 'HEALTHY'
+          }));
+          if (typeof window !== 'undefined') {
+            (window as any).__asrarhub_version_diagnostic = {
+              status: 'HEALTHY',
+              version: targetPackageVersion,
+              timestamp: new Date().toISOString()
+            };
+          }
+        }
+      } catch (err) {
+        console.debug('[VersionDiagnostic] Diagnostic check error:', err);
+      }
+    };
+
+    // Run initial diagnostic check after short settle time
+    const initialTimer = setTimeout(runDiagnosticCheck, 3000);
+
+    // Regularly re-run diagnostic check respecting battery saver frequency (e.g. 5m in Battery Saver vs 1m normal)
+    const interval = setInterval(runDiagnosticCheck, diagnosticCheckFrequencyMs || (batterySaver ? 300000 : 60000));
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        runDiagnosticCheck();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
+    return () => {
+      clearTimeout(initialTimer);
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
+    };
+  }, [batterySaver, diagnosticCheckFrequencyMs]);
+}
+
+function lazyWithRetry<T extends React.ComponentType<any> = React.ComponentType<any>>(
+  componentImport: () => Promise<any>
+) {
+  return React.lazy(async () => {
+    let attempts = 0;
+    let lastError: any = null;
+    while (attempts < 5) {
+      try {
+        const module = await componentImport();
+        let component = module?.default;
+        if (!component && module) {
+          const keys = Object.keys(module);
+          for (const key of keys) {
+            const val = module[key];
+            if (typeof val === 'function' || (typeof val === 'object' && val !== null && (val.$$typeof || val.render))) {
+              component = val;
+              break;
+            }
+          }
+          if (!component && keys.length > 0) {
+            component = module[keys[0]];
+          }
+        }
+        if (component) {
+          return { default: component };
+        }
+      } catch (err: any) {
+        lastError = err;
+        attempts++;
+        if (attempts >= 5) {
+          console.warn(`Dynamic import retry exhausted (${attempts} attempts):`, err);
+          break;
+        }
+        await new Promise((r) => setTimeout(r, 300 * Math.pow(1.5, attempts)));
+      }
+    }
+
+    const FallbackErrorPage: React.FC = () => (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] p-6 text-center space-y-4">
+        <div className="w-14 h-14 rounded-2xl bg-amber-500/10 dark:bg-amber-500/20 flex items-center justify-center text-amber-500">
+          <RefreshCw className="w-7 h-7" />
+        </div>
+        <div className="space-y-1 max-w-sm">
+          <h3 className="text-base font-bold text-gray-900 dark:text-white">Chargement de la page</h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            Une mise à jour ou interruption réseau temporaire s'est produite.
+          </p>
+        </div>
+        <button
+          onClick={() => window.location.reload()}
+          className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold rounded-xl text-xs transition-all shadow-lg shadow-emerald-600/20 flex items-center gap-2 cursor-pointer"
+        >
+          <RefreshCw className="w-4 h-4" />
+          <span>Réessayer l'accès</span>
+        </button>
+      </div>
+    );
+
+    return { default: FallbackErrorPage };
+  });
+}
+
+const SecretDetail = lazyWithRetry(() => import('./pages/user/SecretDetail'));
+const ToolsDashboard = lazyWithRetry(() => import('./pages/user/ToolsDashboard'));
+const AbjadCalculator = lazyWithRetry(() => import('./pages/user/tools/AbjadCalculator'));
+const CustomDuaGenerator = lazyWithRetry(() => import('./pages/user/tools/CustomDuaGenerator'));
+const PlanetaryHours = lazyWithRetry(() => import('./pages/user/tools/PlanetaryHours'));
+const Tasbih = lazyWithRetry(() => import('./pages/user/tools/Tasbih'));
+const KhatimGenerator = lazyWithRetry(() => import('./pages/user/tools/KhatimGenerator'));
+const Asma = lazyWithRetry(() => import('./pages/user/tools/Asma'));
+const Talsam = lazyWithRetry(() => import('./pages/user/tools/Talsam'));
+const Istikhara = lazyWithRetry(() => import('./pages/user/tools/Istikhara'));
+const SirrAlAsrar = lazyWithRetry(() => import('./pages/user/tools/SirrAlAsrar'));
+const Zairja = lazyWithRetry(() => import('./pages/user/tools/Zairja'));
+const ZakatCalculator = lazyWithRetry(() => import('./pages/user/tools/ZakatCalculator'));
+const FaraidCalculator = lazyWithRetry(() => import('./pages/user/tools/FaraidCalculator'));
+const DreamJournal = lazyWithRetry(() => import('./pages/user/tools/DreamJournal'));
+const Halaqat = lazyWithRetry(() => import('./pages/user/tools/Halaqat'));
+const NamesOfAllah = lazyWithRetry(() => import('./pages/user/tools/NamesOfAllah'));
+const RouhaniyyaExtractor = lazyWithRetry(() => import('./pages/user/tools/RouhaniyyaExtractor'));
+const Taksir = lazyWithRetry(() => import('./pages/user/tools/Taksir'));
+const QuranFull = lazyWithRetry(() => import('./pages/user/tools/QuranFull'));
+const ElementalAnalyzer = lazyWithRetry(() => import('./pages/user/tools/ElementalAnalyzer'));
+const Geomancy = lazyWithRetry(() => import('./pages/user/tools/Geomancy'));
+const ScienceOfLetters = lazyWithRetry(() => import('./pages/user/tools/ScienceOfLetters'));
+const PersonalWird = lazyWithRetry(() => import('./pages/user/tools/PersonalWird'));
+const LunarMansions = lazyWithRetry(() => import('./pages/user/tools/LunarMansions'));
+const SpiritualCompatibility = lazyWithRetry(() => import('./pages/user/tools/SpiritualCompatibility'));
+const IlmJafar = lazyWithRetry(() => import('./pages/user/tools/IlmJafar'));
+const GrandOaths = lazyWithRetry(() => import('./pages/user/tools/GrandOaths'));
+const KhouddamExtractor = lazyWithRetry(() => import('./pages/user/tools/KhouddamExtractor'));
+const AwfaqAdvanced = lazyWithRetry(() => import('./pages/user/tools/AwfaqAdvanced'));
+const QuranicFaal = lazyWithRetry(() => import('./pages/user/tools/QuranicFaal'));
+const UserProfile = lazyWithRetry(() => import('./pages/user/UserProfile'));
+const PaymentPage = lazyWithRetry(() => import('./pages/user/PaymentPage'));
+const Journal = lazyWithRetry(() => import('./pages/user/Journal'));
+const ExploreDashboard = lazyWithRetry(() => import('./pages/user/ExploreDashboard'));
+const Quizz = lazyWithRetry(() => import('./pages/user/explore/Quizz'));
+const Lexique = lazyWithRetry(() => import('./pages/user/explore/Lexique'));
+const CalendarConverter = lazyWithRetry(() => import('./pages/user/explore/CalendarConverter'));
+const AdminDashboard = lazyWithRetry(() => import('./pages/admin/AdminDashboard'));
+const Community = lazyWithRetry(() => import('./pages/user/Community'));
+const DailyDhikrTracker = lazyWithRetry(() => import('./pages/user/tools/DailyDhikrTracker'));
+const IaRapprochements = lazyWithRetry(() => import('./pages/user/tools/IaRapprochements'));
+const RingPendantTalisman = lazyWithRetry(() => import('./pages/user/tools/RingPendantTalisman'));
+const CombustionEclipseCalculator = lazyWithRetry(() => import('./pages/user/tools/CombustionEclipseCalculator'));
+const DairaAsSirr = lazyWithRetry(() => import('./pages/user/tools/DairaAsSirr'));
+const SevenKingsSeals = lazyWithRetry(() => import('./pages/user/tools/SevenKingsSeals'));
+const CoranAnalogyAbjad = lazyWithRetry(() => import('./pages/user/tools/CoranAnalogyAbjad'));
+const ZikrLevelsCalculator = lazyWithRetry(() => import('./pages/user/tools/ZikrLevelsCalculator'));
+const HijriFullMoonCalculator = lazyWithRetry(() => import('./pages/user/tools/HijriFullMoonCalculator'));
+const MuridJournal = lazyWithRetry(() => import('./pages/user/tools/MuridJournal'));
+const SaahIjabah = lazyWithRetry(() => import('./pages/user/tools/SaahIjabah'));
+const SealsCatalogue = lazyWithRetry(() => import('./pages/user/tools/SealsCatalogue'));
+const RajmaCharms = lazyWithRetry(() => import('./pages/user/tools/RajmaCharms'));
+const SacredBooksLibrary = lazyWithRetry(() => import('./pages/user/tools/SacredBooksLibrary'));
+const AlBuniShams = lazyWithRetry(() => import('./pages/user/tools/AlBuniShams'));
+const DiagnosticProtection = lazyWithRetry(() => import('./pages/user/tools/DiagnosticProtection'));
+const TalismanicGeometry = lazyWithRetry(() => import('./pages/user/tools/TalismanicGeometry'));
+const TalsamsExtraction = lazyWithRetry(() => import('./pages/user/tools/TalsamsExtraction'));
+const AstrologicalElections = lazyWithRetry(() => import('./pages/user/tools/AstrologicalElections'));
+const SacredGeography = lazyWithRetry(() => import('./pages/user/tools/SacredGeography'));
+const AdvancedAlchemy = lazyWithRetry(() => import('./pages/user/tools/AdvancedAlchemy'));
+const MetaphysicalDefense = lazyWithRetry(() => import('./pages/user/tools/MetaphysicalDefense'));
+const DiscretionMentalProtection = lazyWithRetry(() => import('./pages/user/tools/DiscretionMentalProtection'));
+const AnchoringAstralStability = lazyWithRetry(() => import('./pages/user/tools/AnchoringAstralStability'));
+const SpiritualToolsHub = lazyWithRetry(() => import('./pages/user/tools/SpiritualToolsHub'));
+const ThiebissabaTradition = lazyWithRetry(() => import('./pages/user/tools/ThiebissabaTradition'));
+const HighPrecisionIndividualization = lazyWithRetry(() => import('./pages/user/tools/HighPrecisionIndividualization'));
+const AdvancedRamlProcessing = lazyWithRetry(() => import('./pages/user/tools/AdvancedRamlProcessing'));
+const TraditionalDivinationQurah = lazyWithRetry(() => import('./pages/user/tools/TraditionalDivinationQurah'));
+const IbnArabiSeals = lazyWithRetry(() => import('./pages/user/tools/IbnArabiSeals').then(m => ({ default: m.IbnArabiSeals })));
+const AdvancedGeomancy = lazyWithRetry(() => import('./pages/user/tools/AdvancedGeomancy').then(m => ({ default: m.AdvancedGeomancy })));
+const ComparativeTraditionsHub = lazyWithRetry(() => import('./pages/user/tools/ComparativeTraditionsHub').then(m => ({ default: m.ComparativeTraditionsHub })));
+const LunarCyclesCalculator = lazyWithRetry(() => import('./pages/user/tools/LunarCyclesCalculator').then(m => ({ default: m.LunarCyclesCalculator })));
+const Store = lazyWithRetry(() => import('./pages/user/Store'));
+const FaqPage = lazyWithRetry(() => import('./pages/FaqPage'));
+const ReferralPage = lazyWithRetry(() => import('./pages/user/ReferralPage'));
+const PdfLibraryPage = lazyWithRetry(() => import('./pages/user/PdfLibraryPage').then(m => ({ default: m.PdfLibraryPage })));
+
+const PlaceholderPage = ({ title }: { title: string }) => (
+  <div className="flex items-center justify-center h-full min-h-[50vh]">
+    <h2 className="text-2xl font-semibold text-gray-500 dark:text-gray-400">{title}</h2>
+  </div>
+);
+
+const FaqButton = () => {
+  const { featureToggles } = useFeatures();
+  
+  if (featureToggles['tool_faq'] === 'inactive' || featureToggles['assistantIconVisible'] !== true) return null;
+  
+  return (
+    <Link 
+      to="/faq" 
+      id="tour-faq"
+      className="fixed bottom-[85px] right-4 sm:bottom-6 sm:right-6 z-40 bg-gradient-to-r from-emerald-500 to-teal-600 text-white p-3.5 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center hover:scale-110 active:scale-95"
+      aria-label="Assistant IA"
+    >
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M11.9567 24C12.1645 17.5144 17.3079 12.3551 23.7547 12.0298C17.3079 11.6961 12.1645 6.54519 11.9567 0.0595703C11.7489 6.54519 6.60555 11.6961 0.158691 12.0298C6.60555 12.3551 11.7489 17.5144 11.9567 24Z" fill="currentColor"/>
+      </svg>
+    </Link>
+  );
+};
+
+const NetworkStatus = () => {
+  const { batterySaver, backgroundSyncFrequencyMs } = useSettings();
+  const [isOnline, setIsOnline] = React.useState(navigator.onLine);
+  const [checking, setChecking] = React.useState(false);
+  const [statusFeedback, setStatusFeedback] = React.useState<string | null>(null);
+  const [bgSyncMessage, setBgSyncMessage] = React.useState<string | null>(null);
+  const [isDismissed, setIsDismissed] = React.useState(false);
+  const [swrStats, setSwrStats] = React.useState<SWRCacheStats | null>(null);
+  const [isSwrSyncing, setIsSwrSyncing] = React.useState(false);
+
+  const loadSwrStats = React.useCallback(async () => {
+    try {
+      const stats = await getSWRCacheStats();
+      setSwrStats(stats);
+    } catch (e) {}
+  }, []);
+
+  const handleSWRRevalidate = React.useCallback(async (
+    triggerSource = 'manual',
+    options: { isSilent?: boolean } = {}
+  ) => {
+    const isSilent = options.isSilent ?? false;
+    setIsSwrSyncing(true);
+
+    if (!isSilent) {
+      setStatusFeedback("Synchronisation locale des articles en cours...");
+    } else {
+      setBgSyncMessage("Synchronisation des articles en arrière-plan...");
+    }
+
+    try {
+      const articles = await revalidatePublishedArticles(triggerSource);
+      await loadSwrStats();
+      if (!isSilent) {
+        setStatusFeedback(`Articles à jour : ${articles.length} articles synchronisés.`);
+      } else {
+        setBgSyncMessage(`Synchro arrière-plan terminée (${articles.length} articles)`);
+        setTimeout(() => setBgSyncMessage(null), 4000);
+      }
+    } catch (err: any) {
+      console.warn('[NetworkStatus] SWR revalidation error:', err);
+      if (!isSilent) {
+        setStatusFeedback(`Mode Hors Ligne : Articles disponibles depuis la mémoire locale.`);
+      } else {
+        setBgSyncMessage(`Synchro arrière-plan : Mode hors ligne.`);
+        setTimeout(() => setBgSyncMessage(null), 4000);
+      }
+    } finally {
+      setIsSwrSyncing(false);
+      if (!isSilent) {
+        setTimeout(() => setStatusFeedback(null), 6000);
+      }
+    }
+  }, [loadSwrStats]);
+
+  const handleTestWebViewFetch = async () => {
+    setChecking(true);
+    setStatusFeedback("Test fetch URL racine...");
+    const rootUrl = window.location.origin || window.location.href || '/';
+    console.log(`[NetworkStatus] Diagnostic fetch test to application root URL: "${rootUrl}"`);
+
+    addNetworkLog(
+      'info',
+      'ssl_cors',
+      `Diagnostic WebView: Fetch déclenché sur URL racine "${rootUrl}"`,
+      `Protocol: ${window.location.protocol}, UserAgent: ${navigator.userAgent}`
+    );
+
+    try {
+      const response = await fetch(rootUrl, { method: 'GET', cache: 'no-store' });
+      console.log(`[NetworkStatus] Root fetch succeeded! Status: ${response.status}, Type: ${response.type}`);
+      addNetworkLog(
+        'success',
+        'ssl_cors',
+        `Fetch URL racine réussi (${response.status} ${response.statusText || 'OK'})`,
+        `URL: ${rootUrl}, Response type: ${response.type}, Redirected: ${response.redirected}`
+      );
+      setStatusFeedback(`Root Fetch OK (${response.status} ${response.type})`);
+    } catch (err: any) {
+      const msg = err?.message || String(err);
+      console.warn(`[NetworkStatus] WebView fetch to root URL failed! Possible CORS or scheme issue:`, err);
+      addNetworkLog(
+        'error',
+        'ssl_cors',
+        `Échec du fetch WebView URL racine (${rootUrl}): ${msg}`,
+        `Blocage potentiel CORS / Schème WebView (file:/capacitor:) dans Android/iOS: ${msg}`
+      );
+      setStatusFeedback(`[CORS/WebView Error] ${msg}`);
+    } finally {
+      setChecking(false);
+      setTimeout(() => setStatusFeedback(null), 8000);
+    }
+  };
+
+  React.useEffect(() => {
+    // Expose diagnostic tool & SWR revalidator on window for debugging
+    if (typeof window !== 'undefined') {
+      (window as any).asrarhub_test_webview_fetch = handleTestWebViewFetch;
+      (window as any).asrarhub_revalidate_swr = (silent = true) => handleSWRRevalidate('console', { isSilent: silent });
+    }
+
+    // Load initial IndexedDB stats
+    loadSwrStats();
+
+    // Trigger initial SWR background revalidation if online (silent)
+    if (navigator.onLine) {
+      handleSWRRevalidate('app_start', { isSilent: true });
+    }
+
+    // Periodic background sync respecting Battery Saver frequency (30m in battery saver vs 10m normal)
+    const syncIntervalMs = backgroundSyncFrequencyMs || (batterySaver ? 30 * 60 * 1000 : 10 * 60 * 1000);
+    const periodicSyncInterval = setInterval(() => {
+      if (navigator.onLine) {
+        handleSWRRevalidate('periodic_bg', { isSilent: true });
+      }
+    }, syncIntervalMs);
+
+    // Sync on tab visibility change (throttled in Battery Saver mode)
+    let lastTabSyncTime = 0;
+    const handleVisibilityChange = () => {
+      const now = Date.now();
+      const minInterval = batterySaver ? 15 * 60 * 1000 : 60 * 1000;
+      if (document.visibilityState === 'visible' && navigator.onLine && (now - lastTabSyncTime > minInterval)) {
+        lastTabSyncTime = now;
+        handleSWRRevalidate('tab_visible', { isSilent: true });
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    const doubleCheckOnline = () => {
+      fetch('https://www.google.com/favicon.ico', { method: 'HEAD', mode: 'no-cors' })
+        .then(() => {
+          setIsOnline(true);
+          console.log("[NetworkStatus] Connection verified successfully via fetch.");
+          // Automatic Stale-While-Revalidate when online status confirmed
+          handleSWRRevalidate('online_reconnect', { isSilent: true });
+        })
+        .catch(() => {
+          setIsOnline(false);
+          console.warn("[NetworkStatus] Connection failed verification.");
+        });
+    };
+
+    const handleOnline = () => {
+      setIsOnline(true);
+      console.log("[NetworkStatus] Device went online.");
+      handleSWRRevalidate('online_event', { isSilent: true });
+    };
+    const handleOffline = () => {
+      doubleCheckOnline();
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    if (!navigator.onLine) {
+      doubleCheckOnline();
+    }
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      clearInterval(periodicSyncInterval);
+    };
+  }, [handleSWRRevalidate, loadSwrStats, batterySaver, backgroundSyncFrequencyMs]);
+
+  const handleCheckStatus = async () => {
+    setChecking(true);
+    setStatusFeedback("Vérification...");
+    try {
+      const result = await pingFirestore();
+      if (result.reachable) {
+        setStatusFeedback(`Serveur OK (Latence: ${result.latencyMs}ms)`);
+        handleSWRRevalidate('ping_success', { isSilent: false });
+      } else {
+        setStatusFeedback(`Serveur injoignable : ${result.errorMessage || 'Erreur réseau'}`);
+      }
+    } catch (err) {
+      setStatusFeedback("Échec du diagnostic de connexion.");
+    } finally {
+      setChecking(false);
+      setTimeout(() => setStatusFeedback(null), 6000);
+    }
+  };
+
+  // Silent background network manager (Visual indicators and controls are located in the header's SyncStatusBadge)
+  return null;
+};
+
+const ProtectedToolsLayout: React.FC = () => {
+  const { user, isPremium } = useAuth();
+  const { t, language } = useLanguage();
+  const { featureToggles } = useFeatures();
+  const location = useLocation();
+  const [showAuthModal, setShowAuthModal] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!user) {
+      setShowAuthModal(true);
+    }
+  }, [user]);
+
+  const getGuardedFeatureId = (pathname: string): string => {
+    if (pathname.startsWith('/tools/') && pathname !== '/tools') {
+      const parts = pathname.split('/');
+      return parts[parts.length - 1];
+    }
+    if (pathname === '/pdf-library' || pathname === '/pdf' || pathname === '/explore/pdf' || pathname === '/tools/pdf') return 'pdf';
+    if (pathname === '/store') return 'store';
+    if (pathname === '/community') return 'community';
+    if (pathname === '/journal') return 'journal';
+    if (pathname === '/explore/calendar') return 'calendar';
+    if (pathname === '/explore/quizz') return 'quizz';
+    if (pathname === '/explore/lexique') return 'lexique';
+    if (pathname === '/explore') return 'explore';
+    if (pathname === '/referral' || pathname === '/parrainage') return 'referral';
+    return '';
+  };
+
+  const featureId = getGuardedFeatureId(location.pathname);
+  const isGuardedRoute = Boolean(featureId);
+  const toolId = featureId;
+  const toolDisplayName = toolId ? getToolDisplayName(toolId, language) : "";
+  
+  const accessResult = isGuardedRoute && toolId
+    ? checkFeatureAccess(toolId, toolDisplayName, featureToggles, user, isPremium)
+    : { allowed: true, restrictionType: null, featureName: toolDisplayName, status: 'active' as const };
+
+  const isMaintenance = isGuardedRoute && accessResult.restrictionType === 'maintenance';
+  const isInactive = isGuardedRoute && accessResult.restrictionType === 'blocked' && (accessResult.status === 'inactive' || accessResult.status === 'disabled');
+  const isPremiumOnly = isGuardedRoute && accessResult.restrictionType === 'premium';
+  const isBlocked = isGuardedRoute && accessResult.restrictionType === 'blocked' && !isInactive;
+  const isAdmin = user?.role === 'admin' || user?.email === 'jibriltengeh4@gmail.com' || user?.email === 'sbireino@gmail.com' || user?.email === 'tenibawwal10@gmail.com' || user?.email === 'jibriltengeh57@gmail.com';
+
+  React.useEffect(() => {
+    if (user && isGuardedRoute && accessResult.allowed && toolId) {
+      localStorage.setItem('asrarhub_last_tool', toolId);
+    }
+  }, [user, location.pathname, isGuardedRoute, accessResult.allowed, toolId]);
+
+  // Log unauthorized access attempts to blocked/restricted tools for admin security alerting
+  React.useEffect(() => {
+    if (user && isGuardedRoute && !accessResult.allowed && toolId && !isAdmin) {
+      const restrictionType = accessResult.restrictionType || (isMaintenance ? 'maintenance' : isPremiumOnly ? 'premium' : 'blocked');
+      recordUnauthorizedToolAttempt({
+        user,
+        toolId,
+        toolName: accessResult.featureName || toolId,
+        restrictionType,
+        featureToggles
+      });
+    }
+  }, [user, isGuardedRoute, accessResult.allowed, toolId, accessResult.restrictionType, isMaintenance, isPremiumOnly, isBlocked, isAdmin, featureToggles]);
+
+  if (!user) {
+    return (
+      <div className="max-w-md mx-auto p-6 sm:p-8 text-center flex flex-col items-center justify-center min-h-[70vh]">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-xl border border-gray-100 dark:border-gray-700 w-full"
+        >
+          <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/40 rounded-full flex items-center justify-center text-emerald-600 dark:text-emerald-400 mb-6 mx-auto">
+            <ShieldAlert size={32} />
+          </div>
+          
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
+            {t('auth.requiredTitle', 'Connexion Requise')}
+          </h2>
+          
+          <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed mb-8">
+            {t('auth.requiredDesc', 'Pour accéder aux outils spirituels et secrets d\'AsrarHub, vous devez être connecté à votre compte. Rejoignez notre communauté dès aujourd\'hui.')}
+          </p>
+          
+          <button
+            onClick={() => setShowAuthModal(true)}
+            className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold py-3 px-6 rounded-2xl shadow-md hover:shadow-lg transition-all transform hover:scale-[1.02] active:scale-[0.98]"
+          >
+            <LogIn size={18} />
+            {t('auth.loginOrCreate', 'Se connecter / S\'inscrire')}
+          </button>
+        </motion.div>
+        
+        <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
+      </div>
+    );
+  }
+
+  const adminEmails = ['jibriltengeh4@gmail.com', 'sbireino@gmail.com', 'tenibawwal10@gmail.com', 'jibriltengeh57@gmail.com'];
+  const isUserAdmin = isAdmin || (user.email && adminEmails.includes(user.email.toLowerCase()));
+
+  if (!user.emailVerified && !isUserAdmin) {
+    return <UnverifiedEmailGuard />;
+  }
+
+  if (isGuardedRoute) {
+    if (isBlocked) {
+      return (
+        <div className="max-w-md mx-auto p-6 sm:p-8 text-center flex flex-col items-center justify-center min-h-[70vh]">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-xl border border-red-100 dark:border-red-900/30 w-full"
+          >
+            <div className="w-16 h-16 bg-red-100 dark:bg-red-900/40 rounded-full flex items-center justify-center text-red-600 dark:text-red-400 mb-6 mx-auto">
+              <ShieldAlert size={32} />
+            </div>
+            
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
+              {language === 'fr' ? 'Accès Bloqué' : language === 'ha' ? 'An Rufe Hanya' : 'Access Blocked'}
+            </h2>
+            
+            <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed mb-8">
+              {language === 'fr' 
+                ? 'Cet outil a été bloqué pour votre compte. Veuillez contacter l\'administrateur pour plus d\'informations.' 
+                : language === 'ha'
+                ? 'An rufe wannan kayan aiki ga asusunka. Tuntuɓi mai gudanarwa don ƙarin bayani.'
+                : 'This tool has been blocked for your account. Please contact the administrator for more information.'}
+            </p>
+            
+            <Link
+              to="/tools"
+              className="w-full flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-bold py-3 px-6 rounded-2xl transition-all"
+            >
+              {language === 'fr' ? 'Retour aux Outils' : language === 'ha' ? 'Koma ga Kayan Aiki' : 'Back to Tools'}
+            </Link>
+          </motion.div>
+        </div>
+      );
+    }
+
+    if (isMaintenance) {
+      return (
+        <div className="max-w-md mx-auto p-6 sm:p-8 text-center flex flex-col items-center justify-center min-h-[70vh]">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-xl border border-amber-100 dark:border-amber-900/30 w-full"
+          >
+            <div className="w-16 h-16 bg-amber-100 dark:bg-amber-900/40 rounded-full flex items-center justify-center text-amber-600 dark:text-amber-400 mb-6 mx-auto animate-pulse">
+              <RefreshCw size={32} />
+            </div>
+            
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
+              {language === 'fr' ? 'Outil en Maintenance' : language === 'ha' ? 'Kayan Aiki a Gyara' : 'Tool under Maintenance'}
+            </h2>
+            
+            <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed mb-8">
+              {language === 'fr' 
+                ? 'Cet outil est temporairement en maintenance pour des ajustements techniques ou spirituels. Veuillez réessayer plus tard.' 
+                : language === 'ha'
+                ? 'Wannan kayan aiki yana fuskantar gyara na ɗan lokaci. Da fatan za a sake gwadawa daga baya.'
+                : 'This tool is temporarily under maintenance for technical or spiritual adjustments. Please try again later.'}
+            </p>
+            
+            <Link
+              to="/tools"
+              className="w-full flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-bold py-3 px-6 rounded-2xl transition-all"
+            >
+              {language === 'fr' ? 'Retour aux Outils' : language === 'ha' ? 'Koma ga Kayan Aiki' : 'Back to Tools'}
+            </Link>
+          </motion.div>
+        </div>
+      );
+    }
+
+    if (isInactive) {
+      return (
+        <div className="max-w-md mx-auto p-6 sm:p-8 text-center flex flex-col items-center justify-center min-h-[70vh]">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-xl border border-gray-200 dark:border-gray-700 w-full"
+          >
+            <div className="w-16 h-16 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center text-gray-500 dark:text-gray-400 mb-6 mx-auto">
+              <ShieldAlert size={32} />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
+              {language === 'fr' ? 'Outil Inactif' : language === 'ha' ? 'Kayan Aiki An Kashe' : 'Tool Inactive'}
+            </h2>
+            <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed mb-8">
+              {language === 'fr' 
+                ? 'Cet outil a été temporairement désactivé par l\'administration.' 
+                : language === 'ha'
+                ? 'An kashe wannan kayan aiki ta hanyar gudanarwa.'
+                : 'This tool has been temporarily deactivated by the administration.'}
+            </p>
+            <Link
+              to="/tools"
+              className="w-full flex items-center justify-center gap-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-bold py-3 px-6 rounded-2xl transition-all"
+            >
+              {language === 'fr' ? 'Retour aux Outils' : language === 'ha' ? 'Koma ga Kayan Aiki' : 'Back to Tools'}
+            </Link>
+          </motion.div>
+        </div>
+      );
+    }
+
+    if (isPremiumOnly) {
+      return (
+        <PremiumLockScreen
+          toolName={accessResult.featureName || undefined}
+        />
+      );
+    }
+  }
+
+  return <Outlet />;
+};
+
+export default function App() {
+  const { user, showTrialPopup, markTrialPopupSeen } = useAuth();
+  const { language } = useLanguage();
+  const { isFullscreen } = useFullscreen();
+  const { featureToggles } = useFeatures();
+  const { batterySaver, lazyLoadRootMargin } = useSettings();
+  const { isPlaying: globalIsPlaying, currentTrack, quranRepeatCount: repeatCount, setQuranRepeatCount: setRepeatCount } = useAudio();
+
+  // Global Image Lazy Loading Strategy using Intersection Observer
+  useGlobalImageLazyLoader(batterySaver, lazyLoadRootMargin);
+
+  const [hasCompletedOnboarding, setHasCompletedOnboarding] = React.useState(
+    localStorage.getItem('hasCompletedOnboarding') === 'true'
+  );
+
+  const [showConnectedToast, setShowConnectedToast] = React.useState(false);
+  const [toastUserName, setToastUserName] = React.useState('');
+  const [backExitToast, setBackExitToast] = React.useState(false);
+  const lastBackPressTimeRef = React.useRef<number>(0);
+
+  // Hidden background version diagnostic helper (monitors mismatch and updates Admin Dashboard)
+  useHiddenVersionDiagnosticHelper();
+
+  // App version check and upgrade prompt
+  const [showVersionUpgradeModal, setShowVersionUpgradeModal] = React.useState(false);
+  const [showArticleSyncModal, setShowArticleSyncModal] = React.useState(false);
+  const [versionUpgradeData, setVersionUpgradeData] = React.useState<{
+    currentVersion: string;
+    previousVersion: string | null;
+  }>({
+    currentVersion: appVersionService.getCurrentVersion(),
+    previousVersion: null
+  });
+
+  React.useEffect(() => {
+    const handleOpenArticleSync = () => {
+      setShowArticleSyncModal(true);
+    };
+    window.addEventListener('asrarhub_open_article_sync_video_modal', handleOpenArticleSync);
+    if (typeof window !== 'undefined') {
+      (window as any).asrarhub_open_article_sync_video_modal = () => setShowArticleSyncModal(true);
+    }
+    return () => {
+      window.removeEventListener('asrarhub_open_article_sync_video_modal', handleOpenArticleSync);
+    };
+  }, []);
+
+  React.useEffect(() => {
+    // Check version and purge IndexedDB cache if upgrade detected
+    checkVersionAndPurgeCache();
+
+    // 1. Check if new local bundle version detected compared to local storage
+    const check = appVersionService.checkVersionUpgrade();
+    if (check.isNewVersion) {
+      if (!appVersionService.isVersionNotified(check.currentVersion)) {
+        setVersionUpgradeData({
+          currentVersion: check.currentVersion,
+          previousVersion: check.previousVersion
+        });
+        setShowVersionUpgradeModal(true);
+        appVersionService.markVersionNotified(check.currentVersion);
+      }
+    }
+
+    // 2. Subscribe to database releases from Firestore collection 'app_versions'
+    // Shows the notification ONCE only if there is a genuinely new release published in the database
+    const unsubscribeReleases = appVersionService.subscribeReleases((releases) => {
+      const dbCheck = appVersionService.checkDatabaseUpgrade(releases);
+      if (dbCheck.hasDbUpdate && dbCheck.dbRelease) {
+        setVersionUpgradeData({
+          currentVersion: dbCheck.dbRelease.version,
+          previousVersion: appVersionService.getCurrentVersion()
+        });
+        setShowVersionUpgradeModal(true);
+        appVersionService.markVersionNotified(dbCheck.dbRelease.version);
+      }
+    }, false);
+
+    return () => {
+      unsubscribeReleases();
+    };
+  }, []);
+
+  React.useEffect(() => {
+    if (user && !sessionStorage.getItem('asrarhub_welcome_shown')) {
+      const name = user.name || user.email || (language === 'fr' ? 'Utilisateur' : language === 'ha' ? 'Mai amfani' : 'User');
+      setToastUserName(name);
+      setShowConnectedToast(true);
+      sessionStorage.setItem('asrarhub_welcome_shown', 'true');
+    }
+  }, [user, language]);
+
+  React.useEffect(() => {
+    if (showConnectedToast) {
+      const timer = setTimeout(() => {
+        setShowConnectedToast(false);
+      }, 2500);
+      return () => clearTimeout(timer);
+    }
+  }, [showConnectedToast]);
+
+  // Real-Time Planetary Hours Push Notifications & Forced Permissions (Notifications + Microphone)
+  React.useEffect(() => {
+    requestAllPermissions();
+    checkAndTriggerPlanetaryNotification(language as any);
+    const interval = setInterval(() => {
+      checkAndTriggerPlanetaryNotification(language as any);
+    }, 5 * 60 * 1000); // Check every 5 minutes
+    return () => clearInterval(interval);
+  }, [language]);
+
+  const isCompletedOnboarding = hasCompletedOnboarding || 
+    sessionStorage.getItem('hasCompletedOnboarding') === 'true' || 
+    !!(user && (user as any).hasCompletedOnboarding);
+  
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Navigation history tracking stack for Capacitor Android back button
+  const internalHistoryStackRef = React.useRef<string[]>([]);
+
+  // Global scroll-to-top and route changed logger on route changes
+  React.useEffect(() => {
+    const currentPath = location.pathname + location.search;
+    const stack = internalHistoryStackRef.current;
+
+    if (stack.length === 0) {
+      stack.push(currentPath);
+    } else if (stack[stack.length - 1] !== currentPath) {
+      if (stack.length >= 2 && stack[stack.length - 2] === currentPath) {
+        // Navigated back
+        stack.pop();
+      } else {
+        // Navigated forward
+        stack.push(currentPath);
+      }
+    }
+
+    console.log(`[Navigation] Route transitioned to: "${location.pathname}"`);
+    window.scrollTo(0, 0);
+    if (document.documentElement) {
+      document.documentElement.scrollTo({ top: 0 });
+    }
+    if (document.body) {
+      document.body.scrollTo({ top: 0 });
+    }
+
+    const mainPaths = [
+      '/user/dashboard',
+      '/tools',
+      '/explore',
+      '/journal',
+      '/saved',
+      '/profile',
+      '/community'
+    ];
+    if (mainPaths.includes(location.pathname)) {
+      sessionStorage.setItem('last_active_main_path', location.pathname);
+    }
+  }, [location.pathname, location.search]);
+
+  React.useEffect(() => {
+    const handleBackButton = () => {
+      executeStepByStepBack(navigate, lastBackPressTimeRef, setBackExitToast);
+    };
+
+    let listenerHandle: any = null;
+    try {
+      CapacitorApp.addListener('backButton', handleBackButton).then((handle) => {
+        listenerHandle = handle;
+      }).catch((e) => {
+        console.warn('Capacitor backButton listener attach error:', e);
+      });
+    } catch (e) {
+      console.warn('CapacitorApp backButton addListener error:', e);
+    }
+
+    return () => {
+      try {
+        if (listenerHandle && typeof listenerHandle.remove === 'function') {
+          listenerHandle.remove();
+        } else {
+          CapacitorApp.removeAllListeners().catch(() => {});
+        }
+      } catch (e) {
+        // ignore
+      }
+    };
+  }, [navigate]);
+
+  React.useEffect(() => {
+    let lastCheckedMinute = -1;
+    const interval = setInterval(() => {
+      // 1. Process custom manually created reminders (asrar_reminders)
+      let reminders = [];
+      try {
+        const parsed = JSON.parse(localStorage.getItem('asrar_reminders') || '[]');
+        if (Array.isArray(parsed)) {
+          reminders = parsed;
+        }
+      } catch (e) {
+        console.error("Error parsing reminders", e);
+      }
+
+      // 2. Process automatic prayer times and recurring Dhikr reminders (asrar_reminders_config)
+      let autoRemindersConfig: any = null;
+      try {
+        const saved = localStorage.getItem('asrar_reminders_config');
+        if (saved) {
+          autoRemindersConfig = JSON.parse(saved);
+        }
+      } catch (e) {
+        console.error("Error parsing auto reminders config", e);
+      }
+
+      const now = new Date();
+      const currentMinute = now.getMinutes();
+      const todayDateStr = now.toDateString();
+
+      if (currentMinute !== lastCheckedMinute) {
+        lastCheckedMinute = currentMinute;
+        const currentTimeString = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+        const currentLang = (language || localStorage.getItem('language') || 'fr') as 'fr' | 'en' | 'ha';
+
+        // Custom manually created reminders
+        reminders.forEach((rem: any) => {
+          if (rem.enabled && rem.time === currentTimeString) {
+            const notificationType = rem.isZikr ? 'dhikrDaily' : 'customReminder';
+            const { title, body } = getLocalizedNotificationText(notificationType, currentLang, { label: rem.label });
+            dispatchSystemNotification(title, body, {
+              type: notificationType,
+              label: rem.label,
+              targetUrl: rem.isZikr ? '/tools/daily-dhikr' : '/journal',
+            });
+          }
+        });
+
+        // Automatic Prayer Times reminders
+        if (autoRemindersConfig && autoRemindersConfig.prayerEnabled && autoRemindersConfig.prayers) {
+          Object.entries(autoRemindersConfig.prayers).forEach(([prayer, time]) => {
+            if (time === currentTimeString) {
+              const lastPrayerDate = autoRemindersConfig.lastPrayerReminders?.[prayer];
+              if (lastPrayerDate !== todayDateStr) {
+                const { title, body } = getLocalizedNotificationText('prayerTime', currentLang, {
+                  prayerName: prayer,
+                  time: String(time),
+                });
+                dispatchSystemNotification(title, body, {
+                  type: 'prayerTime',
+                  prayerName: prayer,
+                  time: String(time),
+                  targetUrl: '/explore/calendar',
+                });
+
+                // Update last triggering date
+                if (!autoRemindersConfig.lastPrayerReminders) {
+                  autoRemindersConfig.lastPrayerReminders = {};
+                }
+                autoRemindersConfig.lastPrayerReminders[prayer] = todayDateStr;
+                localStorage.setItem('asrar_reminders_config', JSON.stringify(autoRemindersConfig));
+              }
+            }
+          });
+        }
+      }
+
+      // 3. Process periodic recurring Dhikr reminders
+      if (autoRemindersConfig && autoRemindersConfig.dhikrEnabled) {
+        const lastDhikrTime = autoRemindersConfig.lastDhikrReminder || 0;
+        const intervalMs = (autoRemindersConfig.dhikrInterval || 60) * 60 * 1000;
+        if (Date.now() - lastDhikrTime >= intervalMs) {
+          const currentLang = (language || localStorage.getItem('language') || 'fr') as 'fr' | 'en' | 'ha';
+          const { title, body } = getLocalizedNotificationText('dhikrRecurring', currentLang);
+          dispatchSystemNotification(title, body, {
+            type: 'dhikrRecurring',
+            targetUrl: '/tools/tasbih',
+          });
+
+          // Update last triggering time
+          autoRemindersConfig.lastDhikrReminder = Date.now();
+          localStorage.setItem('asrar_reminders_config', JSON.stringify(autoRemindersConfig));
+        }
+      }
+    }, 10000); // Check every 10 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Prefetch Quran data in background for instant offline "View all occurrences"
+  React.useEffect(() => {
+    if (navigator.onLine) {
+      import('idb-keyval').then(({ get, set }) => {
+        get('asrar_quran_full_json').then(cached => {
+          if (!cached) {
+            fetch(getApiUrl('/quran.json'))
+              .then(res => {
+                if (res.ok) return res.json();
+                throw new Error();
+              })
+              .then(data => {
+                if (Array.isArray(data)) {
+                  set('asrar_quran_full_json', data);
+                }
+              })
+              .catch(() => {});
+          }
+        });
+      });
+    }
+  }, []);
+
+  // Banned or Suspended User Intercept
+  if (user && ((user as any).isBanned || (user as any).isSuspended)) {
+    const isSuspended = !(user as any).isBanned && (user as any).isSuspended;
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center p-4">
+        <div className="bg-white dark:bg-gray-800 rounded-3xl p-8 max-w-md w-full shadow-2xl border border-red-100 dark:border-red-900/30 text-center">
+          <div className="w-16 h-16 bg-red-100 dark:bg-red-900/40 rounded-full flex items-center justify-center text-red-600 dark:text-red-400 mb-6 mx-auto animate-bounce">
+            <ShieldAlert size={32} />
+          </div>
+          <h2 className="text-2xl font-black text-gray-900 dark:text-white mb-3">
+            {isSuspended 
+              ? (language === 'fr' ? 'Compte Temporairement Suspendu' : language === 'ha' ? 'An Dakatar da Asusunka na Ɗan Lokaci' : 'Account Temporarily Suspended')
+              : (language === 'fr' ? 'Compte Banni Définitivement' : language === 'ha' ? 'An Dakatar da Asusunka' : 'Account Banned')}
+          </h2>
+          <p className="text-gray-600 dark:text-gray-300 text-sm leading-relaxed mb-6">
+            {isSuspended
+              ? (language === 'fr' 
+                ? 'Votre compte a été temporairement suspendu par l\'administrateur. L\'accès aux outils et secrets est momentanément restreint.' 
+                : language === 'ha'
+                ? 'An dakatar da asusunka na dan lokaci. Ba ka da damar shiga cikin kayan aiki a yanzu.'
+                : 'Your account has been temporarily suspended by the administrator. Access to tools and secrets is restricted.')
+              : (language === 'fr' 
+                ? 'Votre compte a été banni par l\'administrateur. Vous n\'avez plus accès aux contenus, secrets et outils spirituels.' 
+                : language === 'ha'
+                ? 'An dakatar da asusunka ta hannun mai gudanarwa. Ba ka da damar shiga cikin abubuwan asiri da kayan aiki.'
+                : 'Your account has been banned by the administrator. You no longer have access to content, secrets, and spiritual tools.')}
+          </p>
+          <div className="text-xs text-red-500 font-semibold border border-red-100 dark:border-red-900/20 bg-red-50/50 dark:bg-red-900/10 rounded-xl p-3 mb-6">
+            {language === 'fr'
+              ? 'Si vous pensez qu\'il s\'agit d\'une erreur, veuillez contacter l\'administrateur.'
+              : language === 'ha'
+              ? 'Idan kana tunanin wannan kuskure ne, tuntuɓi mai gudanarwa.'
+              : 'If you think this is an error, please contact the administrator.'}
+          </div>
+          <button 
+            onClick={() => {
+              import('./lib/firebase').then(({ auth }) => auth.signOut());
+            }}
+            className="w-full py-3 px-4 rounded-xl bg-gray-150 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-bold hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors cursor-pointer"
+          >
+            {language === 'fr' ? 'Se Déconnecter' : language === 'ha' ? 'Fita daga Asusun' : 'Sign Out'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isCompletedOnboarding) {
+    return <Onboarding onComplete={() => {
+      localStorage.setItem('hasCompletedOnboarding', 'true');
+      sessionStorage.setItem('hasCompletedOnboarding', 'true');
+      setHasCompletedOnboarding(true);
+      if (user && isAutoSaveEnabled()) {
+        import('firebase/firestore').then(({ setDoc, doc }) => {
+          setDoc(doc(db, 'users', user.uid), { hasCompletedOnboarding: true }, { merge: true }).catch(console.error);
+        });
+      }
+    }} />;
+  }
+
+  return (
+    <MaintenanceOverlay>
+      <NavigationProgressBar />
+      <FirstOpenPermissionsModal />
+      <ContentProtectionManager />
+      <NetworkStatus />
+      <ErrorToastContainer />
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors flex flex-col font-sans mb-16 sm:mb-0 w-full max-w-full m-0 p-0 pt-0 overflow-x-hidden">
+        <FloatingBackButton />
+        {!isFullscreen && <Header />}
+        <FloatingFullscreenExitButton />
+        <FloatingToolFullscreenButton />
+        <DailyRewardHandler />
+        <main className={`flex flex-col flex-1 w-full max-w-full text-gray-900 dark:text-gray-100 pb-20 m-0 p-0 ${isFullscreen ? 'pt-0' : 'pt-[48px] sm:pt-[54px]'} min-w-0 overflow-x-hidden`}>
+          <React.Suspense fallback={
+            <div className="flex items-center justify-center min-h-[60vh] w-full py-12">
+              <AsrarHubLoader size="lg" text="Chargement..." />
+            </div>
+          }>
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={location.pathname}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -12 }}
+                transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+                className="w-full max-w-full flex flex-col flex-1 min-h-0 min-w-0 overflow-x-hidden"
+              >
+                <Routes location={location}>
+                <Route path="/" element={<Navigate to="/user/dashboard" replace />} />
+                <Route path="/user/dashboard" element={<UserDashboard />} />
+                <Route path="/secret/:id" element={<SecretDetail />} />
+                <Route path="/explore/:categoryId" element={<UserDashboard />} />
+                <Route element={<ProtectedToolsLayout />}>
+                  <Route path="/tools" element={<ToolsDashboard />} />
+                  <Route path="/tools/abjad" element={<AbjadCalculator />} />
+                  <Route path="/tools/custom-dua" element={<CustomDuaGenerator />} />
+                  <Route path="/tools/planetary" element={<PlanetaryHours />} />
+                  <Route path="/tools/tasbih" element={<Tasbih />} />
+                  <Route path="/tools/khatim" element={<KhatimGenerator />} />
+                  <Route path="/tools/asma" element={<Asma />} />
+                  <Route path="/tools/talsam" element={<Talsam />} />
+                  <Route path="/tools/istikhara" element={<Istikhara />} />
+                  <Route path="/tools/sirr" element={<SirrAlAsrar />} />
+                  <Route path="/tools/zairja" element={<Zairja />} />
+                  <Route path="/tools/zakat" element={<ZakatCalculator />} />
+                  <Route path="/tools/faraid" element={<FaraidCalculator />} />
+                  <Route path="/tools/dreams" element={<DreamJournal />} />
+                  <Route path="/tools/halaqat" element={<Halaqat />} />
+                  <Route path="/tools/elemental" element={<ElementalAnalyzer />} />
+                  <Route path="/tools/geomancy" element={<Geomancy />} />
+                  <Route path="/tools/letters" element={<ScienceOfLetters />} />
+                  <Route path="/tools/science-of-letters" element={<ScienceOfLetters />} />
+                  <Route path="/tools/personal-wird" element={<PersonalWird />} />
+                  <Route path="/tools/daily-dhikr" element={<DailyDhikrTracker />} />
+                  <Route path="/tools/lunar-mansions" element={<LunarMansions />} />
+                  <Route path="/tools/spiritual-compatibility" element={<SpiritualCompatibility />} />
+                  <Route path="/tools/ilm-jafar" element={<IlmJafar />} />
+                  <Route path="/tools/grand-oaths" element={<GrandOaths />} />
+                  <Route path="/tools/99names" element={<NamesOfAllah />} />
+                  <Route path="/tools/rouhaniyya" element={<RouhaniyyaExtractor />} />
+                  <Route path="/tools/taksir" element={<Taksir />} />
+                  <Route path="/tools/quran" element={<QuranFull />} />
+                  <Route path="/tools/khouddam" element={<KhouddamExtractor />} />
+                  <Route path="/tools/awfaq" element={<AwfaqAdvanced />} />
+                  <Route path="/tools/quranic-faal" element={<QuranicFaal />} />
+                  <Route path="/tools/ia-rapprochements" element={<IaRapprochements />} />
+                  <Route path="/tools/ring-pendant-talisman" element={<RingPendantTalisman />} />
+                  <Route path="/tools/combustion-eclipse" element={<CombustionEclipseCalculator />} />
+                  <Route path="/tools/daira-as-sirr" element={<DairaAsSirr />} />
+                  <Route path="/tools/dairah" element={<DairaAsSirr />} />
+                  <Route path="/tools/saah-ijabah" element={<SaahIjabah />} />
+                  <Route path="/tools/seals-catalogue" element={<SealsCatalogue />} />
+                  <Route path="/tools/seals" element={<SealsCatalogue />} />
+                  <Route path="/tools/seven-kings" element={<SevenKingsSeals />} />
+                  <Route path="/tools/quran-analogy" element={<CoranAnalogyAbjad />} />
+                  <Route path="/tools/zikr-levels" element={<ZikrLevelsCalculator />} />
+                  <Route path="/tools/hijri-full-moon" element={<HijriFullMoonCalculator />} />
+                  <Route path="/tools/murid-journal" element={<MuridJournal />} />
+                  <Route path="/tools/rajma-charms" element={<RajmaCharms />} />
+                  <Route path="/tools/rajma" element={<RajmaCharms />} />
+                  <Route path="/tools/sacred-books" element={<SacredBooksLibrary />} />
+                  <Route path="/tools/books" element={<SacredBooksLibrary />} />
+                  <Route path="/tools/grimoires" element={<SacredBooksLibrary />} />
+                  <Route path="/tools/al-buni-shams" element={<AlBuniShams />} />
+                  <Route path="/tools/buni" element={<AlBuniShams />} />
+                  <Route path="/tools/shams" element={<AlBuniShams />} />
+                  <Route path="/tools/diagnostic-protection" element={<DiagnosticProtection />} />
+                  <Route path="/tools/diagnostic" element={<DiagnosticProtection />} />
+                  <Route path="/tools/talismanic-geometry" element={<TalismanicGeometry />} />
+                  <Route path="/tools/tilasim" element={<TalismanicGeometry />} />
+                  <Route path="/tools/talsams-extraction" element={<TalsamsExtraction />} />
+                  <Route path="/tools/talsams" element={<TalsamsExtraction />} />
+                  <Route path="/tools/astrological-elections" element={<AstrologicalElections />} />
+                  <Route path="/tools/elections" element={<AstrologicalElections />} />
+                  <Route path="/tools/sacred-geography" element={<SacredGeography />} />
+                  <Route path="/tools/geographie-sacree" element={<SacredGeography />} />
+                  <Route path="/tools/advanced-alchemy" element={<AdvancedAlchemy />} />
+                  <Route path="/tools/alchemy" element={<AdvancedAlchemy />} />
+                  <Route path="/tools/alchimie" element={<AdvancedAlchemy />} />
+                  <Route path="/tools/metaphysical-defense" element={<MetaphysicalDefense />} />
+                  <Route path="/tools/defense-metaphysique" element={<MetaphysicalDefense />} />
+                  <Route path="/tools/defense" element={<MetaphysicalDefense />} />
+                  <Route path="/tools/discretion-protection" element={<DiscretionMentalProtection />} />
+                  <Route path="/tools/discretion-mental-protection" element={<DiscretionMentalProtection />} />
+                  <Route path="/tools/discretion" element={<DiscretionMentalProtection />} />
+                  <Route path="/tools/anchoring-stability" element={<AnchoringAstralStability />} />
+                  <Route path="/tools/ancrage-stabilite" element={<AnchoringAstralStability />} />
+                  <Route path="/tools/anchoring" element={<AnchoringAstralStability />} />
+                  <Route path="/tools/spiritual-hub" element={<SpiritualToolsHub />} />
+                  <Route path="/tools/spiritual" element={<SpiritualToolsHub />} />
+                  <Route path="/tools/thiebissaba-tradition" element={<ThiebissabaTradition />} />
+                  <Route path="/tools/thiebissaba" element={<ThiebissabaTradition />} />
+                  <Route path="/tools/cebesaba" element={<ThiebissabaTradition />} />
+                  <Route path="/tools/high-precision-individualization" element={<HighPrecisionIndividualization />} />
+                  <Route path="/tools/individualisation" element={<HighPrecisionIndividualization />} />
+                  <Route path="/tools/high-precision" element={<HighPrecisionIndividualization />} />
+                  <Route path="/tools/advanced-raml-processing" element={<AdvancedRamlProcessing />} />
+                  <Route path="/tools/khatam-raml" element={<AdvancedRamlProcessing />} />
+                  <Route path="/tools/raml" element={<AdvancedRamlProcessing />} />
+                  <Route path="/tools/divination-qurah" element={<TraditionalDivinationQurah />} />
+                  <Route path="/tools/qurah" element={<TraditionalDivinationQurah />} />
+                  <Route path="/tools/cauris" element={<TraditionalDivinationQurah />} />
+                  <Route path="/tools/azlam" element={<TraditionalDivinationQurah />} />
+                  <Route path="/tools/ibn-arabi-seals" element={<IbnArabiSeals />} />
+                  <Route path="/tools/ibn-arabi" element={<IbnArabiSeals />} />
+                  <Route path="/tools/sceaux-ibn-arabi" element={<IbnArabiSeals />} />
+                  <Route path="/tools/akbari-seals" element={<IbnArabiSeals />} />
+                  <Route path="/tools/advanced-geomancy" element={<AdvancedGeomancy />} />
+                  <Route path="/tools/geomancy-traditions" element={<AdvancedGeomancy />} />
+                  <Route path="/tools/geomancie-avancee" element={<AdvancedGeomancy />} />
+                  <Route path="/tools/ifa" element={<AdvancedGeomancy />} />
+                  <Route path="/tools/sikidy" element={<AdvancedGeomancy />} />
+                  
+                  {/* Comparative Traditions & Advanced Astroscience */}
+                  <Route path="/tools/comparative-traditions" element={<ComparativeTraditionsHub />} />
+                  <Route path="/tools/comparative" element={<ComparativeTraditionsHub />} />
+                  <Route path="/tools/traditions-comparees" element={<ComparativeTraditionsHub />} />
+                  <Route path="/tools/nakshatras" element={<ComparativeTraditionsHub />} />
+                  <Route path="/tools/feng-shui" element={<ComparativeTraditionsHub />} />
+                  <Route path="/tools/tasyir" element={<ComparativeTraditionsHub />} />
+                  <Route path="/tools/synastry" element={<ComparativeTraditionsHub />} />
+                  <Route path="/tools/sacred-plants" element={<ComparativeTraditionsHub />} />
+                  
+                  {/* Lunar Cycles & Moon Phases Calculator */}
+                  <Route path="/tools/lunar-cycles" element={<LunarCyclesCalculator />} />
+                  <Route path="/tools/lunar-phases" element={<LunarCyclesCalculator />} />
+                  <Route path="/tools/cycles-lunaires" element={<LunarCyclesCalculator />} />
+                  <Route path="/tools/moon-phases" element={<LunarCyclesCalculator />} />
+                  
+                  {/* Additional Protected Routes */}
+                  <Route path="/explore" element={<ExploreDashboard />} />
+                  <Route path="/store" element={<Store />} />
+                  <Route path="/explore/quizz" element={<Quizz />} />
+                  <Route path="/explore/lexique" element={<Lexique />} />
+                  <Route path="/explore/calendar" element={<CalendarConverter />} />
+                  <Route path="/profile" element={<UserProfile />} />
+                  <Route path="/payment" element={<PaymentPage />} />
+                  <Route path="/journal" element={<Journal />} />
+                  <Route path="/saved" element={<UserDashboard initialFilter="favoris" />} />
+                  <Route path="/community" element={<Community />} />
+                  <Route path="/referral" element={<ReferralPage />} />
+                  <Route path="/parrainage" element={<ReferralPage />} />
+                  <Route path="/pdf-library" element={<PdfLibraryPage />} />
+                  <Route path="/pdf" element={<PdfLibraryPage />} />
+                  <Route path="/explore/pdf" element={<PdfLibraryPage />} />
+                  <Route path="/tools/pdf" element={<PdfLibraryPage />} />
+                  <Route path="/tools/calendar" element={<CalendarConverter />} />
+                  <Route path="/tools/quizz" element={<Quizz />} />
+                  <Route path="/tools/lexique" element={<Lexique />} />
+                  <Route path="/tools/journal" element={<Journal />} />
+                </Route>
+                <Route path="/admin" element={<AdminDashboard />} />
+                <Route path="/faq" element={<FaqPage />} />
+                <Route path="*" element={<Navigate to="/user/dashboard" replace />} />
+              </Routes>
+            </motion.div>
+          </AnimatePresence>
+        </React.Suspense>
+      </main>
+        {featureToggles['tool_inspector'] === 'active' && <LayoutTester />}
+        <FaqButton />
+        {featureToggles?.sacredAudioPlayerVisible !== false && <SacredAudioPlayer />}
+        {!isFullscreen && <BottomNav />}
+
+        {/* Global Floating Repeat Mode (visible only when Quran is playing and NOT on the Quran page itself) */}
+        <AnimatePresence>
+          {globalIsPlaying && currentTrack?.isQuranVerse && location.pathname !== '/tools/quran' && (
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.8, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.8, y: 15 }}
+              className="fixed bottom-[152px] right-4 sm:bottom-[92px] sm:right-6 z-50"
+            >
+              <div className="relative">
+                <motion.button 
+                  whileHover={{ scale: 1.1, rotate: 15 }}
+                  whileTap={{ scale: 0.9 }}
+                  className={`p-3.5 rounded-full transition-all shadow-xl border-2 ${repeatCount > 0 ? 'bg-emerald-500 text-white border-emerald-400' : 'bg-white text-gray-700 hover:text-emerald-600 dark:bg-gray-800 dark:text-gray-300 border-gray-200 dark:border-gray-700 dark:hover:bg-gray-700 hover:border-emerald-500'}`}
+                  title="Mode Répétition"
+                >
+                  <RefreshCw size={22} className={repeatCount > 0 ? "animate-spin" : ""} style={{ animationDuration: '4s' }} />
+                  {repeatCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-amber-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full animate-bounce shadow-sm border-2 border-white dark:border-gray-900">
+                      {repeatCount}
+                    </span>
+                  )}
+                </motion.button>
+                <select
+                  value={repeatCount}
+                  onChange={(e) => setRepeatCount(Number(e.target.value))}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  title="Mode Répétition"
+                >
+                  <option value={0}>Sans répétition</option>
+                  {[3, 7, 11, 21, 33, 41, 70, 71, 73, 111, 313, 666, 777, 786, 1000, 1111].map((c, cIdx) => (
+                    <option key={`repeat-count-opt-${c}-${cIdx}`} value={c}>{c} fois</option>
+                  ))}
+                </select>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        {/* Image Error Interceptor & Debugger */}
+        <ImageDebugger />
+
+        {/* Download pop-up notification */}
+        <DownloadNotificationPopup />
+
+        {/* Global Interactive Notification Click & Preview Manager */}
+        <NotificationModalManager />
+
+        {/* Collapsible Floating App-Wide Quick Widget */}
+        <CollapsibleFloatingWidget />
+
+        {/* Connection success notification */}
+        <AnimatePresence>
+          {showConnectedToast && (
+            <motion.div
+              initial={{ opacity: 0, y: -50, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -20, scale: 0.9 }}
+              className="fixed top-24 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-full bg-emerald-500 text-white shadow-xl flex items-center gap-2.5 border border-emerald-400/20"
+            >
+              <div className="w-2 h-2 rounded-full bg-white animate-ping" />
+              <span className="text-xs sm:text-sm font-bold tracking-tight">
+                {language === 'fr' 
+                  ? `Utilisateur connecté avec succès : ${toastUserName} !` 
+                  : language === 'ha'
+                  ? `An haɗa mai amfani cikin nasara: ${toastUserName} !`
+                  : `User connected successfully: ${toastUserName}!`}
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Back button exit app confirmation toast */}
+        <AnimatePresence>
+          {backExitToast && (
+            <motion.div
+              initial={{ opacity: 0, y: 40, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.9 }}
+              className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[9999] px-5 py-3 rounded-2xl bg-gray-900/95 dark:bg-gray-800/95 text-white shadow-2xl flex items-center gap-3 border border-amber-500/40 backdrop-blur-md"
+            >
+              <div className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping" />
+              <span className="text-xs sm:text-sm font-bold tracking-tight text-amber-300">
+                {language === 'fr' 
+                  ? "Appuyez à nouveau pour quitter l'application" 
+                  : language === 'ha'
+                  ? "Danna sake don fita daga aikace-aikacen"
+                  : "Press back again to exit the app"}
+              </span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        {/* 24-Hour Free Premium Trial Modal */}
+        <FreeTrial24hModal isOpen={showTrialPopup} onClose={markTrialPopupSeen} />
+
+        {/* App Version Upgrade / Cache Refresh Modal */}
+        <NewVersionBannerModal
+          isOpen={showVersionUpgradeModal}
+          currentVersion={versionUpgradeData.currentVersion}
+          previousVersion={versionUpgradeData.previousVersion}
+          onDismiss={() => {
+            appVersionService.markVersionInstalled(versionUpgradeData.currentVersion);
+            appVersionService.markVersionNotified(versionUpgradeData.currentVersion);
+            setShowVersionUpgradeModal(false);
+          }}
+        />
+
+        {/* Mandatory / Force Update Modal for APK & Web users */}
+        <ForceUpdateModal
+          currentInstalledVersion={versionUpgradeData.currentVersion}
+          currentInstalledVersionCode={appVersionService.getCurrentVersionCode()}
+        />
+
+        {/* Promo Code Video Announcement Interactive Modal */}
+        <PromoVideoModal />
+
+        {/* Video Article Synchronization Modal */}
+        <ArticleSyncVideoModal
+          isOpen={showArticleSyncModal}
+          onClose={() => setShowArticleSyncModal(false)}
+        />
+
+        {/* Automatic Initial Tools Integrity Monitor & 1-Click Repair */}
+        <ToolsIntegrityNotification />
+      </div>
+    </MaintenanceOverlay>
+  );
+}

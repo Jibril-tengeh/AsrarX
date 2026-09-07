@@ -225,8 +225,8 @@ export const ArticleQuickControlModal: React.FC<ArticleQuickControlModalProps> =
                     }}
                     className="w-full bg-white dark:bg-gray-800 border border-indigo-200 dark:border-indigo-800 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white font-bold outline-none cursor-pointer focus:ring-2 focus:ring-indigo-500/20"
                   >
-                    {allCategoryNames.map((catName) => (
-                      <option key={catName} value={catName}>
+                    {allCategoryNames.map((catName, cIdx) => (
+                      <option key={`art-ctrl-cat-${catName}-${cIdx}`} value={catName}>
                         {catName}
                       </option>
                     ))}
@@ -243,8 +243,8 @@ export const ArticleQuickControlModal: React.FC<ArticleQuickControlModalProps> =
                       className="w-full bg-white dark:bg-gray-800 border border-indigo-200 dark:border-indigo-800 rounded-xl p-2.5 text-xs text-gray-900 dark:text-white font-medium outline-none cursor-pointer"
                     >
                       <option value="">-- Aucune sous-catégorie --</option>
-                      {availableSubCategories.map((sub) => (
-                        <option key={sub} value={sub}>{sub}</option>
+                      {availableSubCategories.map((sub, sIdx) => (
+                        <option key={`art-ctrl-sub-${sub}-${sIdx}`} value={sub}>{sub}</option>
                       ))}
                       <option value="__custom__">+ Saisir une autre sous-catégorie...</option>
                     </select>

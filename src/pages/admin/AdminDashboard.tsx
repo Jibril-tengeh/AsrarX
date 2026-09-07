@@ -4356,11 +4356,11 @@ export const AdminDashboard: React.FC = () => {
               <div className="md:col-span-1">
                 <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1">Durée Premium en Heures *</label>
                 <div className="grid grid-cols-3 sm:grid-cols-6 gap-1.5">
-                  {([2, 4, 6, 8, 10, 12] as const).map((h) => {
+                  {([2, 4, 6, 8, 10, 12] as const).map((h, hIdx) => {
                     const isSelected = (newPromo.durationHours || 2) === h;
                     return (
                       <button
-                        key={h}
+                        key={`promo-h-${h}-${hIdx}`}
                         type="button"
                         onClick={() => {
                           const updatedCode = newPromo.code.startsWith('PREM') && newPromo.code.endsWith('H') ? `PREM${h}H` : newPromo.code;
@@ -4551,7 +4551,7 @@ export const AdminDashboard: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-750 text-xs sm:text-sm">
-                    {promoCodes.map((promo) => {
+                    {promoCodes.map((promo, idx) => {
                       let benefit = '';
                       const isHourly = promo.type === 'unlock_subscription_hours' || !!promo.durationHours;
 
@@ -4570,7 +4570,7 @@ export const AdminDashboard: React.FC = () => {
                       const isExpired = promo.expiryDate && Date.now() > promo.expiryDate;
 
                       return (
-                        <tr key={promo.code} className="text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
+                        <tr key={promo.id ? `promo-${promo.id}-${idx}` : `promo-${promo.code || idx}-${idx}`} className="text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
                           <td className="py-3 px-4 font-black text-gray-900 dark:text-white font-mono flex items-center gap-2">
                             <span>{promo.code}</span>
                             {isHourly && (
@@ -5734,6 +5734,9 @@ export const AdminDashboard: React.FC = () => {
         extraFields['home_only_categories_grid'] = true;
         extraFields['home_display_mode'] = 'fixed_categories';
       }
+    } else if (featureId === 'home_categories_show_texts' || featureId === 'home_categories_show_header') {
+      extraFields['home_categories_show_texts'] = newValue;
+      extraFields['home_categories_show_header'] = newValue;
     }
 
     const fullPayload = { [featureId]: newValue, ...extraFields };
@@ -6588,46 +6591,150 @@ export const AdminDashboard: React.FC = () => {
               </div>
             </div>
 
-            {featureToggles?.home_only_categories_grid === true && (
-              <div className="pt-3 border-t border-gray-100 dark:border-gray-700 space-y-2">
+            <div className="pt-3 border-t border-gray-100 dark:border-gray-700 space-y-3">
+              <span className="text-xs font-bold text-gray-800 dark:text-gray-200 block">
+                Options d'affichage & visibilité des textes :
+              </span>
+
+              {/* Header texts toggle */}
+              <div className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-gray-750 dark:text-gray-200">Afficher le slider des outils :</span>
+                  <div>
+                    <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300 block">
+                      Afficher les textes d'en-tête (Titre, Badge, Description) :
+                    </span>
+                    <span className="text-[10px] text-gray-500 dark:text-gray-400">
+                      Désactiver pour masquer le bloc d'introduction au-dessus des catégories.
+                    </span>
+                  </div>
                   <button
                     type="button"
-                    onClick={() => handleToggleFeature('home_categories_show_slider', featureToggles?.home_categories_show_slider === false ? true : false, "Slider Outils sur Accueil Catégories")}
-                    className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors cursor-pointer ${
-                      featureToggles?.home_categories_show_slider !== false ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
+                    onClick={() => {
+                      const nextVal = featureToggles?.home_categories_show_texts === false ? true : false;
+                      handleToggleFeature('home_categories_show_texts', nextVal, "Textes d'en-tête Catégories");
+                      handleToggleFeature('home_categories_show_header', nextVal);
+                    }}
+                    className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors cursor-pointer shrink-0 ${
+                      featureToggles?.home_categories_show_texts !== false && featureToggles?.home_categories_show_header !== false ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
                     }`}
                   >
-                    <div className={`w-4 h-4 rounded-full bg-white transition-transform ${featureToggles?.home_categories_show_slider !== false ? 'translate-x-5' : 'translate-x-0'}`} />
+                    <div className={`w-4 h-4 rounded-full bg-white transition-transform ${featureToggles?.home_categories_show_texts !== false && featureToggles?.home_categories_show_header !== false ? 'translate-x-5' : 'translate-x-0'}`} />
                   </button>
                 </div>
+
+                {featureToggles?.home_categories_show_texts !== false && featureToggles?.home_categories_show_header !== false && (
+                  <div className="pt-2 border-t border-dashed border-gray-200 dark:border-gray-700/80 space-y-1.5 pl-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] text-gray-600 dark:text-gray-300">Badge "Classification Exclusive" :</span>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleFeature('home_categories_show_badge', featureToggles?.home_categories_show_badge === false ? true : false, "Badge Classification Exclusive")}
+                        className={`w-8 h-4 flex items-center rounded-full p-0.5 transition-colors cursor-pointer shrink-0 ${
+                          featureToggles?.home_categories_show_badge !== false ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
+                        }`}
+                      >
+                        <div className={`w-3 h-3 rounded-full bg-white transition-transform ${featureToggles?.home_categories_show_badge !== false ? 'translate-x-4' : 'translate-x-0'}`} />
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] text-gray-600 dark:text-gray-300">Titre de la section ("Catégories") :</span>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleFeature('home_categories_show_title', featureToggles?.home_categories_show_title === false ? true : false, "Titre Catégories")}
+                        className={`w-8 h-4 flex items-center rounded-full p-0.5 transition-colors cursor-pointer shrink-0 ${
+                          featureToggles?.home_categories_show_title !== false ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
+                        }`}
+                      >
+                        <div className={`w-3 h-3 rounded-full bg-white transition-transform ${featureToggles?.home_categories_show_title !== false ? 'translate-x-4' : 'translate-x-0'}`} />
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] text-gray-600 dark:text-gray-300">Sous-titre / Description :</span>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleFeature('home_categories_show_subtitle', featureToggles?.home_categories_show_subtitle === false ? true : false, "Sous-titre Catégories")}
+                        className={`w-8 h-4 flex items-center rounded-full p-0.5 transition-colors cursor-pointer shrink-0 ${
+                          featureToggles?.home_categories_show_subtitle !== false ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
+                        }`}
+                      >
+                        <div className={`w-3 h-3 rounded-full bg-white transition-transform ${featureToggles?.home_categories_show_subtitle !== false ? 'translate-x-4' : 'translate-x-0'}`} />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-gray-750 dark:text-gray-200">Afficher le slider des outils :</span>
+                <button
+                  type="button"
+                  onClick={() => handleToggleFeature('home_categories_show_slider', featureToggles?.home_categories_show_slider === false ? true : false, "Slider Outils sur Accueil Catégories")}
+                  className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors cursor-pointer ${
+                    featureToggles?.home_categories_show_slider !== false ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
+                  }`}
+                >
+                  <div className={`w-4 h-4 rounded-full bg-white transition-transform ${featureToggles?.home_categories_show_slider !== false ? 'translate-x-5' : 'translate-x-0'}`} />
+                </button>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-600 dark:text-gray-300">Afficher les phrases d'accroche (hooks) :</span>
+                <button
+                  type="button"
+                  onClick={() => handleToggleFeature('home_categories_show_hooks', featureToggles?.home_categories_show_hooks === false ? true : false)}
+                  className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors ${
+                    featureToggles?.home_categories_show_hooks !== false ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
+                  }`}
+                >
+                  <div className={`w-4 h-4 rounded-full bg-white transition-transform ${featureToggles?.home_categories_show_hooks !== false ? 'translate-x-5' : 'translate-x-0'}`} />
+                </button>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-600 dark:text-gray-300">Afficher le nombre d'articles :</span>
+                <button
+                  type="button"
+                  onClick={() => handleToggleFeature('home_categories_show_counts', featureToggles?.home_categories_show_counts === false ? true : false)}
+                  className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors ${
+                    featureToggles?.home_categories_show_counts !== false ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
+                  }`}
+                >
+                  <div className={`w-4 h-4 rounded-full bg-white transition-transform ${featureToggles?.home_categories_show_counts !== false ? 'translate-x-5' : 'translate-x-0'}`} />
+                </button>
+              </div>
+
+              <div className="pt-3 border-t border-gray-100 dark:border-gray-700/60 space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-600 dark:text-gray-300">Afficher les phrases d'accroche (hooks) :</span>
-                  <button
-                    type="button"
-                    onClick={() => handleToggleFeature('home_categories_show_hooks', featureToggles?.home_categories_show_hooks === false ? true : false)}
-                    className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors ${
-                      featureToggles?.home_categories_show_hooks !== false ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
-                    }`}
-                  >
-                    <div className={`w-4 h-4 rounded-full bg-white transition-transform ${featureToggles?.home_categories_show_hooks !== false ? 'translate-x-5' : 'translate-x-0'}`} />
-                  </button>
+                  <span className="text-xs font-bold text-gray-700 dark:text-gray-200">Taille des titres des catégories :</span>
+                  <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800">
+                    {featureToggles?.home_categories_title_size || 13}px
+                  </span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-600 dark:text-gray-300">Afficher le nombre d'articles :</span>
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => handleToggleFeature('home_categories_show_counts', featureToggles?.home_categories_show_counts === false ? true : false)}
-                    className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors ${
-                      featureToggles?.home_categories_show_counts !== false ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
-                    }`}
+                    onClick={() => handleToggleFeature('home_categories_title_size', Math.max(10, (featureToggles?.home_categories_title_size || 13) - 1), "Taille Titres Catégories")}
+                    className="w-7 h-7 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 flex items-center justify-center font-bold text-sm text-gray-700 dark:text-gray-200 cursor-pointer"
                   >
-                    <div className={`w-4 h-4 rounded-full bg-white transition-transform ${featureToggles?.home_categories_show_counts !== false ? 'translate-x-5' : 'translate-x-0'}`} />
+                    -
+                  </button>
+                  <input
+                    type="range"
+                    min={10}
+                    max={24}
+                    step={1}
+                    value={featureToggles?.home_categories_title_size || 13}
+                    onChange={(e) => handleToggleFeature('home_categories_title_size', parseInt(e.target.value), "Taille Titres Catégories")}
+                    className="flex-1 accent-emerald-500 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleToggleFeature('home_categories_title_size', Math.min(24, (featureToggles?.home_categories_title_size || 13) + 1), "Taille Titres Catégories")}
+                    className="w-7 h-7 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 flex items-center justify-center font-bold text-sm text-gray-700 dark:text-gray-200 cursor-pointer"
+                  >
+                    +
                   </button>
                 </div>
               </div>
-            )}
+            </div>
           </div>
         </CollapsibleAdminCard>
 
