@@ -1672,9 +1672,9 @@ export const ScienceOfLetters: React.FC = () => {
                   { id: 'Terre', label: dict.earth },
                   { id: 'Air', label: dict.air },
                   { id: 'Eau', label: dict.water }
-                ].map(item => (
+                ].map((item, itIdx) => (
                   <button
-                    key={item.id}
+                    key={item.id ? `el-filter-${item.id}-${itIdx}` : `el-filter-${itIdx}`}
                     onClick={() => setFilterElement(item.id)}
                     className={`px-2 py-0.5 rounded-lg font-bold shrink-0 transition-all cursor-pointer ${
                       filterElement === item.id
@@ -1690,11 +1690,11 @@ export const ScienceOfLetters: React.FC = () => {
               {/* Nature Filter */}
               <div className="flex items-center gap-0.5 bg-gray-50 dark:bg-gray-900 p-0.5 rounded-xl border border-gray-200 dark:border-gray-700 text-[11px] shrink-0">
                 <span className="text-gray-600 dark:text-gray-300 px-1.5 font-semibold text-[10px] shrink-0">{dict.filterNature}</span>
-                {['Tous', 'Lumineuse', 'Sombre'].map(nat => {
+                {['Tous', 'Lumineuse', 'Sombre'].map((nat, nIdx) => {
                   const label = nat === 'Tous' ? dict.all : (nat === 'Lumineuse' ? dict.luminous : dict.dark);
                   return (
                     <button
-                      key={nat}
+                      key={`nat-filter-${nat}-${nIdx}`}
                       onClick={() => setFilterNature(nat)}
                       className={`px-2 py-0.5 rounded-lg font-bold shrink-0 transition-all cursor-pointer ${
                         filterNature === nat
@@ -1712,9 +1712,9 @@ export const ScienceOfLetters: React.FC = () => {
 
           {/* Letter Cards Grid - 4 columns on small mobile, 7 on screens >=480px */}
           <div className="grid grid-cols-4 min-[480px]:grid-cols-7 gap-1.5 sm:gap-2.5 w-full max-w-full" dir="rtl">
-            {filteredLetters.map((l) => (
+            {filteredLetters.map((l, lIdx) => (
               <motion.button
-                key={l.char}
+                key={l.char ? `let-${l.char}-${lIdx}` : `let-${lIdx}`}
                 whileHover={{ scale: 1.04 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => handleSelectLetter(l)}
@@ -2039,9 +2039,9 @@ export const ScienceOfLetters: React.FC = () => {
                 { label: 'Imam Al-Busiri', value: 'Busiri' },
                 { label: 'Al-Tilimsani', value: 'Tilimsani' },
                 { label: 'Ma al-\'Aynayn', value: 'Aynayn' }
-              ].map((m) => (
+              ].map((m, mIdx) => (
                 <button
-                  key={m.value}
+                  key={m.value ? `m-filter-${m.value}-${mIdx}` : `m-filter-${mIdx}`}
                   onClick={() => setSelectedMasterFilter(m.value)}
                   className={`px-3 py-1 rounded-xl text-xs font-bold whitespace-nowrap transition-all shrink-0 cursor-pointer ${
                     selectedMasterFilter === m.value
@@ -2060,10 +2060,10 @@ export const ScienceOfLetters: React.FC = () => {
               if (selectedMasterFilter === 'Tous') return true;
               return w.master.toLowerCase().includes(selectedMasterFilter.toLowerCase()) || 
                      w.id.toLowerCase().includes(selectedMasterFilter.toLowerCase());
-            }).map((rawW) => {
+            }).map((rawW, wIdx) => {
               const w = getLocalizedMasterWord(rawW, language);
               return (
-                <div key={w.id} className="p-4 sm:p-6 rounded-3xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg space-y-4 relative overflow-hidden w-full max-w-full">
+                <div key={rawW.id ? `gmw-${rawW.id}-${wIdx}` : `gmw-${wIdx}`} className="p-4 sm:p-6 rounded-3xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-lg space-y-4 relative overflow-hidden w-full max-w-full">
                   <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 border-b border-gray-100 dark:border-gray-700 pb-3 w-full max-w-full">
                     <div className="min-w-0">
                       <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">{w.master}</span>
@@ -2108,7 +2108,7 @@ export const ScienceOfLetters: React.FC = () => {
                     <p className="text-emerald-700 dark:text-emerald-400 font-bold break-words"><strong>{dict.executionRitual}</strong> {w.ritual}</p>
                     <div className="flex flex-wrap gap-1.5 pt-1 w-full max-w-full">
                       {w.benefits.map((b, i) => (
-                        <span key={i} className="bg-emerald-100 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 px-2 py-0.5 rounded-md font-medium text-[11px] break-words">
+                        <span key={`benefit-${i}-${b.substring(0, 8)}`} className="bg-emerald-100 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 px-2 py-0.5 rounded-md font-medium text-[11px] break-words">
                           ✓ {b}
                         </span>
                       ))}

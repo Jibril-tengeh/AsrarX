@@ -61,7 +61,9 @@ console.error = function (...args) {
       msg.includes('b815') ||
       msg.includes('ca9') ||
       msg.includes('targetId') ||
-      msg.includes('Unexpected state')
+      msg.includes('Unexpected state') ||
+      msg.includes('SnapshotVersion') ||
+      msg.includes('fromVersion')
     ) {
       console.warn("[Filtered Firestore Log]", ...args);
       return;
@@ -77,15 +79,18 @@ if (typeof window !== 'undefined') {
   window.addEventListener('unhandledrejection', (event) => {
     const reason = event.reason;
     const msg = typeof reason === 'string' ? reason : (reason?.message || reason?.stack || String(reason) || '');
-    if (
+    const isAssertion = 
       msg.includes('INTERNAL ASSERTION FAILED') ||
       msg.includes('FIRESTORE') ||
       msg.includes('ca9') ||
       msg.includes('b815') ||
       msg.includes('c050') ||
       msg.includes('targetId') ||
-      msg.includes('Unexpected state')
-    ) {
+      msg.includes('Unexpected state') ||
+      msg.includes('SnapshotVersion') ||
+      msg.includes('fromVersion');
+
+    if (isAssertion) {
       console.warn('[Filtered Firestore Unhandled Rejection]', msg);
       if (event.preventDefault) {
         event.preventDefault();
@@ -100,15 +105,18 @@ if (typeof window !== 'undefined') {
 
   window.addEventListener('error', (event) => {
     const msg = String(event.message || (event.error && (event.error.message || event.error.stack)) || event.error || '');
-    if (
+    const isAssertion = 
       msg.includes('INTERNAL ASSERTION FAILED') ||
       msg.includes('FIRESTORE') ||
       msg.includes('ca9') ||
       msg.includes('b815') ||
       msg.includes('c050') ||
       msg.includes('targetId') ||
-      msg.includes('Unexpected state')
-    ) {
+      msg.includes('Unexpected state') ||
+      msg.includes('SnapshotVersion') ||
+      msg.includes('fromVersion');
+
+    if (isAssertion) {
       if (event.preventDefault) {
         event.preventDefault();
       }
@@ -127,19 +135,22 @@ if (typeof window !== 'undefined') {
     if (event.preventDefault) {
       event.preventDefault();
     }
-  });
+  }, true);
 
   window.onerror = function (msg, url, lineNo, columnNo, error) {
     const messageStr = String(msg || (error && (error.message || error.stack)) || '');
-    if (
+    const isAssertion = 
       messageStr.includes('INTERNAL ASSERTION FAILED') ||
       messageStr.includes('FIRESTORE') ||
       messageStr.includes('ca9') ||
       messageStr.includes('b815') ||
       messageStr.includes('c050') ||
       messageStr.includes('targetId') ||
-      messageStr.includes('Unexpected state')
-    ) {
+      messageStr.includes('Unexpected state') ||
+      messageStr.includes('SnapshotVersion') ||
+      messageStr.includes('fromVersion');
+
+    if (isAssertion) {
       return true; // Suppress Firestore internal assertion errors from throwing globally
     }
     if (messageStr.toLowerCase().includes('script error') || !messageStr) {
@@ -148,75 +159,6 @@ if (typeof window !== 'undefined') {
     console.warn('[Window.onerror Handled]', messageStr, url, lineNo, error);
     return true; // Prevent unhandled error propagation
   };
-}
-
-// Global Fetch Interceptor for Deep CORS/SSL/Offline Diagnostics
-try {
-  const originalFetch = window.fetch;
-  if (originalFetch) {
-    const customFetch = async function (input: RequestInfo | URL, init?: RequestInit) {
-      const url = typeof input === 'string' 
-        ? input 
-        : input instanceof URL 
-          ? input.toString() 
-          : input instanceof Request 
-            ? input.url 
-            : String(input);
-      
-      // Direct pass-through for Firestore, Firebase, Google APIs to prevent stream corruption
-      if (
-        url.includes('firestore.googleapis.com') ||
-        url.includes('firebase') ||
-        url.includes('googleapis.com') ||
-        url.includes('google.com') ||
-        url.includes('gstatic.com')
-      ) {
-        return originalFetch(input, init);
-      }
-
-      const start = performance.now();
-      let attempt = 0;
-      const maxAttempts = 2;
-      const delayMs = 1000;
-      let lastError: any;
-
-      while (attempt < maxAttempts) {
-        try {
-          attempt++;
-          let reqInput: RequestInfo | URL = input;
-          if (typeof Request !== 'undefined' && input instanceof Request) {
-            try {
-              reqInput = attempt === 1 ? input : input.clone();
-            } catch {
-              reqInput = url;
-            }
-          }
-
-          const response = await originalFetch(reqInput, init);
-          return response;
-        } catch (error: any) {
-          lastError = error;
-          const isGet = !init?.method || init.method.toUpperCase() === 'GET';
-          if (isGet && attempt < maxAttempts) {
-            await new Promise(resolve => setTimeout(resolve, delayMs));
-            continue;
-          }
-          break;
-        }
-      }
-
-      // If fetch fails completely, rethrow gracefully without breaking JS engine
-      throw lastError || new Error(`Network request failed for ${url}`);
-    };
-
-    Object.defineProperty(window, 'fetch', {
-      value: customFetch,
-      writable: true,
-      configurable: true
-    });
-  }
-} catch (fetchOverrideError) {
-  console.warn("Unable to intercept window.fetch in this environment due to restrictions:", fetchOverrideError);
 }
 
 

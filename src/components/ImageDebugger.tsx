@@ -208,9 +208,9 @@ export const ImageDebugger: React.FC = () => {
                   </div>
                 ) : (
                   <div className="space-y-2.5 max-h-80 overflow-y-auto">
-                    {errorsList.map((err) => (
+                    {errorsList.map((err, errIdx) => (
                       <div
-                        key={err.id}
+                        key={err.id ? `img-err-${err.id}-${errIdx}` : `img-err-${errIdx}`}
                         className="p-3 bg-slate-800/80 rounded-xl border border-slate-700/80 text-xs space-y-1.5"
                       >
                         <div className="flex items-center justify-between gap-2">

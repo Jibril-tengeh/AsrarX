@@ -543,8 +543,8 @@ export const DailyDhikrTracker: React.FC = () => {
                     animate={{ opacity: 1, height: 'auto' }}
                     className="grid grid-cols-2 sm:grid-cols-5 gap-2.5 p-3.5 bg-gray-50 dark:bg-gray-900/40 rounded-2xl border border-gray-100 dark:border-gray-800/80"
                   >
-                    {Object.entries(remindersConfig.prayers).map(([prayer, time]) => (
-                      <div key={prayer} className="flex flex-col gap-1">
+                    {Object.entries(remindersConfig.prayers).map(([prayer, time], pIdx) => (
+                      <div key={`prayer-time-${prayer}-${pIdx}`} className="flex flex-col gap-1">
                         <span className="text-[10px] font-bold text-gray-400 dark:text-gray-300 capitalize">{prayer}</span>
                         <input
                           type="time"
@@ -653,13 +653,13 @@ export const DailyDhikrTracker: React.FC = () => {
             <p className="text-gray-500 dark:text-gray-300">Aucun objectif défini. Ajoutez-en un ci-dessus.</p>
           </div>
         ) : (
-          goals.map(goal => {
+          goals.map((goal, gIdx) => {
             const isCompleted = goal.progress >= goal.target;
             const percentage = Math.min(100, Math.round((goal.progress / goal.target) * 100));
 
             return (
               <motion.div
-                key={goal.id}
+                key={goal.id ? `goal-${goal.id}-${gIdx}` : `goal-${gIdx}`}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="bg-white dark:bg-gray-800 rounded-3xl p-5 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700"

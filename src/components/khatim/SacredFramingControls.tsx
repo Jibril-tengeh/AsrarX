@@ -191,8 +191,8 @@ export const SacredFramingControls: React.FC<SacredFramingControlsProps> = ({
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {QURANIC_TAWQ_PRESETS.map((preset) => (
-              <div key={preset.id} className="bg-black/50 border border-emerald-500/30 rounded-2xl p-4 flex flex-col justify-between gap-3">
+            {QURANIC_TAWQ_PRESETS.map((preset, pIdx) => (
+              <div key={preset.id ? `tawq-preset-${preset.id}-${pIdx}` : `tawq-preset-${pIdx}`} className="bg-black/50 border border-emerald-500/30 rounded-2xl p-4 flex flex-col justify-between gap-3">
                 <div className="space-y-1">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-emerald-300">{preset.nameFr}</span>

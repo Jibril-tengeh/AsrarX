@@ -1890,7 +1890,7 @@ export const Community: React.FC = () => {
                               {post.attachments.map((att, i) => {
                                 if (att.type === "video") {
                                   return (
-                                    <div key={i} className="rounded-2xl overflow-hidden max-h-[280px] bg-black/15 dark:bg-black/40 border border-gray-150 dark:border-gray-800">
+                                    <div key={`att-vid-${post.id}-${i}`} className="rounded-2xl overflow-hidden max-h-[280px] bg-black/15 dark:bg-black/40 border border-gray-150 dark:border-gray-800">
                                       <video
                                         src={att.url}
                                         controls
@@ -1900,14 +1900,14 @@ export const Community: React.FC = () => {
                                   );
                                 } else if (att.type === "audio") {
                                   return (
-                                    <div key={i} className="flex items-center gap-2.5 bg-black/10 dark:bg-white/5 p-2.5 rounded-xl w-full max-w-[280px] select-none border border-gray-100 dark:border-gray-800">
+                                    <div key={`att-aud-${post.id}-${i}`} className="flex items-center gap-2.5 bg-black/10 dark:bg-white/5 p-2.5 rounded-xl w-full max-w-[280px] select-none border border-gray-100 dark:border-gray-800">
                                       <audio src={att.url} controls className="w-full text-xs" />
                                     </div>
                                   );
                                 } else if (att.type === "document") {
                                   return (
                                     <div
-                                      key={i}
+                                      key={`att-doc-${post.id}-${i}`}
                                       onClick={() => handleOpenDocViewer(att)}
                                       className="flex items-center gap-2.5 bg-black/10 dark:bg-white/5 hover:bg-black/15 dark:hover:bg-white/10 p-2.5 rounded-2xl text-left border border-gray-100 dark:border-gray-800 transition-all w-full max-w-[320px] cursor-pointer group shadow-sm"
                                     >
@@ -1935,7 +1935,7 @@ export const Community: React.FC = () => {
                                   // Default to Image
                                   return (
                                     <img
-                                      key={i}
+                                      key={`att-img-${post.id}-${i}`}
                                       src={att.url}
                                       alt="Attachment"
                                       onClick={() => {
@@ -1956,7 +1956,7 @@ export const Community: React.FC = () => {
                           {post.voiceNotes && post.voiceNotes.map((audio, i) => {
                             const isPlayingThis = playingAudioKey === `${post.id}-${i}`;
                             return (
-                              <div key={i} className="flex items-center gap-2.5 bg-black/10 dark:bg-white/5 p-2 rounded-xl mt-2 w-[220px] sm:w-[240px] select-none">
+                              <div key={`vn-${post.id}-${i}`} className="flex items-center gap-2.5 bg-black/10 dark:bg-white/5 p-2 rounded-xl mt-2 w-[220px] sm:w-[240px] select-none">
                                 <button
                                   onClick={() => handlePlayVoiceNote(audio, post.id, i)}
                                   className={`p-2 rounded-full hover:scale-105 active:scale-95 transition-all cursor-pointer ${
@@ -2107,7 +2107,7 @@ export const Community: React.FC = () => {
                                             </div>
                                             <div className="space-y-1 max-h-[120px] overflow-y-auto no-scrollbar text-gray-300">
                                               {compiledOutputs[post.id].map((log, i) => (
-                                                <div key={i}>{log}</div>
+                                                <div key={`log-${post.id}-${i}`}>{log}</div>
                                               ))}
                                             </div>
                                           </div>
@@ -3045,7 +3045,7 @@ export const Community: React.FC = () => {
                       .slice(0, 12)
                       .map((att, i) => (
                         <img
-                          key={i}
+                          key={`shared-att-${att.url}-${i}`}
                           src={att.url}
                           alt="Shared attachment"
                           onClick={() => {
@@ -3405,7 +3405,7 @@ export const Community: React.FC = () => {
                 <div className="space-y-2">
                   <label className="block text-[10px] font-extrabold text-gray-400 uppercase tracking-widest mb-1">Choix de réponses</label>
                   {pollOptions.map((opt, i) => (
-                    <div key={i} className="flex items-center gap-2">
+                    <div key={`poll-opt-${i}`} className="flex items-center gap-2">
                       <input
                         type="text"
                         required={i < 2}

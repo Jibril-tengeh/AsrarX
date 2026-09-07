@@ -10,7 +10,7 @@ import {
   FolderOpen, Copy, Radio, Type, Sliders, Maximize2, Activity, Terminal, RefreshCw, RotateCcw, AlertTriangle, Moon, ChevronDown, ChevronUp, Layout,
   AlignLeft, AlignCenter, AlignRight, AlignJustify, Camera, ShieldBan, Tag, Ticket, Check, ArrowLeft, Calculator,
   ArrowUp, ArrowDown, MoveVertical, Compass, Gift, AlertCircle, Share2, Edit3, Video, HardDrive,
-  GripVertical, ArrowUpDown, Move, Layers, LayoutGrid, LayoutList, Square
+  GripVertical, ArrowUpDown, Move, Layers, LayoutGrid, LayoutList, Square, Pin
 } from 'lucide-react';
 import * as Icons from 'lucide-react';
 
@@ -354,17 +354,9 @@ const CollapsibleAdminCard: React.FC<{
       </div>
 
       {!isCollapsed && (
-        <AnimatePresence>
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="p-3.5 sm:p-5 md:p-6 border-t border-gray-100 dark:border-gray-700 space-y-4 sm:space-y-6 w-full max-w-full overflow-x-auto"
-          >
-            {children}
-          </motion.div>
-        </AnimatePresence>
+        <div className="p-3.5 sm:p-5 md:p-6 border-t border-gray-100 dark:border-gray-700 space-y-4 sm:space-y-6 w-full max-w-full overflow-x-auto">
+          {children}
+        </div>
       )}
     </div>
   );
@@ -5696,6 +5688,52 @@ export const AdminDashboard: React.FC = () => {
     } else if (featureId === 'store_layout_mode') {
       extraFields['store_layout_mode'] = newValue;
       extraFields['store_display_mode'] = newValue;
+    } else if (featureId === 'play_store_mode') {
+      extraFields['play_store_mode'] = newValue;
+    } else if (featureId === 'paystack_enabled') {
+      const isEnabled = newValue !== false;
+      extraFields['paystack_enabled'] = isEnabled;
+      extraFields['pay_paystack_card'] = isEnabled;
+      extraFields['pay_mobile_money'] = isEnabled;
+    } else if (featureId === 'home_display_mode') {
+      extraFields['home_display_mode'] = newValue;
+      if (newValue === 'fixed_categories') {
+        extraFields['home_lock_display'] = true;
+        extraFields['home_only_categories_grid'] = true;
+        extraFields['home_enable_categories'] = true;
+      } else if (newValue === 'fixed_articles') {
+        extraFields['home_lock_display'] = true;
+        extraFields['home_only_categories_grid'] = false;
+        extraFields['home_enable_articles'] = true;
+      } else if (newValue === 'free') {
+        extraFields['home_lock_display'] = false;
+        extraFields['home_enable_categories'] = true;
+        extraFields['home_enable_articles'] = true;
+      }
+    } else if (featureId === 'home_lock_display') {
+      extraFields['home_lock_display'] = newValue;
+      if (newValue === true) {
+        extraFields['home_display_mode'] = featureToggles?.home_only_categories_grid ? 'fixed_categories' : 'fixed_articles';
+      } else {
+        extraFields['home_display_mode'] = 'free';
+      }
+    } else if (featureId === 'home_only_categories_grid') {
+      extraFields['home_only_categories_grid'] = newValue;
+      if (featureToggles?.home_lock_display) {
+        extraFields['home_display_mode'] = newValue ? 'fixed_categories' : 'fixed_articles';
+      }
+    } else if (featureId === 'home_enable_categories') {
+      extraFields['home_enable_categories'] = newValue;
+      if (newValue === false) {
+        extraFields['home_only_categories_grid'] = false;
+        extraFields['home_display_mode'] = 'fixed_articles';
+      }
+    } else if (featureId === 'home_enable_articles') {
+      extraFields['home_enable_articles'] = newValue;
+      if (newValue === false) {
+        extraFields['home_only_categories_grid'] = true;
+        extraFields['home_display_mode'] = 'fixed_categories';
+      }
     }
 
     const fullPayload = { [featureId]: newValue, ...extraFields };
@@ -6670,33 +6708,167 @@ export const AdminDashboard: React.FC = () => {
         {/* 6. Payment Methods Toggle */}
         <CollapsibleAdminCard
           id="feat_payment_methods"
-          title="Moyens de Paiement Autorisés (Utilisateurs)"
-          subtitle="Désactivez ou activez les méthodes de paiement disponibles pour les utilisateurs sur la page de paiement."
+          title="Moyens de Paiement & Conformité Play Store"
+          subtitle="Désactivez Paystack pour la publication sur Google Play Store ou activez/désactivez les passerelles individuelles."
           icon={<CreditCard size={22} className="text-emerald-500 shrink-0" />}
         >
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {[
-              { id: 'pay_paystack_card', label: 'Carte Bancaire (Visa / Mastercard via Paystack)' },
-              { id: 'pay_mobile_money', label: 'Mobile Money (Orange, Wave, MTN, Moov)' },
-              { id: 'pay_manual_transfer', label: 'Paiement Manuel (Virement / Contact Support)' },
-              { id: 'pay_promo_code', label: 'Utilisation des Codes Promo' }
-            ].map((pm) => {
-              const enabled = featureToggles[pm.id] !== false;
-              return (
-                <div key={pm.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-750 rounded-xl border border-gray-100 dark:border-gray-700">
-                  <span className="text-xs font-semibold text-gray-800 dark:text-gray-200">{pm.label}</span>
-                  <button
-                    type="button"
-                    onClick={() => handleToggleFeature(pm.id, !enabled)}
-                    className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors ${
-                      enabled ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
-                    }`}
-                  >
-                    <div className={`w-4 h-4 rounded-full bg-white transition-transform ${enabled ? 'translate-x-5' : 'translate-x-0'}`} />
-                  </button>
+          <div className="space-y-4">
+            {/* Google Play Store Compliance Mode Banner */}
+            <div className="p-4 rounded-2xl border transition-all bg-gradient-to-r from-amber-500/10 via-emerald-500/10 to-blue-500/10 border-amber-300 dark:border-amber-700/60 shadow-xs space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Icons.ShieldCheck className="text-amber-600 dark:text-amber-400 shrink-0" size={20} />
+                    <h4 className="text-sm font-bold text-gray-900 dark:text-white">
+                      Mode Conformité Google Play Store (Anti-Rejet)
+                    </h4>
+                    <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full ${
+                      featureToggles.play_store_mode === 'android_only' || featureToggles.play_store_mode === true
+                        ? 'bg-emerald-600 text-white shadow-xs'
+                        : featureToggles.play_store_mode === 'all'
+                        ? 'bg-purple-600 text-white shadow-xs'
+                        : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
+                    }`}>
+                      {featureToggles.play_store_mode === 'android_only' || featureToggles.play_store_mode === true
+                        ? 'Actif : Android Play Store Uniquement (Web Protégé & Actif)'
+                        : featureToggles.play_store_mode === 'all'
+                        ? 'Actif : Masqué Partout (Web & Android)'
+                        : 'Inactif (Mode Normal)'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed max-w-2xl">
+                    <strong>Règle Google Play :</strong> Google interdit les passerelles tierces (Paystack) uniquement dans l'application installée depuis le Play Store. Sur le Web (navigateur PC/Mac, mobile, PWA), vous avez le droit absolu d'encaisser par Paystack sans commission Google !
+                  </p>
                 </div>
-              );
-            })}
+              </div>
+
+              {/* 3 Selectable Modes */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-amber-200/50 dark:border-amber-700/30">
+                <button
+                  type="button"
+                  onClick={() => handleToggleFeature('play_store_mode', 'android_only')}
+                  className={`p-2.5 rounded-xl text-xs font-bold transition-all text-left flex flex-col gap-1 border cursor-pointer ${
+                    featureToggles.play_store_mode === 'android_only' || featureToggles.play_store_mode === true
+                      ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
+                      : 'bg-white/80 dark:bg-gray-800/80 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700'
+                  }`}
+                >
+                  <span className="flex items-center gap-1.5 font-black">
+                    <Icons.Smartphone size={14} /> Android Uniquement (Idéal)
+                  </span>
+                  <span className={`text-[10px] leading-tight ${
+                    featureToggles.play_store_mode === 'android_only' || featureToggles.play_store_mode === true
+                      ? 'text-emerald-100'
+                      : 'text-gray-500 dark:text-gray-400'
+                  }`}>
+                    Masqué sur l'App Android. <strong>Reste 100% ACTIF sur le Web & PWA</strong>.
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleToggleFeature('play_store_mode', 'all')}
+                  className={`p-2.5 rounded-xl text-xs font-bold transition-all text-left flex flex-col gap-1 border cursor-pointer ${
+                    featureToggles.play_store_mode === 'all'
+                      ? 'bg-purple-600 text-white border-purple-500 shadow-sm'
+                      : 'bg-white/80 dark:bg-gray-800/80 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700'
+                  }`}
+                >
+                  <span className="flex items-center gap-1.5 font-black">
+                    <Icons.Globe size={14} /> Masquer Partout
+                  </span>
+                  <span className={`text-[10px] leading-tight ${
+                    featureToggles.play_store_mode === 'all'
+                      ? 'text-purple-100'
+                      : 'text-gray-500 dark:text-gray-400'
+                  }`}>
+                    Masque Paystack sur l'App Android ET sur le Web pour tout le monde.
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleToggleFeature('play_store_mode', false)}
+                  className={`p-2.5 rounded-xl text-xs font-bold transition-all text-left flex flex-col gap-1 border cursor-pointer ${
+                    featureToggles.play_store_mode === false || !featureToggles.play_store_mode
+                      ? 'bg-gray-800 dark:bg-gray-700 text-white border-gray-700 shadow-sm'
+                      : 'bg-white/80 dark:bg-gray-800/80 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700'
+                  }`}
+                >
+                  <span className="flex items-center gap-1.5 font-black">
+                    <Icons.CheckCircle2 size={14} /> Inactif (Afficher Partout)
+                  </span>
+                  <span className={`text-[10px] leading-tight ${
+                    featureToggles.play_store_mode === false || !featureToggles.play_store_mode
+                      ? 'text-gray-200'
+                      : 'text-gray-500 dark:text-gray-400'
+                  }`}>
+                    Paystack visible partout sans aucune condition.
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            {/* Individual Payment Method Toggles */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {[
+                { 
+                  id: 'paystack_enabled', 
+                  label: 'Passerelle Paystack Globale (Interrupteur Général)', 
+                  desc: 'Activer ou couper entièrement la passerelle Paystack dans toute l\'application',
+                  isMaster: true 
+                },
+                { 
+                  id: 'pay_paystack_card', 
+                  label: 'Carte Bancaire (Visa / Mastercard via Paystack)',
+                  desc: 'Paiement par carte automatique'
+                },
+                { 
+                  id: 'pay_mobile_money', 
+                  label: 'Mobile Money (Orange, Wave, MTN, Moov)',
+                  desc: 'Paiement Mobile Money via Paystack'
+                },
+                { 
+                  id: 'pay_manual_transfer', 
+                  label: 'Paiement Manuel (Virement Bancaire / Contact Support)',
+                  desc: 'Coordonnées bancaires directes'
+                },
+                { 
+                  id: 'pay_promo_code', 
+                  label: 'Utilisation des Codes Promo & Cartes Cadeaux',
+                  desc: 'Autorise le déblocage par code'
+                }
+              ].map((pm) => {
+                const enabled = featureToggles[pm.id] !== false;
+                return (
+                  <div key={pm.id} className={`flex items-start justify-between p-3.5 rounded-xl border transition-all ${
+                    pm.isMaster 
+                      ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/50 sm:col-span-2' 
+                      : 'bg-gray-50 dark:bg-gray-750 border-gray-100 dark:border-gray-700'
+                  }`}>
+                    <div className="space-y-0.5 pr-2">
+                      <span className={`text-xs font-bold ${pm.isMaster ? 'text-emerald-900 dark:text-emerald-200' : 'text-gray-800 dark:text-gray-200'}`}>
+                        {pm.label}
+                      </span>
+                      {pm.desc && (
+                        <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                          {pm.desc}
+                        </p>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleToggleFeature(pm.id, !enabled)}
+                      className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors shrink-0 cursor-pointer mt-0.5 ${
+                        enabled ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
+                      }`}
+                    >
+                      <div className={`w-4 h-4 rounded-full bg-white transition-transform ${enabled ? 'translate-x-5' : 'translate-x-0'}`} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </CollapsibleAdminCard>
 
@@ -7818,6 +7990,74 @@ export const AdminDashboard: React.FC = () => {
 
         {/* Thumbnail diagnostic widget */}
         <ThumbnailValidatorWidget articles={articles} />
+
+        {/* Quick Admin Control: Home Page Display Mode (Articles vs Categories) */}
+        <div className="p-4 bg-gradient-to-r from-indigo-50/80 via-white to-emerald-50/80 dark:from-indigo-950/40 dark:via-gray-800 dark:to-emerald-950/30 rounded-3xl border border-indigo-100 dark:border-gray-700 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-2xs">
+          <div className="flex items-center gap-3">
+            <span className="p-2.5 rounded-2xl bg-indigo-600 text-white shadow-xs">
+              <Pin size={18} />
+            </span>
+            <div>
+              <div className="flex flex-wrap items-center gap-2">
+                <h4 className="text-xs sm:text-sm font-extrabold text-gray-900 dark:text-white">
+                  Affichage Accueil : Articles vs Catégories
+                </h4>
+                {featureToggles?.home_display_mode === 'fixed_articles' || (!featureToggles?.home_enable_categories && featureToggles?.home_enable_articles !== false) ? (
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-indigo-100 text-indigo-800 dark:bg-indigo-900/60 dark:text-indigo-300 border border-indigo-300 flex items-center gap-1">
+                    <Lock size={11} /> FIXE : Articles Uniquement
+                  </span>
+                ) : featureToggles?.home_display_mode === 'fixed_categories' || (!featureToggles?.home_enable_articles && featureToggles?.home_enable_categories !== false) ? (
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300 border border-emerald-300 flex items-center gap-1">
+                    <Lock size={11} /> FIXE : Catégories Uniquement
+                  </span>
+                ) : (
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300 border border-amber-300 flex items-center gap-1">
+                    <Unlock size={11} /> Mode Libre (Bascule Utilisateur)
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                Activez, désactivez ou rendez <strong>FIXE</strong> le flux d'articles ou les catégories sur la page d'accueil sans aller dans les paramètres.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={() => handleToggleFeature('home_display_mode', 'fixed_articles', "Fixer Accueil sur Articles")}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                featureToggles?.home_display_mode === 'fixed_articles'
+                  ? 'bg-indigo-600 text-white shadow-xs'
+                  : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <Lock size={12} /> Fixer sur Articles
+            </button>
+            <button
+              type="button"
+              onClick={() => handleToggleFeature('home_display_mode', 'fixed_categories', "Fixer Accueil sur Catégories")}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                featureToggles?.home_display_mode === 'fixed_categories'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <FolderOpen size={12} /> Fixer sur Catégories
+            </button>
+            <button
+              type="button"
+              onClick={() => handleToggleFeature('home_display_mode', 'free', "Mode Libre")}
+              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                featureToggles?.home_display_mode === 'free' || (!featureToggles?.home_lock_display && featureToggles?.home_display_mode !== 'fixed_categories' && featureToggles?.home_display_mode !== 'fixed_articles')
+                  ? 'bg-amber-600 text-white shadow-xs'
+                  : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600 hover:bg-gray-50'
+              }`}
+            >
+              <Unlock size={12} /> Mode Libre
+            </button>
+          </div>
+        </div>
 
         {/* Articles Management Table & Grid List */}
         <div className="bg-white dark:bg-gray-800 rounded-3xl p-4 sm:p-7 shadow-sm border border-gray-100 dark:border-gray-700 space-y-5">

@@ -369,15 +369,15 @@ export const KhatimWafqGenerator: React.FC = () => {
 
   // Responsive styling depending on grid size
   const getCellSizeClass = (size: number) => {
-    if (size <= 3) return "w-16 h-16 sm:w-20 sm:h-20 text-lg sm:text-2xl font-bold rounded-xl sm:rounded-2xl";
-    if (size <= 4) return "w-12 h-12 sm:w-16 sm:h-16 text-base sm:text-xl font-bold rounded-lg sm:rounded-xl";
-    if (size <= 6) return "w-10 h-10 sm:w-12 sm:h-12 text-xs sm:text-base font-bold rounded-md sm:rounded-lg";
-    if (size <= 8) return "w-8 h-8 sm:w-10 sm:h-10 text-[11px] sm:text-xs font-semibold rounded";
-    return "w-7 h-7 sm:w-8 sm:h-8 text-[9px] sm:text-[11px] font-semibold rounded-[3px] p-0.5";
+    if (size <= 3) return "w-full aspect-square min-w-[70px] max-w-[120px] text-lg sm:text-2xl font-bold rounded-xl sm:rounded-2xl";
+    if (size <= 4) return "w-full aspect-square min-w-[52px] sm:min-w-[64px] text-base sm:text-xl font-bold rounded-lg sm:rounded-xl";
+    if (size <= 6) return "w-full aspect-square min-w-[38px] sm:min-w-[48px] text-xs sm:text-base font-bold rounded-md sm:rounded-lg";
+    if (size <= 8) return "w-full aspect-square min-w-[30px] sm:min-w-[36px] text-[10px] sm:text-xs font-semibold rounded";
+    return "w-full aspect-square min-w-[26px] sm:min-w-[30px] text-[9px] sm:text-[10px] font-semibold rounded-[3px] p-0.5";
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 p-6 sm:p-8 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm space-y-6">
+    <div className="bg-white dark:bg-gray-800 p-3.5 sm:p-8 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm space-y-6">
       {/* Title */}
       <div className="border-b border-gray-100 dark:border-gray-700 pb-4">
         <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
@@ -500,9 +500,9 @@ export const KhatimWafqGenerator: React.FC = () => {
         </div>
 
         {/* WAFQ GRID VISUAL DISPLAY */}
-        <div className="w-full overflow-x-auto pb-2 custom-scrollbar touch-pan-x overscroll-x-contain flex justify-start sm:justify-center my-4">
+        <div className="w-full overflow-x-auto pb-2 custom-scrollbar touch-pan-x overscroll-x-contain flex justify-center my-3">
           <div 
-            className={`p-3 sm:p-5 bg-slate-950/90 border-2 border-amber-500/60 rounded-2xl shadow-2xl relative min-w-fit ${
+            className={`w-full max-w-lg mx-auto p-2.5 sm:p-5 bg-slate-950/90 border-2 border-amber-500/60 rounded-2xl shadow-2xl relative ${
               disableDuaCopy ? 'select-none' : ''
             }`}
             onCopy={(e) => { if (disableDuaCopy) e.preventDefault(); }}
@@ -515,7 +515,7 @@ export const KhatimWafqGenerator: React.FC = () => {
             <span className="absolute bottom-1 right-2 text-[10px] text-amber-500/50 font-arabic">علي</span>
 
             <div 
-              className="grid gap-1 sm:gap-2 pt-2"
+              className="grid gap-1 sm:gap-2 pt-2 w-full mx-auto"
               style={{ gridTemplateColumns: `repeat(${wafqSize}, minmax(0, 1fr))` }}
             >
               {wafqGrid.map((row, rIdx) =>

@@ -398,9 +398,9 @@ export const DownloadedItemModal: React.FC<DownloadedItemModalProps> = ({
                   </div>
                 ) : (
                   <div className="flex flex-col gap-2 max-h-[420px] overflow-y-auto pr-1">
-                    {history.map((item) => (
+                    {history.map((item, histIdx) => (
                       <div
-                        key={item.id}
+                        key={item.id ? `dl-item-${item.id}-${histIdx}` : `dl-item-${histIdx}`}
                         onClick={() => {
                           setCurrentItem(item);
                           setActiveTab('preview');

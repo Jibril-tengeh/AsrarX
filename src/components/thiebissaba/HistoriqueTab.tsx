@@ -99,9 +99,9 @@ export default function HistoriqueTab({ t, langKey, onReloadTheme }: HistoriqueT
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {history.map((entry) => (
+          {history.map((entry, eIdx) => (
             <div
-              key={entry.id}
+              key={entry.id ? `hist-${entry.id}-${eIdx}` : `hist-${eIdx}`}
               ref={(el) => {
                 cardRefs.current[entry.id] = el;
               }}

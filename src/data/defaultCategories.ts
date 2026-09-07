@@ -23,9 +23,145 @@ export interface CategoryItem {
   hook_ha?: string;
   thumbnail?: string; // Vignette / image cover
   iconName?: string;
+  videoUrl?: string; // Dedicated looping video icon
+  theme?: string;
   subCategories?: SubCategoryItem[];
   createdAt?: number;
 }
+
+export interface StandardScreenshotCategory {
+  id: string;
+  name: string;
+  name_en?: string;
+  name_ha?: string;
+  hook?: string;
+  iconName?: string;
+  theme: string;
+  thumbnail?: string;
+}
+
+export const STANDARD_SCREENSHOT_CATEGORIES: StandardScreenshotCategory[] = [
+  {
+    id: 'versets-protection',
+    name: 'Versets de Protection',
+    name_en: 'Protective Verses',
+    name_ha: 'Ayoyin Kariya',
+    hook: 'Sourates et versets protecteurs contre tout mal et attaques occultes.',
+    iconName: 'Shield',
+    theme: 'versets-protection',
+    thumbnail: 'https://images.unsplash.com/photo-1542816417-0983cbe32277?q=80&w=800&auto=format&fit=crop'
+  },
+  {
+    id: 'azkar',
+    name: 'Azkar',
+    name_en: 'Azkar & Dhikr',
+    name_ha: 'Zikiri & Adhkar',
+    hook: 'Litanies du matin et du soir, glorifications et invocations quotidiennes.',
+    iconName: 'Moon',
+    theme: 'azkar',
+    thumbnail: 'https://images.unsplash.com/photo-1564769625905-50e93615e769?q=80&w=800&auto=format&fit=crop'
+  },
+  {
+    id: 'wird',
+    name: 'Wird',
+    name_en: 'Daily Wirds',
+    name_ha: 'Awradi na Kullum',
+    hook: 'Awrads sacrés et récits des voies spirituelles authentiques.',
+    iconName: 'BookOpen',
+    theme: 'wird',
+    thumbnail: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?q=80&w=800&auto=format&fit=crop'
+  },
+  {
+    id: 'ruqyah',
+    name: 'Ruqyah',
+    name_en: 'Ruqyah Healing',
+    name_ha: 'Ruqyah & Waraka',
+    hook: 'Guérison spirituelle coranique, délivrance et purification profonde.',
+    iconName: 'Heart',
+    theme: 'ruqyah',
+    thumbnail: 'https://images.unsplash.com/photo-1519817650390-64a93db51149?q=80&w=800&auto=format&fit=crop'
+  },
+  {
+    id: 'douas',
+    name: 'Du\'à',
+    name_en: 'Du\'a & Supplications',
+    name_ha: 'Addu\'o\'i',
+    hook: 'Invocations exaucées, prières de besoin pressant et supplications prophétiques.',
+    iconName: 'Heart',
+    theme: 'douas',
+    thumbnail: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?q=80&w=800&auto=format&fit=crop'
+  },
+  {
+    id: 'ouvertures',
+    name: 'Ouvertures',
+    name_en: 'Spiritual Openings',
+    name_ha: 'Bude Kofofi',
+    hook: 'Clés d\'ouverture spirituelle et matérielle, déblocage des opportunités.',
+    iconName: 'Key',
+    theme: 'ouvertures',
+    thumbnail: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=800&auto=format&fit=crop'
+  },
+  {
+    id: 'elevation',
+    name: 'Élévation',
+    name_en: 'Spiritual Elevation',
+    name_ha: 'Daukaka',
+    hook: 'Élévation de rang, rayonnement personnel, charisme et dévoilements intérieurs.',
+    iconName: 'Sparkles',
+    theme: 'elevation',
+    thumbnail: 'https://images.unsplash.com/photo-1584551246679-0daf3d275d0f?q=80&w=800&auto=format&fit=crop'
+  },
+  {
+    id: 'protection',
+    name: 'Protection',
+    name_en: 'Divine Protection',
+    name_ha: 'Kariya',
+    hook: 'Boucliers angéliques et forteresse imprenable pour le croyant et sa famille.',
+    iconName: 'Shield',
+    theme: 'protection',
+    thumbnail: 'https://images.unsplash.com/photo-1519817650390-64a93db51149?q=80&w=800&auto=format&fit=crop'
+  },
+  {
+    id: 'sihr-mauvais-oeil',
+    name: 'Sihr & Mauvais Œil',
+    name_en: 'Sihr & Evil Eye',
+    name_ha: 'Sihiri da Hassada',
+    hook: 'Neutralisation du mauvais œil, désenvoûtement et destruction des nœuds de sorcellerie.',
+    iconName: 'Flame',
+    theme: 'sihr-mauvais-oeil',
+    thumbnail: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?q=80&w=800&auto=format&fit=crop'
+  },
+  {
+    id: 'provisions',
+    name: 'Provisions',
+    name_en: 'Sustenance & Wealth',
+    name_ha: 'Arziki & Hanyar Samun Kudi',
+    hook: 'Attraction de la subsistance bénie (Rizq), prospérité et réussite commerciale.',
+    iconName: 'Coins',
+    theme: 'provisions',
+    thumbnail: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?q=80&w=800&auto=format&fit=crop'
+  },
+  {
+    id: 'deblocage',
+    name: 'Déblocage',
+    name_en: 'Uncrossing & Breakthrough',
+    name_ha: 'Warware Matsaloli',
+    hook: 'Dissolution des nœuds occultes, déblocage des situations stagnantes.',
+    iconName: 'Key',
+    theme: 'deblocage',
+    thumbnail: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=800&auto=format&fit=crop'
+  },
+  {
+    id: 'favoris',
+    name: 'Favoris',
+    name_en: 'Favorites',
+    name_ha: 'Abubuwan da aka fi so',
+    hook: 'Accès rapide à vos secrets et invocations enregistrés en favoris.',
+    iconName: 'Heart',
+    theme: 'favoris',
+    thumbnail: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?q=80&w=800&auto=format&fit=crop'
+  }
+];
 
 export const PRESET_THUMBNAILS = [
   {

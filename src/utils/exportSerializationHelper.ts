@@ -85,10 +85,14 @@ export async function exportElementToCanvas(
 
   const renderStyle: Partial<CSSStyleDeclaration> = {
     maxHeight: 'none',
-    height: `${height}px`,
+    maxWidth: 'none',
+    minWidth: `${width}px`,
     width: `${width}px`,
+    height: `${height}px`,
+    boxSizing: 'border-box',
     overflow: 'visible',
     transform: 'none',
+    margin: '0',
   };
 
   try {

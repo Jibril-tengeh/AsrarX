@@ -83,6 +83,18 @@ const guides: Record<string, Record<string, InterpretationGuide>> = {
       howItWorks: "Génère les 16 maisons géomantiques à partir des 4 Mères (soit par tirage de sable, saisie manuelle ou calcul Abjad). Les Filles, Nièces, Témoins, Juge et Suprême sont calculés par l'addition binaire sacrée.",
       interpretation: "Le Juge (M15) donne la réponse directe à votre interrogation, tandis que le Suprême (M16) scelle l'issue ultime à long terme. L'analyse par domaine (M1 vs M-Cible) et la boussole spatiale révèlent les dynamiques d'action.",
       advice: "Consultez le thème avec respect et sérénité. Effectuez l'aumône (Saraka) et les zikrs recommandés pour harmoniser les énergies élémentaires et débloquer les situations."
+    },
+    "lunar-cycles": {
+      title: "Interprétation des Cycles Lunaires & Manazil al-Qamar",
+      howItWorks: "Le calculateur détermine la phase lunaire exacte, le pourcentage d'illumination, l'âge de la Lune et la demeure lunaire (Manzil al-Qamar sur les 28 stations célestes). Il calcule les conjonctions, les nuits blanches (Ayyam al-Bid) et la position zodiacale.",
+      interpretation: "La Lune croissante (Hilal au Badr) favorise l'attraction, la prospérité (Jalb al-Rizq) et le développement. La Lune décroissante favorise la purification, la protection (Daf' al-Darar) et le détachement spirituel. Les Demeures lunaires indiquent le climat ésotérique favorable aux invocations.",
+      advice: "Alignez vos wirds, zikrs et jeûnes avec les phases recommandées. Privilégiez les Nuits Blanches (13e, 14e, 15e jours hijri) pour les retraites et grandes invocations de lumière."
+    },
+    "hijri-full-moon": {
+      title: "Interprétation de la Pleine Lune Hijri & Nuits Blanches",
+      howItWorks: "Calcule l'alignement précis de la pleine lune astronomique avec les 13e, 14e et 15e nuits du calendrier hégirien (Ayyam al-Bid).",
+      interpretation: "Le Badr (pleine lune) représente l'apogée de l'énergie de réceptivité spirituelle, d'illumination du cœur et de clarté mentale.",
+      advice: "Recommandé pour le jeûne prophétique des jours blancs, les prières nocturnes (Qiyam al-Layl) et la consécration des bagues ou talismans de lumière."
     }
   },
   en: {
@@ -151,6 +163,18 @@ const guides: Record<string, Record<string, InterpretationGuide>> = {
       howItWorks: "Generates the 16 geomantic houses from 4 Mothers (via sand casting, manual input, or Abjad calculation). Daughters, Nieces, Witnesses, Judge, and Supreme are calculated through sacred binary addition.",
       interpretation: "The Judge (H15) provides the direct answer to your question, while the Supreme (H16) seals the ultimate long-term outcome. Domain analysis (H1 vs Target-H) and spatial compass reveal action dynamics.",
       advice: "Consult the chart with respect and peace. Perform the recommended charity (Saraka) and dhikrs to harmonize elemental energies and unblock situations."
+    },
+    "lunar-cycles": {
+      title: "Interpretation of Lunar Cycles & Lunar Mansions",
+      howItWorks: "The calculator computes the exact lunar phase, illumination percentage, lunar age, and the 28 lunar stations (Manazil al-Qamar). It tracks conjunctions, White Nights (Ayyam al-Bid), and zodiac coordinates.",
+      interpretation: "Waxing Moon (Hilal to Badr) fosters attraction, growth, and prosperity (Jalb al-Rizq). Waning Moon fosters purification, unblocking, and spiritual shielding (Daf' & Ibtal). Lunar mansions reveal the cosmic energetic climate for dhikr.",
+      advice: "Align your personal wirds, fasting, and prayers with the auspicious lunar windows. Honor the White Nights (13th, 14th, 15th Hijri) for major spiritual retreats."
+    },
+    "hijri-full-moon": {
+      title: "Interpretation of Hijri Full Moon & White Nights",
+      howItWorks: "Calculates the exact astronomical full moon alignment with the 13th, 14th, and 15th nights of the Hijri lunar calendar (Ayyam al-Bid).",
+      interpretation: "Badr (Full Moon) represents the zenith of spiritual receptivity, illumination of the heart, and divine peace.",
+      advice: "Highly recommended for observing the Sunnah fast of the White Days, Tahajjud prayers, and consecrating spiritual items."
     }
   },
   ha: {
@@ -219,6 +243,18 @@ const guides: Record<string, Record<string, InterpretationGuide>> = {
       howItWorks: "Yana samarda gidajen kasa 16 daga uwaye 4 (ta hanyar duba a yashi, shigarwa da hannu ko lissafin Abjad). Yammata, jikoki, shaidu, Alkali da Mafi Daukaka ana samun su ta hanyar lissafin lamba.",
       interpretation: "Alkali (G15) yana ba da amsa kai tsaye ga tambayarka, yayin da Mafi Daukaka (G16) yake rufe karshen al'amari. Binciken bangare (G1 da Gidan Tambaya) da boussole suna nuna hanyar motsi.",
       advice: "Duba kasa da girmamawa da nutsuwa. Yi sadaka da zikirin da aka shawarta domin daidaita karfin sassan hudu da bude hanya."
+    },
+    "lunar-cycles": {
+      title: "Fassarar Zagayowar Wata da Manazil al-Qamar",
+      howItWorks: "Kwandatsin yana lissafa yanayin wata, hasken wata, kwanakin wata da tashoshin wata 28 (Manazil al-Qamar).",
+      interpretation: "Wata mai hauhawa yana taimakawa wajen jawo alheri, arziki da budi. Wata mai ragewa yana taimakawa wajen kariya, tsarkake jiki da yaye matsaloli.",
+      advice: "Daidaita zikirorinka da azumin kwanaki farare (13, 14, 15 na watan Musulunci) don samun cikakkiyar albarka."
+    },
+    "hijri-full-moon": {
+      title: "Fassarar Cikakken Watan Hijri da Fararen Darare",
+      howItWorks: "Yana lissafa daidaiton cikakken wata da dararen 13, 14, da 15 na kowane watan Musulunci.",
+      interpretation: "Cikakken wata yana nuna cikar haske da karfin ruhi na samun nutsuwa.",
+      advice: "Ana so a yi azumin kwanakin farare da yawaita nafiloli a cikin wadannan darare."
     }
   }
 };
@@ -231,20 +267,20 @@ export const ToolInfoTooltip: React.FC<ToolInfoTooltipProps> = ({ toolId, title:
 
   if (customTitle && customContent) {
     return (
-      <div className="w-full max-w-full overflow-hidden break-words bg-amber-50/90 dark:bg-stone-900/90 border border-amber-300/60 dark:border-amber-500/30 rounded-2xl p-4 transition-all duration-300 shadow-sm">
+      <div className="w-full max-w-full overflow-hidden break-words bg-amber-50/90 dark:bg-stone-900/90 border border-amber-300/60 dark:border-amber-500/30 rounded-2xl p-3.5 sm:p-4 transition-all duration-300 shadow-sm">
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="w-full flex items-center justify-between text-left focus:outline-none group gap-2"
+          className="w-full flex items-center justify-between text-left focus:outline-none group gap-2 sm:gap-3 cursor-pointer"
         >
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
             <div className="p-2 bg-amber-500/20 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 rounded-xl shrink-0 border border-amber-500/30">
               <Info size={18} className="animate-pulse" />
             </div>
             <div className="min-w-0 flex-1">
-              <h4 className="text-sm font-bold text-stone-900 dark:text-amber-300 group-hover:text-amber-700 dark:group-hover:text-amber-200 transition-colors truncate">
+              <h4 className="text-xs sm:text-sm font-bold text-stone-900 dark:text-amber-300 group-hover:text-amber-700 dark:group-hover:text-amber-200 transition-colors break-words line-clamp-1">
                 {customTitle}
               </h4>
-              <p className="text-xs text-stone-600 dark:text-stone-400 mt-0.5 truncate font-medium">
+              <p className="text-[11px] sm:text-xs text-stone-600 dark:text-stone-400 mt-0.5 font-medium break-words leading-tight line-clamp-1">
                 {t('toolTooltip.clickToInterpret', "Cliquez pour voir comment interpréter les résultats")}
               </p>
             </div>
@@ -258,7 +294,7 @@ export const ToolInfoTooltip: React.FC<ToolInfoTooltipProps> = ({ toolId, title:
           {isOpen && (
             <motion.div
               initial={{ height: 0, opacity: 0, marginTop: 0 }}
-              animate={{ height: 'auto', opacity: 1, marginTop: 16 }}
+              animate={{ height: 'auto', opacity: 1, marginTop: 14 }}
               exit={{ height: 0, opacity: 0, marginTop: 0 }}
               transition={{ duration: 0.25, ease: 'easeInOut' }}
               className="overflow-hidden text-xs sm:text-sm text-stone-800 dark:text-stone-200 border-t border-amber-300/40 dark:border-amber-500/20 pt-3 break-words leading-relaxed"
@@ -274,20 +310,20 @@ export const ToolInfoTooltip: React.FC<ToolInfoTooltipProps> = ({ toolId, title:
   if (!currentGuide) return null;
 
   return (
-    <div className="w-full max-w-full overflow-hidden break-words bg-amber-50/90 dark:bg-stone-900/90 border border-amber-300/60 dark:border-amber-500/30 rounded-2xl p-4 transition-all duration-300 shadow-sm">
+    <div className="w-full max-w-full overflow-hidden break-words bg-amber-50/90 dark:bg-stone-900/90 border border-amber-300/60 dark:border-amber-500/30 rounded-2xl p-3.5 sm:p-4 transition-all duration-300 shadow-sm">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between text-left focus:outline-none group gap-2"
+        className="w-full flex items-center justify-between text-left focus:outline-none group gap-2 sm:gap-3 cursor-pointer"
       >
-        <div className="flex items-center gap-3 min-w-0">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
           <div className="p-2 bg-amber-500/20 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 rounded-xl shrink-0 border border-amber-500/30">
             <Info size={18} className="animate-pulse" />
           </div>
           <div className="min-w-0 flex-1">
-            <h4 className="text-sm font-bold text-stone-900 dark:text-amber-300 group-hover:text-amber-700 dark:group-hover:text-amber-200 transition-colors truncate">
+            <h4 className="text-xs sm:text-sm font-bold text-stone-900 dark:text-amber-300 group-hover:text-amber-700 dark:group-hover:text-amber-200 transition-colors break-words line-clamp-1">
               {currentGuide.title}
             </h4>
-            <p className="text-xs text-stone-600 dark:text-stone-400 mt-0.5 truncate font-medium">
+            <p className="text-[11px] sm:text-xs text-stone-600 dark:text-stone-400 mt-0.5 font-medium break-words leading-tight line-clamp-1">
               {t('toolTooltip.clickToInterpret', "Cliquez pour voir comment interpréter les résultats")}
             </p>
           </div>
@@ -301,7 +337,7 @@ export const ToolInfoTooltip: React.FC<ToolInfoTooltipProps> = ({ toolId, title:
         {isOpen && (
           <motion.div
             initial={{ height: 0, opacity: 0, marginTop: 0 }}
-            animate={{ height: 'auto', opacity: 1, marginTop: 16 }}
+            animate={{ height: 'auto', opacity: 1, marginTop: 14 }}
             exit={{ height: 0, opacity: 0, marginTop: 0 }}
             transition={{ duration: 0.25, ease: 'easeInOut' }}
             className="overflow-hidden"

@@ -200,9 +200,9 @@ export const DirectMessages: React.FC<DirectMessagesProps> = ({
                 {tLocal("noConversations")}
               </p>
             ) : (
-              conversations.map((c) => (
+              conversations.map((c, cIdx) => (
                 <button
-                  key={c.id}
+                  key={c.id ? `dm-conv-${c.id}-${cIdx}` : `dm-conv-${cIdx}`}
                   onClick={() => setActiveChat(c)}
                   className={`w-full text-left p-4 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors border-b border-gray-100 dark:border-gray-700 ${activeChat?.id === c.id ? "bg-emerald-50 dark:bg-emerald-900/20" : ""}`}
                 >
@@ -249,9 +249,9 @@ export const DirectMessages: React.FC<DirectMessagesProps> = ({
                 {tLocal("sendToStart")}
               </div>
             ) : (
-              activeMessages.map((msg) => (
+              activeMessages.map((msg, mIdx) => (
                 <div
-                  key={msg.id}
+                  key={msg.id ? `dm-msg-${msg.id}-${mIdx}` : `dm-msg-${mIdx}`}
                   className={`flex ${msg.senderId === user?.uid ? "justify-end" : "justify-start"}`}
                 >
                   <div

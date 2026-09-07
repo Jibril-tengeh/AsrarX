@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { db } from '../lib/firebase';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { get, set } from 'idb-keyval';
@@ -222,8 +222,10 @@ export const FeatureProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return () => unsubscribe();
   }, []);
 
+  const value = useMemo(() => ({ featureToggles }), [featureToggles]);
+
   return (
-    <FeatureContext.Provider value={{ featureToggles }}>
+    <FeatureContext.Provider value={value}>
       {children}
     </FeatureContext.Provider>
   );

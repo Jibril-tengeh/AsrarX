@@ -13,6 +13,7 @@ import { db } from '../../lib/firebase';
 import { collection, addDoc, query, where, onSnapshot, orderBy, updateDoc, doc } from 'firebase/firestore';
 import { getPromoHourMessage, getPromoHourLabel, PROMO_HOURLY_OPTIONS, PromoDurationHours } from '../../utils/promoConfig';
 import { PremiumUnlockCelebrationModal } from '../../components/PremiumUnlockCelebrationModal';
+import { shouldEnablePaystack, isPlayStoreNoticeApplicable, isWebOrPwa } from '../../utils/platformHelper';
 
 export const PaymentPage: React.FC = () => {
   const { t, language } = useLanguage();
@@ -24,6 +25,10 @@ export const PaymentPage: React.FC = () => {
   const price6m = Number(featureToggles?.premium_price_6m) || 280;
   const price12m = Number(featureToggles?.premium_price_12m) || 520;
   const premiumCurrency = featureToggles?.premium_currency || 'GHS';
+
+  const isPlayStoreMode = isPlayStoreNoticeApplicable(featureToggles);
+  const isPaystackEnabled = shouldEnablePaystack(featureToggles);
+  const isBankTransferEnabled = featureToggles?.bank_transfer_enabled !== false && featureToggles?.pay_manual_transfer !== false && !isPlayStoreMode;
 
   const detectUserCurrencyAndPrice = (priceUSD: number) => {
     let price = price3m;
@@ -946,9 +951,25 @@ export const PaymentPage: React.FC = () => {
         </p>
         
         <div className="mt-6 flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 items-center justify-center sm:justify-start text-xs sm:text-sm font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 p-3 sm:p-4 rounded-xl border border-emerald-100 dark:border-emerald-800/50 w-full overflow-hidden">
-          <span className="flex items-center gap-2 text-center sm:text-left"><CreditCard size={16} className="shrink-0" /><span className="leading-tight">{t('payment.methodPaystack', 'Paystack (Automatique : Cartes & Mobile Money)')}</span></span>
-          <span className="text-emerald-300 hidden sm:inline">•</span>
-          <span className="flex items-center gap-2 text-center sm:text-left"><Landmark size={16} className="shrink-0" /><span className="leading-tight">{t('payment.methodBank', 'Transfert Bancaire Direct (GCB Bank PLC)')}</span></span>
+          {isPaystackEnabled && (
+            <>
+              <span className="flex items-center gap-2 text-center sm:text-left"><CreditCard size={16} className="shrink-0" /><span className="leading-tight">{t('payment.methodPaystack', 'Paystack (Automatique : Cartes & Mobile Money)')}</span></span>
+              {isBankTransferEnabled && <span className="text-emerald-300 hidden sm:inline">•</span>}
+            </>
+          )}
+          {isBankTransferEnabled && (
+            <span className="flex items-center gap-2 text-center sm:text-left"><Landmark size={16} className="shrink-0" /><span className="leading-tight">{t('payment.methodBank', 'Transfert Bancaire Direct (GCB Bank PLC)')}</span></span>
+          )}
+          {!isPaystackEnabled && !isBankTransferEnabled && (
+            <span className="flex items-center gap-2 text-center sm:text-left">
+              <Sparkles size={16} className="shrink-0 text-amber-500" />
+              <span className="leading-tight">
+                {isPlayStoreMode 
+                  ? t('payment.playStoreBadge', 'Activation par Code Promo & Espace Membre') 
+                  : t('payment.methodsDisabledBadge', 'Moyens de paiement en ligne temporairement indisponibles')}
+              </span>
+            </span>
+          )}
         </div>
       </div>
 
@@ -1005,10 +1026,10 @@ export const PaymentPage: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
-        {plans.map((plan) => {
+        {plans.map((plan, planIdx) => {
           const pricing = detectUserCurrencyAndPrice(plan.priceNumber);
           return (
-            <div key={plan.id} className="bg-white dark:bg-gray-800 rounded-3xl p-4 sm:p-6 lg:p-8 border border-gray-200 dark:border-gray-700 shadow-xl relative overflow-hidden group flex flex-col transition-transform hover:-translate-y-1">
+            <div key={plan.id ? `plan-${plan.id}-${planIdx}` : `plan-${planIdx}`} className="bg-white dark:bg-gray-800 rounded-3xl p-4 sm:p-6 lg:p-8 border border-gray-200 dark:border-gray-700 shadow-xl relative overflow-hidden group flex flex-col transition-transform hover:-translate-y-1">
               <div className={`absolute top-0 left-0 w-full h-2 bg-gradient-to-r ${plan.color}`}></div>
               <div className="flex flex-row items-center gap-3.5 mb-4 text-left">
                 <div className={`w-11 h-11 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br ${plan.color} flex items-center justify-center text-white shadow-lg transform group-hover:scale-110 transition-transform shrink-0`}>
@@ -1066,8 +1087,8 @@ export const PaymentPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 dark:divide-gray-750 text-sm">
-                {manualPayments.map((p) => (
-                  <tr key={p.id} className="text-gray-700 dark:text-gray-300">
+                {manualPayments.map((p, pIdx) => (
+                  <tr key={p.id ? `mp-${p.id}-${pIdx}` : `mp-${pIdx}`} className="text-gray-700 dark:text-gray-300">
                     <td className="py-3.5 px-4 font-bold">{p.planName}</td>
                     <td className="py-3.5 px-4 font-mono">{p.amount} {p.currency}</td>
                     <td className="py-3.5 px-4">{p.senderName}</td>
@@ -1146,13 +1167,17 @@ export const PaymentPage: React.FC = () => {
                     <>
                       <h4 className="font-bold text-gray-900 dark:text-white mb-2">{t('payment.modalSelectMethod', 'Sélectionnez votre méthode de paiement')}</h4>
                       
-                      {featureToggles?.paystack_enabled === false && featureToggles?.bank_transfer_enabled === false ? (
-                        <div className="text-center py-8 text-gray-500 border border-dashed rounded-2xl p-4">
-                          ⚠️ {t('payment.methodsDisabled', "Les méthodes de paiement en ligne sont temporairement désactivées par l'administrateur. Veuillez réessayer plus tard.")}
+                      {!isPaystackEnabled && !isBankTransferEnabled ? (
+                        <div className="text-center py-6 text-gray-600 dark:text-gray-300 border border-dashed rounded-2xl p-5 space-y-3 bg-gray-50/50 dark:bg-gray-800/50">
+                          <p className="text-sm font-medium leading-relaxed">
+                            {isPlayStoreMode
+                              ? t('payment.playStoreModalNotice', "Sur cette version Play Store, les paiements directs par passerelle tierce sont désactivés pour respecter les règles de Google Play. Vous pouvez débloquer vos accès instantanément en saisissant un Code Promo / Code d'Activation dans la section ci-dessus.")
+                              : t('payment.methodsDisabled', "Les méthodes de paiement en ligne sont temporairement désactivées par l'administrateur. Veuillez réessayer plus tard.")}
+                          </p>
                         </div>
                       ) : (
                         <>
-                          {featureToggles?.paystack_enabled !== false && (
+                          {isPaystackEnabled && (
                             <button
                               onClick={() => setPaymentMethod('paystack')}
                               className="w-full flex items-center gap-4 p-4 border-2 border-gray-100 hover:border-emerald-500 dark:border-gray-800 dark:hover:border-emerald-500 rounded-2xl text-left hover:bg-emerald-50/20 dark:hover:bg-emerald-900/10 transition-all group animate-fade-in"
@@ -1167,7 +1192,7 @@ export const PaymentPage: React.FC = () => {
                             </button>
                           )}
 
-                          {featureToggles?.bank_transfer_enabled !== false && (
+                          {isBankTransferEnabled && (
                             <button
                               onClick={() => setPaymentMethod('direct')}
                               className="w-full flex items-center gap-4 p-4 border-2 border-gray-100 hover:border-emerald-500 dark:border-gray-800 dark:hover:border-emerald-500 rounded-2xl text-left hover:bg-emerald-50/20 dark:hover:bg-emerald-900/10 transition-all group animate-fade-in"

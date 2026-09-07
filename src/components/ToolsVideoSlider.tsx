@@ -626,7 +626,7 @@ export const ToolsVideoSlider: React.FC<ToolsVideoSliderProps> = ({ className = 
         {/* Slide Content with Motion Transition */}
         <AnimatePresence mode="wait">
           <motion.div
-            key={currentTool.id}
+            key={`tool-slide-${currentTool.id || 'tool'}-${currentIndex}`}
             initial={{ opacity: 0, x: 25, scale: 0.98 }}
             animate={{ opacity: 1, x: 0, scale: 1 }}
             exit={{ opacity: 0, x: -25, scale: 0.98 }}

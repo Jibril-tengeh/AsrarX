@@ -888,8 +888,8 @@ export const SirrAlAsrar: React.FC = () => {
                     {labels.savedProfiles}
                   </h3>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                    {savedProfiles.map((p) => (
-                      <div key={p.id} className="bg-gray-50 dark:bg-gray-900 p-3 rounded-xl border border-gray-200 dark:border-gray-700 flex justify-between items-center gap-2">
+                    {savedProfiles.map((p, pIdx) => (
+                      <div key={p.id ? `sirr-prof-${p.id}-${pIdx}` : `sirr-prof-${pIdx}`} className="bg-gray-50 dark:bg-gray-900 p-3 rounded-xl border border-gray-200 dark:border-gray-700 flex justify-between items-center gap-2">
                         <div 
                           onClick={() => {
                             setName(p.name);
@@ -950,12 +950,12 @@ export const SirrAlAsrar: React.FC = () => {
                   { id: 'wird', label: labels.tabWird, icon: BookOpen },
                   { id: 'aura', label: labels.tabAura, icon: Flame },
                   { id: 'scroll', label: labels.tabScroll, icon: Feather }
-                ].map(tab => {
+                ].map((tab, tIdx) => {
                   const isActive = activeTab === tab.id;
                   const IconComp = tab.icon;
                   return (
                     <button
-                      key={tab.id}
+                      key={tab.id ? `sirr-tab-${tab.id}-${tIdx}` : `sirr-tab-${tIdx}`}
                       type="button"
                       onClick={() => setActiveTab(tab.id as any)}
                       className={`flex items-center gap-2 px-3.5 py-2 rounded-xl font-bold text-xs whitespace-nowrap transition-all cursor-pointer shrink-0 ${

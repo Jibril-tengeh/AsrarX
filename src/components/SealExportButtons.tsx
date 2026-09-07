@@ -210,7 +210,7 @@ export const SealExportButtons: React.FC<SealExportButtonsProps> = ({
                 <h4 className="text-xl font-bold font-serif text-amber-950 mb-2">{title}</h4>
                 {subtitle && <p className="text-xs text-amber-900 italic mb-4">{subtitle}</p>}
                 <div 
-                  className="max-w-[340px] mx-auto p-4 border-2 border-amber-900/80 bg-amber-50 rounded-2xl shadow-inner my-2"
+                  className="w-full max-w-md mx-auto p-2 sm:p-4 border-2 border-amber-900/80 bg-amber-50 rounded-2xl shadow-inner my-2"
                   dangerouslySetInnerHTML={{
                     __html: getTargetElement()?.innerHTML || `<div class="py-8 font-serif font-bold text-amber-950 text-center">${title}</div>`
                   }}

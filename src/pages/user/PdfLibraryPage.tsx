@@ -308,8 +308,8 @@ export const PdfLibraryPage: React.FC = () => {
               onChange={(e) => setSelectedCategory(e.target.value)}
               className="w-full sm:w-auto px-3 py-1.5 rounded-xl text-xs font-bold bg-gray-100 dark:bg-gray-700/80 text-gray-700 dark:text-gray-200 border border-gray-200/80 dark:border-gray-600/60 outline-none focus:ring-2 focus:ring-emerald-500 cursor-pointer"
             >
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
+              {categories.map((cat, catIdx) => (
+                <option key={cat.id ? `pdf-cat-${cat.id}-${catIdx}` : `pdf-cat-${catIdx}`} value={cat.id}>
                   {cat.label}
                 </option>
               ))}
@@ -360,9 +360,9 @@ export const PdfLibraryPage: React.FC = () => {
         </div>
       ) : (
         <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 w-full max-w-full min-w-0' : 'space-y-3 w-full max-w-full min-w-0'}>
-          {filteredPdfs.map((pdf) => (
+          {filteredPdfs.map((pdf, pIdx) => (
             <PdfCard
-              key={pdf.id}
+              key={pdf.id ? `pdf-${pdf.id}-${pIdx}` : `pdf-${pIdx}`}
               pdf={pdf}
               viewMode={viewMode}
               onRead={(selected) => setActivePdfForReading(selected)}

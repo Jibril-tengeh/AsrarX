@@ -478,9 +478,9 @@ export const FaqPage: React.FC = () => {
           </div>
 
           <div className="space-y-1 flex-1 overflow-y-auto custom-scrollbar pr-1">
-            {sessions.map(s => (
+            {sessions.map((s, sIdx) => (
               <div
-                key={s.id}
+                key={s.id ? `faq-sess-${s.id}-${sIdx}` : `faq-sess-${sIdx}`}
                 onClick={() => setActiveSessionId(s.id)}
                 className={`group flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all border ${
                   activeSessionId === s.id
@@ -575,9 +575,9 @@ export const FaqPage: React.FC = () => {
                 </div>
 
                 <div className="space-y-1 flex-1 overflow-y-auto custom-scrollbar">
-                  {sessions.map(s => (
+                  {sessions.map((s, sIdx) => (
                     <div
-                      key={s.id}
+                      key={s.id ? `faq-sess-m-${s.id}-${sIdx}` : `faq-sess-m-${sIdx}`}
                       onClick={() => {
                         setActiveSessionId(s.id);
                         setIsSidebarOpen(false);

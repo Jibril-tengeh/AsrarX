@@ -68,9 +68,9 @@ export const AbjadKhoddamTab: React.FC<AbjadKhoddamTabProps> = ({
 
       {/* 4 Main Guarding Entities Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {result.entities.map((entity) => (
+        {result.entities.map((entity, eIdx) => (
           <div
-            key={entity.id}
+            key={entity.id ? `khoddam-${entity.id}-${eIdx}` : `khoddam-${eIdx}`}
             className="p-5 rounded-3xl bg-white dark:bg-gray-800/90 border border-gray-200 dark:border-gray-700 shadow-sm flex flex-col justify-between space-y-4 hover:shadow-md transition-all"
           >
             <div>
@@ -194,9 +194,9 @@ export const AbjadKhoddamTab: React.FC<AbjadKhoddamTabProps> = ({
 
         {/* Suffixes Chips */}
         <div className="flex flex-wrap gap-2 mb-4">
-          {TRADITIONAL_SUFFIXES.map((sfx) => (
+          {TRADITIONAL_SUFFIXES.map((sfx, sIdx) => (
             <button
-              key={sfx.id}
+              key={sfx.id ? `sfx-${sfx.id}-${sIdx}` : `sfx-${sIdx}`}
               type="button"
               onClick={() => {
                 setSelectedCustomSuffix(sfx.ar);

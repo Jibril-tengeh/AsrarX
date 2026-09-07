@@ -57,6 +57,7 @@ import { AuthModal } from '../../components/AuthModal';
 import { InteractiveLexiconText } from "../../components/InteractiveLexiconText";
 import { PremiumWrapper } from "../../components/PremiumWrapper";
 import { UnverifiedEmailGuard } from "../../components/UnverifiedEmailGuard";
+import { Secret3DVideoPaywallCard } from "../../components/videoCards/Secret3DVideoPaywallCard";
 import { getApiUrl } from "../../lib/api";
 
 const AccordionSection: React.FC<{ title: string, htmlContent: string, readingMode: boolean, fontSize: number, style?: React.CSSProperties }> = ({ title, htmlContent, readingMode, fontSize, style }) => {
@@ -1827,10 +1828,10 @@ export const SecretDetail: React.FC = () => {
                     {buildSpokenSegments(item, displayContent).map((segment, sIdx) => {
                       if (segment.type === 'title') {
                         return (
-                          <h2 key={sIdx} className="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white mb-4">
-                            {segment.words.map((word) => (
+                          <h2 key={`speak-seg-title-${sIdx}`} className="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white mb-4">
+                            {segment.words.map((word, wIdx) => (
                               <span
-                                key={word.globalIndex}
+                                key={`word-t-${sIdx}-${wIdx}-${word.globalIndex}`}
                                 id={`word-speak-${word.globalIndex}`}
                                 className={`inline-block mr-1.5 transition-all duration-150 px-1 rounded ${
                                   speakingWordIndex === word.globalIndex
@@ -1846,10 +1847,10 @@ export const SecretDetail: React.FC = () => {
                       }
                       if (segment.type === 'verse') {
                         return (
-                          <div key={sIdx} className="my-6 p-4 bg-emerald-50/50 dark:bg-emerald-900/10 rounded-xl border border-emerald-100/50 dark:border-emerald-800/30 font-arabic text-center leading-loose text-2xl">
-                            {segment.words.map((word) => (
+                          <div key={`speak-seg-verse-${sIdx}`} className="my-6 p-4 bg-emerald-50/50 dark:bg-emerald-900/10 rounded-xl border border-emerald-100/50 dark:border-emerald-800/30 font-arabic text-center leading-loose text-2xl">
+                            {segment.words.map((word, wIdx) => (
                               <span
-                                key={word.globalIndex}
+                                key={`word-v-${sIdx}-${wIdx}-${word.globalIndex}`}
                                 id={`word-speak-${word.globalIndex}`}
                                 className={`inline-block mr-1.5 transition-all duration-150 px-1 rounded ${
                                   speakingWordIndex === word.globalIndex
@@ -1864,10 +1865,10 @@ export const SecretDetail: React.FC = () => {
                         );
                       }
                       return (
-                        <p key={sIdx} className="mb-4 leading-relaxed text-justify" style={{ fontSize: `${articleFontSize}px` }}>
-                          {segment.words.map((word) => (
+                        <p key={`speak-seg-p-${sIdx}`} className="mb-4 leading-relaxed text-justify" style={{ fontSize: `${articleFontSize}px` }}>
+                          {segment.words.map((word, wIdx) => (
                             <span
-                              key={word.globalIndex}
+                              key={`word-c-${sIdx}-${wIdx}-${word.globalIndex}`}
                               id={`word-speak-${word.globalIndex}`}
                               className={`inline-block mr-1.5 transition-all duration-150 px-1 rounded ${
                                 speakingWordIndex === word.globalIndex
@@ -1968,34 +1969,9 @@ export const SecretDetail: React.FC = () => {
                 })()}
 
                 {isShowingTeaserOnly && (
-                  <div className="mt-8 p-6 sm:p-8 rounded-3xl bg-gradient-to-br from-amber-600 via-amber-500 to-yellow-500 text-white shadow-2xl relative overflow-hidden border border-amber-400/30">
-                    <div className="absolute top-[-20%] right-[-10%] w-64 h-64 bg-white/10 rounded-full blur-2xl pointer-events-none" />
-                    <div className="absolute bottom-[-10%] left-[-5%] w-48 h-48 bg-black/15 rounded-full blur-xl pointer-events-none" />
-                    
-                    <div className="relative z-10 flex flex-col items-center text-center">
-                      <div className="w-14 h-14 bg-white/20 rounded-full flex items-center justify-center shadow-md mb-4 backdrop-blur-sm">
-                        <Crown size={28} className="text-yellow-300 animate-pulse fill-yellow-300" />
-                      </div>
-                      
-                      <h3 className="text-xl sm:text-2xl font-black mb-3 text-white">
-                        {t("secretDetail.unlockSecretTitle", "Révélez le Secret Complet")}
-                      </h3>
-                      
-                      <p className="text-white/95 max-w-lg text-sm sm:text-base leading-relaxed mb-6">
-                        {t("secretDetail.unlockSecretDesc", "La suite de ce secret (les formules exactes, la méthode d'activation spirituelle et les détails de pratique) est réservée aux membres Premium de l'AsrarHub.")}
-                      </p>
-                      
-                      <div className="flex flex-wrap items-center justify-center gap-4">
-                        <Link 
-                          to="/payment" 
-                          className="inline-flex items-center gap-2 bg-white text-gray-950 hover:bg-gray-100 font-extrabold px-6 py-3 rounded-xl text-sm sm:text-base transition-all shadow-lg transform hover:-translate-y-0.5"
-                        >
-                          <Sparkles size={18} className="text-amber-600 fill-amber-200" />
-                          {t("secretDetail.unlockSecretBtn", "Passer au Premium")}
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
+                  <Secret3DVideoPaywallCard 
+                    secretTitle={item?.title}
+                  />
                 )}
               </div>
             </section>

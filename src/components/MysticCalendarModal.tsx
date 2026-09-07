@@ -3062,13 +3062,13 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
 
                       {/* Preset Selector Buttons Grid */}
                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 mb-2.5">
-                        {getFreqPresets().map((preset) => {
+                        {getFreqPresets().map((preset, pIdx) => {
                           const isCurrent = activeSynthPreset?.id === preset.id;
                           const isSyncedWithTask = selectedCategory === preset.id;
                           
                           return (
                             <button
-                              key={preset.id}
+                              key={preset.id ? `freq-p-${preset.id}-${pIdx}` : `freq-p-${pIdx}`}
                               onClick={() => isCurrent && isSynthPlaying ? stopSynth() : startSynth(preset)}
                               className={`py-1.5 px-2 rounded-xl text-[9px] font-extrabold transition-all cursor-pointer border flex flex-col justify-center items-center text-center leading-tight relative ${
                                 isCurrent && isSynthPlaying
@@ -3677,9 +3677,9 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                     {/* Version Switcher Bar in Lightbox (V1..V12) */}
                     <div className="w-full max-w-xl bg-black/80 p-2 rounded-2xl border border-purple-500/30 mb-6 shadow-inner">
                       <div className="flex items-center gap-1.5 overflow-x-auto pb-2 max-w-full no-scrollbar">
-                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((vNum) => (
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((vNum, vnIdx) => (
                           <button
-                            key={vNum}
+                            key={`seal-vnum-${vNum}-${vnIdx}`}
                             type="button"
                             onClick={() => setSelectedSealVersion(vNum)}
                             className={`px-3 py-1.5 text-xs font-extrabold rounded-xl whitespace-nowrap transition-all cursor-pointer ${
@@ -3737,8 +3737,8 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                       </div>
 
                       <div className="space-y-3">
-                        {proto.usageSteps.map((s) => (
-                          <div key={s.step} className="flex gap-3 items-start bg-black/40 border border-purple-500/10 rounded-xl p-3">
+                        {proto.usageSteps.map((s, sIdx) => (
+                          <div key={s.step ? `step-${s.step}-${sIdx}` : `step-${sIdx}`} className="flex gap-3 items-start bg-black/40 border border-purple-500/10 rounded-xl p-3">
                             <span className="flex-shrink-0 w-6 h-6 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-bold flex items-center justify-center">
                               {s.step}
                             </span>

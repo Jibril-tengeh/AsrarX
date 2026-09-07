@@ -142,11 +142,11 @@ export const PostComments: React.FC<PostCommentsProps> = ({ postId }) => {
             {tLocal("noComments")}
           </p>
         ) : (
-          comments.map((comment) => {
+          comments.map((comment, cIdx) => {
             const hasLiked = comment.likes?.includes(user?.uid || "") || false;
             return (
               <div
-                key={comment.id}
+                key={comment.id ? `comment-${comment.id}-${cIdx}` : `comment-${cIdx}`}
                 className={`flex gap-2 sm:gap-3 items-start transition-all ${comment.replyTo ? "ml-4 sm:ml-8 pl-1.5 sm:pl-2 border-l-2 border-emerald-500/10 dark:border-emerald-500/5" : ""}`}
               >
                 <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/40 flex items-center justify-center text-emerald-600 dark:text-emerald-300 shrink-0 text-xs font-bold shadow-sm">
@@ -258,9 +258,9 @@ export const PostComments: React.FC<PostCommentsProps> = ({ postId }) => {
           {/* Quick Emoji Picker */}
           {showEmojiPicker && (
             <div className="absolute left-0 bottom-full mb-2 bg-white dark:bg-gray-850 p-2.5 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 flex gap-1.5 flex-wrap max-w-xs z-20">
-              {emojis.map((emoji) => (
+              {emojis.map((emoji, eIdx) => (
                 <button
-                  key={emoji}
+                  key={`emoji-${emoji}-${eIdx}`}
                   type="button"
                   onClick={() => handleInsertEmoji(emoji)}
                   className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg text-lg transition-transform hover:scale-110 active:scale-95 cursor-pointer"

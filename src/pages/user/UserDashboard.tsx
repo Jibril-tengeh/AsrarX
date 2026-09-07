@@ -4,8 +4,8 @@ import { useAuth, handleFirestoreError, OperationType } from '../../contexts/Aut
 import { useFeatures } from '../../contexts/FeatureContext';
 import { db } from '../../lib/firebase';
 import { collection, query, orderBy, onSnapshot, doc, setDoc, getDocsFromServer, getDocs, where, limit } from 'firebase/firestore';
-import { Search, LayoutGrid, Square, List, Filter, X, BookOpen, Store, Award, MapPin, Trophy, ShieldCheck, ChevronDown, Bookmark, Flame, Shield, RefreshCw, Quote, Folder, Plus, Library, Music, Pencil, Trash2, Sliders, Sparkles, Calendar, FolderOpen, Star, FileText, HardDrive, ArrowRight, ArrowLeft, Layers } from 'lucide-react';
-import * as Icons from 'lucide-react';
+import { Search, LayoutGrid, Square, List, Filter, X, BookOpen, Store, Award, MapPin, Trophy, ShieldCheck, ChevronDown, Bookmark, Flame, Shield, RefreshCw, Quote, Folder, Plus, Library, Music, Pencil, Trash2, Sliders, Sparkles, Calendar, FolderOpen, Star, FileText, HardDrive, ArrowRight, ArrowLeft, Layers, Newspaper } from 'lucide-react';
+import { CategoryDynamicIcon } from '../../components/common/CategoryDynamicIcon';
 import { SecretCard, LayoutMode } from '../../components/SecretCard';
 import { HabitTracker } from '../../components/HabitTracker';
 import { DailyGoalsTracker } from '../../components/DailyGoalsTracker';
@@ -19,7 +19,7 @@ import { PullToRefresh } from '../../components/PullToRefresh';
 import { OfflineDashboardSection } from '../../components/OfflineDashboardSection';
 import { PromoAnnouncementBanner } from '../../components/videoCards/PromoAnnouncementBanner';
 import { HomeCategoriesGrid } from '../../components/home/HomeCategoriesGrid';
-import { getCategoryFallbackThumbnail, getCategoryFallbackHook } from '../../data/defaultCategories';
+import { getCategoryFallbackThumbnail, getCategoryFallbackHook, STANDARD_SCREENSHOT_CATEGORIES } from '../../data/defaultCategories';
 import { sanitizeImageSource } from '../../utils/articleImageUtils';
 
 import { INITIAL_DEFAULT_ARTICLES, DefaultArticle } from '../../data/defaultArticles';
@@ -34,11 +34,7 @@ import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { OfflineArticlesPopup } from '../../components/OfflineArticlesPopup';
 
 const LucideIcon = ({ name, className, size }: { name: string; className?: string; size?: number }) => {
-  const IconComponent = (Icons as any)[name];
-  if (!IconComponent) {
-    return <Icons.FolderOpen className={className} size={size} />;
-  }
-  return <IconComponent className={className} size={size} />;
+  return <CategoryDynamicIcon name={name} className={className} size={size} />;
 };
 import { getAsrarItems } from '../../data/store';
 import { AsrarItem, Category } from '../../types';
@@ -47,6 +43,8 @@ import { useLocation, Link, useParams, useNavigate } from 'react-router-dom';
 import { tools } from '../../data/tools';
 
 import { getApiUrl } from '../../lib/api';
+
+export type HomeDisplayType = 'categories' | 'articles';
 
 interface Props {
   initialFilter?: Category | 'all' | 'favoris' | 'offline';
@@ -81,6 +79,50 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
     if (locState === 'offline') return 'offline';
     return initialFilter;
   });
+  const isCategoriesEnabled = featureToggles?.home_enable_categories !== false;
+  const isArticlesEnabled = featureToggles?.home_enable_articles !== false;
+
+  const isDisplayLocked = 
+    featureToggles?.home_lock_display === true ||
+    featureToggles?.home_display_mode === 'fixed_categories' ||
+    featureToggles?.home_display_mode === 'fixed_articles' ||
+    !isCategoriesEnabled ||
+    !isArticlesEnabled;
+
+  const lockedTarget: HomeDisplayType | null = 
+    !isCategoriesEnabled ? 'articles' :
+    !isArticlesEnabled ? 'categories' :
+    featureToggles?.home_display_mode === 'fixed_categories' ? 'categories' :
+    featureToggles?.home_display_mode === 'fixed_articles' ? 'articles' :
+    featureToggles?.home_lock_display === true ? (featureToggles?.home_only_categories_grid === true ? 'categories' : 'articles') :
+    null;
+
+  const [displayType, setDisplayType] = useState<HomeDisplayType>(() => {
+    if (lockedTarget) return lockedTarget;
+    try {
+      const saved = localStorage.getItem('asrar_home_display_type');
+      if (saved === 'categories' || saved === 'articles') return saved as HomeDisplayType;
+    } catch (e) {}
+    return featureToggles?.home_only_categories_grid === true ? 'categories' : 'articles';
+  });
+
+  // Effective display type resolves immediately without recursive effect loop
+  const effectiveDisplayType: HomeDisplayType = lockedTarget || displayType;
+
+  const handleSetDisplayType = (mode: HomeDisplayType) => {
+    if (isDisplayLocked) return;
+    setDisplayType(mode);
+    try {
+      localStorage.setItem('asrar_home_display_type', mode);
+    } catch (e) {}
+    if (mode === 'categories') {
+      if (filter !== 'all' && filter !== 'favoris' && filter !== 'offline') {
+        setFilter('all');
+        setSelectedSubCategory('');
+      }
+    }
+  };
+
   const [layoutMode, setLayoutMode] = useState<LayoutMode>(() => {
     try {
       const saved = localStorage.getItem('asrar_preferred_layout');
@@ -226,12 +268,27 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
   useBackButton(() => setIsGlobalSearchOpen(false), isGlobalSearchOpen);
   useBackButton(() => setIsCalendarOpen(false), isCalendarOpen);
 
-  const isOnlyCategoriesMode = featureToggles?.home_only_categories_grid === true;
+  const isOnlyCategoriesMode = effectiveDisplayType === 'categories';
 
   const activeCategoryObj = useMemo(() => {
     if (!filter || filter === 'all' || filter === 'favoris' || filter === 'offline') return null;
     const filterCat = (filter || '').toString().toLowerCase().trim();
-    return categories.find(c => c.id === filter || c.id?.toLowerCase() === filterCat || (c.name && c.name.toLowerCase() === filterCat));
+    const found = categories.find(c => c.id === filter || c.id?.toLowerCase() === filterCat || (c.name && c.name.toLowerCase() === filterCat));
+    if (found) return found;
+
+    const standard = STANDARD_SCREENSHOT_CATEGORIES.find(s => s.id === filter || s.id.toLowerCase() === filterCat || s.name.toLowerCase() === filterCat);
+    if (standard) {
+      return {
+        id: standard.id,
+        name: standard.name,
+        name_en: standard.name_en,
+        name_ha: standard.name_ha,
+        hook: standard.hook,
+        iconName: standard.iconName,
+        thumbnail: standard.thumbnail
+      };
+    }
+    return null;
   }, [categories, filter]);
 
   useBackButton(() => {
@@ -469,8 +526,15 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
                 .map(doc => ({ ...doc.data(), id: doc.id }))
                 .filter((cat: any) => !deletedIds.includes(cat.id));
               list.sort((a: any, b: any) => (a.createdAt || 0) - (b.createdAt || 0));
-              setCategories(list);
-              try { localStorage.setItem('asrarhub_cached_categories', JSON.stringify(list)); } catch (e) {}
+              const seenCats = new Set<string>();
+              const dedupedList = list.filter((c: any) => {
+                const k = (c.id || c.name || '').toLowerCase().trim();
+                if (!k || seenCats.has(k)) return false;
+                seenCats.add(k);
+                return true;
+              });
+              setCategories(dedupedList);
+              try { localStorage.setItem('asrarhub_cached_categories', JSON.stringify(dedupedList)); } catch (e) {}
             }
           }).catch(e => console.warn('[PullToRefresh] Categories getDocs note:', e))
         );
@@ -704,18 +768,28 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
     if (isManualEnabled && manualText) {
       const dismissedKey = localStorage.getItem('asrarhub_dismissed_announcement_text');
       const uniqueId = `manual_${manualText}`;
-      if (dismissedKey !== uniqueId && dismissedKey !== manualText) {
-        setIsAnnouncementDismissed(false);
-      } else {
-        setIsAnnouncementDismissed(true);
-      }
-      setAnnouncement({
-        title: manualTitle,
-        text: manualText,
-        visible: true,
-        link: manualLink,
-        buttonText: manualBtnText,
-        uniqueId: uniqueId
+      const shouldDismiss = (dismissedKey === uniqueId || dismissedKey === manualText);
+      setIsAnnouncementDismissed(prev => prev === shouldDismiss ? prev : shouldDismiss);
+      setAnnouncement((prev: any) => {
+        if (
+          prev &&
+          prev.title === manualTitle &&
+          prev.text === manualText &&
+          prev.visible === true &&
+          prev.link === manualLink &&
+          prev.buttonText === manualBtnText &&
+          prev.uniqueId === uniqueId
+        ) {
+          return prev;
+        }
+        return {
+          title: manualTitle,
+          text: manualText,
+          visible: true,
+          link: manualLink,
+          buttonText: manualBtnText,
+          uniqueId: uniqueId
+        };
       });
       return;
     }
@@ -737,28 +811,37 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
           if (notifText) {
             const uniqueId = `notif_${latestDoc.id}_${notifText}`;
             const dismissedKey = localStorage.getItem('asrarhub_dismissed_announcement_text');
-            if (dismissedKey !== uniqueId && dismissedKey !== notifText) {
-              setIsAnnouncementDismissed(false);
-            } else {
-              setIsAnnouncementDismissed(true);
-            }
-            setAnnouncement({
-              title: notifTitle || t('dashboardContent.announcementTitle', 'Annonce'),
-              text: notifText,
-              visible: true,
-              uniqueId: uniqueId
+            const shouldDismiss = (dismissedKey === uniqueId || dismissedKey === notifText);
+            setIsAnnouncementDismissed(prev => prev === shouldDismiss ? prev : shouldDismiss);
+            const expectedTitle = notifTitle || t('dashboardContent.announcementTitle', 'Annonce');
+            setAnnouncement((prev: any) => {
+              if (
+                prev &&
+                prev.title === expectedTitle &&
+                prev.text === notifText &&
+                prev.visible === true &&
+                prev.uniqueId === uniqueId
+              ) {
+                return prev;
+              }
+              return {
+                title: expectedTitle,
+                text: notifText,
+                visible: true,
+                uniqueId: uniqueId
+              };
             });
             return;
           }
         }
-        setAnnouncement(null);
+        setAnnouncement((prev: any) => (prev === null ? null : null));
       }, (err) => {
         console.warn("Notifications onSnapshot in UserDashboard:", err);
-        setAnnouncement(null);
+        setAnnouncement((prev: any) => (prev === null ? null : null));
       });
     } catch (e) {
       console.warn("Failed to subscribe to notifications for dashboard banner:", e);
-      setAnnouncement(null);
+      setAnnouncement((prev: any) => (prev === null ? null : null));
     }
 
     return () => {
@@ -767,7 +850,25 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
         try { unsubNotifs(); } catch (_) {}
       }
     };
-  }, [featureToggles, language, t]);
+  }, [
+    featureToggles?.home_announcement_enabled,
+    featureToggles?.announcementVisible,
+    featureToggles?.home_announcement_text,
+    featureToggles?.home_announcement_text_fr,
+    featureToggles?.home_announcement_text_en,
+    featureToggles?.home_announcement_text_ha,
+    featureToggles?.announcementText,
+    featureToggles?.home_announcement_title,
+    featureToggles?.home_announcement_title_fr,
+    featureToggles?.home_announcement_title_en,
+    featureToggles?.home_announcement_title_ha,
+    featureToggles?.announcementTitle,
+    featureToggles?.home_announcement_link,
+    featureToggles?.announcementLink,
+    featureToggles?.home_announcement_btn_text,
+    featureToggles?.announcementBtnText,
+    language
+  ]);
 
   useEffect(() => {
     if (featureToggles?.premiumPromoText) {
@@ -802,7 +903,17 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
     try {
       const cached = localStorage.getItem('asrarhub_cached_categories');
       if (cached) {
-        setCategories(JSON.parse(cached));
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed)) {
+          const seen = new Set<string>();
+          const deduped = parsed.filter((c: any) => {
+            const k = (c.id || c.name || '').toLowerCase().trim();
+            if (!k || seen.has(k)) return false;
+            seen.add(k);
+            return true;
+          });
+          setCategories(deduped);
+        }
       }
     } catch (e) {
       console.warn("Notice pre-loading categories from cache:", e);
@@ -852,20 +963,41 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
           .map(doc => ({ ...doc.data(), id: doc.id }))
           .filter((cat: any) => !deletedIds.includes(cat.id));
         list.sort((a: any, b: any) => (a.createdAt || 0) - (b.createdAt || 0));
-        setCategories(list);
+        const seenCats = new Set<string>();
+        const dedupedList = list.filter((c: any) => {
+          const k = (c.id || c.name || '').toLowerCase().trim();
+          if (!k || seenCats.has(k)) return false;
+          seenCats.add(k);
+          return true;
+        });
+        setCategories(dedupedList);
         try {
-          localStorage.setItem('asrarhub_cached_categories', JSON.stringify(list));
+          localStorage.setItem('asrarhub_cached_categories', JSON.stringify(dedupedList));
         } catch (e) {}
       } else {
         const remainingDefaults = defaultCats.filter(c => !deletedIds.includes(c.id));
-        setCategories(remainingDefaults);
+        const seenDefaults = new Set<string>();
+        const dedupedDefaults = remainingDefaults.filter((c: any) => {
+          const k = (c.id || c.name || '').toLowerCase().trim();
+          if (!k || seenDefaults.has(k)) return false;
+          seenDefaults.add(k);
+          return true;
+        });
+        setCategories(dedupedDefaults);
       }
     }, (error) => {
       console.warn("Categories fetch note (using local fallback):", error);
       let deletedIds: string[] = [];
       try { deletedIds = JSON.parse(localStorage.getItem('asrarhub_deleted_categories') || '[]'); } catch (e) {}
       const remainingDefaults = defaultCats.filter(c => !deletedIds.includes(c.id));
-      setCategories(remainingDefaults);
+      const seenDefaults = new Set<string>();
+      const dedupedDefaults = remainingDefaults.filter((c: any) => {
+        const k = (c.id || c.name || '').toLowerCase().trim();
+        if (!k || seenDefaults.has(k)) return false;
+        seenDefaults.add(k);
+        return true;
+      });
+      setCategories(dedupedDefaults);
     });
 
     return () => unsubscribe();
@@ -907,14 +1039,23 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
         const categoryName = categoryObj ? (categoryObj.name || '').toLowerCase().trim() : '';
 
         const isRecette = (filterCat === 'recette' || filterCat === 'recipes') && (itemCat.includes('recette') || itemCat.includes('recipe'));
-        const isWird = (filterCat === 'wird' || filterCat === 'wirds' || filterCat === 'zikr') && (itemCat.includes('wird') || itemCat.includes('zikr'));
+        const isWird = (filterCat === 'wird' || filterCat === 'wirds' || filterCat === 'zikr') && (itemCat.includes('wird') || itemCat.includes('zikr') || itemCat.includes('awrad'));
         const isSecret = (filterCat === 'secret' || filterCat === 'secrets' || filterCat === 'sirr') && (itemCat.includes('secret') || itemCat.includes('sirr'));
-        const isRouqyah = (filterCat === 'rouqyah' || filterCat === 'ruqyah') && (itemCat.includes('rouqyah') || itemCat.includes('ruqyah'));
+        const isRouqyah = (filterCat === 'rouqyah' || filterCat === 'ruqyah') && (itemCat.includes('rouqyah') || itemCat.includes('ruqyah') || itemCat.includes('roqya'));
         const isMuraqabah = (filterCat === 'muraqabah' || filterCat === 'meditation') && (itemCat.includes('muraqabah') || itemCat.includes('meditation'));
+        const isAzkar = (filterCat === 'azkar' || filterCat === 'adhkar') && (itemCat.includes('azkar') || itemCat.includes('adhkar') || itemCat.includes('zikr') || itemCat.includes('invocation'));
+        const isVersetsProtection = (filterCat === 'versets-protection' || filterCat === 'protection') && (itemCat.includes('protection') || itemCat.includes('ruqyah') || itemCat.includes('hifz') || itemCat.includes('verset'));
+        const isSihr = (filterCat === 'sihr-mauvais-oeil' || filterCat === 'sihr' || filterCat === 'mauvais-oeil') && (itemCat.includes('sihr') || itemCat.includes('oeil') || itemCat.includes('desenvoutement') || itemCat.includes('ruqyah'));
+        const isOuvertures = (filterCat === 'ouvertures' || filterCat === 'ouverture') && (itemCat.includes('ouverture') || itemCat.includes('richesse') || itemCat.includes('waqia') || itemCat.includes('fath'));
+        const isProvisions = (filterCat === 'provisions' || filterCat === 'provision' || filterCat === 'rizq') && (itemCat.includes('richesse') || itemCat.includes('provision') || itemCat.includes('commerce') || itemCat.includes('rizq') || itemCat.includes('argent'));
+        const isDeblocage = (filterCat === 'deblocage' || filterCat === 'déblocage') && (itemCat.includes('deblocage') || itemCat.includes('desenvoutement') || itemCat.includes('ouverture') || itemCat.includes('hajah'));
+        const isElevation = (filterCat === 'elevation' || filterCat === 'élévation') && (itemCat.includes('elevation') || itemCat.includes('sirr') || itemCat.includes('secret') || itemCat.includes('spirituel'));
+        const isDua = (filterCat === 'douas' || filterCat === 'dua' || filterCat === 'du\'a' || filterCat === 'invocations') && (itemCat.includes('doua') || itemCat.includes('dua') || itemCat.includes('invocation') || itemCat.includes('hajah'));
 
         const matchesCategory = itemCat === filterCat 
           || (categoryName && (itemCat === categoryName || itemCat.includes(categoryName) || categoryName.includes(itemCat)))
-          || isRecette || isWird || isSecret || isRouqyah || isMuraqabah;
+          || isRecette || isWird || isSecret || isRouqyah || isMuraqabah
+          || isAzkar || isVersetsProtection || isSihr || isOuvertures || isProvisions || isDeblocage || isElevation || isDua;
         const itemSubCat = (item as any).subCategory || '';
         const matchesSubCat = !selectedSubCategory || itemSubCat === selectedSubCategory;
 
@@ -924,7 +1065,15 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
       return matchesSearch && matchesFilter;
     });
 
-    return sortArticlesInOrder(raw, true);
+    const sorted = sortArticlesInOrder(raw, true);
+    // Guarantee strict uniqueness of item.id to prevent any React duplicate key warnings
+    const seenItems = new Set<string>();
+    return sorted.filter((item, idx) => {
+      const id = item.id || `item-idx-${idx}`;
+      if (seenItems.has(id)) return false;
+      seenItems.add(id);
+      return true;
+    });
   }, [items, aiSearchResults, searchQuery, filter, activeFolder, bookmarkFolders, bookmarks, categories, selectedSubCategory]);
 
   // Force Vite HMR invalidation
@@ -1447,6 +1596,42 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
             </button>
           </div>
         )}
+
+        {/* Quick Home View Mode Toggle in Fixed Toolbar (Catégories / Articles) - Hidden when fixed/locked by admin */}
+        {!isDisplayLocked && isCategoriesEnabled && isArticlesEnabled && (
+          <div id="tour-display-type" className={`flex bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-0.5 sm:p-1 flex-shrink-0 h-[34px] sm:h-[42px] items-center transition-opacity duration-200 ${isSearchOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
+            <button
+              type="button"
+              onClick={() => handleSetDisplayType('categories')}
+              className={`p-1 sm:p-1.5 rounded-md sm:rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                effectiveDisplayType === 'categories'
+                  ? 'bg-emerald-600 text-white shadow-xs font-bold'
+                  : 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white'
+              }`}
+              title={language === 'fr' ? 'Affichage par Catégories' : language === 'ha' ? 'Bangarori' : 'Categories View'}
+            >
+              <FolderOpen className="w-[15px] h-[15px] sm:w-[18px] sm:h-[18px]" />
+              <span className="hidden md:inline text-[11px] font-bold">
+                {language === 'fr' ? 'Catégories' : language === 'ha' ? 'Bangarori' : 'Catégories'}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSetDisplayType('articles')}
+              className={`p-1 sm:p-1.5 rounded-md sm:rounded-lg transition-all flex items-center gap-1 cursor-pointer ${
+                effectiveDisplayType === 'articles'
+                  ? 'bg-emerald-600 text-white shadow-xs font-bold'
+                  : 'text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white'
+              }`}
+              title={language === 'fr' ? 'Affichage par Articles' : language === 'ha' ? 'Rubuce-rubuce' : 'Articles View'}
+            >
+              <Newspaper className="w-[15px] h-[15px] sm:w-[18px] sm:h-[18px]" />
+              <span className="hidden md:inline text-[11px] font-bold">
+                {language === 'fr' ? 'Articles' : language === 'ha' ? 'Rubuce-rubuce' : 'Articles'}
+              </span>
+            </button>
+          </div>
+        )}
         </div>
       </div>
 
@@ -1468,6 +1653,71 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
         refreshingText={t('pullToRefresh.refreshing', 'Actualisation...')}
         successText={t('pullToRefresh.success', 'À jour')}
       >
+        {/* ================= TYPE D'AFFICHAGE ACCUEIL (Catégories vs Articles) - Hidden when fixed/locked by admin ================= */}
+        {!isDisplayLocked && isCategoriesEnabled && isArticlesEnabled && (
+          <div className="w-full mb-3 sm:mb-4 pt-1 sm:pt-1.5">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 p-2 bg-gradient-to-r from-emerald-50/70 via-white to-teal-50/70 dark:from-gray-850 dark:via-gray-800 dark:to-gray-850 rounded-2xl sm:rounded-3xl border border-emerald-100/80 dark:border-gray-700/80 shadow-xs">
+              {/* Segmented Buttons */}
+              <div className="inline-flex p-1 bg-gray-100/90 dark:bg-gray-900/60 rounded-xl sm:rounded-2xl border border-gray-200/70 dark:border-gray-700/70">
+                <button
+                  type="button"
+                  id="home-display-categories-btn"
+                  onClick={() => handleSetDisplayType('categories')}
+                  className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3.5 sm:px-5 py-2 rounded-lg sm:rounded-xl text-xs sm:text-sm font-extrabold transition-all cursor-pointer ${
+                    effectiveDisplayType === 'categories'
+                      ? 'bg-emerald-600 text-white shadow-sm ring-1 ring-emerald-500/30'
+                      : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
+                  }`}
+                >
+                  <FolderOpen size={16} className={effectiveDisplayType === 'categories' ? 'text-white' : 'text-emerald-600 dark:text-emerald-400'} />
+                  <span>{language === 'ha' ? 'Bangarori' : language === 'en' ? 'By Categories' : 'Par Catégories'}</span>
+                  {categories.length > 0 && (
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-black ${
+                      effectiveDisplayType === 'categories'
+                        ? 'bg-white/25 text-white'
+                        : 'bg-emerald-100/80 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300'
+                    }`}>
+                      {categories.length}
+                    </span>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  id="home-display-articles-btn"
+                  onClick={() => handleSetDisplayType('articles')}
+                  className={`flex-1 sm:flex-initial flex items-center justify-center gap-2 px-3.5 sm:px-5 py-2 rounded-lg sm:rounded-xl text-xs sm:text-sm font-extrabold transition-all cursor-pointer ${
+                    effectiveDisplayType === 'articles'
+                      ? 'bg-emerald-600 text-white shadow-sm ring-1 ring-emerald-500/30'
+                      : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white'
+                  }`}
+                >
+                  <Newspaper size={16} className={effectiveDisplayType === 'articles' ? 'text-white' : 'text-emerald-600 dark:text-emerald-400'} />
+                  <span>{language === 'ha' ? 'Rubuce-rubuce' : language === 'en' ? 'By Articles' : 'Par Articles'}</span>
+                  {items.length > 0 && (
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-black ${
+                      effectiveDisplayType === 'articles'
+                        ? 'bg-white/25 text-white'
+                        : 'bg-emerald-100/80 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300'
+                    }`}>
+                      {items.length}
+                    </span>
+                  )}
+                </button>
+              </div>
+
+              {/* Quick Helper / Current Mode Description */}
+              <div className="flex items-center justify-between sm:justify-end gap-2 px-1 text-xs text-gray-500 dark:text-gray-400 font-medium">
+                <span className="truncate">
+                  {effectiveDisplayType === 'categories'
+                    ? (language === 'ha' ? 'Bincika ta bangaren sirri' : language === 'en' ? 'Explore by spiritual themes' : 'Explorer par thématiques spirituelles')
+                    : (language === 'ha' ? 'Duk rubuce-rubuce da asirai' : language === 'en' ? 'Feed of all secrets & wirds' : 'Flux continu de tous les secrets et wirds')}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
       {isOnlyCategoriesMode ? (
         /* ================= ONLY CATEGORIES 2-COLUMN GRID MODE ================= */
         <div className="w-full">
@@ -1668,7 +1918,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
 
                             return (
                               <button
-                                key={sub.id || `sub-pill-${sIdx}`}
+                                key={sub.id ? `sub-pill-${sub.id}-${sIdx}` : `sub-pill-${sIdx}`}
                                 type="button"
                                 onClick={() => setSelectedSubCategory(isSubActive ? '' : sub.id)}
                                 className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${

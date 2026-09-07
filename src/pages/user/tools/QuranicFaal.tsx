@@ -149,16 +149,16 @@ export const QuranicFaal: React.FC = () => {
 
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 safe-area-pt pb-24">
-      <div className="flex items-center gap-4 mb-8">
-        <Link to="/tools" className="p-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+      <div className="flex items-start gap-3 sm:gap-4 mb-6 sm:mb-8 shrink-0 w-full min-w-0">
+        <Link to="/tools" className="p-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shrink-0 mt-0.5">
           <ArrowLeft className="text-gray-600 dark:text-gray-300" size={20} />
         </Link>
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <BookOpen className="text-blue-600" />
-            {dict.title}
+        <div className="min-w-0 flex-1">
+          <h1 className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white flex items-start sm:items-center gap-2 leading-tight">
+            <BookOpen className="text-blue-600 shrink-0 mt-0.5 sm:mt-0" size={22} />
+            <span className="break-words">{dict.title}</span>
           </h1>
-          <p className="text-gray-500 dark:text-gray-300">{t("tools.quranic-faal.description")}</p>
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-300 mt-1 break-words">{t("tools.quranic-faal.description")}</p>
         </div>
       </div>
 

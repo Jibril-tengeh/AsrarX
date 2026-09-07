@@ -159,9 +159,9 @@ export const FalakLiveClockTab: React.FC<FalakLiveClockTabProps> = ({
                 Sélectionner un repère astronomique spirituel :
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-                {HOLY_AND_MAJOR_CITIES.map((city) => (
+                {HOLY_AND_MAJOR_CITIES.map((city, cIdx) => (
                   <button
-                    key={city.id}
+                    key={city.id ? `city-${city.id}-${cIdx}` : `city-${cIdx}`}
                     onClick={() => {
                       onSelectCity(city);
                       setShowCityPicker(false);

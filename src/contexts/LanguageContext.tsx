@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import fr from '../i18n/fr.json';
 import en from '../i18n/en.json';
 import ha from '../i18n/ha.json';
@@ -34,12 +34,12 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
   }, []);
 
-  const handleSetLanguage = (lang: Language) => {
+  const handleSetLanguage = useCallback((lang: Language) => {
     setLanguage(lang);
     localStorage.setItem('language', lang);
-  };
+  }, []);
 
-  const t = (key: string, defaultValue?: string, params?: Record<string, string | number>): string => {
+  const t = useCallback((key: string, defaultValue?: string, params?: Record<string, string | number>): string => {
     const keys = key.split('.');
     let value = translations[language];
     let result = '';
@@ -75,15 +75,21 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }
 
     return result;
-  };
+  }, [language]);
 
   useEffect(() => {
     document.documentElement.dir = 'ltr';
     document.documentElement.lang = language;
   }, [language]);
 
+  const contextValue = useMemo(() => ({
+    language,
+    setLanguage: handleSetLanguage,
+    t
+  }), [language, handleSetLanguage, t]);
+
   return (
-    <LanguageContext.Provider value={{ language, setLanguage: handleSetLanguage, t }}>
+    <LanguageContext.Provider value={contextValue}>
       {children}
     </LanguageContext.Provider>
   );

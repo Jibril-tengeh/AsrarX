@@ -1623,11 +1623,11 @@ Généré par AsrarHub — https://asrarhub.com
               { id: 'sandCanvas', label: i18n.modeSandCanvas, icon: Touchpad },
               { id: 'manual', label: i18n.modeManual, icon: Layers },
               { id: 'abjad', label: i18n.modeAbjad, icon: Calculator }
-            ].map(m => {
+            ].map((m, mIdx) => {
               const Icon = m.icon;
               return (
                 <button
-                  key={m.id}
+                  key={m.id ? `geo-mode-${m.id}-${mIdx}` : `geo-mode-${mIdx}`}
                   onClick={() => setInputMode(m.id as any)}
                   className={`px-2 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer whitespace-nowrap ${
                     inputMode === m.id
@@ -1733,10 +1733,10 @@ Généré par AsrarHub — https://asrarhub.com
                     }}
                     className="p-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-xs text-gray-900 dark:text-white font-medium focus:ring-2 focus:ring-amber-500"
                   >
-                    {Object.keys(FIGURES_DATABASE).map(code => {
+                    {Object.keys(FIGURES_DATABASE).map((code, cIdx) => {
                       const fig = FIGURES_DATABASE[code];
                       return (
-                        <option key={code} value={code}>
+                        <option key={`fig-code-${code}-${cIdx}`} value={code}>
                           {fig.latin} ({fig.arabic.split(' ')[0]} - {fig.african.split(' / ')[0]})
                         </option>
                       );
@@ -1805,12 +1805,12 @@ Généré par AsrarHub — https://asrarhub.com
             { id: 'secret', label: i18n.tabSecret, icon: Key },
             { id: 'dictionary', label: i18n.tabDictionary, icon: BookOpen },
             { id: 'history', label: `${i18n.tabHistory} (${savedReadings.length})`, icon: History }
-          ].map(tab => {
+          ].map((tab, tIdx) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
             return (
               <button
-                key={tab.id}
+                key={tab.id ? `geo-tab-${tab.id}-${tIdx}` : `geo-tab-${tIdx}`}
                 onClick={() => setActiveTab(tab.id as any)}
                 className={`px-3 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer ${
                   isActive
@@ -2041,9 +2041,9 @@ Généré par AsrarHub — https://asrarhub.com
                 { house: 11, label: i18n.domainFriends, houseName: langKey === 'ha' ? 'G11' : langKey === 'en' ? 'H11' : 'M11' },
                 { house: 4, label: i18n.domainHome, houseName: langKey === 'ha' ? 'G4' : langKey === 'en' ? 'H4' : 'M4' },
                 { house: 12, label: i18n.domainObstacles, houseName: langKey === 'ha' ? 'G12' : langKey === 'en' ? 'H12' : 'M12' },
-              ].map((d) => (
+              ].map((d, dIdx) => (
                 <button
-                  key={d.house}
+                  key={`geo-domain-${d.house}-${dIdx}`}
                   onClick={() => setSelectedDomain(d.house)}
                   className={`p-2.5 rounded-xl text-xs font-bold transition-all text-left flex items-center justify-between cursor-pointer border ${
                     selectedDomain === d.house
@@ -2444,11 +2444,11 @@ Généré par AsrarHub — https://asrarhub.com
                     fig.indian.toLowerCase().includes(query)
                   );
                 })
-                .map(code => {
+                .map((code, cIdx) => {
                   const fig = FIGURES_DATABASE[code];
                   const figArr = code.split('-').map(Number);
                   return (
-                    <div key={code} className="p-3.5 rounded-xl bg-gray-50 dark:bg-gray-900/40 border border-gray-200/60 dark:border-gray-700/60 space-y-2">
+                    <div key={`geo-code-${code}-${cIdx}`} className="p-3.5 rounded-xl bg-gray-50 dark:bg-gray-900/40 border border-gray-200/60 dark:border-gray-700/60 space-y-2">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2.5">
                           <div className="p-1.5 bg-white dark:bg-gray-800 rounded-lg border border-amber-200 shrink-0" dir="ltr">
@@ -2503,12 +2503,12 @@ Généré par AsrarHub — https://asrarhub.com
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-                {savedReadings.map(reading => {
+                {savedReadings.map((reading, rIdx) => {
                   const m1 = getFigureDetail(reading.figures[0]);
                   const m15 = getFigureDetail(reading.figures[14]);
                   const m16 = getFigureDetail(reading.figures[15]);
                   return (
-                    <div key={reading.id} className="p-4 rounded-xl bg-gray-50 dark:bg-gray-900/50 border border-gray-200/80 dark:border-gray-700 space-y-2.5 hover:border-amber-400 transition-all">
+                    <div key={reading.id ? `geo-reading-${reading.id}-${rIdx}` : `geo-reading-${rIdx}`} className="p-4 rounded-xl bg-gray-50 dark:bg-gray-900/50 border border-gray-200/80 dark:border-gray-700 space-y-2.5 hover:border-amber-400 transition-all">
                       <div className="flex items-start justify-between gap-2">
                         <div>
                           <h4 className="font-bold text-sm text-gray-900 dark:text-white">{reading.title}</h4>

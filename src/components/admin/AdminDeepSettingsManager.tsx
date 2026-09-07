@@ -34,6 +34,85 @@ interface AdminDeepSettingsManagerProps {
   promoCodes?: any[];
 }
 
+interface AdminDeepSettingsContextType {
+  collapsedCards: Record<string, boolean>;
+  toggleCard: (id: string) => void;
+  searchQuery: string;
+}
+
+const AdminDeepSettingsContext = React.createContext<AdminDeepSettingsContextType>({
+  collapsedCards: {},
+  toggleCard: () => {},
+  searchQuery: '',
+});
+
+interface SettingCardProps {
+  id: string;
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+  badge?: string;
+  headerRight?: React.ReactNode;
+  children: React.ReactNode;
+}
+
+// Settings Card Wrapper Component - declared outside to preserve component identity, DOM nodes, focus, and scroll position on state updates
+const SettingCard: React.FC<SettingCardProps> = ({ id, title, description, icon, badge, headerRight, children }) => {
+  const { collapsedCards, toggleCard, searchQuery } = React.useContext(AdminDeepSettingsContext);
+  // By default, all settings sections are OPEN (expanded) so all parameters are immediately visible
+  const isCollapsed = collapsedCards[id] !== undefined ? !!collapsedCards[id] : false;
+  
+  // Check if card matches search query
+  if (searchQuery.trim()) {
+    const q = searchQuery.toLowerCase();
+    const matchTitle = title.toLowerCase().includes(q);
+    const matchDesc = description.toLowerCase().includes(q);
+    if (!matchTitle && !matchDesc) return null;
+  }
+
+  return (
+    <div id={id} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden transition-all duration-200 hover:border-gray-200 dark:hover:border-gray-600">
+      <div 
+        onClick={() => toggleCard(id)}
+        className="p-4 sm:p-5 flex items-start justify-between gap-3 cursor-pointer select-none bg-gray-50/50 dark:bg-gray-850/50 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+      >
+        <div className="flex items-start gap-3 min-w-0 flex-1">
+          <div className="p-2.5 rounded-xl bg-white dark:bg-gray-700 border border-gray-100 dark:border-gray-600 shadow-xs shrink-0 mt-0.5">
+            {icon}
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2 mb-1">
+              <h4 className="text-sm font-bold text-gray-900 dark:text-white leading-tight">{title}</h4>
+              {badge && (
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                  {badge}
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed line-clamp-2">{description}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          {headerRight}
+          <button 
+            type="button" 
+            className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg hover:bg-gray-200/60 dark:hover:bg-gray-700 transition-colors"
+            aria-label={isCollapsed ? "Déplier" : "Replier"}
+          >
+            {isCollapsed ? <ChevronDown size={18} /> : <ChevronUp size={18} />}
+          </button>
+        </div>
+      </div>
+
+      {!isCollapsed && (
+        <div className="p-4 sm:p-5 border-t border-gray-100 dark:border-gray-700 space-y-4">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export const AdminDeepSettingsManager: React.FC<AdminDeepSettingsManagerProps> = ({
   featureToggles,
   handleToggleFeature,
@@ -204,72 +283,9 @@ export const AdminDeepSettingsManager: React.FC<AdminDeepSettingsManagerProps> =
     (r.country || "").toLowerCase().includes(reciterFilter.toLowerCase()) || (r.nameAr || "").includes(reciterFilter)
   ).slice(0, 30);
 
-  // Settings Card Wrapper Component
-  const SettingCard: React.FC<{
-    id: string;
-    title: string;
-    description: string;
-    icon: React.ReactNode;
-    badge?: string;
-    headerRight?: React.ReactNode;
-    children: React.ReactNode;
-  }> = ({ id, title, description, icon, badge, headerRight, children }) => {
-    // By default, all settings sections are OPEN (expanded) so all parameters are immediately visible
-    const isCollapsed = collapsedCards[id] !== undefined ? !!collapsedCards[id] : false;
-    
-    // Check if card matches search query
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      const matchTitle = title.toLowerCase().includes(q);
-      const matchDesc = description.toLowerCase().includes(q);
-      if (!matchTitle && !matchDesc) return null;
-    }
-
-    return (
-      <div id={id} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden transition-all duration-200 hover:border-gray-200 dark:hover:border-gray-600">
-        <div 
-          onClick={() => toggleCard(id)}
-          className="p-4 sm:p-5 flex items-start justify-between gap-3 cursor-pointer select-none bg-gray-50/50 dark:bg-gray-850/50 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-        >
-          <div className="flex items-start gap-3 min-w-0 flex-1">
-            <div className="p-2.5 rounded-xl bg-white dark:bg-gray-700 border border-gray-100 dark:border-gray-600 shadow-xs shrink-0 mt-0.5">
-              {icon}
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex flex-wrap items-center gap-2 mb-1">
-                <h4 className="text-sm font-bold text-gray-900 dark:text-white leading-tight">{title}</h4>
-                {badge && (
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
-                    {badge}
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed line-clamp-2">{description}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            {headerRight}
-            <button 
-              type="button" 
-              className="p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 rounded-lg hover:bg-gray-200/60 dark:hover:bg-gray-700 transition-colors"
-              aria-label={isCollapsed ? "Déplier" : "Replier"}
-            >
-              {isCollapsed ? <ChevronDown size={18} /> : <ChevronUp size={18} />}
-            </button>
-          </div>
-        </div>
-
-        {!isCollapsed && (
-          <div className="p-4 sm:p-5 border-t border-gray-100 dark:border-gray-700 space-y-4">
-            {children}
-          </div>
-        )}
-      </div>
-    );
-  };
-
   return (
-    <div className="space-y-6">
+    <AdminDeepSettingsContext.Provider value={{ collapsedCards, toggleCard, searchQuery }}>
+      <div className="space-y-6">
       {/* Header Search & Quick Actions */}
       <div className="bg-gradient-to-br from-emerald-900/10 via-emerald-950/5 to-transparent p-4 sm:p-5 rounded-2xl border border-emerald-500/20 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
         <div className="space-y-1">
@@ -1074,7 +1090,7 @@ export const AdminDeepSettingsManager: React.FC<AdminDeepSettingsManagerProps> =
                         <span className="text-xs text-white font-bold">Bague de Salomon</span>
                         <span className="text-xs text-amber-400 font-bold">250 GHS</span>
                       </div>
-                      <button className="w-full py-1 bg-amber-500 text-white rounded-lg text-[10px] font-bold">
+                      <button type="button" className="w-full py-1 bg-amber-500 text-white rounded-lg text-[10px] font-bold">
                         Commander
                       </button>
                     </div>
@@ -1088,12 +1104,133 @@ export const AdminDeepSettingsManager: React.FC<AdminDeepSettingsManagerProps> =
         {/* 12. Pricing & Paystack Subscription Tiers */}
         <SettingCard
           id="set_pricing_paystack"
-          title="Montants des Abonnements & Grille Tarifaire (Paystack / Stripe)"
-          description="Configurez les prix des abonnements mensuels, trimestriels, annuels et à vie avec sélection de la devise et aperçu des cartes."
+          title="Monétisation, Abonnements & Conformité Play Store"
+          description="Contrôlez la passerelle Paystack, le mode anti-rejet Google Play Store, la devise et les prix des abonnements."
           icon={<CreditCard size={18} className="text-emerald-500 shrink-0" />}
           badge="Monétisation"
         >
-          <div className="space-y-4">
+          <div className="space-y-5">
+            {/* Google Play Mode Switch inside Deep Settings */}
+            <div className="p-4 rounded-2xl border transition-all bg-gradient-to-r from-amber-500/10 via-emerald-500/10 to-blue-500/10 border-amber-300 dark:border-amber-700/60 shadow-xs space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Shield size={18} className="text-amber-600 dark:text-amber-400" />
+                    <span className="text-xs font-bold text-gray-900 dark:text-white">
+                      Mode Conformité Google Play Store (Anti-Rejet)
+                    </span>
+                    <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-full ${
+                      featureToggles.play_store_mode === 'android_only' || featureToggles.play_store_mode === true
+                        ? 'bg-emerald-600 text-white'
+                        : featureToggles.play_store_mode === 'all'
+                        ? 'bg-purple-600 text-white'
+                        : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
+                    }`}>
+                      {featureToggles.play_store_mode === 'android_only' || featureToggles.play_store_mode === true
+                        ? 'Actif : Android Play Store Uniquement (Web Protégé & Actif)'
+                        : featureToggles.play_store_mode === 'all'
+                        ? 'Actif : Masqué Partout (Web & Android)'
+                        : 'Inactif (Mode Normal)'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-gray-600 dark:text-gray-300">
+                    Masque automatiquement Paystack sur l'application Android Play Store, tout en le laissant <strong>actif sur le Web (PC/Mac/PWA)</strong> pour continuer vos ventes sans commission Google.
+                  </p>
+                </div>
+              </div>
+
+              {/* 3 selectable modes */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 border-t border-amber-200/50 dark:border-amber-700/30">
+                <button
+                  type="button"
+                  onClick={() => handleToggleFeature('play_store_mode', 'android_only')}
+                  className={`p-2.5 rounded-xl text-xs font-bold transition-all text-left flex flex-col gap-0.5 border cursor-pointer ${
+                    featureToggles.play_store_mode === 'android_only' || featureToggles.play_store_mode === true
+                      ? 'bg-emerald-600 text-white border-emerald-500 shadow-sm'
+                      : 'bg-white/80 dark:bg-gray-800/80 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700'
+                  }`}
+                >
+                  <span className="flex items-center gap-1.5 font-black">
+                    <Smartphone size={14} /> Android Uniquement
+                  </span>
+                  <span className={`text-[10px] ${
+                    featureToggles.play_store_mode === 'android_only' || featureToggles.play_store_mode === true
+                      ? 'text-emerald-100'
+                      : 'text-gray-500 dark:text-gray-400'
+                  }`}>
+                    Masqué sur l'APK Android. Actif sur Web / PC / PWA.
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleToggleFeature('play_store_mode', 'all')}
+                  className={`p-2.5 rounded-xl text-xs font-bold transition-all text-left flex flex-col gap-0.5 border cursor-pointer ${
+                    featureToggles.play_store_mode === 'all'
+                      ? 'bg-purple-600 text-white border-purple-500 shadow-sm'
+                      : 'bg-white/80 dark:bg-gray-800/80 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700'
+                  }`}
+                >
+                  <span className="flex items-center gap-1.5 font-black">
+                    <Globe size={14} /> Masquer Partout
+                  </span>
+                  <span className={`text-[10px] ${
+                    featureToggles.play_store_mode === 'all'
+                      ? 'text-purple-100'
+                      : 'text-gray-500 dark:text-gray-400'
+                  }`}>
+                    Masque Paystack sur tous les appareils (Web & Android).
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleToggleFeature('play_store_mode', false)}
+                  className={`p-2.5 rounded-xl text-xs font-bold transition-all text-left flex flex-col gap-0.5 border cursor-pointer ${
+                    featureToggles.play_store_mode === false || !featureToggles.play_store_mode
+                      ? 'bg-gray-800 dark:bg-gray-700 text-white border-gray-700 shadow-sm'
+                      : 'bg-white/80 dark:bg-gray-800/80 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700'
+                  }`}
+                >
+                  <span className="flex items-center gap-1.5 font-black">
+                    <CheckCircle2 size={14} /> Inactif (Afficher Partout)
+                  </span>
+                  <span className={`text-[10px] ${
+                    featureToggles.play_store_mode === false || !featureToggles.play_store_mode
+                      ? 'text-gray-200'
+                      : 'text-gray-500 dark:text-gray-400'
+                  }`}>
+                    Paystack actif sans restriction.
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            {/* Paystack Master Toggle */}
+            <div className="flex items-center justify-between p-3.5 bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/50 rounded-xl">
+              <div>
+                <span className="text-xs font-bold text-emerald-950 dark:text-emerald-200 block">
+                  Passerelle Paystack Active (Interrupteur Général)
+                </span>
+                <span className="text-[11px] text-emerald-800 dark:text-emerald-300/80">
+                  {featureToggles.paystack_enabled !== false
+                    ? "Paystack est activé pour les cartes et le Mobile Money."
+                    : "Paystack est totalement désactivé dans toute l'application."}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleToggleFeature('paystack_enabled', featureToggles.paystack_enabled === false)}
+                className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors shrink-0 cursor-pointer ${
+                  featureToggles.paystack_enabled !== false ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
+                }`}
+              >
+                <div className={`w-4 h-4 rounded-full bg-white transition-transform ${
+                  featureToggles.paystack_enabled !== false ? 'translate-x-5' : 'translate-x-0'
+                }`} />
+              </button>
+            </div>
+
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-gray-700 dark:text-gray-300">Devise Principale :</label>
               <div className="flex flex-wrap gap-2">
@@ -1765,5 +1902,6 @@ export const AdminDeepSettingsManager: React.FC<AdminDeepSettingsManagerProps> =
         </SettingCard>
       </div>
     </div>
+    </AdminDeepSettingsContext.Provider>
   );
 };

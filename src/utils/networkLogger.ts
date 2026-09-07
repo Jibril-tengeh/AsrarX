@@ -121,10 +121,13 @@ export const pingFirestore = async (): Promise<PingResult> => {
 
   const start = performance.now();
   try {
-    // Attempt a live fetch from the Firestore server for a specific connection test document
+    // Attempt a live fetch from the Firestore server for a known readable document
     // Using getDocFromServer bypasses local caches completely.
-    const testDocRef = doc(db, '_connection_test_nonexistent_unique_id_', 'ping');
-    await getDocFromServer(testDocRef);
+    const testDocRef = doc(db, 'branding', 'current');
+    await getDocFromServer(testDocRef).catch(async () => {
+      const { getDoc } = await import('firebase/firestore');
+      return getDoc(testDocRef);
+    });
     
     // Non-existent document is a successful reachability test!
     const latencyMs = Math.round(performance.now() - start);

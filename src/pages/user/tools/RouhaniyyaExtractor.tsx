@@ -300,12 +300,12 @@ export const RouhaniyyaExtractor: React.FC = () => {
 
       {/* Sub-Tabs Selector Bar with swipe scroll */}
       <div className="flex overflow-x-auto no-scrollbar gap-1.5 sm:gap-2 p-1.5 sm:p-2 sm:flex-wrap rounded-2xl bg-white dark:bg-slate-900 border border-gray-200 dark:border-slate-800 shadow-sm w-full max-w-full min-w-0">
-        {tabsConfig.map((tab) => {
+        {tabsConfig.map((tab, tIdx) => {
           const Icon = tab.icon;
           const isSelected = activeTab === tab.id;
           return (
             <button
-              key={tab.id}
+              key={tab.id ? `rouh-tab-${tab.id}-${tIdx}` : `rouh-tab-${tIdx}`}
               onClick={() => setActiveTab(tab.id)}
               className={`inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer shrink-0 whitespace-nowrap ${
                 isSelected
@@ -749,7 +749,7 @@ export const RouhaniyyaExtractor: React.FC = () => {
                     </span>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3 pt-1">
                       {extractionData.schedule.optimalHours.map((hr, i) => (
-                        <div key={i} className="p-2.5 sm:p-3 rounded-xl bg-indigo-950/50 border border-indigo-500/20 text-slate-200 flex items-center gap-2 min-w-0">
+                        <div key={`opt-hr-${hr}-${i}`} className="p-2.5 sm:p-3 rounded-xl bg-indigo-950/50 border border-indigo-500/20 text-slate-200 flex items-center gap-2 min-w-0">
                           <Sun size={14} className="text-amber-400 shrink-0" />
                           <span className="truncate">{hr}</span>
                         </div>

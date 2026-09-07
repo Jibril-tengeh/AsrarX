@@ -23,6 +23,8 @@ export interface CategoryItem {
   hook_ha?: string;
   thumbnail?: string; // Vignette / image cover
   iconName?: string;
+  videoUrl?: string; // Dedicated looping video icon
+  theme?: string;
   subCategories?: SubCategoryItem[];
   createdAt?: number;
 }

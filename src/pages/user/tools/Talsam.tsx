@@ -810,7 +810,7 @@ export const Talsam: React.FC = () => {
                   </h4>
                   <div className="space-y-2">
                     {divineNames.map((name, i) => (
-                      <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-900/50">
+                      <div key={name.ar ? `divine-${name.ar}-${i}` : `divine-${i}`} className="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-900/50">
                         <div className="space-y-1">
                           <div className="flex items-center gap-2">
                             <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{name.fr}</span>

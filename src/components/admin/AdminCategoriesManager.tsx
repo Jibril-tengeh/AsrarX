@@ -5,7 +5,8 @@ import {
   Tag, Check, X, Search, Layers, Eye, BookOpen, Shield,
   Heart, Key, Compass, Moon, Sun, Flame, Feather, Coins,
   Star, Volume2, ChevronDown, ChevronUp, RefreshCw, Upload,
-  AlertTriangle, CheckCircle2, Copy, LayoutGrid, Square, LayoutList, Crown
+  AlertTriangle, CheckCircle2, Copy, LayoutGrid, Square, LayoutList, Crown,
+  Grid2X2, Lock, Unlock, Newspaper, Pin, Film
 } from 'lucide-react';
 import { doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
@@ -16,6 +17,8 @@ import {
   getCategoryFallbackThumbnail, getCategoryFallbackHook, getSubCategoryFallbackHook
 } from '../../data/defaultCategories';
 import { sanitizeImageSource } from '../../utils/articleImageUtils';
+import { CategoryDynamicIcon, CategoryVideoOrIconBadge } from '../common/CategoryDynamicIcon';
+import { CategoryIconPickerModal } from './CategoryIconPickerModal';
 
 interface AdminCategoriesManagerProps {
   categories: CategoryItem[];
@@ -38,11 +41,30 @@ export const AdminCategoriesManager: React.FC<AdminCategoriesManagerProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
 
-  // Home Page Display Mode Toggle & 3 Layout Models
+  // Home Page Display Mode Toggles & Fixed/Active Status
   const isHomeOnlyCategories = featureToggles?.home_only_categories_grid === true;
-  const homeCategoryLayoutMode: 'grid2' | 'banner' | 'list' =
+  const isCategoriesEnabled = featureToggles?.home_enable_categories !== false;
+  const isArticlesEnabled = featureToggles?.home_enable_articles !== false;
+
+  const isDisplayLocked = 
+    featureToggles?.home_lock_display === true ||
+    featureToggles?.home_display_mode === 'fixed_categories' ||
+    featureToggles?.home_display_mode === 'fixed_articles' ||
+    !isCategoriesEnabled ||
+    !isArticlesEnabled;
+
+  const currentHomeMode: 'fixed_categories' | 'fixed_articles' | 'free' = 
+    !isCategoriesEnabled ? 'fixed_articles' :
+    !isArticlesEnabled ? 'fixed_categories' :
+    featureToggles?.home_display_mode === 'fixed_categories' ? 'fixed_categories' :
+    featureToggles?.home_display_mode === 'fixed_articles' ? 'fixed_articles' :
+    featureToggles?.home_lock_display === true ? (isHomeOnlyCategories ? 'fixed_categories' : 'fixed_articles') :
+    'free';
+
+  const homeCategoryLayoutMode: 'grid4' | 'grid2' | 'banner' | 'list' =
     featureToggles?.home_categories_layout_mode === 'banner' ? 'banner' :
-    featureToggles?.home_categories_layout_mode === 'list' ? 'list' : 'grid2';
+    featureToggles?.home_categories_layout_mode === 'list' ? 'list' :
+    featureToggles?.home_categories_layout_mode === 'grid2' ? 'grid2' : 'grid4';
 
   const showHooksOnHome = featureToggles?.home_categories_show_hooks !== false;
   const showCountsOnHome = featureToggles?.home_categories_show_counts !== false;
@@ -50,6 +72,96 @@ export const AdminCategoriesManager: React.FC<AdminCategoriesManagerProps> = ({
   const showSliderOnHome = featureToggles?.home_categories_show_slider !== false;
 
   const [isUpdatingToggle, setIsUpdatingToggle] = useState(false);
+
+  // Set Master Home Display Mode (Fixed Categories, Fixed Articles, or Free)
+  const handleSetDisplayMode = async (mode: 'fixed_categories' | 'fixed_articles' | 'free') => {
+    setIsUpdatingToggle(true);
+    try {
+      const payload: Record<string, any> = {
+        home_display_mode: mode,
+        home_lock_display: mode !== 'free',
+        home_only_categories_grid: mode === 'fixed_categories',
+        home_enable_categories: true,
+        home_enable_articles: true,
+      };
+
+      if (handleToggleFeature) {
+        await handleToggleFeature('home_display_mode', mode, `Mode Accueil : ${mode}`);
+      } else {
+        await setDoc(doc(db, 'settings', 'features'), payload, { merge: true });
+        const localFontSaved = localStorage.getItem('asrar_font_toggles');
+        let localObj = localFontSaved ? JSON.parse(localFontSaved) : {};
+        Object.assign(localObj, payload);
+        localStorage.setItem('asrar_font_toggles', JSON.stringify(localObj));
+        window.dispatchEvent(new Event('asrar_font_updated'));
+      }
+
+      const label = 
+        mode === 'fixed_categories' ? "Affichage de l'accueil FIXÉ sur : Catégories uniquement (Verrouillé)" :
+        mode === 'fixed_articles' ? "Affichage de l'accueil FIXÉ sur : Articles uniquement (Verrouillé)" :
+        "Mode libre activé : L'utilisateur peut alterner librement entre Catégories et Articles.";
+      onShowToast(label, "success");
+    } catch (e: any) {
+      console.warn("Display mode error:", e);
+      onShowToast("Erreur lors de la mise à jour : " + (e.message || ''), "error");
+    } finally {
+      setIsUpdatingToggle(false);
+    }
+  };
+
+  // Toggle Categories Enabled on Home
+  const handleToggleCategoriesEnabled = async () => {
+    const targetVal = !isCategoriesEnabled;
+    setIsUpdatingToggle(true);
+    try {
+      if (handleToggleFeature) {
+        await handleToggleFeature('home_enable_categories', targetVal, "Catégories sur l'accueil");
+      } else {
+        await setDoc(doc(db, 'settings', 'features'), { home_enable_categories: targetVal }, { merge: true });
+      }
+      onShowToast(targetVal ? "Catégories activées sur l'accueil." : "Catégories désactivées sur l'accueil.", "info");
+    } catch (e: any) {
+      onShowToast("Erreur : " + e.message, "error");
+    } finally {
+      setIsUpdatingToggle(false);
+    }
+  };
+
+  // Toggle Articles Enabled on Home
+  const handleToggleArticlesEnabled = async () => {
+    const targetVal = !isArticlesEnabled;
+    setIsUpdatingToggle(true);
+    try {
+      if (handleToggleFeature) {
+        await handleToggleFeature('home_enable_articles', targetVal, "Articles sur l'accueil");
+      } else {
+        await setDoc(doc(db, 'settings', 'features'), { home_enable_articles: targetVal }, { merge: true });
+      }
+      onShowToast(targetVal ? "Flux d'articles activé sur l'accueil." : "Flux d'articles désactivé sur l'accueil.", "info");
+    } catch (e: any) {
+      onShowToast("Erreur : " + e.message, "error");
+    } finally {
+      setIsUpdatingToggle(false);
+    }
+  };
+
+  // Toggle Lock (Make Fixed / Free)
+  const handleToggleLockDisplay = async () => {
+    const targetVal = !isDisplayLocked;
+    setIsUpdatingToggle(true);
+    try {
+      if (handleToggleFeature) {
+        await handleToggleFeature('home_lock_display', targetVal, "Verrouillage de l'affichage");
+      } else {
+        await setDoc(doc(db, 'settings', 'features'), { home_lock_display: targetVal }, { merge: true });
+      }
+      onShowToast(targetVal ? "Affichage rendu fixe (verrouillé pour les utilisateurs)." : "Affichage déverrouillé (mode libre pour l'utilisateur).", "info");
+    } catch (e: any) {
+      onShowToast("Erreur : " + e.message, "error");
+    } finally {
+      setIsUpdatingToggle(false);
+    }
+  };
 
   const handleToggleHomeOnlyCategories = async (newVal?: boolean) => {
     const targetVal = newVal !== undefined ? newVal : !isHomeOnlyCategories;
@@ -79,7 +191,7 @@ export const AdminCategoriesManager: React.FC<AdminCategoriesManagerProps> = ({
     }
   };
 
-  const handleSelectLayoutMode = async (mode: 'grid2' | 'banner' | 'list') => {
+  const handleSelectLayoutMode = async (mode: 'grid4' | 'grid2' | 'banner' | 'list') => {
     setIsUpdatingToggle(true);
     try {
       if (handleToggleFeature) {
@@ -101,9 +213,10 @@ export const AdminCategoriesManager: React.FC<AdminCategoriesManagerProps> = ({
       }
 
       const label =
-        mode === 'banner' ? "Modèle 2 : Grande Carte / Bannière (1 Colonne)" :
-        mode === 'list' ? "Modèle 3 : Liste Horizontale Compacte" :
-        "Modèle 1 : Grille 2 Colonnes";
+        mode === 'grid4' ? "Modèle 1 : Grille 4 Colonnes (Icônes & Badges)" :
+        mode === 'banner' ? "Modèle 3 : Grande Carte / Bannière (1 Colonne)" :
+        mode === 'list' ? "Modèle 4 : Liste Horizontale Compacte" :
+        "Modèle 2 : Grille 2 Colonnes";
 
       onShowToast(`Modèle activé : ${label}`, "success");
     } catch (e: any) {
@@ -208,6 +321,7 @@ export const AdminCategoriesManager: React.FC<AdminCategoriesManagerProps> = ({
 
   // Category Edit Modal State
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [isIconPickerModalOpen, setIsIconPickerModalOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<CategoryItem | null>(null);
   const [categoryFormData, setCategoryFormData] = useState({
     name: '',
@@ -217,7 +331,8 @@ export const AdminCategoriesManager: React.FC<AdminCategoriesManagerProps> = ({
     hook_en: '',
     hook_ha: '',
     thumbnail: '',
-    iconName: 'FolderOpen'
+    iconName: 'FolderOpen',
+    videoUrl: ''
   });
 
   // SubCategory Edit Modal State
@@ -254,24 +369,9 @@ export const AdminCategoriesManager: React.FC<AdminCategoriesManagerProps> = ({
     }));
   };
 
-  // Helper icon renderer
+  // Helper icon renderer - dynamically resolves 520+ icons
   const renderIcon = (name: string, size = 18, className = '') => {
-    switch (name) {
-      case 'Sparkles': return <Sparkles size={size} className={className} />;
-      case 'Shield': return <Shield size={size} className={className} />;
-      case 'BookOpen': return <BookOpen size={size} className={className} />;
-      case 'Heart': return <Heart size={size} className={className} />;
-      case 'Key': return <Key size={size} className={className} />;
-      case 'Compass': return <Compass size={size} className={className} />;
-      case 'Moon': return <Moon size={size} className={className} />;
-      case 'Sun': return <Sun size={size} className={className} />;
-      case 'Flame': return <Flame size={size} className={className} />;
-      case 'Feather': return <Feather size={size} className={className} />;
-      case 'Coins': return <Coins size={size} className={className} />;
-      case 'Star': return <Star size={size} className={className} />;
-      case 'Volume2': return <Volume2 size={size} className={className} />;
-      default: return <FolderOpen size={size} className={className} />;
-    }
+    return <CategoryDynamicIcon name={name} size={size} className={className} />;
   };
 
   // Calculate article counts per category and subcategory
@@ -341,7 +441,8 @@ export const AdminCategoriesManager: React.FC<AdminCategoriesManagerProps> = ({
       hook_en: '',
       hook_ha: '',
       thumbnail: PRESET_THUMBNAILS[0].url,
-      iconName: 'Sparkles'
+      iconName: 'Sparkles',
+      videoUrl: ''
     });
     setShowCatPresetThumbnails(false);
     setIsCategoryModalOpen(true);
@@ -358,7 +459,8 @@ export const AdminCategoriesManager: React.FC<AdminCategoriesManagerProps> = ({
       hook_en: cat.hook_en || '',
       hook_ha: cat.hook_ha || '',
       thumbnail: cat.thumbnail || getCategoryFallbackThumbnail(cat.name),
-      iconName: cat.iconName || 'FolderOpen'
+      iconName: cat.iconName || 'FolderOpen',
+      videoUrl: cat.videoUrl || ''
     });
     setShowCatPresetThumbnails(false);
     setIsCategoryModalOpen(true);
@@ -428,6 +530,7 @@ export const AdminCategoriesManager: React.FC<AdminCategoriesManagerProps> = ({
       hook_ha: categoryFormData.hook_ha.trim() || resolvedHook,
       thumbnail: resolvedThumbnail,
       iconName: categoryFormData.iconName || 'FolderOpen',
+      videoUrl: categoryFormData.videoUrl.trim() || undefined,
       subCategories: editingCategory?.subCategories || [],
       createdAt: editingCategory?.createdAt || Date.now()
     };
@@ -715,66 +818,307 @@ export const AdminCategoriesManager: React.FC<AdminCategoriesManagerProps> = ({
           </div>
         </div>
 
-        {/* Home Page Categories Display Control with 3 Layout Models */}
-        <div className="mt-5 p-4 sm:p-6 bg-gradient-to-br from-emerald-50 via-teal-50/30 to-white dark:from-emerald-950/40 dark:via-teal-950/20 dark:to-gray-800 rounded-2xl sm:rounded-3xl border-2 border-emerald-200/80 dark:border-emerald-800/80 shadow-xs space-y-4">
+        {/* Home Page Categories & Articles Master Display Control (Fixed / Active / Toggle) */}
+        <div className="mt-5 p-4 sm:p-6 bg-gradient-to-br from-emerald-50 via-teal-50/30 to-white dark:from-emerald-950/40 dark:via-teal-950/20 dark:to-gray-800 rounded-2xl sm:rounded-3xl border-2 border-emerald-200/80 dark:border-emerald-800/80 shadow-xs space-y-5">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="space-y-1">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="p-2 rounded-xl bg-emerald-600 text-white shadow-xs">
-                  <LayoutGrid size={18} />
+                  <Pin size={18} />
                 </span>
                 <h3 className="text-sm sm:text-base font-extrabold text-gray-900 dark:text-white">
-                  Affichage Accueil : Modèles de Catégories (3 Formats)
+                  Affichage Accueil : Fixer ou Basculer (Catégories vs Articles)
                 </h3>
-                {isHomeOnlyCategories ? (
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    En Ligne (Actif)
+                {currentHomeMode === 'fixed_categories' ? (
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 flex items-center gap-1">
+                    <Lock size={11} className="text-emerald-600 dark:text-emerald-400" />
+                    FIXE : Catégories Uniquement
+                  </span>
+                ) : currentHomeMode === 'fixed_articles' ? (
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-indigo-100 text-indigo-800 dark:bg-indigo-900/60 dark:text-indigo-300 border border-indigo-300 dark:border-indigo-700 flex items-center gap-1">
+                    <Lock size={11} className="text-indigo-600 dark:text-indigo-400" />
+                    FIXE : Articles Uniquement
                   </span>
                 ) : (
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-600 dark:bg-gray-750 dark:text-gray-400 border border-gray-200 dark:border-gray-700 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-gray-400" />
-                    Flux Standard (Inactif)
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300 border border-amber-300 dark:border-amber-700 flex items-center gap-1">
+                    <Unlock size={11} className="text-amber-600 dark:text-amber-400" />
+                    MODE LIBRE (Choix Utilisateur)
                   </span>
                 )}
               </div>
               <p className="text-xs text-gray-600 dark:text-gray-300 max-w-2xl leading-relaxed">
-                Choisissez parmi les 3 modèles visuels pour présenter les catégories sur la page d'accueil.
+                Activez, désactivez ou rendez <strong>FIXE</strong> l'affichage par Catégories ou par Articles. En mode fixe, l'accueil est verrouillé pour tous les visiteurs et les boutons de bascule sont masqués.
               </p>
             </div>
 
-            {/* Master Switch */}
-            <div className="flex items-center gap-3 shrink-0 self-start md:self-center">
-              <span className="text-xs font-bold text-gray-700 dark:text-gray-300">
-                {isHomeOnlyCategories ? 'Affichage Activé' : 'Affichage Désactivé'}
+            {/* Quick Lock/Unlock Status */}
+            <div className="flex items-center gap-2 shrink-0 self-start md:self-center bg-white dark:bg-gray-800 p-1.5 px-3 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-2xs">
+              <span className="text-xs font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                {isDisplayLocked ? (
+                  <>
+                    <Lock size={14} className="text-rose-500" />
+                    <span>Verrouillé (Fixe)</span>
+                  </>
+                ) : (
+                  <>
+                    <Unlock size={14} className="text-emerald-500" />
+                    <span>Mode Libre</span>
+                  </>
+                )}
               </span>
               <button
                 type="button"
                 disabled={isUpdatingToggle}
-                onClick={() => handleToggleHomeOnlyCategories()}
-                className={`relative inline-flex h-8 w-16 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
-                  isHomeOnlyCategories ? 'bg-emerald-600' : 'bg-gray-300 dark:bg-gray-650'
+                onClick={handleToggleLockDisplay}
+                className={`ml-1 text-[11px] font-extrabold px-2.5 py-1 rounded-xl cursor-pointer transition-all ${
+                  isDisplayLocked 
+                    ? 'bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 hover:bg-rose-100' 
+                    : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-100'
                 }`}
-                title={isHomeOnlyCategories ? "Désactiver l'affichage des catégories sur l'accueil" : "Activer l'affichage des catégories sur l'accueil"}
+                title="Basculer entre mode fixe ou libre"
               >
-                <span
-                  className={`pointer-events-none inline-block h-7 w-7 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out flex items-center justify-center text-[10px] font-bold ${
-                    isHomeOnlyCategories ? 'translate-x-8 text-emerald-600' : 'translate-x-0 text-gray-400'
-                  }`}
-                >
-                  {isHomeOnlyCategories ? 'ON' : 'OFF'}
-                </span>
+                {isDisplayLocked ? 'Déverrouiller' : 'Rendre Fixe'}
               </button>
             </div>
           </div>
 
-          {/* 3 Interactive Model Selection Cards */}
-          <div className="pt-2">
-            <label className="block text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-2.5">
-              Sélectionnez le Modèle d'Affichage Souhaité :
-            </label>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {/* Model 1: 2 Columns Grid */}
+          {/* 3 Master Mode Selectors */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+            {/* Mode 1: Fixed Categories */}
+            <div
+              onClick={() => handleSetDisplayMode('fixed_categories')}
+              className={`p-3.5 sm:p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200 relative overflow-hidden flex flex-col justify-between ${
+                currentHomeMode === 'fixed_categories'
+                  ? 'border-emerald-500 bg-white dark:bg-emerald-950/20 shadow-md ring-2 ring-emerald-500/20'
+                  : 'border-gray-200 dark:border-gray-700 bg-white/70 dark:bg-gray-800/60 hover:border-emerald-300'
+              }`}
+            >
+              {currentHomeMode === 'fixed_categories' && (
+                <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full bg-emerald-500 text-white text-[10px] font-black flex items-center gap-1 shadow-xs">
+                  <Check size={11} /> ACTIF FIXE
+                </div>
+              )}
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <div className={`p-2 rounded-xl ${currentHomeMode === 'fixed_categories' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-750 dark:text-gray-400'}`}>
+                    <FolderOpen size={18} />
+                  </div>
+                  <div>
+                    <h4 className="text-xs sm:text-sm font-extrabold text-gray-900 dark:text-white flex items-center gap-1.5">
+                      Fixer sur Catégories
+                      <Lock size={12} className="text-emerald-600 dark:text-emerald-400" />
+                    </h4>
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
+                      Accueil = Thèmes / Grille
+                    </span>
+                  </div>
+                </div>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed pt-1">
+                  Les utilisateurs voient exclusivement la grille de vos catégories. Le choix est fixe et non modifiable par les visiteurs.
+                </p>
+              </div>
+              <div className="mt-3 pt-2 border-t border-gray-100 dark:border-gray-700/60 flex items-center justify-between text-[11px] font-bold">
+                <span className={currentHomeMode === 'fixed_categories' ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'}>
+                  {currentHomeMode === 'fixed_categories' ? '✓ Actuel (Verrouillé)' : 'Appliquer ce mode'}
+                </span>
+                <span className="text-[10px] text-gray-400">Accueil 100% Catégories</span>
+              </div>
+            </div>
+
+            {/* Mode 2: Fixed Articles */}
+            <div
+              onClick={() => handleSetDisplayMode('fixed_articles')}
+              className={`p-3.5 sm:p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200 relative overflow-hidden flex flex-col justify-between ${
+                currentHomeMode === 'fixed_articles'
+                  ? 'border-indigo-500 bg-white dark:bg-indigo-950/20 shadow-md ring-2 ring-indigo-500/20'
+                  : 'border-gray-200 dark:border-gray-700 bg-white/70 dark:bg-gray-800/60 hover:border-indigo-300'
+              }`}
+            >
+              {currentHomeMode === 'fixed_articles' && (
+                <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full bg-indigo-500 text-white text-[10px] font-black flex items-center gap-1 shadow-xs">
+                  <Check size={11} /> ACTIF FIXE
+                </div>
+              )}
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <div className={`p-2 rounded-xl ${currentHomeMode === 'fixed_articles' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-750 dark:text-gray-400'}`}>
+                    <Newspaper size={18} />
+                  </div>
+                  <div>
+                    <h4 className="text-xs sm:text-sm font-extrabold text-gray-900 dark:text-white flex items-center gap-1.5">
+                      Fixer sur Articles
+                      <Lock size={12} className="text-indigo-600 dark:text-indigo-400" />
+                    </h4>
+                    <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold">
+                      Accueil = Flux d'articles
+                    </span>
+                  </div>
+                </div>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed pt-1">
+                  Les utilisateurs arrivent directement sur le flux continu des articles et secrets. L'affichage est fixé et ne peut pas être changé.
+                </p>
+              </div>
+              <div className="mt-3 pt-2 border-t border-gray-100 dark:border-gray-700/60 flex items-center justify-between text-[11px] font-bold">
+                <span className={currentHomeMode === 'fixed_articles' ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400'}>
+                  {currentHomeMode === 'fixed_articles' ? '✓ Actuel (Verrouillé)' : 'Appliquer ce mode'}
+                </span>
+                <span className="text-[10px] text-gray-400">Accueil 100% Articles</span>
+              </div>
+            </div>
+
+            {/* Mode 3: Free User Choice */}
+            <div
+              onClick={() => handleSetDisplayMode('free')}
+              className={`p-3.5 sm:p-4 rounded-2xl border-2 cursor-pointer transition-all duration-200 relative overflow-hidden flex flex-col justify-between ${
+                currentHomeMode === 'free'
+                  ? 'border-amber-500 bg-white dark:bg-amber-950/20 shadow-md ring-2 ring-amber-500/20'
+                  : 'border-gray-200 dark:border-gray-700 bg-white/70 dark:bg-gray-800/60 hover:border-amber-300'
+              }`}
+            >
+              {currentHomeMode === 'free' && (
+                <div className="absolute top-2.5 right-2.5 px-2 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-black flex items-center gap-1 shadow-xs">
+                  <Check size={11} /> ACTIF LIBRE
+                </div>
+              )}
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2">
+                  <div className={`p-2 rounded-xl ${currentHomeMode === 'free' ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-750 dark:text-gray-400'}`}>
+                    <Unlock size={18} />
+                  </div>
+                  <div>
+                    <h4 className="text-xs sm:text-sm font-extrabold text-gray-900 dark:text-white flex items-center gap-1.5">
+                      Mode Libre
+                      <Unlock size={12} className="text-amber-600 dark:text-amber-400" />
+                    </h4>
+                    <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold">
+                      Choix libre de l'utilisateur
+                    </span>
+                  </div>
+                </div>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed pt-1">
+                  Les deux affichages sont actifs. L'utilisateur peut basculer facilement entre Catégories et Articles grâce au sélecteur sur l'accueil.
+                </p>
+              </div>
+              <div className="mt-3 pt-2 border-t border-gray-100 dark:border-gray-700/60 flex items-center justify-between text-[11px] font-bold">
+                <span className={currentHomeMode === 'free' ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400'}>
+                  {currentHomeMode === 'free' ? '✓ Actuel (Libre)' : 'Appliquer ce mode'}
+                </span>
+                <span className="text-[10px] text-gray-400">Boutons visibles</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Individual Toggle Switches */}
+          <div className="pt-2 border-t border-emerald-200/60 dark:border-emerald-800/60 flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div className="flex flex-wrap items-center gap-4 sm:gap-6">
+              {/* Toggle Categories */}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={isUpdatingToggle}
+                  onClick={handleToggleCategoriesEnabled}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    isCategoriesEnabled ? 'bg-emerald-600' : 'bg-gray-300 dark:bg-gray-650'
+                  }`}
+                  title={isCategoriesEnabled ? "Désactiver les catégories sur l'accueil" : "Activer les catégories sur l'accueil"}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                      isCategoriesEnabled ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+                <span className="font-bold text-gray-700 dark:text-gray-300">
+                  Afficher Catégories {isCategoriesEnabled ? '(Activé)' : '(Désactivé)'}
+                </span>
+              </div>
+
+              {/* Toggle Articles */}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={isUpdatingToggle}
+                  onClick={handleToggleArticlesEnabled}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    isArticlesEnabled ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-650'
+                  }`}
+                  title={isArticlesEnabled ? "Désactiver le flux d'articles sur l'accueil" : "Activer le flux d'articles sur l'accueil"}
+                >
+                  <span
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out ${
+                      isArticlesEnabled ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+                <span className="font-bold text-gray-700 dark:text-gray-300">
+                  Afficher Flux Articles {isArticlesEnabled ? '(Activé)' : '(Désactivé)'}
+                </span>
+              </div>
+            </div>
+
+            <div className="text-[11px] text-gray-500 dark:text-gray-400 italic">
+              💡 Les changements prennent effet instantanément pour tous les utilisateurs.
+            </div>
+          </div>
+
+          {/* 4 Interactive Model Selection Cards (Shown if categories are enabled) */}
+          {isCategoriesEnabled && (
+          <div className="pt-3 border-t border-emerald-200/60 dark:border-emerald-800/60">
+            <div className="flex items-center justify-between mb-2.5">
+              <label className="block text-xs font-black uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                Format d'Affichage des Catégories (4 Modèles Visuels) :
+              </label>
+              <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                Modèle actuel : {homeCategoryLayoutMode.toUpperCase()}
+              </span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {/* Model 1: 4 Columns Grid (Screenshot standard) */}
+              <div
+                onClick={() => handleSelectLayoutMode('grid4')}
+                className={`p-3.5 rounded-2xl border-2 cursor-pointer transition-all duration-200 flex flex-col justify-between relative overflow-hidden ${
+                  homeCategoryLayoutMode === 'grid4'
+                    ? 'border-emerald-500 bg-white dark:bg-emerald-950/20 shadow-md ring-2 ring-emerald-500/20'
+                    : 'border-gray-200 dark:border-gray-700 bg-white/70 dark:bg-gray-800/60 hover:border-emerald-300'
+                }`}
+              >
+                {homeCategoryLayoutMode === 'grid4' && (
+                  <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-xs">
+                    <Check size={12} />
+                  </div>
+                )}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className={`p-2 rounded-xl ${homeCategoryLayoutMode === 'grid4' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-750 dark:text-gray-400'}`}>
+                      <LayoutGrid size={18} />
+                    </div>
+                    <div>
+                      <h4 className="text-xs sm:text-sm font-extrabold text-gray-900 dark:text-white">
+                        Modèle 1 : Grille 4 Colonnes
+                      </h4>
+                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
+                        Icônes & Badges Authentiques
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
+                    Grille dense à 4 colonnes fidèle à votre capture d'écran avec badges circulaires colorés et titres compacts.
+                  </p>
+                </div>
+                <div className="mt-3 pt-2 border-t border-gray-100 dark:border-gray-700/60 flex items-center justify-between text-[10px] font-bold">
+                  <span className={homeCategoryLayoutMode === 'grid4' ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'}>
+                    {homeCategoryLayoutMode === 'grid4' ? '✓ Modèle Actif' : 'Choisir ce modèle'}
+                  </span>
+                  <div className="grid grid-cols-4 gap-0.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Model 2: 2 Columns Grid */}
               <div
                 onClick={() => handleSelectLayoutMode('grid2')}
                 className={`p-3.5 rounded-2xl border-2 cursor-pointer transition-all duration-200 flex flex-col justify-between relative overflow-hidden ${
@@ -791,11 +1135,11 @@ export const AdminCategoriesManager: React.FC<AdminCategoriesManagerProps> = ({
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
                     <div className={`p-2 rounded-xl ${homeCategoryLayoutMode === 'grid2' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300' : 'bg-gray-100 text-gray-600 dark:bg-gray-750 dark:text-gray-400'}`}>
-                      <LayoutGrid size={18} />
+                      <Grid2X2 size={18} />
                     </div>
                     <div>
                       <h4 className="text-xs sm:text-sm font-extrabold text-gray-900 dark:text-white">
-                        Modèle 1 : Grille 2 Colonnes
+                        Modèle 2 : Grille 2 Colonnes
                       </h4>
                       <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
                         Équilibré & Visuel
@@ -803,7 +1147,7 @@ export const AdminCategoriesManager: React.FC<AdminCategoriesManagerProps> = ({
                     </div>
                   </div>
                   <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
-                    Grille à 2 colonnes côte-à-côte avec vignettes immersives, badges icônes, compteurs et accroches superposées.
+                    Grille à 2 colonnes avec vignettes immersives, badges icônes, compteurs et accroches superposées.
                   </p>
                 </div>
                 <div className="mt-3 pt-2 border-t border-gray-100 dark:border-gray-700/60 flex items-center justify-between text-[10px] font-bold">
@@ -817,7 +1161,7 @@ export const AdminCategoriesManager: React.FC<AdminCategoriesManagerProps> = ({
                 </div>
               </div>
 
-              {/* Model 2: Large Banner Card (1 Col - Screenshot 1) */}
+              {/* Model 3: Large Banner Card (1 Col) */}
               <div
                 onClick={() => handleSelectLayoutMode('banner')}
                 className={`p-3.5 rounded-2xl border-2 cursor-pointer transition-all duration-200 flex flex-col justify-between relative overflow-hidden ${
@@ -838,7 +1182,7 @@ export const AdminCategoriesManager: React.FC<AdminCategoriesManagerProps> = ({
                     </div>
                     <div>
                       <h4 className="text-xs sm:text-sm font-extrabold text-gray-900 dark:text-white">
-                        Modèle 2 : Grande Carte
+                        Modèle 3 : Grande Carte
                       </h4>
                       <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold">
                         Bannière 1 Colonne
@@ -846,7 +1190,7 @@ export const AdminCategoriesManager: React.FC<AdminCategoriesManagerProps> = ({
                     </div>
                   </div>
                   <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
-                    Grande image en haut avec titre blanc incrusté, et bloc blanc contenant la description et accroche en dessous.
+                    Grande image en haut avec titre blanc incrusté, et bloc blanc contenant la description et accroche.
                   </p>
                 </div>
                 <div className="mt-3 pt-2 border-t border-gray-100 dark:border-gray-700/60 flex items-center justify-between text-[10px] font-bold">
@@ -860,7 +1204,7 @@ export const AdminCategoriesManager: React.FC<AdminCategoriesManagerProps> = ({
                 </div>
               </div>
 
-              {/* Model 3: Horizontal List Row (1 Col - Screenshot 2) */}
+              {/* Model 4: Horizontal List Row (1 Col) */}
               <div
                 onClick={() => handleSelectLayoutMode('list')}
                 className={`p-3.5 rounded-2xl border-2 cursor-pointer transition-all duration-200 flex flex-col justify-between relative overflow-hidden ${
@@ -881,7 +1225,7 @@ export const AdminCategoriesManager: React.FC<AdminCategoriesManagerProps> = ({
                     </div>
                     <div>
                       <h4 className="text-xs sm:text-sm font-extrabold text-gray-900 dark:text-white">
-                        Modèle 3 : Liste Horizontale
+                        Modèle 4 : Liste Horizontale
                       </h4>
                       <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold">
                         Compact & Épuré
@@ -903,52 +1247,53 @@ export const AdminCategoriesManager: React.FC<AdminCategoriesManagerProps> = ({
                 </div>
               </div>
             </div>
-          </div>
 
-          {/* Sub-options */}
-          {isHomeOnlyCategories && (
-            <div className="pt-3 border-t border-emerald-200/60 dark:border-emerald-800/60 flex flex-wrap items-center gap-4 text-xs">
-              <span className="text-[11px] font-bold text-gray-600 dark:text-gray-400">Options d'affichage :</span>
-              <label className="flex items-center gap-1.5 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={showSliderOnHome}
-                  onChange={() => handleToggleHomeSubOption('home_categories_show_slider', showSliderOnHome)}
-                  className="rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
-                />
-                <span className="text-gray-750 dark:text-gray-250 font-bold text-emerald-700 dark:text-emerald-300">
-                  Afficher le Slider des outils
-                </span>
-              </label>
-              <label className="flex items-center gap-1.5 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={showHooksOnHome}
-                  onChange={() => handleToggleHomeSubOption('home_categories_show_hooks', showHooksOnHome)}
-                  className="rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
-                />
-                <span className="text-gray-700 dark:text-gray-300 font-medium">Afficher les phrases d'accroche (hooks)</span>
-              </label>
-              <label className="flex items-center gap-1.5 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={showCountsOnHome}
-                  onChange={() => handleToggleHomeSubOption('home_categories_show_counts', showCountsOnHome)}
-                  className="rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
-                />
-                <span className="text-gray-700 dark:text-gray-300 font-medium">Compteur d'articles</span>
-              </label>
-              <label className="flex items-center gap-1.5 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={showSubCountsOnHome}
-                  onChange={() => handleToggleHomeSubOption('home_categories_show_sub_counts', showSubCountsOnHome)}
-                  className="rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
-                />
-                <span className="text-gray-700 dark:text-gray-300 font-medium">Compteur sous-thèmes</span>
-              </label>
-            </div>
-          )}
+            {/* Sub-options */}
+            {isHomeOnlyCategories && (
+              <div className="pt-3 border-t border-emerald-200/60 dark:border-emerald-800/60 flex flex-wrap items-center gap-4 text-xs">
+                <span className="text-[11px] font-bold text-gray-600 dark:text-gray-400">Options d'affichage :</span>
+                <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={showSliderOnHome}
+                    onChange={() => handleToggleHomeSubOption('home_categories_show_slider', showSliderOnHome)}
+                    className="rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                  />
+                  <span className="text-gray-750 dark:text-gray-250 font-bold text-emerald-700 dark:text-emerald-300">
+                    Afficher le Slider des outils
+                  </span>
+                </label>
+                <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={showHooksOnHome}
+                    onChange={() => handleToggleHomeSubOption('home_categories_show_hooks', showHooksOnHome)}
+                    className="rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                  />
+                  <span className="text-gray-700 dark:text-gray-300 font-medium">Afficher les phrases d'accroche (hooks)</span>
+                </label>
+                <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={showCountsOnHome}
+                    onChange={() => handleToggleHomeSubOption('home_categories_show_counts', showCountsOnHome)}
+                    className="rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                  />
+                  <span className="text-gray-700 dark:text-gray-300 font-medium">Compteur d'articles</span>
+                </label>
+                <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={showSubCountsOnHome}
+                    onChange={() => handleToggleHomeSubOption('home_categories_show_sub_counts', showSubCountsOnHome)}
+                    className="rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer"
+                  />
+                  <span className="text-gray-700 dark:text-gray-300 font-medium">Compteur sous-thèmes</span>
+                </label>
+              </div>
+            )}
+          </div>
+        )}
         </div>
 
         {/* Category Articles Display Control with 3 Layout Models */}
@@ -1183,7 +1528,7 @@ export const AdminCategoriesManager: React.FC<AdminCategoriesManagerProps> = ({
 
             return (
               <div
-                key={cat.id || `category-card-${catIdx}`}
+                key={cat.id ? `category-card-${cat.id}-${catIdx}` : `category-card-${catIdx}`}
                 className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-150 dark:border-gray-700 overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
               >
                 <div>
@@ -1202,8 +1547,11 @@ export const AdminCategoriesManager: React.FC<AdminCategoriesManagerProps> = ({
                     {/* Floating Badges */}
                     <div className="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none">
                       <span className="px-2.5 py-1 rounded-xl bg-black/60 backdrop-blur-md text-white text-[11px] font-black flex items-center gap-1.5 border border-white/10 shadow-sm pointer-events-auto">
-                        {renderIcon(cat.iconName || 'FolderOpen', 13, 'text-amber-400')}
+                        {renderIcon(cat.iconName || 'FolderOpen', 13, 'text-emerald-400')}
                         <span>{cat.name}</span>
+                        {cat.videoUrl && (
+                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse ml-0.5" title="Badge vidéo HD actif" />
+                        )}
                       </span>
 
                       <div className="flex items-center gap-1.5 pointer-events-auto">
@@ -1287,7 +1635,7 @@ export const AdminCategoriesManager: React.FC<AdminCategoriesManagerProps> = ({
 
                               return (
                                 <div
-                                  key={sub.id || `sub-${cat.id}-${sIdx}`}
+                                  key={sub.id ? `sub-${cat.id}-${sub.id}-${sIdx}` : `sub-${cat.id}-${sIdx}`}
                                   className="p-2.5 sm:p-3 rounded-2xl bg-gray-50 dark:bg-gray-750/70 border border-gray-150 dark:border-gray-700 hover:border-indigo-300 dark:hover:border-indigo-700 transition-all flex items-center justify-between gap-3 group/sub"
                                 >
                                   {/* Sub Thumbnail */}
@@ -1577,27 +1925,74 @@ export const AdminCategoriesManager: React.FC<AdminCategoriesManagerProps> = ({
                   )}
                 </div>
 
-                {/* Icon Selection */}
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-gray-700 dark:text-gray-300">
-                    Icône Thématique
-                  </label>
-                  <div className="flex flex-wrap gap-1.5 p-2 bg-gray-50 dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700">
-                    {PRESET_ICONS.map((icon) => (
-                      <button
-                        key={`icon-${icon}`}
-                        type="button"
-                        onClick={() => setCategoryFormData(prev => ({ ...prev, iconName: icon }))}
-                        className={`p-2 rounded-xl transition-all ${
-                          categoryFormData.iconName === icon
-                            ? 'bg-amber-500 text-white shadow-sm'
-                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700'
-                        }`}
-                        title={icon}
-                      >
-                        {renderIcon(icon, 16)}
-                      </button>
-                    ))}
+                {/* Icons & Video Looping Badge Selection */}
+                <div className="space-y-2.5 p-3.5 bg-gray-50 dark:bg-gray-800/60 rounded-2xl border border-gray-200 dark:border-gray-700">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1.5">
+                      <Sparkles size={14} className="text-emerald-500" />
+                      <span>Icône SVG & Badge Vidéo Animé</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setIsIconPickerModalOpen(true)}
+                      className="text-xs font-extrabold text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 flex items-center gap-1 cursor-pointer bg-emerald-50 dark:bg-emerald-950/50 px-2.5 py-1 rounded-lg border border-emerald-300/40"
+                    >
+                      <Film size={13} />
+                      <span>Médiathèque (520+ Icônes & Vidéos)</span>
+                    </button>
+                  </div>
+
+                  {/* Current Selection Live Preview Card */}
+                  <div className="flex items-center gap-3.5 bg-white dark:bg-gray-900 p-2.5 rounded-xl border border-gray-200 dark:border-gray-700/80 shadow-xs">
+                    <CategoryVideoOrIconBadge
+                      iconName={categoryFormData.iconName}
+                      videoUrl={categoryFormData.videoUrl}
+                      categoryName={categoryFormData.name || 'Aperçu'}
+                      size="md"
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-black text-gray-900 dark:text-white">
+                          {categoryFormData.iconName || 'Sparkles'}
+                        </span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border border-emerald-300/40">
+                          {categoryFormData.videoUrl ? '🎬 Vidéo Looping Active' : '✨ Badge SVG Animé'}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 truncate mt-0.5">
+                        {categoryFormData.videoUrl ? `Source : ${categoryFormData.videoUrl}` : 'Rendu dynamique avec aura émeraude & halo radiant'}
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setIsIconPickerModalOpen(true)}
+                      className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black shrink-0 transition-all cursor-pointer shadow-xs"
+                    >
+                      Parcourir
+                    </button>
+                  </div>
+
+                  {/* Quick Strip of Essential Icons */}
+                  <div className="space-y-1">
+                    <div className="text-[10px] font-semibold text-gray-400">Sélection rapide :</div>
+                    <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                      {PRESET_ICONS.map((icon) => (
+                        <button
+                          key={`icon-${icon}`}
+                          type="button"
+                          onClick={() => setCategoryFormData(prev => ({ ...prev, iconName: icon }))}
+                          className={`p-2 rounded-xl transition-all cursor-pointer shrink-0 ${
+                            categoryFormData.iconName === icon
+                              ? 'bg-emerald-600 text-white shadow-sm'
+                              : 'text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 bg-white dark:bg-gray-900 border border-gray-200/60 dark:border-gray-700'
+                          }`}
+                          title={icon}
+                        >
+                          {renderIcon(icon, 16)}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1624,6 +2019,22 @@ export const AdminCategoriesManager: React.FC<AdminCategoriesManagerProps> = ({
           </div>
         )}
       </AnimatePresence>
+
+      {/* 520+ Icons & HD Video Picker Modal */}
+      <CategoryIconPickerModal
+        isOpen={isIconPickerModalOpen}
+        onClose={() => setIsIconPickerModalOpen(false)}
+        selectedIcon={categoryFormData.iconName}
+        selectedVideoUrl={categoryFormData.videoUrl}
+        categoryName={categoryFormData.name}
+        onSelect={(iconName, videoUrl) => {
+          setCategoryFormData(prev => ({
+            ...prev,
+            iconName,
+            videoUrl: videoUrl || ''
+          }));
+        }}
+      />
 
       {/* ================= MODAL: CRÉER / MODIFIER SOUS-CATÉGORIE ================= */}
       <AnimatePresence>

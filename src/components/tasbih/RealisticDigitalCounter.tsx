@@ -126,11 +126,11 @@ export const RealisticDigitalCounter: React.FC<RealisticDigitalCounterProps> = (
           className="flex items-center gap-3 overflow-x-auto py-2 px-1 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700 snap-x"
           style={{ scrollBehavior: 'smooth' }}
         >
-          {COUNTER_SKINS.map((skin) => {
+          {COUNTER_SKINS.map((skin, sIdx) => {
             const isSelected = skin.id === selectedSkinId;
             return (
               <button
-                key={skin.id}
+                key={skin.id ? `skin-${skin.id}-${sIdx}` : `skin-${sIdx}`}
                 onClick={() => handleSelectSkin(skin.id)}
                 className={`relative shrink-0 flex flex-col items-center gap-1 p-1.5 rounded-2xl transition-all snap-center cursor-pointer group ${
                   isSelected 

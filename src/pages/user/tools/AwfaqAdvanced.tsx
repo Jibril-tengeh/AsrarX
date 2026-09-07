@@ -489,27 +489,27 @@ export const AwfaqAdvanced: React.FC = () => {
 
   const elemAnalysis = calculateElementalBalance();
 
-  let cellSizeClass = "w-16 h-16 sm:w-20 sm:h-20 text-lg sm:text-2xl rounded-2xl";
+  let cellSizeClass = "w-full aspect-square min-w-[70px] max-w-[120px] text-lg sm:text-2xl rounded-xl sm:rounded-2xl";
   if (gridSize > 8) {
-    cellSizeClass = "w-8 h-8 sm:w-11 sm:h-11 text-xs sm:text-base rounded-md sm:rounded-lg";
+    cellSizeClass = "w-full aspect-square min-w-[28px] sm:min-w-[34px] text-[9px] sm:text-xs rounded-sm sm:rounded-md";
   } else if (gridSize > 5) {
-    cellSizeClass = "w-10 h-10 sm:w-14 sm:h-14 text-sm sm:text-xl rounded-lg sm:rounded-xl";
+    cellSizeClass = "w-full aspect-square min-w-[38px] sm:min-w-[48px] text-xs sm:text-base rounded-md sm:rounded-lg";
   } else if (gridSize > 3) {
-    cellSizeClass = "w-12 h-12 sm:w-16 sm:h-16 text-base sm:text-2xl rounded-xl";
+    cellSizeClass = "w-full aspect-square min-w-[50px] sm:min-w-[64px] text-sm sm:text-xl rounded-lg sm:rounded-xl";
   }
 
   return (
     <div className="w-full max-w-7xl mx-auto p-3 sm:p-6 lg:p-8 safe-area-pt min-h-screen pb-24 flex flex-col">
-      <div className="flex items-center gap-4 mb-4 shrink-0">
-        <Link to="/tools" className="p-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+      <div className="flex items-start gap-3 sm:gap-4 mb-4 shrink-0 w-full min-w-0">
+        <Link to="/tools" className="p-2 bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shrink-0 mt-0.5">
           <ArrowLeft className="text-gray-600 dark:text-gray-300" size={20} />
         </Link>
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <Hexagon className="text-fuchsia-500 shrink-0" />
-            <span className="truncate">{dict.title}</span>
+        <div className="min-w-0 flex-1">
+          <h1 className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white flex items-start sm:items-center gap-2 leading-tight">
+            <Hexagon className="text-fuchsia-500 shrink-0 mt-0.5 sm:mt-0" size={22} />
+            <span className="break-words">{dict.title}</span>
           </h1>
-          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-300 mt-1">{dict.desc}</p>
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-300 mt-1 break-words">{dict.desc}</p>
         </div>
       </div>
 
@@ -520,7 +520,7 @@ export const AwfaqAdvanced: React.FC = () => {
         <button
           type="button"
           onClick={() => setActiveTab('generator')}
-          className={`flex-1 min-w-[180px] py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
+          className={`flex-1 min-w-[140px] sm:min-w-[180px] py-2.5 px-3 sm:px-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
             activeTab === 'generator'
               ? 'bg-fuchsia-600 text-white shadow-md'
               : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
@@ -533,7 +533,7 @@ export const AwfaqAdvanced: React.FC = () => {
         <button
           type="button"
           onClick={() => setActiveTab('combine')}
-          className={`flex-1 min-w-[180px] py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
+          className={`flex-1 min-w-[140px] sm:min-w-[180px] py-2.5 px-3 sm:px-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
             activeTab === 'combine'
               ? 'bg-gradient-to-r from-fuchsia-600 to-amber-600 text-white shadow-md'
               : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
@@ -546,7 +546,7 @@ export const AwfaqAdvanced: React.FC = () => {
         <button
           type="button"
           onClick={() => setActiveTab('validator')}
-          className={`flex-1 min-w-[180px] py-2.5 px-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
+          className={`flex-1 min-w-[140px] sm:min-w-[180px] py-2.5 px-3 sm:px-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer ${
             activeTab === 'validator'
               ? 'bg-amber-600 text-white shadow-md'
               : 'text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white'
@@ -862,10 +862,10 @@ export const AwfaqAdvanced: React.FC = () => {
               </div>
             )}
 
-            <div ref={wafqRef} className="w-full overflow-x-auto pb-4 scrollbar-thin flex justify-start sm:justify-center p-2 bg-slate-900/10 dark:bg-slate-950/40 rounded-3xl">
-              <div className="p-3 bg-gray-100 dark:bg-gray-900/80 rounded-3xl border border-gray-200 dark:border-gray-700/60 shadow-inner relative overflow-hidden">
+            <div ref={wafqRef} className="w-full overflow-x-auto pb-4 scrollbar-thin flex justify-center p-1.5 sm:p-3 bg-slate-900/10 dark:bg-slate-950/40 rounded-2xl sm:rounded-3xl">
+              <div className="w-full max-w-lg mx-auto p-2.5 sm:p-4 bg-gray-100 dark:bg-gray-900/80 rounded-2xl sm:rounded-3xl border border-gray-200 dark:border-gray-700/60 shadow-inner relative overflow-hidden">
                 <AsrarHubWatermark variant="dark" opacity={0.12} showCentralSeal={true} />
-                <div className={`grid gap-1.5 sm:gap-2`} style={{ gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))` }}>
+                <div className={`grid gap-1 sm:gap-2 w-full mx-auto`} style={{ gridTemplateColumns: `repeat(${gridSize}, minmax(0, 1fr))` }}>
                   {grid.map((row, i) => (
                     row.map((cell, j) => {
                       const houseNum = baseHousesGrid[i][j] + 1;

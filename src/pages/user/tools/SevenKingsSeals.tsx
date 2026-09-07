@@ -1282,7 +1282,7 @@ export const SevenKingsSeals: React.FC = () => {
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-80 overflow-y-auto pr-1">
-                {savedSeals.map((seal) => {
+                {savedSeals.map((seal, sIdx) => {
                   const isCurrentlySelected =
                     seal.dayId === selectedDay.dayId &&
                     seal.wafqSize === wafqSize &&
@@ -1290,7 +1290,7 @@ export const SevenKingsSeals: React.FC = () => {
 
                   return (
                     <div
-                      key={seal.id}
+                      key={seal.id ? `saved-seal-${seal.id}-${sIdx}` : `saved-seal-${sIdx}`}
                       onClick={() => handleLoadSeal(seal)}
                       className={`p-3.5 rounded-2xl border text-xs cursor-pointer transition-all flex flex-col justify-between gap-2.5 relative group ${
                         isCurrentlySelected
@@ -1345,9 +1345,9 @@ export const SevenKingsSeals: React.FC = () => {
 
       {/* Days Selector Tabs (Dimanche à Samedi) */}
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-2">
-        {SEVEN_KINGS_DATA.map((k) => (
+        {SEVEN_KINGS_DATA.map((k, kIdx) => (
           <button
-            key={k.dayId}
+            key={`king-day-${k.dayId}-${kIdx}`}
             onClick={() => {
               setSelectedDay(k);
               setActiveSealSegment(null);
@@ -1550,9 +1550,9 @@ export const SevenKingsSeals: React.FC = () => {
 
             {/* Wafq Dimension Buttons (3x3 to 10x10) */}
             <div className="grid grid-cols-4 sm:grid-cols-8 gap-1.5">
-              {[3, 4, 5, 6, 7, 8, 9, 10].map((sz) => (
+              {[3, 4, 5, 6, 7, 8, 9, 10].map((sz, szIdx) => (
                 <button
-                  key={sz}
+                  key={`wafq-sz-${sz}-${szIdx}`}
                   type="button"
                   onClick={() => setWafqSize(sz)}
                   className={`py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer border ${
@@ -1647,7 +1647,7 @@ export const SevenKingsSeals: React.FC = () => {
             </div>
 
             {/* SVG Interactive Celestial Seal with Fade-In Animation */}
-            <div className="relative w-full max-w-[320px] aspect-square my-2 z-10 flex items-center justify-center">
+            <div className="relative w-full max-w-sm sm:max-w-md aspect-square my-2 z-10 flex items-center justify-center">
               <AnimatePresence mode="wait">
                 <motion.div
                   key={`${selectedDay.dayId}-${wafqSize}-${displayMode}`}

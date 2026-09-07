@@ -224,15 +224,17 @@ export const TraditionalDivinationQurah: React.FC = () => {
             </button>
 
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl sm:text-2xl font-black text-stone-900 dark:text-transparent dark:bg-clip-text dark:bg-gradient-to-r dark:from-amber-200 dark:via-amber-400 dark:to-yellow-500">
-                  {t.title}
-                </h1>
-                <ToolInfoTooltip content={t.infoToolTip} />
-              </div>
+              <h1 className="text-xl sm:text-2xl font-black text-stone-900 dark:text-transparent dark:bg-clip-text dark:bg-gradient-to-r dark:from-amber-200 dark:via-amber-400 dark:to-yellow-500">
+                {t.title}
+              </h1>
               <p className="text-xs sm:text-sm text-stone-600 dark:text-slate-400 mt-1 max-w-2xl leading-relaxed">
                 {t.subtitle}
               </p>
+              {t.infoToolTip && (
+                <div className="mt-3 w-full">
+                  <ToolInfoTooltip title={t.title} content={t.infoToolTip} />
+                </div>
+              )}
             </div>
           </div>
 

@@ -1028,7 +1028,7 @@ export const AlBuniShams: React.FC = () => {
 
               return (
                 <button
-                  key={chap.id}
+                  key={chap.id ? `buni-c-${chap.id}-${idx}` : `buni-c-${idx}`}
                   onClick={() => {
                     setSelectedChapterId(chap.id);
                     setExpandedChapterId(chap.id);
@@ -1071,7 +1071,7 @@ export const AlBuniShams: React.FC = () => {
 
                 return (
                   <motion.div
-                    key={chap.id}
+                    key={chap.id ? `buni-grid-${chap.id}-${idx}` : `buni-grid-${idx}`}
                     initial={{ opacity: 0, y: 15 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: idx * 0.04 }}
@@ -1148,14 +1148,14 @@ export const AlBuniShams: React.FC = () => {
                             </div>
                           ) : (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              {chapterSecrets.map((secret) => {
+                              {chapterSecrets.map((secret, sIdx) => {
                                 const isSaved = savedSecretIds.includes(secret.id);
                                 const title = getSecretTitle(secret, language);
                                 const desc = getSecretDescription(secret, language);
 
                                 return (
                                   <motion.div
-                                    key={secret.id}
+                                    key={secret.id ? `buni-sec-${secret.id}-${sIdx}` : `buni-sec-${sIdx}`}
                                     layout
                                     initial={{ opacity: 0, scale: 0.95 }}
                                     animate={{ opacity: 1, scale: 1 }}
@@ -1302,11 +1302,11 @@ export const AlBuniShams: React.FC = () => {
                 </h4>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {currentReaderSecrets.map((secret) => {
+                  {currentReaderSecrets.map((secret, sIdx) => {
                     const isSaved = savedSecretIds.includes(secret.id);
                     return (
                       <div 
-                        key={secret.id}
+                        key={secret.id ? `reader-sec-${secret.id}-${sIdx}` : `reader-sec-${sIdx}`}
                         className="p-4 bg-gray-50 dark:bg-gray-900/60 rounded-2xl border border-gray-200 dark:border-gray-700 flex flex-col justify-between"
                       >
                         <div>
@@ -1394,9 +1394,9 @@ export const AlBuniShams: React.FC = () => {
                 { id: 'historical_seals', label: t('shams.categories.historical_seals', 'Sceaux Historiques') },
                 { id: 'elemental_mechanics', label: t('shams.categories.elemental_mechanics', 'Mécaniques 4 Éléments') },
                 { id: 'author_warnings', label: t('shams.categories.author_warnings', 'Règles & Avertissements') },
-              ].map(cat => (
+              ].map((cat, cIdx) => (
                 <button
-                  key={cat.id}
+                  key={cat.id ? `shams-cat-${cat.id}-${cIdx}` : `shams-cat-${cIdx}`}
                   onClick={() => setSelectedCategoryFilter(cat.id)}
                   className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
                     selectedCategoryFilter === cat.id 
@@ -1412,14 +1412,14 @@ export const AlBuniShams: React.FC = () => {
 
           {/* Secrets Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {compendiumSecrets.map((secret) => {
+            {compendiumSecrets.map((secret, sIdx) => {
               const isSaved = savedSecretIds.includes(secret.id);
               const title = getSecretTitle(secret, language);
               const desc = getSecretDescription(secret, language);
 
               return (
                 <div 
-                  key={secret.id}
+                  key={secret.id ? `comp-sec-${secret.id}-${sIdx}` : `comp-sec-${sIdx}`}
                   className="bg-white dark:bg-gray-800/90 rounded-2xl border border-gray-100 dark:border-gray-700/80 p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between relative overflow-hidden group"
                 >
                   <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-bl-full pointer-events-none" />

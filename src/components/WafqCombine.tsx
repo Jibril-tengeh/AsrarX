@@ -221,13 +221,13 @@ export const WafqCombine: React.FC = () => {
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 sm:p-8 border border-gray-100 dark:border-gray-700 shadow-sm space-y-6">
-      <div>
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-          <Layers className="text-fuchsia-500" size={22} />
-          <span>{t.title}</span>
+    <div className="bg-white dark:bg-gray-800 rounded-3xl p-3.5 sm:p-8 border border-gray-100 dark:border-gray-700 shadow-sm space-y-6 w-full min-w-0">
+      <div className="w-full min-w-0">
+        <h2 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white flex items-start sm:items-center gap-2 leading-tight">
+          <Layers className="text-fuchsia-500 shrink-0 mt-0.5 sm:mt-0" size={22} />
+          <span className="break-words min-w-0 flex-1">{t.title}</span>
         </h2>
-        <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-300 mt-1">
+        <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-300 mt-1 break-words">
           {t.subtitle}
         </p>
       </div>

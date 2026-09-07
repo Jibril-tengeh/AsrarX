@@ -103,7 +103,7 @@ const highlightArabicText = (originalText: string, query: string) => {
     }
     
     elements.push(
-      <mark key={matchIndex} className="bg-amber-100 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 px-0.5 rounded font-arabic">
+      <mark key={`quran-mark-${matchIndex}-${elements.length}`} className="bg-amber-100 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 px-0.5 rounded font-arabic">
         {originalText.substring(origStart, origEnd)}
       </mark>
     );

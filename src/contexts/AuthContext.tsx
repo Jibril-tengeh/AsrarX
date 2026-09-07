@@ -308,6 +308,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(!initialLocalUser);
   const [showTrialPopup, setShowTrialPopup] = useState(false);
 
+  // Safety fallback: Never keep the application in loading state for more than 1.5s
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, []);
+
   useEffect(() => {
     let unsubscribeDoc: (() => void) | null = null;
     let unsubscribeSession: (() => void) | null = null;

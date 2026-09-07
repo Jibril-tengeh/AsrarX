@@ -139,16 +139,16 @@ export const FaraidCalculator: React.FC = () => {
 
   return (
     <div className="max-w-3xl mx-auto p-4 sm:p-6 lg:p-8 safe-area-pt pb-24 min-h-screen">
-      <div className="flex items-center gap-4 mb-6">
-        <Link to="/tools" className="p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 transition-colors">
+      <div className="flex items-start gap-3 sm:gap-4 mb-6 shrink-0 w-full min-w-0">
+        <Link to="/tools" className="p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 transition-colors shrink-0 mt-0.5">
           <ArrowLeft size={24} />
         </Link>
-        <div>
-           <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <Scale className="text-red-500" />
-            Calculateur Faraid
+        <div className="min-w-0 flex-1">
+           <h1 className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white flex items-start sm:items-center gap-2 leading-tight">
+            <Scale className="text-red-500 shrink-0 mt-0.5 sm:mt-0" size={22} />
+            <span className="break-words">Calculateur Faraid</span>
           </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-300 mt-1">{t("tools.faraid.description")}</p>
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-300 mt-1 break-words">{t("tools.faraid.description")}</p>
           {isUsingCache ? (
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 dark:bg-amber-950/30 dark:text-amber-400 border border-amber-100 dark:border-amber-900/30 mt-2">
               <Database size={11} className="animate-pulse" />

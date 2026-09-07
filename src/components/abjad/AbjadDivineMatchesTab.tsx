@@ -211,9 +211,9 @@ export const AbjadDivineMatchesTab: React.FC<AbjadDivineMatchesTabProps> = ({ ab
         {/* Exact Verses */}
         {(activeSubFilter === 'all' || activeSubFilter === 'exact') && matches.exactVerses.length > 0 && (
           <div className="space-y-3">
-            {matches.exactVerses.map((verse) => (
+            {matches.exactVerses.map((verse, vIdx) => (
               <div
-                key={verse.id}
+                key={verse.id ? `exact-verse-${verse.id}-${vIdx}` : `exact-verse-${vIdx}`}
                 className="p-5 rounded-3xl bg-gradient-to-r from-emerald-50 via-teal-50/50 to-indigo-50/30 dark:from-emerald-950/40 dark:to-indigo-950/20 border-2 border-emerald-500/60 shadow-md"
               >
                 <div className="flex items-center justify-between mb-2">

@@ -34,6 +34,13 @@ if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
         registration.unregister().catch(() => {});
       }
     }).catch(() => {});
+    if (typeof window !== 'undefined' && 'caches' in window) {
+      caches.keys().then((keys) => {
+        for (const key of keys) {
+          caches.delete(key).catch(() => {});
+        }
+      }).catch(() => {});
+    }
   } else if (import.meta.env.PROD) {
     // Only register PWA service worker on standard Web browsers
     try {
@@ -65,31 +72,42 @@ if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
 
 const rootElement = document.getElementById('root');
 if (rootElement) {
-  createRoot(rootElement).render(
-    <StrictMode>
-      <ErrorBoundary>
-        <HashRouter>
-          <BrandingProvider>
-            <AuthProvider>
-              <LanguageProvider>
-                <ThemeProvider>
-                  <TextScaleProvider>
-                    <AudioProvider>
-                      <FeatureProvider>
-                        <FullscreenProvider>
-                          <SettingsProvider>
-                            <App />
-                          </SettingsProvider>
-                        </FullscreenProvider>
-                      </FeatureProvider>
-                    </AudioProvider>
-                  </TextScaleProvider>
-                </ThemeProvider>
-              </LanguageProvider>
-            </AuthProvider>
-          </BrandingProvider>
-        </HashRouter>
-      </ErrorBoundary>
-    </StrictMode>,
-  );
+  try {
+    const root = createRoot(rootElement);
+    root.render(
+      <StrictMode>
+        <ErrorBoundary>
+          <HashRouter>
+            <BrandingProvider>
+              <AuthProvider>
+                <LanguageProvider>
+                  <ThemeProvider>
+                    <TextScaleProvider>
+                      <AudioProvider>
+                        <FeatureProvider>
+                          <FullscreenProvider>
+                            <SettingsProvider>
+                              <App />
+                            </SettingsProvider>
+                          </FullscreenProvider>
+                        </FeatureProvider>
+                      </AudioProvider>
+                    </TextScaleProvider>
+                  </ThemeProvider>
+                </LanguageProvider>
+              </AuthProvider>
+            </BrandingProvider>
+          </HashRouter>
+        </ErrorBoundary>
+      </StrictMode>,
+    );
+  } catch (err: any) {
+    console.error('Fatal initialization error:', err);
+    const fallback = document.getElementById('initial-asrar-fallback');
+    if (fallback) {
+      fallback.style.display = 'block';
+      const msg = document.getElementById('initial-asrar-error-msg');
+      if (msg) msg.textContent = err?.message || String(err);
+    }
+  }
 }

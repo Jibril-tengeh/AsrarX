@@ -280,6 +280,9 @@ export const IbnArabiSeals: React.FC = () => {
                 <Crown className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
                 {tStrings.toolBadge}
               </span>
+            </div>
+
+            <div className="w-full mt-1">
               <ToolInfoTooltip 
                 title={tStrings.toolTitle} 
                 content={tStrings.metaDesc} 
@@ -377,9 +380,9 @@ export const IbnArabiSeals: React.FC = () => {
                     {tStrings.huroofPresetLabel}
                   </label>
                   <div className="grid grid-cols-1 gap-2">
-                    {AKBARI_PRESETS.map((p) => (
+                    {AKBARI_PRESETS.map((p, pIdx) => (
                       <button
-                        key={p.id}
+                        key={p.id ? `akbari-p-${p.id}-${pIdx}` : `akbari-p-${pIdx}`}
                         onClick={() => setHuroofInput(p.arabicText)}
                         className={`text-left p-2.5 rounded-xl border text-xs transition-all flex items-center justify-between cursor-pointer ${
                           huroofInput === p.arabicText
@@ -405,9 +408,9 @@ export const IbnArabiSeals: React.FC = () => {
                       </label>
                     </div>
                     <div className="grid grid-cols-5 sm:grid-cols-10 gap-1 p-1 bg-stone-100 dark:bg-slate-950 rounded-xl border border-stone-300 dark:border-slate-800">
-                      {[3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((size) => (
+                      {[3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((size, sIdx) => (
                         <button
-                          key={size}
+                          key={`akbari-sz-${size}-${sIdx}`}
                           onClick={() => setHuroofGridSize(size)}
                           className={`py-1.5 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${
                             huroofGridSize === size
@@ -457,7 +460,7 @@ export const IbnArabiSeals: React.FC = () => {
 
               {/* Matrix Display Column */}
               <div className="lg:col-span-7 space-y-5">
-                <div className="bg-white dark:bg-slate-900/60 p-6 rounded-2xl border border-stone-200 dark:border-slate-800 shadow-sm flex flex-col items-center justify-center space-y-4">
+                <div className="bg-white dark:bg-slate-900/60 p-3 sm:p-6 rounded-2xl border border-stone-200 dark:border-slate-800 shadow-sm flex flex-col items-center justify-center space-y-4 w-full">
                   <div className="text-center space-y-1">
                     <h3 className="text-base font-serif font-bold text-amber-900 dark:text-amber-200">{tStrings.huroofMatrixTitle}</h3>
                     <p className="text-xs text-stone-600 dark:text-slate-400">{tStrings.huroofMatrixSubtitle}</p>
@@ -466,12 +469,11 @@ export const IbnArabiSeals: React.FC = () => {
                   {/* Pure Wafq Letter Matrix Display */}
                   <div 
                     ref={wafqHuroofRef}
-                    className="p-3 sm:p-5 rounded-2xl bg-gradient-to-b from-stone-100 via-white to-stone-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 border-2 border-amber-500/40 shadow-xl dark:shadow-2xl dark:shadow-amber-950/40 w-full"
-                    style={{ maxWidth: huroofGridSize > 8 ? '560px' : huroofGridSize > 5 ? '480px' : '420px' }}
+                    className="p-2 sm:p-5 rounded-2xl bg-gradient-to-b from-stone-100 via-white to-stone-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 border-2 border-amber-500/40 shadow-xl dark:shadow-2xl dark:shadow-amber-950/40 w-full max-w-lg mx-auto"
                   >
                     <div 
                       className={`grid ${
-                        huroofGridSize <= 4 ? 'gap-2' : huroofGridSize <= 6 ? 'gap-1.5' : huroofGridSize <= 9 ? 'gap-1' : 'gap-0.5'
+                        huroofGridSize <= 4 ? 'gap-1.5 sm:gap-2' : huroofGridSize <= 6 ? 'gap-1 sm:gap-1.5' : huroofGridSize <= 9 ? 'gap-0.5 sm:gap-1' : 'gap-0.5'
                       }`}
                       style={{ gridTemplateColumns: `repeat(${huroofGridSize}, minmax(0, 1fr))` }}
                     >
@@ -561,7 +563,7 @@ export const IbnArabiSeals: React.FC = () => {
                           </p>
                         </div>
                         <div 
-                          className="grid gap-1.5 max-w-[420px] mx-auto p-3.5 border-2 border-amber-900 bg-amber-50/90 rounded-2xl shadow-inner my-3"
+                          className="grid gap-1 sm:gap-1.5 w-full max-w-md mx-auto p-2 sm:p-3.5 border-2 border-amber-900 bg-amber-50/90 rounded-2xl shadow-inner my-3"
                           style={{ gridTemplateColumns: `repeat(${huroofGridSize}, minmax(0, 1fr))` }}
                         >
                           {huroofMatrix.map((row, r) =>
@@ -784,9 +786,9 @@ export const IbnArabiSeals: React.FC = () => {
                       { id: 'abundance', label: langKey === 'ha' ? 'Arziki & Rahama' : langKey === 'en' ? 'Abundance & Mercy' : 'Subsistance & Miséricorde' },
                       { id: 'life', label: langKey === 'ha' ? 'Rayuwa & Farfadowa' : langKey === 'en' ? 'Vitality & Awakening' : 'Souffle Vital & Éveil' },
                       { id: 'victory', label: langKey === 'ha' ? 'Kariya & Nasara' : langKey === 'en' ? 'Protection & Victory' : 'Protection & Victoire' }
-                    ].map((item) => (
+                    ].map((item, itIdx) => (
                       <button
-                        key={item.id}
+                        key={item.id ? `ang-it-${item.id}-${itIdx}` : `ang-it-${itIdx}`}
                         onClick={() => setAngelsIntention(item.id as any)}
                         className={`p-2.5 rounded-xl border text-xs font-medium text-center transition-all ${
                           angelsIntention === item.id
@@ -976,13 +978,13 @@ export const IbnArabiSeals: React.FC = () => {
                             <line x1="25" y1="200" x2="375" y2="200" stroke="#b45309" strokeWidth="1" strokeDasharray="2 2" />
 
                             {/* Outer 4 Cardinal Archangel Seals */}
-                            {ARCHANGELS_DATA.map((ang) => {
+                            {ARCHANGELS_DATA.map((ang, angIdx) => {
                               const rad = (ang.azimuthDeg - 90) * (Math.PI / 180);
                               const x = 200 + 135 * Math.cos(rad);
                               const y = 200 + 135 * Math.sin(rad);
                               const isDominant = angelResonance.dominantAngel.id === ang.id;
                               return (
-                                <g key={ang.id}>
+                                <g key={ang.id ? `archang-g-${ang.id}-${angIdx}` : `archang-g-${angIdx}`}>
                                   <circle 
                                     cx={x} 
                                     cy={y} 
@@ -1012,8 +1014,8 @@ export const IbnArabiSeals: React.FC = () => {
                         </div>
 
                         <div className="grid grid-cols-2 gap-2 w-full max-w-md mx-auto text-xs my-2">
-                          {ARCHANGELS_DATA.map(a => (
-                            <div key={a.id} className="p-2 border border-amber-900/40 rounded-xl bg-amber-100/70 shadow-xs text-left">
+                          {ARCHANGELS_DATA.map((a, aIdx) => (
+                            <div key={a.id ? `archang-d-${a.id}-${aIdx}` : `archang-d-${aIdx}`} className="p-2 border border-amber-900/40 rounded-xl bg-amber-100/70 shadow-xs text-left">
                               <strong className="block text-xs text-amber-950 font-serif">{a.namePhonetic} ({a.nameAr})</strong>
                               <span className="text-[10px] text-amber-900">{langKey === 'ha' ? a.directionHa : langKey === 'en' ? a.directionEn : a.directionFr} • Azimuth {a.azimuthDeg}°</span>
                             </div>
@@ -1035,8 +1037,8 @@ export const IbnArabiSeals: React.FC = () => {
 
                 {/* 4 Pillars Details Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {ARCHANGELS_DATA.map((ang) => (
-                    <div key={ang.id} className="p-3.5 rounded-xl bg-white dark:bg-slate-900/60 border border-stone-200 dark:border-slate-800 space-y-1.5 text-xs shadow-xs">
+                  {ARCHANGELS_DATA.map((ang, aIdx) => (
+                    <div key={ang.id ? `archang-card-${ang.id}-${aIdx}` : `archang-card-${aIdx}`} className="p-3.5 rounded-xl bg-white dark:bg-slate-900/60 border border-stone-200 dark:border-slate-800 space-y-1.5 text-xs shadow-xs">
                       <div className="flex items-center justify-between">
                         <span className="font-bold font-serif text-stone-900 dark:text-slate-100">{ang.namePhonetic} ({ang.nameAr})</span>
                         <span className="text-[11px] font-mono font-bold text-amber-700 dark:text-amber-400">{ang.azimuthDeg.toString().padStart(3, '0')}°</span>
@@ -1105,9 +1107,9 @@ export const IbnArabiSeals: React.FC = () => {
                       { label: "Jāmi' (114)", val: "114" },
                       { label: "Badr (313)", val: "313" },
                       { label: "Kāfī (111)", val: "111" }
-                    ].map((p) => (
+                    ].map((p, pIdx) => (
                       <button
-                        key={p.val}
+                        key={p.val ? `mutaqati-p-${p.val}-${pIdx}` : `mutaqati-p-${pIdx}`}
                         onClick={() => setMutaqatiValue(p.val)}
                         className={`p-2 rounded-xl border text-xs font-medium text-center transition-all ${
                           mutaqatiValue === p.val
@@ -1300,11 +1302,11 @@ export const IbnArabiSeals: React.FC = () => {
                 </span>
               </div>
               <div className="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-10 gap-2">
-                {SHAJARAT_NODES.map((node) => {
+                {SHAJARAT_NODES.map((node, nIdx) => {
                   const isSelected = selectedShajaratNode.id === node.id;
                   return (
                     <button
-                      key={node.id}
+                      key={node.id ? `shaj-btn-${node.id}-${nIdx}` : `shaj-btn-${nIdx}`}
                       onClick={() => handleSelectShajaratNode(node)}
                       className={`flex flex-col items-center justify-center p-2.5 rounded-xl border transition-all cursor-pointer ${
                         isSelected 
@@ -1418,11 +1420,11 @@ export const IbnArabiSeals: React.FC = () => {
                       <path d="M50,38 Q62,30 70,22" stroke="#f59e0b" strokeWidth="1" strokeDasharray="1 1" fill="none" />
 
                       {/* Nodes Map */}
-                      {SHAJARAT_NODES.map((node) => {
+                      {SHAJARAT_NODES.map((node, nIdx) => {
                         const isSelected = selectedShajaratNode.id === node.id;
                         return (
                           <g 
-                            key={node.id} 
+                            key={node.id ? `shaj-g1-${node.id}-${nIdx}` : `shaj-g1-${nIdx}`} 
                             onClick={() => handleSelectShajaratNode(node)} 
                             className="cursor-pointer transition-transform duration-200"
                           >
@@ -1497,11 +1499,11 @@ export const IbnArabiSeals: React.FC = () => {
                             <path d="M50,38 Q62,30 70,22" stroke="#d97706" strokeWidth="1.2" strokeDasharray="1.2 1.2" fill="none" />
 
                             {/* Cosmic Nodes */}
-                            {SHAJARAT_NODES.map((node) => {
+                            {SHAJARAT_NODES.map((node, nIdx) => {
                               const isSelected = selectedShajaratNode.id === node.id;
                               const isPersonal = personalShajaratBranch.node.id === node.id;
                               return (
-                                <g key={node.id}>
+                                <g key={node.id ? `shaj-g2-${node.id}-${nIdx}` : `shaj-g2-${nIdx}`}>
                                   {/* Halo for selected/personal */}
                                   {(isSelected || isPersonal) && (
                                     <circle 
@@ -1850,9 +1852,9 @@ export const IbnArabiSeals: React.FC = () => {
                     {tStrings.pentagramPresetLabel}
                   </label>
                   <div className="space-y-2">
-                    {PENTAGRAM_PRESETS.map((p) => (
+                    {PENTAGRAM_PRESETS.map((p, pIdx) => (
                       <button
-                        key={p.id}
+                        key={p.id ? `penta-p-${p.id}-${pIdx}` : `penta-p-${pIdx}`}
                         onClick={() => setSelectedPentagramPresetId(p.id)}
                         className={`w-full text-left p-3 rounded-xl border text-xs transition-all space-y-1 ${
                           selectedPentagramPresetId === p.id
@@ -2124,7 +2126,7 @@ export const IbnArabiSeals: React.FC = () => {
                 <div className="space-y-4">
                   <h4 className="text-lg font-bold text-center text-amber-950">{tStrings.huroofMatrixTitle}</h4>
                   <div 
-                    className="grid gap-2 max-w-[320px] mx-auto p-4 border-2 border-amber-900 bg-amber-50 rounded-xl"
+                    className="grid gap-1.5 sm:gap-2 w-full max-w-md mx-auto p-2 sm:p-4 border-2 border-amber-900 bg-amber-50 rounded-xl"
                     style={{ gridTemplateColumns: `repeat(${huroofGridSize}, minmax(0, 1fr))` }}
                   >
                     {huroofMatrix.map((row, r) =>
@@ -2145,8 +2147,8 @@ export const IbnArabiSeals: React.FC = () => {
                 <div className="space-y-4 text-center">
                   <h4 className="text-lg font-bold text-amber-950">{tStrings.angelsSealTitle}</h4>
                   <div className="grid grid-cols-2 gap-3 w-full max-w-md mx-auto text-xs">
-                    {ARCHANGELS_DATA.map(a => (
-                      <div key={a.id} className="p-2 border border-amber-800 rounded bg-amber-50">
+                    {ARCHANGELS_DATA.map((a, aIdx) => (
+                      <div key={a.id ? `print-arch-${a.id}-${aIdx}` : `print-arch-${aIdx}`} className="p-2 border border-amber-800 rounded bg-amber-50">
                         <strong className="block text-sm">{a.namePhonetic} ({a.nameAr})</strong>
                         <span>{langKey === 'ha' ? a.directionHa : langKey === 'en' ? a.directionEn : a.directionFr}</span>
                       </div>
@@ -2198,11 +2200,11 @@ export const IbnArabiSeals: React.FC = () => {
                       <path d="M50,38 Q62,30 70,22" stroke="#d97706" strokeWidth="1.2" strokeDasharray="1.2 1.2" fill="none" />
 
                       {/* Cosmic Nodes */}
-                      {SHAJARAT_NODES.map((node) => {
+                      {SHAJARAT_NODES.map((node, nIdx) => {
                         const isSelected = selectedShajaratNode.id === node.id;
                         const isPersonal = personalShajaratBranch.node.id === node.id;
                         return (
-                          <g key={node.id}>
+                          <g key={node.id ? `shaj-print-${node.id}-${nIdx}` : `shaj-print-${nIdx}`}>
                             {(isSelected || isPersonal) && (
                               <circle 
                                 cx={node.x} 

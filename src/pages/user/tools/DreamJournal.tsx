@@ -653,11 +653,11 @@ export const DreamJournal: React.FC = () => {
           </div>
         )}
 
-        {dreams.map(dream => {
+        {dreams.map((dream, dIdx) => {
           const isExpanded = expandedDreamIds.has(dream.id);
           return (
             <motion.div 
-              key={dream.id}
+              key={dream.id ? `dream-${dream.id}-${dIdx}` : `dream-${dIdx}`}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 relative cursor-pointer hover:shadow-md transition-shadow group"

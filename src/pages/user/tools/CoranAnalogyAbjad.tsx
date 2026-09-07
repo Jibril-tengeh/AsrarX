@@ -129,16 +129,16 @@ export const CoranAnalogyAbjad: React.FC = () => {
   return (
     <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 safe-area-pt pb-24 min-h-screen w-full max-w-full overflow-x-hidden min-w-0">
       {/* Header */}
-      <div className="flex items-center gap-4 mb-6">
-        <Link to="/tools" className="p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 transition-colors">
+      <div className="flex items-start gap-3 sm:gap-4 mb-6 shrink-0 w-full min-w-0">
+        <Link to="/tools" className="p-2 -ml-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 transition-colors shrink-0 mt-0.5">
           <ArrowLeft size={24} />
         </Link>
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-            <span>Corresp'Ayāt par Abjad</span>
-            <BookOpen className="w-6 h-6 text-emerald-500" />
+        <div className="min-w-0 flex-1">
+          <h1 className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white flex items-start sm:items-center gap-2 leading-tight">
+            <span className="break-words">Corresp'Ayāt par Abjad</span>
+            <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-500 shrink-0 mt-0.5 sm:mt-0" />
           </h1>
-          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300">
+          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-300 mt-1 break-words">
             {language === 'fr'
               ? 'Recherche d\'Analogie & Versets Coraniques Correspondants au Poids Mystique'
               : language === 'ha'

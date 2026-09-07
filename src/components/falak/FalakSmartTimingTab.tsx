@@ -137,11 +137,11 @@ export const FalakSmartTimingTab: React.FC<FalakSmartTimingTabProps> = ({
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
-          {SPIRITUAL_INTENTIONS.map((intention) => {
+          {SPIRITUAL_INTENTIONS.map((intention, inIdx) => {
             const isSelected = intention.id === selectedIntentionId;
             return (
               <button
-                key={intention.id}
+                key={intention.id ? `intent-${intention.id}-${inIdx}` : `intent-${inIdx}`}
                 onClick={() => setSelectedIntentionId(intention.id)}
                 className={`p-3.5 rounded-2xl border text-left flex flex-col justify-between transition-all cursor-pointer ${
                   isSelected
@@ -255,7 +255,7 @@ export const FalakSmartTimingTab: React.FC<FalakSmartTimingTabProps> = ({
 
               return (
                 <motion.div
-                  key={win.id}
+                  key={win.id ? `gwin-${win.id}-${idx}` : `gwin-${idx}`}
                   initial={{ opacity: 0, y: 12 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: idx * 0.04 }}

@@ -103,10 +103,10 @@ if (typeof window !== 'undefined') {
     console.warn('[Network Monitor] Device status changed: OFFLINE.');
   });
 
-  if (isCapacitorNative || process.env.NODE_ENV === 'development') {
+  if (isCapacitorNative && !isInIframe) {
     setTimeout(() => {
       import('./firestoreDiagnostics').then(m => m.runFirestoreDiagnostics()).catch(() => {});
-    }, 2000);
+    }, 3000);
   }
 }
 

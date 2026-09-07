@@ -9,6 +9,7 @@ import { PremiumBadge } from '../../components/PremiumBadge';
 import { PaystackService } from '../../services/PaystackService';
 import { AuthModal } from '../../components/AuthModal';
 import { useFeatures } from '../../contexts/FeatureContext';
+import { shouldEnablePaystack, isPlayStoreNoticeApplicable } from '../../utils/platformHelper';
 
 type LayoutMode = 'grid1' | 'grid2' | 'list' | 'bento';
 type SortOption = 'Date' | 'Popularité' | 'Alphabétique';
@@ -17,6 +18,8 @@ export const Store: React.FC = () => {
   const { t } = useLanguage();
   const { user } = useAuth();
   const { featureToggles } = useFeatures();
+  const isPlayStoreMode = isPlayStoreNoticeApplicable(featureToggles);
+  const isPaystackEnabled = shouldEnablePaystack(featureToggles);
   const [layoutMode, setLayoutMode] = useState<LayoutMode>('grid2');
 
   useEffect(() => {
@@ -115,6 +118,13 @@ export const Store: React.FC = () => {
       }
       if (paymentMethod === 'crypto') {
         alert("Paiement par crypto-monnaie en cours de configuration. Bientôt disponible !");
+        return;
+      }
+
+      if (!isPaystackEnabled) {
+        alert(isPlayStoreMode 
+          ? "Les paiements directs par passerelle sont désactivés sur la version Play Store. Vous pouvez utiliser vos points spirituels ou activer vos accès via un code promo."
+          : "La passerelle Paystack est temporairement désactivée par l'administrateur.");
         return;
       }
 
@@ -352,9 +362,9 @@ export const Store: React.FC = () => {
                   exit={{ opacity: 0, y: 10 }}
                   className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl shadow-lg z-20 py-1"
                 >
-                  {sortOptions.map(option => (
+                  {sortOptions.map((option, optIdx) => (
                     <button
-                      key={option}
+                      key={`sort-${option}-${optIdx}`}
                       onClick={() => {
                         setSortOption(option);
                         setIsSortOpen(false);
@@ -595,32 +605,53 @@ export const Store: React.FC = () => {
                     )}
                     {selectedProduct.category === 'Abonnements' ? (
                       <div className="flex flex-col flex-1 gap-2">
-                        <button 
-                          onClick={() => handlePurchase(selectedProduct, false, 'paystack')}
-                          className="py-3 bg-[#0BA4DB] text-white rounded-xl font-bold transition-colors shadow-md hover:bg-[#0983AF]"
-                        >
-                          Payer avec Paystack
-                        </button>
-                        <button 
-                          onClick={() => handlePurchase(selectedProduct, false, 'visa')}
-                          className="py-3 bg-[#1434CB] text-white rounded-xl font-bold transition-colors shadow-md hover:bg-[#0F289F]"
-                        >
-                          Payer avec Carte Visa / Mastercard
-                        </button>
-                        <button 
-                          onClick={() => handlePurchase(selectedProduct, false, 'crypto')}
-                          className="py-3 bg-[#F7931A] text-white rounded-xl font-bold transition-colors shadow-md hover:bg-[#D98115]"
-                        >
-                          Payer en Crypto-monnaie
-                        </button>
+                        {isPaystackEnabled ? (
+                          <>
+                            <button 
+                              onClick={() => handlePurchase(selectedProduct, false, 'paystack')}
+                              className="py-3 bg-[#0BA4DB] text-white rounded-xl font-bold transition-colors shadow-md hover:bg-[#0983AF]"
+                            >
+                              Payer avec Paystack
+                            </button>
+                            <button 
+                              onClick={() => handlePurchase(selectedProduct, false, 'visa')}
+                              className="py-3 bg-[#1434CB] text-white rounded-xl font-bold transition-colors shadow-md hover:bg-[#0F289F]"
+                            >
+                              Payer avec Carte Visa / Mastercard
+                            </button>
+                            <button 
+                              onClick={() => handlePurchase(selectedProduct, false, 'crypto')}
+                              className="py-3 bg-[#F7931A] text-white rounded-xl font-bold transition-colors shadow-md hover:bg-[#D98115]"
+                            >
+                              Payer en Crypto-monnaie
+                            </button>
+                          </>
+                        ) : (
+                          <div className="p-4 bg-gray-50 dark:bg-gray-800/80 rounded-xl border border-gray-200 dark:border-gray-700 text-center space-y-1.5">
+                            <p className="text-xs font-bold text-gray-800 dark:text-gray-200">
+                              {isPlayStoreMode 
+                                ? "Souscription directe par passerelle désactivée sur la version Play Store."
+                                : "Paiements par passerelle temporairement désactivés."}
+                            </p>
+                            <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                              Vous pouvez débloquer vos accès via un Code Promotionnel / Code d'Activation ou vos points spirituels.
+                            </p>
+                          </div>
+                        )}
                       </div>
                     ) : (
-                      <button 
-                        onClick={() => handlePurchase(selectedProduct, false)}
-                        className="flex-1 py-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl font-bold text-lg transition-colors flex items-center justify-center gap-2 shadow-md hover:bg-gray-800 dark:hover:bg-gray-100"
-                      >
-                        Acheter ({selectedProduct.price})
-                      </button>
+                      isPaystackEnabled ? (
+                        <button 
+                          onClick={() => handlePurchase(selectedProduct, false)}
+                          className="flex-1 py-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl font-bold text-lg transition-colors flex items-center justify-center gap-2 shadow-md hover:bg-gray-800 dark:hover:bg-gray-100"
+                        >
+                          Acheter ({selectedProduct.price})
+                        </button>
+                      ) : !selectedProduct.pointsCost ? (
+                        <div className="flex-1 p-3 text-center text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 rounded-xl border border-dashed">
+                          Paiement monétaire indisponible sur cette version.
+                        </div>
+                      ) : null
                     )}
                     <div className="flex gap-2">
                       <button 

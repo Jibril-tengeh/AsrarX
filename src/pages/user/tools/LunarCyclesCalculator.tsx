@@ -524,40 +524,45 @@ export const LunarCyclesCalculator: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-indigo-950/40 to-slate-950 text-slate-100 py-8 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-indigo-950/40 to-slate-950 text-slate-100 py-8 px-4 sm:px-6 lg:px-8 overflow-x-hidden">
       <div className="max-w-7xl mx-auto space-y-6">
         
         {/* Top Header & Navigation */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-indigo-900/40">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-indigo-900/40">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
             <Link
               to="/tools"
-              className="p-2.5 rounded-2xl bg-indigo-950/60 hover:bg-indigo-900/60 border border-indigo-800/50 text-indigo-300 hover:text-white transition-all shadow-sm flex items-center gap-2 text-sm"
+              className="p-2.5 rounded-2xl bg-indigo-950/60 hover:bg-indigo-900/60 border border-indigo-800/50 text-indigo-300 hover:text-white transition-all shadow-sm flex items-center gap-2 text-sm shrink-0"
+              title="Retour aux Outils"
             >
               <ArrowLeft className="w-4 h-4" />
               <span className="hidden sm:inline">Retour aux Outils</span>
             </Link>
-            <div>
+            <div className="min-w-0 flex-1">
               <h1 className="text-xl sm:text-2xl font-black text-white flex items-center gap-2">
-                <Moon className="w-6 h-6 text-amber-400 fill-amber-400/20" />
-                {t.title}
-                <ToolInfoTooltip title={t.title} content={t.subtitle} />
+                <Moon className="w-6 h-6 text-amber-400 fill-amber-400/20 shrink-0" />
+                <span className="break-words">{t.title}</span>
               </h1>
-              <p className="text-xs sm:text-sm text-indigo-300/80 mt-0.5">
+              <p className="text-xs sm:text-sm text-indigo-300/80 mt-0.5 break-words">
                 {t.subtitle}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
             <button
               onClick={() => setShowParchmentModal(true)}
-              className="px-4 py-2 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold text-xs sm:text-sm flex items-center gap-2 shadow-lg shadow-amber-500/20 transition-all cursor-pointer"
+              className="px-4 py-2 rounded-2xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 font-bold text-xs sm:text-sm flex items-center gap-2 shadow-lg shadow-amber-500/20 transition-all cursor-pointer whitespace-nowrap"
             >
               <Download className="w-4 h-4" />
               {t.exportParchment}
             </button>
           </div>
+        </div>
+
+        {/* Interpretation Guide Tooltip */}
+        <div className="w-full max-w-full overflow-hidden">
+          <ToolInfoTooltip toolId="lunar-cycles" title={t.title} content={t.subtitle} />
         </div>
 
         {/* Date Selector & Quick Navigation Bar */}
@@ -1065,13 +1070,13 @@ export const LunarCyclesCalculator: React.FC = () => {
 
               {/* Clickable Intention Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {(['jalb', 'kashf', 'tathir', 'khalwa'] as const).map((key) => {
+                {(['jalb', 'kashf', 'tathir', 'khalwa'] as const).map((key, kIdx) => {
                   const item = t.intentions[key];
                   const isSelected = selectedIntention === key;
 
                   return (
                     <button
-                      key={key}
+                      key={`lunar-int-${key}-${kIdx}`}
                       type="button"
                       onClick={() => setSelectedIntention(key)}
                       className={`p-5 rounded-2xl text-left transition-all cursor-pointer border ${
@@ -1130,8 +1135,8 @@ export const LunarCyclesCalculator: React.FC = () => {
                     onChange={(e) => setSelectedYear(Number(e.target.value))}
                     className="px-3 py-1.5 rounded-xl bg-indigo-950 border border-indigo-700/50 text-xs font-mono font-bold text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
                   >
-                    {[2025, 2026, 2027, 2028, 2029, 2030].map((y) => (
-                      <option key={y} value={y}>{y}</option>
+                    {[2025, 2026, 2027, 2028, 2029, 2030].map((y, yIdx) => (
+                      <option key={`lunar-yr-${y}-${yIdx}`} value={y}>{y}</option>
                     ))}
                   </select>
                 </div>

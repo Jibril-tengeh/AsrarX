@@ -1230,11 +1230,11 @@ export const KhatimGenerator: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-3 sm:grid-cols-9 gap-1.5 sm:gap-2">
-              {activeDoorList.map((door) => {
+              {activeDoorList.map((door, dIdx) => {
                 const nameText = langKey === 'en' ? door.nameEn : door.nameFr;
                 return (
                   <button
-                    key={door.id}
+                    key={door.id ? `khatim-door-${door.id}-${dIdx}` : `khatim-door-${dIdx}`}
                     type="button"
                     onClick={() => setSelectedDoor(door.id)}
                     className={`py-2 px-1 rounded-xl text-center border transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${
@@ -1283,13 +1283,13 @@ export const KhatimGenerator: React.FC = () => {
             </label>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 max-h-[280px] overflow-y-auto pr-1">
-              {VERSETS_BESOINS_PRESETS.map((preset) => {
+              {VERSETS_BESOINS_PRESETS.map((preset, pIdx) => {
                 const isSelected = selectedPreset?.id === preset.id;
                 const titleText = langKey === 'en' ? preset.titleEn : preset.titleFr;
                 const descText = langKey === 'en' ? preset.descriptionEn : preset.descriptionFr;
                 return (
                   <button
-                    key={preset.id}
+                    key={preset.id ? `vb-preset-${preset.id}-${pIdx}` : `vb-preset-${pIdx}`}
                     type="button"
                     onClick={() => handleSelectPreset(preset)}
                     className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between gap-1.5 ${
@@ -1710,9 +1710,9 @@ export const KhatimGenerator: React.FC = () => {
               { size: 10, name: 'Mu\'ashshar', ar: 'المعشر' },
               { size: 11, name: 'Ahada \'Ashari', ar: 'الحادي عشر' },
               { size: 12, name: 'Ithna \'Ashari', ar: 'الثاني عشر' },
-            ].map(({ size, name, ar }) => (
+            ].map(({ size, name, ar }, sIdx) => (
               <button
-                key={size}
+                key={`khatim-sz-${size}-${sIdx}`}
                 type="button"
                 onClick={() => setGridSize(size)}
                 className={`py-2 px-1.5 rounded-xl text-xs font-bold border transition-all duration-200 text-center flex flex-col items-center justify-center gap-0.5 cursor-pointer ${
@@ -1869,9 +1869,9 @@ export const KhatimGenerator: React.FC = () => {
                     { label: i18n.presetStandard, val: 0 },
                     { label: i18n.presetRecommended, val: 30 },
                     { label: i18n.presetMax, val: 50 },
-                  ].map((preset) => (
+                  ].map((preset, pIdx) => (
                     <button
-                      key={preset.val}
+                      key={`ln-preset-${preset.val}-${pIdx}`}
                       type="button"
                       onClick={() => handleLongNamesReductionChange(preset.val)}
                       className={`py-1.5 px-1.5 rounded-xl text-[10px] sm:text-[11px] font-bold border transition-all cursor-pointer text-center ${

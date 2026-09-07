@@ -4,13 +4,14 @@ import {
   FolderOpen, Sparkles, Shield, BookOpen, Heart, Key,
   Compass, Moon, Sun, Flame, Feather, Coins, Star, Volume2,
   ArrowRight, Tag, Layers, Search, Crown, LayoutGrid, Square,
-  LayoutList, Check
+  LayoutList, Check, Grid2X2
 } from 'lucide-react';
 import { CategoryItem } from '../../types';
-import { getCategoryFallbackThumbnail, getCategoryFallbackHook } from '../../data/defaultCategories';
+import { getCategoryFallbackThumbnail, getCategoryFallbackHook, STANDARD_SCREENSHOT_CATEGORIES } from '../../data/defaultCategories';
 import { sanitizeImageSource } from '../../utils/articleImageUtils';
+import { CategoryDynamicIcon, CategoryVideoOrIconBadge } from '../common/CategoryDynamicIcon';
 
-export type HomeCategoryLayoutMode = 'grid2' | 'banner' | 'list';
+export type HomeCategoryLayoutMode = 'grid4' | 'grid2' | 'banner' | 'list';
 
 interface HomeCategoriesGridProps {
   categories: CategoryItem[];
@@ -29,10 +30,11 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
   searchQuery = '',
   featureToggles = {}
 }) => {
-  // Configured layout mode from Admin settings: 'grid2' | 'banner' | 'list'
+  // Configured layout mode from Admin settings: 'grid4' (default, matches screenshot) | 'grid2' | 'banner' | 'list'
   const adminLayoutMode: HomeCategoryLayoutMode = 
     featureToggles?.home_categories_layout_mode === 'banner' ? 'banner' :
-    featureToggles?.home_categories_layout_mode === 'list' ? 'list' : 'grid2';
+    featureToggles?.home_categories_layout_mode === 'list' ? 'list' :
+    featureToggles?.home_categories_layout_mode === 'grid2' ? 'grid2' : 'grid4';
 
   const [activeLayoutMode, setActiveLayoutMode] = useState<HomeCategoryLayoutMode>(adminLayoutMode);
 
@@ -43,24 +45,9 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
     }
   }, [featureToggles?.home_categories_layout_mode]);
 
-  // Helper icon renderer
+  // Helper icon renderer - dynamically supports 520+ SVG icons
   const renderIcon = (name?: string, size = 18, className = '') => {
-    switch (name) {
-      case 'Sparkles': return <Sparkles size={size} className={className} />;
-      case 'Shield': return <Shield size={size} className={className} />;
-      case 'BookOpen': return <BookOpen size={size} className={className} />;
-      case 'Heart': return <Heart size={size} className={className} />;
-      case 'Key': return <Key size={size} className={className} />;
-      case 'Compass': return <Compass size={size} className={className} />;
-      case 'Moon': return <Moon size={size} className={className} />;
-      case 'Sun': return <Sun size={size} className={className} />;
-      case 'Flame': return <Flame size={size} className={className} />;
-      case 'Feather': return <Feather size={size} className={className} />;
-      case 'Coins': return <Coins size={size} className={className} />;
-      case 'Star': return <Star size={size} className={className} />;
-      case 'Volume2': return <Volume2 size={size} className={className} />;
-      default: return <FolderOpen size={size} className={className} />;
-    }
+    return <CategoryDynamicIcon name={name || 'FolderOpen'} size={size} className={className} />;
   };
 
   // Article count helper
@@ -79,38 +66,180 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
     return (articleCounts[catNameLower] || 0) + (articleCounts[catIdLower] || 0);
   };
 
-  // Filter categories by search if provided
+  // Filter categories by search if provided & deduplicate strictly
   const filteredCategories = useMemo(() => {
-    if (!searchQuery.trim()) return categories;
-    const q = searchQuery.toLowerCase().trim();
-    return categories.filter(cat => {
-      const nameMatch = (cat.name || '').toLowerCase().includes(q)
-        || (cat.name_en || '').toLowerCase().includes(q)
-        || (cat.name_ha || '').toLowerCase().includes(q);
-      const hookMatch = (cat.hook || '').toLowerCase().includes(q)
-        || (cat.hook_en || '').toLowerCase().includes(q)
-        || (cat.hook_ha || '').toLowerCase().includes(q);
-      const subMatch = (cat.subCategories || []).some(sub =>
-        (sub.name || '').toLowerCase().includes(q) || (sub.hook || '').toLowerCase().includes(q)
-      );
-      return nameMatch || hookMatch || subMatch;
+    let list = categories;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      list = categories.filter(cat => {
+        const nameMatch = (cat.name || '').toLowerCase().includes(q)
+          || (cat.name_en || '').toLowerCase().includes(q)
+          || (cat.name_ha || '').toLowerCase().includes(q);
+        const hookMatch = (cat.hook || '').toLowerCase().includes(q)
+          || (cat.hook_en || '').toLowerCase().includes(q)
+          || (cat.hook_ha || '').toLowerCase().includes(q);
+        const subMatch = (cat.subCategories || []).some(sub =>
+          (sub.name || '').toLowerCase().includes(q) || (sub.hook || '').toLowerCase().includes(q)
+        );
+        return nameMatch || hookMatch || subMatch;
+      });
+    }
+
+    const seen = new Set<string>();
+    return list.filter((cat, idx) => {
+      const uniqueKey = (cat.id || cat.name || `cat-idx-${idx}`).toString().trim().toLowerCase();
+      if (seen.has(uniqueKey)) return false;
+      seen.add(uniqueKey);
+      return true;
     });
   }, [categories, searchQuery]);
+
+  // Combined canonical screenshot categories + any user-created custom categories for Grid 4
+  const grid4Items = useMemo(() => {
+    const canonical = STANDARD_SCREENSHOT_CATEGORIES.map(item => {
+      let displayName = item.name;
+      if (language === 'en' && item.name_en) displayName = item.name_en;
+      if (language === 'ha' && item.name_ha) displayName = item.name_ha;
+      return {
+        ...item,
+        displayName,
+        isCanonical: true
+      };
+    });
+
+    // Check for any categories in `categories` not covered by canonical
+    const extraCustom: any[] = [];
+    (categories || []).forEach(cat => {
+      const catNameLower = (cat.name || '').toLowerCase().trim();
+      const catIdLower = (cat.id || '').toLowerCase().trim();
+      const alreadyExists = canonical.some(c => 
+        c.id === catIdLower || 
+        c.name.toLowerCase().trim() === catNameLower ||
+        (catNameLower && c.id.includes(catNameLower)) ||
+        (catIdLower && c.name.toLowerCase().includes(catIdLower))
+      );
+      if (!alreadyExists && cat.id !== 'all' && cat.id !== 'offline') {
+        let displayName = cat.name;
+        if (language === 'en' && cat.name_en) displayName = cat.name_en;
+        if (language === 'ha' && cat.name_ha) displayName = cat.name_ha;
+        extraCustom.push({
+          ...cat,
+          displayName,
+          theme: cat.iconName ? cat.iconName.toLowerCase() : 'custom',
+          isCanonical: false
+        });
+      }
+    });
+
+    const combined = [...canonical, ...extraCustom];
+
+    if (!searchQuery.trim()) {
+      return combined;
+    }
+
+    const q = searchQuery.toLowerCase().trim();
+    return combined.filter(item => 
+      (item.displayName || '').toLowerCase().includes(q) ||
+      (item.name || '').toLowerCase().includes(q) ||
+      (item.hook || '').toLowerCase().includes(q)
+    );
+  }, [categories, language, searchQuery]);
+
+  // Helper to map category to its high-definition looping video asset (Seamless, zero-flicker WebP video stream)
+  const getCategoryVideoUrl = (cat: any): string => {
+    if (cat.videoUrl) {
+      return cat.videoUrl.replace(/\.mp4$/, '.webp');
+    }
+    const theme = (cat.theme || cat.id || cat.name || '').toString().toLowerCase().trim();
+
+    if (theme.includes('verset') && theme.includes('protect')) return '/videos/categories/versets-protection.webp';
+    if (theme.includes('verset')) return '/videos/categories/versets-protection.webp';
+    if (theme.includes('azkar') || theme.includes('dhikr') || theme.includes('zikr')) return '/videos/categories/azkar.webp';
+    if (theme.includes('wird') || theme.includes('awrad')) return '/videos/categories/wird.webp';
+    if (theme.includes('ruqyah') || theme.includes('guerison') || theme.includes('healing')) return '/videos/categories/ruqyah.webp';
+    if (theme.includes('doua') || theme.includes('du\'a') || theme.includes('dua') || theme.includes('addua') || theme.includes('invocation')) return '/videos/categories/douas.webp';
+    if (theme.includes('ouverture') || theme.includes('opening') || theme.includes('bude') || theme.includes('fath')) return '/videos/categories/ouvertures.webp';
+    if (theme.includes('elevation') || theme.includes('daukaka')) return '/videos/categories/elevation.webp';
+    if (theme.includes('sihr') || theme.includes('oeil') || theme.includes('evil') || theme.includes('sorcellerie')) return '/videos/categories/sihr-mauvais-oeil.webp';
+    if (theme.includes('provision') || theme.includes('richesse') || theme.includes('argent') || theme.includes('arziki') || theme.includes('rizq')) return '/videos/categories/provisions.webp';
+    if (theme.includes('deblocage') || theme.includes('uncrossing') || theme.includes('warware')) return '/videos/categories/deblocage.webp';
+    if (theme.includes('favori') || theme.includes('favorite')) return '/videos/categories/favoris.webp';
+    if (theme.includes('asrar') || theme.includes('secret') || theme.includes('khatim')) return '/videos/categories/secrets-asrar.webp';
+    if (theme.includes('recette') || theme.includes('spirituelle') || theme.includes('pratique') || theme.includes('formule')) return '/videos/categories/recettes-spirituelles.webp';
+    if (theme.includes('protect')) return '/videos/categories/protection.webp';
+
+    // Direct match against known category files
+    const directId = (cat.id || '').toLowerCase();
+    const knownIds = ['versets-protection', 'azkar', 'wird', 'ruqyah', 'douas', 'ouvertures', 'elevation', 'protection', 'sihr-mauvais-oeil', 'provisions', 'deblocage', 'favoris', 'secrets-asrar', 'recettes-spirituelles', 'protections'];
+    if (knownIds.includes(directId)) {
+      return `/videos/categories/${directId}.webp`;
+    }
+
+    return '/videos/categories/default.webp';
+  };
+
+  // Category Badge Icon renderer: Professional video badge or animated SVG badge (100% fluid, zero flicker)
+  const renderCategoryBadge = (cat: any, size: 'sm' | 'md' | 'lg' = 'md') => {
+    const videoUrl = cat.videoUrl || getCategoryVideoUrl(cat);
+    return (
+      <CategoryVideoOrIconBadge
+        iconName={cat.iconName}
+        videoUrl={videoUrl}
+        categoryName={cat.displayName || cat.name}
+        size={size}
+      />
+    );
+  };
 
   const showHooks = featureToggles?.home_categories_show_hooks !== false;
   const showCounts = featureToggles?.home_categories_show_counts !== false;
   const showSubCounts = featureToggles?.home_categories_show_sub_counts !== false;
 
   const headerTitle = featureToggles?.home_categories_custom_title || (
-    language === 'en' ? 'Sacred Knowledge & Themes' :
-    language === 'ha' ? 'Bangarorin Ilimi & Sirrika' :
-    'Thématiques & Savoirs Sacrés'
+    activeLayoutMode === 'grid4'
+      ? (language === 'en' ? 'Categories' : language === 'ha' ? 'Bangarori' : 'Catégories')
+      : (language === 'en' ? 'Sacred Knowledge & Themes' : language === 'ha' ? 'Bangarorin Ilimi & Sirrika' : 'Thématiques & Savoirs Sacrés')
   );
 
   const headerSubtitle = featureToggles?.home_categories_custom_subtitle || (
     language === 'en' ? 'Explore authentic secrets, invocations, and spiritual practices classified by domain.' :
     language === 'ha' ? 'Bincika ingantattun sirrika, addu\'o\'i da ayyukan ibada na musamman.' :
     'Explorez nos secrets, invocations et pratiques spirituelles authentiques classés par domaines.'
+  );
+
+  /* ========================================================================= */
+  /* MODEL 4: GRILLE 4 COLONNES & VIDÉOS RÉELLES                               */
+  /* ========================================================================= */
+  const renderGrid4Layout = () => (
+    <div className="grid grid-cols-4 gap-2 sm:gap-3 md:gap-3.5 w-full">
+      {grid4Items.map((cat, idx) => {
+        return (
+          <motion.div
+            key={cat.id ? `cat-grid4-${cat.id}-${idx}` : `cat-grid4-${idx}`}
+            whileHover={{ y: -4, scale: 1.03 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => {
+              if (cat.id === 'favoris') {
+                onSelectCategory({ id: 'favoris', name: 'Favoris' } as any);
+              } else {
+                onSelectCategory(cat as any);
+              }
+            }}
+            className="relative bg-white dark:bg-gray-850 rounded-2xl sm:rounded-3xl p-2 sm:p-2.5 pt-3 pb-2.5 border border-gray-200/90 dark:border-gray-700/80 hover:border-emerald-500/70 dark:hover:border-emerald-400/70 shadow-xs hover:shadow-md transition-all duration-300 flex flex-col items-center justify-between text-center cursor-pointer min-h-[114px] sm:min-h-[126px] group overflow-hidden"
+          >
+            {/* Vraie Vidéo Professionnelle */}
+            <div className="relative z-10 w-11 h-11 sm:w-12 sm:h-12 flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-110">
+              {renderCategoryBadge(cat)}
+            </div>
+
+            {/* Titre */}
+            <span className="relative z-10 text-[11px] sm:text-xs font-extrabold text-gray-900 dark:text-gray-100 text-center leading-tight line-clamp-2 mt-1.5 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+              {cat.displayName}
+            </span>
+          </motion.div>
+        );
+      })}
+    </div>
   );
 
   /* ========================================================================= */
@@ -136,11 +265,11 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
 
         return (
           <motion.div
-            key={cat.id || `cat-grid-${idx}`}
+            key={cat.id ? `cat-grid-${cat.id}-${idx}` : `cat-grid-${idx}`}
             whileHover={{ y: -3 }}
             whileTap={{ scale: 0.97 }}
             onClick={() => onSelectCategory(cat)}
-            className="group relative cursor-pointer overflow-hidden rounded-2xl sm:rounded-3xl border border-gray-200/80 dark:border-gray-800 bg-gray-950 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between min-h-[220px] sm:min-h-[260px] md:min-h-[290px]"
+            className="group relative cursor-pointer overflow-hidden rounded-2xl sm:rounded-3xl border border-gray-200/80 dark:border-gray-800 hover:border-emerald-500/60 dark:hover:border-emerald-500/60 bg-gray-950 shadow-md hover:shadow-xl transition-all duration-300 flex flex-col justify-between min-h-[220px] sm:min-h-[260px] md:min-h-[290px]"
           >
             {/* Full-bleed Thumbnail Image */}
             <div className="absolute inset-0 z-0 overflow-hidden">
@@ -156,10 +285,10 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
               <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-950/65 to-black/30 group-hover:via-gray-950/75 transition-colors duration-300" />
             </div>
 
-            {/* Top Section: Icon & Counts */}
+            {/* Top Section: Video Badge & Counts */}
             <div className="relative z-10 p-2.5 sm:p-3.5 flex items-start justify-between gap-1.5">
-              <div className="p-2 sm:p-2.5 rounded-xl sm:rounded-2xl bg-white/20 hover:bg-white/30 backdrop-blur-md text-white border border-white/25 shadow-md flex items-center justify-center transition-colors">
-                {renderIcon(cat.iconName, 18, 'text-emerald-300')}
+              <div className="transition-transform duration-300 group-hover:scale-110">
+                {renderCategoryBadge(cat, 'sm')}
               </div>
 
               {showCounts && (
@@ -210,7 +339,7 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
   );
 
   /* ========================================================================= */
-  /* MODEL 2: GRANDE CARTE / BANNIÈRE 1 COLONNE (Screenshot 1)                 */
+  /* MODEL 2: GRANDE CARTE / BANNIÈRE 1 COLONNE AVEC LUMIÈRE D'OR              */
   /* ========================================================================= */
   const renderBannerLayout = () => (
     <div className="space-y-4 sm:space-y-6 w-full max-w-4xl mx-auto">
@@ -232,11 +361,11 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
 
         return (
           <motion.div
-            key={cat.id || `cat-banner-${idx}`}
+            key={cat.id ? `cat-banner-${cat.id}-${idx}` : `cat-banner-${idx}`}
             whileHover={{ y: -3 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => onSelectCategory(cat)}
-            className="group cursor-pointer overflow-hidden rounded-2xl sm:rounded-3xl border border-gray-200/80 dark:border-gray-800 bg-white dark:bg-gray-850 shadow-xs hover:shadow-xl transition-all duration-300"
+            className="group cursor-pointer overflow-hidden rounded-2xl sm:rounded-3xl border border-gray-200 dark:border-gray-800 hover:border-emerald-500/60 dark:hover:border-emerald-500/60 bg-white dark:bg-gray-850 shadow-md hover:shadow-xl transition-all duration-300"
           >
             {/* Top Large Banner Image with Overlay */}
             <div className="relative h-52 xs:h-60 sm:h-72 md:h-80 w-full overflow-hidden bg-gray-900">
@@ -251,10 +380,13 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
               />
               <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-950/40 to-black/30 group-hover:via-gray-950/50 transition-colors duration-300" />
 
-              {/* Top-Left Badge: Floating Pill like "Verses & Wirds" */}
+              {/* Top-Left Badge: Video Badge + Floating Pill */}
               <div className="absolute top-3 left-3 sm:top-4 sm:left-4 z-10 flex items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/65 hover:bg-black/80 backdrop-blur-md text-white border border-white/20 text-xs sm:text-sm font-bold shadow-sm">
-                  <Crown size={14} className="text-amber-400 shrink-0" />
+                <div className="scale-90 origin-left">
+                  {renderCategoryBadge(cat, 'sm')}
+                </div>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/65 hover:bg-black/80 backdrop-blur-md text-white border border-white/20 text-xs sm:text-sm font-bold shadow-xs">
+                  <Crown size={14} className="text-emerald-400 shrink-0" />
                   <span>{displayName}</span>
                 </span>
               </div>
@@ -306,7 +438,7 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
   );
 
   /* ========================================================================= */
-  /* MODEL 3: LISTE HORIZONTALE COMPACTE (Screenshot 2)                       */
+  /* MODEL 3: LISTE HORIZONTALE COMPACTE AVEC LUMIÈRE D'OR                     */
   /* ========================================================================= */
   const renderListLayout = () => (
     <div className="space-y-3 sm:space-y-3.5 w-full max-w-4xl mx-auto">
@@ -328,11 +460,11 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
 
         return (
           <motion.div
-            key={cat.id || `cat-list-${idx}`}
+            key={cat.id ? `cat-list-${cat.id}-${idx}` : `cat-list-${idx}`}
             whileHover={{ y: -2 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => onSelectCategory(cat)}
-            className="group cursor-pointer overflow-hidden rounded-2xl sm:rounded-3xl border border-gray-200/90 dark:border-gray-800 bg-white dark:bg-gray-850 shadow-xs hover:shadow-lg transition-all duration-300 flex flex-row items-stretch"
+            className="group cursor-pointer overflow-hidden rounded-2xl sm:rounded-3xl border border-gray-200 dark:border-gray-800 hover:border-emerald-500/60 dark:hover:border-emerald-500/60 bg-white dark:bg-gray-850 shadow-md hover:shadow-xl transition-all duration-300 flex flex-row items-stretch"
           >
             {/* Left Thumbnail with Badge Overlay (Exact style of Screenshot 2) */}
             <div className="w-28 xs:w-36 sm:w-44 md:w-48 shrink-0 relative overflow-hidden bg-gray-900 rounded-l-2xl sm:rounded-l-3xl">
@@ -347,10 +479,13 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30" />
 
-              {/* Badge on Thumbnail: Pill like "Verses & ..." */}
-              <div className="absolute top-2 left-2 sm:top-2.5 sm:left-2.5 z-10">
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/65 backdrop-blur-md text-white border border-white/20 text-[10px] sm:text-[11px] font-bold shadow-xs max-w-[100px] xs:max-w-[130px] sm:max-w-none truncate">
-                  <Crown size={11} className="text-amber-400 shrink-0" />
+              {/* Badge on Thumbnail: Video Badge + Pill */}
+              <div className="absolute top-2 left-2 sm:top-2.5 sm:left-2.5 z-10 flex items-center gap-1.5">
+                <div className="scale-75 origin-left">
+                  {renderCategoryBadge(cat, 'sm')}
+                </div>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-black/65 backdrop-blur-md text-white border border-white/20 text-[10px] sm:text-[11px] font-bold shadow-xs max-w-[90px] xs:max-w-[120px] sm:max-w-none truncate">
+                  <Crown size={11} className="text-emerald-400 shrink-0" />
                   <span className="truncate">{displayName}</span>
                 </span>
               </div>
@@ -422,15 +557,29 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
             <div className="flex items-center bg-gray-100 dark:bg-gray-800 p-1 rounded-2xl border border-gray-200/70 dark:border-gray-700">
               <button
                 type="button"
+                onClick={() => setActiveLayoutMode('grid4')}
+                className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                  activeLayoutMode === 'grid4'
+                    ? 'bg-white dark:bg-gray-700 text-emerald-600 dark:text-emerald-400 shadow-xs'
+                    : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
+                }`}
+                title="Modèle 1 : Grille 4 Colonnes (Icônes & Badges)"
+              >
+                <LayoutGrid size={14} />
+                <span className="hidden md:inline">4 Cols</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => setActiveLayoutMode('grid2')}
                 className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
                   activeLayoutMode === 'grid2'
                     ? 'bg-white dark:bg-gray-700 text-emerald-600 dark:text-emerald-400 shadow-xs'
                     : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
                 }`}
-                title="Modèle 1 : Grille 2 Colonnes"
+                title="Modèle 2 : Grille 2 Colonnes"
               >
-                <LayoutGrid size={14} />
+                <Grid2X2 size={14} />
                 <span className="hidden md:inline">2 Cols</span>
               </button>
 
@@ -442,7 +591,7 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
                     ? 'bg-white dark:bg-gray-700 text-emerald-600 dark:text-emerald-400 shadow-xs'
                     : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
                 }`}
-                title="Modèle 2 : Grande Carte / Bannière (1 Colonne)"
+                title="Modèle 3 : Grande Carte / Bannière (1 Colonne)"
               >
                 <Square size={14} />
                 <span className="hidden md:inline">Bannière</span>
@@ -456,7 +605,7 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
                     ? 'bg-white dark:bg-gray-700 text-emerald-600 dark:text-emerald-400 shadow-xs'
                     : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
                 }`}
-                title="Modèle 3 : Liste Horizontale"
+                title="Modèle 4 : Liste Horizontale"
               >
                 <LayoutList size={14} />
                 <span className="hidden md:inline">Liste</span>
@@ -466,7 +615,7 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
             {/* Metrics Chips */}
             <div className="flex items-center gap-1.5 text-[11px] font-bold text-gray-500 dark:text-gray-400">
               <span className="px-2.5 py-1 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200/60 dark:border-gray-700">
-                {categories.length} {language === 'en' ? 'Categories' : language === 'ha' ? 'Bangarori' : 'Catégories'}
+                {activeLayoutMode === 'grid4' ? grid4Items.length : categories.length} {language === 'en' ? 'Categories' : language === 'ha' ? 'Bangarori' : 'Catégories'}
               </span>
               <span className="px-2.5 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/40">
                 {articles.length} {language === 'en' ? 'Articles' : language === 'ha' ? 'Rubuce-rubuce' : 'Articles'}
@@ -477,9 +626,27 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
       </div>
 
       {/* Categories Content Rendering based on activeLayoutMode */}
-      {filteredCategories.length === 0 ? (
+      {activeLayoutMode === 'grid4' ? (
+        grid4Items.length === 0 ? (
+          <div className="p-8 text-center bg-white dark:bg-gray-800/60 rounded-3xl border border-gray-100 dark:border-gray-700/60 my-6">
+            <div className="w-14 h-14 mx-auto rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-3">
+              <Search size={24} />
+            </div>
+            <h4 className="text-sm font-bold text-gray-900 dark:text-white">
+              {language === 'en' ? 'No category found' : language === 'ha' ? 'Ba a sami bangare ba' : 'Aucune catégorie trouvée'}
+            </h4>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              {searchQuery
+                ? (language === 'en' ? `No matching category for "${searchQuery}".` : `Aucune catégorie ne correspond à "${searchQuery}".`)
+                : (language === 'en' ? 'No categories available currently.' : 'Aucune catégorie disponible pour le moment.')}
+            </p>
+          </div>
+        ) : (
+          renderGrid4Layout()
+        )
+      ) : filteredCategories.length === 0 ? (
         <div className="p-8 text-center bg-white dark:bg-gray-800/60 rounded-3xl border border-gray-100 dark:border-gray-700/60 my-6">
-          <div className="w-14 h-14 mx-auto rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-500 flex items-center justify-center mb-3">
+          <div className="w-14 h-14 mx-auto rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-3">
             <Search size={24} />
           </div>
           <h4 className="text-sm font-bold text-gray-900 dark:text-white">

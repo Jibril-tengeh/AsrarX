@@ -40,9 +40,9 @@ export const ParchmentExporterModal: React.FC<ParchmentExporterModalProps> = ({
     try {
       const el = parchmentRef.current;
       
-      // Calculate true natural unconstrained dimensions
-      const fullWidth = Math.ceil(Math.max(el.scrollWidth, el.offsetWidth, el.clientWidth, 540));
-      const fullHeight = Math.ceil(Math.max(el.scrollHeight, el.offsetHeight, el.clientHeight));
+      // Calculate true natural unconstrained dimensions based on element
+      const fullWidth = Math.ceil(Math.max(el.scrollWidth, el.offsetWidth, el.clientWidth, el.getBoundingClientRect().width));
+      const fullHeight = Math.ceil(Math.max(el.scrollHeight, el.offsetHeight, el.clientHeight, el.getBoundingClientRect().height));
 
       const canvas = await exportElementToCanvas(el, '#fef3c7', { 
         pixelRatio: 2.5,
@@ -143,10 +143,10 @@ export const ParchmentExporterModal: React.FC<ParchmentExporterModalProps> = ({
           </div>
 
           {/* Renderable Parchment Canvas Container */}
-          <div className="p-4 sm:p-6 overflow-y-auto max-h-[75vh] flex justify-center">
+          <div className="p-2 sm:p-6 overflow-y-auto max-h-[75vh] flex justify-center w-full">
             <div
               ref={parchmentRef}
-              className="w-full max-w-xl p-6 sm:p-8 rounded-2xl bg-amber-50 text-amber-950 border-4 border-double border-amber-700/60 shadow-inner relative overflow-hidden font-serif"
+              className="w-full max-w-xl p-3.5 sm:p-8 rounded-2xl bg-amber-50 text-amber-950 border-4 border-double border-amber-700/60 shadow-inner relative overflow-hidden font-serif"
               style={{
                 backgroundColor: '#fef3c7',
                 color: '#451a03',
@@ -165,24 +165,24 @@ export const ParchmentExporterModal: React.FC<ParchmentExporterModalProps> = ({
               <div className="absolute bottom-2 right-2 text-amber-800/40 text-lg select-none">✦</div>
 
               {/* Bismillah Header */}
-              <div className="text-center mb-6">
-                <p className="font-uthmani text-xs sm:text-sm text-[#5c2406] font-bold tracking-wider mb-1 bg-[#fde68a]/90 border border-[#b45309]/50 px-4 py-1 rounded-xl inline-block shadow-sm">
+              <div className="text-center mb-4 sm:mb-6">
+                <p className="font-uthmani text-xs sm:text-sm text-[#5c2406] font-bold tracking-wider mb-1 bg-[#fde68a]/90 border border-[#b45309]/50 px-3 sm:px-4 py-1 rounded-xl inline-block shadow-sm">
                   بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ
                 </p>
-                <p className="text-xs text-amber-800/80 font-mono tracking-widest uppercase">
+                <p className="text-[11px] sm:text-xs text-amber-800/80 font-mono tracking-widest uppercase">
                   {t('parchmentModal.sacredTreatiseSubtitle', 'AsrarHub Traité Sacré & Fiche Rituelle')}
                 </p>
                 <div className="w-24 h-0.5 bg-gradient-to-r from-transparent via-amber-700 to-transparent mx-auto mt-2" />
               </div>
 
               {/* Title & Metadata */}
-              <div className="text-center mb-6">
-                <h2 className="text-lg sm:text-xl font-extrabold text-amber-950 uppercase tracking-wide">
+              <div className="text-center mb-4 sm:mb-6">
+                <h2 className="text-base sm:text-xl font-extrabold text-amber-950 uppercase tracking-wide">
                   {title}
                 </h2>
                 {subtitle && <p className="text-xs italic text-amber-800 mt-1">{subtitle}</p>}
                 {(recipientName || abjadWeight) && (
-                  <div className="flex justify-center items-center gap-4 mt-3 text-xs text-amber-900 bg-amber-200/50 py-1.5 px-4 rounded-full max-w-fit mx-auto border border-amber-400/40 font-sans font-medium">
+                  <div className="flex justify-center items-center gap-2 sm:gap-4 mt-2 sm:mt-3 text-xs text-amber-900 bg-amber-200/50 py-1 px-3 sm:px-4 rounded-full max-w-fit mx-auto border border-amber-400/40 font-sans font-medium">
                     {recipientName && <span>{t('parchmentModal.name', 'Nom :')} <strong>{recipientName}</strong></span>}
                     {abjadWeight && <span>{t('parchmentModal.weight', 'Poids (Zimām) :')} <strong>{abjadWeight}</strong></span>}
                   </div>
@@ -190,12 +190,12 @@ export const ParchmentExporterModal: React.FC<ParchmentExporterModalProps> = ({
               </div>
 
               {/* Main Content Render */}
-              <div className="my-6 p-4 bg-amber-100/60 rounded-xl border border-amber-600/30 text-center font-serif text-sm leading-relaxed text-amber-950">
+              <div className="my-3 sm:my-6 p-2 sm:p-4 bg-amber-100/60 rounded-xl border border-amber-600/30 text-center font-serif text-sm leading-relaxed text-amber-950 w-full">
                 {content}
               </div>
 
               {/* Footer Stamp */}
-              <div className="pt-4 border-t border-amber-800/20 text-center flex items-center justify-between text-[11px] text-amber-800 font-sans">
+              <div className="pt-3 sm:pt-4 border-t border-amber-800/20 text-center flex items-center justify-between text-[10px] sm:text-[11px] text-amber-800 font-sans">
                 <div className="flex items-center gap-1">
                   <Sparkles className="w-3 h-3 text-amber-600" />
                   <span>{t('parchmentModal.drawnBy', 'Conscripteur : AsrarHub Ruhaniyat')}</span>
