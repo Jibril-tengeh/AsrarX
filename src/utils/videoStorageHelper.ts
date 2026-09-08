@@ -157,6 +157,54 @@ export async function uploadImageToFirebaseStorage(
 }
 
 /**
+ * Uploads a category or subcategory thumbnail directly to Firebase Cloud Storage
+ * Returns a permanent HTTPS download URL with optimal cache headers.
+ */
+export async function uploadCategoryThumbnailToFirebaseStorage(
+  file: File,
+  categoryId?: string,
+  onProgress?: (percent: number) => void
+): Promise<string> {
+  const ext = file.name?.split('.').pop() || 'jpg';
+  const cleanName = file.name 
+    ? file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
+    : `thumb_${Date.now()}.${ext}`;
+  const catSlug = categoryId ? categoryId.replace(/[^a-zA-Z0-9_-]/g, '') : 'cat';
+  const safePath = `categories/thumbnails/${catSlug}_${Date.now()}_${cleanName}`;
+  const storageRef = ref(storage, safePath);
+  
+  const metadata = {
+    contentType: file.type || 'image/jpeg',
+    cacheControl: 'public, max-age=31536000'
+  };
+
+  const uploadTask = uploadBytesResumable(storageRef, file, metadata);
+  return new Promise((resolve, reject) => {
+    uploadTask.on(
+      'state_changed',
+      (snapshot) => {
+        if (snapshot.totalBytes > 0) {
+          const progress = Math.round((snapshot.bytesTransferred / snapshot.totalBytes) * 100);
+          onProgress?.(progress);
+        }
+      },
+      (err) => {
+        console.warn('[CategoryThumbnailStorage] Firebase Storage upload error:', err);
+        reject(err);
+      },
+      async () => {
+        try {
+          const downloadUrl = await getDownloadURL(uploadTask.snapshot.ref);
+          resolve(downloadUrl);
+        } catch (e) {
+          reject(e);
+        }
+      }
+    );
+  });
+}
+
+/**
  * Check if a field exceeds Firestore's 1MB single property limit
  */
 export function isOversizedFirestoreField(val?: string): boolean {

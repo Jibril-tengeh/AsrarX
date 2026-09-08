@@ -5701,22 +5701,40 @@ export const AdminDashboard: React.FC = () => {
         extraFields['home_lock_display'] = true;
         extraFields['home_only_categories_grid'] = true;
         extraFields['home_enable_categories'] = true;
+        extraFields['home_enable_articles'] = true;
+        extraFields['home_categories_layout_locked'] = true;
+        extraFields['home_categories_layout_free'] = false;
+        extraFields['home_categories_show_switcher'] = false;
       } else if (newValue === 'fixed_articles') {
         extraFields['home_lock_display'] = true;
         extraFields['home_only_categories_grid'] = false;
         extraFields['home_enable_articles'] = true;
+        extraFields['home_enable_categories'] = true;
       } else if (newValue === 'free') {
         extraFields['home_lock_display'] = false;
         extraFields['home_enable_categories'] = true;
         extraFields['home_enable_articles'] = true;
+        extraFields['home_categories_layout_locked'] = false;
+        extraFields['home_categories_layout_free'] = true;
+        extraFields['home_categories_show_switcher'] = true;
       }
     } else if (featureId === 'home_lock_display') {
       extraFields['home_lock_display'] = newValue;
       if (newValue === true) {
         extraFields['home_display_mode'] = featureToggles?.home_only_categories_grid ? 'fixed_categories' : 'fixed_articles';
+        extraFields['home_categories_layout_locked'] = true;
+        extraFields['home_categories_layout_free'] = false;
+        extraFields['home_categories_show_switcher'] = false;
       } else {
         extraFields['home_display_mode'] = 'free';
+        extraFields['home_categories_layout_locked'] = false;
+        extraFields['home_categories_layout_free'] = true;
+        extraFields['home_categories_show_switcher'] = true;
       }
+    } else if (featureId === 'home_categories_show_switcher') {
+      extraFields['home_categories_show_switcher'] = newValue;
+      extraFields['home_categories_layout_free'] = newValue;
+      extraFields['home_categories_layout_locked'] = !newValue;
     } else if (featureId === 'home_only_categories_grid') {
       extraFields['home_only_categories_grid'] = newValue;
       if (featureToggles?.home_lock_display) {
@@ -6595,6 +6613,41 @@ export const AdminDashboard: React.FC = () => {
               <span className="text-xs font-bold text-gray-800 dark:text-gray-200 block">
                 Options d'affichage & visibilité des textes :
               </span>
+
+              {/* Grid switcher icons toggle */}
+              <div className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 flex items-center justify-between gap-2">
+                <div>
+                  <span className="text-xs font-bold text-gray-800 dark:text-gray-200 block">
+                    Afficher les icônes de sélection de grille [ ⊞ 田 ⊞ ▢ ≡ ] :
+                  </span>
+                  <span className="text-[10px] text-gray-500 dark:text-gray-400">
+                    {featureToggles?.home_categories_show_switcher !== false && !featureToggles?.home_lock_display && featureToggles?.home_display_mode !== 'fixed_categories'
+                      ? "Visibles : Les visiteurs peuvent basculer librement entre les 5 modèles."
+                      : "Invisibles : Les 5 icônes sont masquées, l'affichage est bloqué sur le modèle actif."}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const currentVal = featureToggles?.home_categories_show_switcher !== false && !featureToggles?.home_lock_display && featureToggles?.home_display_mode !== 'fixed_categories';
+                    const nextVal = !currentVal;
+                    handleToggleFeature('home_categories_show_switcher', nextVal, "Icônes sélecteur de grille");
+                    handleToggleFeature('home_categories_layout_free', nextVal);
+                    handleToggleFeature('home_categories_layout_locked', !nextVal);
+                  }}
+                  className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors cursor-pointer shrink-0 ${
+                    featureToggles?.home_categories_show_switcher !== false && !featureToggles?.home_lock_display && featureToggles?.home_display_mode !== 'fixed_categories'
+                      ? 'bg-emerald-500'
+                      : 'bg-gray-300 dark:bg-gray-600'
+                  }`}
+                >
+                  <div className={`w-4 h-4 rounded-full bg-white transition-transform ${
+                    featureToggles?.home_categories_show_switcher !== false && !featureToggles?.home_lock_display && featureToggles?.home_display_mode !== 'fixed_categories'
+                      ? 'translate-x-5'
+                      : 'translate-x-0'
+                  }`} />
+                </button>
+              </div>
 
               {/* Header texts toggle */}
               <div className="p-2.5 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 space-y-2">
@@ -9048,19 +9101,19 @@ export const AdminDashboard: React.FC = () => {
         <AnimatePresence>
           {toast && (
             <motion.div
-              initial={{ opacity: 0, y: -20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-2xl shadow-xl border text-sm font-semibold flex items-center gap-2 ${
+              initial={{ opacity: 0, y: -20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -20, scale: 0.95 }}
+              className={`fixed top-4 left-4 right-4 sm:left-auto sm:right-6 sm:w-auto z-[999999] px-5 py-3.5 rounded-2xl shadow-2xl border text-sm font-bold flex items-center gap-3 backdrop-blur-md ${
                 toast.type === "error"
-                  ? "bg-red-500 text-white border-red-600"
+                  ? "bg-red-600 text-white border-red-500 shadow-red-950/40"
                   : toast.type === "info"
-                  ? "bg-blue-500 text-white border-blue-600"
-                  : "bg-emerald-600 text-white border-emerald-700"
+                  ? "bg-blue-600 text-white border-blue-500 shadow-blue-950/40"
+                  : "bg-emerald-600 text-white border-emerald-500 shadow-emerald-950/40"
               }`}
             >
-              {toast.type === "error" ? <AlertTriangle size={18} /> : <Check size={18} />}
-              <span>{toast.message}</span>
+              {toast.type === "error" ? <AlertTriangle size={20} className="shrink-0" /> : <Check size={20} className="shrink-0" />}
+              <span className="leading-snug">{toast.message}</span>
             </motion.div>
           )}
         </AnimatePresence>
