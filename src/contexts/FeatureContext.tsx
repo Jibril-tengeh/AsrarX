@@ -75,7 +75,7 @@ export const FeatureProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
 
     const catTitleSize = Number(mergedData.home_categories_title_size || mergedData.textSizeCategoryTitle);
-    if (catTitleSize && catTitleSize >= 9 && catTitleSize <= 30) {
+    if (catTitleSize && catTitleSize >= 5 && catTitleSize <= 30) {
       root.style.setProperty('--app-category-title-font-size', `${catTitleSize}px`);
       root.classList.add('has-custom-category-title-size');
     } else {

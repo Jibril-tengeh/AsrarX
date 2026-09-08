@@ -35,7 +35,7 @@ function bumpVersion() {
   if (fs.existsSync(gradlePath)) {
     gradleContent = fs.readFileSync(gradlePath, 'utf8');
 
-    const codeMatch = gradleContent.match(/versionCode\s+(\d+)/);
+    const codeMatch = gradleContent.match(/versionCode\s+(?:project\.hasProperty\([^)]+\)\s*\?[^:]+:\s*)?(\d+)/);
     if (codeMatch) {
       currentVersionCode = parseInt(codeMatch[1], 10);
     }
@@ -48,7 +48,7 @@ function bumpVersion() {
 
   // Increment versionCode
   const newVersionCode = currentVersionCode + 1;
-  const newVersionName = newPkgVersion.split('.').slice(0, 2).join('.'); // e.g. "1.1"
+  const newVersionName = newPkgVersion;
 
   console.log(`📦 Previous: Version ${currentPkgVersion} (Code ${currentVersionCode})`);
   console.log(`✨ New:      Version ${newPkgVersion} / Android "${newVersionName}" (Code ${newVersionCode})`);
@@ -61,7 +61,7 @@ function bumpVersion() {
   // 4. Write android/app/build.gradle
   if (gradleContent) {
     let updatedGradle = gradleContent
-      .replace(/versionCode\s+\d+/, `versionCode ${newVersionCode}`)
+      .replace(/versionCode\s+(?:project\.hasProperty\([^)]+\)\s*\?[^:]+:\s*)?\d+/, `versionCode project.hasProperty('versionCode') ? project.property('versionCode').toInteger() : ${newVersionCode}`)
       .replace(/versionName\s+["'][^"']+["']/, `versionName "${newVersionName}"`);
     fs.writeFileSync(gradlePath, updatedGradle, 'utf8');
     console.log('✅ Updated android/app/build.gradle');

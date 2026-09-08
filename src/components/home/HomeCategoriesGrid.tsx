@@ -4,14 +4,14 @@ import {
   FolderOpen, Sparkles, Shield, BookOpen, Heart, Key,
   Compass, Moon, Sun, Flame, Feather, Coins, Star, Volume2,
   ArrowRight, Tag, Layers, Search, Crown, LayoutGrid, Square,
-  LayoutList, Check, Grid2X2
+  LayoutList, Check, Grid2X2, Grid3X3
 } from 'lucide-react';
 import { CategoryItem } from '../../types';
-import { getCategoryFallbackThumbnail, getCategoryFallbackHook, STANDARD_SCREENSHOT_CATEGORIES } from '../../data/defaultCategories';
+import { getCategoryFallbackThumbnail, getCategoryFallbackHook } from '../../data/defaultCategories';
 import { sanitizeImageSource } from '../../utils/articleImageUtils';
 import { CategoryDynamicIcon, CategoryVideoOrIconBadge } from '../common/CategoryDynamicIcon';
 
-export type HomeCategoryLayoutMode = 'grid4' | 'grid2' | 'banner' | 'list';
+export type HomeCategoryLayoutMode = 'grid4' | 'grid3' | 'grid2' | 'banner' | 'list';
 
 interface HomeCategoriesGridProps {
   categories: CategoryItem[];
@@ -30,20 +30,30 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
   searchQuery = '',
   featureToggles = {}
 }) => {
-  // Configured layout mode from Admin settings: 'grid4' (default, matches screenshot) | 'grid2' | 'banner' | 'list'
+  // Configured layout mode from Admin settings: 'grid3' | 'grid4' | 'grid2' | 'banner' | 'list'
   const adminLayoutMode: HomeCategoryLayoutMode = 
     featureToggles?.home_categories_layout_mode === 'banner' ? 'banner' :
     featureToggles?.home_categories_layout_mode === 'list' ? 'list' :
-    featureToggles?.home_categories_layout_mode === 'grid2' ? 'grid2' : 'grid4';
+    featureToggles?.home_categories_layout_mode === 'grid2' ? 'grid2' :
+    featureToggles?.home_categories_layout_mode === 'grid4' ? 'grid4' : 'grid3';
+
+  // Check if category display or layout is locked/blocked by admin
+  const isCategoriesLayoutLocked = 
+    featureToggles?.home_categories_layout_locked === true ||
+    featureToggles?.home_categories_layout_free === false ||
+    featureToggles?.home_categories_show_switcher === false ||
+    featureToggles?.home_lock_display === true ||
+    featureToggles?.home_display_mode === 'fixed_categories';
+
+  // Switcher icons are visible ONLY if admin did not lock/block category display and explicitly enabled them
+  const showLayoutSwitcher = !isCategoriesLayoutLocked && featureToggles?.home_categories_show_switcher !== false;
 
   const [activeLayoutMode, setActiveLayoutMode] = useState<HomeCategoryLayoutMode>(adminLayoutMode);
 
-  // Sync if admin changes featureToggles remotely
+  // Sync with admin's configured layout mode whenever featureToggles change or when layout is locked
   useEffect(() => {
-    if (featureToggles?.home_categories_layout_mode) {
-      setActiveLayoutMode(featureToggles.home_categories_layout_mode);
-    }
-  }, [featureToggles?.home_categories_layout_mode]);
+    setActiveLayoutMode(adminLayoutMode);
+  }, [adminLayoutMode, isCategoriesLayoutLocked]);
 
   // Helper icon renderer - dynamically supports 520+ SVG icons
   const renderIcon = (name?: string, size = 18, className = '') => {
@@ -66,12 +76,13 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
     return (articleCounts[catNameLower] || 0) + (articleCounts[catIdLower] || 0);
   };
 
-  // Filter categories by search if provided & deduplicate strictly
+  // Filter categories by search if provided, ensure only enabled categories are shown & deduplicate strictly
   const filteredCategories = useMemo(() => {
-    let list = categories;
+    // Only display categories where enabled !== false
+    let list = (categories || []).filter(cat => cat.enabled !== false);
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
-      list = categories.filter(cat => {
+      list = list.filter(cat => {
         const nameMatch = (cat.name || '').toLowerCase().includes(q)
           || (cat.name_en || '').toLowerCase().includes(q)
           || (cat.name_ha || '').toLowerCase().includes(q);
@@ -94,56 +105,22 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
     });
   }, [categories, searchQuery]);
 
-  // Combined canonical screenshot categories + any user-created custom categories for Grid 4
+  // Real user-created and database categories for Grid 3 and Grid 4
   const grid4Items = useMemo(() => {
-    const canonical = STANDARD_SCREENSHOT_CATEGORIES.map(item => {
-      let displayName = item.name;
-      if (language === 'en' && item.name_en) displayName = item.name_en;
-      if (language === 'ha' && item.name_ha) displayName = item.name_ha;
+    // 1. Use the real categories passed in filteredCategories (user-created & database)
+    // Never force mock STANDARD_SCREENSHOT_CATEGORIES over the user's categories!
+    return filteredCategories.map(cat => {
+      let displayName = cat.name;
+      if (language === 'en' && cat.name_en) displayName = cat.name_en;
+      if (language === 'ha' && cat.name_ha) displayName = cat.name_ha;
       return {
-        ...item,
+        ...cat,
         displayName,
-        isCanonical: true
+        theme: cat.iconName ? cat.iconName.toLowerCase() : 'custom',
+        isCanonical: false
       };
     });
-
-    // Check for any categories in `categories` not covered by canonical
-    const extraCustom: any[] = [];
-    (categories || []).forEach(cat => {
-      const catNameLower = (cat.name || '').toLowerCase().trim();
-      const catIdLower = (cat.id || '').toLowerCase().trim();
-      const alreadyExists = canonical.some(c => 
-        c.id === catIdLower || 
-        c.name.toLowerCase().trim() === catNameLower ||
-        (catNameLower && c.id.includes(catNameLower)) ||
-        (catIdLower && c.name.toLowerCase().includes(catIdLower))
-      );
-      if (!alreadyExists && cat.id !== 'all' && cat.id !== 'offline') {
-        let displayName = cat.name;
-        if (language === 'en' && cat.name_en) displayName = cat.name_en;
-        if (language === 'ha' && cat.name_ha) displayName = cat.name_ha;
-        extraCustom.push({
-          ...cat,
-          displayName,
-          theme: cat.iconName ? cat.iconName.toLowerCase() : 'custom',
-          isCanonical: false
-        });
-      }
-    });
-
-    const combined = [...canonical, ...extraCustom];
-
-    if (!searchQuery.trim()) {
-      return combined;
-    }
-
-    const q = searchQuery.toLowerCase().trim();
-    return combined.filter(item => 
-      (item.displayName || '').toLowerCase().includes(q) ||
-      (item.name || '').toLowerCase().includes(q) ||
-      (item.hook || '').toLowerCase().includes(q)
-    );
-  }, [categories, language, searchQuery]);
+  }, [filteredCategories, language]);
 
   // Helper to map category to its high-definition looping video asset (Seamless, zero-flicker video stream)
   const getCategoryVideoUrl = (cat: any): string => {
@@ -178,7 +155,7 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
     return '/videos/categories/default.mp4';
   };
 
-  // Category Badge Icon renderer: Luminous clear SVG jewel badge (or explicit HD video badge)
+  // Category Badge Icon renderer: Luminous clear SVG jewel badge (or explicit HD video badge or custom uploaded thumbnail)
   const renderCategoryBadge = (cat: any, size: 'xs' | 'sm' | 'md' | 'lg' | 'xl' = 'md') => {
     // Categories display looping HD video presets by default unless explicitly disabled in admin settings
     const showVideos = featureToggles?.home_categories_use_video_presets !== false;
@@ -187,6 +164,7 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
       <CategoryVideoOrIconBadge
         iconName={cat.iconName}
         videoUrl={videoUrl}
+        thumbnailUrl={cat.thumbnail}
         categoryName={cat.displayName || cat.name}
         theme={cat.theme || cat.id}
         size={size}
@@ -218,6 +196,49 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
     language === 'en' ? 'Explore authentic secrets, invocations, and spiritual practices classified by domain.' :
     language === 'ha' ? 'Bincika ingantattun sirrika, addu\'o\'i da ayyukan ibada na musamman.' :
     'Explorez nos secrets, invocations et pratiques spirituelles authentiques classés par domaines.'
+  );
+
+  /* ========================================================================= */
+  /* MODEL: GRILLE 3 COLONNES                                                  */
+  /* ========================================================================= */
+  const renderGrid3Layout = () => (
+    <div className="grid grid-cols-3 gap-2.5 sm:gap-3.5 md:gap-4 w-full">
+      {grid4Items.map((cat, idx) => {
+        return (
+          <motion.div
+            key={cat.id ? `cat-grid3-${cat.id}-${idx}` : `cat-grid3-${idx}`}
+            whileHover={{ y: -4, scale: 1.03 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => {
+              if (cat.id === 'favoris') {
+                onSelectCategory({ id: 'favoris', name: 'Favoris' } as any);
+              } else {
+                onSelectCategory(cat as any);
+              }
+            }}
+            className="relative bg-white dark:bg-gray-850 rounded-2xl sm:rounded-3xl p-2 sm:p-3 py-3.5 sm:py-4 border border-gray-200/90 dark:border-gray-700/80 hover:border-emerald-500/70 dark:hover:border-emerald-400/70 shadow-xs hover:shadow-md transition-all duration-300 flex flex-col items-center justify-center gap-1.5 sm:gap-2 text-center cursor-pointer min-h-[105px] sm:min-h-[120px] group overflow-hidden"
+          >
+            {/* Vraie Vidéo & Icône Lumineuse Agrandie */}
+            <div className="relative z-10 flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-108">
+              {renderCategoryBadge(cat, 'md')}
+            </div>
+
+            {/* Titre */}
+            {showCategoryNames && (
+              <span
+                style={{
+                  fontSize: configuredTitleSize ? `${configuredTitleSize}px` : undefined,
+                  lineHeight: '1.2'
+                }}
+                className="relative z-10 text-[13px] sm:text-sm font-extrabold text-gray-900 dark:text-gray-100 text-center line-clamp-2 px-0.5 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors"
+              >
+                {cat.displayName}
+              </span>
+            )}
+          </motion.div>
+        );
+      })}
+    </div>
   );
 
   /* ========================================================================= */
@@ -568,104 +589,146 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
   return (
     <div className="w-full space-y-4 sm:space-y-6 pb-6">
       {/* Header Section with Quick Layout Switcher */}
-      <div className={`text-center sm:text-left ${hasAnyHeaderText ? 'pt-2 pb-2 border-b border-gray-100 dark:border-gray-800/80' : 'pt-1 pb-1'}`}>
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
-          {hasAnyHeaderText && (
-            <div>
-              {showBadge && (
-                <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/60 dark:border-emerald-800/50 text-[11px] font-bold text-emerald-700 dark:text-emerald-300 mb-1.5">
-                  <Sparkles size={13} className="text-emerald-500" />
-                  <span>{language === 'en' ? 'Exclusive Classification' : language === 'ha' ? 'Rabe-raben Ilimi' : 'Classification Exclusive'}</span>
+      {(hasAnyHeaderText || showLayoutSwitcher || showCounts) && (
+        <div className={`text-center sm:text-left ${hasAnyHeaderText ? 'pt-2 pb-2 border-b border-gray-100 dark:border-gray-800/80' : 'pt-1 pb-1'}`}>
+          <div className={`flex flex-col sm:flex-row gap-3 ${!hasAnyHeaderText || !showLayoutSwitcher ? 'items-center justify-center' : 'sm:items-end justify-between'}`}>
+            {hasAnyHeaderText && (
+              <div>
+                {showBadge && (
+                  <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/60 dark:border-emerald-800/50 text-[11px] font-bold text-emerald-700 dark:text-emerald-300 mb-1.5">
+                    <Sparkles size={13} className="text-emerald-500" />
+                    <span>{language === 'en' ? 'Exclusive Classification' : language === 'ha' ? 'Rabe-raben Ilimi' : 'Classification Exclusive'}</span>
+                  </div>
+                )}
+                {showTitle && (
+                  <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white tracking-tight">
+                    {headerTitle}
+                  </h2>
+                )}
+                {showSubtitle && (
+                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 max-w-2xl mt-0.5">
+                    {headerSubtitle}
+                  </p>
+                )}
+              </div>
+            )}
+
+            <div className={`flex flex-wrap items-center gap-2 shrink-0 ${
+              !showLayoutSwitcher 
+                ? 'w-full justify-center' 
+                : (!hasAnyHeaderText ? 'w-full justify-center sm:justify-end' : 'justify-end')
+            }`}>
+              {/* Mode Switcher Buttons - Rendered ONLY if categories layout is NOT locked/blocked by admin */}
+              {showLayoutSwitcher && (
+                <div className="flex items-center bg-gray-100 dark:bg-gray-800 p-1 rounded-2xl border border-gray-200/70 dark:border-gray-700">
+                  <button
+                    type="button"
+                    onClick={() => setActiveLayoutMode('grid4')}
+                    className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                      activeLayoutMode === 'grid4'
+                        ? 'bg-white dark:bg-gray-700 text-emerald-600 dark:text-emerald-400 shadow-xs'
+                        : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
+                    }`}
+                    title="Grille 4 Colonnes"
+                  >
+                    <LayoutGrid size={14} />
+                    <span className="hidden md:inline">4 Cols</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveLayoutMode('grid3')}
+                    className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                      activeLayoutMode === 'grid3'
+                        ? 'bg-white dark:bg-gray-700 text-emerald-600 dark:text-emerald-400 shadow-xs'
+                        : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
+                    }`}
+                    title="Modèle 3 Colonnes"
+                  >
+                    <Grid3X3 size={14} />
+                    <span className="hidden md:inline">3 Cols</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveLayoutMode('grid2')}
+                    className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                      activeLayoutMode === 'grid2'
+                        ? 'bg-white dark:bg-gray-700 text-emerald-600 dark:text-emerald-400 shadow-xs'
+                        : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
+                    }`}
+                    title="Modèle 2 : Grille 2 Colonnes"
+                  >
+                    <Grid2X2 size={14} />
+                    <span className="hidden md:inline">2 Cols</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveLayoutMode('banner')}
+                    className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                      activeLayoutMode === 'banner'
+                        ? 'bg-white dark:bg-gray-700 text-emerald-600 dark:text-emerald-400 shadow-xs'
+                        : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
+                    }`}
+                    title="Modèle 3 : Grande Carte / Bannière (1 Colonne)"
+                  >
+                    <Square size={14} />
+                    <span className="hidden md:inline">Bannière</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setActiveLayoutMode('list')}
+                    className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
+                      activeLayoutMode === 'list'
+                        ? 'bg-white dark:bg-gray-700 text-emerald-600 dark:text-emerald-400 shadow-xs'
+                        : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
+                    }`}
+                    title="Modèle 4 : Liste Horizontale"
+                  >
+                    <LayoutList size={14} />
+                    <span className="hidden md:inline">Liste</span>
+                  </button>
                 </div>
               )}
-              {showTitle && (
-                <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900 dark:text-white tracking-tight">
-                  {headerTitle}
-                </h2>
+
+              {/* Metrics Chips */}
+              {showCounts && (
+                <div className={`flex items-center gap-1.5 text-[11px] font-bold text-gray-500 dark:text-gray-400 ${!showLayoutSwitcher ? 'justify-center mx-auto' : ''}`}>
+                  <span className="px-2.5 py-1 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200/60 dark:border-gray-700 shadow-2xs">
+                    {(activeLayoutMode === 'grid4' || activeLayoutMode === 'grid3') ? grid4Items.length : categories.length} {language === 'en' ? 'Categories' : language === 'ha' ? 'Bangarori' : 'Catégories'}
+                  </span>
+                  <span className="px-2.5 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/40 shadow-2xs">
+                    {articles.length} {language === 'en' ? 'Articles' : language === 'ha' ? 'Rubuce-rubuce' : 'Articles'}
+                  </span>
+                </div>
               )}
-              {showSubtitle && (
-                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 max-w-2xl mt-0.5">
-                  {headerSubtitle}
-                </p>
-              )}
-            </div>
-          )}
-
-          <div className={`flex flex-wrap items-center justify-center sm:justify-end gap-2 shrink-0 ${!hasAnyHeaderText ? 'w-full justify-between sm:justify-between' : ''}`}>
-            {/* Mode Switcher Buttons */}
-            <div className="flex items-center bg-gray-100 dark:bg-gray-800 p-1 rounded-2xl border border-gray-200/70 dark:border-gray-700">
-              <button
-                type="button"
-                onClick={() => setActiveLayoutMode('grid4')}
-                className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
-                  activeLayoutMode === 'grid4'
-                    ? 'bg-white dark:bg-gray-700 text-emerald-600 dark:text-emerald-400 shadow-xs'
-                    : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
-                }`}
-                title="Modèle 1 : Grille 4 Colonnes (Icônes & Badges)"
-              >
-                <LayoutGrid size={14} />
-                <span className="hidden md:inline">4 Cols</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveLayoutMode('grid2')}
-                className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
-                  activeLayoutMode === 'grid2'
-                    ? 'bg-white dark:bg-gray-700 text-emerald-600 dark:text-emerald-400 shadow-xs'
-                    : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
-                }`}
-                title="Modèle 2 : Grille 2 Colonnes"
-              >
-                <Grid2X2 size={14} />
-                <span className="hidden md:inline">2 Cols</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveLayoutMode('banner')}
-                className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
-                  activeLayoutMode === 'banner'
-                    ? 'bg-white dark:bg-gray-700 text-emerald-600 dark:text-emerald-400 shadow-xs'
-                    : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
-                }`}
-                title="Modèle 3 : Grande Carte / Bannière (1 Colonne)"
-              >
-                <Square size={14} />
-                <span className="hidden md:inline">Bannière</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setActiveLayoutMode('list')}
-                className={`px-2.5 py-1 rounded-xl text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
-                  activeLayoutMode === 'list'
-                    ? 'bg-white dark:bg-gray-700 text-emerald-600 dark:text-emerald-400 shadow-xs'
-                    : 'text-gray-500 hover:text-gray-800 dark:hover:text-gray-200'
-                }`}
-                title="Modèle 4 : Liste Horizontale"
-              >
-                <LayoutList size={14} />
-                <span className="hidden md:inline">Liste</span>
-              </button>
-            </div>
-
-            {/* Metrics Chips */}
-            <div className="flex items-center gap-1.5 text-[11px] font-bold text-gray-500 dark:text-gray-400">
-              <span className="px-2.5 py-1 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200/60 dark:border-gray-700">
-                {activeLayoutMode === 'grid4' ? grid4Items.length : categories.length} {language === 'en' ? 'Categories' : language === 'ha' ? 'Bangarori' : 'Catégories'}
-              </span>
-              <span className="px-2.5 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/40">
-                {articles.length} {language === 'en' ? 'Articles' : language === 'ha' ? 'Rubuce-rubuce' : 'Articles'}
-              </span>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Categories Content Rendering based on activeLayoutMode */}
-      {activeLayoutMode === 'grid4' ? (
+      {activeLayoutMode === 'grid3' ? (
+        grid4Items.length === 0 ? (
+          <div className="p-8 text-center bg-white dark:bg-gray-800/60 rounded-3xl border border-gray-100 dark:border-gray-700/60 my-6">
+            <div className="w-14 h-14 mx-auto rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-3">
+              <Search size={24} />
+            </div>
+            <h4 className="text-sm font-bold text-gray-900 dark:text-white">
+              {language === 'en' ? 'No category found' : language === 'ha' ? 'Ba a sami bangare ba' : 'Aucune catégorie trouvée'}
+            </h4>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              {searchQuery
+                ? (language === 'en' ? `No matching category for "${searchQuery}".` : `Aucune catégorie ne correspond à "${searchQuery}".`)
+                : (language === 'en' ? 'No categories available currently.' : 'Aucune catégorie disponible pour le moment.')}
+            </p>
+          </div>
+        ) : (
+          renderGrid3Layout()
+        )
+      ) : activeLayoutMode === 'grid4' ? (
         grid4Items.length === 0 ? (
           <div className="p-8 text-center bg-white dark:bg-gray-800/60 rounded-3xl border border-gray-100 dark:border-gray-700/60 my-6">
             <div className="w-14 h-14 mx-auto rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-3">
