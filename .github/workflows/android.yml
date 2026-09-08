@@ -41,12 +41,13 @@ jobs:
     - name: Make Gradlew Executable & Ensure Gradle Wrapper
       run: |
         cd android
-        # If gradle-wrapper.jar is corrupt or truncated, regenerate it cleanly using the official Gradle runner
-        if [ ! -f "gradle/wrapper/gradle-wrapper.jar" ] || ! unzip -tq "gradle/wrapper/gradle-wrapper.jar" 2>/dev/null; then
-          echo "⚠️ gradle-wrapper.jar is invalid! Regenerating official wrapper..."
+        # Test if gradle-wrapper.jar is fully executable with java -jar
+        if ! java -jar gradle/wrapper/gradle-wrapper.jar --version >/dev/null 2>&1; then
+          echo "⚠️ gradle-wrapper.jar is invalid or missing main manifest attribute. Regenerating official Gradle wrapper..."
           gradle wrapper --gradle-version 8.11.1 --distribution-type all
         fi
         chmod +x gradlew
+        ./gradlew --version
         cd ..
 
     - name: Prepare Signing Keystore
