@@ -745,5 +745,3 @@ export const AdminPromoVideoAnnouncementManager: React.FC<AdminPromoVideoAnnounc
     </div>
   );
 };
-
-export default AdminPromoVideoAnnouncementManager;

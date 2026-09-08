@@ -25,8 +25,6 @@ export interface CategoryItem {
   iconName?: string;
   videoUrl?: string; // Dedicated looping video icon
   theme?: string;
-  enabled?: boolean; // Contrôle d'affichage/blocage (actif par défaut)
-  isCustom?: boolean; // Marqueur de catégorie personnalisée créée par l'administrateur
   subCategories?: SubCategoryItem[];
   createdAt?: number;
 }

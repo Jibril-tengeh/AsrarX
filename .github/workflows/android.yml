@@ -24,12 +24,6 @@ jobs:
         distribution: 'zulu'
         java-version: '21'
 
-    - name: Setup Gradle
-      uses: gradle/actions/setup-gradle@v4
-      with:
-        gradle-version: '8.11.1'
-        validate-wrappers: false
-
     - name: Install Dependencies
       run: npm install --legacy-peer-deps
 
@@ -39,38 +33,33 @@ jobs:
     - name: Sync Capacitor
       run: npx cap sync android
 
-    - name: Make Gradlew Executable & Ensure Gradle Wrapper
-      run: |
-        cd android
-        # Generate official Gradle wrapper directly with the Gradle tool installed on the runner
-        gradle wrapper --gradle-version 8.11.1 --distribution-type all
-        chmod +x gradlew
-        ./gradlew --version
-        cd ..
+    - name: Make Gradlew Executable
+      run: chmod +x android/gradlew
 
     - name: Prepare Signing Keystore
       run: |
         mkdir -p android/app
-        # 1. If GitHub Secret KEYSTORE_BASE64 is configured, use it:
+        # If GitHub Secret KEYSTORE_BASE64 is configured, use it:
         if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
-          echo "Restoring keystore from GitHub Secret KEYSTORE_BASE64..."
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > android/app/asrarhub.keystore
-        elif [ -f "android/app/asrarhub.keystore" ]; then
-          echo "Using existing android/app/asrarhub.keystore from repository..."
         elif [ -f "asrarhub.keystore" ]; then
-          echo "Copying root asrarhub.keystore to android/app/..."
           cp asrarhub.keystore android/app/asrarhub.keystore
-        else
-          echo "Restoring permanent official AsrarHub keystore from static fallback..."
-          echo "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" | base64 --decode > android/app/asrarhub.keystore
         fi
-
-        # Verify keystore validity:
+        # Test if keystore is valid with keytool; if not, generate a fresh valid PKCS12 release keystore
         if ! keytool -list -keystore android/app/asrarhub.keystore -storepass AsrarHub1492 >/dev/null 2>&1; then
-          echo "Keystore verification failed, restoring permanent base64..."
-          echo "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" | base64 --decode > android/app/asrarhub.keystore
+          echo "Generating a fresh, valid release keystore with password AsrarHub1492..."
+          rm -f android/app/asrarhub.keystore
+          keytool -genkeypair -v \
+            -keystore android/app/asrarhub.keystore \
+            -alias asrarhub \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 10000 \
+            -storetype PKCS12 \
+            -storepass AsrarHub1492 \
+            -keypass AsrarHub1492 \
+            -dname "CN=AsrarHub1492i, OU=AsrarHub, O=AsrarHub, L=Nsawam, ST=Adoadjyri, C=GH"
         fi
-
         cp android/app/asrarhub.keystore android/asrarhub.keystore
         cp android/app/asrarhub.keystore asrarhub.keystore
         ls -la android/app/asrarhub.keystore
@@ -81,11 +70,8 @@ jobs:
         KEY_ALIAS: ${{ secrets.KEY_ALIAS || 'asrarhub' }}
         KEY_PASSWORD: ${{ secrets.KEY_PASSWORD || 'AsrarHub1492' }}
       run: |
-        # Calculate versionCode guaranteed to be strictly increasing and > 100
-        DYNAMIC_VERSION_CODE=$(( 100 + ${{ github.run_number }} ))
-        echo "Building APKs with versionCode: $DYNAMIC_VERSION_CODE"
         cd android
-        ./gradlew assembleRelease assembleDebug -PversionCode=$DYNAMIC_VERSION_CODE -x lint --stacktrace || ./gradlew assembleDebug -PversionCode=$DYNAMIC_VERSION_CODE
+        ./gradlew assembleRelease assembleDebug -PversionCode=${{ github.run_number }} -x lint --stacktrace || ./gradlew assembleDebug -PversionCode=${{ github.run_number }}
 
     - name: Ensure Release APK is Signed (Sign with apksigner if needed)
       run: |
@@ -147,9 +133,8 @@ jobs:
         KEY_ALIAS: ${{ secrets.KEY_ALIAS || 'asrarhub' }}
         KEY_PASSWORD: ${{ secrets.KEY_PASSWORD || 'AsrarHub1492' }}
       run: |
-        DYNAMIC_VERSION_CODE=$(( 100 + ${{ github.run_number }} ))
         cd android
-        ./gradlew bundleRelease -PversionCode=$DYNAMIC_VERSION_CODE -x lint --stacktrace || ./gradlew bundleDebug -PversionCode=$DYNAMIC_VERSION_CODE
+        ./gradlew bundleRelease -PversionCode=${{ github.run_number }} -x lint --stacktrace || ./gradlew bundleDebug -PversionCode=${{ github.run_number }}
 
     - name: Upload Play Store Bundle (AAB)
       uses: actions/upload-artifact@v4

@@ -1467,7 +1467,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
                     <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">{t('categories', 'Thématiques')}</h4>
                     
                     <div className="space-y-3">
-                      {categories.filter(cat => cat.enabled !== false).map((cat, catIdx) => {
+                      {categories.map((cat, catIdx) => {
                         const isSelected = filter === cat.id;
                         const artCount = items.filter(a => a.category === cat.id).length;
                         
@@ -1572,7 +1572,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
           </AnimatePresence>
         </div>
 
-        {isLayoutFree && !isOnlyCategoriesMode && (
+        {isLayoutFree && (
           <div id="tour-layout" className={`flex bg-white dark:bg-gray-800 rounded-lg sm:rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 p-0.5 sm:p-1 flex-shrink-0 h-[34px] sm:h-[42px] items-center transition-opacity duration-200 ${isSearchOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
             <button 
               onClick={() => handleSetLayoutMode('grid2')}

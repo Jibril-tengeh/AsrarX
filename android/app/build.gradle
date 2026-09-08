@@ -18,14 +18,7 @@ android {
     }
     signingConfigs {
         release {
-            def ks = file('asrarhub.keystore')
-            if (!ks.exists()) {
-                ks = rootProject.file('app/asrarhub.keystore')
-            }
-            if (!ks.exists()) {
-                ks = rootProject.file('asrarhub.keystore')
-            }
-            storeFile ks
+            storeFile file('asrarhub.keystore')
             storePassword(System.getenv("KEYSTORE_PASSWORD") ?: 'AsrarHub1492')
             keyAlias(System.getenv("KEY_ALIAS") ?: 'asrarhub')
             keyPassword(System.getenv("KEY_PASSWORD") ?: 'AsrarHub1492')
@@ -40,7 +33,6 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
         debug {
-            // Sign debug builds with the exact same release keystore so test installs can be updated to release builds
             signingConfig signingConfigs.release
         }
     }

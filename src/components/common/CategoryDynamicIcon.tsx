@@ -308,7 +308,6 @@ export const getCategoryLuminousTheme = (categoryHint?: string, iconName?: strin
 interface CategoryVideoOrIconBadgeProps {
   iconName?: string;
   videoUrl?: string;
-  thumbnailUrl?: string;
   categoryName?: string;
   theme?: string;
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
@@ -324,7 +323,6 @@ interface CategoryVideoOrIconBadgeProps {
 export const CategoryVideoOrIconBadge: React.FC<CategoryVideoOrIconBadgeProps> = ({
   iconName = 'Sparkles',
   videoUrl,
-  thumbnailUrl,
   categoryName = 'Catégorie',
   theme,
   size = 'md',
@@ -332,13 +330,11 @@ export const CategoryVideoOrIconBadge: React.FC<CategoryVideoOrIconBadgeProps> =
   animate = true,
 }) => {
   const [isImgError, setIsImgError] = useState(false);
-  const [isThumbError, setIsThumbError] = useState(false);
 
-  // Reset error flag if videoUrl or thumbnailUrl changes
+  // Reset error flag if videoUrl changes
   useEffect(() => {
     setIsImgError(false);
-    setIsThumbError(false);
-  }, [videoUrl, thumbnailUrl]);
+  }, [videoUrl]);
 
   // Size dimensions: significantly enlarged, bold and high-visibility
   const sizeMap = {
@@ -368,9 +364,6 @@ export const CategoryVideoOrIconBadge: React.FC<CategoryVideoOrIconBadgeProps> =
   const trimmedUrl = (videoUrl || '').trim();
   const mp4Url = trimmedUrl ? (trimmedUrl.endsWith('.webp') ? trimmedUrl.replace(/\.webp$/, '.mp4') : trimmedUrl) : '';
   const webpUrl = trimmedUrl ? (trimmedUrl.endsWith('.mp4') ? trimmedUrl.replace(/\.mp4$/, '.webp') : trimmedUrl) : '';
-
-  // Real thumbnail asset
-  const hasThumbnail = Boolean(!isThumbError && thumbnailUrl && thumbnailUrl.trim().length > 0 && !hasRealVideo);
 
   return (
     <div
@@ -402,22 +395,6 @@ export const CategoryVideoOrIconBadge: React.FC<CategoryVideoOrIconBadgeProps> =
               {webpUrl && <source src={webpUrl} type="image/webp" onError={(e) => e.stopPropagation()} />}
             </video>
             <div className="absolute inset-0 bg-black/25 backdrop-blur-[0.5px]" />
-          </div>
-        )}
-
-        {/* If a custom uploaded/preset thumbnail is provided (and no video), display it as crystal cover */}
-        {hasThumbnail && (
-          <div className="absolute inset-0 w-full h-full rounded-[inherit] overflow-hidden z-10 pointer-events-none">
-            <img
-              src={thumbnailUrl}
-              alt={categoryName}
-              className="w-full h-full object-cover brightness-100 contrast-105 group-hover/badge:scale-110 transition-transform duration-500"
-              onError={(e) => {
-                e.stopPropagation();
-                setIsThumbError(true);
-              }}
-            />
-            <div className="absolute inset-0 bg-black/30 backdrop-blur-[0.5px]" />
           </div>
         )}
 
