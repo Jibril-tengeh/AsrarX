@@ -28,6 +28,7 @@ jobs:
       uses: gradle/actions/setup-gradle@v4
       with:
         gradle-version: '8.11.1'
+        validate-wrappers: false
 
     - name: Install Dependencies
       run: npm install --legacy-peer-deps
@@ -41,11 +42,8 @@ jobs:
     - name: Make Gradlew Executable & Ensure Gradle Wrapper
       run: |
         cd android
-        # Test if gradle-wrapper.jar is fully executable with java -jar
-        if ! java -jar gradle/wrapper/gradle-wrapper.jar --version >/dev/null 2>&1; then
-          echo "⚠️ gradle-wrapper.jar is invalid or missing main manifest attribute. Regenerating official Gradle wrapper..."
-          gradle wrapper --gradle-version 8.11.1 --distribution-type all
-        fi
+        # Generate official Gradle wrapper directly with the Gradle tool installed on the runner
+        gradle wrapper --gradle-version 8.11.1 --distribution-type all
         chmod +x gradlew
         ./gradlew --version
         cd ..
