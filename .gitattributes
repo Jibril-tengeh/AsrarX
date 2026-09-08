@@ -1,1 +1,10 @@
+# Treat binary files properly so Git on Windows/Linux/Android does not corrupt them
 *.jar binary
+*.keystore binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ico binary
+*.so binary
+*.aar binary

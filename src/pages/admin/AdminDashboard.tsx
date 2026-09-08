@@ -86,7 +86,7 @@ import { AdminDeepSettingsManager } from "../../components/admin/AdminDeepSettin
 import { BrandingSettings } from '../../components/admin/BrandingSettings';
 import { FloatingBackButtonSettings } from '../../components/admin/FloatingBackButtonSettings';
 import { AdminPdfDocumentsManager } from '../../components/admin/AdminPdfDocumentsManager';
-import { AdminPromoVideoAnnouncementManager } from '../../components/admin/AdminPromoVideoAnnouncementManager';
+import AdminPromoVideoAnnouncementManager from '../../components/admin/AdminPromoVideoAnnouncementManager';
 import { AdminToolsHealthManager } from '../../components/admin/AdminToolsHealthManager';
 import { ArticleQuickControlModal } from '../../components/admin/ArticleQuickControlModal';
 import { ArticleDeleteConfirmationModal } from '../../components/admin/ArticleDeleteConfirmationModal';
