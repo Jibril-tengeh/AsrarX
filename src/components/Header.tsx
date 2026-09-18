@@ -32,7 +32,6 @@ export const Header: React.FC = () => {
   const { isFullscreen, toggleFullscreen } = useFullscreen();
   const [langMenuOpen, setLangMenuOpen] = useState(false);
   const [notifMenuOpen, setNotifMenuOpen] = useState(false);
-  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [announcementOpen, setAnnouncementOpen] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [hasUnread, setHasUnread] = useState(false);
@@ -69,7 +68,6 @@ export const Header: React.FC = () => {
   }, [user]);
   const langMenuRef = useRef<HTMLDivElement>(null);
   const notifMenuRef = useRef<HTMLDivElement>(null);
-  const userMenuRef = useRef<HTMLDivElement>(null);
   const communityMenuRef = useRef<HTMLDivElement>(null);
   const communityMenuMobileRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
@@ -114,9 +112,6 @@ export const Header: React.FC = () => {
       }
       if (notifMenuRef.current && !notifMenuRef.current.contains(event.target as Node)) {
         setNotifMenuOpen(false);
-      }
-      if (userMenuRef.current && !userMenuRef.current.contains(event.target as Node)) {
-        setUserMenuOpen(false);
       }
       if (communityMenuRef.current && !communityMenuRef.current.contains(event.target as Node)) {
         setCommunityMenuOpen(false);
@@ -253,11 +248,11 @@ export const Header: React.FC = () => {
   return (
     <>
       <header 
-        className="fixed top-0 left-0 right-0 z-[100] w-full m-0 h-[48px] sm:h-[54px] py-1.5 sm:py-2 bg-emerald-600 dark:bg-emerald-800 shadow-sm px-1 min-[375px]:px-2 sm:px-4 flex items-center"
+        className="fixed top-0 left-0 right-0 z-[100] w-full m-0 h-[48px] sm:h-[54px] py-1.5 sm:py-2 bg-emerald-600 dark:bg-emerald-800 shadow-sm px-2 min-[375px]:px-3 sm:px-4 pr-3 sm:pr-4 flex items-center"
         onClick={handleSecretClick}
       >
         <div className="w-full max-w-7xl mx-auto flex items-center justify-between">
-          <Link to="/" className="flex items-center group -ml-0.5 sm:-ml-1">
+          <Link to="/" className="flex items-center group shrink-0 translate-x-[2px]">
             {branding.isEnabled && branding.appLogo ? (
               <img 
                 src={branding.appLogo} 
@@ -269,109 +264,8 @@ export const Header: React.FC = () => {
             )}
           </Link>
           
-          <div className="flex items-center gap-0.5 min-[375px]:gap-1 sm:gap-2 -mr-0.5 sm:-mr-1">
+          <div className="flex items-center gap-0.5 min-[375px]:gap-1 sm:gap-2 mr-1 sm:mr-0 -translate-x-1.5 sm:-translate-x-1 shrink-0">
             
-            {featureToggles['tool_community'] !== 'inactive' && (
-              <div
-                className="relative hidden sm:block"
-                ref={communityMenuRef}
-                id="tour-community"
-                onMouseEnter={() => setCommunityMenuOpen(true)}
-                onMouseLeave={() => setCommunityMenuOpen(false)}
-              >
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => {
-                    setCommunityMenuOpen(false);
-                    navigate('/community?view=messages');
-                  }}
-                  className="p-1 min-[375px]:p-1.5 sm:p-2 rounded-full hover:bg-emerald-700 dark:hover:bg-emerald-900 text-white transition-colors flex cursor-pointer relative"
-                  aria-label="Community"
-                  title="Ouvrir la communauté (Discussions & Posts)"
-                >
-                  <Users size={18} />
-                </motion.button>
-
-                <AnimatePresence>
-                  {communityMenuOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 15, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 15, scale: 0.95 }}
-                      transition={{ duration: 0.15 }}
-                      className="absolute right-0 mt-2.5 w-64 bg-white dark:bg-gray-800 border border-gray-150 dark:border-gray-700/85 rounded-3xl shadow-xl py-2 z-50 overflow-hidden"
-                    >
-                      <div className="px-3.5 py-2 border-b border-gray-50 dark:border-gray-700/50 flex items-center justify-between">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">
-                          {language === 'en' ? 'Community Menu' : language === 'ha' ? "Tsarin Al'umma" : 'Menu Communauté'}
-                        </span>
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                      </div>
-                      <div className="flex flex-col">
-                        <Link
-                          to="/community?view=messages"
-                          onClick={() => setCommunityMenuOpen(false)}
-                          className="flex items-center gap-3 px-3.5 py-2.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all border-b border-gray-50/50 dark:border-gray-700/30"
-                        >
-                          <MessageSquare size={15} className="text-emerald-500" />
-                          <span>{language === 'en' ? 'Discussions & Posts' : language === 'ha' ? 'Tattaunawa da Saƙonni' : 'Discussions & Messages'}</span>
-                        </Link>
-                        <Link
-                          to="/community?view=polls"
-                          onClick={() => setCommunityMenuOpen(false)}
-                          className="flex items-center gap-3 px-3.5 py-2.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all border-b border-gray-50/50 dark:border-gray-700/30"
-                        >
-                          <Vote size={15} className="text-emerald-500" />
-                          <span>{language === 'en' ? 'Community Polls' : language === 'ha' ? "Zaɓukan Al'umma" : "Sondages de l'Al'umma"}</span>
-                        </Link>
-                        <Link
-                          to="/community?view=dms"
-                          onClick={() => setCommunityMenuOpen(false)}
-                          className="flex items-center gap-3 px-3.5 py-2.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all border-b border-gray-50/50 dark:border-gray-700/30"
-                        >
-                          <Inbox size={15} className="text-emerald-500" />
-                          <span>{language === 'en' ? 'Private Messages' : language === 'ha' ? 'Saƙonnin Sirri' : 'Messages Privés'}</span>
-                        </Link>
-                        <Link
-                          to="/community?view=friends"
-                          onClick={() => setCommunityMenuOpen(false)}
-                          className="flex items-center gap-3 px-3.5 py-2.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all border-b border-gray-50/50 dark:border-gray-700/30"
-                        >
-                          <Users size={15} className="text-emerald-500" />
-                          <span>{language === 'en' ? 'Members & Friends' : language === 'ha' ? 'Mambobi da Abokai' : 'Membres & Amis'}</span>
-                        </Link>
-                        <Link
-                          to="/community?view=online"
-                          onClick={() => setCommunityMenuOpen(false)}
-                          className="flex items-center justify-between px-3.5 py-2.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all border-b border-gray-50/50 dark:border-gray-700/30"
-                        >
-                          <div className="flex items-center gap-3">
-                            <Radio size={15} className="text-emerald-500" />
-                            <span>{language === 'en' ? 'Online Users' : language === 'ha' ? 'Masu amfani a kan layi' : 'Utilisateurs en ligne'}</span>
-                          </div>
-                          <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                        </Link>
-
-                        {/* Spiritual Code Preview */}
-                        <div className="p-3 bg-emerald-500/5 dark:bg-emerald-500/10 rounded-2xl mx-2.5 mt-2 border border-emerald-500/10 flex flex-col gap-1.5">
-                          <div className="flex items-center justify-between text-[9px] text-emerald-600 dark:text-emerald-400 font-extrabold tracking-wider uppercase">
-                            <span>{language === 'en' ? 'Spiritual Code' : language === 'ha' ? 'Kodin Asrar' : 'Code Spirituel'}</span>
-                            <span className="animate-pulse">●</span>
-                          </div>
-                          <code className="text-[9px] font-mono text-gray-500 dark:text-gray-300 block bg-gray-50 dark:bg-gray-900 p-2 rounded-xl border border-gray-100 dark:border-gray-800 text-left leading-normal">
-                            <span className="text-purple-500 font-bold">const</span> zikr = <span className="text-emerald-500 font-bold">"Ya-Latif"</span>;<br />
-                            <span className="text-purple-500 font-bold">const</span> count = <span className="text-amber-500 font-semibold">129</span>;<br />
-                            <span className="text-blue-500 font-semibold">reciterZikr</span>(zikr, count);
-                          </code>
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            )}
-
             {user && (
               <div className="relative" ref={notifMenuRef} id="tour-notifications">
                 <motion.button
@@ -520,103 +414,6 @@ export const Header: React.FC = () => {
               {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
             </motion.button>
 
-
-
-            {featureToggles['tool_community'] !== 'inactive' && (
-              <div className="relative sm:hidden" ref={communityMenuMobileRef}>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => {
-                    setCommunityMenuOpen(false);
-                    navigate('/community?view=messages');
-                  }}
-                  className="p-1 min-[375px]:p-1.5 sm:p-2 rounded-full hover:bg-emerald-700 dark:hover:bg-emerald-900 text-white transition-colors flex cursor-pointer relative"
-                  aria-label="Community"
-                  title="Ouvrir la communauté (Discussions & Posts)"
-                >
-                  <Users size={18} />
-                </motion.button>
-
-                <AnimatePresence>
-                  {communityMenuOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 15, scale: 0.95 }}
-                      animate={{ opacity: 1, y: 0, scale: 1 }}
-                      exit={{ opacity: 0, y: 15, scale: 0.95 }}
-                      transition={{ duration: 0.15 }}
-                      className="absolute right-0 mt-2.5 w-64 bg-white dark:bg-gray-800 border border-gray-150 dark:border-gray-700/85 rounded-3xl shadow-xl py-2 z-50 overflow-hidden"
-                    >
-                      <div className="px-3.5 py-2 border-b border-gray-50 dark:border-gray-700/50 flex items-center justify-between">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">
-                          {language === 'en' ? 'Community Menu' : language === 'ha' ? "Tsarin Al'umma" : 'Menu Communauté'}
-                        </span>
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                      </div>
-                      <div className="flex flex-col">
-                        <Link
-                          to="/community?view=messages"
-                          onClick={() => setCommunityMenuOpen(false)}
-                          className="flex items-center gap-3 px-3.5 py-2.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all border-b border-gray-50/50 dark:border-gray-700/30"
-                        >
-                          <MessageSquare size={15} className="text-emerald-500" />
-                          <span>{language === 'en' ? 'Discussions & Posts' : language === 'ha' ? 'Tattaunawa da Saƙonni' : 'Discussions & Messages'}</span>
-                        </Link>
-                        <Link
-                          to="/community?view=polls"
-                          onClick={() => setCommunityMenuOpen(false)}
-                          className="flex items-center gap-3 px-3.5 py-2.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all border-b border-gray-50/50 dark:border-gray-700/30"
-                        >
-                          <Vote size={15} className="text-emerald-500" />
-                          <span>{language === 'en' ? 'Community Polls' : language === 'ha' ? "Zaɓukan Al'umma" : "Sondages de l'Al'umma"}</span>
-                        </Link>
-                        <Link
-                          to="/community?view=dms"
-                          onClick={() => setCommunityMenuOpen(false)}
-                          className="flex items-center gap-3 px-3.5 py-2.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all border-b border-gray-50/50 dark:border-gray-700/30"
-                        >
-                          <Inbox size={15} className="text-emerald-500" />
-                          <span>{language === 'en' ? 'Private Messages' : language === 'ha' ? 'Saƙonnin Sirri' : 'Messages Privés'}</span>
-                        </Link>
-                        <Link
-                          to="/community?view=friends"
-                          onClick={() => setCommunityMenuOpen(false)}
-                          className="flex items-center gap-3 px-3.5 py-2.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all border-b border-gray-50/50 dark:border-gray-700/30"
-                        >
-                          <Users size={15} className="text-emerald-500" />
-                          <span>{language === 'en' ? 'Members & Friends' : language === 'ha' ? 'Mambobi da Abokai' : 'Membres & Amis'}</span>
-                        </Link>
-                        <Link
-                          to="/community?view=online"
-                          onClick={() => setCommunityMenuOpen(false)}
-                          className="flex items-center justify-between px-3.5 py-2.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 hover:text-emerald-600 dark:hover:text-emerald-400 transition-all border-b border-gray-50/50 dark:border-gray-700/30"
-                        >
-                          <div className="flex items-center gap-3">
-                            <Radio size={15} className="text-emerald-500" />
-                            <span>{language === 'en' ? 'Online Users' : language === 'ha' ? 'Masu amfani a kan layi' : 'Utilisateurs en ligne'}</span>
-                          </div>
-                          <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                        </Link>
-
-                        {/* Spiritual Code Preview */}
-                        <div className="p-3 bg-emerald-500/5 dark:bg-emerald-500/10 rounded-2xl mx-2.5 mt-2 border border-emerald-500/10 flex flex-col gap-1.5">
-                          <div className="flex items-center justify-between text-[9px] text-emerald-600 dark:text-emerald-400 font-extrabold tracking-wider uppercase">
-                            <span>{language === 'en' ? 'Spiritual Code' : language === 'ha' ? 'Kodin Asrar' : 'Code Spirituel'}</span>
-                            <span className="animate-pulse">●</span>
-                          </div>
-                          <code className="text-[9px] font-mono text-gray-500 dark:text-gray-300 block bg-gray-50 dark:bg-gray-900 p-2 rounded-xl border border-gray-100 dark:border-gray-800 text-left leading-normal">
-                            <span className="text-purple-500 font-bold">const</span> zikr = <span className="text-emerald-500 font-bold">"Ya-Latif"</span>;<br />
-                            <span className="text-purple-500 font-bold">const</span> count = <span className="text-amber-500 font-semibold">129</span>;<br />
-                            <span className="text-blue-500 font-semibold">reciterZikr</span>(zikr, count);
-                          </code>
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            )}
-
             {(user?.role === 'admin' || ['jibriltengeh4@gmail.com', 'sbireino@gmail.com', 'tenibawwal10@gmail.com', 'jibriltengeh57@gmail.com'].includes(user?.email?.toLowerCase() || '')) && (
               <Link to="/admin">
                 <motion.div
@@ -631,258 +428,6 @@ export const Header: React.FC = () => {
             )}
 
             <SyncStatusBadge />
-
-            {/* User Profile & Quick Actions Menu */}
-            <div className="relative" ref={userMenuRef}>
-              <motion.button 
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setUserMenuOpen(!userMenuOpen)}
-                id="tour-profile"
-                className="w-8 h-8 rounded-full bg-emerald-500 dark:bg-emerald-600 flex items-center justify-center overflow-hidden ring-2 ring-white/20 cursor-pointer ml-0.5 sm:ml-1 focus:outline-none"
-                aria-label="User Menu"
-              >
-                {user?.photoURL ? (
-                  <img src={user.photoURL} alt="Profile" className="w-full h-full object-cover" />
-                ) : (
-                  <User className="text-white" size={16} />
-                )}
-              </motion.button>
-
-              {/* Mobile backdrop for high visibility and dismissability */}
-              <AnimatePresence>
-                {userMenuOpen && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="fixed inset-0 bg-black/40 backdrop-blur-xs z-40 sm:hidden"
-                    onClick={() => setUserMenuOpen(false)}
-                  />
-                )}
-              </AnimatePresence>
-
-              <AnimatePresence>
-                {userMenuOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 12, scale: 0.95 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 12, scale: 0.95 }}
-                    transition={{ duration: 0.18, ease: 'easeOut' }}
-                    className="fixed inset-x-3 top-16 sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2.5 w-auto max-w-[340px] sm:w-76 mx-auto sm:mx-0 bg-white dark:bg-gray-800 rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-700/80 p-2 z-50 overflow-hidden text-gray-800 dark:text-gray-200"
-                  >
-                    {/* User info preview */}
-                    <div className="p-3.5 rounded-2xl bg-gray-50/80 dark:bg-gray-900/50 border border-gray-100/80 dark:border-gray-700/50 mb-1">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-10 h-10 rounded-full bg-emerald-500/15 dark:bg-emerald-500/25 flex items-center justify-center shrink-0 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 overflow-hidden">
-                            {user?.photoURL ? (
-                              <img src={user.photoURL} alt="Avatar" className="w-full h-full object-cover" />
-                            ) : (
-                              <User size={20} />
-                            )}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="text-sm font-bold truncate text-gray-900 dark:text-white">
-                              {user ? (user.name || (user as any).displayName || user.email?.split('@')[0] || (language === 'fr' ? 'Chercheur Spirituel' : 'Spiritual Seeker')) : (language === 'fr' ? 'Mode Invité' : language === 'ha' ? 'Yanayin Bako' : 'Guest Mode')}
-                            </p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                              {user ? (user.email || '') : (language === 'fr' ? 'Non connecté' : language === 'ha' ? 'Ba a shiga ba' : 'Not signed in')}
-                            </p>
-                          </div>
-                        </div>
-                        <button
-                          onClick={() => setUserMenuOpen(false)}
-                          className="p-1 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-200/50 dark:hover:bg-gray-700/50 transition-colors sm:hidden"
-                          aria-label="Close menu"
-                        >
-                          <X size={16} />
-                        </button>
-                      </div>
-
-                      <div className="mt-2.5 flex items-center justify-between gap-2">
-                        {user ? (
-                          <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 ${
-                            user?.role === 'admin'
-                              ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300'
-                              : isPremium
-                              ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300'
-                              : 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300'
-                          }`}>
-                            {user?.role === 'admin' ? (
-                              <>
-                                <Shield size={10} />
-                                <span>Admin</span>
-                              </>
-                            ) : isPremium ? (
-                              <>
-                                <Sparkles size={10} />
-                                <span>{language === 'fr' ? 'Membre Premium' : language === 'ha' ? 'Mamba na Musamman' : 'Premium Member'}</span>
-                              </>
-                            ) : (
-                              <span>{language === 'fr' ? 'Membre' : language === 'ha' ? 'Mamba' : 'Member'}</span>
-                            )}
-                          </span>
-                        ) : (
-                          <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-gray-200/70 dark:bg-gray-700 text-gray-600 dark:text-gray-300">
-                            {language === 'fr' ? 'Invité' : language === 'ha' ? 'Bako' : 'Guest'}
-                          </span>
-                        )}
-
-                        {!user && (
-                          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">
-                            {language === 'fr' ? 'Prêt à synchroniser' : language === 'ha' ? 'A shirye don ajiya' : 'Ready to sync'}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Quick Menu Options */}
-                    <div className="p-1 space-y-1">
-                      {/* Mode Plein Écran Switch */}
-                      <button
-                        onClick={async () => {
-                          setUserMenuOpen(false);
-                          await toggleFullscreen();
-                        }}
-                        className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
-                          isFullscreen
-                            ? 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 font-bold'
-                            : 'hover:bg-gray-100 dark:hover:bg-gray-700/60 text-gray-700 dark:text-gray-200'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2.5">
-                          {isFullscreen ? (
-                            <Minimize2 size={16} className="text-amber-500" />
-                          ) : (
-                            <Maximize2 size={16} className="text-emerald-500" />
-                          )}
-                          <span>
-                            {language === 'fr' 
-                              ? 'Mode Plein Écran' 
-                              : language === 'ha'
-                              ? 'Yanayin Cikakken Fuska'
-                              : 'Fullscreen Mode'}
-                          </span>
-                        </div>
-                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-                          isFullscreen 
-                            ? 'bg-amber-500 text-white' 
-                            : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300'
-                        }`}>
-                          {isFullscreen ? 'Actif' : 'Off'}
-                        </span>
-                      </button>
-
-                      {/* Contenu Hors-Ligne (IndexedDB) link */}
-                      <Link
-                        to="/user/dashboard"
-                        state={{ filter: 'offline' }}
-                        onClick={() => {
-                          setUserMenuOpen(false);
-                          // Trigger custom event so dashboard switches tab smoothly
-                          window.dispatchEvent(new CustomEvent('asrarhub_open_offline_vault'));
-                        }}
-                        className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold hover:bg-gray-100 dark:hover:bg-gray-700/60 text-gray-700 dark:text-gray-200 transition-colors"
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <HardDrive size={16} className="text-teal-500" />
-                          <span>
-                            {language === 'fr' 
-                              ? 'Contenu Hors-Ligne' 
-                              : language === 'ha'
-                              ? 'Abubuwan da Ba a Haɗa ba'
-                              : 'Offline Content'}
-                          </span>
-                        </div>
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-teal-100 dark:bg-teal-900/40 text-teal-700 dark:text-teal-300 font-bold">
-                          IndexedDB
-                        </span>
-                      </Link>
-
-                      {/* Sauvegarder l'application hors-ligne */}
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setUserMenuOpen(false);
-                          setIsOfflineSaverOpen(true);
-                        }}
-                        className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold bg-emerald-50/70 dark:bg-emerald-950/30 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 transition-colors cursor-pointer"
-                      >
-                        <div className="flex items-center gap-2.5">
-                          <HardDriveDownload size={16} className="text-emerald-600 dark:text-emerald-400" />
-                          <span className="font-bold">
-                            {language === 'fr' 
-                              ? "Sauvegarder l'app (Hors-ligne)" 
-                              : language === 'ha'
-                              ? 'Ajiye App don Offline'
-                              : 'Save App for Offline'}
-                          </span>
-                        </div>
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-200/60 dark:bg-emerald-800/60 text-emerald-800 dark:text-emerald-200 font-bold">
-                          100%
-                        </span>
-                      </button>
-
-                      {/* Mon Profil & Paramètres */}
-                      <Link
-                        to="/profile"
-                        onClick={() => setUserMenuOpen(false)}
-                        className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold hover:bg-gray-100 dark:hover:bg-gray-700/60 text-gray-700 dark:text-gray-200 transition-colors"
-                      >
-                        <Settings size={16} className="text-blue-500" />
-                        <span>
-                          {language === 'fr' 
-                            ? 'Mon Profil & Réglages' 
-                            : language === 'ha'
-                            ? 'Bayanina & Saituna'
-                            : 'Profile & Settings'}
-                        </span>
-                      </Link>
-
-                      <div className="h-px bg-gray-100 dark:bg-gray-700/60 my-1" />
-
-                      {/* Auth action: Sign In when guest, Sign Out when authenticated */}
-                      {user ? (
-                        <button
-                          onClick={async () => {
-                            setUserMenuOpen(false);
-                            await signOut();
-                          }}
-                          className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-xs font-semibold hover:bg-red-50 dark:hover:bg-red-900/20 text-red-600 dark:text-red-400 transition-colors cursor-pointer"
-                        >
-                          <LogOut size={16} />
-                          <span>
-                            {language === 'fr' 
-                              ? 'Se Déconnecter' 
-                              : language === 'ha'
-                              ? 'Fita daga Asusun'
-                              : 'Sign Out'}
-                          </span>
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => {
-                            setUserMenuOpen(false);
-                            setShowAuthModal(true);
-                          }}
-                          className="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white shadow-md hover:shadow-lg transition-all transform active:scale-95 cursor-pointer"
-                        >
-                          <LogIn size={16} />
-                          <span>
-                            {language === 'fr' 
-                              ? 'Se Connecter / S\'inscrire' 
-                              : language === 'ha'
-                              ? 'Shiga / Buɗe Asusu'
-                              : 'Sign In / Sign Up'}
-                          </span>
-                        </button>
-                      )}
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
           </div>
         </div>
       </header>

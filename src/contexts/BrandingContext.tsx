@@ -39,7 +39,7 @@ const defaultBranding: AppBranding = {
   loadingScreenImage: '',
   loadingScreenVideo: '/videos/loading.mp4',
   loadingScreenEnabled: true,
-  showLoadingImage: true,
+  showLoadingImage: false,
   loadingVideoAutoplay: true,
   loadingVideoLoop: false,
   loadingVideoMuted: true,
@@ -67,10 +67,9 @@ function sanitizeBrandingForFirestore(data: AppBranding): AppBranding {
     sanitized.loadingScreenVideo = '/videos/loading.mp4';
   }
 
-  if (sanitized.loadingScreenImage && sanitized.loadingScreenImage.length > MAX_SAFE_FIELD_LEN) {
-    console.warn('[Branding] loadingScreenImage was oversized for Firestore (>500KB). Sanitized.');
-    sanitized.loadingScreenImage = '';
-  }
+  // Remove loading screen image
+  sanitized.loadingScreenImage = '';
+  sanitized.showLoadingImage = false;
 
   if (sanitized.appLogo && sanitized.appLogo.length > MAX_SAFE_FIELD_LEN) {
     sanitized.appLogo = '';
@@ -92,6 +91,8 @@ function getInitialBranding(): AppBranding {
       if (parsed.loadingScreenVideo && parsed.loadingScreenVideo.length > 500000) {
         parsed.loadingScreenVideo = '/videos/loading.mp4';
       }
+      parsed.loadingScreenImage = '';
+      parsed.showLoadingImage = false;
       return { ...defaultBranding, ...parsed };
     }
   } catch (e) {

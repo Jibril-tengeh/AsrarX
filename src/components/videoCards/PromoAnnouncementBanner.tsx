@@ -25,7 +25,7 @@ export const PromoAnnouncementBanner: React.FC<PromoAnnouncementBannerProps> = (
   useEffect(() => {
     const unsub = promoAnnouncementService.subscribeActiveAnnouncement((data) => {
       if (data && data.isActive && data.showInBanner) {
-        if (!data.targetPages || data.targetPages.includes('all') || data.targetPages.includes(pageLocation)) {
+        if (!data.targetPages || data.targetPages.includes('all') || (data.targetPages as any).includes(pageLocation)) {
           setAnnouncement(data);
           return;
         }

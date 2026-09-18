@@ -74,7 +74,13 @@ export const fetchArticlesFromRest = async (): Promise<any[]> => {
         url += `&pageToken=${encodeURIComponent(pageToken)}`;
       }
       
-      const res = await fetch(url, { method: 'GET', cache: 'no-store' });
+      let res: Response;
+      try {
+        res = await fetch(url, { method: 'GET', cache: 'no-store', signal: AbortSignal.timeout(3500) });
+      } catch (fetchErr) {
+        console.warn(`[Firestore REST] Page fetch timed out or network error:`, fetchErr);
+        break;
+      }
       if (!res.ok) {
         console.warn(`[Firestore REST] Page fetch returned status ${res.status}`);
         break;

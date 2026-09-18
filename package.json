@@ -10,7 +10,7 @@
     "cap:sync": "node scripts/cap-flow.cjs",
     "cap:open": "node scripts/cap-flow.cjs --open",
     "prepare:android": "npm run build && node scripts/cap-flow.cjs",
-    "build": "npm run sync-version && vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
+    "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
     "build:prod": "node scripts/bump-version.cjs && vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
     "build:android": "npm run build && node scripts/cap-flow.cjs",
     "build:apk": "npm run build && node scripts/cap-flow.cjs && cd android && ./gradlew assembleRelease",

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Moon, ArrowLeft, Plus, Calendar, Save, Trash2, ChevronDown, CheckCircle2, RefreshCw, Cloud, Download, BookOpen, Sparkles } from 'lucide-react';
+import { Moon, ArrowLeft, Plus, Calendar, Save, Trash2, ChevronDown, CheckCircle2, RefreshCw, Cloud, Download, BookOpen, Sparkles, Copy, Check, Edit3, Eye, Loader2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -11,6 +11,103 @@ import { collection, query, where, onSnapshot, setDoc, deleteDoc, doc } from 'fi
 import { motion, AnimatePresence } from 'motion/react';
 import { getApiUrl } from '../../../lib/api';
 import { jsPDF } from 'jspdf';
+import { exportDreamToHighDefPDF, exportAllDreamsToHighDefPDF } from '../../../utils/dreamPdfExporter';
+
+export const SCHOLARS = [
+  { id: 'all', name: 'Tous les Savants', arabic: 'الكل', emoji: '🌟', desc: 'Synthèse globale des 4 maîtres' },
+  { id: 'ibn_sirin', name: 'Ibn Sīrīn', arabic: 'ابن سيرين', emoji: '📜', desc: 'Analogies Coran & Sunnah' },
+  { id: 'nabulusi', name: 'Al-Nābulusī', arabic: 'النابلسي', emoji: '🕊️', desc: 'Dictionnaire des symboles' },
+  { id: 'ibn_shahin', name: 'Ibn Shāhīn', arabic: 'ابن شاهين', emoji: '⚔️', desc: 'Selon le rang & la piété' },
+  { id: 'jafar_sadiq', name: 'Imam Ja\'far Al-Ṣādiq', arabic: 'الإمام الصادق', emoji: '💎', desc: 'Facettes & aspects multiples' },
+] as const;
+
+export function normalizeInterpretationMarkdown(raw: string): string {
+  if (!raw || typeof raw !== 'string') return '';
+  let text = raw.trim();
+
+  // If text uses # or ## headers, convert to ###
+  text = text.replace(/^#{1,2}\s+/gm, '### ');
+
+  // If text uses 1. ... or **1. ...**, convert them to ### 1. [Emoji] [Title]
+  text = text.replace(/^(?:\*\*)?([1-9])[\.\)]\s*(?:\*\*)?\s*(.+?)(?:\*\*)?:?\s*$/gm, (match, num, title) => {
+    if (match.startsWith('###')) return match;
+    const cleanTitle = title.replace(/\*\*/g, '').trim();
+    let emoji = '✨';
+    if (/classification|nature|sunnah|ru'ya|vision/i.test(cleanTitle)) emoji = '🌙';
+    else if (/symbole|sirin|analog/i.test(cleanTitle)) emoji = '📜';
+    else if (/nabulusi|matiere|spirituel|sens/i.test(cleanTitle)) emoji = '🕊️';
+    else if (/shahin|situation|epreuve|piege|combat/i.test(cleanTitle)) emoji = '⚔️';
+    else if (/jafar|sadiq|facette|aspect|dimension/i.test(cleanTitle)) emoji = '🌟';
+    else if (/recommandation|conseil|invocation|doua|zikr|priere/i.test(cleanTitle)) emoji = '🤲';
+    else if (/signification|diagnostic|avertissement/i.test(cleanTitle)) emoji = '🧭';
+
+    const hasEmoji = /[\u{1F300}-\u{1F9FF}]/u.test(cleanTitle);
+    return `\n\n### ${num}. ${hasEmoji ? '' : emoji + ' '}${cleanTitle}\n`;
+  });
+
+  // Ensure double newlines before headers
+  text = text.replace(/([^\n])\n(###\s+)/g, '$1\n\n$2');
+  return text.trim();
+}
+
+export const StructuredInterpretationMarkdown: React.FC<{ content: string }> = ({ content }) => {
+  const normalized = normalizeInterpretationMarkdown(content);
+
+  const renderHeading = (children: React.ReactNode) => (
+    <div className="mt-5 mb-2.5 pt-1 first:mt-0">
+      <h3 className="text-xs sm:text-sm md:text-base font-extrabold text-indigo-950 dark:text-indigo-200 bg-gradient-to-r from-indigo-100/90 via-purple-50/70 to-transparent dark:from-indigo-950/80 dark:via-purple-950/50 dark:to-transparent px-3.5 py-2.5 rounded-xl border-l-4 border-indigo-600 dark:border-indigo-400 shadow-xs flex items-center gap-2 tracking-wide font-sans">
+        {children}
+      </h3>
+    </div>
+  );
+
+  return (
+    <div className="prose dark:prose-invert max-w-none text-xs sm:text-sm text-gray-800 dark:text-gray-200 leading-relaxed font-sans space-y-2.5">
+      <Markdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          h1: ({ children }) => renderHeading(children),
+          h2: ({ children }) => renderHeading(children),
+          h3: ({ children }) => renderHeading(children),
+          h4: ({ children }) => (
+            <h4 className="text-xs sm:text-sm font-bold text-purple-900 dark:text-purple-300 mt-3 mb-1 px-1 flex items-center gap-1.5 font-sans">
+              {children}
+            </h4>
+          ),
+          p: ({ children }) => (
+            <p className="text-xs sm:text-sm text-gray-700 dark:text-gray-200 leading-relaxed my-2 font-normal">
+              {children}
+            </p>
+          ),
+          strong: ({ children }) => (
+            <strong className="font-bold text-indigo-950 dark:text-indigo-200 bg-indigo-50/80 dark:bg-indigo-900/40 px-1 py-0.5 rounded">
+              {children}
+            </strong>
+          ),
+          ul: ({ children }) => (
+            <ul className="space-y-1.5 my-2.5 pl-1 sm:pl-2 list-none">{children}</ul>
+          ),
+          ol: ({ children }) => (
+            <ol className="space-y-1.5 my-2.5 pl-4 list-decimal text-xs sm:text-sm text-gray-700 dark:text-gray-200">{children}</ol>
+          ),
+          li: ({ children }) => (
+            <li className="text-xs sm:text-sm text-gray-700 dark:text-gray-200 flex items-start gap-2 leading-relaxed">
+              <span className="inline-block w-1.5 h-1.5 rounded-full bg-indigo-500 dark:bg-indigo-400 mt-2 shrink-0" />
+              <div className="flex-1">{children}</div>
+            </li>
+          ),
+          blockquote: ({ children }) => (
+            <blockquote className="my-2.5 p-3 rounded-xl bg-amber-50/90 dark:bg-amber-950/30 border-l-4 border-amber-500 text-amber-950 dark:text-amber-200 text-xs sm:text-sm italic shadow-xs">
+              {children}
+            </blockquote>
+          ),
+        }}
+      >
+        {normalized}
+      </Markdown>
+    </div>
+  );
+};
 
 interface DreamEntry {
   id: string;
@@ -37,297 +134,57 @@ export const DreamJournal: React.FC = () => {
   const [type, setType] = useState<DreamEntry['type']>('unknown');
   const [isInterpreting, setIsInterpreting] = useState(false);
 
-  // PDF Export helper for single dream
-  const exportSingleToPDF = (dream: DreamEntry) => {
+  const [selectedScholar, setSelectedScholar] = useState<string>('all');
+  const [viewMode, setViewMode] = useState<'rendered' | 'raw'>('rendered');
+  const [copied, setCopied] = useState(false);
+  const [pastDreamInterpretingId, setPastDreamInterpretingId] = useState<string | null>(null);
+  const [isExportingPDF, setIsExportingPDF] = useState(false);
+  const [exportingDreamId, setExportingDreamId] = useState<string | null>(null);
+
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  // High-definition PDF Export helper for single dream
+  const exportSingleToPDF = async (dream: DreamEntry) => {
     if (!isPremium) {
       triggerProtectionModal('download');
       return;
     }
+    setExportingDreamId(dream.id);
+    setIsExportingPDF(true);
     try {
-      const doc = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
-      });
-
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-      const margin = 20;
-      const contentWidth = pageWidth - (margin * 2);
-
-      // Header Banner (Indigo-600)
-      doc.setFillColor(79, 70, 229);
-      doc.rect(0, 0, pageWidth, 40, 'F');
-
-      // Title inside banner
-      doc.setTextColor(255, 255, 255);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(20);
-      doc.text('AsrarHub - Journal des Reves', margin, 25);
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'normal');
-      doc.text('AsrarHub • Plateforme Spirituelle & Vision Oneirique', margin, 33);
-
-      let y = 55;
-
-      // Title of the dream
-      doc.setTextColor(31, 41, 55);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(16);
-      const titleLines = doc.splitTextToSize(dream.title, contentWidth);
-      doc.text(titleLines, margin, y);
-      y += (titleLines.length * 8) + 5;
-
-      // Date and type
-      doc.setTextColor(107, 114, 128);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(10);
-      const formattedDate = new Date(dream.date).toLocaleDateString('fr-FR', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
-      const typeLabel = dream.type === 'rahmani' ? 'Rahmani (Veridique)' :
-                        dream.type === 'nafsani' ? 'Nafsani (Psychologique)' :
-                        dream.type === 'shaytani' ? 'Shaytani (Cauchemar)' : 'Non defini';
-      doc.text(`Date : ${formattedDate}   |   Type : ${typeLabel}`, margin, y);
-      y += 10;
-
-      // Divider
-      doc.setDrawColor(229, 231, 235);
-      doc.setLineWidth(0.3);
-      doc.line(margin, y, pageWidth - margin, y);
-      y += 10;
-
-      // Prelude Wird
-      if (dream.wirdDone) {
-        doc.setFillColor(243, 244, 246);
-        doc.rect(margin, y, contentWidth, 12, 'F');
-        doc.setTextColor(79, 70, 229);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(10);
-        doc.text(` Prelude (Wird) : ${dream.wirdDone}`, margin + 3, y + 8);
-        y += 18;
-      }
-
-      // Content (Récit)
-      doc.setTextColor(55, 65, 81);
-      doc.setFont('times', 'normal');
-      doc.setFontSize(11.5);
-      const contentLines = doc.splitTextToSize(dream.content, contentWidth);
-      
-      contentLines.forEach((line: string) => {
-        if (y > pageHeight - 30) {
-          doc.addPage();
-          y = 20;
-        }
-        doc.text(line, margin, y);
-        y += 6;
-      });
-      y += 10;
-
-      // Interpretation
-      if (dream.interpretation) {
-        if (y > pageHeight - 60) {
-          doc.addPage();
-          y = 20;
-        }
-
-        doc.setFillColor(240, 242, 254);
-        doc.setDrawColor(129, 140, 248);
-        doc.setLineWidth(1);
-        
-        const interpretationLines = doc.splitTextToSize(dream.interpretation, contentWidth - 10);
-        const boxHeight = (interpretationLines.length * 6) + 12;
-
-        doc.rect(margin, y, contentWidth, boxHeight, 'F');
-        doc.line(margin, y, margin, y + boxHeight);
-
-        doc.setTextColor(79, 70, 229);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(11);
-        doc.text("INTERPRETATION (TA'BIR)", margin + 5, y + 8);
-
-        doc.setTextColor(30, 41, 59);
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(10);
-        
-        let tempY = y + 14;
-        interpretationLines.forEach((line: string) => {
-          doc.text(line, margin + 5, tempY);
-          tempY += 6;
-        });
-      }
-
-      // Footer
-      const totalPages = (doc.internal as any).pages.length - 1;
-      for (let i = 1; i <= totalPages; i++) {
-        doc.setPage(i);
-        doc.setTextColor(156, 163, 175);
-        doc.setFont('helvetica', 'italic');
-        doc.setFontSize(8);
-        doc.text(`AsrarHub • Plateforme Spirituelle AsrarHub - Page ${i} sur ${totalPages}`, margin, pageHeight - 10);
-      }
-
-      doc.save(`reve-${dream.id}.pdf`);
+      await exportDreamToHighDefPDF(dream);
     } catch (err) {
       console.error("PDF export error:", err);
-      alert("Erreur lors de la generation du PDF");
+      alert("Erreur lors de la génération du PDF");
+    } finally {
+      setIsExportingPDF(false);
+      setExportingDreamId(null);
     }
   };
 
-  // PDF Export helper for all dreams
-  const exportAllToPDF = () => {
+  // High-definition PDF Export helper for all dreams
+  const exportAllToPDF = async () => {
     if (!isPremium) {
       triggerProtectionModal('download');
       return;
     }
     if (dreams.length === 0) {
-      alert("Aucun reve a exporter.");
+      alert("Aucun rêve à exporter.");
       return;
     }
 
+    setIsExportingPDF(true);
     try {
-      const doc = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
-      });
-
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-      const margin = 20;
-      const contentWidth = pageWidth - (margin * 2);
-
-      // Header Banner (Indigo-600)
-      doc.setFillColor(79, 70, 229);
-      doc.rect(0, 0, pageWidth, 45, 'F');
-
-      // Title inside banner
-      doc.setTextColor(255, 255, 255);
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(22);
-      doc.text('ASRAR - JOURNAL DES REVES', margin, 25);
-      
-      doc.setFontSize(11);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`Recueil complet - ${dreams.length} reve(s) documente(s)`, margin, 35);
-
-      let y = 60;
-
-      dreams.forEach((dream, index) => {
-        if (index > 0) {
-          doc.addPage();
-          y = 20;
-        }
-
-        // Title of the dream
-        doc.setTextColor(31, 41, 55);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(15);
-        const titleLines = doc.splitTextToSize(`${index + 1}. ${dream.title}`, contentWidth);
-        doc.text(titleLines, margin, y);
-        y += (titleLines.length * 7) + 4;
-
-        // Date and type
-        doc.setTextColor(107, 114, 128);
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9.5);
-        const formattedDate = new Date(dream.date).toLocaleDateString('fr-FR', {
-          day: 'numeric',
-          month: 'long',
-          year: 'numeric'
-        });
-        const typeLabel = dream.type === 'rahmani' ? 'Rahmani (Veridique)' :
-                          dream.type === 'nafsani' ? 'Nafsani (Psychologique)' :
-                          dream.type === 'shaytani' ? 'Shaytani (Cauchemar)' : 'Non defini';
-        doc.text(`Date : ${formattedDate}   |   Type : ${typeLabel}`, margin, y);
-        y += 8;
-
-        // Divider
-        doc.setDrawColor(229, 231, 235);
-        doc.setLineWidth(0.3);
-        doc.line(margin, y, pageWidth - margin, y);
-        y += 10;
-
-        // Prelude Wird
-        if (dream.wirdDone) {
-          doc.setFillColor(243, 244, 246);
-          doc.rect(margin, y, contentWidth, 10, 'F');
-          doc.setTextColor(79, 70, 229);
-          doc.setFont('helvetica', 'bold');
-          doc.setFontSize(9);
-          doc.text(` Prelude (Wird) : ${dream.wirdDone}`, margin + 3, y + 7);
-          y += 15;
-        }
-
-        // Content
-        doc.setTextColor(55, 65, 81);
-        doc.setFont('times', 'normal');
-        doc.setFontSize(11);
-        const contentLines = doc.splitTextToSize(dream.content, contentWidth);
-        
-        contentLines.forEach((line: string) => {
-          if (y > pageHeight - 30) {
-            doc.addPage();
-            y = 20;
-          }
-          doc.text(line, margin, y);
-          y += 5.5;
-        });
-        y += 8;
-
-        // Interpretation
-        if (dream.interpretation) {
-          if (y > pageHeight - 50) {
-            doc.addPage();
-            y = 20;
-          }
-
-          doc.setFillColor(240, 242, 254);
-          doc.setDrawColor(129, 140, 248);
-          doc.setLineWidth(0.8);
-          
-          const interpretationLines = doc.splitTextToSize(dream.interpretation, contentWidth - 10);
-          const boxHeight = (interpretationLines.length * 5) + 10;
-
-          doc.rect(margin, y, contentWidth, boxHeight, 'F');
-          doc.line(margin, y, margin, y + boxHeight);
-
-          doc.setTextColor(79, 70, 229);
-          doc.setFont('helvetica', 'bold');
-          doc.setFontSize(10);
-          doc.text("INTERPRETATION (TA'BIR)", margin + 4, y + 6);
-
-          doc.setTextColor(30, 41, 59);
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(9.5);
-          
-          let tempY = y + 11;
-          interpretationLines.forEach((line: string) => {
-            doc.text(line, margin + 4, tempY);
-            tempY += 5;
-          });
-          y += boxHeight + 10;
-        }
-      });
-
-      // Footer
-      const totalPages = (doc.internal as any).pages.length - 1;
-      for (let i = 1; i <= totalPages; i++) {
-        doc.setPage(i);
-        doc.setTextColor(156, 163, 175);
-        doc.setFont('helvetica', 'italic');
-        doc.setFontSize(8);
-        doc.text(`AsrarHub • Recueil Officiel AsrarHub - Page ${i} sur ${totalPages}`, margin, pageHeight - 10);
-      }
-
-      doc.save('journal-reves-asrarhub.pdf');
+      await exportAllDreamsToHighDefPDF(dreams);
     } catch (err) {
       console.error("PDF export error:", err);
-      alert("Erreur lors de la generation du PDF");
+      alert("Erreur lors de la génération du recueil PDF");
+    } finally {
+      setIsExportingPDF(false);
     }
   };
 
@@ -387,28 +244,85 @@ export const DreamJournal: React.FC = () => {
     return () => unsubscribe();
   }, [user]);
 
-  const handleInterpret = async () => {
-    if (!title || !content) {
-      alert("Veuillez remplir le titre et le récit du rêve d'abord.");
+  const handleInterpret = async (scholarParam?: string) => {
+    if (!content.trim()) {
+      alert("Veuillez d'abord rédiger le récit de votre rêve.");
       return;
+    }
+    const finalScholar = scholarParam || selectedScholar;
+    const finalTitle = title.trim() || content.trim().slice(0, 35) + '...';
+    if (!title.trim()) {
+      setTitle(finalTitle);
     }
     setIsInterpreting(true);
     try {
       const res = await fetch(getApiUrl('/api/dreams/interpret'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, content, type, wirdDone, language })
+        body: JSON.stringify({ 
+          title: finalTitle, 
+          content, 
+          type, 
+          wirdDone, 
+          language,
+          scholar: finalScholar 
+        })
       });
       const data = await res.json();
       if (data.interpretation) {
         setInterpretation(data.interpretation);
+        setViewMode('rendered');
       } else {
         alert(data.error || "Erreur d'interprétation");
       }
     } catch (e) {
-      alert("Erreur réseau");
+      alert("Erreur réseau lors de la communication avec le service d'interprétation.");
     } finally {
       setIsInterpreting(false);
+    }
+  };
+
+  const handleInterpretPastDream = async (dream: DreamEntry, scholarParam: string = 'all') => {
+    setPastDreamInterpretingId(dream.id);
+    try {
+      const res = await fetch(getApiUrl('/api/dreams/interpret'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: dream.title || dream.content.slice(0, 35),
+          content: dream.content,
+          type: dream.type,
+          wirdDone: dream.wirdDone,
+          language,
+          scholar: scholarParam
+        })
+      });
+      const data = await res.json();
+      if (data.interpretation) {
+        const updated = dreams.map(d => d.id === dream.id ? { ...d, interpretation: data.interpretation } : d);
+        setDreams(updated);
+        localStorage.setItem('asrar_dreams', JSON.stringify(updated));
+
+        if (user) {
+          try {
+            await setDoc(doc(db, 'dreams', dream.id), {
+              ...dream,
+              interpretation: data.interpretation,
+              userId: user.uid
+            });
+          } catch (cloudErr) {
+            console.warn("Could not sync interpreted past dream to cloud:", cloudErr);
+          }
+        }
+        setExpandedDreamIds(prev => new Set([...prev, dream.id]));
+      } else if (data.error) {
+        alert(data.error);
+      }
+    } catch (e) {
+      console.error("Error interpreting past dream:", e);
+      alert("Erreur lors de l'interprétation du rêve passé.");
+    } finally {
+      setPastDreamInterpretingId(null);
     }
   };
 
@@ -524,11 +438,18 @@ export const DreamJournal: React.FC = () => {
           {dreams.length > 0 && (
             <button 
               onClick={exportAllToPDF}
-              className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-750 rounded-xl text-gray-700 dark:text-gray-300 flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all shadow-sm font-semibold text-sm active:scale-95"
-              title="Exporter tout en PDF"
+              disabled={isExportingPDF}
+              className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-750 rounded-xl text-gray-700 dark:text-gray-300 flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all shadow-sm font-semibold text-sm active:scale-95 disabled:opacity-60"
+              title="Exporter tout en PDF haute fidélité"
             >
-              <Download size={18} className="text-indigo-500" />
-              <span className="hidden sm:inline">Exporter PDF</span>
+              {isExportingPDF && !exportingDreamId ? (
+                <Loader2 size={18} className="text-indigo-500 animate-spin" />
+              ) : (
+                <Download size={18} className="text-indigo-500" />
+              )}
+              <span className="hidden sm:inline">
+                {isExportingPDF && !exportingDreamId ? 'Exportation...' : 'Exporter PDF'}
+              </span>
             </button>
           )}
           <button 
@@ -597,32 +518,128 @@ export const DreamJournal: React.FC = () => {
                 ></textarea>
               </div>
 
-              <div>
-                <div className="flex flex-wrap justify-between items-center mb-2 gap-2">
-                  <label className="block text-sm font-bold text-gray-700 dark:text-gray-300">
-                    {t("common.interpretation")} (Ta'bīr - Ibn Sīrīn & Savants)
-                  </label>
+              <div className="space-y-3">
+                <div className="flex flex-wrap justify-between items-center gap-2">
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 dark:text-gray-300">
+                      {t("common.interpretation")} (Ta'bīr - Ibn Sīrīn & Savants)
+                    </label>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                      Choisissez un savant ou lancez l'analyse globale structurée :
+                    </p>
+                  </div>
                   <button
-                    onClick={handleInterpret}
-                    disabled={isInterpreting || !title || !content}
-                    className="text-xs font-bold px-3 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 transition-all disabled:opacity-50 flex items-center gap-1.5 shadow-sm"
+                    type="button"
+                    onClick={() => handleInterpret()}
+                    disabled={isInterpreting || !content.trim()}
+                    className="text-xs font-bold px-3.5 py-1.5 bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 text-white rounded-xl hover:from-purple-700 hover:to-indigo-700 transition-all disabled:opacity-50 flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer"
                   >
-                    <Sparkles size={14} />
-                    {isInterpreting ? "Analyse Savants en cours..." : "Interpréter avec l'IA (Ibn Sirin & Savants)"}
+                    {isInterpreting ? (
+                      <>
+                        <Loader2 size={14} className="animate-spin" />
+                        <span>Analyse en cours...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles size={14} />
+                        <span>Interpréter avec l'IA ({SCHOLARS.find(s => s.id === selectedScholar)?.name})</span>
+                      </>
+                    )}
                   </button>
                 </div>
-                <div className="flex flex-wrap gap-1.5 mb-2">
-                  <span className="text-[10px] font-medium bg-amber-50 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 px-2 py-0.5 rounded-full border border-amber-200/50 dark:border-amber-800/50">Ibn Sīrīn (ابن سيرين)</span>
-                  <span className="text-[10px] font-medium bg-emerald-50 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 px-2 py-0.5 rounded-full border border-emerald-200/50 dark:border-emerald-800/50">Al-Nābulusī (النابلسي)</span>
-                  <span className="text-[10px] font-medium bg-blue-50 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300 px-2 py-0.5 rounded-full border border-blue-200/50 dark:border-blue-800/50">Ibn Shāhīn (ابن شاهين)</span>
-                  <span className="text-[10px] font-medium bg-purple-50 text-purple-800 dark:bg-purple-950/40 dark:text-purple-300 px-2 py-0.5 rounded-full border border-purple-200/50 dark:border-purple-800/50">Imam Ja'far Al-Ṣādiq (الإمام الصادق)</span>
+
+                {/* Interactive Scholar Selector Pills */}
+                <div className="flex flex-wrap gap-1.5">
+                  {SCHOLARS.map((s) => {
+                    const isSelected = selectedScholar === s.id;
+                    return (
+                      <button
+                        key={s.id}
+                        type="button"
+                        onClick={() => {
+                          setSelectedScholar(s.id);
+                          if (content.trim()) {
+                            handleInterpret(s.id);
+                          }
+                        }}
+                        disabled={isInterpreting}
+                        className={`text-xs font-semibold px-3 py-1 rounded-full border transition-all flex items-center gap-1.5 cursor-pointer active:scale-95 ${
+                          isSelected
+                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm ring-2 ring-indigo-300 dark:ring-indigo-700'
+                            : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/60'
+                        }`}
+                        title={s.desc}
+                      >
+                        <span>{s.emoji}</span>
+                        <span>{s.name}</span>
+                        <span className={`text-[10px] ${isSelected ? 'text-indigo-100' : 'text-gray-400 dark:text-gray-300'}`}>({s.arabic})</span>
+                      </button>
+                    );
+                  })}
                 </div>
-                <textarea
-                  value={interpretation}
-                  onChange={(e) => setInterpretation(e.target.value)}
-                  placeholder="L'interprétation générée apparaîtra ici avec l'analyse d'Ibn Sirin et des savants..."
-                  className="w-full h-32 bg-indigo-50/40 dark:bg-indigo-900/10 border border-indigo-100 dark:border-indigo-900/50 rounded-xl p-3 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 resize-none font-sans text-sm"
-                ></textarea>
+
+                {/* Interpretation preview container */}
+                {interpretation ? (
+                  <div className="bg-gradient-to-br from-indigo-50/50 via-purple-50/30 to-amber-50/20 dark:from-indigo-950/20 dark:via-purple-950/20 dark:to-amber-950/10 border border-indigo-200/70 dark:border-indigo-800/40 rounded-2xl p-4 shadow-sm relative">
+                    <div className="flex items-center justify-between border-b border-indigo-100 dark:border-indigo-800/40 pb-2 mb-3">
+                      <div className="flex items-center gap-2">
+                        <BookOpen size={16} className="text-indigo-600 dark:text-indigo-400" />
+                        <span className="text-xs font-bold text-indigo-900 dark:text-indigo-200 uppercase tracking-wider">
+                          Interprétation des Savants
+                        </span>
+                        <span className="text-[10px] bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded-full font-bold">
+                          {SCHOLARS.find(s => s.id === selectedScholar)?.name}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleCopy(interpretation)}
+                          className="px-2 py-1 rounded-lg text-xs font-semibold text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-800 flex items-center gap-1 border border-transparent hover:border-gray-200 dark:hover:border-gray-700 transition-all cursor-pointer"
+                          title="Copier le texte"
+                        >
+                          {copied ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
+                          <span className="hidden sm:inline">{copied ? "Copié !" : "Copier"}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setViewMode(viewMode === 'rendered' ? 'raw' : 'rendered')}
+                          className="px-2 py-1 rounded-lg text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-white dark:hover:bg-gray-800 flex items-center gap-1 border border-indigo-200/50 dark:border-indigo-700/50 transition-all cursor-pointer"
+                        >
+                          {viewMode === 'rendered' ? (
+                            <>
+                              <Edit3 size={14} />
+                              <span className="hidden sm:inline">Modifier</span>
+                            </>
+                          ) : (
+                            <>
+                              <Eye size={14} />
+                              <span className="hidden sm:inline">Aperçu structuré</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    {viewMode === 'rendered' ? (
+                      <StructuredInterpretationMarkdown content={interpretation} />
+                    ) : (
+                      <textarea
+                        value={interpretation}
+                        onChange={(e) => setInterpretation(e.target.value)}
+                        placeholder="L'interprétation apparaîtra ici..."
+                        className="w-full h-64 bg-white dark:bg-gray-900 border border-indigo-200 dark:border-indigo-800 rounded-xl p-3 text-gray-900 dark:text-white focus:ring-2 focus:ring-indigo-500 font-mono text-xs leading-relaxed"
+                      />
+                    )}
+                  </div>
+                ) : (
+                  <div className="bg-gray-50/70 dark:bg-gray-900/50 border border-dashed border-gray-200 dark:border-gray-700 rounded-2xl p-5 text-center">
+                    <Sparkles size={22} className="mx-auto text-indigo-400 mb-2 opacity-70" />
+                    <p className="text-xs text-gray-600 dark:text-gray-400 max-w-md mx-auto leading-relaxed">
+                      Cliquez sur <strong>« Interpréter avec l'IA »</strong> ou sélectionnez un savant (Ibn Sīrīn, Al-Nābulusī, Ibn Shāhīn, Imam Ja'far Al-Ṣādiq) pour générer l'analyse structurée avec titres H3 et émojis.
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div className="flex gap-3 justify-end pt-4">
@@ -669,10 +686,15 @@ export const DreamJournal: React.FC = () => {
                     e.stopPropagation();
                     exportSingleToPDF(dream);
                   }}
-                  className="text-gray-400 hover:text-indigo-500 transition-colors p-1 rounded-lg"
-                  title="Exporter ce rêve en PDF"
+                  disabled={isExportingPDF}
+                  className="text-gray-400 hover:text-indigo-500 transition-colors p-1 rounded-lg disabled:opacity-50"
+                  title="Exporter ce rêve en PDF haute fidélité"
                 >
-                  <Download size={18} />
+                  {isExportingPDF && exportingDreamId === dream.id ? (
+                    <Loader2 size={18} className="text-indigo-500 animate-spin" />
+                  ) : (
+                    <Download size={18} />
+                  )}
                 </button>
                 <button
                   onClick={(e) => {
@@ -715,23 +737,68 @@ export const DreamJournal: React.FC = () => {
                       <p className="text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-wrap font-serif mb-4">
                         {dream.content}
                       </p>
-                      {dream.interpretation && (
-                        <div className="bg-gradient-to-br from-indigo-50/80 via-purple-50/50 to-amber-50/30 dark:from-indigo-950/20 dark:via-purple-950/20 dark:to-amber-950/10 border-l-4 border-indigo-500 p-5 rounded-r-2xl border border-indigo-100/50 dark:border-indigo-900/30 shadow-sm mt-4">
-                          <div className="flex flex-wrap items-center justify-between gap-2 mb-3 pb-2 border-b border-indigo-100 dark:border-indigo-900/40">
+                      {dream.interpretation ? (
+                        <div className="bg-gradient-to-br from-indigo-50/80 via-purple-50/50 to-amber-50/30 dark:from-indigo-950/20 dark:via-purple-950/20 dark:to-amber-950/10 border-l-4 border-indigo-500 p-4 sm:p-5 rounded-r-2xl border border-indigo-100/50 dark:border-indigo-900/30 shadow-sm mt-4">
+                          <div className="flex flex-wrap items-center justify-between gap-2 mb-3 pb-2.5 border-b border-indigo-100 dark:border-indigo-900/40">
                             <h4 className="text-xs uppercase tracking-widest font-bold text-indigo-700 dark:text-indigo-300 flex items-center gap-1.5">
                               <BookOpen size={14} className="text-indigo-600 dark:text-indigo-400" />
                               Interprétation Traditionnelle (Ta'bīr al-Ru'yā)
                             </h4>
-                            <div className="flex flex-wrap gap-1">
-                              <span className="text-[10px] bg-indigo-100/80 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-300 px-2 py-0.5 rounded-full font-semibold">Ibn Sīrīn</span>
-                              <span className="text-[10px] bg-purple-100/80 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300 px-2 py-0.5 rounded-full font-semibold">Al-Nābulusī</span>
-                              <span className="text-[10px] bg-amber-100/80 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 px-2 py-0.5 rounded-full font-semibold">Ibn Shāhīn</span>
-                              <span className="text-[10px] bg-emerald-100/80 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300 px-2 py-0.5 rounded-full font-semibold">Imam Al-Ṣādiq</span>
+                            <div className="flex flex-wrap items-center gap-1">
+                              {SCHOLARS.map((s) => (
+                                <button
+                                  key={s.id}
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleInterpretPastDream(dream, s.id);
+                                  }}
+                                  disabled={pastDreamInterpretingId === dream.id}
+                                  className="text-[10px] bg-white/90 dark:bg-gray-800/90 hover:bg-indigo-50 dark:hover:bg-indigo-950/70 text-gray-700 dark:text-gray-300 px-2 py-0.5 rounded-full font-semibold border border-gray-200 dark:border-gray-700 transition-all flex items-center gap-1 cursor-pointer active:scale-95 disabled:opacity-50"
+                                  title={`Consulter / Ré-interpréter selon ${s.name}`}
+                                >
+                                  {pastDreamInterpretingId === dream.id ? (
+                                    <Loader2 size={10} className="animate-spin text-indigo-500" />
+                                  ) : (
+                                    <span>{s.emoji}</span>
+                                  )}
+                                  <span>{s.name}</span>
+                                </button>
+                              ))}
                             </div>
                           </div>
                           
-                          <div className="prose dark:prose-invert max-w-none text-sm text-gray-800 dark:text-gray-200 leading-relaxed font-sans space-y-2">
-                            <Markdown remarkPlugins={[remarkGfm]}>{dream.interpretation}</Markdown>
+                          <StructuredInterpretationMarkdown content={dream.interpretation} />
+                        </div>
+                      ) : (
+                        <div className="mt-4 p-4 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/20 border border-dashed border-indigo-200 dark:border-indigo-800/40 flex flex-wrap items-center justify-between gap-3">
+                          <div className="text-xs text-indigo-950 dark:text-indigo-200">
+                            <span className="font-bold flex items-center gap-1 mb-0.5">
+                              <Moon size={14} className="text-indigo-500" />
+                              Interprétation des savants disponible
+                            </span>
+                            <span className="text-gray-600 dark:text-gray-400">Lancez l'analyse de ce rêve selon Ibn Sīrīn, Al-Nābulusī, Ibn Shāhīn ou l'Imam Ja'far :</span>
+                          </div>
+                          <div className="flex flex-wrap gap-1.5">
+                            {SCHOLARS.map((s) => (
+                              <button
+                                key={s.id}
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleInterpretPastDream(dream, s.id);
+                                }}
+                                disabled={pastDreamInterpretingId === dream.id}
+                                className="text-xs font-bold px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-all shadow-xs flex items-center gap-1 disabled:opacity-50 cursor-pointer active:scale-95"
+                              >
+                                {pastDreamInterpretingId === dream.id ? (
+                                  <Loader2 size={12} className="animate-spin" />
+                                ) : (
+                                  <span>{s.emoji}</span>
+                                )}
+                                <span>{s.name}</span>
+                              </button>
+                            ))}
                           </div>
                         </div>
                       )}

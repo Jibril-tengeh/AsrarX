@@ -92,7 +92,7 @@ export const NuraniZulmaniAnalyzer: React.FC = () => {
 
   // Clean letters
   const cleanStr = inputText.replace(/[\u064B-\u065F\u0670\u06D6-\u06DC\u06DF-\u06E8\u06EA-\u06ED\s]/g, '');
-  const chars = Array.from(cleanStr);
+  const chars = Array.from(cleanStr) as string[];
 
   const luminousFound: string[] = [];
   const darkFound: string[] = [];

@@ -19,21 +19,11 @@ export const AsrarHubLoader: React.FC<AsrarHubLoaderProps> = ({
   canSkip
 }) => {
   const { branding } = useAppBranding();
-  const [imageError, setImageError] = useState(false);
   const [videoError, setVideoError] = useState(false);
   const [isMuted, setIsMuted] = useState(branding.loadingVideoMuted !== false);
   const [videoProgress, setVideoProgress] = useState(0);
   const [resolvedVideoSrc, setResolvedVideoSrc] = useState<string>(branding.loadingScreenVideo || '/videos/loading.mp4');
   const videoRef = useRef<HTMLVideoElement>(null);
-
-  const customImageSrc = (branding.isEnabled !== false) 
-    ? (branding.loadingScreenImage || branding.appLogo || branding.appIcon) 
-    : undefined;
-
-  // Reset errors if branding media changes
-  useEffect(() => {
-    setImageError(false);
-  }, [branding.loadingScreenImage, branding.appLogo, branding.appIcon]);
 
   useEffect(() => {
     setVideoError(false);
@@ -129,47 +119,6 @@ export const AsrarHubLoader: React.FC<AsrarHubLoaderProps> = ({
     }
   };
 
-  // Custom animation styles for custom branding loading screen (image mode)
-  const getCustomAnimation = () => {
-    switch (branding.loadingAnimationType) {
-      case 'spin':
-        return {
-          animate: { rotate: 360 },
-          transition: { duration: 2, repeat: Infinity, ease: "linear" as const }
-        };
-      case 'bounce':
-        return {
-          animate: { y: [-6, 6, -6] },
-          transition: { duration: 1.2, repeat: Infinity, ease: "easeInOut" as const }
-        };
-      case 'glow':
-        return {
-          animate: { 
-            scale: [0.96, 1.04, 0.96],
-            filter: [
-              'drop-shadow(0 0 10px rgba(245,158,11,0.4))',
-              'drop-shadow(0 0 30px rgba(245,158,11,0.9))',
-              'drop-shadow(0 0 10px rgba(245,158,11,0.4))'
-            ]
-          },
-          transition: { duration: 1.8, repeat: Infinity, ease: "easeInOut" as const }
-        };
-      case 'fade':
-        return {
-          animate: { opacity: [0.3, 1, 0.3] },
-          transition: { duration: 1.6, repeat: Infinity, ease: "easeInOut" as const }
-        };
-      case 'pulse':
-      default:
-        return {
-          animate: { opacity: [0.6, 1, 0.6], scale: [0.97, 1.03, 0.97] },
-          transition: { duration: 1.5, repeat: Infinity, ease: "easeInOut" as const }
-        };
-    }
-  };
-
-  const anim = getCustomAnimation();
-
   // Fullscreen video rendering
   if (size === 'fullscreen' && isVideoMode && showMedia) {
     const isCover = branding.loadingVideoFit === 'cover';
@@ -250,7 +199,7 @@ export const AsrarHubLoader: React.FC<AsrarHubLoaderProps> = ({
     <div className="flex flex-col items-center justify-center select-none gap-5">
       {showMedia ? (
         isVideoMode ? (
-          <div className="w-28 h-28 rounded-2xl overflow-hidden bg-black/50 border border-amber-500/30 shadow-lg flex items-center justify-center">
+          <div className="w-28 h-28 rounded-2xl overflow-hidden bg-black/50 border border-emerald-500/30 shadow-lg flex items-center justify-center">
             <video
               src={resolvedVideoSrc}
               autoPlay
@@ -261,25 +210,6 @@ export const AsrarHubLoader: React.FC<AsrarHubLoaderProps> = ({
               className="w-full h-full object-cover"
             />
           </div>
-        ) : customImageSrc && !imageError ? (
-          <motion.div
-            initial={{ opacity: 0.6 }}
-            animate={anim.animate}
-            transition={anim.transition}
-            className="flex items-center justify-center"
-          >
-            <img
-              src={customImageSrc}
-              alt="Loading..."
-              onError={() => setImageError(true)}
-              className={`object-contain max-w-full ${
-                size === 'sm' ? 'max-h-12' :
-                size === 'md' ? 'max-h-24' :
-                size === 'lg' ? 'max-h-36' :
-                'max-h-48'
-              }`}
-            />
-          </motion.div>
         ) : (
           <motion.div
             initial={{ opacity: 0.6 }}
@@ -291,11 +221,11 @@ export const AsrarHubLoader: React.FC<AsrarHubLoaderProps> = ({
           </motion.div>
         )
       ) : (
-        <div className="w-10 h-10 border-3 border-amber-500/20 border-t-amber-400 rounded-full animate-spin" />
+        <div className="w-10 h-10 border-3 border-emerald-500/20 border-t-emerald-400 rounded-full animate-spin" />
       )}
 
       {displayText && (
-        <span className="text-sm font-semibold text-amber-500 animate-pulse tracking-wide mt-1 text-center max-w-xs">
+        <span className="text-sm font-semibold text-emerald-500 animate-pulse tracking-wide mt-1 text-center max-w-xs">
           {displayText}
         </span>
       )}

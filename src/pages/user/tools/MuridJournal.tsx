@@ -8,6 +8,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { ToolInfoTooltip } from '../../../components/ToolInfoTooltip';
 import { getApiUrl } from '../../../lib/api';
 import { getZikrCache, setZikrCache, syncMuridJournalOffline } from '../../../utils/zikrSyncEngine';
+import { StructuredInterpretationMarkdown } from './DreamJournal';
 
 interface MuridLogEntry {
   id: string;
@@ -420,8 +421,8 @@ export const MuridJournal: React.FC = () => {
                       {dict.ibnSirinHeader}
                     </span>
                   </div>
-                  <div className="prose dark:prose-invert max-w-none text-xs text-gray-700 dark:text-gray-300">
-                    <Markdown remarkPlugins={[remarkGfm]}>{entry.interpretation}</Markdown>
+                  <div>
+                    <StructuredInterpretationMarkdown content={entry.interpretation} />
                   </div>
                 </div>
               )}

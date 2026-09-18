@@ -20,7 +20,7 @@ type DeviceType = 'mobile' | 'tablet' | 'desktop';
 export const FeedSettingsPreview: React.FC<FeedSettingsPreviewProps> = ({
   featureToggles,
   handleToggleFeature,
-  showToast = () => {}
+  showToast = (_msg?: string, _type?: 'success' | 'error' | 'info') => {}
 }) => {
   const [selectedFeed, setSelectedFeed] = useState<FeedType>('home');
   const [deviceView, setDeviceView] = useState<DeviceType>('mobile');

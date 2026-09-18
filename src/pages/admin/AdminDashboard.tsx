@@ -21,6 +21,7 @@ const LucideIcon = ({ name, className, size }: { name: string; className?: strin
   }
   return <IconComponent className={className} size={size} />;
 };
+import { CategoryVideoOrIconBadge } from '../../components/common/CategoryDynamicIcon';
 import { db, auth } from '../../lib/firebase';
 import { collection, getDocs, doc, getDoc, updateDoc, deleteDoc, addDoc, onSnapshot, query, orderBy, setDoc, writeBatch, increment } from 'firebase/firestore';
 import { set } from 'idb-keyval';
@@ -86,7 +87,7 @@ import { AdminDeepSettingsManager } from "../../components/admin/AdminDeepSettin
 import { BrandingSettings } from '../../components/admin/BrandingSettings';
 import { FloatingBackButtonSettings } from '../../components/admin/FloatingBackButtonSettings';
 import { AdminPdfDocumentsManager } from '../../components/admin/AdminPdfDocumentsManager';
-import { AdminPromoVideoAnnouncementManager } from '../../components/admin/AdminPromoVideoAnnouncementManager';
+import AdminPromoVideoAnnouncementManager from '../../components/admin/AdminPromoVideoAnnouncementManager';
 import { AdminToolsHealthManager } from '../../components/admin/AdminToolsHealthManager';
 import { ArticleQuickControlModal } from '../../components/admin/ArticleQuickControlModal';
 import { ArticleDeleteConfirmationModal } from '../../components/admin/ArticleDeleteConfirmationModal';
@@ -262,6 +263,7 @@ export const SYSTEM_FEATURES = [
   { id: 'tools', label: 'Outils Spirituels (Catalogue)', desc: 'Page principale regroupant tous les outils mystiques', category: 'nav' },
   { id: 'journal', label: 'Journal Intime (Notes & Suivi)', desc: 'Carnet de notes spirituel personnel et historique', category: 'nav' },
   { id: 'saved', label: 'Favoris & Enregistrements', desc: 'Accès rapide aux articles et secrets sauvegardés', category: 'nav' },
+  { id: 'profile', label: 'Profil Utilisateur & Paramètres', desc: 'Mon profil, compte, réglages et paramètres personnels', category: 'nav' },
   { id: 'store', label: 'Boutique AsrarHub (Store)', desc: 'Boutique en ligne, articles et services spirituels', category: 'nav' },
   { id: 'community', label: 'Communauté (Forum & Chat)', desc: 'Forum communautaire, messages et membres', category: 'nav' },
   { id: 'pdf', label: 'Bibliothèque PDF & Manuscrits', desc: 'Accès global aux documents PDF et manuscrits rares', category: 'nav' },
@@ -2213,7 +2215,7 @@ export const AdminDashboard: React.FC = () => {
         });
       } else {
         const rawLines = batchEmailsText.split(/[\n,;]/).map(s => s.trim().toLowerCase()).filter(Boolean);
-        const uniqueEmails = Array.from(new Set(rawLines));
+        const uniqueEmails: string[] = Array.from(new Set(rawLines));
         if (uniqueEmails.length === 0) {
           showToast("Aucune adresse email valide trouvée dans le texte.", "error");
           setIsAddingUsers(false);
@@ -5755,6 +5757,9 @@ export const AdminDashboard: React.FC = () => {
     } else if (featureId === 'home_categories_show_texts' || featureId === 'home_categories_show_header') {
       extraFields['home_categories_show_texts'] = newValue;
       extraFields['home_categories_show_header'] = newValue;
+    } else if (featureId === 'home_categories_icon_style') {
+      extraFields['home_categories_icon_style'] = newValue;
+      extraFields['home_categories_use_video_presets'] = newValue === 'video';
     }
 
     const fullPayload = { [featureId]: newValue, ...extraFields };
@@ -6785,6 +6790,248 @@ export const AdminDashboard: React.FC = () => {
                   >
                     +
                   </button>
+                </div>
+              </div>
+
+              {/* Paramètres d'apparence & de luminosité des icônes de catégories */}
+              <div className="pt-4 border-t border-gray-100 dark:border-gray-700/60 space-y-3.5">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="p-1.5 rounded-lg bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400">
+                      <Sparkles size={16} />
+                    </span>
+                    <div>
+                      <span className="text-xs font-bold text-gray-900 dark:text-white block">
+                        Style & Luminosité des Icônes de Catégories
+                      </span>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                        Réglez la clarté, éliminez l'effet noirci et choisissez le style visuel des badges
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-[11px] font-black px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                    {featureToggles?.home_categories_icon_style === 'pastel'
+                      ? 'Pastel Doux'
+                      : featureToggles?.home_categories_icon_style === 'white_bordered'
+                      ? 'Blanc Pur'
+                      : featureToggles?.home_categories_icon_style === 'vibrant_gradient'
+                      ? 'Dégradé Vif'
+                      : featureToggles?.home_categories_icon_style === 'video'
+                      ? 'Vidéos Mystiques'
+                      : 'Lumineux & Éclatant'}
+                  </span>
+                </div>
+
+                {/* 5 Styles au choix */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+                  {[
+                    {
+                      id: 'luminous',
+                      label: 'Lumineux & Éclatant',
+                      desc: 'Dégradé clair, sans fond noir',
+                      badge: 'Recommandé',
+                      color: 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/30'
+                    },
+                    {
+                      id: 'pastel',
+                      label: 'Pastel Doux',
+                      desc: 'Fond très clair, icône colorée',
+                      badge: 'Épuré',
+                      color: 'border-sky-500 bg-sky-50/50 dark:bg-sky-950/30'
+                    },
+                    {
+                      id: 'white_bordered',
+                      label: 'Blanc Pur & Bordure',
+                      desc: 'Fond blanc, contour coloré',
+                      badge: 'Net',
+                      color: 'border-purple-500 bg-purple-50/50 dark:bg-purple-950/30'
+                    },
+                    {
+                      id: 'vibrant_gradient',
+                      label: 'Dégradé Bijou',
+                      desc: 'Couleurs saturées vives',
+                      badge: 'Vibrant',
+                      color: 'border-amber-500 bg-amber-50/50 dark:bg-amber-950/30'
+                    },
+                    {
+                      id: 'video',
+                      label: 'Vidéos Mystiques',
+                      desc: 'Fond animé ésotérique',
+                      badge: 'Animé',
+                      color: 'border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/30'
+                    },
+                  ].map((styleOpt) => {
+                    const isSelected = (featureToggles?.home_categories_icon_style || 'luminous') === styleOpt.id;
+                    return (
+                      <button
+                        key={`cat-icon-style-${styleOpt.id}`}
+                        type="button"
+                        onClick={() => handleToggleFeature('home_categories_icon_style', styleOpt.id, `Style icône ${styleOpt.label}`)}
+                        className={`p-2.5 rounded-xl border-2 text-left transition-all cursor-pointer relative ${
+                          isSelected ? `${styleOpt.color} shadow-xs ring-1 ring-emerald-500` : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-1 mb-1">
+                          <span className="text-[11px] font-bold text-gray-900 dark:text-white leading-tight">
+                            {styleOpt.label}
+                          </span>
+                          {isSelected && <Check size={13} className="text-emerald-600 shrink-0" />}
+                        </div>
+                        <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight">
+                          {styleOpt.desc}
+                        </p>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Option 2 : Supprimer le voile sombre / noirci */}
+                <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 flex items-center justify-between gap-3">
+                  <div>
+                    <span className="text-xs font-bold text-gray-800 dark:text-gray-200 block">
+                      Supprimer le filtre assombrissant / voile noir des badges :
+                    </span>
+                    <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                      {featureToggles?.home_categories_remove_dark_overlay !== false
+                        ? "Activé : Les badges sont limpides et radieux sans aucune couche sombre."
+                        : "Désactivé : Un voile sombre à 25% est appliqué sur le fond."}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleFeature('home_categories_remove_dark_overlay', featureToggles?.home_categories_remove_dark_overlay === false ? true : false, "Suppression filtre sombre")}
+                    className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors cursor-pointer shrink-0 ${
+                      featureToggles?.home_categories_remove_dark_overlay !== false ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
+                    }`}
+                  >
+                    <div className={`w-4 h-4 rounded-full bg-white transition-transform ${
+                      featureToggles?.home_categories_remove_dark_overlay !== false ? 'translate-x-5' : 'translate-x-0'
+                    }`} />
+                  </button>
+                </div>
+
+                {/* Option 3 : Curseur de luminosité / clarté */}
+                <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-gray-800 dark:text-gray-200">
+                      Luminosité globale des icônes :
+                    </span>
+                    <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800">
+                      {featureToggles?.home_categories_icon_brightness !== undefined ? featureToggles.home_categories_icon_brightness : 100}%
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleToggleFeature('home_categories_icon_brightness', Math.max(60, (featureToggles?.home_categories_icon_brightness || 100) - 10), "Luminosité icônes")}
+                      className="w-7 h-7 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-emerald-100 flex items-center justify-center font-bold text-sm text-gray-700 dark:text-gray-200 cursor-pointer"
+                    >
+                      -
+                    </button>
+                    <input
+                      type="range"
+                      min={60}
+                      max={150}
+                      step={5}
+                      value={featureToggles?.home_categories_icon_brightness !== undefined ? featureToggles.home_categories_icon_brightness : 100}
+                      onChange={(e) => handleToggleFeature('home_categories_icon_brightness', parseInt(e.target.value), "Luminosité icônes")}
+                      className="flex-1 accent-emerald-500 cursor-pointer h-2 bg-gray-200 dark:bg-gray-700 rounded-lg"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handleToggleFeature('home_categories_icon_brightness', Math.min(150, (featureToggles?.home_categories_icon_brightness || 100) + 10), "Luminosité icônes")}
+                      className="w-7 h-7 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-emerald-100 flex items-center justify-center font-bold text-sm text-gray-700 dark:text-gray-200 cursor-pointer"
+                    >
+                      +
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-1.5 pt-1 overflow-x-auto">
+                    {[
+                      { label: 'Tamisé (80%)', val: 80 },
+                      { label: 'Standard (100%)', val: 100 },
+                      { label: 'Lumineux (115%)', val: 115 },
+                      { label: 'Très Clair (130%)', val: 130 },
+                    ].map((preset) => (
+                      <button
+                        key={`bright-preset-${preset.val}`}
+                        type="button"
+                        onClick={() => handleToggleFeature('home_categories_icon_brightness', preset.val, `Luminosité ${preset.label}`)}
+                        className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border transition-colors cursor-pointer ${
+                          (featureToggles?.home_categories_icon_brightness || 100) === preset.val
+                            ? 'bg-emerald-600 text-white border-emerald-600'
+                            : 'bg-white dark:bg-gray-750 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700'
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Option 4 : Couleur des icônes SVG */}
+                <div className="flex items-center justify-between p-3 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700">
+                  <div>
+                    <span className="text-xs font-bold text-gray-800 dark:text-gray-200 block">
+                      Couleur du symbole SVG de l'icône :
+                    </span>
+                    <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                      Blanc éclatant ou teinté aux couleurs de la catégorie
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    {[
+                      { id: 'auto', label: 'Automatique' },
+                      { id: 'white', label: 'Blanc Pur' },
+                      { id: 'theme', label: 'Couleur Thème' },
+                    ].map((colOpt) => (
+                      <button
+                        key={`cat-icon-col-${colOpt.id}`}
+                        type="button"
+                        onClick={() => handleToggleFeature('home_categories_icon_color_mode', colOpt.id, `Couleur icône ${colOpt.label}`)}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold border transition-colors cursor-pointer ${
+                          (featureToggles?.home_categories_icon_color_mode || 'auto') === colOpt.id
+                            ? 'bg-emerald-600 text-white border-emerald-600'
+                            : 'bg-white dark:bg-gray-750 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700'
+                        }`}
+                      >
+                        {colOpt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Aperçu direct interactif */}
+                <div className="p-3 rounded-xl bg-white dark:bg-gray-850 border border-gray-200 dark:border-gray-750 space-y-2">
+                  <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400 block">
+                    Aperçu direct du rendu des icônes sur la page d'accueil :
+                  </span>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    {[
+                      { name: 'Versets & Protection', icon: 'Shield', theme: 'protection' },
+                      { name: 'Richesse & Provisions', icon: 'Coins', theme: 'richesse' },
+                      { name: 'Secrets d\'Asrar', icon: 'Sparkles', theme: 'secret' },
+                      { name: 'Invocations & Douas', icon: 'Heart', theme: 'doua' },
+                    ].map((sample, sIdx) => (
+                      <div
+                        key={`sample-cat-${sIdx}`}
+                        className="p-2.5 rounded-xl border border-gray-150 dark:border-gray-700/70 bg-gray-50/70 dark:bg-gray-800/50 flex flex-col items-center gap-1.5 text-center"
+                      >
+                        <CategoryVideoOrIconBadge
+                          iconName={sample.icon}
+                          categoryName={sample.name}
+                          theme={sample.theme}
+                          size="sm"
+                          badgeStyle={featureToggles?.home_categories_icon_style || 'luminous'}
+                          brightness={featureToggles?.home_categories_icon_brightness !== undefined ? featureToggles.home_categories_icon_brightness : 100}
+                          removeDarkOverlay={featureToggles?.home_categories_remove_dark_overlay !== false}
+                          iconColorMode={featureToggles?.home_categories_icon_color_mode || 'auto'}
+                        />
+                        <span className="text-[10px] font-bold text-gray-800 dark:text-gray-200 truncate w-full">
+                          {sample.name}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>

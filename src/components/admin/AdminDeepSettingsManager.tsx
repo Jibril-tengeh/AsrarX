@@ -17,6 +17,7 @@ import { AdminSecurityAlertsManager } from './AdminSecurityAlertsManager';
 import { AdminRecitersManager } from './AdminRecitersManager';
 import { AdminMediaStorageManager } from './AdminMediaStorageManager';
 import { AdminVersionControlManager } from './AdminVersionControlManager';
+import { AdminAiPoolManager } from './AdminAiPoolManager';
 import { FeedSettingsPreview } from './FeedSettingsPreview';
 import { calculateHijriDate } from '../../utils/hijriDate';
 import { QURAN_RECITERS } from '../../data/reciters';
@@ -1363,7 +1364,18 @@ export const AdminDeepSettingsManager: React.FC<AdminDeepSettingsManagerProps> =
           </div>
         </SettingCard>
 
-        {/* 14. AI Assistant Prompts & Persona */}
+        {/* 14. AI API Pool & Failover System */}
+        <SettingCard
+          id="set_ai_api_pool"
+          title="Multi-API IA & Basculement Automatique de Quota (Failover)"
+          description="Configurez plusieurs clés et fournisseurs IA (Inception Labs, Gemini, Groq, OpenAI...). En cas d'épuisement de quota ou de tokens (erreur 429), le système passe automatiquement à l'API suivante."
+          icon={<Layers size={18} className="text-emerald-500 shrink-0" />}
+          badge="Haute Disponibilité IA"
+        >
+          <AdminAiPoolManager showToast={showToast} />
+        </SettingCard>
+
+        {/* 15. AI Assistant Prompts & Persona */}
         <SettingCard
           id="set_assistant_prompts"
           title="Instructions, Persona & Prompts de l'Assistant IA Spirituel"

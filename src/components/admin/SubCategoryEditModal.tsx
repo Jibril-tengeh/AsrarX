@@ -29,7 +29,7 @@ export const SubCategoryEditModal: React.FC<SubCategoryEditModalProps> = ({
   defaultParentId,
   subToEdit,
   onSave,
-  onShowToast = () => {}
+  onShowToast = (_msg?: string, _type?: 'success' | 'error' | 'info') => {}
 }) => {
   const [parentId, setParentId] = useState<string>('');
   const [formData, setFormData] = useState({

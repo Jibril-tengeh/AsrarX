@@ -187,7 +187,7 @@ export const DirectAbjadWidget: React.FC = () => {
 
   // Individual letter breakdown
   const lettersBreakdown = useMemo(() => {
-    return Array.from(cleanArabic).map((char, index) => {
+    return (Array.from(cleanArabic) as string[]).map((char, index) => {
       const val = abjadLettersMap[char] || 0;
       let element: 'fire' | 'air' | 'water' | 'earth' = 'fire';
       if (['ا', 'أ', 'إ', 'آ', 'ه', 'ة', 'ط', 'م', 'ف', 'ش', 'ذ'].includes(char)) element = 'fire';

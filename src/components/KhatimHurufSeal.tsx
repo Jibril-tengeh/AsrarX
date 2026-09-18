@@ -104,7 +104,7 @@ export const KhatimHurufSeal: React.FC = () => {
   const numNodes = Math.max(letters.length, 1);
 
   // Generate node coordinates
-  const nodeCoords = letters.map((char, i) => {
+  const nodeCoords = (letters as string[]).map((char, i) => {
     const angle = (2 * Math.PI * i) / numNodes - Math.PI / 2;
     const x = center + radius * Math.cos(angle);
     const y = center + radius * Math.sin(angle);

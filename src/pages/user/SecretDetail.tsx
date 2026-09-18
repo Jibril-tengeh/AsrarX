@@ -40,8 +40,11 @@ import {
   HardDriveDownload,
   CheckCircle2,
   HardDrive,
-  WifiOff
+  WifiOff,
+  Stamp
 } from "lucide-react";
+import { useTheme } from "../../contexts/ThemeContext";
+import { AsrarHubWatermark } from "../../components/AsrarHubWatermark";
 import { 
   saveSecretToOfflineVault, 
   getSecretFromOfflineVault, 
@@ -60,10 +63,26 @@ import { UnverifiedEmailGuard } from "../../components/UnverifiedEmailGuard";
 import { Secret3DVideoPaywallCard } from "../../components/videoCards/Secret3DVideoPaywallCard";
 import { getApiUrl } from "../../lib/api";
 
-const AccordionSection: React.FC<{ title: string, htmlContent: string, readingMode: boolean, fontSize: number, style?: React.CSSProperties }> = ({ title, htmlContent, readingMode, fontSize, style }) => {
+const AccordionSection: React.FC<{ 
+  title: string; 
+  htmlContent: string; 
+  readingMode: boolean; 
+  fontSize: number; 
+  style?: React.CSSProperties;
+  showWatermark?: boolean;
+  watermarkVariant?: 'parchment' | 'dark' | 'light' | 'gold';
+}> = ({ 
+  title, 
+  htmlContent, 
+  readingMode, 
+  fontSize, 
+  style,
+  showWatermark = true,
+  watermarkVariant = 'light'
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   return (
-    <div className={`rounded-2xl border transition-colors overflow-hidden ${readingMode ? "border-[#e8dcb5] dark:border-[#524830]/50" : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"}`} style={style}>
+    <div className={`rounded-2xl border transition-colors overflow-hidden relative ${readingMode ? "border-[#e8dcb5] dark:border-[#524830]/50" : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"}`} style={style}>
       <button 
         onClick={() => setIsOpen(!isOpen)}
         className={`w-full flex items-center justify-between p-4 sm:p-5 text-left font-bold transition-colors ${
@@ -82,19 +101,26 @@ const AccordionSection: React.FC<{ title: string, htmlContent: string, readingMo
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.25, ease: "easeInOut" }}
-            className="overflow-hidden"
+            className="overflow-hidden relative"
           >
             <div 
-              className={`article-reader-container p-4 sm:p-5 border-t ${readingMode ? "border-[#e8dcb5] dark:border-[#524830]/50 text-[#363028] dark:text-[#c4b79d]" : "border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300"}`} 
+              className={`article-reader-container p-4 sm:p-5 border-t relative overflow-hidden ${readingMode ? "border-[#e8dcb5] dark:border-[#524830]/50 text-[#363028] dark:text-[#c4b79d]" : "border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300"}`} 
               style={{ 
                 '--article-reader-font-size': `${fontSize}px`, 
                 fontSize: `${fontSize}px`, 
                 ...style 
               } as React.CSSProperties}
             >
+              {showWatermark && (
+                <AsrarHubWatermark 
+                  variant={watermarkVariant}
+                  opacity={readingMode ? 0.055 : 0.035}
+                  showCentralSeal={false}
+                />
+              )}
               <div 
                 dangerouslySetInnerHTML={{ __html: htmlContent }} 
-                className="article-reader-content prose dark:prose-invert w-full max-w-full break-words overflow-hidden" 
+                className="article-reader-content prose dark:prose-invert w-full max-w-full break-words overflow-hidden relative z-10" 
                 style={{ 
                   '--article-reader-font-size': `${fontSize}px`, 
                   fontSize: `${fontSize}px` 
@@ -218,11 +244,33 @@ export const SecretDetail: React.FC = () => {
   const { user, loading: authLoading, isPremium } = useAuth();
   const { featureToggles } = useFeatures();
   const { isFullscreen, toggleFullscreen } = useFullscreen();
+  const { actualTheme } = useTheme();
 
   const [item, setItem] = useState<AsrarItem | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [isCheckingPremium, setIsCheckingPremium] = useState(true);
   const [readingMode, setReadingMode] = useState(false);
+  const [showWatermark, setShowWatermark] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('asrar_reading_watermark');
+      return saved !== null ? saved === 'true' : true;
+    } catch (_) {
+      return true;
+    }
+  });
+
+  const toggleWatermark = () => {
+    setShowWatermark(prev => {
+      const next = !prev;
+      try {
+        localStorage.setItem('asrar_reading_watermark', String(next));
+      } catch (_) {}
+      return next;
+    });
+  };
+
+  const watermarkVariant = readingMode ? 'parchment' : actualTheme === 'dark' ? 'dark' : 'light';
+  const watermarkOpacity = readingMode ? 0.08 : actualTheme === 'dark' ? 0.06 : 0.045;
   const [zenMode, setZenMode] = useState(false);
   const [zenFontSize, setZenFontSize] = useState<'sm' | 'md' | 'lg' | 'xl'>('lg');
   const [zenTheme, setZenTheme] = useState<'cream' | 'dark' | 'white'>('cream');
@@ -1439,6 +1487,22 @@ export const SecretDetail: React.FC = () => {
           >
             <BookType size={18} />
           </button>
+
+          {/* Bouton Filigrane d'authenticité AsrarHub gravé */}
+          <button
+            onClick={toggleWatermark}
+            className={`p-1.5 rounded-full transition-all flex items-center gap-1.5 ${
+              showWatermark 
+                ? readingMode 
+                  ? "bg-[#f4ebd0] text-[#8b6e3f] dark:bg-[#383120] dark:text-[#d4c39c]" 
+                  : "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"
+                : "text-gray-400 hover:text-gray-600 dark:text-gray-500"
+            }`}
+            title={showWatermark ? t("secretDetail.watermarkActive", "Filigrane AsrarHub gravé : Activé") : t("secretDetail.watermarkDisabled", "Filigrane AsrarHub : Désactivé")}
+            aria-label="Filigrane AsrarHub"
+          >
+            <Stamp size={17} />
+          </button>
           
           {/* Lecture Vocale (Text-To-Speech) Button */}
           <button
@@ -1586,8 +1650,19 @@ export const SecretDetail: React.FC = () => {
           </div>
         )}
         <div
-          className={`${readingMode ? "p-0 sm:p-2 lg:p-4" : "p-6 md:p-8 lg:p-10"}`}
+          className={`relative ${readingMode ? "p-0 sm:p-2 lg:p-4" : "p-6 md:p-8 lg:p-10"}`}
         >
+          {/* Filigrane d'authenticité AsrarHub gravé sur la feuille de lecture */}
+          {showWatermark && (
+            <AsrarHubWatermark 
+              variant={watermarkVariant}
+              opacity={watermarkOpacity}
+              showCentralSeal={true}
+              className="z-0 pointer-events-none"
+            />
+          )}
+
+          <div className="relative z-10">
           <div className="flex flex-col items-center sm:items-start gap-3 mb-6">
             <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-start w-full">
               {item.isPremium && (
@@ -1961,6 +2036,8 @@ export const SecretDetail: React.FC = () => {
                             htmlContent={section.htmlContent} 
                             readingMode={readingMode} 
                             fontSize={articleFontSize} 
+                            showWatermark={showWatermark}
+                            watermarkVariant={watermarkVariant}
                           />
                         ))}
                       </div>
@@ -2011,6 +2088,7 @@ export const SecretDetail: React.FC = () => {
                 )}
               </div>
             </div>
+          </div>
           </div>
         </div>
       </div>
@@ -2238,6 +2316,17 @@ export const SecretDetail: React.FC = () => {
                 lineHeight: zenFont.includes('serif') || zenFont === 'sans' ? '1.8' : '2.2'
               }}
             >
+              {/* Filigrane d'authenticité AsrarHub gravé en mode Zen */}
+              {showWatermark && (
+                <AsrarHubWatermark 
+                  variant={zenTheme === 'cream' ? 'parchment' : zenTheme === 'dark' ? 'dark' : 'light'}
+                  opacity={zenTheme === 'cream' ? 0.08 : zenTheme === 'dark' ? 0.06 : 0.045}
+                  showCentralSeal={true}
+                  className="z-0 pointer-events-none"
+                />
+              )}
+
+              <div className="relative z-10">
               <h1 className={`font-serif font-extrabold text-3xl sm:text-4xl md:text-5xl text-center mb-10 tracking-tight leading-tight ${
                 zenTheme === "cream" ? "text-[#4a3f35]" : zenTheme === "dark" ? "text-white" : "text-gray-900"
               }`}>
@@ -2286,6 +2375,7 @@ export const SecretDetail: React.FC = () => {
                     fontFamily: `var(--font-${zenFont === 'serif' ? 'serif' : zenFont === 'sans' ? 'sans' : zenFont})`,
                   } as React.CSSProperties}
                 />
+              </div>
               </div>
             </div>
           </motion.div>

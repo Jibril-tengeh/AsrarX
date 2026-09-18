@@ -305,7 +305,7 @@ export const SyncStatusBadge: React.FC = () => {
   };
 
   return (
-    <div className="relative inline-block" ref={popoverRef}>
+    <div className="relative inline-block shrink-0" ref={popoverRef}>
       {/* Small badge trigger with subtle framer-motion breathing animation when verifying connection */}
       <motion.button
         whileHover={{ scale: 1.05 }}
@@ -336,7 +336,7 @@ export const SyncStatusBadge: React.FC = () => {
           refreshCacheStats();
           setShowPopover(!showPopover);
         }}
-        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-semibold shadow-sm transition-all duration-300 cursor-pointer border border-transparent backdrop-blur-sm ${getStatusColor()} ${
+        className={`flex items-center gap-1.5 px-2 min-[375px]:px-2.5 py-1.5 rounded-full text-xs font-semibold shadow-sm transition-all duration-300 cursor-pointer border border-transparent backdrop-blur-sm shrink-0 ${getStatusColor()} ${
           !isVerifying && (syncState === 'offline' || syncState === 'cache') ? 'animate-pulse' : ''
         }`}
         title={getStatusLabel()}

@@ -92,11 +92,11 @@ export const FloatingTextResizer: React.FC = () => {
 
               {/* Presets Grid */}
               <div className="grid grid-cols-5 gap-1.5 pt-1">
-                {presets.map((preset) => {
+                {presets.map((preset, pIdx) => {
                   const isSelected = Math.abs(textScale - preset.scale) < 0.04;
                   return (
                     <button
-                      key={preset.label}
+                      key={`font-preset-${preset.label}-${pIdx}`}
                       type="button"
                       onClick={() => setScale(preset.scale)}
                       className={`py-1.5 px-1 rounded-xl text-center text-[10px] font-bold border transition-all cursor-pointer flex flex-col items-center justify-center gap-0.5 ${

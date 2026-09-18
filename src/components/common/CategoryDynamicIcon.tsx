@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import * as Icons from 'lucide-react';
+import { useFeatures } from '../../contexts/FeatureContext';
 import {
   FolderOpen, Folder, Shield, Moon, BookOpen, Heart, Key, Sparkles, Flame,
   Coins, Compass, Sun, Feather, Star, Volume2, Library, Music, Layers, Crown,
@@ -200,6 +201,11 @@ export interface CategoryLuminousTheme {
   ring: string;
   accent: string;
   label: string;
+  pastelBg: string;
+  pastelBorder: string;
+  pastelIconColor: string;
+  whiteBorder: string;
+  vividIconColor: string;
 }
 
 /**
@@ -217,11 +223,16 @@ export const getCategoryLuminousTheme = (categoryHint?: string, iconName?: strin
     str.includes('wealth') || str.includes('wallet') || str.includes('deblocage')
   ) {
     return {
-      gradient: 'from-amber-500 via-amber-400 to-yellow-500',
-      glow: 'shadow-[0_4px_16px_rgba(245,158,11,0.38)]',
-      ring: 'ring-amber-200/50',
+      gradient: 'from-amber-400 via-amber-300 to-yellow-400',
+      glow: 'shadow-[0_4px_16px_rgba(245,158,11,0.3)]',
+      ring: 'ring-amber-200/70',
       accent: '#f59e0b',
-      label: 'Or Rayonnant'
+      label: 'Or Rayonnant',
+      pastelBg: 'bg-amber-50 dark:bg-amber-950/40',
+      pastelBorder: 'border-amber-200/90 dark:border-amber-800/80',
+      pastelIconColor: 'text-amber-550 dark:text-amber-400',
+      whiteBorder: 'border-amber-400 dark:border-amber-500',
+      vividIconColor: 'text-amber-600 dark:text-amber-400'
     };
   }
 
@@ -232,11 +243,16 @@ export const getCategoryLuminousTheme = (categoryHint?: string, iconName?: strin
     str.includes('ciel') || str.includes('paix') || str.includes('compass')
   ) {
     return {
-      gradient: 'from-sky-500 via-cyan-400 to-teal-500',
-      glow: 'shadow-[0_4px_16px_rgba(14,165,233,0.38)]',
-      ring: 'ring-sky-200/50',
+      gradient: 'from-sky-400 via-cyan-300 to-teal-400',
+      glow: 'shadow-[0_4px_16px_rgba(14,165,233,0.3)]',
+      ring: 'ring-sky-200/70',
       accent: '#0ea5e9',
-      label: 'Céleste Azur'
+      label: 'Céleste Azur',
+      pastelBg: 'bg-sky-50 dark:bg-sky-950/40',
+      pastelBorder: 'border-sky-200/90 dark:border-sky-800/80',
+      pastelIconColor: 'text-sky-600 dark:text-sky-400',
+      whiteBorder: 'border-sky-400 dark:border-sky-500',
+      vividIconColor: 'text-sky-600 dark:text-sky-400'
     };
   }
 
@@ -247,11 +263,16 @@ export const getCategoryLuminousTheme = (categoryHint?: string, iconName?: strin
     str.includes('ruqyah') || str.includes('guerison') || str.includes('healing')
   ) {
     return {
-      gradient: 'from-rose-500 via-pink-400 to-rose-600',
-      glow: 'shadow-[0_4px_16px_rgba(244,63,94,0.38)]',
-      ring: 'ring-rose-200/50',
+      gradient: 'from-rose-400 via-pink-400 to-rose-500',
+      glow: 'shadow-[0_4px_16px_rgba(244,63,94,0.3)]',
+      ring: 'ring-rose-200/70',
       accent: '#f43f5e',
-      label: 'Rubis Sacré'
+      label: 'Rubis Sacré',
+      pastelBg: 'bg-rose-50 dark:bg-rose-950/40',
+      pastelBorder: 'border-rose-200/90 dark:border-rose-800/80',
+      pastelIconColor: 'text-rose-600 dark:text-rose-400',
+      whiteBorder: 'border-rose-400 dark:border-rose-500',
+      vividIconColor: 'text-rose-600 dark:text-rose-400'
     };
   }
 
@@ -262,11 +283,16 @@ export const getCategoryLuminousTheme = (categoryHint?: string, iconName?: strin
     str.includes('gem') || str.includes('sparkles') || str.includes('arcane')
   ) {
     return {
-      gradient: 'from-violet-600 via-purple-500 to-indigo-600',
-      glow: 'shadow-[0_4px_16px_rgba(139,92,246,0.38)]',
-      ring: 'ring-purple-200/50',
+      gradient: 'from-violet-500 via-purple-400 to-indigo-500',
+      glow: 'shadow-[0_4px_16px_rgba(139,92,246,0.3)]',
+      ring: 'ring-purple-200/70',
       accent: '#8b5cf6',
-      label: 'Améthyste Royale'
+      label: 'Améthyste Royale',
+      pastelBg: 'bg-purple-50 dark:bg-purple-950/40',
+      pastelBorder: 'border-purple-200/90 dark:border-purple-800/80',
+      pastelIconColor: 'text-purple-600 dark:text-purple-400',
+      whiteBorder: 'border-purple-400 dark:border-purple-500',
+      vividIconColor: 'text-purple-600 dark:text-purple-400'
     };
   }
 
@@ -276,34 +302,51 @@ export const getCategoryLuminousTheme = (categoryHint?: string, iconName?: strin
     str.includes('danger') || str.includes('oeil') || str.includes('evil')
   ) {
     return {
-      gradient: 'from-orange-500 via-amber-500 to-red-500',
-      glow: 'shadow-[0_4px_16px_rgba(249,115,22,0.38)]',
-      ring: 'ring-orange-200/50',
+      gradient: 'from-amber-400 via-orange-400 to-red-400',
+      glow: 'shadow-[0_4px_16px_rgba(249,115,22,0.3)]',
+      ring: 'ring-orange-200/70',
       accent: '#f97316',
-      label: 'Lumière Solaire'
+      label: 'Lumière Solaire',
+      pastelBg: 'bg-orange-50 dark:bg-orange-950/40',
+      pastelBorder: 'border-orange-200/90 dark:border-orange-800/80',
+      pastelIconColor: 'text-orange-600 dark:text-orange-400',
+      whiteBorder: 'border-orange-400 dark:border-orange-500',
+      vividIconColor: 'text-orange-600 dark:text-orange-400'
     };
   }
 
   // Favoris
   if (str.includes('favori')) {
     return {
-      gradient: 'from-amber-400 via-yellow-400 to-orange-400',
-      glow: 'shadow-[0_4px_16px_rgba(251,191,36,0.4)]',
-      ring: 'ring-amber-200/50',
+      gradient: 'from-amber-300 via-yellow-300 to-amber-400',
+      glow: 'shadow-[0_4px_16px_rgba(251,191,36,0.35)]',
+      ring: 'ring-amber-200/70',
       accent: '#f59e0b',
-      label: 'Favoris Dorés'
+      label: 'Favoris Dorés',
+      pastelBg: 'bg-amber-50 dark:bg-amber-950/40',
+      pastelBorder: 'border-amber-200/90 dark:border-amber-800/80',
+      pastelIconColor: 'text-amber-600 dark:text-amber-400',
+      whiteBorder: 'border-amber-400 dark:border-amber-500',
+      vividIconColor: 'text-amber-600 dark:text-amber-400'
     };
   }
 
   // Protection, Versets, Coran, Forteresse, Bouclier (Émeraude Majestueuse par défaut)
   return {
-    gradient: 'from-emerald-500 via-teal-400 to-emerald-600',
-    glow: 'shadow-[0_4px_16px_rgba(16,185,129,0.38)]',
-    ring: 'ring-emerald-200/50',
+    gradient: 'from-emerald-400 via-teal-300 to-emerald-500',
+    glow: 'shadow-[0_4px_16px_rgba(16,185,129,0.3)]',
+    ring: 'ring-emerald-200/70',
     accent: '#10b981',
-    label: 'Émeraude Céleste'
+    label: 'Émeraude Céleste',
+    pastelBg: 'bg-emerald-50 dark:bg-emerald-950/40',
+    pastelBorder: 'border-emerald-200/90 dark:border-emerald-800/80',
+    pastelIconColor: 'text-emerald-600 dark:text-emerald-400',
+    whiteBorder: 'border-emerald-400 dark:border-emerald-500',
+    vividIconColor: 'text-emerald-600 dark:text-emerald-400'
   };
 };
+
+export type CategoryBadgeStyle = 'luminous' | 'pastel' | 'white_bordered' | 'vibrant_gradient' | 'video';
 
 interface CategoryVideoOrIconBadgeProps {
   iconName?: string;
@@ -314,6 +357,10 @@ interface CategoryVideoOrIconBadgeProps {
   size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   className?: string;
   animate?: boolean;
+  badgeStyle?: CategoryBadgeStyle;
+  brightness?: number;
+  removeDarkOverlay?: boolean;
+  iconColorMode?: 'white' | 'theme' | 'auto';
 }
 
 /**
@@ -330,7 +377,25 @@ export const CategoryVideoOrIconBadge: React.FC<CategoryVideoOrIconBadgeProps> =
   size = 'md',
   className = '',
   animate = true,
+  badgeStyle,
+  brightness,
+  removeDarkOverlay,
+  iconColorMode,
 }) => {
+  const { featureToggles } = useFeatures() || { featureToggles: {} };
+  const effectiveStyle: CategoryBadgeStyle =
+    badgeStyle || featureToggles?.home_categories_icon_style || 'luminous';
+  const effectiveBrightness =
+    brightness !== undefined
+      ? brightness
+      : (Number(featureToggles?.home_categories_icon_brightness) || 100);
+  const effectiveRemoveOverlay =
+    removeDarkOverlay !== undefined
+      ? removeDarkOverlay
+      : (featureToggles?.home_categories_remove_dark_overlay !== false);
+  const effectiveIconColorMode =
+    iconColorMode || featureToggles?.home_categories_icon_color_mode || 'auto';
+
   const [isImgError, setIsImgError] = useState(false);
   const [isThumbError, setIsThumbError] = useState(false);
 
@@ -363,17 +428,86 @@ export const CategoryVideoOrIconBadge: React.FC<CategoryVideoOrIconBadgeProps> =
   // Determine luminous palette tailored to the category
   const palette = getCategoryLuminousTheme(theme || categoryName, iconName);
 
-  // Real video asset (only used if explicitly assigned and not broken)
-  const hasRealVideo = Boolean(!isImgError && videoUrl && videoUrl.trim().length > 0);
+  // Real video asset: only used if style is 'video' or explicit prop provided and not error
+  const hasRealVideo = Boolean(
+    (effectiveStyle === 'video' || videoUrl) &&
+    effectiveStyle !== 'pastel' &&
+    effectiveStyle !== 'white_bordered' &&
+    effectiveStyle !== 'luminous' &&
+    effectiveStyle !== 'vibrant_gradient' &&
+    !isImgError &&
+    videoUrl &&
+    videoUrl.trim().length > 0
+  );
   const trimmedUrl = (videoUrl || '').trim();
   const mp4Url = trimmedUrl ? (trimmedUrl.endsWith('.webp') ? trimmedUrl.replace(/\.webp$/, '.mp4') : trimmedUrl) : '';
   const webpUrl = trimmedUrl ? (trimmedUrl.endsWith('.mp4') ? trimmedUrl.replace(/\.mp4$/, '.webp') : trimmedUrl) : '';
 
   // Real thumbnail asset
-  const hasThumbnail = Boolean(!isThumbError && thumbnailUrl && thumbnailUrl.trim().length > 0 && !hasRealVideo);
+  const hasThumbnail = Boolean(
+    !hasRealVideo &&
+    !isThumbError &&
+    thumbnailUrl &&
+    thumbnailUrl.trim().length > 0 &&
+    effectiveStyle !== 'pastel' &&
+    effectiveStyle !== 'white_bordered'
+  );
 
+  // Icon color determination based on effectiveStyle & iconColorMode
+  const isColoredIcon =
+    effectiveIconColorMode === 'theme' ||
+    (effectiveIconColorMode === 'auto' && (effectiveStyle === 'pastel' || effectiveStyle === 'white_bordered'));
+
+  const iconClass = isColoredIcon
+    ? (effectiveStyle === 'pastel' ? palette.pastelIconColor : palette.vividIconColor)
+    : 'text-white';
+
+  const filterStyle = effectiveBrightness !== 100 ? { filter: `brightness(${effectiveBrightness}%)` } : undefined;
+
+  // --- STYLE 1: PASTEL DOUX & ÉPURÉ ---
+  if (effectiveStyle === 'pastel') {
+    return (
+      <div
+        style={filterStyle}
+        className={`relative ${containerClasses} ${palette.pastelBg} ${palette.pastelBorder} border shadow-xs flex items-center justify-center shrink-0 overflow-hidden group/badge select-none transition-all duration-300 hover:scale-105 ${className}`}
+        title={categoryName}
+      >
+        <div className="relative z-20 flex items-center justify-center transition-transform duration-300 group-hover/badge:scale-110">
+          <CategoryDynamicIcon
+            name={iconName}
+            size={targetIconSize}
+            strokeWidth={2.4}
+            className={`${iconClass}`}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // --- STYLE 2: BLANC PUR AVEC BORDURE COLORÉE ---
+  if (effectiveStyle === 'white_bordered') {
+    return (
+      <div
+        style={filterStyle}
+        className={`relative ${containerClasses} bg-white dark:bg-gray-800 ${palette.whiteBorder} border-2 shadow-xs flex items-center justify-center shrink-0 overflow-hidden group/badge select-none transition-all duration-300 hover:scale-105 ${className}`}
+        title={categoryName}
+      >
+        <div className="relative z-20 flex items-center justify-center transition-transform duration-300 group-hover/badge:scale-110">
+          <CategoryDynamicIcon
+            name={iconName}
+            size={targetIconSize}
+            strokeWidth={2.4}
+            className={`${iconClass}`}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // --- STYLE 3: LUMINEUX / VIBRANT / VIDEO (DEGRADÉ ÉCLATANT SANS FOND NOIR) ---
   return (
     <div
+      style={filterStyle}
       className={`relative ${containerClasses} p-[1.5px] bg-gradient-to-tr ${palette.gradient} ${palette.glow} flex items-center justify-center shrink-0 overflow-hidden group/badge select-none ${className}`}
       title={categoryName}
     >
@@ -383,7 +517,7 @@ export const CategoryVideoOrIconBadge: React.FC<CategoryVideoOrIconBadgeProps> =
         {/* Ambient radial lighting for high specular brightness */}
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_25%,rgba(255,255,255,0.45),transparent_70%)] pointer-events-none" />
 
-        {/* If an HD video was assigned, display it with smooth hardware-accelerated video playback */}
+        {/* If an HD video was assigned and video style active */}
         {hasRealVideo && (
           <div className="absolute inset-0 w-full h-full rounded-[inherit] overflow-hidden z-10 pointer-events-none">
             <video
@@ -401,11 +535,13 @@ export const CategoryVideoOrIconBadge: React.FC<CategoryVideoOrIconBadgeProps> =
               {mp4Url && <source src={mp4Url} type="video/mp4" onError={(e) => e.stopPropagation()} />}
               {webpUrl && <source src={webpUrl} type="image/webp" onError={(e) => e.stopPropagation()} />}
             </video>
-            <div className="absolute inset-0 bg-black/25 backdrop-blur-[0.5px]" />
+            {!effectiveRemoveOverlay && (
+              <div className="absolute inset-0 bg-black/25 backdrop-blur-[0.5px]" />
+            )}
           </div>
         )}
 
-        {/* If a custom uploaded/preset thumbnail is provided (and no video), display it as crystal cover */}
+        {/* If a custom uploaded/preset thumbnail is provided (and no video) */}
         {hasThumbnail && (
           <div className="absolute inset-0 w-full h-full rounded-[inherit] overflow-hidden z-10 pointer-events-none">
             <img
@@ -417,17 +553,19 @@ export const CategoryVideoOrIconBadge: React.FC<CategoryVideoOrIconBadgeProps> =
                 setIsThumbError(true);
               }}
             />
-            <div className="absolute inset-0 bg-black/30 backdrop-blur-[0.5px]" />
+            {!effectiveRemoveOverlay && (
+              <div className="absolute inset-0 bg-black/30 backdrop-blur-[0.5px]" />
+            )}
           </div>
         )}
 
-        {/* Dynamic Luminous SVG Icon: Always 100% crisp pure white with sharp drop-shadow, NEVER black */}
-        <div className="relative z-20 text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.65)] flex items-center justify-center transition-transform duration-300 group-hover/badge:scale-110">
+        {/* Dynamic Luminous SVG Icon: 100% crisp pure white (or theme colored if chosen) */}
+        <div className={`relative z-20 ${iconClass} ${isColoredIcon ? '' : 'drop-shadow-[0_1px_3px_rgba(0,0,0,0.4)]'} flex items-center justify-center transition-transform duration-300 group-hover/badge:scale-110`}>
           <CategoryDynamicIcon 
             name={iconName} 
             size={targetIconSize} 
             strokeWidth={2.4} 
-            className="text-white drop-shadow-sm" 
+            className={iconClass} 
           />
         </div>
 

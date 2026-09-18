@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useId } from 'react';
 
 interface AsrarHubWatermarkProps {
   /** 'parchment' for warm gold/amber ink, 'dark' for dark/purple cards, 'light' for white/gray cards, or 'gold' */
@@ -16,22 +16,27 @@ export const AsrarHubWatermark: React.FC<AsrarHubWatermarkProps> = ({
   opacity,
   className = '',
 }) => {
+  const rawId = useId();
+  const cleanId = rawId.replace(/[^a-zA-Z0-9_-]/g, '');
+  const patternId = `asrarhub-watermark-pattern-${variant}-${cleanId}`;
+  const circlePathId = `circlePath-${variant}-${cleanId}`;
+
   let textColor = '#78350f'; // amber-900 / parchment
   let sealColor = '#92400e';
-  let defaultOpacity = 0.14;
+  let defaultOpacity = 0.08;
 
   if (variant === 'dark') {
-    textColor = '#a855f7'; // purple-500
-    sealColor = '#c084fc';
-    defaultOpacity = 0.16;
+    textColor = '#34d399'; // emerald-400
+    sealColor = '#10b981';
+    defaultOpacity = 0.06;
   } else if (variant === 'gold') {
     textColor = '#d97706'; // amber-600
     sealColor = '#f59e0b';
-    defaultOpacity = 0.18;
+    defaultOpacity = 0.09;
   } else if (variant === 'light') {
-    textColor = '#334155'; // slate-700
-    sealColor = '#475569';
-    defaultOpacity = 0.12;
+    textColor = '#047857'; // emerald-700
+    sealColor = '#059669';
+    defaultOpacity = 0.05;
   }
 
   const finalOpacity = opacity !== undefined ? opacity : defaultOpacity;
@@ -45,7 +50,7 @@ export const AsrarHubWatermark: React.FC<AsrarHubWatermarkProps> = ({
       <svg className="absolute inset-0 w-full h-full" xmlns="http://www.w3.org/2000/svg">
         <defs>
           <pattern
-            id={`asrarhub-watermark-pattern-${variant}`}
+            id={patternId}
             width="200"
             height="110"
             patternUnits="userSpaceOnUse"
@@ -96,7 +101,7 @@ export const AsrarHubWatermark: React.FC<AsrarHubWatermarkProps> = ({
             </text>
           </pattern>
         </defs>
-        <rect width="100%" height="100%" fill={`url(#asrarhub-watermark-pattern-${variant})`} />
+        <rect width="100%" height="100%" fill={`url(#${patternId})`} />
       </svg>
 
       {/* 2. Optional Central Engraved Circular Seal Emblem */}
@@ -127,9 +132,9 @@ export const AsrarHubWatermark: React.FC<AsrarHubWatermarkProps> = ({
             />
 
             {/* Circular Text Path - ASRARHUB */}
-            <path id={`circlePath-${variant}`} d="M 30,100 A 70,70 0 1,1 170,100 A 70,70 0 1,1 30,100" fill="none" />
+            <path id={circlePathId} d="M 30,100 A 70,70 0 1,1 170,100 A 70,70 0 1,1 30,100" fill="none" />
             <text fill={sealColor} fontSize="8.5" fontWeight="bold" letterSpacing="1.8" fontFamily="serif">
-              <textPath href={`#circlePath-${variant}`} startOffset="0%">
+              <textPath href={`#${circlePathId}`} startOffset="0%">
                 ✦ ASRARHUB ✦ ASRARHUB ✦ ASRARHUB ✦ ASRARHUB ✦
               </textPath>
             </text>

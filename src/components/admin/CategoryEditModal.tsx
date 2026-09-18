@@ -33,7 +33,7 @@ export const CategoryEditModal: React.FC<CategoryEditModalProps> = ({
   onClose,
   categoryToEdit,
   onSave,
-  onShowToast = () => {}
+  onShowToast = (_msg?: string, _type?: 'success' | 'error' | 'info') => {}
 }) => {
   const [formData, setFormData] = useState({
     name: '',

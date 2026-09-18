@@ -1,3 +1,5 @@
+import type React from 'react';
+
 export interface FloatingBackButtonColorPreset {
   id: string;
   name: string;

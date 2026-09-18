@@ -6,3 +6,4 @@ coverage/
 *.log
 .env*
 !.env.example
+ai_api_pool.json

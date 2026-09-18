@@ -3,10 +3,11 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { motion } from 'motion/react';
 import { 
   Home, Wrench, Compass, Bookmark, Book, ShoppingBag, 
-  Users, FileText, Calendar, Sparkles, HelpCircle, Award, BookOpen
+  Users, FileText, Calendar, Sparkles, HelpCircle, Award, BookOpen, User
 } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useFeatures } from '../contexts/FeatureContext';
+import { useAuth } from '../contexts/AuthContext';
 
 interface NavItemConfig {
   id: string;
@@ -21,6 +22,7 @@ interface NavItemConfig {
 export const BottomNav: React.FC = () => {
   const { t } = useLanguage();
   const { featureToggles } = useFeatures();
+  const { user } = useAuth();
   const location = useLocation();
   const [isHidden, setIsHidden] = useState(false);
 
@@ -46,6 +48,7 @@ export const BottomNav: React.FC = () => {
     { id: 'tools', featureId: 'tools', to: '/tools', icon: Wrench, labelKey: 'nav.tools', defaultLabel: 'Outils', tourId: 'tour-nav-tools' },
     { id: 'journal', featureId: 'journal', to: '/journal', icon: Book, labelKey: 'nav.journal', defaultLabel: 'Journal', tourId: 'tour-nav-journal' },
     { id: 'saved', featureId: 'saved', to: '/saved', icon: Bookmark, labelKey: 'nav.saved', defaultLabel: 'Favoris', tourId: 'tour-nav-saved' },
+    { id: 'profile', featureId: 'profile', to: '/profile', icon: User, labelKey: 'nav.profile', defaultLabel: 'Profil', tourId: 'tour-profile' },
     { id: 'store', featureId: 'store', to: '/store', icon: ShoppingBag, labelKey: 'nav.store', defaultLabel: 'Boutique', tourId: 'tour-nav-store' },
     { id: 'community', featureId: 'community', to: '/community', icon: Users, labelKey: 'nav.community', defaultLabel: 'Communauté', tourId: 'tour-nav-community' },
     { id: 'pdf', featureId: 'pdf', to: '/pdf', icon: FileText, labelKey: 'nav.pdf', defaultLabel: 'PDF', tourId: 'tour-nav-pdf' },
@@ -58,6 +61,7 @@ export const BottomNav: React.FC = () => {
 
   // Check if item is active/enabled in featureToggles
   const isItemActive = (item: NavItemConfig) => {
+    if (item.id === 'profile') return true;
     const rawStatus = featureToggles[item.featureId];
     const toolStatus = featureToggles[`tool_${item.featureId}`];
     const status = toolStatus !== undefined ? toolStatus : rawStatus;
@@ -79,15 +83,20 @@ export const BottomNav: React.FC = () => {
     return posA - posB;
   });
 
-  // Filter active items and cap at 5 or 6 items max for bottom navigation bar UX
+  // Filter active items and ensure Profile is always present in the bottom navigation bar
   const activeSortedItems = sortedNavItems.filter(isItemActive);
-  const displayItems = activeSortedItems.slice(0, 5);
+  const profileItem = allAvailableNavItems.find(i => i.id === 'profile') || {
+    id: 'profile', featureId: 'profile', to: '/profile', icon: User, labelKey: 'nav.profile', defaultLabel: 'Profil', tourId: 'tour-profile'
+  };
+  const nonProfileActive = activeSortedItems.filter(i => i.id !== 'profile');
+  // Display up to 4 main items + Profile at the end (total 5 tabs, standard mobile UX)
+  const displayItems = [...nonProfileActive.slice(0, 4), profileItem];
 
   return (
     <div className={`fixed bottom-0 left-0 right-0 bg-emerald-600 dark:bg-emerald-800 border-t border-emerald-700 dark:border-emerald-900 pb-safe shadow-[0_-4px_20px_-10px_rgba(0,0,0,0.1)] z-50 transition-transform duration-300 ease-in-out ${
       isHidden ? 'translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100'
     }`}>
-      <nav className="flex justify-around items-center px-1 h-16 max-w-md mx-auto">
+      <nav className="flex justify-around items-center px-1 h-16 max-w-lg mx-auto">
         {displayItems.map((item, itemIdx) => {
           const label = t(item.labelKey) !== item.labelKey ? t(item.labelKey) : item.defaultLabel;
           return (
@@ -106,13 +115,19 @@ export const BottomNav: React.FC = () => {
               {({ isActive }) => (
                 <>
                   <motion.div
-                    whileHover={{ scale: 1.2, rotate: isActive ? 0 : -8 }}
-                    whileTap={{ scale: 0.82, rotate: 15 }}
-                    animate={isActive ? { scale: 1.15, rotate: 0 } : { scale: 1, rotate: 0 }}
+                    whileHover={{ scale: 1.15, rotate: isActive ? 0 : -6 }}
+                    whileTap={{ scale: 0.85 }}
+                    animate={isActive ? { scale: 1.1, rotate: 0 } : { scale: 1, rotate: 0 }}
                     transition={{ type: 'spring', stiffness: 450, damping: 18 }}
                     className="relative flex items-center justify-center"
                   >
-                    <item.icon size={22} strokeWidth={isActive ? 2.5 : 2} />
+                    {item.id === 'profile' && user?.photoURL ? (
+                      <div className={`w-6 h-6 rounded-full overflow-hidden ring-2 transition-all ${isActive ? 'ring-white scale-105' : 'ring-emerald-200/60 dark:ring-emerald-300/40'}`}>
+                        <img src={user.photoURL} alt="Profile" className="w-full h-full object-cover" />
+                      </div>
+                    ) : (
+                      <item.icon size={21} strokeWidth={isActive ? 2.5 : 2} />
+                    )}
                     {isActive && (
                       <motion.span
                         layoutId="bottomNavActiveDot"

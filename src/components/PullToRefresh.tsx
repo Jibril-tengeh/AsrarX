@@ -114,13 +114,17 @@ export const PullToRefresh: React.FC<PullToRefreshProps> = ({
     setInternalIsRefreshing(true);
     setPullDistance(52); // Hold position while refreshing
     try {
-      await Promise.resolve(onRefresh());
+      // Hard watchdog timeout (1400ms max) ensuring the refresh badge never gets stuck on mobile
+      await Promise.race([
+        Promise.resolve(onRefresh()),
+        new Promise(resolve => setTimeout(resolve, 1400))
+      ]);
       setShowSuccess(true);
       setTimeout(() => {
         setShowSuccess(false);
         setPullDistance(0);
         setInternalIsRefreshing(false);
-      }, 600);
+      }, 450);
     } catch (err) {
       console.warn('[PullToRefresh] Refresh completed with notice:', err);
       setPullDistance(0);

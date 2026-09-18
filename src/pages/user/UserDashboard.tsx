@@ -19,7 +19,7 @@ import { PullToRefresh } from '../../components/PullToRefresh';
 import { OfflineDashboardSection } from '../../components/OfflineDashboardSection';
 import { PromoAnnouncementBanner } from '../../components/videoCards/PromoAnnouncementBanner';
 import { HomeCategoriesGrid } from '../../components/home/HomeCategoriesGrid';
-import { getCategoryFallbackThumbnail, getCategoryFallbackHook, STANDARD_SCREENSHOT_CATEGORIES } from '../../data/defaultCategories';
+import { getCategoryFallbackThumbnail, getCategoryFallbackHook, STANDARD_SCREENSHOT_CATEGORIES, DEFAULT_CATEGORIES_PRESETS } from '../../data/defaultCategories';
 import { sanitizeImageSource } from '../../utils/articleImageUtils';
 
 import { INITIAL_DEFAULT_ARTICLES, DefaultArticle } from '../../data/defaultArticles';
@@ -223,7 +223,32 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
-  const [categories, setCategories] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>(() => {
+    try {
+      let deletedIds: string[] = [];
+      try { deletedIds = JSON.parse(localStorage.getItem('asrarhub_deleted_categories') || '[]'); } catch (e) {}
+      const cached = localStorage.getItem('asrarhub_cached_categories');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const combined = [...parsed];
+          for (const def of DEFAULT_CATEGORIES_PRESETS) {
+            if (!deletedIds.includes(def.id) && !combined.some((c: any) => (c?.id && c.id.toLowerCase() === def.id.toLowerCase()) || (c?.name && c.name.toLowerCase().trim() === def.name.toLowerCase().trim()))) {
+              combined.push(def);
+            }
+          }
+          const seen = new Set<string>();
+          return combined.filter((c: any) => {
+            const k = (c.id || c.name || '').toLowerCase().trim();
+            if (!k || seen.has(k)) return false;
+            seen.add(k);
+            return true;
+          });
+        }
+      }
+    } catch (e) {}
+    return DEFAULT_CATEGORIES_PRESETS;
+  });
   const [selectedSubCategory, setSelectedSubCategory] = useState<string>('');
   const isCalendarOpen = location.search.includes('calendar=true');
   const setIsCalendarOpen = (open: boolean) => {
@@ -412,7 +437,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
         }
       }
       const allAccumulated = Array.from(articleMapRef.current.values());
-      const merged = mergeWithLocalArticles(allAccumulated, false);
+      const merged = mergeWithLocalArticles(allAccumulated as any, false);
       const publicOnly = merged.filter((it: any) => ArticleService.isPublished(it));
       const sorted = sortArticlesInOrder(publicOnly, true);
       if (sorted.length > 0) {
@@ -554,10 +579,11 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
           detail: { articles: Array.from(articleMapRef.current.values()) }
         }));
 
-        // Fluid delay for UX
-        await Promise.all([
-          ...fetchTasks,
-          new Promise(resolve => setTimeout(resolve, 450))
+        // Fluid & immediate UX: race fetch tasks with an ultra-responsive timeout (950ms max).
+        // Any tasks taking longer continue in the background and update the state reactively.
+        await Promise.race([
+          Promise.all(fetchTasks),
+          new Promise(resolve => setTimeout(resolve, 950))
         ]);
       } catch (err) {
         console.error('[UserDashboard] Revalidation error:', err);
@@ -900,19 +926,30 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
   }, [isSearchOpen]);
 
   useEffect(() => {
+    let deletedIds: string[] = [];
+    try { deletedIds = JSON.parse(localStorage.getItem('asrarhub_deleted_categories') || '[]'); } catch (e) {}
+
     try {
       const cached = localStorage.getItem('asrarhub_cached_categories');
       if (cached) {
         const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed)) {
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const combined = [...parsed];
+          for (const def of DEFAULT_CATEGORIES_PRESETS) {
+            if (!deletedIds.includes(def.id) && !combined.some((c: any) => (c?.id && c.id.toLowerCase() === def.id.toLowerCase()) || (c?.name && c.name.toLowerCase().trim() === def.name.toLowerCase().trim()))) {
+              combined.push(def);
+            }
+          }
           const seen = new Set<string>();
-          const deduped = parsed.filter((c: any) => {
+          const deduped = combined.filter((c: any) => {
             const k = (c.id || c.name || '').toLowerCase().trim();
             if (!k || seen.has(k)) return false;
             seen.add(k);
             return true;
           });
-          setCategories(deduped);
+          if (deduped.length > 0) {
+            setCategories(deduped);
+          }
         }
       }
     } catch (e) {
@@ -920,6 +957,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
     }
 
     const defaultCats = [
+      ...DEFAULT_CATEGORIES_PRESETS,
       {
         id: 'wird',
         name: 'Versets & Wirds',
@@ -955,16 +993,25 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
     ];
 
     const unsubscribe = onSnapshot(collection(db, 'categories'), (snapshot) => {
-      let deletedIds: string[] = [];
-      try { deletedIds = JSON.parse(localStorage.getItem('asrarhub_deleted_categories') || '[]'); } catch (e) {}
+      let currentDeletedIds: string[] = [];
+      try { currentDeletedIds = JSON.parse(localStorage.getItem('asrarhub_deleted_categories') || '[]'); } catch (e) {}
 
       if (!snapshot.empty) {
         const list = snapshot.docs
           .map(doc => ({ ...doc.data(), id: doc.id }))
-          .filter((cat: any) => !deletedIds.includes(cat.id));
+          .filter((cat: any) => !currentDeletedIds.includes(cat.id));
         list.sort((a: any, b: any) => (a.createdAt || 0) - (b.createdAt || 0));
+
+        // Merge Firestore categories with default presets so categories are not limited if Firestore only has a few items
+        const combined = [...list];
+        for (const def of defaultCats) {
+          if (!currentDeletedIds.includes(def.id) && !combined.some((c: any) => (c?.id && c.id.toLowerCase() === def.id.toLowerCase()) || (c?.name && c.name.toLowerCase().trim() === def.name.toLowerCase().trim()))) {
+            combined.push(def);
+          }
+        }
+
         const seenCats = new Set<string>();
-        const dedupedList = list.filter((c: any) => {
+        const dedupedList = combined.filter((c: any) => {
           const k = (c.id || c.name || '').toLowerCase().trim();
           if (!k || seenCats.has(k)) return false;
           seenCats.add(k);
@@ -975,7 +1022,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
           localStorage.setItem('asrarhub_cached_categories', JSON.stringify(dedupedList));
         } catch (e) {}
       } else {
-        const remainingDefaults = defaultCats.filter(c => !deletedIds.includes(c.id));
+        const remainingDefaults = defaultCats.filter(c => !currentDeletedIds.includes(c.id));
         const seenDefaults = new Set<string>();
         const dedupedDefaults = remainingDefaults.filter((c: any) => {
           const k = (c.id || c.name || '').toLowerCase().trim();
@@ -987,9 +1034,9 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
       }
     }, (error) => {
       console.warn("Categories fetch note (using local fallback):", error);
-      let deletedIds: string[] = [];
-      try { deletedIds = JSON.parse(localStorage.getItem('asrarhub_deleted_categories') || '[]'); } catch (e) {}
-      const remainingDefaults = defaultCats.filter(c => !deletedIds.includes(c.id));
+      let currentDeletedIds: string[] = [];
+      try { currentDeletedIds = JSON.parse(localStorage.getItem('asrarhub_deleted_categories') || '[]'); } catch (e) {}
+      const remainingDefaults = defaultCats.filter(c => !currentDeletedIds.includes(c.id));
       const seenDefaults = new Set<string>();
       const dedupedDefaults = remainingDefaults.filter((c: any) => {
         const k = (c.id || c.name || '').toLowerCase().trim();
@@ -1476,7 +1523,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
                         if (language === 'ha' && cat.name_ha) displayName = cat.name_ha;
 
                         return (
-                          <div key={cat.id ? `cat-${cat.id}-${catIdx}` : `cat-${catIdx}`} className={`rounded-2xl border transition-all ${
+                          <div key={`modal-cat-${cat.id || catIdx}-${catIdx}`} className={`rounded-2xl border transition-all ${
                             isSelected 
                               ? 'border-emerald-200 dark:border-emerald-800 bg-emerald-50/10 dark:bg-emerald-900/5'
                               : 'border-gray-100 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/30'
@@ -1534,9 +1581,9 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
 
                                   return (
                                     <button
-                                      key={sub.id ? `sub-${cat.id}-${sub.id}-${subIdx}` : `sub-${catIdx}-${subIdx}`}
+                                      key={`modal-sub-${cat.id || catIdx}-${sub?.id || subIdx}-${subIdx}`}
                                       onClick={() => {
-                                        setSelectedSubCategory(sub.id);
+                                        setSelectedSubCategory(sub?.id || '');
                                         setIsCategoryModalOpen(false);
                                       }}
                                       className={`px-3 py-1 rounded-full text-xs font-bold transition-all ${
@@ -1793,7 +1840,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
                   </button>
                   {bookmarkFolders.map((folder, fIdx) => (
                     <button
-                      key={folder.id ? `folder-btn-${folder.id}-${fIdx}` : `folder-btn-${fIdx}`}
+                      key={`fav-folder-btn-${folder.id || fIdx}-${fIdx}`}
                       type="button"
                       onClick={() => setActiveFolder(folder.id)}
                       className={`px-4 py-2 rounded-xl flex items-center gap-2 whitespace-nowrap transition-colors border text-xs font-bold ${
@@ -1816,7 +1863,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
                   'grid-cols-1'
                 }`}>
                   {filteredItems.map((item, itemIdx) => (
-                    <div key={item.id ? `card-fav-${item.id}-${itemIdx}` : `card-fav-${itemIdx}`} className="flex flex-col h-full">
+                    <div key={`card-fav-${item.id || itemIdx}-${itemIdx}`} className="flex flex-col h-full">
                       <SecretCard item={item} layoutMode={layoutMode} categories={categories} />
                     </div>
                   ))}
@@ -1909,22 +1956,28 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
                           >
                             {language === 'en' ? 'All' : language === 'ha' ? 'Duk' : 'Tout'}
                           </button>
-                          {activeCategoryObj.subCategories.map((sub, sIdx) => {
-                            const isSubActive = selectedSubCategory === sub.id || selectedSubCategory === sub.name;
+                          {(activeCategoryObj.subCategories || []).map((sub: any, sIdx: number) => {
+                            const subId = typeof sub === 'string' ? sub : (sub?.id || sub?.name || `sub-${sIdx}`);
+                            const subName = typeof sub === 'string' ? sub : (sub?.name || sub?.id || '');
+                            const isSubActive = selectedSubCategory === subId || selectedSubCategory === subName;
                             const subArticlesCount = items.filter(a => {
                               const s = ((a as any).subCategory || '').toLowerCase();
-                              return s === sub.id.toLowerCase() || s === sub.name.toLowerCase();
+                              const targetId = (sub?.id || '').toLowerCase();
+                              const targetName = (subName || '').toLowerCase();
+                              return (targetId && s === targetId) || (targetName && s === targetName);
                             }).length;
 
-                            let subDisplayName = sub.name;
-                            if (language === 'en' && sub.name_en) subDisplayName = sub.name_en;
-                            if (language === 'ha' && sub.name_ha) subDisplayName = sub.name_ha;
+                            let subDisplayName = subName;
+                            if (typeof sub === 'object' && sub !== null) {
+                              if (language === 'en' && sub.name_en) subDisplayName = sub.name_en;
+                              if (language === 'ha' && sub.name_ha) subDisplayName = sub.name_ha;
+                            }
 
                             return (
                               <button
-                                key={sub.id ? `sub-pill-${sub.id}-${sIdx}` : `sub-pill-${sIdx}`}
+                                key={`sub-pill-${activeCategoryObj.id || 'cat'}-${subId}-${sIdx}`}
                                 type="button"
-                                onClick={() => setSelectedSubCategory(isSubActive ? '' : sub.id)}
+                                onClick={() => setSelectedSubCategory(isSubActive ? '' : subId)}
                                 className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
                                   isSubActive
                                     ? 'bg-emerald-500 text-white shadow-xs'
@@ -2055,7 +2108,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
                   'grid-cols-1'
                 }`}>
                   {filteredItems.map((item, itemIdx) => (
-                    <div key={item.id ? `card-item-${item.id}-${itemIdx}` : `card-item-${itemIdx}`} className="flex flex-col h-full">
+                    <div key={`card-feed-${item.id || itemIdx}-${itemIdx}`} className="flex flex-col h-full">
                       <div className="flex-1">
                         <SecretCard item={item} layoutMode={layoutMode} categories={categories} />
                       </div>
@@ -2366,7 +2419,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
 
                     return (
                       <Link
-                        key={item.id ? `history-${item.id}-${item.viewedAt || histIdx}` : `history-${histIdx}`}
+                        key={`history-${item.id || histIdx}-${item.viewedAt || histIdx}-${histIdx}`}
                         to={`/secret/${item.id}`}
                         className="flex items-center gap-3 p-3 bg-gray-50/50 dark:bg-gray-750/30 hover:bg-emerald-50/50 dark:hover:bg-emerald-900/10 rounded-2xl border border-gray-100 dark:border-gray-700/50 hover:border-emerald-100 dark:hover:border-emerald-800 transition-all group"
                       >
@@ -2495,7 +2548,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
               </button>
               {bookmarkFolders.map((folder, fIdx) => (
                 <button
-                  key={folder.id ? `folder-btn-${folder.id}-${fIdx}` : `folder-btn-${fIdx}`}
+                  key={`manage-folder-btn-${folder.id || fIdx}-${fIdx}`}
                   onClick={() => setActiveFolder(folder.id)}
                   className={`px-4 py-2 rounded-xl flex items-center gap-2 whitespace-nowrap transition-colors border ${
                     activeFolder === folder.id 
@@ -2593,7 +2646,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
           filteredItems.map((item, itemIdx) => {
             const currentFolder = bookmarkFolders.find(f => f.items.includes(item.id));
             return (
-              <div key={item.id ? `card-item-${item.id}-${itemIdx}` : `card-item-${itemIdx}`} className="flex flex-col h-full">
+              <div key={`card-grid-${item.id || itemIdx}-${itemIdx}`} className="flex flex-col h-full">
                 <div className="flex-1">
                   <SecretCard item={item} layoutMode={layoutMode} categories={categories} />
                 </div>
@@ -2640,7 +2693,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
                     >
                       <option value="">📁 Aucun dossier</option>
                       {bookmarkFolders.map((f, optIdx) => (
-                        <option key={f.id ? `f-opt-${f.id}-${optIdx}` : `f-opt-${optIdx}`} value={f.id}>{f.name}</option>
+                        <option key={`f-opt-${f.id || optIdx}-${optIdx}`} value={f.id}>{f.name}</option>
                       ))}
                       <option value="__new__" className="text-emerald-600 dark:text-emerald-400 font-semibold">+ Nouveau dossier...</option>
                     </select>

@@ -28,8 +28,9 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
   onSelectCategory,
   language = 'fr',
   searchQuery = '',
-  featureToggles = {}
+  featureToggles: rawFeatureToggles
 }) => {
+  const featureToggles: any = rawFeatureToggles || {};
   // Configured layout mode from Admin settings: 'grid3' | 'grid4' | 'grid2' | 'banner' | 'list'
   const adminLayoutMode: HomeCategoryLayoutMode = 
     featureToggles?.home_categories_layout_mode === 'banner' ? 'banner' :
@@ -157,8 +158,8 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
 
   // Category Badge Icon renderer: Luminous clear SVG jewel badge (or explicit HD video badge or custom uploaded thumbnail)
   const renderCategoryBadge = (cat: any, size: 'xs' | 'sm' | 'md' | 'lg' | 'xl' = 'md') => {
-    // Categories display looping HD video presets by default unless explicitly disabled in admin settings
-    const showVideos = featureToggles?.home_categories_use_video_presets !== false;
+    const iconStyle = featureToggles?.home_categories_icon_style || 'luminous';
+    const showVideos = iconStyle === 'video' || (iconStyle === undefined && featureToggles?.home_categories_use_video_presets === true);
     const videoUrl = cat.videoUrl || (showVideos ? getCategoryVideoUrl(cat) : undefined);
     return (
       <CategoryVideoOrIconBadge
@@ -168,6 +169,10 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
         categoryName={cat.displayName || cat.name}
         theme={cat.theme || cat.id}
         size={size}
+        badgeStyle={iconStyle}
+        brightness={featureToggles?.home_categories_icon_brightness !== undefined ? Number(featureToggles.home_categories_icon_brightness) : 100}
+        removeDarkOverlay={featureToggles?.home_categories_remove_dark_overlay !== false}
+        iconColorMode={featureToggles?.home_categories_icon_color_mode || 'auto'}
       />
     );
   };
@@ -206,7 +211,7 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
       {grid4Items.map((cat, idx) => {
         return (
           <motion.div
-            key={cat.id ? `cat-grid3-${cat.id}-${idx}` : `cat-grid3-${idx}`}
+            key={`cat-grid3-${cat.id || idx}-${idx}`}
             whileHover={{ y: -4, scale: 1.03 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => {
@@ -249,7 +254,7 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
       {grid4Items.map((cat, idx) => {
         return (
           <motion.div
-            key={cat.id ? `cat-grid4-${cat.id}-${idx}` : `cat-grid4-${idx}`}
+            key={`cat-grid4-${cat.id || idx}-${idx}`}
             whileHover={{ y: -4, scale: 1.03 }}
             whileTap={{ scale: 0.95 }}
             onClick={() => {
@@ -307,7 +312,7 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
 
         return (
           <motion.div
-            key={cat.id ? `cat-grid-${cat.id}-${idx}` : `cat-grid-${idx}`}
+            key={`cat-grid2-${cat.id || idx}-${idx}`}
             whileHover={{ y: -3 }}
             whileTap={{ scale: 0.97 }}
             onClick={() => onSelectCategory(cat)}
@@ -408,7 +413,7 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
 
         return (
           <motion.div
-            key={cat.id ? `cat-banner-${cat.id}-${idx}` : `cat-banner-${idx}`}
+            key={`cat-banner-${cat.id || idx}-${idx}`}
             whileHover={{ y: -3 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => onSelectCategory(cat)}
@@ -507,7 +512,7 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
 
         return (
           <motion.div
-            key={cat.id ? `cat-list-${cat.id}-${idx}` : `cat-list-${idx}`}
+            key={`cat-list-${cat.id || idx}-${idx}`}
             whileHover={{ y: -2 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => onSelectCategory(cat)}

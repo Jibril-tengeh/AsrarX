@@ -3437,10 +3437,10 @@ export const QuranFull: React.FC = () => {
                              if (!acc[r.country]) acc[r.country] = [];
                              acc[r.country].push(r);
                              return acc;
-                           }, {} as Record<string, typeof activeQuranReciters>)
+                           }, {} as Record<string, any[]>)
                          ).map(([country, reciters]) => (
                            <optgroup key={country} label={country} className="font-bold text-gray-950 dark:text-gray-100 bg-white dark:bg-gray-900 text-[12.5px]" style={{ fontSize: "12.5px" }}>
-                             {reciters.map(r => (
+                             {(reciters as any[]).map(r => (
                                <option key={r.id} value={r.id} className="font-normal text-gray-700 dark:text-gray-300 text-[13.5px]" style={{ fontSize: "13.5px" }}>
                                  {r.name} {r.nameAr ? `(${r.nameAr})` : ''} {defaultReciterFromConfig === r.id ? '★ [Défaut Système]' : ''}
                                </option>

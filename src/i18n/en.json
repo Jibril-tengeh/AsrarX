@@ -66,7 +66,8 @@
     "explore": "Explore",
     "tools": "Tools",
     "journal": "Journal",
-    "saved": "Saved"
+    "saved": "Saved",
+    "profile": "Profile"
   },
   "exploreDashboard": {
     "title": "Explore",
@@ -997,6 +998,8 @@
     "folderUpdated": "Folder updated!",
     "select": "Select",
     "rateArticle": "Rate this article",
+    "watermarkActive": "Engraved AsrarHub Watermark: Active",
+    "watermarkDisabled": "Engraved AsrarHub Watermark: Disabled",
     "thankYouRating": "Thank you for your rating!",
     "exitZenMode": "Exit Zen Mode",
     "themeCream": "Cream",
