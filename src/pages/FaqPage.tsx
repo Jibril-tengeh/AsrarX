@@ -689,7 +689,7 @@ export const FaqPage: React.FC = () => {
                 <div className="flex flex-wrap gap-2 justify-center max-w-full px-2">
                   {promptsToShow.map((q, idx) => (
                     <button 
-                      key={idx}
+                      key={`prompt-q-${idx}-${q.slice(0, 10)}`}
                       onClick={() => handleAsk(q)}
                       className="px-4 py-2 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 rounded-full text-xs font-bold hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors cursor-pointer whitespace-normal break-words text-left sm:text-center max-w-full"
                     >
@@ -703,7 +703,7 @@ export const FaqPage: React.FC = () => {
                 <motion.div 
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  key={idx} 
+                  key={`faq-msg-${msg.role}-${idx}`} 
                   className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div className={`max-w-[85%] sm:max-w-[75%] rounded-2xl p-4 shadow-sm ${

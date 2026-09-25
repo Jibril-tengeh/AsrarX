@@ -37,6 +37,7 @@ import {
   Headphones,
   Music,
   Folder,
+  FolderPlus,
   HardDriveDownload,
   CheckCircle2,
   HardDrive,
@@ -58,6 +59,16 @@ import { doc, getDoc, updateDoc } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { AuthModal } from '../../components/AuthModal';
 import { InteractiveLexiconText } from "../../components/InteractiveLexiconText";
+import { ArticleComments } from "../../components/article/ArticleComments";
+import { ArticleShareModal } from "../../components/article/ArticleShareModal";
+import { BookmarkFolderModal } from "../../components/BookmarkFolderModal";
+import {
+  getBookmarkFolders,
+  createBookmarkFolder,
+  assignItemToFolder,
+  subscribeBookmarkFolders,
+  BookmarkFolder,
+} from "../../utils/bookmarkFoldersManager";
 import { PremiumWrapper } from "../../components/PremiumWrapper";
 import { UnverifiedEmailGuard } from "../../components/UnverifiedEmailGuard";
 import { Secret3DVideoPaywallCard } from "../../components/videoCards/Secret3DVideoPaywallCard";
@@ -71,6 +82,8 @@ const AccordionSection: React.FC<{
   style?: React.CSSProperties;
   showWatermark?: boolean;
   watermarkVariant?: 'parchment' | 'dark' | 'light' | 'gold';
+  isGloballyWatermarkEnabled?: boolean;
+  watermarkOpacity?: number;
 }> = ({ 
   title, 
   htmlContent, 
@@ -78,7 +91,9 @@ const AccordionSection: React.FC<{
   fontSize, 
   style,
   showWatermark = true,
-  watermarkVariant = 'light'
+  watermarkVariant = 'light',
+  isGloballyWatermarkEnabled = true,
+  watermarkOpacity = 0.08
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   return (
@@ -111,10 +126,10 @@ const AccordionSection: React.FC<{
                 ...style 
               } as React.CSSProperties}
             >
-              {showWatermark && (
+              {isGloballyWatermarkEnabled && showWatermark && (
                 <AsrarHubWatermark 
                   variant={watermarkVariant}
-                  opacity={readingMode ? 0.055 : 0.035}
+                  opacity={watermarkOpacity}
                   showCentralSeal={false}
                 />
               )}
@@ -250,6 +265,8 @@ export const SecretDetail: React.FC = () => {
   const [notFound, setNotFound] = useState(false);
   const [isCheckingPremium, setIsCheckingPremium] = useState(true);
   const [readingMode, setReadingMode] = useState(false);
+  const isGloballyWatermarkEnabled = featureToggles?.watermark_enabled !== false;
+
   const [showWatermark, setShowWatermark] = useState<boolean>(() => {
     try {
       const saved = localStorage.getItem('asrar_reading_watermark');
@@ -269,8 +286,20 @@ export const SecretDetail: React.FC = () => {
     });
   };
 
-  const watermarkVariant = readingMode ? 'parchment' : actualTheme === 'dark' ? 'dark' : 'light';
-  const watermarkOpacity = readingMode ? 0.08 : actualTheme === 'dark' ? 0.06 : 0.045;
+  // Dynamically resolve watermark opacity configured via admin panel
+  const adminWatermarkOpacity = featureToggles?.watermark_opacity !== undefined && featureToggles.watermark_opacity !== null && featureToggles.watermark_opacity !== ''
+    ? (() => {
+        const parsed = Number(featureToggles.watermark_opacity);
+        return !isNaN(parsed) && parsed >= 0 ? (parsed > 1 ? parsed / 100 : parsed) : undefined;
+      })()
+    : undefined;
+
+  const watermarkVariant = (featureToggles?.watermark_variant && featureToggles.watermark_variant !== 'auto')
+    ? (featureToggles.watermark_variant as any)
+    : (readingMode ? 'parchment' : actualTheme === 'dark' ? 'dark' : 'light');
+
+  const defaultBaseOpacity = readingMode ? 0.08 : actualTheme === 'dark' ? 0.06 : 0.045;
+  const watermarkOpacity = adminWatermarkOpacity !== undefined ? adminWatermarkOpacity : defaultBaseOpacity;
   const [zenMode, setZenMode] = useState(false);
   const [zenFontSize, setZenFontSize] = useState<'sm' | 'md' | 'lg' | 'xl'>('lg');
   const [zenTheme, setZenTheme] = useState<'cream' | 'dark' | 'white'>('cream');
@@ -279,8 +308,18 @@ export const SecretDetail: React.FC = () => {
   const [zenBrightness, setZenBrightness] = useState<number>(100);
   const [zenFontSizePx, setZenFontSizePx] = useState<number>(22);
   const [isBookmarked, setIsBookmarked] = useState(false);
-  const [bookmarkFolders, setBookmarkFolders] = useState<any[]>([]);
+  const [bookmarkFolders, setBookmarkFolders] = useState<BookmarkFolder[]>(() => getBookmarkFolders());
+  const [isFolderModalOpen, setIsFolderModalOpen] = useState(false);
+  const [folderToastMessage, setFolderToastMessage] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'full' | 'accordion'>('full');
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+
+  const showFolderToast = (msg: string) => {
+    setFolderToastMessage(msg);
+    setTimeout(() => {
+      setFolderToastMessage((prev) => (prev === msg ? null : prev));
+    }, 3000);
+  };
 
   useEffect(() => {
     const defaultMode = featureToggles?.article_reading_mode || featureToggles?.reading_mode_default;
@@ -873,13 +912,18 @@ export const SecretDetail: React.FC = () => {
   }, [zenMode]);
 
   useEffect(() => {
+    setBookmarkFolders(getBookmarkFolders());
+    const unsubscribeFolders = subscribeBookmarkFolders((folders) => {
+      setBookmarkFolders(folders);
+    });
+    return () => {
+      unsubscribeFolders();
+    };
+  }, []);
+
+  useEffect(() => {
     // Scroll to top when loading
     window.scrollTo(0, 0);
-    try {
-      setBookmarkFolders(JSON.parse(localStorage.getItem('asrar_bookmark_folders') || '[]'));
-    } catch (e) {
-      setBookmarkFolders([]);
-    }
     const locationState = location.state as { item?: AsrarItem } | null;
     const items = getAsrarItems();
     const foundItem = locationState?.item || items.find((i) => i.id === id);
@@ -1081,8 +1125,9 @@ export const SecretDetail: React.FC = () => {
               title_fr: data.title,
               content_fr: data.content,
               hook_fr: data.hook,
-              hasManualTranslation: hasManual
-            };
+              hasManualTranslation: hasManual,
+              commentsDisabled: Boolean(data.commentsDisabled)
+            } as any;
 
             setItem(fetchedItem);
             checkBookmark(docSnap.id);
@@ -1334,7 +1379,6 @@ export const SecretDetail: React.FC = () => {
   const handleShare = async () => {
     if (!item) return;
     
-    // Assure that we use the real domain instead of localhost for sharing
     let shareUrl = window.location.href;
     if (shareUrl.includes('localhost')) {
       shareUrl = shareUrl.replace(/^http:\/\/localhost(:\d+)?/, 'https://asrarhub.com');
@@ -1347,18 +1391,14 @@ export const SecretDetail: React.FC = () => {
           text: `Découvrez "${item.title}" sur AsrarHub - L'outil des chercheurs spirituels.`,
           url: shareUrl,
         });
-      } catch (err) {
+        return;
+      } catch (err: any) {
+        if (err.name === 'AbortError') return;
         console.error("Share error:", err);
       }
-    } else {
-      // Fallback: Copy to clipboard if Web Share API is not supported
-      if (!isPremium) {
-        triggerProtectionModal('copy');
-        return;
-      }
-      navigator.clipboard.writeText(shareUrl);
-      alert(t("linkCopied", "Lien copié dans le presse-papiers !"));
     }
+
+    setIsShareModalOpen(true);
   };
 
   if (notFound) {
@@ -1567,6 +1607,14 @@ export const SecretDetail: React.FC = () => {
           >
             <Bookmark size={18} fill={isBookmarked ? "currentColor" : "none"} />
           </button>
+          <button
+            onClick={handleShare}
+            className={`p-1.5 rounded-full transition-colors ${readingMode ? "text-stone-600 hover:bg-[#f4ebd0] dark:text-stone-300 dark:hover:bg-[#383120]" : "text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30"}`}
+            title={t("secretDetail.shareBtn", "Partager cet article")}
+            aria-label="Partager"
+          >
+            <Share2 size={18} />
+          </button>
         </div>
       </div>
 
@@ -1581,44 +1629,57 @@ export const SecretDetail: React.FC = () => {
             </span>
           </div>
           
-          <select 
-            value={bookmarkFolders.find((f: any) => f.items.includes(item.id))?.id || ""}
-            onChange={(e) => {
-              const val = e.target.value;
-              if (val === '__new__') {
-                const name = prompt("Nom du nouveau dossier :");
-                if (name && name.trim()) {
-                  const newId = Date.now().toString();
-                  const newFolder = { id: newId, name: name.trim(), items: [item.id] };
-                  
-                  const updated = bookmarkFolders.map((f: any) => {
-                    f.items = f.items.filter((id: string) => id !== item.id);
-                    return f;
-                  });
-                  const finalFolders = [...updated, newFolder];
-                  setBookmarkFolders(finalFolders);
-                  localStorage.setItem('asrar_bookmark_folders', JSON.stringify(finalFolders));
-                }
-              } else {
-                const updated = bookmarkFolders.map((f: any) => {
-                  f.items = f.items.filter((id: string) => id !== item.id);
-                  if (f.id === val) {
-                    f.items.push(item.id);
+          <div className="flex items-center gap-2">
+            <select 
+              value={bookmarkFolders.find((f: any) => f.items.includes(item.id))?.id || ""}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === '__new__') {
+                  setIsFolderModalOpen(true);
+                  // Reset select value to avoid staying on '__new__' if canceled
+                  e.target.value = bookmarkFolders.find((f: any) => f.items.includes(item.id))?.id || "";
+                } else {
+                  const updated = assignItemToFolder(item.id, val);
+                  setBookmarkFolders(updated);
+                  const assignedFolder = updated.find((f) => f.id === val);
+                  if (assignedFolder) {
+                    showFolderToast(
+                      language === 'fr' 
+                        ? `Classé dans « ${assignedFolder.name} »`
+                        : language === 'ha'
+                        ? `An ajiye a cikin « ${assignedFolder.name} »`
+                        : `Filed in "${assignedFolder.name}"`
+                    );
+                  } else {
+                    showFolderToast(
+                      language === 'fr'
+                        ? "Retiré du dossier"
+                        : language === 'ha'
+                        ? "An cire daga jakar"
+                        : "Removed from folder"
+                    );
                   }
-                  return f;
-                });
-                setBookmarkFolders(updated);
-                localStorage.setItem('asrar_bookmark_folders', JSON.stringify(updated));
-              }
-            }}
-            className="bg-white dark:bg-gray-850 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium cursor-pointer"
-          >
-            <option value="">📁 Aucun dossier</option>
-            {bookmarkFolders.map((f: any, fIdx: number) => (
-              <option key={f.id ? `detail-bm-folder-${f.id}-${fIdx}` : `detail-bm-folder-${fIdx}`} value={f.id}>{f.name}</option>
-            ))}
-            <option value="__new__" className="text-emerald-600 dark:text-emerald-400 font-bold">+ Nouveau dossier...</option>
-          </select>
+                }
+              }}
+              className="bg-white dark:bg-gray-850 border border-gray-200 dark:border-gray-700 rounded-xl px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium cursor-pointer"
+            >
+              <option value="">📁 {language === 'fr' ? 'Aucun dossier' : language === 'ha' ? 'Babu jakar' : 'No folder'}</option>
+              {bookmarkFolders.map((f: any, fIdx: number) => (
+                <option key={f.id ? `detail-bm-folder-${f.id}-${fIdx}` : `detail-bm-folder-${fIdx}`} value={f.id}>{f.name}</option>
+              ))}
+              <option value="__new__" className="text-emerald-600 dark:text-emerald-400 font-bold">+ {language === 'fr' ? 'Nouveau dossier...' : language === 'ha' ? 'Sabuwar jaka...' : 'New folder...'}</option>
+            </select>
+
+            <button
+              type="button"
+              onClick={() => setIsFolderModalOpen(true)}
+              className="p-1.5 px-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold inline-flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer shrink-0"
+              title={language === 'fr' ? 'Créer un nouveau dossier' : 'Create new folder'}
+            >
+              <FolderPlus size={14} />
+              <span className="hidden sm:inline">{language === 'fr' ? 'Nouveau' : language === 'ha' ? 'Sabuwa' : 'New'}</span>
+            </button>
+          </div>
         </div>
       )}
 
@@ -1653,7 +1714,7 @@ export const SecretDetail: React.FC = () => {
           className={`relative ${readingMode ? "p-0 sm:p-2 lg:p-4" : "p-6 md:p-8 lg:p-10"}`}
         >
           {/* Filigrane d'authenticité AsrarHub gravé sur la feuille de lecture */}
-          {showWatermark && (
+          {isGloballyWatermarkEnabled && showWatermark && (
             <AsrarHubWatermark 
               variant={watermarkVariant}
               opacity={watermarkOpacity}
@@ -1986,7 +2047,7 @@ export const SecretDetail: React.FC = () => {
                         >
                           {displayContent.split("\n").map((paragraph, idx) => (
                             <p 
-                              key={idx} 
+                              key={`p-${idx}-${paragraph.slice(0, 10)}`} 
                               className="mb-6 article-reader-content" 
                               style={{ 
                                 '--article-reader-font-size': `${articleFontSize}px`,
@@ -2031,13 +2092,15 @@ export const SecretDetail: React.FC = () => {
                       <div className="space-y-4">
                         {sections.map((section, idx) => (
                           <AccordionSection 
-                            key={idx} 
+                            key={`sec-${section.title}-${idx}`} 
                             title={section.title} 
                             htmlContent={section.htmlContent} 
                             readingMode={readingMode} 
                             fontSize={articleFontSize} 
                             showWatermark={showWatermark}
                             watermarkVariant={watermarkVariant}
+                            isGloballyWatermarkEnabled={isGloballyWatermarkEnabled}
+                            watermarkOpacity={watermarkOpacity}
                           />
                         ))}
                       </div>
@@ -2088,12 +2151,105 @@ export const SecretDetail: React.FC = () => {
                 )}
               </div>
             </div>
+
+            {/* Social Sharing Section */}
+            {item && (
+              <div className={`mt-6 p-4 sm:p-5 rounded-2xl border transition-all ${
+                readingMode 
+                  ? "bg-[#f4ebd0]/30 border-[#e8dcb5] dark:bg-[#383120]/30 dark:border-[#524830]/40" 
+                  : "bg-gradient-to-r from-emerald-50/70 via-teal-50/40 to-emerald-50/70 dark:from-emerald-950/20 dark:via-gray-800/60 dark:to-emerald-950/20 border-emerald-100 dark:border-emerald-900/40 shadow-xs"
+              }`}>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-600/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                      <Share2 size={20} />
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-gray-900 dark:text-white text-sm sm:text-base">
+                        {t("secretDetail.shareCardTitle", "Partager cet enseignement")}
+                      </h4>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {t("secretDetail.shareCardSubtitle", "Transmettez ce savoir bénéfique à vos proches et amis.")}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={handleShare}
+                    className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm shadow-sm transition-all hover:scale-102 active:scale-98 cursor-pointer"
+                  >
+                    <Share2 size={16} />
+                    <span>{t("secretDetail.shareNowBtn", "Partager l'article")}</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Article Comments & Discussion Section */}
+            {item && (
+              <ArticleComments
+                articleId={item.id || id || ''}
+                articleTitle={item.title}
+                initialCommentsDisabled={Boolean((item as any)?.commentsDisabled)}
+                onCommentsDisabledChange={(disabled) => {
+                  setItem(prev => prev ? { ...prev, commentsDisabled: disabled } as any : prev);
+                }}
+              />
+            )}
           </div>
           </div>
         </div>
       </div>
       
       <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
+
+      {/* Article Share Modal */}
+      <ArticleShareModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        article={item ? {
+          id: item.id,
+          title: item.title,
+          hook: item.hook,
+          category: item.category,
+          imageUrl: getArticleImageUrl(item),
+        } : null}
+      />
+
+      {/* Bookmark Folder Creation Modal */}
+      <BookmarkFolderModal
+        isOpen={isFolderModalOpen}
+        onClose={() => setIsFolderModalOpen(false)}
+        onSuccess={(_id, folderName) => {
+          const newFolder = createBookmarkFolder(folderName, item?.id);
+          if (newFolder) {
+            setBookmarkFolders(getBookmarkFolders());
+            showFolderToast(
+              language === 'fr'
+                ? `Dossier « ${folderName} » créé et secret classé ! ✨`
+                : language === 'ha'
+                ? `An ƙirƙiri jakar « ${folderName} » kuma an adana asirin! ✨`
+                : `Folder "${folderName}" created and secret filed! ✨`
+            );
+          }
+        }}
+        mode="create"
+        initialItemId={item?.id}
+      />
+
+      {/* Folder Toast Notification */}
+      <AnimatePresence>
+        {folderToastMessage && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-emerald-600 text-white text-xs sm:text-sm font-bold px-4 py-2.5 rounded-2xl shadow-xl flex items-center gap-2 border border-emerald-400 pointer-events-none"
+          >
+            <CheckCircle2 size={16} />
+            <span>{folderToastMessage}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Immersive Zen Reading Mode Overlay */}
       <AnimatePresence>
@@ -2317,10 +2473,10 @@ export const SecretDetail: React.FC = () => {
               }}
             >
               {/* Filigrane d'authenticité AsrarHub gravé en mode Zen */}
-              {showWatermark && (
+              {isGloballyWatermarkEnabled && showWatermark && (
                 <AsrarHubWatermark 
                   variant={zenTheme === 'cream' ? 'parchment' : zenTheme === 'dark' ? 'dark' : 'light'}
-                  opacity={zenTheme === 'cream' ? 0.08 : zenTheme === 'dark' ? 0.06 : 0.045}
+                  opacity={adminWatermarkOpacity !== undefined ? adminWatermarkOpacity : (zenTheme === 'cream' ? 0.08 : zenTheme === 'dark' ? 0.06 : 0.045)}
                   showCentralSeal={true}
                   className="z-0 pointer-events-none"
                 />

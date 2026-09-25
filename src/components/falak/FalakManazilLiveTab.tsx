@@ -180,7 +180,7 @@ export const FalakManazilLiveTab: React.FC<FalakManazilLiveTabProps> = ({
                   <span className="text-xs font-bold text-emerald-300 mr-1">Actions Fastes :</span>
                   {activeMansion.propitious.map((act, i) => (
                     <span
-                      key={i}
+                      key={`falakmanazillivetab-i-${i}`}
                       className="px-2 py-0.5 rounded-lg bg-emerald-500/20 border border-emerald-400/30 text-emerald-200 text-xs font-semibold flex items-center gap-1"
                     >
                       <CheckCircle2 className="w-3 h-3 text-emerald-400" /> {act}
@@ -194,7 +194,7 @@ export const FalakManazilLiveTab: React.FC<FalakManazilLiveTabProps> = ({
                   <span className="text-xs font-bold text-rose-300 mr-1">Déconseillé :</span>
                   {activeMansion.unpropitious.map((act, i) => (
                     <span
-                      key={i}
+                      key={`falakmanazillivetab-i-${i}`}
                       className="px-2 py-0.5 rounded-lg bg-rose-500/20 border border-rose-400/30 text-rose-200 text-xs font-semibold flex items-center gap-1"
                     >
                       <AlertTriangle className="w-3 h-3 text-rose-400" /> {act}
@@ -454,7 +454,7 @@ export const FalakManazilLiveTab: React.FC<FalakManazilLiveTabProps> = ({
                   <div className="flex flex-wrap gap-1.5">
                     {inspectedMansion.propitious.map((p, i) => (
                       <span
-                        key={i}
+                        key={`falakmanazillivetab-i-${i}`}
                         className="px-2.5 py-1 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-700 text-emerald-900 dark:text-emerald-200 text-xs font-bold flex items-center gap-1"
                       >
                         <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" /> {p}

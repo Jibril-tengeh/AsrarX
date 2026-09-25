@@ -3,8 +3,8 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth, handleFirestoreError, OperationType } from '../../contexts/AuthContext';
 import { useFeatures } from '../../contexts/FeatureContext';
 import { db } from '../../lib/firebase';
-import { collection, query, orderBy, onSnapshot, doc, setDoc, getDocsFromServer, getDocs, where, limit } from 'firebase/firestore';
-import { Search, LayoutGrid, Square, List, Filter, X, BookOpen, Store, Award, MapPin, Trophy, ShieldCheck, ChevronDown, Bookmark, Flame, Shield, RefreshCw, Quote, Folder, Plus, Library, Music, Pencil, Trash2, Sliders, Sparkles, Calendar, FolderOpen, Star, FileText, HardDrive, ArrowRight, ArrowLeft, Layers, Newspaper } from 'lucide-react';
+import { collection, query, orderBy, onSnapshot, doc, setDoc, getDocsFromServer, getDocs, where, limit, deleteDoc } from 'firebase/firestore';
+import { Search, LayoutGrid, Square, List, Filter, X, BookOpen, Store, Award, MapPin, Trophy, ShieldCheck, ChevronDown, Bookmark, Flame, Shield, RefreshCw, Quote, Folder, Plus, Library, Music, Pencil, Trash2, Sliders, Sparkles, Calendar, FolderOpen, Star, FileText, HardDrive, ArrowRight, ArrowLeft, Layers, Newspaper, Users } from 'lucide-react';
 import { CategoryDynamicIcon, CategoryVideoOrIconBadge } from '../../components/common/CategoryDynamicIcon';
 import { SecretCard, LayoutMode } from '../../components/SecretCard';
 import { HabitTracker } from '../../components/HabitTracker';
@@ -19,7 +19,7 @@ import { PullToRefresh } from '../../components/PullToRefresh';
 import { OfflineDashboardSection } from '../../components/OfflineDashboardSection';
 import { PromoAnnouncementBanner } from '../../components/videoCards/PromoAnnouncementBanner';
 import { HomeCategoriesGrid } from '../../components/home/HomeCategoriesGrid';
-import { getCategoryFallbackThumbnail, getCategoryFallbackHook, STANDARD_SCREENSHOT_CATEGORIES, DEFAULT_CATEGORIES_PRESETS } from '../../data/defaultCategories';
+import { getCategoryFallbackThumbnail, getCategoryFallbackHook, getCategoryFallbackIcon, isMockCategory } from '../../data/defaultCategories';
 import { sanitizeImageSource } from '../../utils/articleImageUtils';
 
 import { INITIAL_DEFAULT_ARTICLES, DefaultArticle } from '../../data/defaultArticles';
@@ -32,6 +32,16 @@ import { useBackButton } from '../../hooks/useBackButton';
 import { getArticleImageUrl } from '../../utils/articleImageUtils';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { OfflineArticlesPopup } from '../../components/OfflineArticlesPopup';
+import { BookmarkFolderModal } from '../../components/BookmarkFolderModal';
+import {
+  getBookmarkFolders,
+  createBookmarkFolder,
+  renameBookmarkFolder,
+  deleteBookmarkFolder,
+  assignItemToFolder,
+  subscribeBookmarkFolders,
+  BookmarkFolder,
+} from '../../utils/bookmarkFoldersManager';
 
 const LucideIcon = ({ name, className, size }: { name: string; className?: string; size?: number }) => {
   return <CategoryDynamicIcon name={name} className={className} size={size} />;
@@ -223,6 +233,16 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [isCategoriesLoading, setIsCategoriesLoading] = useState<boolean>(() => {
+    try {
+      const cached = localStorage.getItem('asrarhub_cached_categories');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) return false;
+      }
+    } catch (e) {}
+    return true;
+  });
   const [categories, setCategories] = useState<any[]>(() => {
     try {
       let deletedIds: string[] = [];
@@ -231,23 +251,52 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
       if (cached) {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const combined = [...parsed];
-          for (const def of DEFAULT_CATEGORIES_PRESETS) {
-            if (!deletedIds.includes(def.id) && !combined.some((c: any) => (c?.id && c.id.toLowerCase() === def.id.toLowerCase()) || (c?.name && c.name.toLowerCase().trim() === def.name.toLowerCase().trim()))) {
-              combined.push(def);
-            }
-          }
+          const validRealCats = parsed.filter((c: any) => !deletedIds.includes(c.id) && !isMockCategory(c));
           const seen = new Set<string>();
-          return combined.filter((c: any) => {
+          const deduped = validRealCats.filter((c: any) => {
             const k = (c.id || c.name || '').toLowerCase().trim();
             if (!k || seen.has(k)) return false;
             seen.add(k);
             return true;
           });
+          if (deduped.length > 0) return deduped;
         }
       }
     } catch (e) {}
-    return DEFAULT_CATEGORIES_PRESETS;
+
+    // Fallback instantané à 0ms : dériver immédiatement les catégories réelles depuis les articles en cache local
+    try {
+      const cachedArticles = localStorage.getItem('asrarhub_cached_articles_list') || localStorage.getItem('asrarhub_cached_explore_articles');
+      if (cachedArticles) {
+        const parsedArticles = JSON.parse(cachedArticles);
+        if (Array.isArray(parsedArticles) && parsedArticles.length > 0) {
+          const catMap = new Map<string, any>();
+          parsedArticles.forEach((art: any) => {
+            const rawCat = (art.category || '').toString().trim();
+            if (!rawCat || isMockCategory({ id: rawCat, name: rawCat })) return;
+            const key = rawCat.toLowerCase();
+            if (!catMap.has(key)) {
+              catMap.set(key, {
+                id: key,
+                name: rawCat,
+                thumbnail: art.imageUrl || art.thumbnail || getCategoryFallbackThumbnail(rawCat),
+                hook: getCategoryFallbackHook(rawCat),
+                iconName: getCategoryFallbackIcon(rawCat),
+                theme: key,
+                enabled: true,
+                isCustom: true,
+                subCategories: [],
+                createdAt: art.createdAt || Date.now()
+              });
+            }
+          });
+          const derived = Array.from(catMap.values());
+          if (derived.length > 0) return derived;
+        }
+      }
+    } catch (e) {}
+
+    return [];
   });
   const [selectedSubCategory, setSelectedSubCategory] = useState<string>('');
   const isCalendarOpen = location.search.includes('calendar=true');
@@ -268,8 +317,15 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
   const filterRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [bookmarks, setBookmarks] = useState<string[]>([]);
-  const [bookmarkFolders, setBookmarkFolders] = useState<{ id: string, name: string, items: string[] }[]>([]);
+  const [bookmarkFolders, setBookmarkFolders] = useState<BookmarkFolder[]>(() => getBookmarkFolders());
   const [activeFolder, setActiveFolder] = useState<string | null>(null);
+  const [folderModalConfig, setFolderModalConfig] = useState<{
+    isOpen: boolean;
+    mode: 'create' | 'rename';
+    folderId?: string;
+    initialName?: string;
+    initialItemId?: string;
+  }>({ isOpen: false, mode: 'create' });
   const [quranBookmarks, setQuranBookmarks] = useState<any[]>([]);
   const [lastReadPosition, setLastReadPosition] = useState<{ surahNumber: number, ayahNumberInSurah: number, surahName: string } | null>(null);
   const [activityData, setActivityData] = useState<{ [date: string]: number }>({});
@@ -299,21 +355,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
     if (!filter || filter === 'all' || filter === 'favoris' || filter === 'offline') return null;
     const filterCat = (filter || '').toString().toLowerCase().trim();
     const found = categories.find(c => c.id === filter || c.id?.toLowerCase() === filterCat || (c.name && c.name.toLowerCase() === filterCat));
-    if (found) return found;
-
-    const standard = STANDARD_SCREENSHOT_CATEGORIES.find(s => s.id === filter || s.id.toLowerCase() === filterCat || s.name.toLowerCase() === filterCat);
-    if (standard) {
-      return {
-        id: standard.id,
-        name: standard.name,
-        name_en: standard.name_en,
-        name_ha: standard.name_ha,
-        hook: standard.hook,
-        iconName: standard.iconName,
-        thumbnail: standard.thumbnail
-      };
-    }
-    return null;
+    return found || null;
   }, [categories, filter]);
 
   useBackButton(() => {
@@ -549,7 +591,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
               try { deletedIds = JSON.parse(localStorage.getItem('asrarhub_deleted_categories') || '[]'); } catch (e) {}
               const list = snapshot.docs
                 .map(doc => ({ ...doc.data(), id: doc.id }))
-                .filter((cat: any) => !deletedIds.includes(cat.id));
+                .filter((cat: any) => !deletedIds.includes(cat.id) && !isMockCategory(cat));
               list.sort((a: any, b: any) => (a.createdAt || 0) - (b.createdAt || 0));
               const seenCats = new Set<string>();
               const dedupedList = list.filter((c: any) => {
@@ -559,9 +601,15 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
                 return true;
               });
               setCategories(dedupedList);
+              setIsCategoriesLoading(false);
               try { localStorage.setItem('asrarhub_cached_categories', JSON.stringify(dedupedList)); } catch (e) {}
+            } else {
+              setIsCategoriesLoading(false);
             }
-          }).catch(e => console.warn('[PullToRefresh] Categories getDocs note:', e))
+          }).catch(e => {
+            console.warn('[PullToRefresh] Categories getDocs note:', e);
+            setIsCategoriesLoading(false);
+          })
         );
 
         // 4. Reload local bookmarks & history
@@ -771,6 +819,31 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
   }, []);
 
   useEffect(() => {
+    setBookmarkFolders(getBookmarkFolders());
+    const unsubscribeFolders = subscribeBookmarkFolders((folders) => {
+      setBookmarkFolders(folders);
+    });
+    return () => {
+      unsubscribeFolders();
+    };
+  }, []);
+
+  const handleFolderModalSuccess = (folderId: string, folderName: string) => {
+    if (folderModalConfig.mode === 'create') {
+      const newFolder = createBookmarkFolder(folderName, folderModalConfig.initialItemId);
+      if (newFolder) {
+        setBookmarkFolders(getBookmarkFolders());
+        if (!folderModalConfig.initialItemId) {
+          setActiveFolder(newFolder.id);
+        }
+      }
+    } else if (folderModalConfig.mode === 'rename' && folderId) {
+      renameBookmarkFolder(folderId, folderName);
+      setBookmarkFolders(getBookmarkFolders());
+    }
+  };
+
+  useEffect(() => {
     // 1. Check if Home Announcement from settings/features is enabled
     const isManualEnabled = featureToggles?.home_announcement_enabled === true || 
                             featureToggles?.home_announcement_enabled === 'true' || 
@@ -934,18 +1007,16 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
       if (cached) {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const combined = [...parsed];
-          for (const def of DEFAULT_CATEGORIES_PRESETS) {
-            if (!deletedIds.includes(def.id) && !combined.some((c: any) => (c?.id && c.id.toLowerCase() === def.id.toLowerCase()) || (c?.name && c.name.toLowerCase().trim() === def.name.toLowerCase().trim()))) {
-              combined.push(def);
-            }
-          }
+          const cleanCached = parsed.filter((c: any) => !deletedIds.includes(c.id) && !isMockCategory(c));
           const seen = new Set<string>();
-          const deduped = combined.filter((c: any) => {
+          const deduped = cleanCached.filter((c: any) => {
             const k = (c.id || c.name || '').toLowerCase().trim();
             if (!k || seen.has(k)) return false;
             seen.add(k);
             return true;
+          }).map((c: any) => {
+            const isFolder = !c.iconName || c.iconName.toLowerCase().replace(/[^a-z]/g, '') === 'folderopen' || c.iconName.toLowerCase().replace(/[^a-z]/g, '') === 'folder';
+            return isFolder ? { ...c, iconName: getCategoryFallbackIcon(c.name || c.id) } : c;
           });
           if (deduped.length > 0) {
             setCategories(deduped);
@@ -956,99 +1027,94 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
       console.warn("Notice pre-loading categories from cache:", e);
     }
 
-    const defaultCats = [
-      ...DEFAULT_CATEGORIES_PRESETS,
-      {
-        id: 'wird',
-        name: 'Versets & Wirds',
-        name_en: 'Verses & Wirds',
-        name_ha: 'Wirdoshi & Ayoyi',
-        iconName: 'BookOpen',
-        subCategories: [
-          { id: 'wird-protection', name: 'Protection', name_en: 'Protection', name_ha: 'Kariya' },
-          { id: 'wird-guerison', name: 'Guérison', name_en: 'Healing', name_ha: 'Waraka' }
-        ]
-      },
-      {
-        id: 'secret',
-        name: "Secrets d'Asrar",
-        name_en: 'Secrets of Asrar',
-        name_ha: 'Asrarai',
-        iconName: 'Sparkles',
-        subCategories: [
-          { id: 'secret-richesse', name: 'Prospérité', name_en: 'Prosperity', name_ha: 'Arziki' },
-          { id: 'secret-amour', name: 'Affection', name_en: 'Affection', name_ha: 'Soyayya' }
-        ]
-      },
-      {
-        id: 'recette',
-        name: 'Recettes Spirituelles',
-        name_en: 'Spiritual Recipes',
-        name_ha: 'Hanyoyi',
-        iconName: 'Shield',
-        subCategories: [
-          { id: 'recette-sante', name: 'Santé', name_en: 'Health', name_ha: 'Lafiya' }
-        ]
-      }
-    ];
-
-    const unsubscribe = onSnapshot(collection(db, 'categories'), (snapshot) => {
+    const unsubscribe = onSnapshot(collection(db, 'categories'), async (snapshot) => {
       let currentDeletedIds: string[] = [];
       try { currentDeletedIds = JSON.parse(localStorage.getItem('asrarhub_deleted_categories') || '[]'); } catch (e) {}
 
       if (!snapshot.empty) {
+        // Strictly only real categories created by user/admin from Firestore (never inject mock categories)
         const list = snapshot.docs
           .map(doc => ({ ...doc.data(), id: doc.id }))
-          .filter((cat: any) => !currentDeletedIds.includes(cat.id));
+          .filter((cat: any) => !currentDeletedIds.includes(cat.id) && !isMockCategory(cat));
         list.sort((a: any, b: any) => (a.createdAt || 0) - (b.createdAt || 0));
 
-        // Merge Firestore categories with default presets so categories are not limited if Firestore only has a few items
-        const combined = [...list];
-        for (const def of defaultCats) {
-          if (!currentDeletedIds.includes(def.id) && !combined.some((c: any) => (c?.id && c.id.toLowerCase() === def.id.toLowerCase()) || (c?.name && c.name.toLowerCase().trim() === def.name.toLowerCase().trim()))) {
-            combined.push(def);
+        // Automatically delete any lingering mock preset category documents from Firestore
+        const mockDocs = snapshot.docs.filter(doc => isMockCategory({ ...doc.data(), id: doc.id }));
+        if (mockDocs.length > 0) {
+          for (const mDoc of mockDocs) {
+            try {
+              await deleteDoc(doc(db, 'categories', mDoc.id));
+            } catch (err) {
+              console.warn("Could not delete mock category doc:", mDoc.id, err);
+            }
           }
         }
 
         const seenCats = new Set<string>();
-        const dedupedList = combined.filter((c: any) => {
+        const dedupedList = list.filter((c: any) => {
           const k = (c.id || c.name || '').toLowerCase().trim();
           if (!k || seenCats.has(k)) return false;
           seenCats.add(k);
           return true;
+        }).map((c: any) => {
+          const isFolder = !c.iconName || c.iconName.toLowerCase().replace(/[^a-z]/g, '') === 'folderopen' || c.iconName.toLowerCase().replace(/[^a-z]/g, '') === 'folder';
+          return isFolder ? { ...c, iconName: getCategoryFallbackIcon(c.name || c.id) } : c;
         });
         setCategories(dedupedList);
+        setIsCategoriesLoading(false);
         try {
           localStorage.setItem('asrarhub_cached_categories', JSON.stringify(dedupedList));
         } catch (e) {}
       } else {
-        const remainingDefaults = defaultCats.filter(c => !currentDeletedIds.includes(c.id));
-        const seenDefaults = new Set<string>();
-        const dedupedDefaults = remainingDefaults.filter((c: any) => {
-          const k = (c.id || c.name || '').toLowerCase().trim();
-          if (!k || seenDefaults.has(k)) return false;
-          seenDefaults.add(k);
-          return true;
+        // Only empty out if we don't already have real derived categories from articles
+        setCategories(prev => {
+          if (prev.length > 0) return prev;
+          return [];
         });
-        setCategories(dedupedDefaults);
+        setIsCategoriesLoading(false);
       }
     }, (error) => {
       console.warn("Categories fetch note (using local fallback):", error);
-      let currentDeletedIds: string[] = [];
-      try { currentDeletedIds = JSON.parse(localStorage.getItem('asrarhub_deleted_categories') || '[]'); } catch (e) {}
-      const remainingDefaults = defaultCats.filter(c => !currentDeletedIds.includes(c.id));
-      const seenDefaults = new Set<string>();
-      const dedupedDefaults = remainingDefaults.filter((c: any) => {
-        const k = (c.id || c.name || '').toLowerCase().trim();
-        if (!k || seenDefaults.has(k)) return false;
-        seenDefaults.add(k);
-        return true;
-      });
-      setCategories(dedupedDefaults);
+      setCategories(prev => prev.filter((c: any) => !isMockCategory(c)));
+      setIsCategoriesLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
+
+  // Instant category synthesis: if categories are empty but items exist in cache, hydrate categories immediately at 0ms
+  useEffect(() => {
+    if (categories.length === 0 && items && items.length > 0) {
+      const catMap = new Map<string, any>();
+      items.forEach((art: any) => {
+        const rawCat = (art.category || '').toString().trim();
+        if (!rawCat || isMockCategory({ id: rawCat, name: rawCat })) return;
+        const key = rawCat.toLowerCase();
+        if (!catMap.has(key)) {
+          catMap.set(key, {
+            id: key,
+            name: rawCat,
+            thumbnail: art.imageUrl || art.thumbnail || getCategoryFallbackThumbnail(rawCat),
+            hook: getCategoryFallbackHook(rawCat),
+            iconName: getCategoryFallbackIcon(rawCat),
+            theme: key,
+            enabled: true,
+            isCustom: true,
+            subCategories: [],
+            createdAt: art.createdAt || Date.now()
+          });
+        }
+      });
+      const derived = Array.from(catMap.values());
+      if (derived.length > 0) {
+        setCategories(derived);
+        setIsCategoriesLoading(false);
+        try {
+          localStorage.setItem('asrarhub_cached_categories', JSON.stringify(derived));
+        } catch (e) {}
+      }
+    }
+  }, [items, categories.length]);
 
   const filteredItems = React.useMemo(() => {
     const raw = items.filter(item => {
@@ -1183,6 +1249,33 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {featureToggles['community'] !== 'inactive' && featureToggles['tool_community'] !== 'inactive' && (
+          <motion.div
+            whileHover={{ scale: 1.08, y: -1.5 }}
+            whileTap={{ scale: 0.92 }}
+            className={`relative flex-shrink-0 transition-opacity duration-200 ${isSearchOpen ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+          >
+            <Link
+              id="tour-community"
+              to="/community"
+              className="group relative p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-gradient-to-br from-indigo-500/15 via-indigo-500/10 to-blue-600/20 dark:from-indigo-900/40 dark:via-indigo-800/30 dark:to-blue-950/50 text-indigo-600 dark:text-indigo-400 border border-indigo-300/50 dark:border-indigo-700/50 h-[34px] w-[34px] sm:h-[42px] sm:w-[42px] flex items-center justify-center shadow-sm overflow-hidden"
+              title={t('nav.community', 'Communauté')}
+            >
+              <motion.div
+                className="absolute inset-0 bg-gradient-to-tr from-transparent via-indigo-200/30 dark:via-indigo-400/20 to-transparent opacity-0 group-hover:opacity-100"
+                animate={{ x: ['-100%', '200%'] }}
+                transition={{ repeat: Infinity, duration: 2.7, ease: 'linear' }}
+              />
+              <motion.div
+                animate={{ scale: [1, 1.06, 1] }}
+                transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
+              >
+                <Users className="w-[15px] h-[15px] sm:w-[18px] sm:h-[18px] drop-shadow-[0_1px_3px_rgba(99,102,241,0.4)]" />
+              </motion.div>
+            </Link>
+          </motion.div>
+        )}
 
         {featureToggles['tool_store'] !== 'inactive' && (
           <motion.div
@@ -1538,7 +1631,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
                               <div className="flex items-center gap-3">
                                 <div className="shrink-0">
                                   <CategoryVideoOrIconBadge
-                                    iconName={cat.iconName || 'FolderOpen'}
+                                    iconName={cat.iconName || getCategoryFallbackIcon(cat.name || cat.id)}
                                     categoryName={displayName}
                                     theme={cat.theme || cat.id}
                                     size="sm"
@@ -1794,6 +1887,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
               language={language}
               searchQuery={searchQuery}
               featureToggles={featureToggles}
+              isLoading={isCategoriesLoading}
             />
           ) : filter === 'offline' ? (
             /* Offline section with back button */
@@ -1852,6 +1946,19 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
                       <Folder size={14} /> {folder.name}
                     </button>
                   ))}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFolderModalConfig({
+                        isOpen: true,
+                        mode: 'create',
+                        initialName: '',
+                      });
+                    }}
+                    className="px-3 py-2 rounded-xl flex items-center gap-1.5 whitespace-nowrap transition-colors border text-xs font-bold bg-gray-50 border-gray-200 text-gray-600 dark:bg-gray-800/50 dark:border-gray-700 dark:text-gray-400 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 dark:hover:bg-emerald-950/20 cursor-pointer"
+                  >
+                    <Plus size={14} /> {language === 'fr' ? 'Nouveau dossier' : language === 'ha' ? 'Sabuwar jaka' : 'New folder'}
+                  </button>
                 </div>
               </div>
 
@@ -1900,105 +2007,133 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
                 )}
               </div>
 
-              {/* If activeCategoryObj: Category Hero Banner */}
-              {activeCategoryObj && (
-                <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-gray-200 dark:border-gray-800 bg-gray-950 text-white shadow-md">
-                  {/* Banner Image */}
-                  <div className="absolute inset-0 z-0">
-                    <img
-                      src={sanitizeImageSource(activeCategoryObj.thumbnail || getCategoryFallbackThumbnail(activeCategoryObj.name))}
-                      alt={activeCategoryObj.name}
-                      className="w-full h-full object-cover opacity-35"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-gray-950 via-gray-950/70 to-black/30" />
-                  </div>
+              {/* If activeCategoryObj: Category Hero Banner (Light & High Visibility) */}
+              {activeCategoryObj && (() => {
+                const showThumbnail = featureToggles?.category_banner_show_thumbnail !== false;
+                const thumbStyle = featureToggles?.category_banner_thumbnail_style || 'side'; // 'side' | 'cover' | 'both'
+                const resolvedThumb = sanitizeImageSource(activeCategoryObj.thumbnail || getCategoryFallbackThumbnail(activeCategoryObj.name));
+                const categoryTitle = language === 'en' && activeCategoryObj.name_en ? activeCategoryObj.name_en :
+                                      language === 'ha' && activeCategoryObj.name_ha ? activeCategoryObj.name_ha :
+                                      activeCategoryObj.name;
+                const categoryHook = language === 'en' && activeCategoryObj.hook_en ? activeCategoryObj.hook_en :
+                                     language === 'ha' && activeCategoryObj.hook_ha ? activeCategoryObj.hook_ha :
+                                     (activeCategoryObj.hook || getCategoryFallbackHook(activeCategoryObj.name));
 
-                  <div className="relative z-10 p-4 sm:p-6 space-y-2.5 sm:space-y-3">
-                    <div className="flex items-center gap-3">
-                      <CategoryVideoOrIconBadge
-                        iconName={activeCategoryObj.iconName || 'FolderOpen'}
-                        categoryName={activeCategoryObj.name}
-                        theme={activeCategoryObj.theme || activeCategoryObj.id}
-                        size="md"
-                      />
-                      <div>
-                        <h2 className="text-lg sm:text-2xl font-black text-white">
-                          {language === 'en' && activeCategoryObj.name_en ? activeCategoryObj.name_en :
-                           language === 'ha' && activeCategoryObj.name_ha ? activeCategoryObj.name_ha :
-                           activeCategoryObj.name}
-                        </h2>
-                        <p className="text-[11px] sm:text-xs text-emerald-300 font-bold">
-                          {filteredItems.length} {language === 'en' ? 'articles available' : language === 'ha' ? 'rubuce-rubuce' : 'articles disponibles'}
-                        </p>
+                return (
+                  <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl border border-emerald-300/60 dark:border-gray-700/80 bg-gray-900 text-white shadow-sm sm:shadow-md transition-all min-h-[140px] sm:min-h-[170px]">
+                    {/* Full-bleed category thumbnail covering the entire framed rectangle card */}
+                    {showThumbnail && resolvedThumb ? (
+                      <div className="absolute inset-0 z-0 overflow-hidden">
+                        <img
+                          src={resolvedThumb}
+                          alt={categoryTitle}
+                          className="w-full h-full object-cover object-center scale-100 transition-transform duration-700 hover:scale-105"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLElement).style.display = 'none';
+                          }}
+                        />
+                        {/* High-visibility optical gradient scrim so thumbnail is vivid & clearly visible while ensuring text readability */}
+                        <div className="absolute inset-0 bg-gradient-to-t from-gray-950/95 via-gray-950/60 to-gray-900/35" />
+                        <div className="absolute inset-0 bg-emerald-950/20 mix-blend-multiply" />
                       </div>
-                    </div>
-
-                    {(activeCategoryObj.hook || getCategoryFallbackHook(activeCategoryObj.name)) && (
-                      <p className="text-xs sm:text-sm text-gray-200 italic border-l-2 border-emerald-400 pl-3 py-0.5 leading-relaxed bg-black/25 rounded-r max-w-2xl">
-                        « {language === 'en' && activeCategoryObj.hook_en ? activeCategoryObj.hook_en :
-                           language === 'ha' && activeCategoryObj.hook_ha ? activeCategoryObj.hook_ha :
-                           (activeCategoryObj.hook || getCategoryFallbackHook(activeCategoryObj.name))} »
-                      </p>
+                    ) : (
+                      <div className="absolute inset-0 z-0 bg-gradient-to-br from-emerald-900 via-teal-900 to-gray-900" />
                     )}
 
-                    {/* Sub-categories horizontal pill bar if any */}
-                    {activeCategoryObj.subCategories && activeCategoryObj.subCategories.length > 0 && (
-                      <div className="pt-2">
-                        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-                          <button
-                            type="button"
-                            onClick={() => setSelectedSubCategory('')}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
-                              !selectedSubCategory
-                                ? 'bg-emerald-500 text-white shadow-xs'
-                                : 'bg-white/15 hover:bg-white/25 text-white/90 border border-white/20'
-                            }`}
-                          >
-                            {language === 'en' ? 'All' : language === 'ha' ? 'Duk' : 'Tout'}
-                          </button>
-                          {(activeCategoryObj.subCategories || []).map((sub: any, sIdx: number) => {
-                            const subId = typeof sub === 'string' ? sub : (sub?.id || sub?.name || `sub-${sIdx}`);
-                            const subName = typeof sub === 'string' ? sub : (sub?.name || sub?.id || '');
-                            const isSubActive = selectedSubCategory === subId || selectedSubCategory === subName;
-                            const subArticlesCount = items.filter(a => {
-                              const s = ((a as any).subCategory || '').toLowerCase();
-                              const targetId = (sub?.id || '').toLowerCase();
-                              const targetName = (subName || '').toLowerCase();
-                              return (targetId && s === targetId) || (targetName && s === targetName);
-                            }).length;
+                    <div className="relative z-10 p-4 sm:p-6 space-y-3">
+                      <div className="flex items-start sm:items-center gap-3 sm:gap-4">
+                        {/* Small iconic theme badge */}
+                        <div className="shrink-0 p-2 rounded-2xl bg-white/15 dark:bg-black/40 backdrop-blur-md border border-white/20 shadow-sm text-white">
+                          <CategoryVideoOrIconBadge
+                            iconName={activeCategoryObj.iconName || getCategoryFallbackIcon(activeCategoryObj.name || activeCategoryObj.id)}
+                            categoryName={activeCategoryObj.name}
+                            theme={activeCategoryObj.theme || activeCategoryObj.id}
+                            size="md"
+                          />
+                        </div>
 
-                            let subDisplayName = subName;
-                            if (typeof sub === 'object' && sub !== null) {
-                              if (language === 'en' && sub.name_en) subDisplayName = sub.name_en;
-                              if (language === 'ha' && sub.name_ha) subDisplayName = sub.name_ha;
-                            }
-
-                            return (
-                              <button
-                                key={`sub-pill-${activeCategoryObj.id || 'cat'}-${subId}-${sIdx}`}
-                                type="button"
-                                onClick={() => setSelectedSubCategory(isSubActive ? '' : subId)}
-                                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
-                                  isSubActive
-                                    ? 'bg-emerald-500 text-white shadow-xs'
-                                    : 'bg-white/15 hover:bg-white/25 text-white/90 border border-white/20'
-                                }`}
-                              >
-                                <span>{subDisplayName}</span>
-                                {subArticlesCount > 0 && (
-                                  <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-black/30 font-semibold">
-                                    {subArticlesCount}
-                                  </span>
-                                )}
-                              </button>
-                            );
-                          })}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2 mb-1">
+                            <h2 className="text-lg sm:text-2xl md:text-3xl font-black text-white tracking-tight leading-snug drop-shadow-sm">
+                              {categoryTitle}
+                            </h2>
+                          </div>
+                          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/85 text-white backdrop-blur-md shadow-xs border border-emerald-400/30">
+                            <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+                            <span>
+                              {filteredItems.length} {language === 'en' ? 'articles available' : language === 'ha' ? 'rubuce-rubuce' : 'articles disponibles'}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    )}
+
+                      {categoryHook && (
+                        <p className="text-xs sm:text-sm text-white/95 italic border-l-3 border-emerald-400 pl-3 py-1.5 leading-relaxed bg-black/40 backdrop-blur-md rounded-r-xl max-w-2xl border-t border-b border-r border-white/10">
+                          « {categoryHook} »
+                        </p>
+                      )}
+
+                      {/* Sub-categories horizontal pill bar if any */}
+                      {activeCategoryObj.subCategories && activeCategoryObj.subCategories.length > 0 && (
+                        <div className="pt-1">
+                          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                            <button
+                              type="button"
+                              onClick={() => setSelectedSubCategory('')}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap cursor-pointer backdrop-blur-md ${
+                                !selectedSubCategory
+                                  ? 'bg-emerald-500 text-white shadow-xs ring-2 ring-emerald-300/40'
+                                  : 'bg-black/40 hover:bg-black/60 text-white/90 border border-white/20'
+                              }`}
+                            >
+                              {language === 'en' ? 'All' : language === 'ha' ? 'Duk' : 'Tout'}
+                            </button>
+                            {(activeCategoryObj.subCategories || []).map((sub: any, sIdx: number) => {
+                              const subId = typeof sub === 'string' ? sub : (sub?.id || sub?.name || `sub-${sIdx}`);
+                              const subName = typeof sub === 'string' ? sub : (sub?.name || sub?.id || '');
+                              const isSubActive = selectedSubCategory === subId || selectedSubCategory === subName;
+                              const subArticlesCount = items.filter(a => {
+                                const s = ((a as any).subCategory || '').toLowerCase();
+                                const targetId = (sub?.id || '').toLowerCase();
+                                const targetName = (subName || '').toLowerCase();
+                                return (targetId && s === targetId) || (targetName && s === targetName);
+                              }).length;
+
+                              let subDisplayName = subName;
+                              if (typeof sub === 'object' && sub !== null) {
+                                if (language === 'en' && sub.name_en) subDisplayName = sub.name_en;
+                                if (language === 'ha' && sub.name_ha) subDisplayName = sub.name_ha;
+                              }
+
+                              return (
+                                <button
+                                  key={`sub-pill-${activeCategoryObj.id || 'cat'}-${subId}-${sIdx}`}
+                                  type="button"
+                                  onClick={() => setSelectedSubCategory(isSubActive ? '' : subId)}
+                                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer backdrop-blur-md ${
+                                    isSubActive
+                                      ? 'bg-emerald-500 text-white shadow-xs ring-2 ring-emerald-300/40'
+                                      : 'bg-black/40 hover:bg-black/60 text-white/90 border border-white/20'
+                                  }`}
+                                >
+                                  <span>{subDisplayName}</span>
+                                  {subArticlesCount > 0 && (
+                                    <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-semibold ${
+                                      isSubActive ? 'bg-white/30 text-white' : 'bg-white/20 text-white'
+                                    }`}>
+                                      {subArticlesCount}
+                                    </span>
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
               {/* If search query is active, show search banner */}
               {searchQuery && (
@@ -2561,15 +2696,13 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
               ))}
               <button
                 onClick={() => {
-                  const name = prompt("Nom du nouveau dossier :");
-                  if (name && name.trim()) {
-                    const newFolder = { id: Date.now().toString(), name: name.trim(), items: [] };
-                    const newFolders = [...bookmarkFolders, newFolder];
-                    setBookmarkFolders(newFolders);
-                    localStorage.setItem('asrar_bookmark_folders', JSON.stringify(newFolders));
-                  }
+                  setFolderModalConfig({
+                    isOpen: true,
+                    mode: 'create',
+                    initialName: '',
+                  });
                 }}
-                className="px-4 py-2 rounded-xl flex items-center gap-2 whitespace-nowrap transition-colors border bg-gray-50 border-gray-200 text-gray-600 dark:bg-gray-800/50 dark:border-gray-700 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                className="px-4 py-2 rounded-xl flex items-center gap-2 whitespace-nowrap transition-colors border bg-gray-50 border-gray-200 text-gray-600 dark:bg-gray-800/50 dark:border-gray-700 dark:text-gray-400 hover:bg-emerald-50 hover:text-emerald-700 hover:border-emerald-200 dark:hover:bg-emerald-950/20 cursor-pointer font-bold"
               >
                 <Plus size={16} /> Nouveau
               </button>
@@ -2586,12 +2719,12 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
                   onClick={() => {
                     const folder = bookmarkFolders.find(f => f.id === activeFolder);
                     if (!folder) return;
-                    const newName = prompt("Nouveau nom du dossier :", folder.name);
-                    if (newName && newName.trim()) {
-                      const updated = bookmarkFolders.map(f => f.id === activeFolder ? { ...f, name: newName.trim() } : f);
-                      setBookmarkFolders(updated);
-                      localStorage.setItem('asrar_bookmark_folders', JSON.stringify(updated));
-                    }
+                    setFolderModalConfig({
+                      isOpen: true,
+                      mode: 'rename',
+                      folderId: activeFolder,
+                      initialName: folder.name,
+                    });
                   }}
                   className="p-1.5 rounded-lg text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/30 transition-colors"
                   title="Renommer le dossier"
@@ -2601,9 +2734,8 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
                 <button
                   onClick={() => {
                     if (confirm("Êtes-vous sûr de vouloir supprimer ce dossier ? Les Wirds et Secrets resteront dans vos favoris, mais ne seront plus classés dans ce dossier.")) {
-                      const updated = bookmarkFolders.filter(f => f.id !== activeFolder);
+                      const updated = deleteBookmarkFolder(activeFolder);
                       setBookmarkFolders(updated);
-                      localStorage.setItem('asrar_bookmark_folders', JSON.stringify(updated));
                       setActiveFolder(null);
                     }
                   }}
@@ -2665,28 +2797,16 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
                       onChange={(e) => {
                         const val = e.target.value;
                         if (val === '__new__') {
-                          const name = prompt("Nom du nouveau dossier :");
-                          if (name && name.trim()) {
-                            const newId = Date.now().toString();
-                            const newFolder = { id: newId, name: name.trim(), items: [item.id] };
-                            const updated = bookmarkFolders.map(f => {
-                              f.items = f.items.filter(id => id !== item.id);
-                              return f;
-                            });
-                            const finalFolders = [...updated, newFolder];
-                            setBookmarkFolders(finalFolders);
-                            localStorage.setItem('asrar_bookmark_folders', JSON.stringify(finalFolders));
-                          }
-                        } else {
-                          const updated = bookmarkFolders.map(f => {
-                            f.items = f.items.filter(id => id !== item.id);
-                            if (f.id === val) {
-                              f.items.push(item.id);
-                            }
-                            return f;
+                          setFolderModalConfig({
+                            isOpen: true,
+                            mode: 'create',
+                            initialName: '',
+                            initialItemId: item.id,
                           });
+                          e.target.value = currentFolder?.id || "";
+                        } else {
+                          const updated = assignItemToFolder(item.id, val);
                           setBookmarkFolders(updated);
-                          localStorage.setItem('asrar_bookmark_folders', JSON.stringify(updated));
                         }
                       }}
                       className="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl px-2 py-1 text-[11px] text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-emerald-500 font-medium cursor-pointer"
@@ -2785,6 +2905,17 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
           }
         }}
         articleCount={items.length}
+      />
+
+      {/* Bookmark Folder Management Modal */}
+      <BookmarkFolderModal
+        isOpen={folderModalConfig.isOpen}
+        onClose={() => setFolderModalConfig(prev => ({ ...prev, isOpen: false }))}
+        onSuccess={handleFolderModalSuccess}
+        mode={folderModalConfig.mode}
+        folderId={folderModalConfig.folderId}
+        initialName={folderModalConfig.initialName}
+        initialItemId={folderModalConfig.initialItemId}
       />
     </div>
   );

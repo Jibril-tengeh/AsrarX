@@ -1328,7 +1328,7 @@ Généré par AsrarHub — https://asrarhub.com
     return (
       <div className="flex flex-col gap-1 items-center justify-center">
         {arr.map((val, i) => (
-          <div key={i} className="flex gap-1.5">
+          <div key={`geomancy-i-${i}`} className="flex gap-1.5">
             {val === 2 ? (
               <>
                 <div className={`${dotSizes[size]} rounded-full bg-amber-700 dark:bg-amber-300 shadow-xs`}></div>
@@ -1669,11 +1669,11 @@ Généré par AsrarHub — https://asrarhub.com
                 </div>
               ) : (
                 sandLines.map((count, idx) => (
-                  <div key={idx} className="flex items-center gap-1.5 bg-white/90 dark:bg-amber-950/80 px-2.5 py-1 rounded-lg border border-amber-300 dark:border-amber-700/60 text-xs font-mono text-stone-900 dark:text-amber-200 shadow-xs">
+                  <div key={`sand-line-${idx}-${count}`} className="flex items-center gap-1.5 bg-white/90 dark:bg-amber-950/80 px-2.5 py-1 rounded-lg border border-amber-300 dark:border-amber-700/60 text-xs font-mono text-stone-900 dark:text-amber-200 shadow-xs">
                     <span className="text-amber-700 dark:text-amber-400 font-bold">{i18n.lineLabel} {idx + 1}:</span>
                     <span className="flex gap-1">
                       {Array.from({ length: Math.min(count, 10) }).map((_, i) => (
-                        <span key={i} className="w-2 h-2 rounded-full bg-amber-600 dark:bg-amber-400 inline-block shadow-xs"></span>
+                        <span key={`sand-dot-${idx}-${i}`} className="w-2 h-2 rounded-full bg-amber-600 dark:bg-amber-400 inline-block shadow-xs"></span>
                       ))}
                     </span>
                     <span className="ml-1 text-[10px] text-amber-800 dark:text-amber-300 font-sans font-bold">
@@ -1720,7 +1720,7 @@ Généré par AsrarHub — https://asrarhub.com
             <p className="text-xs font-bold text-amber-900 dark:text-amber-300">{i18n.manualPrompt}</p>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5">
               {[0, 1, 2, 3].map(idx => (
-                <div key={idx} className="flex flex-col gap-1">
+                <div key={`manual-mother-${idx}`} className="flex flex-col gap-1">
                   <label className="text-[11px] font-semibold text-gray-600 dark:text-gray-300">
                     {i18n.motherLabel} {idx + 1} ({langKey === 'ha' ? 'G' : langKey === 'en' ? 'H' : 'M'}{idx + 1})
                   </label>
@@ -1893,7 +1893,7 @@ Généré par AsrarHub — https://asrarhub.com
               const isSelected = selectedHouse === i;
               return (
                 <button
-                  key={i}
+                  key={`geomancy-i-${i}`}
                   onClick={() => setSelectedHouse(i)}
                   className={`flex flex-col items-center p-2 bg-white dark:bg-gray-800 hover:bg-amber-50 dark:hover:bg-amber-900/20 border transition-all rounded-xl text-right cursor-pointer shadow-xs relative overflow-hidden ${
                     isSelected
@@ -2140,7 +2140,7 @@ Généré par AsrarHub — https://asrarhub.com
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {getRepetitionsAndPassations().map((p, idx) => (
-                  <div key={idx} className="p-3 bg-amber-50/50 dark:bg-amber-950/20 rounded-xl border border-amber-200/50 space-y-1.5">
+                  <div key={`passation-${p.detail?.latin || idx}-${idx}`} className="p-3 bg-amber-50/50 dark:bg-amber-950/20 rounded-xl border border-amber-200/50 space-y-1.5">
                     <div className="flex items-center justify-between">
                       <span className="font-bold text-xs text-gray-900 dark:text-white flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-amber-500"></span>

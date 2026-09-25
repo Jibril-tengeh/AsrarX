@@ -98,7 +98,7 @@ const DreamPrintableDocument: React.FC<{
       >
         {Array.from({ length: 14 }).map((_, i) => (
           <div
-            key={i}
+            key={`dreampdfexporter-i-${i}`}
             style={{
               fontSize: '32px',
               fontWeight: 900,

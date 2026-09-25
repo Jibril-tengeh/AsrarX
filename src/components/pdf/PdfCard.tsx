@@ -13,7 +13,10 @@ import {
   RefreshCw, 
   Eye,
   Layers,
-  ArrowRight
+  ArrowRight,
+  Tag,
+  ShoppingBag,
+  ShieldCheck
 } from 'lucide-react';
 import { PdfDocument } from '../../types/pdfDocument';
 import { 
@@ -21,8 +24,14 @@ import {
   downloadAndCachePdf, 
   removePdfFromOfflineVault 
 } from '../../utils/pdfOfflineVault';
+import { 
+  evaluatePdfAccess, 
+  formatPdfPrice, 
+  isAuthenticAdmin 
+} from '../../utils/pdfSecurity';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { PdfBookCover3D } from './PdfBookCover3D';
 
 interface PdfCardProps {
   pdf: PdfDocument;
@@ -44,8 +53,11 @@ export const PdfCard: React.FC<PdfCardProps> = ({
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
 
-  const isAdmin = user?.role === 'admin' || sessionStorage.getItem('admin_bypass') === 'true';
-  const isPremiumUser = !!(isPremium || isAdmin || user?.subscriptionTier === 'premium' || user?.subscriptionTier === 'pro');
+  const isAdmin = isAuthenticAdmin(user);
+  const accessState = evaluatePdfAccess(pdf, user, isPremium);
+  const isPurchased = accessState.isPurchased;
+  const requiresPurchase = accessState.requiresPurchase;
+  const isVipLocked = accessState.reason === 'locked_premium';
 
   useEffect(() => {
     let isMounted = true;
@@ -68,6 +80,12 @@ export const PdfCard: React.FC<PdfCardProps> = ({
   const handleDownloadToggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
     if (isDownloading) return;
+
+    // ANTI-HACK PROTECTION: If book is for sale or VIP required and user hasn't paid, open purchase/reader flow
+    if (requiresPurchase || isVipLocked) {
+      onRead(pdf);
+      return;
+    }
 
     if (isDownloaded) {
       if (window.confirm(language === 'fr' ? 'Retirer ce PDF du stockage hors-ligne local ?' : 'Remove from offline cache?')) {
@@ -117,16 +135,13 @@ export const PdfCard: React.FC<PdfCardProps> = ({
         className="w-full max-w-full bg-white dark:bg-gray-800/90 border border-gray-200/80 dark:border-gray-700/80 rounded-2xl p-3 sm:p-4 shadow-xs hover:shadow-md transition-all group overflow-hidden box-border min-w-0"
       >
         <div className="flex items-start gap-3 sm:gap-3.5 min-w-0 w-full flex-1">
-          {/* Icon / Cover Thumbnail */}
+          {/* Book Cover Thumbnail */}
           <div 
             onClick={() => onRead(pdf)}
-            className="w-12 h-14 sm:w-14 sm:h-16 shrink-0 rounded-xl bg-gradient-to-br from-red-500/10 via-rose-500/15 to-red-600/20 dark:from-red-950/40 dark:to-rose-900/30 border border-red-200 dark:border-red-800/50 flex flex-col items-center justify-center relative overflow-hidden group-hover:scale-105 transition-transform shadow-xs cursor-pointer"
+            className="shrink-0 cursor-pointer pt-0.5 transform group-hover:scale-105 transition-transform duration-200"
+            title={localizedTitle}
           >
-            <span className="text-[9px] font-black tracking-widest text-red-600 dark:text-red-400">PDF</span>
-            <FileText size={20} className="text-red-500 mt-0.5" />
-            {isDownloaded && (
-              <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-gray-800" />
-            )}
+            <PdfBookCover3D size="sm" pdf={pdf} language={language} showShadow={false} />
           </div>
 
           <div className="min-w-0 flex-1 w-full overflow-hidden">
@@ -135,6 +150,16 @@ export const PdfCard: React.FC<PdfCardProps> = ({
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 truncate max-w-[130px] sm:max-w-[180px]">
                 {categoryLabels[pdf.category] || pdf.category}
               </span>
+              {pdf.isForSale && (
+                <span className={`text-[10px] font-black px-2 py-0.5 rounded-md flex items-center gap-0.5 shrink-0 ${
+                  isPurchased 
+                    ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700/50'
+                    : 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
+                }`}>
+                  <Tag size={9} />
+                  <span>{isPurchased ? (language === 'fr' ? 'Acheté' : 'Owned') : formatPdfPrice(pdf.price || 0, pdf.currency || 'FCFA')}</span>
+                </span>
+              )}
               {pdf.isPremium && (
                 <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700/50 flex items-center gap-0.5 shrink-0">
                   <Sparkles size={9} />
@@ -196,16 +221,28 @@ export const PdfCard: React.FC<PdfCardProps> = ({
                 )}
               </button>
 
-              <button
-                type="button"
-                onClick={() => onRead(pdf)}
-                className="p-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer shrink-0"
-                title={language === 'fr' ? 'Lire / Aperçu' : 'Read / Preview'}
-                aria-label={language === 'fr' ? 'Lire / Aperçu' : 'Read'}
-              >
-                <BookOpen size={16} />
-                <span className="hidden xs:inline">{language === 'fr' ? 'Consulter' : 'Read'}</span>
-              </button>
+              {requiresPurchase ? (
+                <button
+                  type="button"
+                  onClick={() => onRead(pdf)}
+                  className="p-2 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer shrink-0 active:scale-95"
+                  title={language === 'fr' ? `Acheter (${formatPdfPrice(pdf.price || 0, pdf.currency || 'FCFA')})` : `Buy Book`}
+                >
+                  <ShoppingBag size={15} />
+                  <span>{language === 'fr' ? `Acheter • ${formatPdfPrice(pdf.price || 0, pdf.currency || 'FCFA')}` : `Buy • ${formatPdfPrice(pdf.price || 0, pdf.currency || 'FCFA')}`}</span>
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => onRead(pdf)}
+                  className="p-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer shrink-0"
+                  title={language === 'fr' ? 'Lire / Aperçu' : 'Read / Preview'}
+                  aria-label={language === 'fr' ? 'Lire / Aperçu' : 'Read'}
+                >
+                  <BookOpen size={16} />
+                  <span className="hidden xs:inline">{isPurchased ? (language === 'fr' ? 'Lire (Acheté)' : 'Read (Owned)') : (language === 'fr' ? 'Consulter' : 'Read')}</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
@@ -218,37 +255,36 @@ export const PdfCard: React.FC<PdfCardProps> = ({
       whileHover={{ y: -3 }}
       className="w-full max-w-full min-w-0 bg-white dark:bg-gray-800 rounded-3xl border border-gray-200/80 dark:border-gray-700/80 shadow-xs hover:shadow-lg transition-all duration-200 flex flex-col overflow-hidden group relative box-border"
     >
-      {/* Top Banner & Cover Image */}
+      {/* Top Book Showcase Stage */}
       <div 
         onClick={() => onRead(pdf)}
-        className="relative h-44 sm:h-48 w-full bg-slate-900 overflow-hidden cursor-pointer flex items-center justify-center"
+        className="relative h-60 sm:h-64 w-full bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 overflow-hidden cursor-pointer flex flex-col items-center justify-center p-3 select-none"
       >
-        {pdf.coverUrl ? (
-          <img
-            src={pdf.coverUrl}
-            alt={pdf.title}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-85 group-hover:opacity-95"
-            referrerPolicy="no-referrer"
-          />
-        ) : (
-          <div className="w-full h-full bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900 flex flex-col items-center justify-center p-4 text-center">
-            <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 flex items-center justify-center mb-2 shadow-inner">
-              <FileText size={28} />
-            </div>
-            <span className="text-xs font-bold text-emerald-200/80 uppercase tracking-widest truncate max-w-full px-2">
-              {categoryLabels[pdf.category] || pdf.category}
-            </span>
-          </div>
-        )}
+        {/* Subtle ambient emerald aura */}
+        <div className="absolute inset-0 bg-radial from-emerald-500/12 via-transparent to-transparent pointer-events-none" />
+        
+        {/* Soft bottom pedestal shelf shadow */}
+        <div className="absolute bottom-0 inset-x-0 h-10 bg-gradient-to-t from-black/80 to-transparent pointer-events-none" />
 
-        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />
+        {/* Book Cover Thumbnail */}
+        <div className="relative z-10 flex items-center justify-center my-auto transform group-hover:scale-105 transition-transform duration-300">
+          <PdfBookCover3D size="md" pdf={pdf} language={language} showShadow={true} />
+        </div>
 
         {/* Top Badges */}
-        <div className="absolute top-3 left-3 right-3 flex items-center justify-between gap-1.5">
+        <div className="absolute top-3 left-3 right-3 flex items-center justify-between gap-1.5 z-20 pointer-events-none">
           <div className="flex items-center gap-1.5 flex-wrap min-w-0">
-            <span className="px-2.5 py-1 rounded-xl bg-red-600 text-white font-black text-[10px] tracking-wider shadow-sm flex items-center gap-1 shrink-0">
+            <span className="px-2.5 py-1 rounded-xl bg-red-600/95 backdrop-blur-xs text-white font-black text-[10px] tracking-wider shadow-sm flex items-center gap-1 shrink-0">
               <span>PDF</span>
             </span>
+            {pdf.isForSale && (
+              <span className={`px-2.5 py-1 rounded-xl text-white font-black text-[10px] tracking-wider shadow-sm flex items-center gap-1 shrink-0 ${
+                isPurchased ? 'bg-emerald-600/95 backdrop-blur-xs' : 'bg-emerald-500/95 backdrop-blur-xs'
+              }`}>
+                <Tag size={10} />
+                <span>{isPurchased ? (language === 'fr' ? 'Acheté' : 'Owned') : formatPdfPrice(pdf.price || 0, pdf.currency || 'FCFA')}</span>
+              </span>
+            )}
             {pdf.isPremium && (
               <span className="px-2 py-1 rounded-xl bg-amber-500 text-slate-950 font-black text-[10px] tracking-wider shadow-sm flex items-center gap-1 shrink-0">
                 <Sparkles size={10} />
@@ -267,7 +303,7 @@ export const PdfCard: React.FC<PdfCardProps> = ({
 
         {/* Maintenance Overlay Badge */}
         {pdf.isMaintenance && (
-          <div className="absolute bottom-3 left-3 right-3 py-1.5 px-3 rounded-xl bg-rose-600/90 backdrop-blur-md text-white text-[11px] font-bold flex items-center gap-1.5">
+          <div className="absolute bottom-3 left-3 right-3 py-1.5 px-3 rounded-xl bg-rose-600/90 backdrop-blur-md text-white text-[11px] font-bold flex items-center gap-1.5 z-20">
             <AlertTriangle size={13} className="shrink-0" />
             <span className="truncate">{language === 'fr' ? 'Maintenance en cours' : 'Under Maintenance'}</span>
           </div>
@@ -326,15 +362,26 @@ export const PdfCard: React.FC<PdfCardProps> = ({
             )}
           </button>
 
-          {/* Read button */}
-          <button
-            type="button"
-            onClick={() => onRead(pdf)}
-            className="flex-1 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer truncate"
-          >
-            <BookOpen size={14} className="shrink-0" />
-            <span className="truncate">{language === 'fr' ? 'Consulter' : 'Preview'}</span>
-          </button>
+          {/* Read or Buy button */}
+          {requiresPurchase ? (
+            <button
+              type="button"
+              onClick={() => onRead(pdf)}
+              className="flex-1 py-2 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 active:scale-95 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer truncate"
+            >
+              <ShoppingBag size={14} className="shrink-0" />
+              <span className="truncate">{language === 'fr' ? `Acheter (${formatPdfPrice(pdf.price || 0, pdf.currency || 'FCFA')})` : `Buy (${formatPdfPrice(pdf.price || 0, pdf.currency || 'FCFA')})`}</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => onRead(pdf)}
+              className="flex-1 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-xs transition-all cursor-pointer truncate"
+            >
+              <BookOpen size={14} className="shrink-0" />
+              <span className="truncate">{isPurchased ? (language === 'fr' ? 'Lire (Acheté)' : 'Read (Owned)') : (language === 'fr' ? 'Consulter' : 'Preview')}</span>
+            </button>
+          )}
         </div>
       </div>
     </motion.div>

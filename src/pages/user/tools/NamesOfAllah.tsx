@@ -707,7 +707,7 @@ export const NamesOfAllah: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10">
         {filtered.map((name, idx) => (
           <motion.div 
-            key={idx}
+            key={name.ref ? `name-card-${name.ref}-${idx}` : `name-card-${name.tr || name.ar || idx}-${idx}`}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             className="bg-white dark:bg-gray-800 rounded-3xl border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-md transition-all flex flex-col relative overflow-hidden group"
@@ -1002,7 +1002,7 @@ export const NamesOfAllah: React.FC = () => {
                                                </div>
                                              )}
 
-                                             {realOccurrences.slice(0, displayLimit).map((occurrence) => {
+                                             {realOccurrences.slice(0, displayLimit).map((occurrence, occIdx) => {
                                                const isExpanded = expandedVerseId === occurrence.id;
                                                const isDetailLoading = loadingDetailId === occurrence.id;
                                                const details = verseDetails[occurrence.id] || {
@@ -1013,7 +1013,7 @@ export const NamesOfAllah: React.FC = () => {
                                                };
                                                
                                                return (
-                                                 <div key={occurrence.id} className={`rounded-xl overflow-hidden border transition-all ${actualTheme === 'dark' ? 'bg-gray-950 border-gray-800' : 'bg-gray-50 border-gray-100'}`}>
+                                                 <div key={occurrence.id ? `allah-occ-${occurrence.id}-${occIdx}` : `allah-occ-${occIdx}`} className={`rounded-xl overflow-hidden border transition-all ${actualTheme === 'dark' ? 'bg-gray-950 border-gray-800' : 'bg-gray-50 border-gray-100'}`}>
                                                    <button 
                                                      type="button"
                                                      onClick={() => toggleVerse(occurrence)}
@@ -1167,9 +1167,9 @@ export const NamesOfAllah: React.FC = () => {
 
                       {/* Dynamic Selector 3x3 to 10x10 */}
                       <div className="flex flex-wrap justify-center gap-1 p-1 bg-gray-100 dark:bg-gray-900 rounded-2xl max-w-full">
-                        {[3, 4, 5, 6, 7, 8, 9, 10].map((size) => (
+                        {[3, 4, 5, 6, 7, 8, 9, 10].map((size, szIdx) => (
                           <button
-                            key={size}
+                            key={`khatim-sz-${size}-${szIdx}`}
                             onClick={() => setKhatimSize(size)}
                             className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                               khatimSize === size
@@ -1198,7 +1198,7 @@ export const NamesOfAllah: React.FC = () => {
                                 {grid.map((row, i) =>
                                   row.map((cell, j) => (
                                     <div
-                                      key={`${i}-${j}`}
+                                      key={`khatim-cell-${i}-${j}`}
                                       className={`aspect-square bg-white dark:bg-gray-800 ${
                                         khatimSize >= 8 ? 'rounded-sm' : khatimSize >= 6 ? 'rounded-md' : 'rounded-xl'
                                       } flex items-center justify-center font-mono font-bold text-gray-900 dark:text-white shadow-sm ${gridCellPaddingMap[khatimSize]} ${textPercentSizeMap[khatimSize]}`}
@@ -1321,7 +1321,7 @@ export const NamesOfAllah: React.FC = () => {
                               </div>
                               <div className="flex flex-wrap gap-2">
                                 {steps.map((st, sidx) => (
-                                  <div key={sidx} className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-750 shadow-sm text-xs">
+                                  <div key={`namesofallah-sidx-${sidx}`} className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-750 shadow-sm text-xs">
                                     <span className="font-mono font-bold text-amber-600 dark:text-amber-400">{st.count}x</span>
                                     <span className="text-gray-600 dark:text-gray-300 truncate max-w-[150px]" title={st.name}>{st.name}</span>
                                   </div>
@@ -1335,7 +1335,7 @@ export const NamesOfAllah: React.FC = () => {
                       {/* Counts List */}
                       <div className="grid gap-4">
                         {activeCounts.map((cb, i) => (
-                          <div key={i} className="flex flex-col sm:flex-row gap-4 sm:items-start p-5 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm transition-colors hover:border-amber-200 dark:hover:border-amber-900/50 group">
+                          <div key={`allah-cb-${cb.ref || cb.count || i}-${i}`} className="flex flex-col sm:flex-row gap-4 sm:items-start p-5 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm transition-colors hover:border-amber-200 dark:hover:border-amber-900/50 group">
                              <div className="flex flex-col items-center justify-center shrink-0 w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-amber-100 to-amber-50 dark:from-amber-900/30 dark:to-gray-800 text-amber-700 dark:text-amber-400 rounded-2xl border border-amber-200 dark:border-amber-800/40 font-mono font-black text-xl sm:text-2xl shadow-inner group-hover:scale-105 transition-transform">
                                {cb.count}
                              </div>

@@ -4,6 +4,46 @@
  */
 
 export function applyAsrarHubWatermark(sourceCanvas: HTMLCanvasElement): HTMLCanvasElement {
+  // Read admin settings from localStorage if available
+  let isWatermarkEnabled = true;
+  let customGridOpacity = 0.12;
+  let customSealOpacity = 0.16;
+  let customBrandText = 'ASRARHUB';
+  let customArabicText = 'أسرار هاب';
+  let showCentralSeal = true;
+
+  try {
+    const saved = localStorage.getItem('asrar_font_toggles');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed.watermark_enabled === false) {
+        isWatermarkEnabled = false;
+      }
+      if (parsed.watermark_opacity !== undefined && parsed.watermark_opacity !== null && parsed.watermark_opacity !== '') {
+        const raw = Number(parsed.watermark_opacity);
+        if (!isNaN(raw) && raw >= 0) {
+          const ratio = raw > 1 ? raw / 100 : raw;
+          customGridOpacity = Math.max(0.01, Math.min(0.6, ratio * 1.4));
+          customSealOpacity = Math.max(0.02, Math.min(0.7, ratio * 1.8));
+        }
+      }
+      if (parsed.watermark_show_seal !== undefined) {
+        showCentralSeal = Boolean(parsed.watermark_show_seal);
+      }
+      if (parsed.watermark_text) {
+        customBrandText = parsed.watermark_text;
+      }
+      if (parsed.watermark_arabic_text) {
+        customArabicText = parsed.watermark_arabic_text;
+      }
+    }
+  } catch (_) {}
+
+  // If globally disabled by admin, return clean source canvas
+  if (!isWatermarkEnabled) {
+    return sourceCanvas;
+  }
+
   const width = sourceCanvas.width;
   const height = sourceCanvas.height;
   
@@ -26,7 +66,7 @@ export function applyAsrarHubWatermark(sourceCanvas: HTMLCanvasElement): HTMLCan
   
   // A) Repeating Diagonal Grid Watermark
   ctx.rotate((-22 * Math.PI) / 180);
-  ctx.globalAlpha = 0.12;
+  ctx.globalAlpha = customGridOpacity;
   ctx.fillStyle = '#f59e0b'; // Gold / amber accent
   const gridFontSize = Math.max(14, Math.round(width * 0.026));
   ctx.font = `bold ${gridFontSize}px "Cinzel", Georgia, serif`;
@@ -36,48 +76,50 @@ export function applyAsrarHubWatermark(sourceCanvas: HTMLCanvasElement): HTMLCan
   
   for (let wy = -height * 1.5; wy < height * 2.5; wy += stepY) {
     for (let wx = -width * 1.5; wx < width * 2.5; wx += stepX) {
-      ctx.fillText('ASRARHUB ✦ أسرار هاب', wx, wy);
+      ctx.fillText(`${customBrandText} ✦ ${customArabicText}`, wx, wy);
     }
   }
   ctx.restore();
 
   // B) Central Watermark Badge (Directly in the middle of the image)
-  ctx.save();
-  const centerX = width / 2;
-  const centerY = height / 2;
+  if (showCentralSeal) {
+    ctx.save();
+    const centerX = width / 2;
+    const centerY = height / 2;
 
-  ctx.globalAlpha = 0.16;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
+    ctx.globalAlpha = customSealOpacity;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
 
-  // Central Circle & Octagram Geometry Outline
-  const sealRadius = Math.max(60, Math.round(Math.min(width, height) * 0.22));
-  ctx.strokeStyle = '#f59e0b';
-  ctx.lineWidth = Math.max(1.5, Math.round(sealRadius * 0.02));
-  ctx.setLineDash([6, 4]);
-  ctx.beginPath();
-  ctx.arc(centerX, centerY, sealRadius, 0, Math.PI * 2);
-  ctx.stroke();
+    // Central Circle & Octagram Geometry Outline
+    const sealRadius = Math.max(60, Math.round(Math.min(width, height) * 0.22));
+    ctx.strokeStyle = '#f59e0b';
+    ctx.lineWidth = Math.max(1.5, Math.round(sealRadius * 0.02));
+    ctx.setLineDash([6, 4]);
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, sealRadius, 0, Math.PI * 2);
+    ctx.stroke();
 
-  ctx.setLineDash([]);
-  ctx.beginPath();
-  ctx.arc(centerX, centerY, sealRadius * 0.85, 0, Math.PI * 2);
-  ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.arc(centerX, centerY, sealRadius * 0.85, 0, Math.PI * 2);
+    ctx.stroke();
 
-  // Central Big Typography "ASRARHUB"
-  const centerFontSize = Math.max(18, Math.round(sealRadius * 0.28));
-  ctx.font = `900 ${centerFontSize}px "Cinzel", Georgia, sans-serif`;
-  ctx.fillStyle = '#fbbf24';
-  ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-  ctx.shadowBlur = 6;
-  ctx.fillText("ASRARHUB", centerX, centerY - centerFontSize * 0.3);
+    // Central Big Typography
+    const centerFontSize = Math.max(18, Math.round(sealRadius * 0.28));
+    ctx.font = `900 ${centerFontSize}px "Cinzel", Georgia, sans-serif`;
+    ctx.fillStyle = '#fbbf24';
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+    ctx.shadowBlur = 6;
+    ctx.fillText(customBrandText, centerX, centerY - centerFontSize * 0.3);
 
-  // Central Arabic Typography "أسرار هاب"
-  const arabicFontSize = Math.max(14, Math.round(sealRadius * 0.22));
-  ctx.font = `bold ${arabicFontSize}px "Amiri", serif`;
-  ctx.fillText("أسرار هاب", centerX, centerY + arabicFontSize * 0.8);
+    // Central Arabic Typography
+    const arabicFontSize = Math.max(14, Math.round(sealRadius * 0.22));
+    ctx.font = `bold ${arabicFontSize}px "Amiri", serif`;
+    ctx.fillText(customArabicText, centerX, centerY + arabicFontSize * 0.8);
 
-  ctx.restore();
+    ctx.restore();
+  }
 
   // 1c. Bottom-right subtle corner tag
   ctx.save();

@@ -270,7 +270,7 @@ export const MuridJournal: React.FC = () => {
         <div className="grid grid-cols-8 sm:grid-cols-10 gap-2 pt-2">
           {arbainProgress.map((done, idx) => (
             <button
-              key={idx}
+              key={`arbain-day-${idx}`}
               onClick={() => toggleArbainDay(idx)}
               className={`aspect-square rounded-xl text-xs font-bold font-mono transition-all flex items-center justify-center cursor-pointer ${
                 done
@@ -370,9 +370,9 @@ export const MuridJournal: React.FC = () => {
         {entries.length === 0 ? (
           <p className="text-xs text-gray-500 text-center py-6">{dict.noEntries}</p>
         ) : (
-          entries.map((entry) => (
+          entries.map((entry, eIdx) => (
             <div
-              key={entry.id}
+              key={entry.id ? `murid-entry-${entry.id}-${eIdx}` : `murid-entry-${eIdx}`}
               className="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm space-y-3"
             >
               <div className="flex items-start justify-between gap-4">

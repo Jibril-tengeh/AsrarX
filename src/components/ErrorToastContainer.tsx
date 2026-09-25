@@ -436,7 +436,7 @@ export const ErrorToastContainer: React.FC = () => {
                     <span className="text-gray-500 italic">Aucun test en cours. Cliquez sur "Relancer" ci-dessous.</span>
                   ) : (
                     diagLogs.map((log, index) => (
-                      <div key={index} className={log.includes('Échec') || log.includes('Erreur') ? 'text-red-400' : log.includes('Succès') ? 'text-emerald-400' : log.includes('Avertissement') ? 'text-amber-400' : ''}>
+                      <div key={`log-entry-${index}`} className={log.includes('Échec') || log.includes('Erreur') ? 'text-red-400' : log.includes('Succès') ? 'text-emerald-400' : log.includes('Avertissement') ? 'text-amber-400' : ''}>
                         {log}
                       </div>
                     ))

@@ -143,7 +143,7 @@ export const AbjadKhoddamTab: React.FC<AbjadKhoddamTabProps> = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {result.degrees.map((deg, idx) => (
             <div
-              key={idx}
+              key={`abjadkhoddamtab-item-${idx}`}
               className="p-3.5 rounded-2xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700/80 flex flex-col justify-between"
             >
               <div>

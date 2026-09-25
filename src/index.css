@@ -197,10 +197,10 @@ input, textarea, select {
   word-wrap: break-word;
 }
 
-/* Protect layouts from elements with fixed widths larger than mobile screens, while allowing horizontal scrolling inside overflow containers */
+/* Protect layouts from elements with fixed widths larger than mobile screens, while allowing horizontal and vertical scrolling inside overflow containers */
 .overflow-x-auto, [class*="overflow-x-auto"] {
   -webkit-overflow-scrolling: touch;
-  touch-action: pan-x;
+  touch-action: pan-x pan-y;
 }
 
 /* Ensure code blocks, tables, and special containers are scrollable horizontally if they exceed bounds */
@@ -461,4 +461,148 @@ html.reduce-motion *::after {
   transition-duration: 0.001ms !important;
   scroll-behavior: auto !important;
 }
+
+/* ==========================================================================
+   Tactile 3D Claymorphic Cards & Badges (VoNovisi Style 3D Relief)
+   ========================================================================== */
+.card-3d-clay {
+  position: relative;
+  transition: transform 0.16s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.16s ease, border-color 0.16s ease;
+  user-select: none;
+}
+
+/* Glossy specular top sheen line */
+.card-3d-clay::before {
+  content: '';
+  position: absolute;
+  top: 1.5px;
+  left: 12px;
+  right: 12px;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.85) 50%, rgba(255, 255, 255, 0.1) 100%);
+  border-radius: 9999px;
+  pointer-events: none;
+  z-index: 15;
+}
+
+/* Theme 1: Ambre & Or Royal (Exact VoNovisi Screenshot match) */
+.card-3d-clay-amber {
+  background: linear-gradient(180deg, #fbbf24 0%, #f59e0b 55%, #d97706 100%) !important;
+  border: 1px solid rgba(251, 191, 36, 0.9) !important;
+  border-bottom: 5.5px solid #92400e !important;
+  box-shadow: 
+    inset 0 2px 3px rgba(255, 255, 255, 0.75),
+    inset 0 -2px 3px rgba(146, 64, 14, 0.35),
+    0 10px 22px -3px rgba(217, 119, 6, 0.38),
+    0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+  color: #451a03 !important;
+}
+
+.card-3d-clay-amber:active {
+  transform: translateY(3.5px) scale(0.99) !important;
+  border-bottom-width: 2px !important;
+  box-shadow: 
+    inset 0 2px 2px rgba(255, 255, 255, 0.5),
+    0 4px 8px -2px rgba(217, 119, 6, 0.25) !important;
+}
+
+/* Theme 2: Émeraude & Or Sacré (Signature AsrarHub) */
+.card-3d-clay-emerald {
+  background: linear-gradient(180deg, #34d399 0%, #10b981 55%, #059669 100%) !important;
+  border: 1px solid rgba(52, 211, 153, 0.9) !important;
+  border-bottom: 5.5px solid #064e3b !important;
+  box-shadow: 
+    inset 0 2px 3px rgba(255, 255, 255, 0.75),
+    inset 0 -2px 3px rgba(6, 78, 59, 0.35),
+    0 10px 22px -3px rgba(5, 150, 105, 0.38),
+    0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+  color: #ffffff !important;
+}
+
+.card-3d-clay-emerald:active {
+  transform: translateY(3.5px) scale(0.99) !important;
+  border-bottom-width: 2px !important;
+  box-shadow: 
+    inset 0 2px 2px rgba(255, 255, 255, 0.5),
+    0 4px 8px -2px rgba(5, 150, 105, 0.25) !important;
+}
+
+/* Theme 3: Claymorphic Céramique Épuré */
+.card-3d-clay-modern {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 55%, #f1f5f9 100%) !important;
+  border: 1px solid rgba(226, 232, 240, 0.95) !important;
+  border-bottom: 5px solid #cbd5e1 !important;
+  box-shadow: 
+    inset 0 2px 2px rgba(255, 255, 255, 0.95),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.05),
+    0 8px 18px -3px rgba(0, 0, 0, 0.1),
+    0 3px 5px -1px rgba(0, 0, 0, 0.06) !important;
+  color: #0f172a !important;
+}
+
+.dark .card-3d-clay-modern {
+  background: linear-gradient(180deg, #1e293b 0%, #172033 55%, #0f172a 100%) !important;
+  border: 1px solid rgba(51, 65, 85, 0.8) !important;
+  border-bottom: 5px solid #020617 !important;
+  box-shadow: 
+    inset 0 2px 2px rgba(255, 255, 255, 0.15),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.5),
+    0 10px 20px -3px rgba(0, 0, 0, 0.5) !important;
+  color: #f8fafc !important;
+}
+
+.card-3d-clay-modern:active {
+  transform: translateY(3.5px) scale(0.99) !important;
+  border-bottom-width: 2px !important;
+}
+
+/* Theme 4: Néo-Relief Sombre VIP */
+.card-3d-clay-dark {
+  background: linear-gradient(180deg, #27272a 0%, #18181b 55%, #09090b 100%) !important;
+  border: 1px solid rgba(63, 63, 70, 0.8) !important;
+  border-bottom: 5.5px solid #000000 !important;
+  box-shadow: 
+    inset 0 2px 2px rgba(255, 255, 255, 0.2),
+    0 12px 24px -4px rgba(0, 0, 0, 0.7) !important;
+  color: #f4f4f5 !important;
+}
+
+.card-3d-clay-dark:active {
+  transform: translateY(3.5px) scale(0.99) !important;
+  border-bottom-width: 2px !important;
+}
+
+/* Intensities */
+.card-3d-subtle {
+  border-bottom-width: 3.5px !important;
+}
+.card-3d-strong {
+  border-bottom-width: 7px !important;
+}
+
+/* 3D Tactile Buttons & Pills (VoNovisi Bell & Badges) */
+.btn-3d-tactile-white {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%) !important;
+  border: 1px solid #e2e8f0 !important;
+  border-bottom: 3.5px solid #cbd5e1 !important;
+  box-shadow: inset 0 1.5px 2px #ffffff, 0 3px 6px rgba(0, 0, 0, 0.08) !important;
+  transition: transform 0.12s ease, border-width 0.12s ease !important;
+}
+.btn-3d-tactile-white:active {
+  transform: translateY(2px) !important;
+  border-bottom-width: 1.5px !important;
+}
+
+.btn-3d-tactile-amber {
+  background: linear-gradient(180deg, #fef3c7 0%, #fde68a 60%, #f59e0b 100%) !important;
+  border: 1.5px solid #fcd34d !important;
+  border-bottom: 3.5px solid #92400e !important;
+  box-shadow: inset 0 1.5px 2px rgba(255,255,255,0.85), 0 3px 6px rgba(180, 83, 9, 0.25) !important;
+  transition: transform 0.12s ease, border-width 0.12s ease !important;
+}
+.btn-3d-tactile-amber:active {
+  transform: translateY(2px) !important;
+  border-bottom-width: 1.5px !important;
+}
+
 

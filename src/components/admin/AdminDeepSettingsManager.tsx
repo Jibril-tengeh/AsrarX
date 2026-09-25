@@ -6,8 +6,10 @@ import {
   ShieldAlert, HardDrive, RefreshCw, Eye, Check, AlertTriangle, Play, Pause,
   Sun, Lock, Unlock, Crown, ExternalLink, ChevronDown, ChevronUp, Clock, Info,
   Tag, Trash2, Search, SlidersHorizontal, BarChart3, Wifi, Zap, Palette,
-  Compass, Award, FileText, CheckCircle2, XCircle
+  Compass, Award, FileText, CheckCircle2, XCircle, CircleDot, Fingerprint,
+  MessageSquare, ShieldCheck, Heart
 } from 'lucide-react';
+import { COUNTER_SKINS } from '../tasbih/counterSkins';
 import { BrandingSettings } from './BrandingSettings';
 import { FloatingBackButtonSettings } from './FloatingBackButtonSettings';
 import { AdminPromoVideoAnnouncementManager } from './AdminPromoVideoAnnouncementManager';
@@ -21,6 +23,8 @@ import { AdminAiPoolManager } from './AdminAiPoolManager';
 import { FeedSettingsPreview } from './FeedSettingsPreview';
 import { calculateHijriDate } from '../../utils/hijriDate';
 import { QURAN_RECITERS } from '../../data/reciters';
+import { AsrarHubWatermark } from '../AsrarHubWatermark';
+import { Card3DTopShine, is3DCardEffectEnabled, get3DCardTheme, get3DCardIntensity } from '../../utils/card3dUtils';
 
 interface AdminDeepSettingsManagerProps {
   featureToggles: any;
@@ -151,7 +155,7 @@ export const AdminDeepSettingsManager: React.FC<AdminDeepSettingsManagerProps> =
     const allIds = [
       'set_branding', 'set_floating_back_button', 'set_spiritual_points', 'set_new_user_premium',
       'set_hijri', 'set_calendar_scale', 'set_font_sizes', 'set_feed_offsets', 'set_articles_layout',
-      'set_article_reading_mode', 'set_store_layout', 'set_pricing_paystack', 'set_firestore_diag',
+      'set_cards_3d_effect', 'set_article_reading_mode', 'set_watermark_settings', 'set_store_layout', 'set_pricing_paystack', 'set_firestore_diag',
       'set_assistant_prompts', 'set_reciter', 'set_announcement', 'set_screenshot_protection',
       'set_dua_copy', 'set_backend_url', 'set_version_control', 'set_promo_videos', 'set_referrals',
       'set_support_emails', 'set_security_alerts', 'set_reciters_mgmt', 'set_sacred_audio', 'set_media_storage',
@@ -175,6 +179,9 @@ export const AdminDeepSettingsManager: React.FC<AdminDeepSettingsManagerProps> =
       return false;
     }
   });
+
+  // Watermark interactive preview theme
+  const [watermarkPreviewTheme, setWatermarkPreviewTheme] = useState<'parchment' | 'dark'>('parchment');
 
   // Search filter for settings
   const [searchQuery, setSearchQuery] = useState('');
@@ -208,10 +215,10 @@ export const AdminDeepSettingsManager: React.FC<AdminDeepSettingsManagerProps> =
       return;
     }
     const presets = {
-      compact: { textSizeBody: 12, textSizeCardTitle: 13, textSizeSectionTitle: 15, textSizePageTitle: 20, textSizeArabic: 18, cardPadding: 12, cardGlobalScale: 90 },
-      standard: { textSizeBody: 14, textSizeCardTitle: 15, textSizeSectionTitle: 18, textSizePageTitle: 24, textSizeArabic: 22, cardPadding: 16, cardGlobalScale: 100 },
-      comfort: { textSizeBody: 16, textSizeCardTitle: 17, textSizeSectionTitle: 20, textSizePageTitle: 28, textSizeArabic: 26, cardPadding: 20, cardGlobalScale: 110 },
-      large: { textSizeBody: 18, textSizeCardTitle: 19, textSizeSectionTitle: 22, textSizePageTitle: 32, textSizeArabic: 30, cardPadding: 24, cardGlobalScale: 120 }
+      compact: { textSizeBody: 12, textSizeAiChat: 13, textSizeCardTitle: 13, textSizeSectionTitle: 15, textSizePageTitle: 20, textSizeArabic: 18, cardPadding: 12, cardGlobalScale: 90 },
+      standard: { textSizeBody: 14, textSizeAiChat: 15, textSizeCardTitle: 15, textSizeSectionTitle: 18, textSizePageTitle: 24, textSizeArabic: 22, cardPadding: 16, cardGlobalScale: 100 },
+      comfort: { textSizeBody: 16, textSizeAiChat: 17, textSizeCardTitle: 17, textSizeSectionTitle: 20, textSizePageTitle: 28, textSizeArabic: 26, cardPadding: 20, cardGlobalScale: 110 },
+      large: { textSizeBody: 18, textSizeAiChat: 19, textSizeCardTitle: 19, textSizeSectionTitle: 22, textSizePageTitle: 32, textSizeArabic: 30, cardPadding: 24, cardGlobalScale: 120 }
     };
     const chosen = presets[preset];
     Object.entries(chosen).forEach(([k, v]) => {
@@ -449,6 +456,68 @@ export const AdminDeepSettingsManager: React.FC<AdminDeepSettingsManagerProps> =
                 </div>
               </div>
             </div>
+          </div>
+        </SettingCard>
+
+        {/* 3.1 Category Hero Banner & Thumbnail Settings */}
+        <SettingCard
+          id="set_category_banner"
+          title="Bannière de Catégorie & Visibilité Thumbnail (Visuel Clair)"
+          description="Contrôlez l'apparence claire de la carte d'en-tête de catégorie sur l'espace utilisateur et la visibilité de l'image miniature (thumbnail)."
+          icon={<Layout size={18} className="text-emerald-500 shrink-0" />}
+          badge="Affichage & Design"
+        >
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-3.5 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800">
+              <div>
+                <span className="text-xs font-bold text-gray-900 dark:text-white block">
+                  Afficher l'Image Thumbnail dans la Bannière :
+                </span>
+                <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                  {featureToggles?.category_banner_show_thumbnail !== false
+                    ? "L'image thumbnail est visible et nette dans l'en-tête de la catégorie."
+                    : "L'image thumbnail est masquée, seule l'icône et les textes sont affichés."}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleToggleFeature('category_banner_show_thumbnail', featureToggles?.category_banner_show_thumbnail === false)}
+                className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors cursor-pointer shrink-0 ml-3 ${
+                  featureToggles?.category_banner_show_thumbnail !== false ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
+                }`}
+              >
+                <div className={`w-4 h-4 rounded-full bg-white transition-transform ${featureToggles?.category_banner_show_thumbnail !== false ? 'translate-x-6' : 'translate-x-0'}`} />
+              </button>
+            </div>
+
+            {featureToggles?.category_banner_show_thumbnail !== false && (
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-gray-700 dark:text-gray-300">
+                  Style de Présentation de la Vignette :
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  {[
+                    { id: 'side', label: 'Vignette Latérale Nette', desc: 'Vignette claire à côté du titre (Recommandé)' },
+                    { id: 'both', label: 'Double Visibilité', desc: 'Vignette + halo d’ambiance clair' },
+                    { id: 'cover', label: 'Arrière-plan Lumineux', desc: 'Filigrane subtil en fond' }
+                  ].map((styleOpt, sIdx) => (
+                    <button
+                      key={`banner-thumb-style-${styleOpt.id}-${sIdx}`}
+                      type="button"
+                      onClick={() => handleToggleFeature('category_banner_thumbnail_style', styleOpt.id)}
+                      className={`p-3 rounded-xl text-left border transition-all cursor-pointer ${
+                        (featureToggles?.category_banner_thumbnail_style || 'side') === styleOpt.id
+                          ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/30 ring-1 ring-emerald-500 text-emerald-900 dark:text-emerald-300 font-bold'
+                          : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:border-emerald-300'
+                      }`}
+                    >
+                      <div className="text-xs font-bold">{styleOpt.label}</div>
+                      <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">{styleOpt.desc}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </SettingCard>
 
@@ -988,6 +1057,254 @@ export const AdminDeepSettingsManager: React.FC<AdminDeepSettingsManagerProps> =
           </div>
         </SettingCard>
 
+        {/* 9b. Style & Effet des Cartes 3D en Relief (Style Claymorphic Tactile) */}
+        <SettingCard
+          id="set_cards_3d_effect"
+          title="Style & Effet des Cartes 3D en Relief (Claymorphic & Tactile)"
+          description="Activez ou désactivez le relief 3D, choisissez la nuance de thème (Ambre Doré VoNovisi, Émeraude Asrar, Clay Moderne, Nuit Tactile), l'épaisseur biseautée et la portée d'application (Catégories et/ou Articles)."
+          icon={<Layers size={18} className="text-amber-500 shrink-0" />}
+          badge="Affichage 3D"
+        >
+          <div className="space-y-4">
+            {/* Master Toggle */}
+            <div className="flex items-center justify-between p-3.5 rounded-xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/60">
+              <div className="flex items-center gap-3">
+                <span className="p-2 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 shrink-0">
+                  <Layers size={20} />
+                </span>
+                <div>
+                  <span className="text-xs font-bold text-amber-950 dark:text-amber-200 block">
+                    Activer l'Effet Cartes 3D en Relief :
+                  </span>
+                  <span className="text-[11px] text-amber-800/80 dark:text-amber-400">
+                    {featureToggles?.cards_3d_effect === true || featureToggles?.cards_3d_enabled === true
+                      ? "Activé : Les cartes bénéficient du relief 3D, de la brillance spéculaire et de l'ombre d'extrusion biseautée."
+                      : "Désactivé : Style plat conventionnel (sans relief 3D)."}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const currentVal = featureToggles?.cards_3d_effect === true || featureToggles?.cards_3d_enabled === true;
+                  const nextVal = !currentVal;
+                  handleToggleFeature('cards_3d_effect', nextVal);
+                  handleToggleFeature('cards_3d_enabled', nextVal);
+                  handleToggleFeature('home_categories_3d_cards', nextVal);
+                  showToast(nextVal ? "Effet Cartes 3D activé !" : "Effet Cartes 3D désactivé", "success");
+                }}
+                className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors cursor-pointer shrink-0 ${
+                  featureToggles?.cards_3d_effect === true || featureToggles?.cards_3d_enabled === true ? 'bg-amber-500' : 'bg-gray-300 dark:bg-gray-600'
+                }`}
+              >
+                <div
+                  className={`w-4 h-4 rounded-full bg-white transition-transform ${
+                    featureToggles?.cards_3d_effect === true || featureToggles?.cards_3d_enabled === true ? 'translate-x-6' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* If enabled: Theme, Intensity, Scope & Interactive Preview */}
+            {(featureToggles?.cards_3d_effect === true || featureToggles?.cards_3d_enabled === true) && (
+              <div className="space-y-4 pt-1">
+                {/* 1. Theme Selection */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">
+                    Thème Visuel & Nuance de Couleur 3D :
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5">
+                    {[
+                      {
+                        id: 'gold_amber',
+                        label: 'Or & Ambre Chaud',
+                        desc: 'Bordure dorée, brillance chaleureuse et relief noble',
+                        badge: 'Style VoNovisi',
+                        color: 'border-amber-400 bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200'
+                      },
+                      {
+                        id: 'emerald_asrar',
+                        label: 'Émeraude Sacrée',
+                        desc: 'Vert profond AsrarHub avec reflet lumineux',
+                        badge: 'AsrarHub',
+                        color: 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200'
+                      },
+                      {
+                        id: 'modern_clay',
+                        label: 'Clay Moderne',
+                        desc: 'Aspect néomorphique doux et contemporain',
+                        badge: 'Minimaliste',
+                        color: 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white'
+                      },
+                      {
+                        id: 'dark_tactile',
+                        label: 'Sombre & Mystique',
+                        desc: 'Noir profond tactile avec arête sombre',
+                        badge: 'Nuit',
+                        color: 'border-gray-800 bg-gray-900 text-gray-100'
+                      }
+                    ].map((themeOpt) => {
+                      const isCurrent = (featureToggles?.cards_3d_theme || 'gold_amber') === themeOpt.id;
+                      return (
+                        <button
+                          key={`theme-3d-${themeOpt.id}`}
+                          type="button"
+                          onClick={() => {
+                            handleToggleFeature('cards_3d_theme', themeOpt.id);
+                            showToast(`Thème 3D : ${themeOpt.label}`, "success");
+                          }}
+                          className={`p-3 rounded-xl border-2 text-left transition-all cursor-pointer flex flex-col justify-between ${
+                            isCurrent
+                              ? 'border-amber-500 ring-2 ring-amber-400/40 shadow-sm'
+                              : 'border-gray-200 dark:border-gray-700 hover:border-amber-300'
+                          } ${themeOpt.color}`}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-bold">{themeOpt.label}</span>
+                            {isCurrent ? (
+                              <CheckCircle2 size={14} className="text-amber-600 dark:text-amber-400 shrink-0" />
+                            ) : (
+                              <span className="text-[9px] font-semibold opacity-60 uppercase">{themeOpt.badge}</span>
+                            )}
+                          </div>
+                          <p className="text-[10px] opacity-80 leading-snug">{themeOpt.desc}</p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 2. Intensity Selection */}
+                <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                  <div>
+                    <span className="text-xs font-bold text-gray-800 dark:text-gray-200 block">
+                      Intensité de l'Extrusion 3D :
+                    </span>
+                    <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                      Règle l'épaisseur de la bordure inférieure biseautée
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    {[
+                      { id: 'subtle', label: 'Subtil (3px)' },
+                      { id: 'medium', label: 'Équilibré (5px)' },
+                      { id: 'strong', label: 'Accenté (7px)' },
+                    ].map((intOpt) => {
+                      const isCurrent = (featureToggles?.cards_3d_intensity || 'medium') === intOpt.id;
+                      return (
+                        <button
+                          key={`int-3d-${intOpt.id}`}
+                          type="button"
+                          onClick={() => {
+                            handleToggleFeature('cards_3d_intensity', intOpt.id);
+                            showToast(`Intensité 3D : ${intOpt.label}`, "success");
+                          }}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors cursor-pointer ${
+                            isCurrent
+                              ? 'bg-amber-500 text-white border-amber-500 shadow-xs'
+                              : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600'
+                          }`}
+                        >
+                          {intOpt.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 3. Scope of application */}
+                <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                  <div>
+                    <span className="text-xs font-bold text-gray-800 dark:text-gray-200 block">
+                      Portée de l'effet 3D :
+                    </span>
+                    <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                      Appliquer l'effet 3D aux catégories, aux articles ou à l'ensemble
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    {[
+                      { id: 'all', label: 'Tout (Catégories + Articles)' },
+                      { id: 'categories_only', label: 'Catégories uniquement' },
+                      { id: 'articles_only', label: 'Articles uniquement' },
+                    ].map((scopeOpt) => {
+                      const isCurrent = (featureToggles?.cards_3d_target || 'all') === scopeOpt.id;
+                      return (
+                        <button
+                          key={`scope-3d-${scopeOpt.id}`}
+                          type="button"
+                          onClick={() => {
+                            handleToggleFeature('cards_3d_target', scopeOpt.id);
+                            showToast(`Portée 3D : ${scopeOpt.label}`, "success");
+                          }}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors cursor-pointer ${
+                            isCurrent
+                              ? 'bg-amber-500 text-white border-amber-500 shadow-xs'
+                              : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600'
+                          }`}
+                        >
+                          {scopeOpt.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 4. Live Interactive Preview */}
+                <div className="p-4 rounded-2xl bg-white dark:bg-gray-850 border border-gray-200 dark:border-gray-700 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                      <Sparkles size={14} className="text-amber-500" />
+                      Aperçu interactif en direct du style 3D :
+                    </span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300/40">
+                      Effet Actif
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {[
+                      { name: 'Secrets d\'Asrar', icon: <Sparkles size={20} className="shrink-0" />, count: 24 },
+                      { name: 'Protection Sacrée', icon: <Shield size={20} className="shrink-0" />, count: 18 },
+                      { name: 'Richesse & Biens', icon: <Gift size={20} className="shrink-0" />, count: 32 },
+                      { name: 'Douas & Prières', icon: <Heart size={20} className="shrink-0" />, count: 15 },
+                    ].map((demo, dIdx) => (
+                      <div
+                        key={`preview-card-3d-${dIdx}`}
+                        className={`relative rounded-2xl p-3 py-3.5 flex flex-col items-center justify-center gap-2 text-center cursor-pointer min-h-[110px] overflow-hidden ${
+                          (featureToggles?.cards_3d_theme || 'gold_amber') === 'gold_amber'
+                            ? 'card-3d-clay card-3d-theme-amber'
+                            : (featureToggles?.cards_3d_theme || 'gold_amber') === 'emerald_asrar'
+                            ? 'card-3d-clay card-3d-theme-emerald'
+                            : (featureToggles?.cards_3d_theme || 'gold_amber') === 'dark_tactile'
+                            ? 'card-3d-clay card-3d-theme-dark'
+                            : 'card-3d-clay card-3d-theme-modern'
+                        }`}
+                      >
+                        <Card3DTopShine />
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center bg-amber-600/20 text-amber-900 dark:text-amber-200 border border-amber-300/40 shadow-[inset_0_1px_2px_rgba(255,255,255,0.6)]">
+                          {demo.icon}
+                        </div>
+                        <span className={`text-[12px] font-black line-clamp-1 ${
+                          (featureToggles?.cards_3d_theme || 'gold_amber') === 'gold_amber'
+                            ? 'text-amber-950 drop-shadow-[0_1px_0_rgba(255,255,255,0.4)]'
+                            : (featureToggles?.cards_3d_theme || 'gold_amber') === 'emerald_asrar'
+                            ? 'text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.3)]'
+                            : 'text-gray-900 dark:text-white'
+                        }`}>
+                          {demo.name}
+                        </span>
+                        <span className="btn-3d-tactile-amber text-amber-950 text-[10px] font-extrabold px-2 py-0.5 rounded-full">
+                          {demo.count} secrets
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </SettingCard>
+
         {/* 10. Article Reading Mode */}
         <SettingCard
           id="set_article_reading_mode"
@@ -1063,7 +1380,412 @@ export const AdminDeepSettingsManager: React.FC<AdminDeepSettingsManagerProps> =
           </div>
         </SettingCard>
 
-        {/* 11. Store & Boutique Layout */}
+        {/* 10b. Watermark Settings (Filigrane d'authenticité & Opacité configurable) */}
+        {(() => {
+          const rawWatermarkOpacity = featureToggles.watermark_opacity;
+          const currentWatermarkOpacityPct = rawWatermarkOpacity !== undefined && rawWatermarkOpacity !== null && rawWatermarkOpacity !== ''
+            ? (Number(rawWatermarkOpacity) > 1 ? Number(rawWatermarkOpacity) : Math.round(Number(rawWatermarkOpacity) * 100))
+            : 8;
+          const isWatermarkGloballyEnabled = featureToggles.watermark_enabled !== false;
+          const isWatermarkSealEnabled = featureToggles.watermark_show_seal !== false;
+          const currentWatermarkVariant = featureToggles.watermark_variant || 'auto';
+          const watermarkText = featureToggles.watermark_text || 'ASRARHUB';
+          const watermarkArabicText = featureToggles.watermark_arabic_text || 'أسرار هاب';
+
+          return (
+            <SettingCard
+              id="set_watermark_settings"
+              title="Filigrane d'authenticité AsrarHub (Protection de lecture & Opacité configurable)"
+              description="Contrôlez l'affichage automatique, le sceau sacré central et l'opacité précise du filigrane AsrarHub gravé sur toutes les vues de lecture (articles, livres sacrés, Coran, PDF et invocations)."
+              icon={<ShieldCheck size={18} className="text-amber-500 shrink-0" />}
+              badge="Filigrane & Sécurité"
+            >
+              <div className="space-y-6">
+                {/* 1. Master Toggle & Summary */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-sm text-gray-900 dark:text-white">
+                        Activer le filigrane AsrarHub sur toutes les pages de lecture
+                      </span>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        isWatermarkGloballyEnabled 
+                          ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300' 
+                          : 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-300'
+                      }`}>
+                        {isWatermarkGloballyEnabled ? 'ACTIF (Gravé)' : 'DÉSACTIVÉ'}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      Protège le contenu spirituel contre le plagiat et les captures non autorisées en superposant l'emblème d'authenticité AsrarHub.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleToggleFeature('watermark_enabled', !isWatermarkGloballyEnabled)}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shadow-xs ${
+                      isWatermarkGloballyEnabled
+                        ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                        : 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-300'
+                    }`}
+                  >
+                    {isWatermarkGloballyEnabled ? 'Désactiver' : 'Activer'}
+                  </button>
+                </div>
+
+                {/* 2. Opacity Slider & Steppers */}
+                <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 space-y-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <label className="text-xs font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                        <span>Opacité du filigrane de lecture :</span>
+                        <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-700 dark:text-amber-400 font-mono font-bold text-xs border border-amber-500/30">
+                          {currentWatermarkOpacityPct}% ({((currentWatermarkOpacityPct) / 100).toFixed(2)})
+                        </span>
+                      </label>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                        Règle l'intensité visuelle du texte et du sceau sur l'ensemble de l'application. (Recommandé : 6% - 10%)
+                      </p>
+                    </div>
+
+                    {/* Stepper buttons */}
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = Math.max(1, currentWatermarkOpacityPct - 5);
+                          handleToggleFeature('watermark_opacity', next);
+                        }}
+                        className="px-2.5 py-1 text-xs font-bold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                        title="-5%"
+                      >
+                        -5%
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = Math.max(1, currentWatermarkOpacityPct - 1);
+                          handleToggleFeature('watermark_opacity', next);
+                        }}
+                        className="px-2.5 py-1 text-xs font-bold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                        title="-1%"
+                      >
+                        -1%
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = Math.min(50, currentWatermarkOpacityPct + 1);
+                          handleToggleFeature('watermark_opacity', next);
+                        }}
+                        className="px-2.5 py-1 text-xs font-bold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                        title="+1%"
+                      >
+                        +1%
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const next = Math.min(50, currentWatermarkOpacityPct + 5);
+                          handleToggleFeature('watermark_opacity', next);
+                        }}
+                        className="px-2.5 py-1 text-xs font-bold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer"
+                        title="+5%"
+                      >
+                        +5%
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Range slider */}
+                  <div className="space-y-2">
+                    <input
+                      type="range"
+                      min={1}
+                      max={40}
+                      step={1}
+                      value={currentWatermarkOpacityPct}
+                      onChange={(e) => handleToggleFeature('watermark_opacity', Number(e.target.value))}
+                      className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-amber-500"
+                    />
+                    <div className="flex justify-between text-[10px] text-gray-400 font-mono">
+                      <span>1% (Quasi invisible)</span>
+                      <span>8% (Idéal lecture)</span>
+                      <span>20% (Très visible)</span>
+                      <span>40% (Protection maximale)</span>
+                    </div>
+                  </div>
+
+                  {/* Presets chips */}
+                  <div className="pt-2 border-t border-gray-100 dark:border-gray-800">
+                    <span className="text-[11px] font-bold text-gray-500 dark:text-gray-400 block mb-2">
+                      Préréglages d'opacité rapides :
+                    </span>
+                    <div className="flex flex-wrap gap-2">
+                      {[
+                        { pct: 3, label: '3% (Très discret)' },
+                        { pct: 6, label: '6% (Subtil)' },
+                        { pct: 8, label: '8% (Recommandé)', highlight: true },
+                        { pct: 12, label: '12% (Modéré)' },
+                        { pct: 18, label: '18% (Bien visible)' },
+                        { pct: 25, label: '25% (Marqué)' }
+                      ].map(preset => (
+                        <button
+                          key={`preset-op-${preset.pct}`}
+                          type="button"
+                          onClick={() => handleToggleFeature('watermark_opacity', preset.pct)}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                            currentWatermarkOpacityPct === preset.pct
+                              ? 'bg-amber-500 text-gray-950 shadow-xs ring-2 ring-amber-400/40'
+                              : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-750'
+                          }`}
+                        >
+                          {preset.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 3. Central Seal & Variant Selection */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Sceau central */}
+                  <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <label className="text-xs font-bold text-gray-900 dark:text-white">
+                        Sceau sacré central (Octogramme & Calligraphie)
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleFeature('watermark_show_seal', !isWatermarkSealEnabled)}
+                        className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                          isWatermarkSealEnabled
+                            ? 'bg-amber-500 text-gray-950'
+                            : 'bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-400'
+                        }`}
+                      >
+                        {isWatermarkSealEnabled ? 'Activé' : 'Désactivé'}
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                      Affiche le grand emblème géométrique circulaire et la calligraphie au centre de la page en plus du quadrillage diagonal.
+                    </p>
+                  </div>
+
+                  {/* Nuance de couleur / Variante */}
+                  <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 space-y-3">
+                    <label className="text-xs font-bold text-gray-900 dark:text-white block">
+                      Variante de couleur du filigrane :
+                    </label>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {[
+                        { id: 'auto', label: 'Auto (Idéal)' },
+                        { id: 'parchment', label: 'Parchemin' },
+                        { id: 'gold', label: 'Or Royal' },
+                        { id: 'dark', label: 'Nuit' },
+                        { id: 'light', label: 'Émeraude' }
+                      ].map(v => (
+                        <button
+                          key={`v-opt-${v.id}`}
+                          type="button"
+                          onClick={() => handleToggleFeature('watermark_variant', v.id)}
+                          className={`py-1.5 px-2 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                            currentWatermarkVariant === v.id
+                              ? 'bg-amber-500 text-gray-950 shadow-xs'
+                              : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300'
+                          }`}
+                        >
+                          {v.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4. Custom Branding Texts */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 space-y-2">
+                    <label className="text-xs font-bold text-gray-900 dark:text-white block">
+                      Texte principal (Latin) :
+                    </label>
+                    <input
+                      type="text"
+                      value={watermarkText}
+                      onChange={(e) => handleToggleFeature('watermark_text', e.target.value)}
+                      placeholder="Ex: ASRARHUB"
+                      className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-semibold text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    />
+                  </div>
+
+                  <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 space-y-2">
+                    <label className="text-xs font-bold text-gray-900 dark:text-white block">
+                      Texte secondaire (Arabe / Calligraphie) :
+                    </label>
+                    <input
+                      type="text"
+                      dir="rtl"
+                      value={watermarkArabicText}
+                      onChange={(e) => handleToggleFeature('watermark_arabic_text', e.target.value)}
+                      placeholder="Ex: أسرار هاب"
+                      className="w-full px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl text-xs font-semibold font-arabic text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    />
+                  </div>
+                </div>
+
+                {/* 5. Live Interactive Preview Box */}
+                <div className="pt-2 border-t border-gray-100 dark:border-gray-800 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                      Aperçu en direct (Rendu dynamique sur page de lecture) :
+                    </span>
+                    <div className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl">
+                      <button
+                        type="button"
+                        onClick={() => setWatermarkPreviewTheme('parchment')}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                          watermarkPreviewTheme === 'parchment'
+                            ? 'bg-amber-100 text-amber-900 dark:bg-amber-950 dark:text-amber-300 shadow-xs'
+                            : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                        }`}
+                      >
+                        📜 Parchemin
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setWatermarkPreviewTheme('dark')}
+                        className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                          watermarkPreviewTheme === 'dark'
+                            ? 'bg-gray-900 text-emerald-400 dark:bg-gray-700 shadow-xs'
+                            : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                        }`}
+                      >
+                        🌙 Nuit
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Simulated Reading Canvas */}
+                  <div className={`relative p-6 sm:p-8 rounded-3xl border transition-all overflow-hidden shadow-sm ${
+                    watermarkPreviewTheme === 'parchment'
+                      ? 'bg-[#fbf9f4] border-[#e8dcb5] text-[#363028]'
+                      : 'bg-slate-950 border-slate-800 text-slate-200'
+                  }`}>
+                    {/* Live Watermark with current admin opacity */}
+                    <AsrarHubWatermark
+                      forceShow={true}
+                      forceExactOpacity={true}
+                      opacity={currentWatermarkOpacityPct / 100}
+                      variant={
+                        currentWatermarkVariant !== 'auto'
+                          ? (currentWatermarkVariant as any)
+                          : (watermarkPreviewTheme === 'parchment' ? 'parchment' : 'dark')
+                      }
+                      showCentralSeal={isWatermarkSealEnabled}
+                      customText={watermarkText}
+                      customArabicText={watermarkArabicText}
+                      className="z-0 pointer-events-none"
+                    />
+
+                    {/* Foreground simulated reading content */}
+                    <div className="relative z-10 space-y-4">
+                      <div className="flex items-center justify-between border-b pb-3 border-current/20">
+                        <div className="space-y-0.5">
+                          <span className="text-[10px] uppercase font-bold tracking-widest opacity-70">
+                            Page de lecture protégée
+                          </span>
+                          <h5 className="font-serif font-bold text-base sm:text-lg">
+                            Secret Sacré : Recette d'Ouverture & Baraka Majeure
+                          </h5>
+                        </div>
+                        <span className="px-2.5 py-1 rounded-full text-[10px] font-mono font-bold bg-amber-500/20 text-amber-700 dark:text-amber-400 border border-amber-500/30">
+                          Opacité active : {currentWatermarkOpacityPct}%
+                        </span>
+                      </div>
+
+                      <p className="font-serif leading-relaxed text-sm text-justify opacity-90">
+                        Au nom d'Allah, le Tout Miséricordieux, le Très Miséricordieux. Cette formule spirituelle est transmise selon les maîtres de la voie. Elle s'inscrit au lever du soleil sur support pur avec de l'encre safranée.
+                      </p>
+
+                      <div className="p-3.5 rounded-2xl bg-black/5 dark:bg-white/5 border border-current/10 font-arabic text-center text-lg sm:text-xl font-bold leading-loose">
+                        بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ ✦ يَا فَتَّاحُ يَا رَزَّاقُ
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2 text-[11px] opacity-70">
+                        <span>✦ AsrarHub Digital Protection</span>
+                        <span>Filigrane gravé dynamiquement</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </SettingCard>
+          );
+        })()}
+
+        {/* 11. Article Comments & Discussions Control */}
+        <SettingCard
+          id="set_article_comments_moderation"
+          title="Système de Commentaires & Réponses des Articles"
+          description="Contrôlez les commentaires des lecteurs, activez/désactivez les échanges et modérez les discussions spirituelles."
+          icon={<MessageSquare size={18} className="text-emerald-500 shrink-0" />}
+          badge="Social & Discussions"
+        >
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-4 bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800">
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-sm text-gray-900 dark:text-white">
+                    Autoriser les commentaires sur tous les articles
+                  </span>
+                  {featureToggles.disable_all_article_comments ? (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-300">
+                      Désactivé Globalement
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">
+                      Actif
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Permet aux chercheurs spirituels de commenter les articles et de répondre aux commentaires des autres.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() =>
+                  handleToggleFeature(
+                    'disable_all_article_comments',
+                    !featureToggles.disable_all_article_comments
+                  )
+                }
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                  !featureToggles.disable_all_article_comments
+                    ? 'bg-emerald-600'
+                    : 'bg-gray-300 dark:bg-gray-700'
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                    !featureToggles.disable_all_article_comments
+                      ? 'translate-x-5'
+                      : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+
+            <div className="p-3.5 bg-emerald-50/60 dark:bg-emerald-950/20 rounded-xl border border-emerald-200/60 dark:border-emerald-800/40 text-xs text-emerald-800 dark:text-emerald-300 flex items-start gap-2.5">
+              <ShieldCheck size={16} className="text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5" />
+              <div className="leading-relaxed">
+                <strong>Modération Admin intégrée :</strong> Sur la page de chaque article individuel, vous disposez d'un interrupteur pour désactiver/réactiver les commentaires spécifiquement pour cet article, ainsi que d'une icône corbeille rouge pour supprimer instantanément tout commentaire ou réponse indésirable.
+              </div>
+            </div>
+          </div>
+        </SettingCard>
+
+        {/* 12. Store & Boutique Layout */}
         <SettingCard
           id="set_store_layout"
           title="Affichage & Disposition de la Boutique Spirituelle"
@@ -1868,7 +2590,175 @@ export const AdminDeepSettingsManager: React.FC<AdminDeepSettingsManagerProps> =
           </div>
         </SettingCard>
 
-        {/* 26. Media Storage Manager */}
+        {/* 25c. Tasbih Visual & Default Display Appearance */}
+        <SettingCard
+          id="set_tasbih_visual"
+          title="Visuel & Style d'Affichage du Tasbih (Compteur de Zikr)"
+          description="Choisissez le visuel par défaut du Tasbih pour tous les utilisateurs (Minimaliste ou Compteur Réaliste 3D), définissez le skin officiel et contrôlez la liberté de bascule."
+          icon={<CircleDot size={18} className="text-emerald-500 shrink-0" />}
+          badge="Expérience Utilisateur"
+        >
+          <div className="space-y-5">
+            {/* 1. Mode Selector */}
+            <div>
+              <label className="text-xs font-bold text-gray-900 dark:text-white mb-1.5 block">
+                Visuel du Tasbih par défaut :
+              </label>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-3">
+                Sélectionnez le mode affiché par défaut lors de l'ouverture du Tasbih pour vos utilisateurs.
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Minimalist Card */}
+                <div
+                  onClick={async () => {
+                    await handleToggleFeature('tasbih_default_display_mode', 'modern');
+                    showToast("Visuel du Tasbih par défaut défini sur Mode Minimaliste", "success");
+                  }}
+                  className={`p-4 rounded-2xl border-2 transition-all cursor-pointer relative ${
+                    (featureToggles.tasbih_default_display_mode || 'modern') === 'modern'
+                      ? 'border-emerald-500 bg-emerald-50/50 dark:bg-emerald-950/30 shadow-xs'
+                      : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-850 hover:border-gray-300 dark:hover:border-gray-600'
+                  }`}
+                >
+                  {(featureToggles.tasbih_default_display_mode || 'modern') === 'modern' && (
+                    <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center">
+                      <Check size={12} strokeWidth={3} />
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-100 dark:bg-emerald-900/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                      <CircleDot size={18} />
+                    </div>
+                    <div>
+                      <h5 className="text-xs font-bold text-gray-900 dark:text-white">Mode Minimaliste</h5>
+                      <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">Par Défaut Recommandé</span>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed mb-3">
+                    Interface épurée avec grand chiffre digital, anneau circulaire de progression et large pad tactile d'empreinte digitale fluide.
+                  </p>
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 flex items-center justify-between text-[11px]">
+                    <span className="flex items-center gap-1.5 font-medium text-gray-600 dark:text-gray-300">
+                      <Fingerprint size={14} className="text-emerald-500" /> Pavé tactile vert
+                    </span>
+                    <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">0 / 308</span>
+                  </div>
+                </div>
+
+                {/* Realistic 3D Tally Counter Card */}
+                <div
+                  onClick={async () => {
+                    await handleToggleFeature('tasbih_default_display_mode', 'realistic');
+                    showToast("Visuel du Tasbih par défaut défini sur Compteur Réaliste 3D", "success");
+                  }}
+                  className={`p-4 rounded-2xl border-2 transition-all cursor-pointer relative ${
+                    featureToggles.tasbih_default_display_mode === 'realistic'
+                      ? 'border-amber-500 bg-amber-50/50 dark:bg-amber-950/30 shadow-xs'
+                      : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-850 hover:border-gray-300 dark:hover:border-gray-600'
+                  }`}
+                >
+                  {featureToggles.tasbih_default_display_mode === 'realistic' && (
+                    <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-amber-500 text-white flex items-center justify-center">
+                      <Check size={12} strokeWidth={3} />
+                    </div>
+                  )}
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="w-8 h-8 rounded-xl bg-amber-100 dark:bg-amber-900/60 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+                      <Smartphone size={18} />
+                    </div>
+                    <div>
+                      <h5 className="text-xs font-bold text-gray-900 dark:text-white">Compteur Réaliste 3D</h5>
+                      <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">Tally Digital Physique</span>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed mb-3">
+                    Boîtier tactile 3D simulant un appareil physique avec microswitch, écran LCD rétroéclairé et textures de matériaux personnalisables.
+                  </p>
+                  <div className="p-2.5 rounded-xl bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 flex items-center justify-between text-[11px]">
+                    <span className="flex items-center gap-1.5 font-medium text-gray-600 dark:text-gray-300">
+                      <Smartphone size={14} className="text-amber-500" /> Écran LCD 7 segments
+                    </span>
+                    <span className="font-mono font-bold text-amber-600 dark:text-amber-400">0000</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 2. Realistic Counter Skin Picker */}
+            <div className="pt-3 border-t border-gray-100 dark:border-gray-800">
+              <label className="text-xs font-bold text-gray-900 dark:text-white mb-1 block">
+                Habillage (Skin) par défaut du Compteur Réaliste :
+              </label>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400 mb-3">
+                Texture et finitions du boîtier lorsqu'un utilisateur utilise le compteur réaliste.
+              </p>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
+                {COUNTER_SKINS.map((skin, skIdx) => {
+                  const isSelected = (featureToggles.tasbih_default_skin || 'brick_terracotta') === skin.id;
+                  return (
+                    <button
+                      key={`tasbih-skin-${skin.id}-${skIdx}`}
+                      type="button"
+                      onClick={async () => {
+                        await handleToggleFeature('tasbih_default_skin', skin.id);
+                        showToast(`Habillage "${skin.name.fr}" défini par défaut`, "success");
+                      }}
+                      className={`p-2.5 rounded-xl border text-left flex flex-col items-center gap-1.5 transition-all cursor-pointer ${
+                        isSelected
+                          ? 'border-emerald-500 bg-emerald-50/60 dark:bg-emerald-950/40 ring-2 ring-emerald-500/20'
+                          : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-gray-300 dark:hover:border-gray-600'
+                      }`}
+                    >
+                      <div 
+                        className="w-full h-8 rounded-lg shadow-inner flex items-center justify-center"
+                        style={{ background: skin.previewBg }}
+                      >
+                        <div 
+                          className="w-10 h-3 rounded-xs border text-[8px] font-mono flex items-center justify-center"
+                          style={{ backgroundColor: skin.lcdBg, borderColor: skin.lcdBorder, color: skin.digitColor }}
+                        >
+                          8888
+                        </div>
+                      </div>
+                      <span className="text-[11px] font-bold text-gray-800 dark:text-gray-200 truncate w-full text-center">
+                        {skin.name.fr}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 3. Allow User Freedom Toggle */}
+            <div className="flex items-center justify-between p-3.5 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800">
+              <div>
+                <span className="text-xs font-bold text-gray-900 dark:text-white block">
+                  Permettre aux utilisateurs de basculer librement de visuel :
+                </span>
+                <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                  Affiche les boutons de commutation [ Compteur Réaliste / Minimaliste ] en haut du Tasbih pour chaque utilisateur.
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={async () => {
+                  const current = featureToggles.tasbih_allow_user_toggle !== false;
+                  await handleToggleFeature('tasbih_allow_user_toggle', !current);
+                  showToast(!current ? "Bascule autorisée aux utilisateurs" : "Visuel fixé par l'administrateur", "info");
+                }}
+                className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors cursor-pointer shrink-0 ml-3 ${
+                  featureToggles.tasbih_allow_user_toggle !== false ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'
+                }`}
+              >
+                <div className={`w-4 h-4 rounded-full bg-white transition-transform ${
+                  featureToggles.tasbih_allow_user_toggle !== false ? 'translate-x-6' : 'translate-x-0'
+                }`} />
+              </button>
+            </div>
+          </div>
+        </SettingCard>
         <SettingCard
           id="set_media_storage"
           title="Gestionnaire du Stockage & Médias Firestore"

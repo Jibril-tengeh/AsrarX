@@ -342,7 +342,7 @@ export const HighPrecisionIndividualization: React.FC = () => {
                 </h4>
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 sm:gap-3">
                   {shifrData.cipherMap.map((item, idx) => (
-                    <div key={idx} className="p-2.5 sm:p-3 rounded-2xl bg-slate-900/60 border border-amber-500/20 text-center space-y-1 min-w-0 overflow-hidden">
+                    <div key={`shifr-map-${item.original}-${idx}`} className="p-2.5 sm:p-3 rounded-2xl bg-slate-900/60 border border-amber-500/20 text-center space-y-1 min-w-0 overflow-hidden">
                       <span className="text-xs text-slate-400 block">{t.shifrTaliSection.originalChar}: <strong className="text-white font-arabic">{item.original}</strong></span>
                       <div className="text-xl font-bold text-amber-300 font-arabic">{item.cipherLetter}</div>
                       <span className="text-[10px] text-amber-400/80 font-mono block">{item.symbol} ({item.numericValue})</span>
@@ -399,7 +399,7 @@ export const HighPrecisionIndividualization: React.FC = () => {
                     </thead>
                     <tbody className="divide-y divide-purple-900/30 bg-slate-900/60 text-slate-200">
                       {mizanKabeerData.letterDetails.map((item, idx) => (
-                        <tr key={idx} className="hover:bg-purple-900/20">
+                        <tr key={`mizan-row-${item.letter}-${idx}`} className="hover:bg-purple-900/20">
                           <td className="p-3 font-arabic text-lg font-bold text-white">{item.letter}</td>
                           <td className="p-3 font-mono">{item.standardValue}</td>
                           <td className="p-3">{item.planetName}</td>
@@ -567,7 +567,7 @@ export const HighPrecisionIndividualization: React.FC = () => {
                 <label className="block text-xs font-bold text-fuchsia-300">{t.labels.divineNamesList}</label>
                 <div className="flex flex-wrap gap-2">
                   {divineNamesList.map((name, idx) => (
-                    <span key={idx} className="px-3 py-1 rounded-xl bg-fuchsia-500/20 border border-fuchsia-500/40 text-fuchsia-200 font-arabic text-sm font-bold flex items-center gap-1.5">
+                    <span key={`divine-name-${name}-${idx}`} className="px-3 py-1 rounded-xl bg-fuchsia-500/20 border border-fuchsia-500/40 text-fuchsia-200 font-arabic text-sm font-bold flex items-center gap-1.5">
                       {name}
                       <button
                         onClick={() => setDivineNamesList(divineNamesList.filter((_, i) => i !== idx))}
@@ -645,7 +645,7 @@ export const HighPrecisionIndividualization: React.FC = () => {
                   <span className="text-xs uppercase tracking-widest font-bold text-indigo-400 block">{t.tlasimLaylSection.nightSchedule}</span>
                   <ul className="space-y-2 text-xs text-slate-200">
                     {(langKey === 'fr' ? tlasimLaylData.targetHoursFr : langKey === 'ha' ? tlasimLaylData.targetHoursHa : tlasimLaylData.targetHoursEn).map((hr, idx) => (
-                      <li key={idx} className="p-2.5 rounded-xl bg-indigo-950/30 border border-indigo-500/20 flex items-center gap-2">
+                      <li key={`night-sched-${idx}-${hr.slice(0, 10)}`} className="p-2.5 rounded-xl bg-indigo-950/30 border border-indigo-500/20 flex items-center gap-2">
                         <Clock size={14} className="text-indigo-400 shrink-0" />
                         <span>{hr}</span>
                       </li>

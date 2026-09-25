@@ -503,7 +503,7 @@ export default function ContinentCitySelector({
             <div className="space-y-1 max-h-48 overflow-y-auto">
               {nominatimResults.map((item, idx) => (
                 <button
-                  key={idx}
+                  key={`continentcityselector-idx-${idx}`}
                   onClick={() => handlePickNominatim(item)}
                   className="w-full text-left p-2 rounded-xl hover:bg-amber-50 dark:hover:bg-amber-950/50 text-xs font-medium text-gray-800 dark:text-gray-200 flex items-start gap-2 transition-all cursor-pointer border border-transparent hover:border-amber-200"
                 >

@@ -213,7 +213,7 @@ Statut : ${radiance.statusFr}`;
               {radiance.luminousChars.length > 0 ? (
                 radiance.luminousChars.map((ch, idx) => (
                   <span
-                    key={idx}
+                    key={`abjadelementalanatomytab-item-${idx}`}
                     className="w-8 h-8 flex items-center justify-center font-arabic font-bold text-base bg-cyan-500/20 text-cyan-200 rounded-lg border border-cyan-400/40 shadow-xs"
                   >
                     {ch}
@@ -245,7 +245,7 @@ Statut : ${radiance.statusFr}`;
               {radiance.darkChars.length > 0 ? (
                 radiance.darkChars.map((ch, idx) => (
                   <span
-                    key={idx}
+                    key={`abjadelementalanatomytab-item-${idx}`}
                     className="w-8 h-8 flex items-center justify-center font-arabic font-bold text-base bg-indigo-500/20 text-indigo-200 rounded-lg border border-indigo-400/40 shadow-xs"
                   >
                     {ch}
@@ -283,7 +283,7 @@ Statut : ${radiance.statusFr}`;
 
               return (
                 <div
-                  key={idx}
+                  key={`abjadelementalanatomytab-item-${idx}`}
                   className="flex flex-col items-center justify-center p-2.5 rounded-xl bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700/80 min-w-[65px]"
                 >
                   <span className="font-arabic font-extrabold text-xl text-gray-900 dark:text-white">

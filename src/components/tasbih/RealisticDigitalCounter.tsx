@@ -24,6 +24,7 @@ interface RealisticDigitalCounterProps {
   autoIncrementSpeed: number;
   onChangeAutoIncrementSpeed: (speed: number) => void;
   lang: string;
+  defaultSkinId?: string;
 }
 
 export const RealisticDigitalCounter: React.FC<RealisticDigitalCounterProps> = ({
@@ -42,15 +43,27 @@ export const RealisticDigitalCounter: React.FC<RealisticDigitalCounterProps> = (
   autoIncrementSpeed,
   onChangeAutoIncrementSpeed,
   lang,
+  defaultSkinId = 'brick_terracotta',
 }) => {
-  // Load saved skin from localStorage or default to brick_terracotta (matching screenshot)
+  // Load saved skin from localStorage or fallback to defaultSkinId
   const [selectedSkinId, setSelectedSkinId] = useState<string>(() => {
     try {
-      return localStorage.getItem('tasbih_counter_skin') || 'brick_terracotta';
+      return localStorage.getItem('tasbih_counter_skin') || defaultSkinId;
     } catch {
-      return 'brick_terracotta';
+      return defaultSkinId;
     }
   });
+
+  useEffect(() => {
+    if (defaultSkinId) {
+      try {
+        const userOverridden = localStorage.getItem('tasbih_counter_skin_user_override');
+        if (!userOverridden) {
+          setSelectedSkinId(defaultSkinId);
+        }
+      } catch {}
+    }
+  }, [defaultSkinId]);
 
   useEffect(() => {
     const handleStorageChange = () => {
@@ -75,6 +88,7 @@ export const RealisticDigitalCounter: React.FC<RealisticDigitalCounterProps> = (
     setSelectedSkinId(skinId);
     try {
       localStorage.setItem('tasbih_counter_skin', skinId);
+      localStorage.setItem('tasbih_counter_skin_user_override', 'true');
     } catch (e) {
       console.warn('Could not save skin:', e);
     }

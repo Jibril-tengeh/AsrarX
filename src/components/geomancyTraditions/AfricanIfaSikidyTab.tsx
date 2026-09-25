@@ -291,7 +291,7 @@ export const AfricanIfaSikidyTab: React.FC<AfricanIfaSikidyTabProps> = ({ houses
                   <div className="flex flex-col items-center space-y-2">
                     <span className="text-[10px] text-stone-500 dark:text-stone-400 uppercase font-semibold">{t.rightLegLabel}</span>
                     {opeleRight.map((val, idx) => (
-                      <div key={idx}>{renderOpelePod(val)}</div>
+                      <div key={`africanifasikidytab-idx-${idx}`}>{renderOpelePod(val)}</div>
                     ))}
                   </div>
 
@@ -302,7 +302,7 @@ export const AfricanIfaSikidyTab: React.FC<AfricanIfaSikidyTabProps> = ({ houses
                   <div className="flex flex-col items-center space-y-2">
                     <span className="text-[10px] text-stone-500 dark:text-stone-400 uppercase font-semibold">{t.leftLegLabel}</span>
                     {opeleLeft.map((val, idx) => (
-                      <div key={idx}>{renderOpelePod(val)}</div>
+                      <div key={`africanifasikidytab-idx-${idx}`}>{renderOpelePod(val)}</div>
                     ))}
                   </div>
                 </div>
@@ -382,7 +382,7 @@ export const AfricanIfaSikidyTab: React.FC<AfricanIfaSikidyTabProps> = ({ houses
                 <div className="space-y-3 mt-4">
                   {oponMarks.map((val, idx) => (
                     <button
-                      key={idx}
+                      key={`africanifasikidytab-idx-${idx}`}
                       onClick={() => toggleOponMark(idx)}
                       className="px-6 py-2 bg-amber-900/15 dark:bg-yellow-950/60 hover:bg-amber-900/25 dark:hover:bg-yellow-900/80 border border-amber-600/40 rounded-lg text-amber-900 dark:text-amber-200 font-mono font-bold text-lg tracking-widest transition-all shadow-sm"
                     >
@@ -537,7 +537,7 @@ export const AfricanIfaSikidyTab: React.FC<AfricanIfaSikidyTabProps> = ({ houses
 
             <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-3">
               {sikidyHouses.map((s, idx) => (
-                <div key={idx} className="p-3 bg-stone-50 dark:bg-stone-950/60 border border-stone-200 dark:border-stone-800 rounded-xl flex flex-col items-center text-center space-y-2 shadow-xs">
+                <div key={`africanifasikidytab-idx-${idx}`} className="p-3 bg-stone-50 dark:bg-stone-950/60 border border-stone-200 dark:border-stone-800 rounded-xl flex flex-col items-center text-center space-y-2 shadow-xs">
                   <span className="text-[10px] font-bold uppercase text-emerald-700 dark:text-emerald-400">{s.nameMalagasy}</span>
                   <div className="flex flex-col items-center space-y-1">
                     {s.figure.dots.map((val, dIdx) => (
@@ -684,7 +684,7 @@ export const AfricanIfaSikidyTab: React.FC<AfricanIfaSikidyTabProps> = ({ houses
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {waterMotherFigures.map((fig, idx) => (
-                <div key={idx} className="p-4 bg-teal-500/10 dark:bg-teal-950/20 border border-teal-500/30 rounded-xl flex flex-col items-center text-center space-y-2 shadow-xs">
+                <div key={`africanifasikidytab-idx-${idx}`} className="p-4 bg-teal-500/10 dark:bg-teal-950/20 border border-teal-500/30 rounded-xl flex flex-col items-center text-center space-y-2 shadow-xs">
                   <span className="text-xs font-bold text-teal-700 dark:text-teal-300 uppercase">Mère {idx + 1}</span>
                   <span className="text-sm font-bold text-stone-900 dark:text-stone-200">{lang === 'fr' ? fig.nameFr : lang === 'ha' ? fig.nameHa : fig.nameEn}</span>
                   <p className="text-xs font-serif text-teal-700 dark:text-teal-400/80">{fig.nameAr}</p>

@@ -139,7 +139,7 @@ export default function QurahAnbiyaTab({ language }: QurahAnbiyaTabProps) {
               const y1 = 160 + 80 * Math.sin(rad);
               const x2 = 160 + 135 * Math.cos(rad);
               const y2 = 160 + 135 * Math.sin(rad);
-              return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#059669" strokeWidth="1.5" />;
+              return <line key={`qurahanbiyatab-i-${i}`} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#059669" strokeWidth="1.5" />;
             })}
 
             {/* Needle pointing to selected angle */}

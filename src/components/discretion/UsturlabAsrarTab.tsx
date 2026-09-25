@@ -243,7 +243,7 @@ export default function UsturlabAsrarTab({ t }: UsturlabAsrarTabProps) {
                 const isActive = idx === celestialData.index;
 
                 return (
-                  <g key={idx}>
+                  <g key={`usturlabasrartab-item-${idx}`}>
                     <circle
                       cx={nodeX}
                       cy={nodeY}

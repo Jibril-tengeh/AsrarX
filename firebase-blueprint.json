@@ -75,6 +75,57 @@
           { "name": "isActive", "type": "boolean" },
           { "name": "createdAt", "type": "number" }
         ]
+      },
+      {
+        "name": "pdf_documents",
+        "document_id": "docId",
+        "fields": [
+          { "name": "title", "type": "string" },
+          { "name": "description", "type": "string" },
+          { "name": "author", "type": "string" },
+          { "name": "category", "type": "string" },
+          { "name": "coverUrl", "type": "string" },
+          { "name": "pagesCount", "type": "number" },
+          { "name": "fileSize", "type": "string" },
+          { "name": "isPremium", "type": "boolean" },
+          { "name": "isForSale", "type": "boolean" },
+          { "name": "freeForVip", "type": "boolean" },
+          { "name": "price", "type": "number" },
+          { "name": "currency", "type": "string" },
+          { "name": "publishedAt", "type": "string" }
+        ]
+      },
+      {
+        "name": "pdf_purchases",
+        "document_id": "purchaseId",
+        "fields": [
+          { "name": "userId", "type": "string" },
+          { "name": "userEmail", "type": "string" },
+          { "name": "pdfId", "type": "string" },
+          { "name": "pdfTitle", "type": "string" },
+          { "name": "amount", "type": "number" },
+          { "name": "currency", "type": "string" },
+          { "name": "paymentMethod", "type": "string" },
+          { "name": "paymentReference", "type": "string" },
+          { "name": "status", "type": "string" },
+          { "name": "purchasedAt", "type": "string" },
+          { "name": "securityHash", "type": "string" }
+        ]
+      },
+      {
+        "name": "pdf_download_links",
+        "document_id": "pdfId",
+        "fields": [
+          { "name": "pdfId", "type": "string" },
+          { "name": "downloadUrl", "type": "string" },
+          { "name": "pdfUrl", "type": "string" },
+          { "name": "title", "type": "string" },
+          { "name": "isPremium", "type": "boolean" },
+          { "name": "isForSale", "type": "boolean" },
+          { "name": "freeForVip", "type": "boolean" },
+          { "name": "price", "type": "number" },
+          { "name": "updatedAt", "type": "timestamp" }
+        ]
       }
     ]
   }

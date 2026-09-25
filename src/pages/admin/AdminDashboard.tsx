@@ -97,12 +97,12 @@ import { AdminCategoriesManager } from '../../components/admin/AdminCategoriesMa
 import { CategoryEditModal } from '../../components/admin/CategoryEditModal';
 import { SubCategoryEditModal } from '../../components/admin/SubCategoryEditModal';
 import { 
-  DEFAULT_CATEGORIES_PRESETS,
   getCategoryFallbackThumbnail, 
   getCategoryFallbackHook, 
   getSubCategoryFallbackHook,
   normalizeCategoryId,
-  normalizeSubCategoryId
+  normalizeSubCategoryId,
+  isMockCategory
 } from '../../data/defaultCategories';
 import { PROMO_HOURS_OPTIONS, PROMO_HOURLY_OPTIONS, getPromoHourMessage, getPromoHourLabel, PromoDurationHours } from '../../utils/promoConfig';
 
@@ -1368,13 +1368,23 @@ export const AdminDashboard: React.FC = () => {
       });
     });
 
-    const defaultCatsList = DEFAULT_CATEGORIES_PRESETS;
-
-    const unsubscribeCategories = onSnapshot(collection(db, 'categories'), (snapshot) => {
+    const unsubscribeCategories = onSnapshot(collection(db, 'categories'), async (snapshot) => {
       let deletedIds: string[] = [];
       try { deletedIds = JSON.parse(localStorage.getItem('asrarhub_deleted_categories') || '[]'); } catch (e) {}
 
       if (!snapshot.empty) {
+        // Automatically delete any mock preset docs from Firestore so they never pollute
+        const mockDocs = snapshot.docs.filter(doc => isMockCategory({ ...doc.data(), id: doc.id }));
+        if (mockDocs.length > 0) {
+          for (const mDoc of mockDocs) {
+            try {
+              await deleteDoc(doc(db, 'categories', mDoc.id));
+            } catch (err) {
+              console.warn("Could not delete mock category doc in AdminDashboard:", mDoc.id, err);
+            }
+          }
+        }
+
         const list = snapshot.docs
           .map(doc => {
             const data = doc.data();
@@ -1393,26 +1403,17 @@ export const AdminDashboard: React.FC = () => {
               }))
             };
           })
-          .filter((cat: any) => !deletedIds.includes(cat.id));
+          .filter((cat: any) => !deletedIds.includes(cat.id) && !isMockCategory(cat));
         list.sort((a: any, b: any) => (a.createdAt || 0) - (b.createdAt || 0));
         setCategories(list);
         try {
           localStorage.setItem('asrarhub_cached_categories', JSON.stringify(list));
         } catch (e) {}
       } else {
-        const remainingDefaults = defaultCatsList.filter(c => !deletedIds.includes(c.id));
-        remainingDefaults.forEach(async (cat) => {
-          try {
-            await setDoc(doc(db, 'categories', cat.id), cat);
-          } catch (e) {
-            console.warn("Category seed error:", e);
-          }
-        });
-        localStorage.setItem('asrarhub_categories_seeded', 'true');
+        setCategories([]);
         try {
-          localStorage.setItem('asrarhub_cached_categories', JSON.stringify(remainingDefaults));
+          localStorage.setItem('asrarhub_cached_categories', JSON.stringify([]));
         } catch (e) {}
-        setCategories(remainingDefaults);
       }
     }, (error) => {
       console.warn("Admin Categories listener note:", error);
@@ -1422,6 +1423,7 @@ export const AdminDashboard: React.FC = () => {
       fetchCategoriesFromRest().then(restCats => {
         if (Array.isArray(restCats) && restCats.length > 0) {
           const list = restCats
+            .filter((c: any) => !isMockCategory(c))
             .map((c: any) => {
               const catName = c.name || '';
               const resolvedThumb = c.thumbnail || getCategoryFallbackThumbnail(catName);
@@ -1444,9 +1446,8 @@ export const AdminDashboard: React.FC = () => {
         } else {
           let cached: any[] = [];
           try { cached = JSON.parse(localStorage.getItem('asrarhub_cached_categories') || '[]'); } catch (e) {}
-          const filtered = cached.filter((c: any) => !deletedIds.includes(c.id));
-          const finalCats = filtered.length > 0 ? filtered : defaultCatsList.filter(c => !deletedIds.includes(c.id));
-          setCategories(finalCats);
+          const filtered = cached.filter((c: any) => !deletedIds.includes(c.id) && !isMockCategory(c));
+          setCategories(filtered);
         }
       });
     });
@@ -3545,7 +3546,7 @@ export const AdminDashboard: React.FC = () => {
       <div className="space-y-6">
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {stats.map((stat, idx) => (
-            <div key={idx} className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+            <div key={`admin-stat-${stat.title || idx}-${idx}`} className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
               <div className="flex items-center gap-3 mb-4">
                 <div className={`p-3 rounded-xl ${stat.bg} ${stat.color}`}>
                   <stat.icon size={24} />
@@ -3616,7 +3617,7 @@ export const AdminDashboard: React.FC = () => {
                 { title: "Validation d'un paiement manuel direct", time: "Il y a 1 heure", type: "payment" },
                 { title: "Utilisation accrue du Calculateur Abjad", time: "Il y a 3 heures", type: "tool" }
               ].map((activity, idx) => (
-                <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-750 rounded-2xl border border-gray-100 dark:border-gray-700">
+                <div key={`activity-${idx}-${activity.time}`} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-750 rounded-2xl border border-gray-100 dark:border-gray-700">
                   <div className="flex items-center gap-3">
                     <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0" />
                     <span className="text-xs font-medium text-gray-700 dark:text-gray-200">{activity.title}</span>
@@ -3919,11 +3920,11 @@ export const AdminDashboard: React.FC = () => {
             </div>
           ) : (
             <div className="space-y-4">
-              {paginatedUsers.map((user) => {
+              {paginatedUsers.map((user, uIdx) => {
                 const isSelected = selectedUserIds.includes(user.id);
                 return (
                   <div 
-                    key={user.id} 
+                    key={user.id ? `admin-user-${user.id}-${uIdx}` : `admin-user-${uIdx}`} 
                     className={`flex flex-col lg:flex-row lg:items-center justify-between p-5 rounded-2xl gap-4 transition-all ${
                       isSelected 
                         ? 'bg-emerald-50/70 dark:bg-emerald-950/30 border-2 border-emerald-500/60 shadow-sm' 
@@ -4149,8 +4150,8 @@ export const AdminDashboard: React.FC = () => {
           ) : (
             <div className="space-y-4">
               {/* Responsive grid / card representation for payments */}
-              {filteredPayments.map((p) => (
-                <div key={p.id} className="p-5 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+              {filteredPayments.map((p, pIdx) => (
+                <div key={p.id ? `admin-pay-${p.id}-${pIdx}` : `admin-pay-${pIdx}`} className="p-5 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                   <div className="space-y-1 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-black text-sm text-gray-900 dark:text-white">{p.senderName}</span>
@@ -4437,8 +4438,8 @@ export const AdminDashboard: React.FC = () => {
                   className="w-full bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl p-3 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none"
                 >
                   <option value="">-- Choisir un article --</option>
-                  {storeProducts.map((p) => (
-                    <option key={p.id} value={p.id}>{p.name} ({p.pointsCost} points / {p.price || 0} USD)</option>
+                  {storeProducts.map((p, pIdx) => (
+                    <option key={p.id ? `store-prod-opt-${p.id}-${pIdx}` : `store-prod-opt-${pIdx}`} value={p.id}>{p.name} ({p.pointsCost} points / {p.price || 0} USD)</option>
                   ))}
                 </select>
               </div>
@@ -5033,8 +5034,8 @@ export const AdminDashboard: React.FC = () => {
                     className="w-full bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl p-3 text-xs font-semibold text-gray-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500"
                   >
                     <option value="">Sélectionner un article</option>
-                    {storeProducts.map(p => (
-                      <option key={p.id} value={p.id}>{p.title || p.name} ({p.price} FCFA)</option>
+                    {storeProducts.map((p, pIdx) => (
+                      <option key={p.id ? `newpromo-prod-${p.id}-${pIdx}` : `newpromo-prod-${pIdx}`} value={p.id}>{p.title || p.name} ({p.price} FCFA)</option>
                     ))}
                   </select>
                 </div>
@@ -5244,14 +5245,14 @@ export const AdminDashboard: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-750">
-                  {filteredCodes.map((promo) => {
+                  {filteredCodes.map((promo, pIdx) => {
                     const isCodeHourly = promo.type === 'unlock_subscription_hours' || promo.durationHours;
                     const hoursVal = promo.durationHours || 2;
                     const isExpired = promo.expiryDate && Date.now() > promo.expiryDate;
                     const isMaxedOut = promo.maxUses && (Number(promo.uses) || 0) >= Number(promo.maxUses);
 
                     return (
-                      <tr key={promo.id || promo.code} className="hover:bg-gray-50/60 dark:hover:bg-gray-750/50 transition-colors">
+                      <tr key={promo.id ? `admin-promo-row-${promo.id}-${pIdx}` : `admin-promo-row-${promo.code || pIdx}-${pIdx}`} className="hover:bg-gray-50/60 dark:hover:bg-gray-750/50 transition-colors">
                         {/* Code */}
                         <td className="py-3 px-2">
                           <div className="flex items-center gap-1.5">
@@ -5562,8 +5563,8 @@ export const AdminDashboard: React.FC = () => {
       <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
         <h3 className="font-bold text-gray-900 dark:text-white mb-4">Audios Publiés</h3>
         <div className="space-y-4">
-          {ruqyahAudios.map((audio) => (
-            <div key={audio.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4">
+          {ruqyahAudios.map((audio, aIdx) => (
+            <div key={audio.id ? `audio-item-${audio.id}-${aIdx}` : `audio-item-${aIdx}`} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl gap-4">
               <div>
                 <h4 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
                   {audio.title}
@@ -6427,10 +6428,10 @@ export const AdminDashboard: React.FC = () => {
               { id: 'shams_secrets', label: 'Tous les Secrets & Formules', desc: "Catalogue complet des secrets théurgiques" },
               { id: 'shams_generator', label: "Générateur Théurgique Al-Buni", desc: "Moteur de génération et calculs théurgiques" },
               { id: 'shams_planetary_hours', label: "Heures Planétaires Théurgiques", desc: "Calcul précis des mansions et influences" }
-            ].map((sub) => {
+            ].map((sub, sIdx) => {
               const status = featureToggles[sub.id] || 'active';
               return (
-                <div key={sub.id} className="p-3.5 sm:p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl space-y-3 min-w-0">
+                <div key={sub.id ? `shams-sub-${sub.id}-${sIdx}` : `shams-sub-${sIdx}`} className="p-3.5 sm:p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl space-y-3 min-w-0">
                   <div className="min-w-0">
                     <h4 className="font-bold text-sm text-gray-900 dark:text-white break-words">{sub.label}</h4>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 break-words">{sub.desc}</p>
@@ -6474,10 +6475,10 @@ export const AdminDashboard: React.FC = () => {
               { id: 'book_ufuk_mubin', label: "10. Al-Ufuk al-Mubin", desc: "Mir Damad - L'Horizon Lumineux" },
               { id: 'book_lumah_nuraniyyah', label: "11. Al-Lum'ah al-Nuraniyyah", desc: "Ahmad al-Buni - Litanies & Ism al-Azam" },
               { id: 'book_kitab_diryak', label: '12. Kitab al-Diryak (Thériaque)', desc: "Pseudo-Galien - Médecine & Guérison" }
-            ].map((book) => {
+            ].map((book, bIdx) => {
               const status = featureToggles[book.id] || 'active';
               return (
-                <div key={book.id} className="p-3.5 sm:p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl space-y-3 min-w-0">
+                <div key={book.id ? `sacred-book-${book.id}-${bIdx}` : `sacred-book-${bIdx}`} className="p-3.5 sm:p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl space-y-3 min-w-0">
                   <div className="min-w-0">
                     <h4 className="font-bold text-sm text-gray-900 dark:text-white break-words">{book.label}</h4>
                     <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 break-words">{book.desc}</p>
@@ -6529,6 +6530,44 @@ export const AdminDashboard: React.FC = () => {
                 <div
                   className={`w-4 h-4 rounded-full bg-white transition-transform ${
                     featureToggles?.home_only_categories_grid === true ? 'translate-x-6' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Quick 3D Relief Effect Toggle */}
+            <div className="flex items-center justify-between p-3 rounded-xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/60">
+              <div className="flex items-center gap-2.5">
+                <span className="p-1.5 rounded-lg bg-amber-500/20 text-amber-600 dark:text-amber-400">
+                  <Layers size={16} />
+                </span>
+                <div>
+                  <span className="text-xs font-bold text-amber-900 dark:text-amber-200 block">
+                    Effet Cartes 3D en Relief (Claymorphic) :
+                  </span>
+                  <span className="text-[11px] text-amber-700/80 dark:text-amber-400">
+                    {featureToggles?.cards_3d_effect === true || featureToggles?.cards_3d_enabled === true
+                      ? "Activé : Cartes en relief 3D avec biseau tactile, reflet spéculaire et boutons bombés."
+                      : "Désactivé : Style de carte plat classique."}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const currentVal = featureToggles?.cards_3d_effect === true || featureToggles?.cards_3d_enabled === true;
+                  const nextVal = !currentVal;
+                  handleToggleFeature('cards_3d_effect', nextVal, "Effet Cartes 3D");
+                  handleToggleFeature('cards_3d_enabled', nextVal);
+                  handleToggleFeature('home_categories_3d_cards', nextVal);
+                }}
+                className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors cursor-pointer shrink-0 ${
+                  featureToggles?.cards_3d_effect === true || featureToggles?.cards_3d_enabled === true ? 'bg-amber-500' : 'bg-gray-300 dark:bg-gray-600'
+                }`}
+              >
+                <div
+                  className={`w-4 h-4 rounded-full bg-white transition-transform ${
+                    featureToggles?.cards_3d_effect === true || featureToggles?.cards_3d_enabled === true ? 'translate-x-6' : 'translate-x-0'
                   }`}
                 />
               </button>
@@ -7038,6 +7077,247 @@ export const AdminDashboard: React.FC = () => {
           </div>
         </CollapsibleAdminCard>
 
+        {/* Paramètres & Personnalisation des Cartes 3D en Relief (Style Claymorphic) */}
+        <CollapsibleAdminCard
+          id="feat_cards_3d_effect"
+          title="Effet Cartes 3D en Relief (Style Claymorphic & Tactile)"
+          subtitle="Donnez un aspect 3D tactile et moderne aux cartes (catégories et articles) avec ombres d'extrusion biseautées, boutons en relief et reflets lumineux."
+          icon={<Layers size={22} className="text-amber-500 shrink-0" />}
+        >
+          <div className="space-y-4">
+            {/* Master Toggle */}
+            <div className="flex items-center justify-between p-3.5 rounded-xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-800/60">
+              <div className="flex items-center gap-3">
+                <span className="p-2 rounded-xl bg-amber-500/20 text-amber-600 dark:text-amber-400 shrink-0">
+                  <Layers size={20} />
+                </span>
+                <div>
+                  <span className="text-xs font-bold text-amber-950 dark:text-amber-200 block">
+                    Activer l'Effet Cartes 3D en Relief :
+                  </span>
+                  <span className="text-[11px] text-amber-800/80 dark:text-amber-400">
+                    {featureToggles?.cards_3d_effect === true || featureToggles?.cards_3d_enabled === true
+                      ? "Activé : Les cartes bénéficient du relief 3D, de la brillance spéculaire et de l'ombre d'extrusion biseautée."
+                      : "Désactivé : Style plat conventionnel (sans relief 3D)."}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  const currentVal = featureToggles?.cards_3d_effect === true || featureToggles?.cards_3d_enabled === true;
+                  const nextVal = !currentVal;
+                  handleToggleFeature('cards_3d_effect', nextVal, "Effet Cartes 3D");
+                  handleToggleFeature('cards_3d_enabled', nextVal);
+                  handleToggleFeature('home_categories_3d_cards', nextVal);
+                }}
+                className={`w-12 h-6 flex items-center rounded-full p-1 transition-colors cursor-pointer shrink-0 ${
+                  featureToggles?.cards_3d_effect === true || featureToggles?.cards_3d_enabled === true ? 'bg-amber-500' : 'bg-gray-300 dark:bg-gray-600'
+                }`}
+              >
+                <div
+                  className={`w-4 h-4 rounded-full bg-white transition-transform ${
+                    featureToggles?.cards_3d_effect === true || featureToggles?.cards_3d_enabled === true ? 'translate-x-6' : 'translate-x-0'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* If enabled: Theme, Intensity, Scope & Interactive Preview */}
+            {(featureToggles?.cards_3d_effect === true || featureToggles?.cards_3d_enabled === true) && (
+              <div className="space-y-4 pt-1">
+                {/* 1. Theme Selection */}
+                <div>
+                  <label className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-2">
+                    Thème Visuel & Nuance de Couleur 3D :
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5">
+                    {[
+                      {
+                        id: 'gold_amber',
+                        label: 'Or & Ambre Chaud',
+                        desc: 'Bordure dorée, brillance chaleureuse et relief noble',
+                        badge: 'Capture d\'écran',
+                        color: 'border-amber-400 bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200'
+                      },
+                      {
+                        id: 'emerald_asrar',
+                        label: 'Émeraude Sacrée',
+                        desc: 'Vert profond AsrarHub avec reflet mentholé',
+                        badge: 'AsrarHub',
+                        color: 'border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-900 dark:text-emerald-200'
+                      },
+                      {
+                        id: 'modern_clay',
+                        label: 'Clay Moderne',
+                        desc: 'Aspect néomorphique doux et contemporain',
+                        badge: 'Minimaliste',
+                        color: 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-white'
+                      },
+                      {
+                        id: 'dark_tactile',
+                        label: 'Sombre & Mystique',
+                        desc: 'Noir profond tactile avec arête sombre',
+                        badge: 'Nuit',
+                        color: 'border-gray-800 bg-gray-900 text-gray-100'
+                      }
+                    ].map((themeOpt) => {
+                      const isCurrent = (featureToggles?.cards_3d_theme || 'gold_amber') === themeOpt.id;
+                      return (
+                        <button
+                          key={`theme-3d-${themeOpt.id}`}
+                          type="button"
+                          onClick={() => handleToggleFeature('cards_3d_theme', themeOpt.id, `Thème 3D ${themeOpt.label}`)}
+                          className={`p-3 rounded-xl border-2 text-left transition-all cursor-pointer flex flex-col justify-between ${
+                            isCurrent
+                              ? 'border-amber-500 ring-2 ring-amber-400/40 shadow-sm'
+                              : 'border-gray-200 dark:border-gray-700 hover:border-amber-300'
+                          } ${themeOpt.color}`}
+                        >
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-bold">{themeOpt.label}</span>
+                            {isCurrent ? (
+                              <CheckCircle2 size={14} className="text-amber-600 dark:text-amber-400 shrink-0" />
+                            ) : (
+                              <span className="text-[9px] font-semibold opacity-60 uppercase">{themeOpt.badge}</span>
+                            )}
+                          </div>
+                          <p className="text-[10px] opacity-80 leading-snug">{themeOpt.desc}</p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 2. Intensity Selection */}
+                <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                  <div>
+                    <span className="text-xs font-bold text-gray-800 dark:text-gray-200 block">
+                      Intensité de l'Extrusion 3D :
+                    </span>
+                    <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                      Règle l'épaisseur de la bordure inférieure biseautée
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    {[
+                      { id: 'subtle', label: 'Subtil (3px)' },
+                      { id: 'medium', label: 'Équilibré (5px)' },
+                      { id: 'strong', label: 'Accenté (7px)' },
+                    ].map((intOpt) => {
+                      const isCurrent = (featureToggles?.cards_3d_intensity || 'medium') === intOpt.id;
+                      return (
+                        <button
+                          key={`int-3d-${intOpt.id}`}
+                          type="button"
+                          onClick={() => handleToggleFeature('cards_3d_intensity', intOpt.id, `Intensité 3D ${intOpt.label}`)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors cursor-pointer ${
+                            isCurrent
+                              ? 'bg-amber-500 text-white border-amber-500 shadow-xs'
+                              : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600'
+                          }`}
+                        >
+                          {intOpt.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 3. Scope of application */}
+                <div className="p-3 rounded-xl bg-gray-50 dark:bg-gray-800/60 border border-gray-200 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                  <div>
+                    <span className="text-xs font-bold text-gray-800 dark:text-gray-200 block">
+                      Portée de l'effet 3D :
+                    </span>
+                    <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                      Appliquer l'effet 3D aux catégories, aux articles ou à l'ensemble
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    {[
+                      { id: 'all', label: 'Tout (Catégories + Articles)' },
+                      { id: 'categories_only', label: 'Catégories uniquement' },
+                      { id: 'articles_only', label: 'Articles uniquement' },
+                    ].map((scopeOpt) => {
+                      const isCurrent = (featureToggles?.cards_3d_target || 'all') === scopeOpt.id;
+                      return (
+                        <button
+                          key={`scope-3d-${scopeOpt.id}`}
+                          type="button"
+                          onClick={() => handleToggleFeature('cards_3d_target', scopeOpt.id, `Portée 3D ${scopeOpt.label}`)}
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors cursor-pointer ${
+                            isCurrent
+                              ? 'bg-amber-500 text-white border-amber-500 shadow-xs'
+                              : 'bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-600'
+                          }`}
+                        >
+                          {scopeOpt.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 4. Live Interactive Preview */}
+                <div className="p-4 rounded-2xl bg-white dark:bg-gray-850 border border-gray-200 dark:border-gray-700 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                      <Sparkles size={14} className="text-amber-500" />
+                      Aperçu interactif en direct du style 3D :
+                    </span>
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300/40">
+                      Effet Actif
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {[
+                      { name: 'Secrets d\'Asrar', icon: 'Sparkles', count: 24 },
+                      { name: 'Protection Sacrée', icon: 'Shield', count: 18 },
+                      { name: 'Richesse & Biens', icon: 'Coins', count: 32 },
+                      { name: 'Douas & Prières', icon: 'Heart', count: 15 },
+                    ].map((demo, dIdx) => (
+                      <div
+                        key={`demo-3d-${dIdx}`}
+                        className={`relative rounded-2xl p-3 py-3.5 flex flex-col items-center justify-center gap-2 text-center cursor-pointer min-h-[110px] overflow-hidden ${
+                          (featureToggles?.cards_3d_theme || 'gold_amber') === 'gold_amber'
+                            ? 'card-3d-clay card-3d-theme-amber'
+                            : (featureToggles?.cards_3d_theme || 'gold_amber') === 'emerald_asrar'
+                            ? 'card-3d-clay card-3d-theme-emerald'
+                            : (featureToggles?.cards_3d_theme || 'gold_amber') === 'dark_tactile'
+                            ? 'card-3d-clay card-3d-theme-dark'
+                            : 'card-3d-clay card-3d-theme-modern'
+                        }`}
+                      >
+                        {/* Top sheen */}
+                        <div 
+                          aria-hidden="true" 
+                          className="absolute top-1 left-3 right-3 h-[2px] bg-gradient-to-r from-white/10 via-white/80 to-white/10 rounded-full blur-[0.4px] pointer-events-none z-10" 
+                        />
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center bg-amber-600/20 text-amber-900 dark:text-amber-200 border border-amber-300/40 shadow-[inset_0_1px_2px_rgba(255,255,255,0.6)]">
+                          <LucideIcon name={demo.icon} size={20} className="shrink-0" />
+                        </div>
+                        <span className={`text-[12px] font-black line-clamp-1 ${
+                          (featureToggles?.cards_3d_theme || 'gold_amber') === 'gold_amber'
+                            ? 'text-amber-950 drop-shadow-[0_1px_0_rgba(255,255,255,0.4)]'
+                            : (featureToggles?.cards_3d_theme || 'gold_amber') === 'emerald_asrar'
+                            ? 'text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.3)]'
+                            : 'text-gray-900 dark:text-white'
+                        }`}>
+                          {demo.name}
+                        </span>
+                        <span className="btn-3d-tactile-amber text-amber-950 text-[10px] font-extrabold px-2 py-0.5 rounded-full">
+                          {demo.count} secrets
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </CollapsibleAdminCard>
+
         {/* 4. Downloads & Documents */}
         <CollapsibleAdminCard
           id="feat_downloads"
@@ -7092,10 +7372,10 @@ export const AdminDashboard: React.FC = () => {
               { id: 'admin_can_manage_features', label: 'Gestion des Outils & Statuts' },
               { id: 'admin_can_manage_promo_codes', label: 'Gestion des Codes Promo' },
               { id: 'admin_can_manage_settings', label: 'Paramètres Globaux du Système' }
-            ].map((perm) => {
+            ].map((perm, pIdx) => {
               const enabled = featureToggles[perm.id] !== false;
               return (
-                <div key={perm.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-750 rounded-xl border border-gray-100 dark:border-gray-700">
+                <div key={perm.id ? `admin-perm-${perm.id}-${pIdx}` : `admin-perm-${pIdx}`} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-750 rounded-xl border border-gray-100 dark:border-gray-700">
                   <span className="text-xs font-semibold text-gray-800 dark:text-gray-200">{perm.label}</span>
                   <button
                     type="button"
@@ -7245,10 +7525,10 @@ export const AdminDashboard: React.FC = () => {
                   label: 'Utilisation des Codes Promo & Cartes Cadeaux',
                   desc: 'Autorise le déblocage par code'
                 }
-              ].map((pm) => {
+              ].map((pm, pmIdx) => {
                 const enabled = featureToggles[pm.id] !== false;
                 return (
-                  <div key={pm.id} className={`flex items-start justify-between p-3.5 rounded-xl border transition-all ${
+                  <div key={pm.id ? `admin-pm-${pm.id}-${pmIdx}` : `admin-pm-${pmIdx}`} className={`flex items-start justify-between p-3.5 rounded-xl border transition-all ${
                     pm.isMaster 
                       ? 'bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-800/50 sm:col-span-2' 
                       : 'bg-gray-50 dark:bg-gray-750 border-gray-100 dark:border-gray-700'
@@ -7378,8 +7658,8 @@ export const AdminDashboard: React.FC = () => {
             <p className="text-center py-8 text-xs text-gray-400">Aucun terme trouvé.</p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {filteredTerms.map((t) => (
-                <div key={t.id} className="p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl space-y-2 min-w-0">
+              {filteredTerms.map((t, tIdx) => (
+                <div key={t.id ? `admin-term-${t.id}-${tIdx}` : `admin-term-${tIdx}`} className="p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl space-y-2 min-w-0">
                   <div className="flex items-start justify-between gap-2">
                     <span className="font-bold text-sm text-gray-900 dark:text-white break-words">{(t as any).word_fr || (t as any).word || ''}</span>
                     <button
@@ -8027,7 +8307,7 @@ export const AdminDashboard: React.FC = () => {
                   <div className="flex flex-wrap gap-2 pt-1">
                     {((newArticle as any).benefits || []).map((b: string, idx: number) => (
                       <span
-                        key={idx}
+                        key={`benefit-${idx}-${b.slice(0, 10)}`}
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 text-xs font-medium rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm"
                       >
                         <CheckCircle size={13} className="text-emerald-500 shrink-0" />
@@ -8377,7 +8657,7 @@ export const AdminDashboard: React.FC = () => {
                     <h4 className="text-xs font-bold text-emerald-900 dark:text-emerald-200">Vertus & Bienfaits :</h4>
                     <ul className="space-y-1">
                       {((newArticle as any).benefits || []).map((b: string, i: number) => (
-                        <li key={i} className="text-xs text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
+                        <li key={`admindashboard-i-${i}`} className="text-xs text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
                           <CheckCircle2 size={13} className="shrink-0" /> {b}
                         </li>
                       ))}
@@ -9188,8 +9468,8 @@ export const AdminDashboard: React.FC = () => {
             {communityPosts.length === 0 ? (
               <p className="text-xs text-gray-400 text-center py-6">Aucune publication dans la communauté pour le moment.</p>
             ) : (
-              communityPosts.map((post) => (
-                <div key={post.id} className="p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl space-y-2 min-w-0">
+              communityPosts.map((post, pIdx) => (
+                <div key={post.id ? `admin-post-${post.id}-${pIdx}` : `admin-post-${pIdx}`} className="p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl space-y-2 min-w-0">
                   <div className="flex justify-between items-start gap-2">
                     <span className="font-bold text-sm text-gray-900 dark:text-white break-words">{post.author}</span>
                     <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded-full ${
@@ -9266,11 +9546,11 @@ export const AdminDashboard: React.FC = () => {
             {notifications.length === 0 ? (
               <p className="text-xs text-gray-400 text-center py-6">Aucune notification enregistrée.</p>
             ) : (
-              notifications.map((n) => {
+              notifications.map((n, nIdx) => {
                 const title = (n as any)[`title_${language}`] || (n as any).title_fr || n.title || '';
                 const msg = (n as any)[`message_${language}`] || (n as any).message_fr || n.message || '';
                 return (
-                  <div key={n.id} className="p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl flex justify-between items-start gap-4 min-w-0">
+                  <div key={n.id ? `admin-notif-${n.id}-${nIdx}` : `admin-notif-${nIdx}`} className="p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl flex justify-between items-start gap-4 min-w-0">
                     <div className="min-w-0 flex-1">
                       <h4 className="font-bold text-sm text-gray-900 dark:text-white break-words">{title}</h4>
                       <p className="text-xs text-gray-500 mt-1 mb-2">{new Date(n.date).toLocaleString('fr-FR')}</p>
@@ -9299,8 +9579,8 @@ export const AdminDashboard: React.FC = () => {
         <div className="bg-white dark:bg-gray-800 rounded-3xl p-4 sm:p-6 shadow-sm border border-gray-100 dark:border-gray-700">
           <h3 className="font-bold text-gray-900 dark:text-white mb-4 text-base sm:text-lg">Les Grands Serments Théurgiques</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {DEFAULT_OATHS.map((oath: any) => (
-              <div key={oath.id} className="p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl space-y-2 min-w-0">
+            {DEFAULT_OATHS.map((oath: any, oIdx: number) => (
+              <div key={oath.id ? `admin-oath-${oath.id}-${oIdx}` : `admin-oath-${oIdx}`} className="p-4 bg-gray-50 dark:bg-gray-750 border border-gray-100 dark:border-gray-700 rounded-2xl space-y-2 min-w-0">
                 <div className="flex items-center justify-between">
                   <h4 className="font-bold text-sm text-gray-900 dark:text-white break-words">{oath.title}</h4>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">

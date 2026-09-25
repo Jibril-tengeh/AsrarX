@@ -507,7 +507,164 @@ export const getCategoryFallbackHook = (name?: string): string => {
   return `Découvrez l'ensemble des enseignements et secrets spirituels dédiés à la thématique ${name}.`;
 };
 
+/**
+ * Resolves a dedicated, highly relevant and crystal-clear spiritual icon for any category.
+ * Prevents categories from falling back to generic, blocking folder icons.
+ */
+export const getCategoryFallbackIcon = (nameOrId?: string): string => {
+  const str = (nameOrId || '').toLowerCase().trim();
+  if (!str) return 'Sparkles';
+
+  // Protection & Boucliers & Sécurité
+  if (
+    str.includes('protect') || str.includes('kariya') || str.includes('hifz') || 
+    str.includes('bouclier') || str.includes('garde') || str.includes('defense')
+  ) {
+    return 'ShieldCheck';
+  }
+
+  // Coran, Sourates, Versets, Al-A'raf, Ayah, etc.
+  if (
+    str.includes('verset') || str.includes('sourat') || str.includes('surah') || 
+    str.includes('coran') || str.includes('quran') || str.includes('ayah') || 
+    str.includes('aya') || str.includes('araf') || str.includes('al-a-raf')
+  ) {
+    return 'BookOpen';
+  }
+
+  // Élévation, Rayonnement, Daukaka, Honneur, Succès, Charisme, Gloire
+  if (
+    str.includes('elevation') || str.includes('daukaka') || str.includes('honneur') || 
+    str.includes('rayonnement') || str.includes('succes') || str.includes('prestige') || 
+    str.includes('gloire') || str.includes('charisme') || str.includes('montee')
+  ) {
+    return 'Sparkles';
+  }
+
+  // Plantes, Recettes, Santé, Tisanes, Nassi, Nature, Arbres, Feuilles, Racines, Ingrédients
+  if (
+    str.includes('plante') || str.includes('recette') || str.includes('nature') || 
+    str.includes('guerison') || str.includes('sante') || str.includes('bain') || 
+    str.includes('nassi') || str.includes('feuille') || str.includes('arbre') ||
+    str.includes('tisane') || str.includes('racine') || str.includes('herbe') ||
+    str.includes('medecine')
+  ) {
+    return 'Leaf';
+  }
+
+  // Ouvertures, Clés, Fath, Bude, Portes
+  if (
+    str.includes('ouvert') || str.includes('fath') || str.includes('bude') || 
+    str.includes('porte') || str.includes('cle') || str.includes('key')
+  ) {
+    return 'Key';
+  }
+
+  // Richesse, Provisions, Argent, Arziki, Rizq, Monnaie, Fortune, Commerce
+  if (
+    str.includes('provis') || str.includes('richesse') || str.includes('argent') || 
+    str.includes('arziki') || str.includes('rizq') || str.includes('financ') || 
+    str.includes('fortune') || str.includes('commerce') || str.includes('gain') ||
+    str.includes('wealth')
+  ) {
+    return 'Coins';
+  }
+
+  // Azkar, Dhikr, Zikr, Litanies, Nuit, Tasbih
+  if (
+    str.includes('azkar') || str.includes('dhikr') || str.includes('zikr') || 
+    str.includes('tasbih') || str.includes('litanie') || str.includes('tahlil')
+  ) {
+    return 'MoonStar';
+  }
+
+  // Wird, Awrad, Voies spirituelles, Confréries
+  if (str.includes('wird') || str.includes('awrad') || str.includes('tariq') || str.includes('cheikh')) {
+    return 'Scroll';
+  }
+
+  // Douas, Du'a, Invocations, Addua, Prières, Demandes
+  if (
+    str.includes('doua') || str.includes('dua') || str.includes('invo') || 
+    str.includes('priere') || str.includes('addua') || str.includes('supplic')
+  ) {
+    return 'Heart';
+  }
+
+  // Ruqyah, Soin, Délivrance
+  if (str.includes('ruqyah') || str.includes('delivrance') || str.includes('soin')) {
+    return 'ShieldAlert';
+  }
+
+  // Sihr, Mauvais œil, Sorcellerie, Evil eye, Hassada, Nœuds
+  if (
+    str.includes('sihr') || str.includes('oeil') || str.includes('evil') || 
+    str.includes('sorcell') || str.includes('hassada') || str.includes('jalousie')
+  ) {
+    return 'Flame';
+  }
+
+  // Déblocage, Warware, Libération, Dénouement
+  if (str.includes('debloc') || str.includes('warware') || str.includes('liber') || str.includes('denoue')) {
+    return 'Unlock';
+  }
+
+  // Favoris, Étoiles, Coups de cœur
+  if (str.includes('favori') || str.includes('star') || str.includes('etoile') || str.includes('prefere')) {
+    return 'Star';
+  }
+
+  // Secrets, Asrar, Sirr, Talsam, Mystique, Khawatim
+  if (
+    str.includes('secret') || str.includes('asrar') || str.includes('sirr') || 
+    str.includes('talsam') || str.includes('mystic') || str.includes('khatim')
+  ) {
+    return 'Gem';
+  }
+
+  return 'Sparkles';
+};
+
 export const getSubCategoryFallbackHook = (subName?: string, catName?: string): string => {
   if (!subName) return 'Secrets détaillés et pratiques spirituelles guidées.';
   return `Méthodes éprouvées, zikrs quotidiens et awrads consacrés à ${subName}${catName ? ` (${catName})` : ''}.`;
+};
+
+export const MOCK_PRESET_CATEGORY_IDS = new Set<string>([
+  'secrets-pratiques',
+  'protection-ruqyah',
+  'richesse-ouverture',
+  'invocations-prières',
+  'sciences-spirituelles',
+  'coran-sourates',
+  'wird',
+  'secret',
+  'recette',
+  'versets-protection',
+  'azkar',
+  'ruqyah',
+  'douas',
+  'ouvertures'
+]);
+
+export const isMockCategory = (cat: any): boolean => {
+  if (!cat) return false;
+  const id = (cat.id || '').toString().toLowerCase().trim();
+  if (MOCK_PRESET_CATEGORY_IDS.has(id)) return true;
+
+  const name = (cat.name || '').toString().toLowerCase().trim();
+  const nameEn = (cat.name_en || '').toString().toLowerCase().trim();
+
+  // Match the exact default preset mock titles
+  if (name === 'secrets & pratiques' || nameEn === 'secrets & practices') return true;
+  if (name === 'protection & ruqyah' || nameEn === 'protection & ruqyah') return true;
+  if (name === 'richesse & ouverture' || nameEn === 'wealth & openings') return true;
+  if (name === 'invocations & prières' || nameEn === 'invocations & supplications') return true;
+  if (name === 'sciences spirituelles' || nameEn === 'spiritual sciences') return true;
+  if (name === 'coran & sourates' || nameEn === 'quran & surahs') return true;
+  if (name === 'versets & wirds' || nameEn === 'verses & wirds') return true;
+  if (name === "secrets d'asrar" || nameEn === 'secrets of asrar') return true;
+  if (name === 'recettes spirituelles' || nameEn === 'spiritual recipes') return true;
+
+  return false;
 };

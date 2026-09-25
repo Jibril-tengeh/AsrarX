@@ -966,7 +966,7 @@ export const Onboarding: React.FC<{ onComplete: () => void }> = ({ onComplete })
               <div className="flex justify-center items-center gap-1.5 mb-4 flex-wrap px-2">
                 {slides.map((_, idx) => (
                   <button
-                    key={idx}
+                    key={`onboarding-dot-${idx}`}
                     onClick={() => setStep(idx + 1)}
                     className="cursor-pointer p-0.5 focus:outline-none"
                     title={`Écran ${idx + 1}`}

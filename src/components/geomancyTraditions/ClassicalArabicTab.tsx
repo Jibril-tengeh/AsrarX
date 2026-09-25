@@ -32,7 +32,7 @@ export const ClassicalArabicTab: React.FC<ClassicalArabicTabProps> = ({ houses, 
   const renderDotsVisual = (dots: [number, number, number, number]) => (
     <div className="flex flex-col items-center justify-center space-y-1.5 py-1 px-2.5 bg-amber-500/5 dark:bg-stone-900/60 rounded-md border border-amber-500/20 dark:border-amber-500/30">
       {dots.map((val, idx) => (
-        <div key={idx} className="flex items-center space-x-1.5 h-3">
+        <div key={`classicalarabictab-idx-${idx}`} className="flex items-center space-x-1.5 h-3">
           {val === 1 ? (
             <div className="w-2.5 h-2.5 rounded-full bg-amber-500 dark:bg-amber-400 shadow-sm" />
           ) : (
@@ -202,7 +202,7 @@ export const ClassicalArabicTab: React.FC<ClassicalArabicTabProps> = ({ houses, 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {aspects.map((asp, idx) => (
                 <div 
-                  key={idx}
+                  key={`classicalarabictab-idx-${idx}`}
                   className={`p-4 rounded-xl border transition-all ${
                     asp.harmonicQuality === 'very_favorable'
                       ? 'bg-emerald-500/10 dark:bg-emerald-950/20 border-emerald-500/30'
@@ -425,7 +425,7 @@ export const ClassicalArabicTab: React.FC<ClassicalArabicTabProps> = ({ houses, 
                 </span>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {inqilabList.map((entry, idx) => (
-                    <div key={idx} className="p-4 bg-stone-50 dark:bg-stone-950/60 border border-stone-200 dark:border-stone-800 rounded-xl space-y-3">
+                    <div key={`classicalarabictab-idx-${idx}`} className="p-4 bg-stone-50 dark:bg-stone-950/60 border border-stone-200 dark:border-stone-800 rounded-xl space-y-3">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-3">
                           {renderDotsVisual(entry.figure.dots)}

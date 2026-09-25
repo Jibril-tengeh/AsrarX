@@ -264,7 +264,7 @@ export const PromoVideoCard: React.FC<PromoVideoCardProps> = ({
           {perks.length > 0 && (
             <ul className="space-y-1.5 pt-2 border-t border-white/10">
               {perks.slice(0, 4).map((perk, idx) => (
-                <li key={idx} className="flex items-start gap-2 text-xs sm:text-[13px] text-gray-200 font-medium">
+                <li key={`promovideocard-idx-${idx}`} className="flex items-start gap-2 text-xs sm:text-[13px] text-gray-200 font-medium">
                   <CheckCircle2 
                     size={14} 
                     className="shrink-0 mt-0.5" 

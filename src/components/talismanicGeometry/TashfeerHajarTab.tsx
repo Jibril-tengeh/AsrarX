@@ -150,7 +150,7 @@ export default function TashfeerHajarTab({ language }: TashfeerHajarTabProps) {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {PRESET_INSCRIPTIONS.map((preset, idx) => (
             <button
-              key={idx}
+              key={`tashfeerhajartab-idx-${idx}`}
               onClick={() => setInputText(preset.textArabic)}
               className="p-3 rounded-2xl bg-stone-50 dark:bg-stone-800/80 border border-stone-200 dark:border-stone-700 hover:border-amber-500 text-left transition-all cursor-pointer space-y-1"
             >
@@ -225,7 +225,7 @@ export default function TashfeerHajarTab({ language }: TashfeerHajarTabProps) {
           </h4>
           <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2">
             {epigraphicResult.symbolBreakdown.map((item, idx) => (
-              <div key={idx} className="p-2.5 rounded-xl bg-stone-900 border border-stone-800 text-center space-y-1">
+              <div key={`tashfeerhajartab-idx-${idx}`} className="p-2.5 rounded-xl bg-stone-900 border border-stone-800 text-center space-y-1">
                 <span className="text-lg font-mono text-amber-300 block">{scriptType === 'musnad' ? item.musnad : item.nabataean}</span>
                 <span className="text-xs font-bold text-stone-300 block">{item.char}</span>
                 <span className="text-[10px] font-mono text-amber-400 block">Abjad: {item.abjad}</span>

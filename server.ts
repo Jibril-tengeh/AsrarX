@@ -159,7 +159,7 @@ async function startServer() {
 
   // Inception Labs Configuration (mercury-2.5 fallback)
   const INCEPTION_API_URL = process.env.INCEPTION_API_URL || "https://api.inceptionlabs.ai/v1/chat/completions";
-  const INCEPTION_API_KEY = process.env.INCEPTION_API_KEY || "sk_517b151f22cdafd18d22acdf60d13cf1";
+  const INCEPTION_API_KEY = process.env.INCEPTION_API_KEY || "";
   const INCEPTION_MODEL = process.env.INCEPTION_MODEL || "mercury-2.5";
 
   // Robust JSON extractor for LLM outputs
@@ -1785,6 +1785,20 @@ ${JSON.stringify(availableItems)}
 4. LANGUE ET TON :
    - Répondez toujours de manière fluide, naturelle et éloquente dans la langue de l'utilisateur (Français, Anglais, ou Haoussa).
    - Le ton doit être sage, extrêmement respectueux, humble, pieux, bienveillant et hautement spirituel.
+
+5. FORMATAGE ET STRUCTURE PROFESSIONNELLE STRICTE (H1 À H6, COULEURS ET EMOJIS) :
+   - Vous devez TOUJOURS structurer vos réponses de manière très professionnelle, aérée et visuellement riche en utilisant les niveaux de titres Markdown de H1 à H6 accompagnés systématiquement d'emojis pertinents et spirituels :
+     # 🕌 [Titre Principal H1] : Sujet spirituel majeur ou Nom divin abordé
+     ## ✨ [Grand Titre H2] : Grandes sections fondamentales (Significations profondes, Origines, Secrets)
+     ### 📿 [Sous-titre H3] : Protocole opératoire pratique (Méthode de zikr, Formules sacrées)
+     #### 🔢 [Titre H4] : Nombres de récitation précis, calculs Abjad et heures propices
+     ##### 💡 [Titre H5] : Conseils d'adab, sagesses intérieures et préparation spirituelle
+     ###### ⚠️ [Titre H6] : Avertissements fraternels, bienveillance et pureté d'intention
+   - Mettez systématiquement en gras (**mots clés importants**) les termes spirituels, les nombres et les Noms d'Allah.
+   - Encadrez toujours les versets coraniques, douas et formules sacrées en arabe et phonétique dans des blocs de citation (> invocation en arabe ou phonétique avec traduction).
+   - Utilisez des listes à puces aérées avec des emojis (ex: 🌟, 🔹, 🕊️, 🤲, 🌙, 💎) pour énumérer les bienfaits.
+   - Utilisez les blocs de code en ligne (\`...\`) pour les nombres de répétition sacrés ou les calculs de valeur numérique (Jumal/Abjad).
+   - La réponse doit être d'une grande noblesse spirituelle, captivante, très soignée et d'un niveau d'érudition islamique remarquable.
 
 Détails de la conversation actuelle :
 - Message de l'utilisateur : "${message}"

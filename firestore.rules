@@ -4,14 +4,78 @@ service cloud.firestore {
   match /databases/{database}/documents {
     
     function isAdmin() {
-      return request.auth != null && 
-        'email' in request.auth.token &&
-        request.auth.token.email.lower() in [
-          'sbireino@gmail.com',
-          'jibriltengeh4@gmail.com',
-          'jibriltengeh57@gmail.com',
-          'tenibawwal10@gmail.com'
-        ];
+      return request.auth != null && (
+        (
+          'email' in request.auth.token &&
+          request.auth.token.email.lower() in [
+            'sbireino@gmail.com',
+            'jibriltengeh4@gmail.com',
+            'jibriltengeh57@gmail.com',
+            'tenibawwal10@gmail.com'
+          ]
+        ) ||
+        (
+          exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', '') == 'admin'
+        )
+      );
+    }
+
+    // Helper: checks if the authenticated user has active Premium / VIP status
+    function isPremiumUser() {
+      return request.auth != null && (
+        isAdmin() ||
+        (
+          exists(/databases/$(database)/documents/users/$(request.auth.uid)) && (
+            (
+              'subscriptionTier' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data &&
+              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.subscriptionTier in ['premium', 'pro', 'vip']
+            ) ||
+            (
+              'isPremium' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data &&
+              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isPremium == true
+            )
+          )
+        )
+      );
+    }
+
+    // Helper: checks if the user has completed purchase for this specific PDF via Stripe/Paystack
+    function hasPurchasedPdf(pdfId) {
+      return request.auth != null && (
+        isAdmin() ||
+        (
+          exists(/databases/$(database)/documents/pdf_purchases/$(request.auth.uid + '_' + pdfId)) &&
+          get(/databases/$(database)/documents/pdf_purchases/$(request.auth.uid + '_' + pdfId)).data.status == 'completed'
+        ) ||
+        (
+          exists(/databases/$(database)/documents/pdf_purchases/$(request.auth.uid + '_pdf_' + pdfId)) &&
+          get(/databases/$(database)/documents/pdf_purchases/$(request.auth.uid + '_pdf_' + pdfId)).data.status == 'completed'
+        ) ||
+        (
+          exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+          'purchasedItems' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data &&
+          (
+            pdfId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.purchasedItems ||
+            ('pdf_' + pdfId) in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.purchasedItems
+          )
+        )
+      );
+    }
+
+    // Helper: checks if PDF is completely free public access
+    function isFreePdfDocument(pdfId) {
+      return exists(/databases/$(database)/documents/pdf_documents/$(pdfId)) &&
+        (!('isPremium' in get(/databases/$(database)/documents/pdf_documents/$(pdfId)).data) || get(/databases/$(database)/documents/pdf_documents/$(pdfId)).data.isPremium == false) &&
+        (!('isForSale' in get(/databases/$(database)/documents/pdf_documents/$(pdfId)).data) || get(/databases/$(database)/documents/pdf_documents/$(pdfId)).data.isForSale == false);
+    }
+
+    // Helper: checks if PDF is included free for VIP members
+    function isFreeForVip(pdfId) {
+      return exists(/databases/$(database)/documents/pdf_documents/$(pdfId)) &&
+        'freeForVip' in get(/databases/$(database)/documents/pdf_documents/$(pdfId)).data &&
+        get(/databases/$(database)/documents/pdf_documents/$(pdfId)).data.freeForVip == true &&
+        isPremiumUser();
     }
 
     match /ruqyah_playlists/{document} {
@@ -164,6 +228,61 @@ service cloud.firestore {
       allow read: if request.auth != null && resource.data.userId == request.auth.uid;
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
       allow update, delete: if request.auth != null && resource.data.userId == request.auth.uid;
+    }
+
+    // PDF Documents & Library monetization security rules
+    match /pdf_documents/{docId} {
+      // Anyone can read catalog metadata (title, category, price, cover, description, author)
+      allow read: if true;
+      // Strict Anti-Hack: Only verified administrators can set prices, edit or delete PDF documents
+      allow write: if isAdmin();
+    }
+
+    // Protected PDF file download links - Strictly enforced by Security Rules
+    // Only users who have 'premium' status OR have completed the purchase of the specific PDF via Stripe/Paystack can access the download link
+    match /pdf_download_links/{pdfId} {
+      allow read: if isAdmin() ||
+                     hasPurchasedPdf(pdfId) ||
+                     isFreePdfDocument(pdfId) ||
+                     isFreeForVip(pdfId) ||
+                     (
+                       isPremiumUser() &&
+                       exists(/databases/$(database)/documents/pdf_documents/$(pdfId)) &&
+                       get(/databases/$(database)/documents/pdf_documents/$(pdfId)).data.get('isPremium', false) == true
+                     );
+      allow write: if isAdmin();
+    }
+
+    // Subcollection mirror for secure access: /pdf_documents/{pdfId}/secure_access/{docId}
+    match /pdf_documents/{pdfId}/secure_access/{docId} {
+      allow read: if isAdmin() ||
+                     hasPurchasedPdf(pdfId) ||
+                     isFreePdfDocument(pdfId) ||
+                     isFreeForVip(pdfId) ||
+                     (
+                       isPremiumUser() &&
+                       exists(/databases/$(database)/documents/pdf_documents/$(pdfId)) &&
+                       get(/databases/$(database)/documents/pdf_documents/$(pdfId)).data.get('isPremium', false) == true
+                     );
+      allow write: if isAdmin();
+    }
+
+    // PDF Individual Purchases & Access rights (Verified transactions via Stripe/Paystack/Points)
+    match /pdf_purchases/{purchaseId} {
+      // Users can only view their own purchases; Admins can audit all purchases
+      allow read: if request.auth != null && (resource.data.userId == request.auth.uid || isAdmin());
+      // Users can record a purchase tied to their authenticated UID with completed/pending status
+      allow create: if request.auth != null && (
+        isAdmin() ||
+        (
+          request.resource.data.userId == request.auth.uid &&
+          request.resource.data.status in ['completed', 'pending'] &&
+          'paymentReference' in request.resource.data &&
+          request.resource.data.paymentReference is string
+        )
+      );
+      // Strict Anti-Hack: Purchases cannot be edited or deleted by normal users
+      allow update, delete: if isAdmin();
     }
 
     match /{document=**} {

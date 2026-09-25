@@ -25,6 +25,7 @@ import { LunarDailyInspirationCard } from '../../../components/LunarDailyInspira
 import { VerseSaveExportModal } from '../../../components/VerseSaveExportModal';
 import { dispatchSystemNotification } from '../../../utils/notificationLocalization';
 import { useNetworkStatus } from '../../../hooks/useNetworkStatus';
+import { AsrarHubWatermark } from '../../../components/AsrarHubWatermark';
 
 const MUSHAF_OPTIONS = [
   { id: 'Amiri Quran', name: 'Uthmani (Amiri)', desc: 'Standard Uthmani script', preview: 'بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ\n\nأَرَءَيْتَ ٱلَّذِى يُكَذِّبُ بِٱلدِّينِ ﴿١﴾', style: {fontFamily: '"Amiri Quran", "Amiri", serif'} },
@@ -525,10 +526,10 @@ const renderTajweed = (text: string) => {
       if (match) {
         const [, code, letter] = match;
         const colorClass = TAJWEED_COLORS[code] || '';
-        return <span key={i} className={colorClass}>{letter}</span>;
+        return <span key={`quranfull-i-${i}`} className={colorClass}>{letter}</span>;
       }
     }
-    return <span key={i}>{part}</span>;
+    return <span key={`quranfull-i-${i}`}>{part}</span>;
   });
 };
 
@@ -2970,7 +2971,7 @@ export const QuranFull: React.FC = () => {
                       <div className="space-y-3">
                         {mainVerseResults.map((match, idx) => (
                           <div 
-                            key={idx} 
+                            key={`main-verse-match-${match.surah?.number || idx}-${match.numberInSurah || idx}-${idx}`} 
                             className="bg-white dark:bg-gray-900 rounded-2xl p-4 border border-gray-100 dark:border-gray-800 shadow-sm transition-all hover:border-emerald-200 dark:hover:border-emerald-800 flex flex-col gap-3"
                           >
                             <div className="flex justify-between items-center gap-2">
@@ -4661,7 +4662,7 @@ export const QuranFull: React.FC = () => {
                           <div className="flex flex-wrap gap-2">
                             {searchHistory.map((hist, idx) => (
                               <button
-                                key={idx}
+                                key={`quran-hist-${hist}-${idx}`}
                                 onClick={() => handleAdvancedSearch(undefined, hist)}
                                 className="px-3 py-1.5 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg text-sm hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-emerald-900/30 transition-colors"
                               >
@@ -4681,7 +4682,7 @@ export const QuranFull: React.FC = () => {
                         <>
                           <p className="text-sm text-gray-500 mb-4">{advancedSearchResults.length} résultat(s) trouvé(s)</p>
                           {advancedSearchResults.map((match, idx) => (
-                            <div key={idx} className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+                            <div key={`quran-adv-res-${match.surah?.number || idx}-${match.numberInSurah || idx}-${idx}`} className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
                               <div className="flex justify-between items-start mb-2">
                                 <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/30 px-2 py-1 rounded-md">
                                   {match.surah.name} ({match.surah.number}:{match.numberInSurah}) {match.matchLang ? `• ${match.matchLang.toUpperCase()}` : '• AR'}
@@ -4743,7 +4744,7 @@ export const QuranFull: React.FC = () => {
                <div className="w-full h-32 bg-gray-200 dark:bg-gray-800 rounded-2xl mb-8"></div>
                {/* Skeleton for Ayahs */}
                {Array.from({ length: 5 }).map((_, i) => (
-                 <div key={i} className="bg-white dark:bg-gray-900 rounded-3xl p-6 sm:p-8 border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col items-end">
+                 <div key={`quranfull-i-${i}`} className="bg-white dark:bg-gray-900 rounded-3xl p-6 sm:p-8 border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col items-end">
                    <div className="flex items-center gap-4 w-full mb-6">
                      <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-800"></div>
                      <div className="h-4 bg-gray-200 dark:bg-gray-800 rounded w-1/4"></div>
@@ -4770,7 +4771,8 @@ export const QuranFull: React.FC = () => {
                </div>
              </div>
            ) : (
-             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="space-y-6 pb-32 sm:pb-40">
+             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="space-y-6 pb-32 sm:pb-40 relative overflow-hidden">
+                <AsrarHubWatermark variant="dark" showCentralSeal={true} className="z-0 pointer-events-none" />
                 {(() => {
                   const rawQuery = surahSearchQuery.trim();
                   const queryLower = rawQuery.toLowerCase();
@@ -4862,7 +4864,7 @@ export const QuranFull: React.FC = () => {
                             const isNewPage = !prevAyah || ayah.page !== prevAyah.page;
 
                             return (
-                              <React.Fragment key={ayah.number || `mushaf-ayah-${i}`}>
+                              <React.Fragment key={ayah.number ? `mushaf-ayah-${ayah.number}-${i}` : `mushaf-ayah-${i}`}>
                                 {isNewPage && i > 0 && (
                                   <div className="w-full flex items-center justify-center my-8 opacity-60 select-none block-separator" dir="ltr">
                                     <div className="h-px bg-emerald-500/30 flex-grow"></div>
@@ -4951,7 +4953,7 @@ export const QuranFull: React.FC = () => {
                         const isNewPage = !prevAyah || ayah.page !== prevAyah.page;
 
                         return (
-                        <div key={ayah.number || `ayah-card-${ayah.numberInSurah || i}`} className="flex flex-col gap-4">
+                        <div key={ayah.number ? `ayah-card-${ayah.number}-${i}` : `ayah-card-${ayah.numberInSurah || i}-${i}`} className="flex flex-col gap-4">
                           {isNewPage && i > 0 && (
                             <div className="w-full flex items-center justify-center my-6 opacity-60 select-none">
                               <div className="h-px bg-emerald-500/30 flex-grow"></div>
@@ -5237,7 +5239,7 @@ export const QuranFull: React.FC = () => {
                                   <div className="space-y-2 max-h-32 overflow-y-auto pr-2 custom-scrollbar">
                                     {ruqyahCollections.map((c, idx) => (
                                       <button 
-                                        key={c.id || `col-opt-${c.name || idx}`}
+                                        key={`roqya-col-${c.id || idx}-${idx}`}
  onClick={async () => {
                                           const ayahsToAdd = selectionMode && selectedAyahs.length > 0 ? selectedAyahs : [playlistModalAyah];
                                           const newTracks = ayahsToAdd.map(ayah => {

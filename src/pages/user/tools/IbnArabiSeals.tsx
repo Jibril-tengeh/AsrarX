@@ -1714,7 +1714,7 @@ export const IbnArabiSeals: React.FC = () => {
                     <div className="flex items-center gap-2 flex-wrap" dir="rtl">
                       {selectedShajaratNode.divineNamesAr.map((name, i) => (
                         <span 
-                          key={i} 
+                          key={`ibnarabiseals-i-${i}`} 
                           className="px-3 py-1 rounded-xl bg-amber-100/80 dark:bg-amber-500/15 border border-amber-400 dark:border-amber-500/30 text-amber-950 dark:text-amber-200 font-serif font-bold text-sm"
                         >
                           {name}
@@ -1885,7 +1885,7 @@ export const IbnArabiSeals: React.FC = () => {
                       <span className="font-serif font-bold text-amber-700 dark:text-amber-400">{activePentagramPreset.centerNameAr}</span>
                     </div>
                     {activePentagramPreset.namesAr.map((name, idx) => (
-                      <div key={idx} className="flex justify-between text-[11px]">
+                      <div key={`penta-name-${name}-${idx}`} className="flex justify-between text-[11px]">
                         <span className="text-stone-500 dark:text-slate-400">
                           {idx === 0 ? tStrings.pentagramPresence1 :
                            idx === 1 ? tStrings.pentagramPresence2 :
@@ -2088,7 +2088,7 @@ export const IbnArabiSeals: React.FC = () => {
 
                         <div className="grid grid-cols-5 gap-1.5 w-full max-w-md mx-auto my-2 text-center">
                           {activePentagramPreset.namesAr.map((name, i) => (
-                            <div key={i} className="p-1.5 border border-amber-900/40 rounded-xl bg-amber-100/70 shadow-xs">
+                            <div key={`ibnarabiseals-i-${i}`} className="p-1.5 border border-amber-900/40 rounded-xl bg-amber-100/70 shadow-xs">
                               <span className="text-xs font-bold text-amber-950 block font-serif">{name}</span>
                               <span className="text-[9px] text-amber-800">{langKey === 'ha' ? 'Koliya' : langKey === 'en' ? 'Summit' : 'Sommet'} {i + 1}</span>
                             </div>

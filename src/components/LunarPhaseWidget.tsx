@@ -479,7 +479,7 @@ export const LunarPhaseWidget: React.FC<{ compact?: boolean }> = ({ compact = fa
                 <p className="text-[11px] text-gray-400 font-semibold mb-1">Plantes & Encens :</p>
                 <div className="flex flex-wrap gap-1.5">
                   {lunarData.herbier.plants.map((plant, i) => (
-                    <span key={i} className="text-xs bg-emerald-950/80 text-emerald-300 border border-emerald-800/50 px-2.5 py-0.5 rounded-lg font-medium">
+                    <span key={`lunarphasewidget-i-${i}`} className="text-xs bg-emerald-950/80 text-emerald-300 border border-emerald-800/50 px-2.5 py-0.5 rounded-lg font-medium">
                       🌿 {plant}
                     </span>
                   ))}
@@ -490,7 +490,7 @@ export const LunarPhaseWidget: React.FC<{ compact?: boolean }> = ({ compact = fa
                 <p className="text-[11px] text-gray-400 font-semibold mb-1">Huiles Essentielles :</p>
                 <div className="flex flex-wrap gap-1.5">
                   {lunarData.herbier.essentialOils.map((oil, i) => (
-                    <span key={i} className="text-xs bg-amber-950/80 text-amber-300 border border-amber-800/50 px-2.5 py-0.5 rounded-lg font-medium">
+                    <span key={`lunarphasewidget-i-${i}`} className="text-xs bg-amber-950/80 text-amber-300 border border-amber-800/50 px-2.5 py-0.5 rounded-lg font-medium">
                       💧 {oil}
                     </span>
                   ))}

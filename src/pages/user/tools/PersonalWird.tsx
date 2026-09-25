@@ -1051,7 +1051,7 @@ export const PersonalWird: React.FC = () => {
 
                   return (
                     <div 
-                      key={idx}
+                      key={`asma-wird-card-${name}-${idx}`}
                       className="bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-5 space-y-3"
                     >
                       <div className="flex items-center justify-between gap-4">

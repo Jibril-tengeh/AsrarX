@@ -1526,7 +1526,7 @@ ${t.labels.cityName} ${cityName} (${lat}° N, ${lng}° E)
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {abjadQiblaData.dhikrList.map((item, idx) => (
-                  <div key={idx} className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/40 text-center space-y-1">
+                  <div key={`qibla-dhikr-${item.name || idx}-${idx}`} className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/40 text-center space-y-1">
                     <p className="text-sm font-bold text-emerald-800 dark:text-emerald-300 dir-rtl">{item.name}</p>
                     <p className="text-xs font-mono text-emerald-600 dark:text-emerald-400 font-extrabold">
                       {item.count} {t.labels.reiterations}
@@ -1609,7 +1609,7 @@ ${t.labels.cityName} ${cityName} (${lat}° N, ${lng}° E)
                   { label: t.labels.muraqaba, pct: tellurismData.muraqabaRating, color: 'bg-purple-600' },
                   { label: t.labels.rizq, pct: tellurismData.rizqRating, color: 'bg-indigo-600' }
                 ].map((item, idx) => (
-                  <div key={idx} className="p-3.5 bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-1.5">
+                  <div key={`suitability-${item.label || idx}-${idx}`} className="p-3.5 bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-1.5">
                     <div className="flex justify-between text-xs font-bold text-gray-800 dark:text-gray-200">
                       <span>{item.label}</span>
                       <span className="font-mono">{item.pct}%</span>

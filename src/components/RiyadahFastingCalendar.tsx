@@ -786,7 +786,7 @@ export const RiyadahFastingCalendar: React.FC<RiyadahFastingCalendarProps> = ({
             {/* Days Header */}
             <div className="grid grid-cols-7 border-b border-gray-200 dark:border-gray-700 bg-gray-100/70 dark:bg-gray-800/80 text-center py-2">
               {t.daysHeader.map((dName, idx) => (
-                <div key={idx} className="text-[11px] font-extrabold uppercase text-gray-600 dark:text-gray-300">
+                <div key={`riyadahfastingcalendar-item-${idx}`} className="text-[11px] font-extrabold uppercase text-gray-600 dark:text-gray-300">
                   {dName}
                 </div>
               ))}
@@ -805,7 +805,7 @@ export const RiyadahFastingCalendar: React.FC<RiyadahFastingCalendarProps> = ({
 
                 return (
                   <button
-                    key={idx}
+                    key={`riyadahfastingcalendar-item-${idx}`}
                     onClick={() => setSelectedDate(dayItem.date)}
                     className={`min-h-[70px] sm:min-h-[85px] p-1.5 sm:p-2 text-left transition-all relative flex flex-col justify-between cursor-pointer ${
                       dayItem.isCurrentMonth

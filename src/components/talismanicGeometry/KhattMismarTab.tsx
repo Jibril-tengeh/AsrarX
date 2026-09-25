@@ -378,7 +378,7 @@ export default function KhattMismarTab({ language }: KhattMismarTabProps) {
               const { lines, dots } = item.glyph;
 
               return (
-                <g key={idx} transform={`translate(${xOffset}, 10)`}>
+                <g key={`khattmismartab-idx-${idx}`} transform={`translate(${xOffset}, 10)`}>
                   {/* Lines */}
                   {lines.map((line, lIdx) => (
                     <line

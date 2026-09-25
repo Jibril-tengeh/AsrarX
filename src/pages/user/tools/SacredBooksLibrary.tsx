@@ -45,6 +45,7 @@ import { InteractiveTasbihModal } from '../../../components/barhatiah/Interactiv
 import { IncenseEncyclopediaWidget } from '../../../components/barhatiah/IncenseEncyclopediaWidget';
 import { SpiritualRuhaniyatDirectory } from '../../../components/barhatiah/SpiritualRuhaniyatDirectory';
 import { SmartProblemSearchWidget } from '../../../components/barhatiah/SmartProblemSearchWidget';
+import { AsrarHubWatermark } from '../../../components/AsrarHubWatermark';
 
 const toEasternArabicNumerals = (str: string | number): string => {
   const easternDigits = ['٠', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩'];
@@ -103,7 +104,7 @@ const FormattedRecipe: React.FC<{ recipeText: string; language?: string }> = ({ 
       <div className="space-y-2.5">
         {steps.map((st, idx) => (
           <div
-            key={idx}
+            key={`step-${st.num || idx}-${idx}`}
             className="p-3.5 sm:p-4 bg-gray-50/90 dark:bg-gray-800/80 hover:bg-amber-500/5 dark:hover:bg-amber-500/10 rounded-xl border border-gray-200 dark:border-gray-700/80 shadow-xs transition-all flex items-start gap-3 group"
           >
             {/* Step Number Badge */}
@@ -868,7 +869,7 @@ export const SacredBooksLibrary: React.FC = () => {
                   </h3>
                   <ul className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {getLocalizedIntro(selectedBook).keyThemes.map((theme, i) => (
-                      <li key={i} className="flex items-start gap-2.5 p-3 bg-gray-50 dark:bg-gray-800/80 rounded-xl border border-gray-200 dark:border-gray-700">
+                      <li key={`sacredbookslibrary-i-${i}`} className="flex items-start gap-2.5 p-3 bg-gray-50 dark:bg-gray-800/80 rounded-xl border border-gray-200 dark:border-gray-700">
                         <CheckCircle2 size={16} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                         <span className="text-xs sm:text-sm font-semibold">{theme}</span>
                       </li>
@@ -924,7 +925,9 @@ export const SacredBooksLibrary: React.FC = () => {
                           if (!currentChapter) return null;
 
                           return (
-                            <div className="bg-white dark:bg-gray-900/80 p-6 rounded-2xl border border-gray-750 space-y-6">
+                            <div className="bg-white dark:bg-gray-900/80 p-6 rounded-2xl border border-gray-750 space-y-6 relative overflow-hidden">
+                              <AsrarHubWatermark variant="parchment" showCentralSeal={true} className="z-0 pointer-events-none" />
+                              <div className="relative z-10 space-y-6">
                               {/* Chapter Header */}
                               <div className="border-b border-gray-800 pb-5 space-y-2">
                                 <div className="flex items-center justify-between">
@@ -946,7 +949,7 @@ export const SacredBooksLibrary: React.FC = () => {
                               {/* Chapter Sections */}
                               <div className="space-y-6">
                                 {currentChapter.sections.map((sec, idx) => (
-                                  <div key={idx} className="p-5 bg-gray-50 dark:bg-gray-800/80 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-4 shadow-sm">
+                                  <div key={`chapter-sec-${sec.id || idx}-${idx}`} className="p-5 bg-gray-50 dark:bg-gray-800/80 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-4 shadow-sm">
                                     <div className="flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 dark:border-gray-700/80 pb-3">
                                       <h3 className="font-bold text-amber-800 dark:text-amber-300 text-base flex items-center gap-2">
                                         <span className="w-6 h-6 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-400 text-xs flex items-center justify-center font-bold">
@@ -1035,6 +1038,7 @@ export const SacredBooksLibrary: React.FC = () => {
                                   <ChevronRight size={16} />
                                 </button>
                               </div>
+                              </div>
                             </div>
                           );
                         })()
@@ -1084,7 +1088,7 @@ export const SacredBooksLibrary: React.FC = () => {
                       </h3>
                       <div className="space-y-3">
                         {getLocalizedIntro(selectedBook).chapterBreakdown.map((ch, i) => (
-                          <div key={i} className="p-3.5 bg-gray-50 dark:bg-gray-800/80 rounded-xl border border-gray-200 dark:border-gray-700 text-xs sm:text-sm font-semibold flex items-center gap-3">
+                          <div key={`sacredbookslibrary-i-${i}`} className="p-3.5 bg-gray-50 dark:bg-gray-800/80 rounded-xl border border-gray-200 dark:border-gray-700 text-xs sm:text-sm font-semibold flex items-center gap-3">
                             <span className="w-6 h-6 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-400 font-bold flex items-center justify-center text-xs">
                               {i + 1}
                             </span>
@@ -1480,7 +1484,7 @@ export const SacredBooksLibrary: React.FC = () => {
                                     </h4>
                                     <ul className="space-y-1.5 text-sm text-gray-800 dark:text-gray-200">
                                       {(language === 'en' ? rec.materialsEn : language === 'ha' ? rec.materialsHa : rec.materialsFr).map((m, i) => (
-                                        <li key={i} className="flex items-start gap-2">
+                                        <li key={`sacredbookslibrary-i-${i}`} className="flex items-start gap-2">
                                           <CheckCircle2 size={13} className="text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
                                           <span>{m}</span>
                                         </li>
@@ -1511,7 +1515,7 @@ export const SacredBooksLibrary: React.FC = () => {
                                   </h4>
                                   <div className="space-y-2">
                                     {(language === 'en' ? rec.stepsEn : language === 'ha' ? rec.stepsHa : rec.stepsFr).map((st, idx) => (
-                                      <div key={idx} className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-750 text-sm text-gray-800 dark:text-gray-200">
+                                      <div key={`rec-step-${idx}-${st.slice(0, 10)}`} className="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-750 text-sm text-gray-800 dark:text-gray-200">
                                         <span className="w-5 h-5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-400 text-[11px] font-bold flex items-center justify-center shrink-0">
                                           {idx + 1}
                                         </span>

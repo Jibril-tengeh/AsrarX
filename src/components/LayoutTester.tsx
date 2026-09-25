@@ -177,7 +177,7 @@ export function LayoutTester() {
                     testGridCols === 1 ? 'grid-cols-1' : testGridCols === 2 ? 'grid-cols-2' : 'grid-cols-3'
                   }`}>
                     {Array.from({ length: testGridCols }).map((_, idx) => (
-                      <div key={idx} className="bg-white dark:bg-gray-900 p-2 rounded-lg border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden flex flex-col justify-between">
+                      <div key={`layouttester-item-${idx}`} className="bg-white dark:bg-gray-900 p-2 rounded-lg border border-gray-100 dark:border-gray-800 shadow-sm overflow-hidden flex flex-col justify-between">
                         <div className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 mb-1">Boîte #{idx + 1}</div>
                         <p className="text-[10.5px] leading-relaxed text-gray-600 dark:text-gray-400 break-words overflow-hidden">
                           {getSampleText()}

@@ -142,7 +142,7 @@ export const ChangelogModal: React.FC<ChangelogModalProps> = ({
                 onClick={handleSyncFirestore}
                 disabled={isSyncingFirestore}
                 className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl text-xs font-semibold transition-all cursor-pointer"
-                title="Synchroniser la collection Firebase app_versions"
+                title="Synchroniser l'historique des versions Cloud"
               >
                 {syncSuccess ? (
                   <>
@@ -152,7 +152,7 @@ export const ChangelogModal: React.FC<ChangelogModalProps> = ({
                 ) : (
                   <>
                     <UploadCloud size={14} className={isSyncingFirestore ? 'animate-bounce' : ''} />
-                    <span>{t('changelog.syncFirestore', 'Sync Firestore')}</span>
+                    <span>{t('changelog.syncFirestore', 'Synchroniser le Cloud')}</span>
                   </>
                 )}
               </button>
@@ -309,7 +309,7 @@ export const ChangelogModal: React.FC<ChangelogModalProps> = ({
                   <div className="space-y-2.5">
                     {activeReleaseLoc.highlights.map((item, index) => (
                       <div
-                        key={index}
+                        key={`changelog-hl-${rawActiveRelease.version}-${index}`}
                         className="p-3.5 bg-gray-50 dark:bg-gray-800/60 rounded-2xl border border-gray-100 dark:border-gray-700/60 flex items-start gap-3"
                       >
                         <div className="p-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5">

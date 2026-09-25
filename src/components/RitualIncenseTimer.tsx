@@ -199,7 +199,7 @@ export const RitualIncenseTimer: React.FC<RitualIncenseTimerProps> = ({
           <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
             {[1, 2, 3, 4, 5].map((i) => (
               <motion.div
-                key={i}
+                key={`ritualincensetimer-i-${i}`}
                 animate={{
                   y: [-10, -70, -110],
                   x: [0, (i % 2 === 0 ? 15 : -15), 0],

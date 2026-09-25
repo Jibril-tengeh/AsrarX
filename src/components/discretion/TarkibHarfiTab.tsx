@@ -191,7 +191,7 @@ export default function TarkibHarfiTab({ t }: TarkibHarfiTabProps) {
               <div className="flex flex-wrap gap-2">
                 {glyphData.letters.map((item, idx) => (
                   <span
-                    key={idx}
+                    key={`tarkibharfitab-item-${idx}`}
                     className="px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs font-bold flex items-center gap-1.5"
                   >
                     <span className="font-arabic text-base">{item.char}</span>
@@ -366,7 +366,7 @@ export default function TarkibHarfiTab({ t }: TarkibHarfiTabProps) {
 
                   return (
                     <g
-                      key={idx}
+                      key={`tarkibharfitab-item-${idx}`}
                       transform={`rotate(${stepAngle} ${center} ${center}) translate(0, -${radiusOffset})`}
                       filter="url(#monogramGlow)"
                     >
@@ -434,7 +434,7 @@ export default function TarkibHarfiTab({ t }: TarkibHarfiTabProps) {
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-slate-800 text-gray-800 dark:text-slate-200">
               {glyphData.letters.map((item, idx) => (
-                <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-slate-800/50">
+                <tr key={`tarkibharfitab-item-${idx}`} className="hover:bg-gray-50 dark:hover:bg-slate-800/50">
                   <td className="py-2.5 px-3 font-arabic text-base font-bold text-amber-600 dark:text-amber-400">
                     {item.char}
                   </td>

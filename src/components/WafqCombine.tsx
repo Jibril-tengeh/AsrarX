@@ -241,7 +241,7 @@ export const WafqCombine: React.FC = () => {
           <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto no-scrollbar">
             {DIVINE_NAME_PRESETS.map((p, idx) => (
               <button
-                key={idx}
+                key={`wafqcombine-item-${idx}`}
                 type="button"
                 onClick={() => {
                   setSelectedDivine(p);
@@ -282,7 +282,7 @@ export const WafqCombine: React.FC = () => {
           <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto no-scrollbar">
             {VERSE_PRESETS.map((v, idx) => (
               <button
-                key={idx}
+                key={`wafqcombine-item-${idx}`}
                 type="button"
                 onClick={() => {
                   setSelectedVerse(v);

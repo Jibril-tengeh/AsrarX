@@ -205,7 +205,7 @@ export const FreeTrial24hModal: React.FC<FreeTrial24hModalProps> = ({ isOpen, on
                 const IconComp = feat.icon;
                 return (
                   <div
-                    key={idx}
+                    key={`freetrial24hmodal-item-${idx}`}
                     className="p-3.5 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/15 flex items-start gap-3.5 transition-all duration-300 shadow-md hover:shadow-xl hover:border-amber-500/40 transform-gpu hover:-translate-y-0.5"
                   >
                     <div className="p-2.5 rounded-xl bg-gradient-to-tr from-amber-500/30 to-yellow-500/20 text-amber-300 shrink-0 mt-0.5 border border-amber-500/30 shadow-sm">

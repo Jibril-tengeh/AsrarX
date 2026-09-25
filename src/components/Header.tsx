@@ -1,11 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../contexts/LanguageContext';
-import { Moon, Sun, Languages, User, Users, Shield, LogOut, LogIn, Bell, BellOff, Store, ChevronDown, ChevronUp, Megaphone, X, ExternalLink, MessageCircle, Search, Inbox, MessageSquare, Vote, Radio, Maximize2, Minimize2, HardDrive, HardDriveDownload, Settings, CheckCircle2, Sparkles } from 'lucide-react';
+import { Moon, Sun, Languages, User, Users, Shield, LogOut, LogIn, Bell, BellOff, Store, ChevronDown, ChevronUp, Megaphone, X, ExternalLink, MessageCircle, Search, Inbox, MessageSquare, Vote, Radio, HardDrive, HardDriveDownload, Settings, CheckCircle2, Sparkles } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useFeatures } from '../contexts/FeatureContext';
 import { useAppBranding } from '../contexts/BrandingContext';
-import { useFullscreen } from '../contexts/FullscreenContext';
 import { signOut, db } from '../lib/firebase';
 import { collection, query, orderBy, onSnapshot, limit, doc, updateDoc } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'motion/react';
@@ -29,7 +28,6 @@ export const Header: React.FC = () => {
   const { user, isPremium } = useAuth();
   const { featureToggles } = useFeatures();
   const { branding } = useAppBranding();
-  const { isFullscreen, toggleFullscreen } = useFullscreen();
   const [langMenuOpen, setLangMenuOpen] = useState(false);
   const [notifMenuOpen, setNotifMenuOpen] = useState(false);
   const [announcementOpen, setAnnouncementOpen] = useState(false);
@@ -401,19 +399,6 @@ export const Header: React.FC = () => {
               <Search size={18} />
             </motion.button>
 
-            {/* Transparent Fullscreen Button in Header */}
-            <motion.button
-              id="header-fullscreen-toggle"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={toggleFullscreen}
-              className="p-1 min-[375px]:p-1.5 sm:p-2 rounded-full bg-transparent hover:bg-emerald-700/60 dark:hover:bg-emerald-900/60 text-white transition-colors cursor-pointer"
-              title={isFullscreen ? (language === 'fr' ? 'Quitter le Plein Écran' : 'Exit Fullscreen') : (language === 'fr' ? 'Mode Plein Écran' : 'Enter Fullscreen')}
-              aria-label="Fullscreen Toggle"
-            >
-              {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
-            </motion.button>
-
             {(user?.role === 'admin' || ['jibriltengeh4@gmail.com', 'sbireino@gmail.com', 'tenibawwal10@gmail.com', 'jibriltengeh57@gmail.com'].includes(user?.email?.toLowerCase() || '')) && (
               <Link to="/admin">
                 <motion.div
@@ -533,15 +518,15 @@ export const Header: React.FC = () => {
       <AnimatePresence>
         {showLoginSuccessNotification && (
           <motion.div
-            initial={{ opacity: 0, y: 50, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.9 }}
-            className="fixed bottom-20 left-4 right-4 sm:left-auto sm:right-6 sm:w-80 z-[120]"
+            initial={{ opacity: 0, y: 35, scale: 0.92, x: '-50%' }}
+            animate={{ opacity: 1, y: 0, scale: 1, x: '-50%' }}
+            exit={{ opacity: 0, y: 20, scale: 0.92, x: '-50%' }}
+            className="fixed bottom-24 left-1/2 z-[150] w-auto max-w-[92vw] sm:max-w-md pointer-events-auto"
           >
-            <div className="bg-emerald-600 dark:bg-emerald-700 text-white px-5 py-3.5 rounded-2xl shadow-xl border border-emerald-500/20 flex items-center gap-3">
-              <span className="text-lg">🎉</span>
-              <div className="text-left">
-                <p className="text-[10px] font-black uppercase tracking-wider text-emerald-100">
+            <div className="bg-emerald-600 dark:bg-emerald-700 text-white px-5 py-3.5 rounded-2xl shadow-2xl border border-emerald-400/30 flex items-center justify-center text-center gap-3">
+              <span className="text-xl shrink-0">🎉</span>
+              <div className="text-center">
+                <p className="text-[11px] font-black uppercase tracking-wider text-emerald-100">
                   {language === "en" ? "Connection Established" : language === "ha" ? "An haɗa lami lafiya" : "Connexion établie"}
                 </p>
                 <p className="text-xs font-bold text-white mt-0.5">

@@ -406,7 +406,7 @@ export const DairaAsSirr: React.FC = () => {
                 const y = 250 + 200 * Math.sin(rad);
                 return (
                   <text
-                    key={i}
+                    key={`dairaassirr-i-${i}`}
                     x={x}
                     y={y}
                     fill={currentTheme.accent}
@@ -430,7 +430,7 @@ export const DairaAsSirr: React.FC = () => {
                 const y = 250 + 160 * Math.sin(rad);
                 return (
                   <text
-                    key={i}
+                    key={`dairaassirr-i-${i}`}
                     x={x}
                     y={y}
                     fill={currentTheme.text}

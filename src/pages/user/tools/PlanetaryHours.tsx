@@ -34,6 +34,12 @@ import { FalakManazilLiveTab } from '../../../components/falak/FalakManazilLiveT
 import { FalakSmartTimingTab } from '../../../components/falak/FalakSmartTimingTab';
 import { FalakParchmentModal } from '../../../components/falak/FalakParchmentModal';
 import { AsrarHubWatermark } from '../../../components/AsrarHubWatermark';
+import { Capacitor } from '@capacitor/core';
+import {
+  requestNotificationPermission,
+  playNotificationTone
+} from '../../../utils/planetaryNotifications';
+import { dispatchSystemNotification } from '../../../utils/notificationLocalization';
 
 export const PlanetaryHours: React.FC = () => {
   const { language } = useLanguage();
@@ -44,7 +50,10 @@ export const PlanetaryHours: React.FC = () => {
   const [geoStatus, setGeoStatus] = useState<string>('');
   const [isLocating, setIsLocating] = useState<boolean>(false);
   const [showParchmentModal, setShowParchmentModal] = useState<boolean>(false);
-  const [notificationToast, setNotificationToast] = useState<string | null>(null);
+  const [notificationToast, setNotificationToast] = useState<{
+    type: 'success' | 'warning' | 'info';
+    message: string;
+  } | null>(null);
 
   // Live real-time tick every second
   useEffect(() => {
@@ -105,24 +114,39 @@ export const PlanetaryHours: React.FC = () => {
   }, [nowTime]);
 
   const handleEnableNotifications = async () => {
-    if (!('Notification' in window)) {
-      setNotificationToast("Les notifications ne sont pas supportées par votre navigateur.");
-      setTimeout(() => setNotificationToast(null), 4000);
-      return;
+    try {
+      const granted = await requestNotificationPermission();
+      if (granted) {
+        playNotificationTone();
+        setNotificationToast({
+          type: 'success',
+          message: "Alertes spirituelles et notifications des heures planétaires activées avec succès !"
+        });
+        dispatchSystemNotification(
+          "AsrarHub • Falak & Manāzil",
+          "Les alertes spirituelles des heures planétaires sont actives sur votre appareil.",
+          { type: 'planetary_alert' }
+        ).catch(() => {});
+      } else {
+        setNotificationToast({
+          type: 'warning',
+          message: "Permission de notification non accordée. Vous pouvez l'autoriser dans les paramètres de votre appareil."
+        });
+      }
+    } catch (err) {
+      if (typeof window !== 'undefined' && !('Notification' in window) && !Capacitor.isNativePlatform()) {
+        setNotificationToast({
+          type: 'info',
+          message: "Les notifications push web nécessitent un navigateur moderne (Chrome/Firefox/Safari) ou l'application installée."
+        });
+      } else {
+        setNotificationToast({
+          type: 'warning',
+          message: "Impossible d'activer les notifications pour le moment."
+        });
+      }
     }
-
-    let perm = Notification.permission;
-    if (perm !== 'granted') {
-      perm = await Notification.requestPermission();
-    }
-
-    if (perm === 'granted') {
-      setNotificationToast("Alertes spirituelles activées avec succès !");
-      setTimeout(() => setNotificationToast(null), 4000);
-    } else {
-      setNotificationToast("Permission de notification refusée.");
-      setTimeout(() => setNotificationToast(null), 4000);
-    }
+    setTimeout(() => setNotificationToast(null), 5000);
   };
 
   return (
@@ -182,10 +206,24 @@ export const PlanetaryHours: React.FC = () => {
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -10 }}
-          className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/70 border border-emerald-400 text-emerald-900 dark:text-emerald-200 text-xs font-bold flex items-center gap-2"
+          className={`p-3 rounded-2xl border text-xs font-bold flex items-center gap-2.5 shadow-sm transition-all ${
+            notificationToast.type === 'success'
+              ? 'bg-emerald-50 dark:bg-emerald-950/70 border-emerald-400 text-emerald-900 dark:text-emerald-200'
+              : notificationToast.type === 'warning'
+              ? 'bg-amber-50 dark:bg-amber-950/70 border-amber-400 text-amber-900 dark:text-amber-200'
+              : 'bg-indigo-50 dark:bg-indigo-950/70 border-indigo-400 text-indigo-900 dark:text-indigo-200'
+          }`}
         >
-          <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-          <span>{notificationToast}</span>
+          {notificationToast.type === 'success' && (
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+          )}
+          {notificationToast.type === 'warning' && (
+            <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
+          )}
+          {notificationToast.type === 'info' && (
+            <Bell className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
+          )}
+          <span>{notificationToast.message}</span>
         </motion.div>
       )}
 

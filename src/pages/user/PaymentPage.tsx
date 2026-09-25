@@ -1047,7 +1047,7 @@ export const PaymentPage: React.FC = () => {
 
               <ul className="space-y-2.5 sm:space-y-4 mb-6 flex-1">
                 {plan.features.map((feature, idx) => (
-                  <li key={idx} className="flex items-start gap-2.5">
+                  <li key={`feature-${plan.id}-${idx}`} className="flex items-start gap-2.5">
                     <div className={`mt-0.5 p-1 rounded-full bg-gradient-to-r ${plan.color} text-white shrink-0`}>
                       <Check size={10} strokeWidth={4} />
                     </div>

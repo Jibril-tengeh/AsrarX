@@ -200,7 +200,7 @@ export const PremiumLockScreen: React.FC<PremiumLockScreenProps> = ({
         {/* Perks & Benefits Section */}
         <div className="w-full bg-white/5 border border-white/10 rounded-2xl p-3.5 sm:p-4 mb-6 backdrop-blur-md text-left space-y-2.5 shadow-inner">
           {texts.perks.map((perk, index) => (
-            <div key={index} className="flex items-start gap-2.5 text-xs text-amber-100/95 font-semibold">
+            <div key={`prem-feature-${index}`} className="flex items-start gap-2.5 text-xs text-amber-100/95 font-semibold">
               <div className="p-0.5 rounded-full bg-amber-400/25 text-amber-300 shrink-0 mt-0.5 border border-amber-400/30">
                 <CheckCircle2 size={12} className="stroke-[2.5]" />
               </div>

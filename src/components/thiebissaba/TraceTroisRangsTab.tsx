@@ -159,7 +159,7 @@ export default function TraceTroisRangsTab({
         <div className="flex flex-wrap items-center gap-1.5 py-1">
           {dotsArray.map((_, idx) => (
             <div
-              key={idx}
+              key={`tracetroisrangstab-idx-${idx}`}
               className="w-3 h-3 rounded-full bg-amber-400/80 border border-amber-300 shadow-[0_0_8px_rgba(251,191,36,0.6)] animate-pulse"
               style={{ animationDelay: `${idx * 40}ms` }}
             />
@@ -349,7 +349,7 @@ export default function TraceTroisRangsTab({
 
               {/* Clicked Dots */}
               {sandDots.map((dot, idx) => (
-                <circle key={idx} cx={dot.x} cy={dot.y} r="5" fill="#f59e0b" stroke="#fef3c7" strokeWidth="1" />
+                <circle key={`tracetroisrangstab-idx-${idx}`} cx={dot.x} cy={dot.y} r="5" fill="#f59e0b" stroke="#fef3c7" strokeWidth="1" />
               ))}
             </svg>
 

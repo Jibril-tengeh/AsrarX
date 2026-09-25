@@ -26,6 +26,7 @@ import {
   Globe,
   Plus,
   Square,
+  CheckSquare,
   Sparkles,
   Maximize2,
   ChevronLeft,
@@ -65,10 +66,18 @@ import {
   Loader2,
   Edit3,
   Clock,
-  LayoutGrid
+  LayoutGrid,
+  MoreVertical,
+  PenSquare,
+  ArrowLeft,
+  ScrollText,
+  BookOpen,
+  ArrowUp
 } from "lucide-react";
+import { AuthModal } from "../../components/AuthModal";
 import { CommunityPostContent } from "../../components/CommunityPostContent";
-import { db } from "../../lib/firebase";
+import { EmojiPickerPopover } from "../../components/chat/EmojiPickerPopover";
+import { db, auth } from "../../lib/firebase";
 import {
   collection,
   addDoc,
@@ -86,12 +95,16 @@ import {
 import { useAuth } from "../../contexts/AuthContext";
 import { useLanguage } from "../../contexts/LanguageContext";
 import { useLocation, useNavigate } from "react-router-dom";
+import { useBackButton } from "../../hooks/useBackButton";
 import Editor from "react-simple-code-editor";
 import Prism from "prismjs";
 
 // Helper components
 import { PostComments } from "./PostComments";
 import { DirectMessages } from "./DirectMessages";
+import { getApiUrl } from "../../lib/api";
+import { downloadImageHighRes } from "../../utils/downloadHelper";
+import { CommunityAiAssistantModal } from "../../components/chat/CommunityAiAssistantModal";
 
 interface Post {
   id: string;
@@ -113,6 +126,7 @@ interface Post {
     code: string;
     language: string;
     explanation?: string;
+    showPreviewDirectly?: boolean;
   };
   voiceNotes?: string[]; // base64 array
   attachments?: {
@@ -139,6 +153,39 @@ interface Post {
     isClosed?: boolean;
   };
 }
+
+// Robust chronological timestamp resolution in milliseconds
+export const getPostTimestampMs = (post: any): number => {
+  if (!post) return 0;
+  const val = post.createdAt;
+  if (!val) {
+    if (typeof post.id === "string") {
+      const match = post.id.match(/\d{10,13}/);
+      if (match) return Number(match[0]);
+    }
+    return Date.now(); // brand new / pending serverTimestamp
+  }
+  if (val instanceof Date) return isNaN(val.getTime()) ? Date.now() : val.getTime();
+  if (typeof val?.toMillis === "function") return val.toMillis();
+  if (typeof val?.toDate === "function") {
+    try {
+      const d = val.toDate();
+      return isNaN(d.getTime()) ? Date.now() : d.getTime();
+    } catch (_) {}
+  }
+  if (typeof val?.seconds === "number") {
+    return val.seconds * 1000 + (val.nanoseconds ? Math.round(val.nanoseconds / 1000000) : 0);
+  }
+  if (typeof val?._seconds === "number") return val._seconds * 1000;
+  if (typeof val === "number") return val < 10000000000 ? val * 1000 : val;
+  if (typeof val === "string") {
+    const parsed = Date.parse(val);
+    if (!isNaN(parsed)) return parsed;
+    const num = Number(val);
+    if (!isNaN(num)) return num < 10000000000 ? num * 1000 : num;
+  }
+  return Date.now();
+};
 
 interface Member {
   id: string;
@@ -343,6 +390,28 @@ CREATE TABLE my_zikr_tracker (
 </div>`
 };
 
+const ADMIN_EMAILS = [
+  "jibriltengeh4@gmail.com",
+  "sbireino@gmail.com",
+  "tenibawwal10@gmail.com",
+  "jibriltengeh57@gmail.com"
+];
+
+export const checkIsAdmin = (u: any): boolean => {
+  if (!u) return false;
+  if (u.role === "admin" || u.role === "Admin") return true;
+  if (u.email && ADMIN_EMAILS.includes(u.email.toLowerCase())) return true;
+  return false;
+};
+
+export const canUserDeletePost = (post: any, currentUser: any): boolean => {
+  if (!currentUser || !post) return false;
+  if (checkIsAdmin(currentUser)) return true;
+  if (post.authorId && post.authorId === currentUser.uid) return true;
+  if (post.authorName && (post.authorName === currentUser.displayName || post.authorName === currentUser.name)) return true;
+  return false;
+};
+
 export const Community: React.FC = () => {
   const { language } = useLanguage();
   const { user } = useAuth();
@@ -360,7 +429,10 @@ export const Community: React.FC = () => {
 
   // Message Sending Inputs
   const [messageText, setMessageText] = useState("");
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [replyToPost, setReplyToPost] = useState<Post | null>(null);
+  const messageInputRef = useRef<HTMLInputElement | null>(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   // Media Attachment States
   const [attachedMedias, setAttachedMedias] = useState<{ type: "image" | "video" | "audio" | "document"; url: string; fileName?: string; fileSize?: string }[]>([]);
@@ -381,10 +453,14 @@ export const Community: React.FC = () => {
 
   // AI Chat States
   const [aiChatMessages, setAiChatMessages] = useState<{ sender: "user" | "ai"; text: string }[]>([
-    { sender: "ai", text: "Salam Alaykoum. Je suis votre Guide spirituel IA. Posez-moi des questions sur les wirds, les Noms d'Allah, l'interprétation de vos rêves ou les secrets spirituels d'AsrarHub." }
+    {
+      sender: "ai",
+      text: `# 🕌 Salam Alaykoum wa Rahmatoullah\n\nBienvenue dans votre **Guide Spirituel IA Asrar** officiel.\n\n## ✨ Que souhaitez-vous approfondir aujourd'hui ?\n\nPosez-moi vos questions avec précision sur :\n* 📿 **Les wirds authentiques** et méthodes de zikr\n* 🌟 **Les Noms d'Allah (Asma-ul-Husna)** et leurs bienfaits célestes\n* 🌙 **L'interprétation de vos songes** selon Ibn Sirin\n* 📖 **Les secrets spirituels & recettes coraniques** d'AsrarHub`
+    }
   ]);
   const [aiInputText, setAiInputText] = useState("");
   const [isAiLoading, setIsAiLoading] = useState(false);
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
 
   // Voice recording simulation states
   const [isRecording, setIsRecording] = useState(false);
@@ -399,6 +475,7 @@ export const Community: React.FC = () => {
   // Search filter
   const [chatSearchQuery, setChatSearchQuery] = useState("");
   const [showSearchInput, setShowSearchInput] = useState(false);
+  const [isScrolledUp, setIsScrolledUp] = useState(false);
 
   // Modals
   const [isPollModalOpen, setIsPollModalOpen] = useState(false);
@@ -415,6 +492,28 @@ export const Community: React.FC = () => {
   const [selectedProfileMember, setSelectedProfileMember] = useState<Member | null>(null);
   const [lightboxImages, setLightboxImages] = useState<string[]>([]);
   const [lightboxIndex, setLightboxIndex] = useState(0);
+  const [lightboxZoom, setLightboxZoom] = useState(100);
+  const [lightboxRotation, setLightboxRotation] = useState(0);
+  const [isDownloadingHD, setIsDownloadingHD] = useState(false);
+  const [lightboxMeta, setLightboxMeta] = useState<{ width: number; height: number } | null>(null);
+
+  useEffect(() => {
+    setLightboxZoom(100);
+    setLightboxRotation(0);
+    const activeUrl = lightboxImages[lightboxIndex];
+    if (activeUrl) {
+      const img = new Image();
+      img.onload = () => {
+        setLightboxMeta({ width: img.naturalWidth || img.width, height: img.naturalHeight || img.height });
+      };
+      img.onerror = () => {
+        setLightboxMeta(null);
+      };
+      img.src = activeUrl;
+    } else {
+      setLightboxMeta(null);
+    }
+  }, [lightboxIndex, lightboxImages]);
 
   // Professional Document Viewer state
   const [docViewerFile, setDocViewerFile] = useState<{ url: string; fileName?: string; fileSize?: string; type?: string } | null>(null);
@@ -424,9 +523,51 @@ export const Community: React.FC = () => {
   const [docViewerTab, setDocViewerTab] = useState<"viewer" | "text" | "details">("viewer");
   const [docViewerCopied, setDocViewerCopied] = useState(false);
   const [docSearchQuery, setDocSearchQuery] = useState("");
+  const [docViewerPdfMode, setDocViewerPdfMode] = useState<"continuous" | "single">(() => {
+    try {
+      const saved = localStorage.getItem("asrarhub_pdf_view_mode");
+      if (saved === "continuous" || saved === "single") return saved;
+    } catch (_) {}
+    return "continuous";
+  });
+  const [isDocViewerFullscreen, setIsDocViewerFullscreen] = useState(false);
+
+  const toggleDocViewerFullscreen = () => {
+    setIsDocViewerFullscreen((prev) => {
+      const next = !prev;
+      try {
+        if (next) {
+          const docElem = document.documentElement;
+          if (docElem.requestFullscreen) {
+            docElem.requestFullscreen().catch(() => {});
+          }
+        } else {
+          if (document.fullscreenElement && document.exitFullscreen) {
+            document.exitFullscreen().catch(() => {});
+          }
+        }
+      } catch (_) {}
+      return next;
+    });
+  };
+
+  useEffect(() => {
+    const handleFsChange = () => {
+      if (!document.fullscreenElement && isDocViewerFullscreen) {
+        setIsDocViewerFullscreen(false);
+      }
+    };
+    document.addEventListener("fullscreenchange", handleFsChange);
+    document.addEventListener("webkitfullscreenchange", handleFsChange);
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFsChange);
+      document.removeEventListener("webkitfullscreenchange", handleFsChange);
+    };
+  }, [isDocViewerFullscreen]);
 
   const handleOpenDocViewer = (file: { url: string; fileName?: string; fileSize?: string; type?: string }) => {
     setDocViewerFile(file);
+    setIsDocViewerFullscreen(false);
     setDocViewerZoom(100);
     setDocViewerRotation(0);
     setDocViewerTab("viewer");
@@ -491,6 +632,13 @@ export const Community: React.FC = () => {
   const [editingPostId, setEditingPostId] = useState<string | null>(null);
   const [editPostContent, setEditPostContent] = useState<string>("");
   const [isSubmittingEdit, setIsSubmittingEdit] = useState<boolean>(false);
+
+  // Multi-selection / Batch deletion states
+  const [isSelectionMode, setIsSelectionMode] = useState<boolean>(false);
+  const [selectedPostIds, setSelectedPostIds] = useState<string[]>([]);
+  const [postToDelete, setPostToDelete] = useState<{ id?: string; count?: number; isBatch?: boolean; content?: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState<boolean>(false);
+  const [deleteToast, setDeleteToast] = useState<string | null>(null);
 
   // Inline Compiler logs
   const [compiledOutputs, setCompiledOutputs] = useState<Record<string, string[]>>({});
@@ -705,7 +853,7 @@ export const Community: React.FC = () => {
     setIsAiLoading(true);
 
     try {
-      const response = await fetch("/api/community/ai-chat", {
+      const response = await fetch(getApiUrl("/api/community/ai-chat"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -727,12 +875,56 @@ export const Community: React.FC = () => {
     }
   };
 
-  // Refs for scroll container
-  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const handleResetAiChat = () => {
+    setAiChatMessages([
+      {
+        sender: "ai",
+        text: `# 🕌 Salam Alaykoum wa Rahmatoullah\n\nBienvenue dans votre **Guide Spirituel IA Asrar** officiel.\n\n## ✨ Que souhaitez-vous approfondir aujourd'hui ?\n\nPosez-moi vos questions avec précision sur :\n* 📿 **Les wirds authentiques** et méthodes de zikr\n* 🌟 **Les Noms d'Allah (Asma-ul-Husna)** et leurs bienfaits célestes\n* 🌙 **L'interprétation de vos songes** selon Ibn Sirin\n* 📖 **Les secrets spirituels & recettes coraniques** d'AsrarHub`
+      }
+    ]);
+  };
 
-  // Fetch Community Posts
+  // Refs for scroll container & bottom anchor
+  const chatContainerRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to bottom helper - guarantees scrolling to the absolute latest message
+  const scrollToBottom = (smooth = false) => {
+    const doScroll = () => {
+      if (messagesEndRef.current) {
+        messagesEndRef.current.scrollIntoView({ behavior: smooth ? "smooth" : "auto", block: "end" });
+      } else if (chatContainerRef.current) {
+        if (smooth) {
+          chatContainerRef.current.scrollTo({
+            top: chatContainerRef.current.scrollHeight + 1000,
+            behavior: "smooth"
+          });
+        } else {
+          chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight + 1000;
+        }
+      }
+    };
+    doScroll();
+    requestAnimationFrame(doScroll);
+    setTimeout(doScroll, 80);
+    setTimeout(doScroll, 200);
+    setTimeout(doScroll, 400);
+  };
+
+  // Helper to deduplicate and sort all posts strictly chronologically (latest at bottom)
+  const sortAndDeduplicatePosts = (allPosts: Post[]): Post[] => {
+    const map = new Map<string, Post>();
+    allPosts.forEach((p) => {
+      if (p && p.id) {
+        map.set(p.id, p);
+      }
+    });
+    return Array.from(map.values()).sort((a, b) => getPostTimestampMs(a) - getPostTimestampMs(b));
+  };
+
+  // Fetch Community Posts with seamless real-time syncing and chronological ordering
   useEffect(() => {
-    const q = query(collection(db, "community_posts"), orderBy("createdAt", "asc"));
+    const postsCollectionRef = collection(db, "community_posts");
 
     const getLocalPosts = (): Post[] => {
       try {
@@ -744,8 +936,9 @@ export const Community: React.FC = () => {
     };
 
     const unsubscribe = onSnapshot(
-      q,
+      postsCollectionRef,
       (snapshot) => {
+        const currentUid = user?.uid || auth.currentUser?.uid;
         const remotePosts = snapshot.docs
           .map((docSnap) => {
             const data = docSnap.data();
@@ -755,28 +948,32 @@ export const Community: React.FC = () => {
               reactions: data.reactions || { like: [], love: [], haha: [], wow: [], sad: [], angry: [] }
             } as Post;
           })
-          .filter((post) => user?.role === "admin" || post.status === "approved" || !post.status);
+          .filter((post) => {
+            // Admin sees all; users see approved posts, unflagged posts, or their own posts
+            return (
+              checkIsAdmin(user) ||
+              post.status === "approved" ||
+              !post.status ||
+              (currentUid && post.authorId === currentUid)
+            );
+          });
 
         const localPosts = getLocalPosts();
-        const existingIds = new Set(remotePosts.map(p => p.id));
-        const uniqueLocal = localPosts.filter(p => !existingIds.has(p.id));
+        const mergedSorted = sortAndDeduplicatePosts([...remotePosts, ...localPosts]);
 
-        setPosts([...remotePosts, ...uniqueLocal]);
-        setTimeout(scrollToBottom, 200);
+        setPosts(mergedSorted);
+        setTimeout(() => scrollToBottom(false), 80);
       },
       (error) => {
         console.warn("Community posts onSnapshot error (using local storage fallback):", error);
-        setPosts(getLocalPosts());
+        setPosts(sortAndDeduplicatePosts(getLocalPosts()));
       }
     );
 
     const handleLocalPostsChanged = () => {
       const localPosts = getLocalPosts();
-      setPosts((prev) => {
-        const existingIds = new Set(prev.map(p => p.id));
-        const uniqueLocal = localPosts.filter(p => !existingIds.has(p.id));
-        return [...prev, ...uniqueLocal];
-      });
+      setPosts((prev) => sortAndDeduplicatePosts([...prev, ...localPosts]));
+      setTimeout(() => scrollToBottom(true), 80);
     };
 
     window.addEventListener("asrarhub_local_posts_changed", handleLocalPostsChanged);
@@ -815,11 +1012,23 @@ export const Community: React.FC = () => {
     return () => unsubscribe();
   }, []);
 
-  // Scroll to bottom helper
-  const scrollToBottom = () => {
-    if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+  // Focus message input or prompt login
+  const focusMessageInput = () => {
+    if (!user) {
+      setShowAuthModal(true);
+      return;
     }
+    scrollToBottom(true);
+    setTimeout(() => {
+      messageInputRef.current?.focus();
+    }, 120);
+  };
+
+  const handleChatScroll = () => {
+    if (!chatContainerRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = chatContainerRef.current;
+    const distanceToBottom = scrollHeight - scrollTop - clientHeight;
+    setIsScrolledUp(distanceToBottom > 160);
   };
 
   useEffect(() => {
@@ -1084,59 +1293,148 @@ export const Community: React.FC = () => {
     }
   };
 
-  // Attach Media File Change (Supports Images, Videos, Audios, Documents)
-  const handleMediaAttach = (e: React.ChangeEvent<HTMLInputElement>, filterType?: "image" | "video" | "audio" | "document") => {
-    const files = e.target.files;
-    if (!files) return;
-    Array.from(files).forEach((file: File) => {
-      if (file.size > 25 * 1024 * 1024) {
-        alert(lang === "ha" ? "Fayil ɗin ya yi yawa (Max 25MB)." : lang === "en" ? "File too large (Max 25MB)." : "Fichier trop volumineux (Max 25Mo).");
-        return;
-      }
+  // Helper: Process and preserve high-resolution images while optimizing size for Firestore
+  const processHighResImage = (file: File): Promise<{ url: string; fileSize: string }> => {
+    return new Promise((resolve) => {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        let type: "image" | "video" | "audio" | "document" = filterType || "image";
-        if (!filterType) {
-          if (file.type.startsWith("video/")) {
-            type = "video";
-          } else if (file.type.startsWith("audio/")) {
-            type = "audio";
-          } else if (
-            file.type.startsWith("text/") ||
-            file.type.includes("pdf") ||
-            file.type.includes("document") ||
-            file.type.includes("sheet") ||
-            file.type.includes("zip") ||
-            file.type.includes("rar") ||
-            file.name.endsWith(".pdf") ||
-            file.name.endsWith(".doc") ||
-            file.name.endsWith(".docx") ||
-            file.name.endsWith(".txt") ||
-            file.name.endsWith(".zip") ||
-            file.name.endsWith(".xlsx") ||
-            file.name.endsWith(".csv")
-          ) {
-            type = "document";
+      reader.onload = (e) => {
+        const rawDataUrl = e.target?.result as string;
+        const img = new Image();
+        img.onload = () => {
+          const maxDim = 2048; // Crisp 2K High Resolution
+          let width = img.naturalWidth || img.width;
+          let height = img.naturalHeight || img.height;
+
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
           }
-        }
-        setAttachedMedias((prev) => [
-          ...prev,
-          {
-            type,
-            url: reader.result as string,
-            fileName: file.name,
+
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = "high";
+            ctx.drawImage(img, 0, 0, width, height);
+            const highResDataUrl = canvas.toDataURL("image/jpeg", 0.90);
+            const estSize = Math.round((highResDataUrl.length * 3) / 4);
+            const sizeStr = estSize >= 1024 * 1024 ? `${(estSize / (1024 * 1024)).toFixed(1)} MB` : `${Math.round(estSize / 1024)} KB`;
+            resolve({ url: highResDataUrl, fileSize: sizeStr });
+            return;
+          }
+          resolve({
+            url: rawDataUrl,
             fileSize: file.size >= 1024 * 1024 ? `${(file.size / (1024 * 1024)).toFixed(1)} MB` : `${(file.size / 1024).toFixed(1)} KB`
-          },
-        ]);
+          });
+        };
+        img.onerror = () => {
+          resolve({
+            url: rawDataUrl,
+            fileSize: file.size >= 1024 * 1024 ? `${(file.size / (1024 * 1024)).toFixed(1)} MB` : `${(file.size / 1024).toFixed(1)} KB`
+          });
+        };
+        img.src = rawDataUrl;
       };
       reader.readAsDataURL(file);
     });
   };
 
+  // Attach Media File Change (Supports Images, Videos, Audios, Documents)
+  const handleMediaAttach = async (e: React.ChangeEvent<HTMLInputElement>, filterType?: "image" | "video" | "audio" | "document") => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    for (const file of Array.from(files) as File[]) {
+      if (file.size > 25 * 1024 * 1024) {
+        alert(lang === "ha" ? "Fayil ɗin ya yi yawa (Max 25MB)." : lang === "en" ? "File too large (Max 25MB)." : "Fichier trop volumineux (Max 25Mo).");
+        continue;
+      }
+
+      let type: "image" | "video" | "audio" | "document" = filterType || "image";
+      if (!filterType) {
+        if (file.type.startsWith("video/")) {
+          type = "video";
+        } else if (file.type.startsWith("audio/")) {
+          type = "audio";
+        } else if (file.type.startsWith("image/")) {
+          type = "image";
+        } else if (
+          file.type.startsWith("text/") ||
+          file.type.includes("pdf") ||
+          file.type.includes("document") ||
+          file.type.includes("sheet") ||
+          file.type.includes("zip") ||
+          file.type.includes("rar") ||
+          file.name.endsWith(".pdf") ||
+          file.name.endsWith(".doc") ||
+          file.name.endsWith(".docx") ||
+          file.name.endsWith(".txt") ||
+          file.name.endsWith(".zip") ||
+          file.name.endsWith(".xlsx") ||
+          file.name.endsWith(".csv")
+        ) {
+          type = "document";
+        }
+      }
+
+      if (type === "image") {
+        try {
+          const processed = await processHighResImage(file);
+          setAttachedMedias((prev) => [
+            ...prev,
+            {
+              type: "image",
+              url: processed.url,
+              fileName: file.name,
+              fileSize: processed.fileSize
+            }
+          ]);
+        } catch (_) {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            setAttachedMedias((prev) => [
+              ...prev,
+              {
+                type: "image",
+                url: reader.result as string,
+                fileName: file.name,
+                fileSize: file.size >= 1024 * 1024 ? `${(file.size / (1024 * 1024)).toFixed(1)} MB` : `${(file.size / 1024).toFixed(1)} KB`
+              }
+            ]);
+          };
+          reader.readAsDataURL(file);
+        }
+      } else {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setAttachedMedias((prev) => [
+            ...prev,
+            {
+              type,
+              url: reader.result as string,
+              fileName: file.name,
+              fileSize: file.size >= 1024 * 1024 ? `${(file.size / (1024 * 1024)).toFixed(1)} MB` : `${(file.size / 1024).toFixed(1)} KB`
+            }
+          ]);
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+  };
+
   // Submit standard text message, audio, or attachment
   const doSendMessage = async (voiceAudioUrl?: string) => {
-    if (!user) {
-      alert(tLocal("mustBeLoggedIn"));
+    const currentAuthUser = auth.currentUser;
+    const effectiveUid = user?.uid || currentAuthUser?.uid;
+    if (!effectiveUid) {
+      setShowAuthModal(true);
       return;
     }
 
@@ -1146,13 +1444,19 @@ export const Community: React.FC = () => {
       return;
     }
 
-    const payload: any = {
-      authorId: user.uid,
-      authorName: user.name || "Aspirant",
-      authorLocation: user.country ? `${user.country}` : "Sénégal",
+    const authorName = user?.name || currentAuthUser?.displayName || user?.email || "Aspirant";
+    const authorLocation = user?.country ? `${user.country}` : "Sénégal";
+    const now = new Date();
+    const tempId = "local_msg_" + Date.now();
+
+    const optimisticPost: Post = {
+      id: tempId,
+      authorId: effectiveUid,
+      authorName,
+      authorLocation,
       status: "approved",
       content: messageText.trim(),
-      createdAt: serverTimestamp() || new Date(),
+      createdAt: now,
       reactions: {
         like: [],
         love: [],
@@ -1164,7 +1468,7 @@ export const Community: React.FC = () => {
     };
 
     if (replyToPost) {
-      payload.replyTo = {
+      optimisticPost.replyTo = {
         authorName: replyToPost.authorName,
         content: replyToPost.content.substring(0, 50),
         postId: replyToPost.id
@@ -1172,23 +1476,51 @@ export const Community: React.FC = () => {
     }
 
     if (attachedMedias.length > 0) {
-      payload.attachments = attachedMedias;
+      optimisticPost.attachments = attachedMedias;
     }
 
     if (audioToSend) {
-      payload.voiceNotes = [audioToSend];
+      optimisticPost.voiceNotes = [audioToSend];
     }
+
+    // Instant optimistic render: place at the very bottom of the feed
+    setPosts((prev) => sortAndDeduplicatePosts([...prev, optimisticPost]));
+
+    // Reset inputs immediately
+    setMessageText("");
+    setReplyToPost(null);
+    setAttachedMedias([]);
+    setRecordedAudio(null);
+    scrollToBottom(true);
+
+    const payload: any = {
+      authorId: effectiveUid,
+      authorName,
+      authorLocation,
+      status: "approved",
+      content: optimisticPost.content,
+      createdAt: serverTimestamp(),
+      reactions: optimisticPost.reactions
+    };
+
+    if (optimisticPost.replyTo) payload.replyTo = optimisticPost.replyTo;
+    if (optimisticPost.attachments) payload.attachments = optimisticPost.attachments;
+    if (optimisticPost.voiceNotes) payload.voiceNotes = optimisticPost.voiceNotes;
 
     try {
       await addDoc(collection(db, "community_posts"), payload);
-      // Reset
-      setMessageText("");
-      setReplyToPost(null);
-      setAttachedMedias([]);
-      setRecordedAudio(null);
-      scrollToBottom();
+      scrollToBottom(true);
     } catch (err) {
-      console.error("Error sending message to Firestore:", err);
+      console.warn("Error sending message to Firestore, saving to local posts:", err);
+      try {
+        const local = JSON.parse(localStorage.getItem("asrarhub_local_posts") || "[]");
+        local.push({
+          ...optimisticPost,
+          createdAt: now.toISOString()
+        });
+        localStorage.setItem("asrarhub_local_posts", JSON.stringify(local));
+      } catch (_) {}
+      scrollToBottom(true);
     }
   };
 
@@ -1200,7 +1532,12 @@ export const Community: React.FC = () => {
   // Submit Poll Message
   const handlePublishPoll = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    const currentAuthUser = auth.currentUser;
+    const effectiveUid = user?.uid || currentAuthUser?.uid;
+    if (!effectiveUid) {
+      setShowAuthModal(true);
+      return;
+    }
     if (!pollQuestion.trim()) return;
 
     const options = pollOptions.filter((opt) => opt.trim() !== "");
@@ -1209,13 +1546,20 @@ export const Community: React.FC = () => {
       return;
     }
 
-    const payload: any = {
-      authorId: user.uid,
-      authorName: user.name || "Aspirant",
-      authorLocation: user.country || "Sénégal",
+    const authorName = user?.name || currentAuthUser?.displayName || user?.email || "Aspirant";
+    const authorLocation = user?.country || "Sénégal";
+    const now = new Date();
+    const tempId = "local_poll_" + Date.now();
+
+    const optimisticPollPost: Post = {
+      id: tempId,
+      authorId: effectiveUid,
+      authorName,
+      authorLocation,
       status: "approved",
-      content: `📊 [Sondage] ${pollQuestion}`,
-      createdAt: serverTimestamp() || new Date(),
+      content: `📊 [Sondage] ${pollQuestion.trim()}`,
+      createdAt: now,
+      reactions: { like: [], love: [], haha: [], wow: [], sad: [], angry: [] },
       poll: {
         question: pollQuestion.trim(),
         options: options.map((opt, idx) => ({
@@ -1227,30 +1571,62 @@ export const Community: React.FC = () => {
       }
     };
 
+    setPosts((prev) => sortAndDeduplicatePosts([...prev, optimisticPollPost]));
+    setPollQuestion("");
+    setPollOptions(["", ""]);
+    setIsPollModalOpen(false);
+    scrollToBottom(true);
+
+    const payload: any = {
+      authorId: effectiveUid,
+      authorName,
+      authorLocation,
+      status: "approved",
+      content: optimisticPollPost.content,
+      createdAt: serverTimestamp(),
+      reactions: optimisticPollPost.reactions,
+      poll: optimisticPollPost.poll
+    };
+
     try {
       await addDoc(collection(db, "community_posts"), payload);
-      setPollQuestion("");
-      setPollOptions(["", ""]);
-      setIsPollModalOpen(false);
-      scrollToBottom();
+      scrollToBottom(true);
     } catch (err) {
-      console.error(err);
+      console.warn("Poll Firestore save error, saving to local fallback:", err);
+      try {
+        const local = JSON.parse(localStorage.getItem("asrarhub_local_posts") || "[]");
+        local.push({ ...optimisticPollPost, createdAt: now.toISOString() });
+        localStorage.setItem("asrarhub_local_posts", JSON.stringify(local));
+      } catch (_) {}
+      scrollToBottom(true);
     }
   };
 
   // Submit Code Message
   const handlePublishCode = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return;
+    const currentAuthUser = auth.currentUser;
+    const effectiveUid = user?.uid || currentAuthUser?.uid;
+    if (!effectiveUid) {
+      setShowAuthModal(true);
+      return;
+    }
     if (!codeContent.trim()) return;
 
-    const payload: any = {
-      authorId: user.uid,
-      authorName: user.name || "Aspirant",
-      authorLocation: user.country || "Sénégal",
+    const authorName = user?.name || currentAuthUser?.displayName || user?.email || "Aspirant";
+    const authorLocation = user?.country || "Sénégal";
+    const now = new Date();
+    const tempId = "local_code_" + Date.now();
+
+    const optimisticCodePost: Post = {
+      id: tempId,
+      authorId: effectiveUid,
+      authorName,
+      authorLocation,
       status: "approved",
       content: codeExplanation.trim() || `💻 [Code] Partage de code ${codeLanguage}`,
-      createdAt: serverTimestamp() || new Date(),
+      createdAt: now,
+      reactions: { like: [], love: [], haha: [], wow: [], sad: [], angry: [] },
       codeSnippet: {
         code: codeContent.trim(),
         language: codeLanguage,
@@ -1259,15 +1635,35 @@ export const Community: React.FC = () => {
       }
     };
 
+    setPosts((prev) => sortAndDeduplicatePosts([...prev, optimisticCodePost]));
+    setCodeContent(CODE_TEMPLATES.javascript);
+    setCodeExplanation("");
+    setShowPreviewDirectly(true);
+    setIsCodeModalOpen(false);
+    scrollToBottom(true);
+
+    const payload: any = {
+      authorId: effectiveUid,
+      authorName,
+      authorLocation,
+      status: "approved",
+      content: optimisticCodePost.content,
+      createdAt: serverTimestamp(),
+      reactions: optimisticCodePost.reactions,
+      codeSnippet: optimisticCodePost.codeSnippet
+    };
+
     try {
       await addDoc(collection(db, "community_posts"), payload);
-      setCodeContent(CODE_TEMPLATES.javascript);
-      setCodeExplanation("");
-      setShowPreviewDirectly(true);
-      setIsCodeModalOpen(false);
-      scrollToBottom();
+      scrollToBottom(true);
     } catch (err) {
-      console.error(err);
+      console.warn("Code Firestore save error, saving to local fallback:", err);
+      try {
+        const local = JSON.parse(localStorage.getItem("asrarhub_local_posts") || "[]");
+        local.push({ ...optimisticCodePost, createdAt: now.toISOString() });
+        localStorage.setItem("asrarhub_local_posts", JSON.stringify(local));
+      } catch (_) {}
+      scrollToBottom(true);
     }
   };
 
@@ -1361,10 +1757,10 @@ export const Community: React.FC = () => {
     return parts.join(" • ") || "Message épinglé";
   };
 
-  // Helper: check if a user can edit/delete a post based on time limit
+  // Helper: check if a user can edit a post based on time limit
   const canUserModifyPost = (post: any, currentUser: any, limitMinutes: number): boolean => {
     if (!currentUser || !post) return false;
-    if (currentUser.role === "admin") return true; // Admins can always edit/delete
+    if (checkIsAdmin(currentUser)) return true; // Admins can always edit
     if (post.authorId !== currentUser.uid) return false; // Non-authors cannot modify
 
     if (limitMinutes === -1) return true; // Unlimited limit
@@ -1395,21 +1791,62 @@ export const Community: React.FC = () => {
     return `${days} jour${days > 1 ? "s" : ""}`;
   };
 
-  // Delete message
-  const handleDeletePost = async (postId: string) => {
+  const showDeleteSuccess = (msg: string) => {
+    setDeleteToast(msg);
+    setTimeout(() => setDeleteToast(null), 3500);
+  };
+
+  const toggleSelectPost = (postId: string) => {
+    setSelectedPostIds((prev) =>
+      prev.includes(postId) ? prev.filter((id) => id !== postId) : [...prev, postId]
+    );
+  };
+
+  const enterSelectionModeWithPost = (postId: string) => {
+    setIsSelectionMode(true);
+    setSelectedPostIds((prev) => (prev.includes(postId) ? prev : [...prev, postId]));
+    setActiveContextMenuPostId(null);
+  };
+
+  const exitSelectionMode = () => {
+    setIsSelectionMode(false);
+    setSelectedPostIds([]);
+  };
+
+  // Delete message: opens the confirmation modal
+  const handleDeletePost = (postId: string) => {
     const post = posts.find((p) => p.id === postId);
     if (!post) return;
-    if (!canUserModifyPost(post, user, messageEditDeleteLimitMinutes)) {
-      alert("Le délai d'autorisation de suppression de ce message a expiré.");
+    if (!canUserDeletePost(post, user)) {
+      alert("Vous n'avez pas l'autorisation de supprimer ce message.");
       return;
     }
-    if (window.confirm("Êtes-vous sûr de vouloir supprimer ce message ?")) {
-      try {
-        await deleteDoc(doc(db, "community_posts", postId));
-        setActiveContextMenuPostId(null);
-      } catch (err) {
-        console.error("Error deleting post:", err);
+    setPostToDelete({ id: postId, isBatch: false, content: post.content || "" });
+    setActiveContextMenuPostId(null);
+  };
+
+  // Perform confirmed deletion (single or bulk)
+  const handleConfirmDelete = async () => {
+    if (!postToDelete) return;
+    setIsDeleting(true);
+    try {
+      if (postToDelete.isBatch) {
+        const ids = [...selectedPostIds];
+        await Promise.all(ids.map((id) => deleteDoc(doc(db, "community_posts", id))));
+        showDeleteSuccess(
+          ids.length > 1 ? `${ids.length} messages supprimés avec succès.` : "Message supprimé avec succès."
+        );
+        exitSelectionMode();
+      } else if (postToDelete.id) {
+        await deleteDoc(doc(db, "community_posts", postToDelete.id));
+        showDeleteSuccess("Message supprimé avec succès.");
       }
+    } catch (err) {
+      console.error("Erreur lors de la suppression:", err);
+    } finally {
+      setIsDeleting(false);
+      setPostToDelete(null);
+      setActiveContextMenuPostId(null);
     }
   };
 
@@ -1551,14 +1988,29 @@ export const Community: React.FC = () => {
     }
   };
 
-  // Filter posts based on search input
-  const filteredPosts = posts.filter((p) => {
-    if (!chatSearchQuery) return true;
-    const contentMatch = p.content?.toLowerCase().includes(chatSearchQuery.toLowerCase());
-    const authorMatch = p.authorName?.toLowerCase().includes(chatSearchQuery.toLowerCase());
-    const snippetMatch = p.codeSnippet?.code?.toLowerCase().includes(chatSearchQuery.toLowerCase());
-    return contentMatch || authorMatch || snippetMatch;
-  });
+  // Filter and chronologically sort posts so the latest messages are always at the bottom
+  const filteredPosts = posts
+    .filter((p) => {
+      if (!chatSearchQuery) return true;
+      const contentMatch = p.content?.toLowerCase().includes(chatSearchQuery.toLowerCase());
+      const authorMatch = p.authorName?.toLowerCase().includes(chatSearchQuery.toLowerCase());
+      const snippetMatch = p.codeSnippet?.code?.toLowerCase().includes(chatSearchQuery.toLowerCase());
+      return contentMatch || authorMatch || snippetMatch;
+    })
+    .sort((a, b) => getPostTimestampMs(a) - getPostTimestampMs(b));
+
+  // Messages that the current user is permitted to delete
+  const selectablePosts = filteredPosts.filter((p) => canUserDeletePost(p, user));
+
+  const toggleSelectAll = () => {
+    const selectableIds = selectablePosts.map((p) => p.id);
+    const allSelected = selectableIds.length > 0 && selectableIds.every((id) => selectedPostIds.includes(id));
+    if (allSelected) {
+      setSelectedPostIds([]);
+    } else {
+      setSelectedPostIds(selectableIds);
+    }
+  };
 
   // Get color for user names based on string hash (Telegram name coloring)
   const getNameColorClass = (name: string) => {
@@ -1580,45 +2032,212 @@ export const Community: React.FC = () => {
     return colors[Math.abs(hash) % colors.length];
   };
 
-  // Format timestamp safely
+  // Safe date parser to completely prevent "Invalid Date"
+  const parseDateSafe = (val: any): Date => {
+    if (!val) return new Date();
+    if (val instanceof Date) return isNaN(val.getTime()) ? new Date() : val;
+    if (typeof val?.toDate === "function") {
+      try {
+        const d = val.toDate();
+        if (!isNaN(d.getTime())) return d;
+      } catch (_) {}
+    }
+    if (typeof val?.seconds === "number") {
+      const d = new Date(val.seconds * 1000);
+      if (!isNaN(d.getTime())) return d;
+    }
+    if (typeof val?._seconds === "number") {
+      const d = new Date(val._seconds * 1000);
+      if (!isNaN(d.getTime())) return d;
+    }
+    if (typeof val === "number") {
+      const d = val < 10000000000 ? new Date(val * 1000) : new Date(val);
+      if (!isNaN(d.getTime())) return d;
+    }
+    if (typeof val === "string") {
+      const d = new Date(val);
+      if (!isNaN(d.getTime())) return d;
+      const num = Number(val);
+      if (!isNaN(num)) {
+        const dNum = num < 10000000000 ? new Date(num * 1000) : new Date(num);
+        if (!isNaN(dNum.getTime())) return dNum;
+      }
+    }
+    return new Date();
+  };
+
+  // Format timestamp safely as Telegram 24h format (e.g., 22:18)
   const formatTime = (createdAt: any) => {
-    if (!createdAt) return "00:00";
-    const date = createdAt.toDate ? createdAt.toDate() : new Date(createdAt);
-    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+    const date = parseDateSafe(createdAt);
+    try {
+      return date.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+    } catch (_) {
+      const hh = String(date.getHours()).padStart(2, "0");
+      const mm = String(date.getMinutes()).padStart(2, "0");
+      return `${hh}:${mm}`;
+    }
   };
 
   const formatDateLabel = (createdAt: any) => {
-    if (!createdAt) return "Aujourd'hui";
-    const date = createdAt.toDate ? createdAt.toDate() : new Date(createdAt);
+    const date = parseDateSafe(createdAt);
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
 
     if (date.toDateString() === today.toDateString()) return "Aujourd'hui";
     if (date.toDateString() === yesterday.toDateString()) return "Hier";
-    return date.toLocaleDateString([], { day: "numeric", month: "long", year: "numeric" });
+    return date.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
   };
 
   // Find the pinned message
   const pinnedPost = posts.find(p => p.isPinned);
 
+  // Centralized robust Back Navigation for Community page
+  const handleCommunityBack = (e?: React.MouseEvent | React.TouchEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    // 1. Close any open sub-views, drawers, modals, or view modes first
+    if (isAiModalOpen) {
+      setIsAiModalOpen(false);
+      return;
+    }
+    if (isDocViewerFullscreen) {
+      setIsDocViewerFullscreen(false);
+      if (document.fullscreenElement && document.exitFullscreen) {
+        document.exitFullscreen().catch(() => {});
+      }
+      return;
+    }
+    if (isSelectionMode) {
+      exitSelectionMode();
+      return;
+    }
+    if (docViewerFile) {
+      setDocViewerFile(null);
+      return;
+    }
+    if (lightboxImages && lightboxImages.length > 0) {
+      setLightboxImages([]);
+      return;
+    }
+    if (selectedProfileMember) {
+      setSelectedProfileMember(null);
+      return;
+    }
+    if (isCodeModalOpen) {
+      setIsCodeModalOpen(false);
+      return;
+    }
+    if (isPollModalOpen) {
+      setIsPollModalOpen(false);
+      return;
+    }
+    if (sidebarOpen) {
+      setSidebarOpen(false);
+      return;
+    }
+    if (showSearchInput) {
+      setShowSearchInput(false);
+      setChatSearchQuery("");
+      return;
+    }
+    if (showEmojiPicker) {
+      setShowEmojiPicker(false);
+      return;
+    }
+    if (isAttachMenuOpen) {
+      setIsAttachMenuOpen(false);
+      return;
+    }
+    if (isRecording) {
+      stopRecording();
+      return;
+    }
+    if (replyToPost) {
+      setReplyToPost(null);
+      return;
+    }
+    if (editingPostId) {
+      setEditingPostId(null);
+      setEditPostContent("");
+      return;
+    }
+
+    // 2. Try to pop previous route from internal app route stack (sessionStorage)
+    try {
+      const rawStack = sessionStorage.getItem('asrar_route_stack');
+      let stack: string[] = rawStack ? JSON.parse(rawStack) : [];
+      stack = stack.filter(Boolean);
+
+      while (
+        stack.length > 0 &&
+        (stack[stack.length - 1] === '/community' ||
+         stack[stack.length - 1].startsWith('/community?') ||
+         stack[stack.length - 1].startsWith('/community#'))
+      ) {
+        stack.pop();
+      }
+
+      if (stack.length > 0) {
+        const previousPath = stack.pop()!;
+        sessionStorage.setItem('asrar_route_stack', JSON.stringify(stack));
+        if (previousPath && previousPath !== '/community') {
+          navigate(previousPath);
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn('[CommunityBack] Error reading route stack:', err);
+    }
+
+    // 3. If user has internal history state (React Router session history index > 0)
+    const historyState = window.history.state;
+    if (historyState && typeof historyState.idx === 'number' && historyState.idx > 0) {
+      navigate(-1);
+      return;
+    }
+
+    // 4. Default guaranteed fallback: return directly to user dashboard
+    navigate('/user/dashboard');
+  };
+
+  // Connect mobile / Android hardware back button for open overlays & sub-views
+  const hasActiveInternalOverlay =
+    isAiModalOpen ||
+    isDocViewerFullscreen ||
+    isSelectionMode ||
+    !!docViewerFile ||
+    (lightboxImages && lightboxImages.length > 0) ||
+    !!selectedProfileMember ||
+    isCodeModalOpen ||
+    isPollModalOpen ||
+    sidebarOpen ||
+    showSearchInput ||
+    showEmojiPicker ||
+    isAttachMenuOpen ||
+    isRecording ||
+    !!replyToPost ||
+    !!editingPostId;
+
+  useBackButton(() => {
+    handleCommunityBack();
+  }, hasActiveInternalOverlay);
+
   return (
-    <div 
-      style={{
-        paddingTop: `max(0px, calc(16px + var(--feed-community-offset, 0px) + var(--feed-global-offset, 0px)))`
-      }}
-      className="w-full max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 pb-28 safe-area-pt transition-all duration-300"
-    >
+    <div className="w-full h-full flex-1 flex flex-col min-h-0 relative">
       
       {/* Telegram-specific styles */}
       <style>{`
         .telegram-chat-bg {
-          background-color: #eef2e6;
-          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cpath d='M10 15c2-1.5 4-1.5 5 0s1 3-1 4.5-4 1.5-5 0-1-3 1-4.5zM35 50c1.5-1 3-1 3.5 0s.5 2-.5 3-2.5 1-3.5 0-.5-2 .5-3zm20-35c1.5-1 3-1 3.5 0s.5 2-.5 3-2.5 1-3.5 0-.5-2 .5-3zM20 70c1-1 2-1 2.5 0s.5 1.5-.5 2.5-2 1-2.5 0-.5-1.5.5-2.5zm45 5c1-1 2-1 2.5 0s.5 1.5-.5 2.5-2 1-2.5 0-.5-1.5.5-2.5z' fill='%23a2c595' fill-opacity='0.12'/%3E%3Cpath d='M65 45c1.5-1 3-1 3.5 0s.5 2-.5 3-2.5 1-3.5 0-.5-2 .5-3zM5 45c1.5-1 3-1 3.5 0s.5 2-.5 3-2.5 1-3.5 0-.5-2 .5-3z' fill='%23a2c595' fill-opacity='0.12'/%3E%3Ccircle cx='30' cy='20' r='1.5' fill='%23a2c595' fill-opacity='0.12'/%3E%3Ccircle cx='70' cy='65' r='1.5' fill='%23a2c595' fill-opacity='0.12'/%3E%3Ccircle cx='50' cy='75' r='1.5' fill='%23a2c595' fill-opacity='0.12'/%3E%3Ccircle cx='10' cy='65' r='1.5' fill='%23a2c595' fill-opacity='0.12'/%3E%3Cpath d='M30 65c2 0 3-1 3-2s-1-2-3-2-3 1-3 2 1 2 3 2zm20-30c2 0 3-1 3-2s-1-2-3-2-3 1-3 2 1 2 3 2z' fill='none' stroke='%23a2c595' stroke-width='1' stroke-opacity='0.15'/%3E%3C/svg%3E");
+          background-color: #8da58d;
+          background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%236e8b6e' fill-opacity='0.16' fill-rule='evenodd'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/svg%3E");
         }
         .dark .telegram-chat-bg {
-          background-color: #0b111c;
-          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='80' viewBox='0 0 80 80'%3E%3Cpath d='M10 15c2-1.5 4-1.5 5 0s1 3-1 4.5-4 1.5-5 0-1-3 1-4.5zM35 50c1.5-1 3-1 3.5 0s.5 2-.5 3-2.5 1-3.5 0-.5-2 .5-3zm20-35c1.5-1 3-1 3.5 0s.5 2-.5 3-2.5 1-3.5 0-.5-2 .5-3zM20 70c1-1 2-1 2.5 0s.5 1.5-.5 2.5-2 1-2.5 0-.5-1.5.5-2.5zm45 5c1-1 2-1 2.5 0s.5 1.5-.5 2.5-2 1-2.5 0-.5-1.5.5-2.5z' fill='%231e293b' fill-opacity='0.25'/%3E%3Cpath d='M65 45c1.5-1 3-1 3.5 0s.5 2-.5 3-2.5 1-3.5 0-.5-2 .5-3zM5 45c1.5-1 3-1 3.5 0s.5 2-.5 3-2.5 1-3.5 0-.5-2 .5-3z' fill='%231e293b' fill-opacity='0.25'/%3E%3Ccircle cx='30' cy='20' r='1.5' fill='%231e293b' fill-opacity='0.25'/%3E%3Ccircle cx='70' cy='65' r='1.5' fill='%231e293b' fill-opacity='0.25'/%3E%3Ccircle cx='50' cy='75' r='1.5' fill='%231e293b' fill-opacity='0.25'/%3E%3Ccircle cx='10' cy='65' r='1.5' fill='%231e293b' fill-opacity='0.25'/%3E%3Cpath d='M30 65c2 0 3-1 3-2s-1-2-3-2-3 1-3 2 1 2 3 2zm20-30c2 0 3-1 3-2s-1-2-3-2-3 1-3 2 1 2 3 2z' fill='none' stroke='%231e293b' stroke-width='1' stroke-opacity='0.25'/%3E%3C/svg%3E");
+          background-color: #0e1621;
+          background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%2317212b' fill-opacity='0.45' fill-rule='evenodd'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/svg%3E");
         }
         .no-scrollbar::-webkit-scrollbar {
           display: none;
@@ -1655,50 +2274,235 @@ export const Community: React.FC = () => {
         }
       `}</style>
 
-      <div className="bg-white dark:bg-[#111926] rounded-3xl overflow-hidden border border-gray-100 dark:border-gray-800 shadow-2xl h-[78vh] flex flex-col md:flex-row relative">
+      <div className="w-full flex-1 flex flex-col md:flex-row h-full min-h-0 bg-white dark:bg-[#111926] relative overflow-hidden m-0 p-0 border-0">
         
         {/* Left/Main Column: Telegram Chat Interface */}
-        <div className="flex-1 flex flex-col h-full relative">
+        <div className="flex-1 flex flex-col h-full min-h-0 relative">
           
           {/* Telegram Header */}
-          <div className="bg-white dark:bg-[#151f2d] border-b border-gray-100 dark:border-gray-800/80 px-4 py-3 flex items-center justify-between z-10 shrink-0">
-            <div 
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="flex items-center gap-3 cursor-pointer group hover:opacity-90 transition-opacity min-w-0"
-              title="Cliquer pour afficher/masquer les infos du groupe"
-            >
-              <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-600 flex items-center justify-center text-white font-extrabold shadow-md relative shrink-0">
-                🕌
-                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white dark:border-[#151f2d] rounded-full animate-pulse" />
-              </div>
-              <div className="text-left min-w-0">
-                <h3 className="font-extrabold text-sm sm:text-base text-gray-900 dark:text-white flex items-center gap-1.5 truncate">
-                  {tLocal("communityTitle")}
-                  <Sparkles size={14} className="text-amber-500 animate-pulse shrink-0" />
-                </h3>
-                <p className="text-xs text-gray-400 truncate">
-                  {membersList.length} {tLocal("membersSuffix")} • {membersList.filter(m => m.isOnline).length} {tLocal("onlineSuffix")}
-                </p>
-              </div>
-            </div>
+          <div className="bg-white dark:bg-[#151f2d] border-b border-gray-150 dark:border-gray-800 px-2.5 sm:px-4 py-2 sm:py-2.5 flex items-center justify-between z-10 shrink-0 min-h-[54px]">
+            {isSelectionMode ? (
+              <div className="flex items-center justify-between w-full">
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                  <button
+                    type="button"
+                    onClick={exitSelectionMode}
+                    className="p-1.5 sm:p-2 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-colors cursor-pointer shrink-0"
+                    title="Annuler la sélection"
+                  >
+                    <X size={20} />
+                  </button>
+                  <div className="min-w-0">
+                    <span className="font-bold text-xs sm:text-sm text-gray-900 dark:text-white flex items-center gap-1.5">
+                      <span className="px-2 py-0.5 rounded-full bg-emerald-500 text-white font-mono text-xs">
+                        {selectedPostIds.length}
+                      </span>
+                      sélectionné{selectedPostIds.length > 1 ? "s" : ""}
+                    </span>
+                    <span className="text-[10px] text-gray-500 dark:text-gray-400 truncate hidden min-[440px]:block">
+                      {selectablePosts.length} message{selectablePosts.length > 1 ? "s" : ""} supprimable{selectablePosts.length > 1 ? "s" : ""}
+                    </span>
+                  </div>
+                </div>
 
-            <div className="flex items-center gap-1.5 sm:gap-2">
-              <button
-                onClick={() => setShowSearchInput(!showSearchInput)}
-                className={`p-2 rounded-xl transition-all cursor-pointer ${
-                  showSearchInput ? "bg-emerald-500/10 text-emerald-600" : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                }`}
-              >
-                <Search size={18} />
-              </button>
-              <button
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-                className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 rounded-xl transition-all cursor-pointer"
-                title={tLocal("groupInfo")}
-              >
-                <Info size={18} />
-              </button>
-            </div>
+                <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={toggleSelectAll}
+                    className="px-2.5 py-1.5 rounded-xl bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs font-semibold cursor-pointer transition-colors"
+                  >
+                    {selectablePosts.length > 0 && selectablePosts.every((p) => selectedPostIds.includes(p.id))
+                      ? "Désélectionner"
+                      : "Tout cocher"}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={selectedPostIds.length === 0}
+                    onClick={() => setPostToDelete({ count: selectedPostIds.length, isBatch: true })}
+                    className={`flex items-center gap-1.5 px-3 sm:px-3.5 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all shadow-xs cursor-pointer ${
+                      selectedPostIds.length > 0
+                        ? "bg-red-600 hover:bg-red-700 text-white active:scale-95"
+                        : "bg-red-300 dark:bg-red-950/40 text-white/50 cursor-not-allowed"
+                    }`}
+                    title="Supprimer les messages sélectionnés"
+                  >
+                    <Trash2 size={15} />
+                    <span>Supprimer ({selectedPostIds.length})</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0">
+                  {/* Back Arrow button matching Telegram navigation */}
+                  <button
+                    type="button"
+                    onClick={handleCommunityBack}
+                    className="w-10 h-10 sm:w-11 sm:h-11 flex items-center justify-center text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/10 active:bg-black/10 dark:active:bg-white/20 active:scale-90 rounded-full transition-all cursor-pointer shrink-0 -ml-1 sm:ml-0 touch-manipulation z-20"
+                    title="Retour"
+                    aria-label="Retour au tableau de bord"
+                  >
+                    <ArrowLeft size={22} className="shrink-0" />
+                  </button>
+
+                  <div 
+                    onClick={() => setSidebarOpen(!sidebarOpen)}
+                    className="flex items-center gap-2 sm:gap-2.5 cursor-pointer group hover:opacity-90 transition-opacity min-w-0"
+                    title="Cliquer pour afficher/masquer les infos du groupe"
+                  >
+                    <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-tr from-emerald-500 to-teal-600 flex items-center justify-center text-white font-extrabold shadow-sm relative shrink-0 text-base sm:text-lg">
+                      🕌
+                      <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-white dark:border-[#151f2d] rounded-full animate-pulse" />
+                    </div>
+                    <div className="text-left min-w-0">
+                      <h3 className="font-extrabold text-xs sm:text-sm md:text-base text-gray-900 dark:text-white flex items-center gap-1.5 truncate">
+                        {tLocal("communityTitle")}
+                        <Sparkles size={13} className="text-amber-500 animate-pulse shrink-0" />
+                      </h3>
+                      <p className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 truncate">
+                        {membersList.length} {tLocal("membersSuffix")} • <span className="text-emerald-500 dark:text-emerald-400 font-semibold">{membersList.filter(m => m.isOnline).length} {tLocal("onlineSuffix")}</span>
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1 sm:gap-1.5 relative">
+                  <button
+                    onClick={() => setIsAiModalOpen(true)}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-semibold text-xs transition-all cursor-pointer shadow-xs border border-emerald-500/20"
+                    title="IA Asrar (Plein Écran)"
+                  >
+                    <Sparkles size={14} className="text-emerald-500 animate-pulse" />
+                    <span className="hidden min-[480px]:inline">IA Asrar</span>
+                  </button>
+                  <button
+                    onClick={focusMessageInput}
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-semibold text-xs transition-all cursor-pointer shadow-xs border border-emerald-500/20"
+                    title="Écrire un message"
+                  >
+                    <PenSquare size={15} />
+                    <span className="hidden min-[480px]:inline">Écrire</span>
+                  </button>
+                  <button
+                    onClick={() => setIsSelectionMode(true)}
+                    className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-all cursor-pointer"
+                    title="Sélectionner des messages pour supprimer"
+                  >
+                    <CheckSquare size={18} />
+                  </button>
+                  <button
+                    onClick={() => setShowSearchInput(!showSearchInput)}
+                    className={`p-2 rounded-full transition-all cursor-pointer ${
+                      showSearchInput ? "bg-emerald-500/10 text-emerald-600" : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5"
+                    }`}
+                    title="Rechercher"
+                  >
+                    <Search size={18} />
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveSidebarTab("info");
+                      setSidebarOpen(!sidebarOpen);
+                    }}
+                    className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 rounded-full transition-all cursor-pointer"
+                    title={tLocal("groupInfo")}
+                  >
+                    <Info size={18} />
+                  </button>
+                  <button
+                    onClick={() => setShowFloatingMenu(!showFloatingMenu)}
+                    className={`p-2 rounded-full transition-all cursor-pointer ${
+                      showFloatingMenu ? "bg-emerald-500/15 text-emerald-600 dark:text-teal-400" : "text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5"
+                    }`}
+                    title="Options et sections"
+                  >
+                    <MoreVertical size={18} />
+                  </button>
+
+                  {/* Telegram Header Dropdown Menu */}
+                  <AnimatePresence>
+                    {showFloatingMenu && (
+                      <>
+                        <div 
+                          className="fixed inset-0 z-40" 
+                          onClick={() => setShowFloatingMenu(false)} 
+                        />
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                          className="absolute right-0 top-11 z-50 w-56 bg-white dark:bg-[#1e2a38] rounded-2xl shadow-2xl border border-gray-200/80 dark:border-gray-700/80 py-1.5 overflow-hidden backdrop-blur-md"
+                        >
+                          <button
+                            onClick={() => {
+                              setShowFloatingMenu(false);
+                              focusMessageInput();
+                            }}
+                            className="w-full px-4 py-2.5 text-left text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50/50 dark:hover:bg-emerald-950/30 flex items-center gap-3 cursor-pointer transition-colors border-b border-gray-100 dark:border-gray-800"
+                          >
+                            <PenSquare size={16} className="text-emerald-500" />
+                            <span>Écrire un message</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              setShowFloatingMenu(false);
+                              setIsSelectionMode(true);
+                            }}
+                            className="w-full px-4 py-2.5 text-left text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/80 flex items-center gap-3 cursor-pointer transition-colors"
+                          >
+                            <CheckSquare size={16} className="text-emerald-500" />
+                            <span>Sélectionner des messages</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              setActiveSidebarTab("info");
+                              setSidebarOpen(true);
+                              setShowFloatingMenu(false);
+                            }}
+                            className="w-full px-4 py-2.5 text-left text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/80 flex items-center gap-3 cursor-pointer transition-colors"
+                          >
+                            <Info size={16} className="text-emerald-500" />
+                            <span>Infos du groupe</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              setActiveSidebarTab("members");
+                              setSidebarOpen(true);
+                              setShowFloatingMenu(false);
+                            }}
+                            className="w-full px-4 py-2.5 text-left text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/80 flex items-center gap-3 cursor-pointer transition-colors"
+                          >
+                            <Users size={16} className="text-blue-500" />
+                            <span>Membres ({membersList.length})</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              setActiveSidebarTab("media");
+                              setSidebarOpen(true);
+                              setShowFloatingMenu(false);
+                            }}
+                            className="w-full px-4 py-2.5 text-left text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/80 flex items-center gap-3 cursor-pointer transition-colors"
+                          >
+                            <ImageIcon size={16} className="text-amber-500" />
+                            <span>Médias & Fichiers</span>
+                          </button>
+                          <button
+                            onClick={() => {
+                              setIsAiModalOpen(true);
+                              setShowFloatingMenu(false);
+                            }}
+                            className="w-full px-4 py-2.5 text-left text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/80 flex items-center gap-3 cursor-pointer transition-colors border-t border-gray-100 dark:border-gray-700/50"
+                          >
+                            <Sparkles size={16} className="text-teal-500 animate-pulse" />
+                            <span className="font-bold text-teal-600 dark:text-teal-400">Assistant IA Asrar (Plein Écran)</span>
+                          </button>
+                        </motion.div>
+                      </>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Search Bar transition */}
@@ -1729,7 +2533,7 @@ export const Community: React.FC = () => {
 
           {/* Sticky Pinned Message Banner */}
           {pinnedPost && (
-            <div className="bg-emerald-500/5 dark:bg-emerald-500/10 border-b border-emerald-500/20 px-4 py-2 flex items-center justify-between gap-3 text-left z-10 shrink-0 relative">
+            <div className="bg-white/95 dark:bg-[#151f2d]/95 backdrop-blur-sm border-b border-emerald-500/20 px-4 py-2 flex items-center justify-between gap-3 text-left z-10 shrink-0 relative">
               <div className="flex items-start gap-2 min-w-0">
                 <Pin size={12} className="text-emerald-500 mt-1 shrink-0 rotate-45" />
                 <div className="min-w-0">
@@ -1759,16 +2563,29 @@ export const Community: React.FC = () => {
           {/* Chat Messages scroll area */}
           <div
             ref={chatContainerRef}
-            className="flex-1 overflow-y-auto px-4 py-5 space-y-4 telegram-chat-bg relative no-scrollbar"
+            onScroll={handleChatScroll}
+            className="flex-1 overflow-y-auto px-2.5 sm:px-4 py-3 sm:py-4 space-y-3 telegram-chat-bg relative no-scrollbar"
           >
             {filteredPosts.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-center p-8">
-                <div className="w-16 h-16 rounded-full bg-white dark:bg-gray-800 flex items-center justify-center shadow-md mb-3 text-xl">
-                  📿
+              <div className="h-full min-h-[320px] flex flex-col items-center justify-center text-center p-4 sm:p-6">
+                <div className="max-w-md w-full bg-white/95 dark:bg-[#15202e]/95 backdrop-blur-md rounded-3xl p-6 sm:p-8 shadow-2xl border border-white/60 dark:border-gray-750 flex flex-col items-center animate-fadeIn">
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-emerald-500/15 to-teal-500/25 dark:from-emerald-950/70 dark:to-teal-900/50 border border-emerald-500/20 dark:border-emerald-700/50 flex items-center justify-center shadow-sm mb-4 text-3xl">
+                    📿
+                  </div>
+                  <h3 className="text-base sm:text-lg font-black text-gray-900 dark:text-white mb-1.5">
+                    {lang === "ha" ? "Barka da zuwa Rukunin" : lang === "en" ? "Welcome to the Group" : "Bienvenue dans le Groupe"}
+                  </h3>
+                  <p className="text-sm font-bold text-emerald-700 dark:text-teal-300 mb-2">
+                    {tLocal("noMessages")}
+                  </p>
+                  <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed max-w-xs">
+                    {lang === "ha" 
+                      ? "Aika saƙon farko don raba hikima, addu'o'i ko tambayoyi tare da mambobi."
+                      : lang === "en"
+                      ? "Send the first message to share wisdom, prayers or questions with members."
+                      : "Envoyez le premier message pour partager sagesses, wirds ou poser vos questions aux membres."}
+                  </p>
                 </div>
-                <p className="text-sm text-gray-400 italic">
-                  {tLocal("noMessages")}
-                </p>
               </div>
             ) : (
               filteredPosts.map((post, idx) => {
@@ -1777,20 +2594,22 @@ export const Community: React.FC = () => {
                 
                 // Day changes separator check
                 const prevPost = idx > 0 ? filteredPosts[idx - 1] : null;
-                const showDateHeader = !prevPost || (post.createdAt && prevPost.createdAt && 
-                  new Date(post.createdAt.toDate ? post.createdAt.toDate() : post.createdAt).toDateString() !== 
-                  new Date(prevPost.createdAt.toDate ? prevPost.createdAt.toDate() : prevPost.createdAt).toDateString());
+                const showDateHeader = !prevPost || (
+                  parseDateSafe(post.createdAt).toDateString() !== parseDateSafe(prevPost?.createdAt).toDateString()
+                );
 
                 const authorMember = membersList.find((m) => m.id === post.authorId || m.name === post.authorName);
                 const rx = post.reactions || {};
                 const currentReactionCount = (rx.like?.length || 0) + (rx.love?.length || 0) + (rx.haha?.length || 0) + (rx.wow?.length || 0) + (rx.sad?.length || 0) + (rx.angry?.length || 0);
+                const canDeleteThisPost = canUserDeletePost(post, user);
+                const isSelected = selectedPostIds.includes(post.id);
 
                 return (
                   <div key={post.id ? `community-post-${post.id}-${idx}` : `community-post-${idx}`} className="space-y-3">
                     {/* Centered Date Separator */}
                     {showDateHeader && (
-                      <div className="flex justify-center my-4">
-                        <span className="bg-gray-400/10 dark:bg-black/30 backdrop-blur text-gray-500 dark:text-gray-300 text-[10.5px] font-extrabold px-3 py-1 rounded-full border border-gray-200/10 shadow-sm">
+                      <div className="flex justify-center my-3 sticky top-2 z-10 pointer-events-none">
+                        <span className="bg-[#415a41]/80 dark:bg-[#1a2330]/85 backdrop-blur-md text-white text-[11px] font-semibold px-3 py-0.5 rounded-full shadow-xs tracking-wide">
                           {formatDateLabel(post.createdAt)}
                         </span>
                       </div>
@@ -1805,6 +2624,36 @@ export const Community: React.FC = () => {
                           : "max-w-[88%] sm:max-w-[78%] min-w-0"
                       }`}
                     >
+                      {/* Selection checkbox in selection mode */}
+                      {isSelectionMode && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (canDeleteThisPost) {
+                              toggleSelectPost(post.id);
+                            }
+                          }}
+                          disabled={!canDeleteThisPost}
+                          className={`w-6 h-6 rounded-full flex items-center justify-center transition-all cursor-pointer shrink-0 mt-2 ${
+                            isSelected
+                              ? "bg-emerald-500 text-white shadow-xs scale-110"
+                              : canDeleteThisPost
+                              ? "border-2 border-gray-400 dark:border-gray-500 bg-white dark:bg-gray-800 hover:border-emerald-500 hover:scale-105"
+                              : "border-2 border-gray-200 dark:border-gray-700 bg-gray-100 dark:bg-gray-800/40 opacity-40 cursor-not-allowed"
+                          }`}
+                          title={
+                            canDeleteThisPost
+                              ? isSelected
+                                ? "Désélectionner"
+                                : "Sélectionner ce message"
+                              : "Vous ne pouvez pas supprimer ce message"
+                          }
+                        >
+                          {isSelected && <Check size={13} className="stroke-[3]" />}
+                        </button>
+                      )}
+
                       {/* Avatar */}
                       {showAvatar && (
                         <button
@@ -1823,13 +2672,24 @@ export const Community: React.FC = () => {
                       <div className={`flex flex-col min-w-0 max-w-full ${isOurPost ? "items-end" : "items-start"}`}>
                         {/* Bubble Inner Container */}
                         <div
+                          onClick={() => {
+                            if (isSelectionMode && canDeleteThisPost) {
+                              toggleSelectPost(post.id);
+                            }
+                          }}
                           onContextMenu={(e) => {
                             e.preventDefault();
                             const rect = e.currentTarget.getBoundingClientRect();
                             setContextMenuCoords({ x: e.clientX, y: e.clientY });
                             setActiveContextMenuPostId(post.id);
                           }}
-                          className={`px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl shadow-sm relative min-w-0 max-w-full overflow-hidden ${
+                          className={`px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl shadow-sm relative min-w-0 max-w-full overflow-hidden transition-all ${
+                            isSelected
+                              ? "ring-3 ring-emerald-500 dark:ring-emerald-400 ring-offset-2 dark:ring-offset-[#0e1621] shadow-md"
+                              : ""
+                          } ${
+                            isSelectionMode && canDeleteThisPost ? "cursor-pointer" : ""
+                          } ${
                             post.codeSnippet || (post.content && (post.content.includes("[Partage de la Communauté") || post.content.includes("|") || post.content.includes("DÉTAILS DU CALCUL")))
                               ? "w-full"
                               : ""
@@ -1841,22 +2701,22 @@ export const Community: React.FC = () => {
                         >
                           {/* Pinned post badge inside bubble */}
                           {post.isPinned && (
-                            <div className="flex items-center gap-1 text-[10px] font-extrabold text-amber-600 dark:text-amber-400 mb-1 select-none bg-amber-500/10 px-2 py-0.5 rounded-md w-fit border border-amber-500/20">
-                              <Pin size={10} className="rotate-45 shrink-0" />
+                            <div className="flex items-center gap-1.5 text-xs font-bold text-amber-600 dark:text-amber-400 mb-1.5 select-none bg-amber-500/10 px-2.5 py-0.5 rounded-md w-fit border border-amber-500/20">
+                              <Pin size={12} className="rotate-45 shrink-0" />
                               <span>Épinglé</span>
                             </div>
                           )}
                           {/* Sender's Unique Colored Name Header */}
                           {!isOurPost && (
-                            <div className="flex items-center gap-1.5 pb-1 justify-between">
+                            <div className="flex items-center gap-2 pb-1 justify-between">
                               <span
                                 onClick={() => authorMember && setSelectedProfileMember(authorMember)}
-                                className={`text-[11px] font-black hover:underline cursor-pointer ${getNameColorClass(post.authorName)}`}
+                                className={`text-[13px] sm:text-sm font-bold hover:underline cursor-pointer ${getNameColorClass(post.authorName)}`}
                               >
                                 {post.authorName}
                               </span>
                               {authorMember?.role === "admin" && (
-                                <span className="bg-red-500/10 text-red-600 dark:text-red-400 text-[8px] font-black uppercase px-1.5 py-0.5 rounded-md tracking-widest border border-red-500/20">
+                                <span className="bg-red-500/10 text-red-600 dark:text-red-400 text-[9.5px] font-black uppercase px-2 py-0.5 rounded-md tracking-wider border border-red-500/20">
                                   admin
                                 </span>
                               )}
@@ -1865,11 +2725,11 @@ export const Community: React.FC = () => {
 
                           {/* Reply Header Preview within Bubble */}
                           {post.replyTo && (
-                            <div className="bg-black/5 dark:bg-white/5 border-l-2 border-emerald-400 dark:border-teal-400 px-2 py-1.5 rounded-r-lg mb-2 text-left text-xs max-w-full">
-                              <span className="block font-black text-[9.5px] text-emerald-600 dark:text-teal-300">
+                            <div className="bg-black/5 dark:bg-white/5 border-l-3 border-emerald-500 dark:border-teal-400 px-2.5 py-1.5 rounded-r-lg mb-2 text-left text-xs max-w-full">
+                              <span className="block font-bold text-xs text-emerald-600 dark:text-teal-300">
                                 {post.replyTo.authorName}
                               </span>
-                              <p className="text-gray-500 dark:text-gray-300 text-[10.5px] truncate">
+                              <p className="text-gray-600 dark:text-gray-300 text-xs truncate mt-0.5">
                                 {post.replyTo.content}
                               </p>
                             </div>
@@ -1932,20 +2792,44 @@ export const Community: React.FC = () => {
                                     </div>
                                   );
                                 } else {
-                                  // Default to Image
+                                  // Default to Image (High Resolution)
                                   return (
-                                    <img
-                                      key={`att-img-${post.id}-${i}`}
-                                      src={att.url}
-                                      alt="Attachment"
-                                      onClick={() => {
-                                        const imagesOnly = post.attachments!.filter(a => a.type === "image" || !a.type).map(a => a.url);
-                                        const imgIndex = imagesOnly.indexOf(att.url);
-                                        setLightboxImages(imagesOnly);
-                                        setLightboxIndex(imgIndex >= 0 ? imgIndex : 0);
-                                      }}
-                                      className="rounded-xl max-h-[220px] object-cover cursor-pointer hover:opacity-90 transition-opacity"
-                                    />
+                                    <div
+                                      key={`att-img-wrapper-${post.id}-${i}`}
+                                      className="relative group/hd-img inline-block rounded-xl overflow-hidden shadow-sm"
+                                    >
+                                      <img
+                                        src={att.url}
+                                        alt="Attachment"
+                                        onClick={() => {
+                                          const imagesOnly = post.attachments!.filter(a => a.type === "image" || !a.type).map(a => a.url);
+                                          const imgIndex = imagesOnly.indexOf(att.url);
+                                          setLightboxImages(imagesOnly);
+                                          setLightboxIndex(imgIndex >= 0 ? imgIndex : 0);
+                                        }}
+                                        className="rounded-xl max-h-[240px] max-w-full object-cover cursor-pointer hover:opacity-95 transition-opacity block"
+                                      />
+                                      {/* HD Badge */}
+                                      <div className="absolute top-2 left-2 px-1.5 py-0.5 bg-black/60 backdrop-blur-xs rounded-md text-[9px] font-bold text-white flex items-center gap-1 opacity-90 pointer-events-none">
+                                        <Sparkles size={10} className="text-amber-300" />
+                                        <span>HD</span>
+                                      </div>
+                                      {/* Direct Download in High Resolution */}
+                                      <button
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          downloadImageHighRes(att.url, att.fileName || `asrarhub-image-hd-${post.id}-${i}.png`);
+                                          setDeleteToast("Téléchargement HD lancé !");
+                                          setTimeout(() => setDeleteToast(null), 2500);
+                                        }}
+                                        className="absolute bottom-2 right-2 flex items-center gap-1 px-2 py-1 bg-black/75 hover:bg-emerald-600 text-white rounded-lg backdrop-blur-md opacity-90 sm:opacity-0 group-hover/hd-img:opacity-100 transition-all cursor-pointer shadow-md text-[10px] font-bold"
+                                        title="Télécharger cette image en Haute Résolution"
+                                      >
+                                        <Download size={12} />
+                                        <span>HD</span>
+                                      </button>
+                                    </div>
                                   );
                                 }
                               })}
@@ -1956,19 +2840,19 @@ export const Community: React.FC = () => {
                           {post.voiceNotes && post.voiceNotes.map((audio, i) => {
                             const isPlayingThis = playingAudioKey === `${post.id}-${i}`;
                             return (
-                              <div key={`vn-${post.id}-${i}`} className="flex items-center gap-2.5 bg-black/10 dark:bg-white/5 p-2 rounded-xl mt-2 w-[220px] sm:w-[240px] select-none">
+                              <div key={`vn-${post.id}-${i}`} className="flex items-center gap-3 bg-black/10 dark:bg-white/5 p-2.5 rounded-2xl mt-2 w-[240px] sm:w-[270px] select-none">
                                 <button
                                   onClick={() => handlePlayVoiceNote(audio, post.id, i)}
-                                  className={`p-2 rounded-full hover:scale-105 active:scale-95 transition-all cursor-pointer ${
+                                  className={`w-9 h-9 rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-all cursor-pointer shrink-0 shadow-xs ${
                                     isPlayingThis ? "bg-amber-500 text-white animate-pulse" : "bg-emerald-500 text-white"
                                   }`}
                                   title={isPlayingThis ? "Pause" : "Play"}
                                 >
-                                  {isPlayingThis ? <Pause size={12} /> : <Play size={12} />}
+                                  {isPlayingThis ? <Pause size={15} /> : <Play size={15} className="ml-0.5" />}
                                 </button>
                                 <div className="flex-1">
-                                  <span className="block text-[9px] font-bold opacity-60">Message Vocal</span>
-                                  <div className="h-1.5 bg-gray-300 dark:bg-gray-700 rounded-full w-full overflow-hidden mt-1">
+                                  <span className="block text-xs font-bold text-gray-700 dark:text-gray-200">Message Vocal</span>
+                                  <div className="h-2 bg-gray-300 dark:bg-gray-700 rounded-full w-full overflow-hidden mt-1.5">
                                     <div className={`h-full ${isPlayingThis ? "bg-amber-400 animate-pulse w-full" : "bg-emerald-400 w-2/3"} transition-all duration-300`} />
                                   </div>
                                 </div>
@@ -2122,8 +3006,8 @@ export const Community: React.FC = () => {
 
                           {/* Interactive Poll Component Block */}
                           {post.poll && (
-                            <div className="bg-gray-50 dark:bg-black/30 rounded-xl p-3 border border-gray-100 dark:border-gray-800 text-left mt-2">
-                              <h4 className="font-extrabold text-xs sm:text-sm text-gray-900 dark:text-white mb-3">
+                            <div className="bg-gray-50 dark:bg-black/30 rounded-2xl p-3.5 border border-gray-150 dark:border-gray-800 text-left mt-2 w-full">
+                              <h4 className="font-extrabold text-sm sm:text-base text-gray-900 dark:text-white mb-3">
                                 📊 {post.poll.question}
                               </h4>
                               <div className="space-y-2.5">
@@ -2137,78 +3021,94 @@ export const Community: React.FC = () => {
                                     <button
                                       key={`poll-opt-${opt.id}-${optIdx}`}
                                       onClick={() => handlePollVote(post.id, opt.id)}
-                                      className={`w-full text-left relative p-2.5 rounded-xl border text-xs font-bold transition-all overflow-hidden flex items-center justify-between cursor-pointer ${
+                                      className={`w-full text-left relative p-3 rounded-xl border text-sm font-bold transition-all overflow-hidden flex items-center justify-between cursor-pointer ${
                                         userHasVotedThis
                                           ? "bg-emerald-500/10 border-emerald-500 text-emerald-700 dark:text-emerald-400"
                                           : "bg-white dark:bg-[#1f293d] border-gray-150 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
                                       }`}
                                     >
                                       <div className="absolute inset-y-0 left-0 bg-emerald-500/10 dark:bg-emerald-500/20 pointer-events-none transition-all duration-500" style={{ width: `${pct}%` }} />
-                                      <span className="relative z-10 flex items-center gap-1.5 truncate">
-                                        {userHasVotedThis && <CheckCircle size={12} className="text-emerald-500 shrink-0" />}
+                                      <span className="relative z-10 flex items-center gap-2 truncate">
+                                        {userHasVotedThis && <CheckCircle size={14} className="text-emerald-500 shrink-0" />}
                                         {opt.text}
                                       </span>
-                                      <span className="relative z-10 text-[10.5px] text-gray-400 shrink-0 font-black">
+                                      <span className="relative z-10 text-xs text-gray-400 shrink-0 font-bold">
                                         {pct}% ({vCount})
                                       </span>
                                     </button>
                                   );
                                 })}
                               </div>
-                              <div className="text-[10px] text-gray-400 mt-2.5 text-right font-black">
+                              <div className="text-xs text-gray-400 mt-2.5 text-right font-medium">
                                 {post.poll.options.reduce((sum, o) => sum + (o.votes?.length || 0), 0)} {tLocal("votesCount")}
                               </div>
                             </div>
                           )}
 
                           {/* Bottom Right status details inside bubble */}
-                          <div className="flex items-center gap-1 justify-end mt-1 text-[9.5px] text-gray-500/70 dark:text-gray-300/60 font-semibold select-none">
-                            {post.isEdited && <span className="italic text-[8.5px] text-gray-400 dark:text-gray-400">(modifié)</span>}
+                          <div className="flex items-center gap-1.5 justify-end mt-1.5 text-[11px] text-gray-500 dark:text-gray-300 font-medium select-none">
+                            {post.isEdited && <span className="italic text-[10px] text-gray-400 dark:text-gray-400">(modifié)</span>}
                             <span>{formatTime(post.createdAt)}</span>
                             {isOurPost && <span className="text-emerald-600 dark:text-sky-300 ml-0.5 font-bold">✓✓</span>}
                           </div>
 
-                          {/* Chat Menu Trigger Button */}
-                          <div className="absolute top-2 right-2 opacity-70 sm:opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                const rect = e.currentTarget.getBoundingClientRect();
-                                setContextMenuCoords({ x: rect.left, y: rect.top });
-                                setActiveContextMenuPostId(post.id);
-                              }}
-                              className="p-1 bg-black/10 dark:bg-white/10 hover:bg-black/20 text-gray-500 dark:text-white rounded-lg cursor-pointer"
-                              title="Options du message"
-                            >
-                              <MoreHorizontal size={12} />
-                            </button>
-                          </div>
+                          {/* Chat Action Buttons (Delete & Options) */}
+                          {!isSelectionMode && (
+                            <div className="absolute top-2 right-2 opacity-80 sm:opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1 z-10">
+                              {canDeleteThisPost && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeletePost(post.id);
+                                  }}
+                                  className="p-1.5 bg-black/10 dark:bg-white/10 hover:bg-red-600 hover:text-white text-gray-500 dark:text-white rounded-lg cursor-pointer transition-colors shadow-xs"
+                                  title="Supprimer ce message"
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const rect = e.currentTarget.getBoundingClientRect();
+                                  setContextMenuCoords({ x: rect.left, y: rect.top });
+                                  setActiveContextMenuPostId(post.id);
+                                }}
+                                className="p-1.5 bg-black/10 dark:bg-white/10 hover:bg-black/20 text-gray-500 dark:text-white rounded-lg cursor-pointer transition-colors"
+                                title="Options du message"
+                              >
+                                <MoreHorizontal size={14} />
+                              </button>
+                            </div>
+                          )}
                         </div>
 
                         {/* Reaction indicators attached under bubble */}
                         {currentReactionCount > 0 && (
-                          <div className={`flex items-center gap-1 bg-white dark:bg-gray-800 border border-gray-150 dark:border-gray-700/80 px-2 py-0.5 rounded-full shadow-sm text-[10px] mt-1 z-10 ${isOurPost ? "mr-1" : "ml-1"}`}>
+                          <div className={`flex items-center gap-1 bg-white dark:bg-gray-800 border border-gray-150 dark:border-gray-700/80 px-2.5 py-1 rounded-full shadow-sm text-xs mt-1 z-10 ${isOurPost ? "mr-1" : "ml-1"}`}>
                             {rx.like?.length > 0 && <span>👍</span>}
                             {rx.love?.length > 0 && <span>❤️</span>}
                             {rx.haha?.length > 0 && <span>😂</span>}
                             {rx.wow?.length > 0 && <span>😮</span>}
                             {rx.sad?.length > 0 && <span>😢</span>}
                             {rx.angry?.length > 0 && <span>😡</span>}
-                            <span className="font-mono text-gray-500 font-extrabold">{currentReactionCount}</span>
+                            <span className="font-mono text-gray-500 font-extrabold ml-0.5">{currentReactionCount}</span>
                           </div>
                         )}
 
-                        {/* Direct Comments & DM Action Buttons */}
-                        <div className={`flex items-center gap-1.5 mt-1 select-none ${isOurPost ? "justify-end" : "justify-start"}`}>
+                        {/* Telegram-style discussion & comment pill */}
+                        <div className={`flex items-center gap-2 mt-1.5 select-none ${isOurPost ? "justify-end" : "justify-start"}`}>
                           <button
                             onClick={() => setActiveCommentPostId((prev) => (prev === post.id ? null : post.id))}
-                            className={`flex items-center gap-1 text-[10.5px] font-medium transition-colors py-0.5 px-2 rounded-full border border-gray-200/60 dark:border-gray-700/60 bg-white/90 dark:bg-gray-800/90 shadow-2xs hover:bg-emerald-50 dark:hover:bg-gray-700 cursor-pointer ${
+                            className={`inline-flex items-center gap-1.5 text-xs font-semibold py-1 px-3 rounded-full transition-all cursor-pointer ${
                               activeCommentPostId === post.id
-                                ? "text-emerald-600 dark:text-emerald-400 font-black bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300"
-                                : "text-gray-500 dark:text-gray-300 hover:text-emerald-600"
+                                ? "bg-[#2481cc] text-white shadow-xs"
+                                : "bg-black/5 dark:bg-white/10 hover:bg-black/10 dark:hover:bg-white/15 text-gray-700 dark:text-gray-200"
                             }`}
                           >
-                            <MessageSquare size={11} className={activeCommentPostId === post.id ? "fill-emerald-500/20" : ""} />
+                            <MessageSquare size={13} className={activeCommentPostId === post.id ? "fill-white" : ""} />
                             <span>{activeCommentPostId === post.id ? tLocal("hideComments") : tLocal("commentsAndReplies")}</span>
                           </button>
 
@@ -2218,10 +3118,10 @@ export const Community: React.FC = () => {
                                 setDmRecipient({ id: post.authorId, name: post.authorName });
                                 setIsDMOpen(true);
                               }}
-                              className="flex items-center gap-1 text-[10.5px] font-medium text-gray-500 dark:text-gray-300 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors py-0.5 px-2 rounded-full border border-gray-200/60 dark:border-gray-700/60 bg-white/90 dark:bg-gray-800/90 shadow-2xs hover:bg-emerald-50 dark:hover:bg-gray-700 cursor-pointer"
+                              title={tLocal("privateMessageDirect")}
+                              className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-black/5 dark:bg-white/10 hover:bg-emerald-500/20 text-gray-500 hover:text-emerald-600 dark:text-gray-300 transition-colors cursor-pointer"
                             >
-                              <Send size={10} />
-                              <span>{tLocal("privateMessageDirect")}</span>
+                              <Send size={12} />
                             </button>
                           )}
                         </div>
@@ -2238,6 +3138,9 @@ export const Community: React.FC = () => {
                 );
               })
             )}
+
+            {/* Reliable bottom scroll anchor */}
+            <div ref={messagesEndRef} id="chat-messages-bottom" className="h-1 w-full shrink-0" />
           </div>
 
           {/* Reply Context Bar */}
@@ -2280,12 +3183,15 @@ export const Community: React.FC = () => {
                 {/* Editable Text Area to refine text draft directly */}
                 {messageText.trim() && (
                   <div className="space-y-1">
-                    <label className="block text-[9px] font-bold uppercase text-gray-400">Message écrit :</label>
+                    <div className="flex items-center justify-between">
+                      <label className="block text-[9px] font-bold uppercase text-gray-500 dark:text-gray-400">Message écrit :</label>
+                      <span className="text-[9px] text-emerald-600 dark:text-teal-400 font-medium">Prêt pour envoi</span>
+                    </div>
                     <textarea
                       value={messageText}
                       onChange={(e) => setMessageText(e.target.value)}
                       placeholder="Écrivez ou modifiez votre texte..."
-                      className="w-full bg-white dark:bg-[#151f2d] border border-gray-200 dark:border-gray-800/80 rounded-xl p-2.5 text-xs text-gray-800 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 resize-none min-h-[50px] max-h-[120px] shadow-sm font-sans"
+                      className="w-full bg-white dark:bg-[#151f2d] border border-gray-200 dark:border-gray-800/80 rounded-xl p-3 text-[15px] sm:text-base leading-relaxed text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/40 resize-none min-h-[56px] max-h-[140px] shadow-sm font-sans"
                     />
                   </div>
                 )}
@@ -2343,7 +3249,7 @@ export const Community: React.FC = () => {
                     <label className="block text-[9px] font-bold uppercase text-gray-400">Pièces jointes ({attachedMedias.length}) :</label>
                     <div className="flex flex-wrap gap-2 pt-0.5">
                       {attachedMedias.map((media, idx) => (
-                        <div key={idx} className="relative group rounded-lg overflow-hidden border border-gray-200 dark:border-gray-800">
+                        <div key={`attached-media-preview-${media.url || idx}-${idx}`} className="relative group rounded-lg overflow-hidden border border-gray-200 dark:border-gray-800">
                           {media.type === "image" ? (
                             <img src={media.url} className="w-16 h-12 object-cover" />
                           ) : media.type === "video" ? (
@@ -2369,119 +3275,196 @@ export const Community: React.FC = () => {
           )}
 
           {/* Bottom input area layout */}
-          <div className="bg-[#f0f4f8]/50 dark:bg-[#0b111c] px-4 py-3 flex items-center gap-2 shrink-0 z-10 border-t border-gray-100 dark:border-gray-800/80">
-            {/* Main Rounded Input Bar (includes Smile, Input Field, Attachments/Code/Polls) */}
-            <div className="flex-1 flex items-center gap-1.5 bg-white dark:bg-[#182533] rounded-3xl px-3 py-1.5 border border-gray-200/50 dark:border-gray-800/80 shadow-sm">
-              
-              {/* Smile Emoji Icon */}
-              <button
-                type="button"
-                onClick={() => setMessageText(prev => prev + "✨")}
-                className="p-1.5 text-gray-400 hover:text-emerald-500 dark:hover:text-teal-400 transition-colors cursor-pointer"
-                title="Ajouter un symbole de bénédiction"
-              >
-                <Smile size={20} />
-              </button>
-
-              {/* Main Text Message Input Field or Animated Recording Interface */}
-              <form onSubmit={handleSendMessage} className="flex-1 min-w-0">
-                {isRecording ? (
-                  <div className="flex-1 flex items-center justify-between gap-2 py-1 select-none">
-                    {/* Live recording dot, soundwaves & timer */}
-                    <div className="flex items-center gap-2 text-red-500 font-bold text-xs sm:text-sm shrink-0">
-                      <span className="relative flex h-2.5 w-2.5 shrink-0">
-                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                        <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
-                      </span>
-
-                      {/* Animated Sound Waves */}
-                      <div className="flex items-center gap-0.5 h-3.5 px-0.5">
-                        <span className="w-0.5 h-2 bg-red-500 rounded-full animate-pulse" style={{ animationDelay: '0ms' }} />
-                        <span className="w-0.5 h-3.5 bg-red-500 rounded-full animate-pulse" style={{ animationDelay: '150ms' }} />
-                        <span className="w-0.5 h-4 bg-red-500 rounded-full animate-pulse" style={{ animationDelay: '300ms' }} />
-                        <span className="w-0.5 h-2.5 bg-red-500 rounded-full animate-pulse" style={{ animationDelay: '450ms' }} />
-                        <span className="w-0.5 h-3 bg-red-500 rounded-full animate-pulse" style={{ animationDelay: '200ms' }} />
-                      </div>
-
-                      <span className="font-mono font-bold text-xs tracking-wide">
-                        {Math.floor(recordingSeconds / 60)}:{(recordingSeconds % 60).toString().padStart(2, '0')}
-                      </span>
-                    </div>
-
-                    {/* Quick controls: Pro Amplifier toggle, Cancel (Trash) & Stop (Preview) */}
-                    <div className="flex items-center gap-1.5 ml-auto">
-                      <button
-                        type="button"
-                        onClick={() => setProVoiceAmplifier(!proVoiceAmplifier)}
-                        className={`hidden sm:flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
-                          proVoiceAmplifier
-                            ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
-                            : "bg-gray-100 dark:bg-gray-800 text-gray-400 border border-transparent"
-                        }`}
-                        title={proVoiceAmplifier ? "Amplificateur Pro HD ACTIF (Réduction du bruit, EQ & Gain Boost)" : "Cliquer pour activer l'amplificateur Pro"}
-                      >
-                        <Sparkles size={11} className={proVoiceAmplifier ? "text-emerald-500 animate-pulse" : ""} />
-                        <span>Studio HD {proVoiceAmplifier ? "ON" : "OFF"}</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsRecording(false);
-                          if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
-                          if (mediaRecorderRef.current) {
-                            try {
-                              mediaRecorderRef.current.stop();
-                            } catch (_) {}
-                          }
-                          mediaRecorderRef.current = null;
-                          setRecordedAudio(null);
-                        }}
-                        className="flex items-center gap-1 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 px-2 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                        title="Annuler l'enregistrement"
-                      >
-                        <Trash2 size={14} />
-                        <span className="hidden sm:inline uppercase text-[10px]">Annuler</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={stopRecording}
-                        className="flex items-center gap-1 bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 hover:bg-amber-500/30 px-2 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer"
-                        title="Arrêter et écouter l'aperçu"
-                      >
-                        <Square size={12} className="fill-current" />
-                        <span className="text-[10px] uppercase">Aperçu</span>
-                      </button>
-                    </div>
+          <div className="bg-[#f0f4f8]/50 dark:bg-[#0b111c] px-3 sm:px-4 py-2 sm:py-2.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] flex items-center gap-2 shrink-0 z-10 border-t border-gray-150 dark:border-gray-800/80">
+            {isSelectionMode ? (
+              <div className="flex-1 flex items-center justify-between gap-3 bg-white dark:bg-[#182533] rounded-2xl px-4 py-2.5 border border-emerald-500/30 dark:border-emerald-500/20 shadow-sm">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="text-xs sm:text-sm font-bold text-gray-800 dark:text-gray-100 truncate">
+                    {selectedPostIds.length} sélectionné{selectedPostIds.length > 1 ? "s" : ""}
+                  </span>
+                  <span className="text-xs text-gray-400 hidden min-[400px]:inline">
+                    ({selectablePosts.length} supprimable{selectablePosts.length > 1 ? "s" : ""})
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={exitSelectionMode}
+                    className="px-3 py-1.5 rounded-xl border border-gray-300 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 text-xs font-semibold text-gray-700 dark:text-gray-300 cursor-pointer transition-colors"
+                  >
+                    Annuler
+                  </button>
+                  <button
+                    type="button"
+                    disabled={selectedPostIds.length === 0}
+                    onClick={() => setPostToDelete({ count: selectedPostIds.length, isBatch: true })}
+                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer ${
+                      selectedPostIds.length > 0
+                        ? "bg-red-600 hover:bg-red-700 text-white active:scale-95"
+                        : "bg-red-300 dark:bg-red-950/40 text-white/50 cursor-not-allowed"
+                    }`}
+                  >
+                    <Trash2 size={14} />
+                    <span>Supprimer ({selectedPostIds.length})</span>
+                  </button>
+                </div>
+              </div>
+            ) : !user ? (
+              <div className="flex-1 flex items-center justify-between gap-3 bg-white dark:bg-[#182533] rounded-3xl px-3.5 sm:px-4 py-2 border border-emerald-500/30 dark:border-emerald-500/20 shadow-xs">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                    <PenSquare size={16} />
                   </div>
-                ) : (
-                  <div className="flex items-center w-full">
-                    <input
-                      type="text"
-                      value={messageText}
-                      onChange={(e) => setMessageText(e.target.value)}
-                      placeholder={tLocal("msgPlaceholder")}
-                      className="w-full bg-transparent border-none text-xs sm:text-sm py-1.5 text-gray-900 dark:text-white focus:outline-none focus:ring-0 placeholder-gray-400"
+                  <div className="min-w-0">
+                    <span className="block text-xs font-bold text-gray-800 dark:text-gray-200 truncate">
+                      Écrire dans la communauté
+                    </span>
+                    <span className="block text-[11px] text-gray-500 dark:text-gray-400 truncate">
+                      Connectez-vous pour envoyer un message ou participer aux discussions
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowAuthModal(true)}
+                  className="px-3 sm:px-4 py-1.5 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-xl text-xs font-bold shadow-xs transition-all active:scale-95 shrink-0 cursor-pointer"
+                >
+                  Se connecter
+                </button>
+              </div>
+            ) : (
+              <>
+                {/* Main Rounded Input Bar (includes Smile, Input Field, Attachments/Code/Polls) */}
+                <div className="flex-1 flex items-center gap-1.5 bg-white dark:bg-[#182533] rounded-3xl px-3 py-1.5 border border-gray-200/50 dark:border-gray-800/80 shadow-sm">
+                  
+                  {/* Smile Emoji Icon & Complete Emoji Picker */}
+                  <div className="relative shrink-0">
+                    <button
+                      type="button"
+                      onClick={() => setShowEmojiPicker((prev) => !prev)}
+                      className={`p-1.5 rounded-full transition-colors cursor-pointer ${
+                        showEmojiPicker
+                          ? "text-emerald-500 bg-emerald-500/10 dark:bg-teal-400/20"
+                          : "text-gray-400 hover:text-emerald-500 dark:hover:text-teal-400"
+                      }`}
+                      title="Sélecteur d'emojis complet (Smileys, Spirituels, Gestes, Cœurs...)"
+                    >
+                      <Smile size={20} />
+                    </button>
+
+                    <EmojiPickerPopover
+                      isOpen={showEmojiPicker}
+                      onClose={() => setShowEmojiPicker(false)}
+                      onSelectEmoji={(emoji) => {
+                        setMessageText((prev) => prev + emoji);
+                        if (messageInputRef.current) {
+                          messageInputRef.current.focus();
+                        }
+                      }}
+                      anchorDirection="up"
                     />
-                    {messageText.trim() && (
-                      <button
-                        type="submit"
-                        className="p-1.5 text-emerald-600 dark:text-teal-400 hover:text-emerald-700 dark:hover:text-teal-300 transition-colors cursor-pointer bg-emerald-500/10 dark:bg-teal-400/20 rounded-full flex items-center justify-center shrink-0 ml-1"
-                        title={tLocal("sendMsg")}
-                      >
-                        <Send size={15} className="ml-0.5" />
-                      </button>
-                    )}
                   </div>
-                )}
-              </form>
+
+                  {/* Main Text Message Input Field or Animated Recording Interface */}
+                  <form onSubmit={handleSendMessage} className="flex-1 min-w-0">
+                    {isRecording ? (
+                      <div className="flex-1 flex items-center justify-between gap-2 py-1 select-none">
+                        {/* Live recording dot, soundwaves & timer */}
+                        <div className="flex items-center gap-2 text-red-500 font-bold text-xs sm:text-sm shrink-0">
+                          <span className="relative flex h-2.5 w-2.5 shrink-0">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500"></span>
+                          </span>
+
+                          {/* Animated Sound Waves */}
+                          <div className="flex items-center gap-0.5 h-3.5 px-0.5">
+                            <span className="w-0.5 h-2 bg-red-500 rounded-full animate-pulse" style={{ animationDelay: '0ms' }} />
+                            <span className="w-0.5 h-3.5 bg-red-500 rounded-full animate-pulse" style={{ animationDelay: '150ms' }} />
+                            <span className="w-0.5 h-4 bg-red-500 rounded-full animate-pulse" style={{ animationDelay: '300ms' }} />
+                            <span className="w-0.5 h-2.5 bg-red-500 rounded-full animate-pulse" style={{ animationDelay: '450ms' }} />
+                            <span className="w-0.5 h-3 bg-red-500 rounded-full animate-pulse" style={{ animationDelay: '200ms' }} />
+                          </div>
+
+                          <span className="font-mono font-bold text-xs tracking-wide">
+                            {Math.floor(recordingSeconds / 60)}:{(recordingSeconds % 60).toString().padStart(2, '0')}
+                          </span>
+                        </div>
+
+                        {/* Quick controls: Pro Amplifier toggle, Cancel (Trash) & Stop (Preview) */}
+                        <div className="flex items-center gap-1.5 ml-auto">
+                          <button
+                            type="button"
+                            onClick={() => setProVoiceAmplifier(!proVoiceAmplifier)}
+                            className={`hidden sm:flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                              proVoiceAmplifier
+                                ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
+                                : "bg-gray-100 dark:bg-gray-800 text-gray-400 border border-transparent"
+                            }`}
+                            title={proVoiceAmplifier ? "Amplificateur Pro HD ACTIF (Réduction du bruit, EQ & Gain Boost)" : "Cliquer pour activer l'amplificateur Pro"}
+                          >
+                            <Sparkles size={11} className={proVoiceAmplifier ? "text-emerald-500 animate-pulse" : ""} />
+                            <span>Studio HD {proVoiceAmplifier ? "ON" : "OFF"}</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setIsRecording(false);
+                              if (recordingIntervalRef.current) clearInterval(recordingIntervalRef.current);
+                              if (mediaRecorderRef.current) {
+                                try {
+                                  mediaRecorderRef.current.stop();
+                                } catch (_) {}
+                              }
+                              mediaRecorderRef.current = null;
+                              setRecordedAudio(null);
+                            }}
+                            className="flex items-center gap-1 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 px-2 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                            title="Annuler l'enregistrement"
+                          >
+                            <Trash2 size={14} />
+                            <span className="hidden sm:inline uppercase text-[10px]">Annuler</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={stopRecording}
+                            className="flex items-center gap-1 bg-amber-500/10 dark:bg-amber-500/20 text-amber-600 dark:text-amber-400 hover:bg-amber-500/30 px-2 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer"
+                            title="Arrêter et écouter l'aperçu"
+                          >
+                            <Square size={12} className="fill-current" />
+                            <span className="text-[10px] uppercase">Aperçu</span>
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center w-full">
+                        <input
+                          ref={messageInputRef}
+                          type="text"
+                          value={messageText}
+                          onChange={(e) => setMessageText(e.target.value)}
+                          placeholder={tLocal("msgPlaceholder")}
+                          className="w-full bg-transparent border-none text-[15px] sm:text-base py-2 text-gray-900 dark:text-white focus:outline-none focus:ring-0 placeholder-gray-400"
+                        />
+                        {messageText.trim() && (
+                          <button
+                            type="submit"
+                            className="p-1.5 text-emerald-600 dark:text-teal-400 hover:text-emerald-700 dark:hover:text-teal-300 transition-colors cursor-pointer bg-emerald-500/10 dark:bg-teal-400/20 rounded-full flex items-center justify-center shrink-0 ml-1"
+                            title={tLocal("sendMsg")}
+                          >
+                            <Send size={15} className="ml-0.5" />
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </form>
 
               {/* Display total attached media indicator */}
               {attachedMedias.length > 0 && (
                 <div className="flex gap-1.5 overflow-x-auto max-w-[150px] no-scrollbar shrink-0 select-none bg-black/5 dark:bg-white/5 p-1 rounded-xl">
                   {attachedMedias.map((media, idx) => (
-                    <div key={idx} className="relative shrink-0">
+                    <div key={`attached-media-bar-${media.url || idx}-${idx}`} className="relative shrink-0">
                       {media.type === "image" ? (
                         <img src={media.url} className="w-7 h-7 rounded-lg object-cover" />
                       ) : media.type === "video" ? (
@@ -2781,90 +3764,25 @@ export const Community: React.FC = () => {
                 <Mic size={18} />
               </button>
             )}
+              </>
+            )}
           </div>
 
-          {/* Floating Action Button & Menu Pill Popover */}
-          <div className="absolute bottom-20 right-4 z-30 flex flex-col items-end gap-2">
-            <AnimatePresence>
-              {showFloatingMenu && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.9, y: 8 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.9, y: 8 }}
-                  className="bg-white/95 dark:bg-[#151f2d]/95 backdrop-blur-md p-1.5 rounded-2xl shadow-2xl border border-gray-100 dark:border-gray-800 flex items-center gap-1 overflow-x-auto max-w-[90vw] sm:max-w-none"
-                >
-                  <button
-                    onClick={() => {
-                      setActiveSidebarTab("info");
-                      setSidebarOpen(true);
-                      setShowFloatingMenu(false);
-                    }}
-                    className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap ${
-                      activeSidebarTab === "info" && sidebarOpen
-                        ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20"
-                        : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-                    }`}
-                  >
-                    INFOS
-                  </button>
-                  <button
-                    onClick={() => {
-                      setActiveSidebarTab("members");
-                      setSidebarOpen(true);
-                      setShowFloatingMenu(false);
-                    }}
-                    className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap ${
-                      activeSidebarTab === "members" && sidebarOpen
-                        ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20"
-                        : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-                    }`}
-                  >
-                    MEMBRES
-                  </button>
-                  <button
-                    onClick={() => {
-                      setActiveSidebarTab("media");
-                      setSidebarOpen(true);
-                      setShowFloatingMenu(false);
-                    }}
-                    className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap ${
-                      activeSidebarTab === "media" && sidebarOpen
-                        ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20"
-                        : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-                    }`}
-                  >
-                    MÉDIAS
-                  </button>
-                  <button
-                    onClick={() => {
-                      setActiveSidebarTab("ai");
-                      setSidebarOpen(true);
-                      setShowFloatingMenu(false);
-                    }}
-                    className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap ${
-                      activeSidebarTab === "ai" && sidebarOpen
-                        ? "bg-emerald-600 text-white shadow-md shadow-emerald-600/20"
-                        : "text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-                    }`}
-                  >
-                    IA ASRAR
-                  </button>
-                </motion.div>
-              )}
-            </AnimatePresence>
-
-            <button
-              onClick={() => setShowFloatingMenu(!showFloatingMenu)}
-              className={`w-11 h-11 rounded-full flex items-center justify-center shadow-xl active:scale-95 transition-all cursor-pointer border ${
-                showFloatingMenu || sidebarOpen
-                  ? "bg-emerald-600 text-white border-emerald-400/30 shadow-emerald-600/30"
-                  : "bg-white dark:bg-[#1c2738] text-gray-700 dark:text-gray-200 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
-              }`}
-              title="Menus rapides de la communauté (INFOS, MEMBRES, MÉDIAS, IA ASRAR)"
-            >
-              <LayoutGrid size={20} />
-            </button>
-          </div>
+          {/* Telegram Scroll-To-Bottom Floating Button */}
+          <AnimatePresence>
+            {isScrolledUp && (
+              <motion.button
+                initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.8, y: 10 }}
+                onClick={() => scrollToBottom(true)}
+                className="absolute bottom-20 right-4 z-20 w-10 h-10 rounded-full bg-white/95 dark:bg-[#1f2c3d]/95 backdrop-blur-md shadow-lg border border-gray-200/80 dark:border-gray-700/80 flex items-center justify-center text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-[#253549] transition-all cursor-pointer group"
+                title="Défiler vers le bas"
+              >
+                <ChevronDown size={20} className="group-hover:translate-y-0.5 transition-transform" />
+              </motion.button>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Sidebar Column: Group Details & Online Members */}
@@ -2922,11 +3840,15 @@ export const Community: React.FC = () => {
                   MÉDIAS
                 </button>
                 <button
-                  onClick={() => setActiveSidebarTab("ai")}
-                  className={`py-2 text-[9px] sm:text-[10px] font-black uppercase rounded-xl tracking-tighter sm:tracking-wider transition-all cursor-pointer flex items-center justify-center gap-0.5 text-center ${
+                  onClick={() => {
+                    setActiveSidebarTab("ai");
+                    setIsAiModalOpen(true);
+                  }}
+                  className={`py-2 text-[9px] sm:text-[10px] font-black uppercase rounded-xl tracking-tighter sm:tracking-wider transition-all cursor-pointer flex items-center justify-center gap-1 text-center ${
                     activeSidebarTab === "ai" ? "bg-white dark:bg-[#151f2d] text-emerald-600 dark:text-teal-400 shadow-sm" : "text-gray-400"
                   }`}
                 >
+                  <Sparkles size={11} className="text-emerald-500" />
                   IA ASRAR
                 </button>
               </div>
@@ -3044,16 +3966,30 @@ export const Community: React.FC = () => {
                       .flatMap((p) => p.attachments!)
                       .slice(0, 12)
                       .map((att, i) => (
-                        <img
-                          key={`shared-att-${att.url}-${i}`}
-                          src={att.url}
-                          alt="Shared attachment"
-                          onClick={() => {
-                            setLightboxImages([att.url]);
-                            setLightboxIndex(0);
-                          }}
-                          className="w-full h-16 rounded-lg object-cover cursor-pointer hover:opacity-95"
-                        />
+                        <div key={`shared-att-${att.url}-${i}`} className="relative group/side-img rounded-lg overflow-hidden h-16 bg-black/5 dark:bg-black/30">
+                          <img
+                            src={att.url}
+                            alt="Shared attachment"
+                            onClick={() => {
+                              setLightboxImages([att.url]);
+                              setLightboxIndex(0);
+                            }}
+                            className="w-full h-full object-cover cursor-pointer hover:opacity-95 transition-opacity"
+                          />
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              downloadImageHighRes(att.url, att.fileName || `asrarhub-media-${i}.png`);
+                              setDeleteToast("Téléchargement HD lancé !");
+                              setTimeout(() => setDeleteToast(null), 2500);
+                            }}
+                            className="absolute bottom-1 right-1 p-1 bg-black/75 hover:bg-emerald-600 text-white rounded-md opacity-0 group-hover/side-img:opacity-100 transition-all cursor-pointer shadow-md"
+                            title="Télécharger en HD"
+                          >
+                            <Download size={11} />
+                          </button>
+                        </div>
                       ))}
                   </div>
 
@@ -3082,87 +4018,28 @@ export const Community: React.FC = () => {
                 </div>
               )}
 
-              {/* Tab 4: IA Asrar Spiritual Assistant (Premium Option) */}
+              {/* Tab 4: IA Asrar Spiritual Assistant (Full Screen Trigger) */}
               {activeSidebarTab === "ai" && (
-                <div className="flex flex-col h-[65vh] text-left">
-                  {user?.subscriptionTier !== "premium" && user?.subscriptionTier !== "pro" && user?.role !== "admin" ? (
-                    <div className="space-y-4 text-center py-10 px-4">
-                      <span className="text-4xl block animate-bounce">👑</span>
-                      <h4 className="font-extrabold text-sm text-gray-900 dark:text-white uppercase tracking-wider font-sans">Assistant IA Asrar</h4>
-                      <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
-                        Débloquez l'IA spirituelle pour obtenir des recommandations personnalisées de wirds, l'interprétation de vos rêves selon Ibn Sirin, et la science des Noms d'Allah.
-                      </p>
-                      <button
-                        onClick={() => navigate("/profile")}
-                        className="w-full py-2.5 bg-gradient-to-r from-amber-500 to-yellow-600 text-white text-xs font-black uppercase rounded-2xl shadow-lg hover:scale-102 active:scale-98 transition-all cursor-pointer"
-                      >
-                        Devenir Premium
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col h-full">
-                      {/* Messages Area */}
-                      <div className="flex-1 overflow-y-auto space-y-3.5 pr-1 no-scrollbar mb-3 flex flex-col">
-                        {aiChatMessages.map((msg, idx) => (
-                          <div key={idx} className={`flex flex-col ${msg.sender === "user" ? "items-end" : "items-start"}`}>
-                            <div
-                              className={`p-3 rounded-2xl text-[11px] sm:text-xs leading-relaxed max-w-[90%] whitespace-pre-wrap ${
-                                msg.sender === "user"
-                                  ? "bg-[#2481cc] text-white rounded-tr-none"
-                                  : "bg-gray-100 dark:bg-[#182533] text-gray-900 dark:text-white rounded-tl-none border border-gray-150 dark:border-gray-800/80"
-                              }`}
-                            >
-                              {msg.text}
-                            </div>
-                          </div>
-                        ))}
-                        {isAiLoading && (
-                          <div className="flex items-center gap-1.5 text-gray-400 text-[10px] uppercase font-extrabold tracking-wider pt-2 select-none">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
-                            <span>L'esprit médite...</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Suggestions area */}
-                      <div className="flex gap-1.5 overflow-x-auto pb-2.5 no-scrollbar shrink-0 select-none">
-                        {[
-                          "Bienfaits de Ya Latif ?",
-                          "Un wird pour la paix",
-                          "Interpréter un rêve de Lion",
-                          "Secrets de Salat al-Fatih"
-                        ].map((qStr, qIdx) => (
-                          <button
-                            key={`comm-ai-q-${qIdx}`}
-                            onClick={() => handleSendAiMessage(qStr)}
-                            className="shrink-0 px-2.5 py-1.5 bg-gray-50 hover:bg-gray-100 dark:bg-[#1c2a39] dark:hover:bg-[#233547] border border-gray-150 dark:border-gray-755/50 rounded-xl text-[9.5px] text-gray-500 dark:text-gray-300 font-bold transition-all cursor-pointer"
-                          >
-                            {qStr}
-                          </button>
-                        ))}
-                      </div>
-
-                      {/* Input Bar */}
-                      <div className="flex items-center gap-1.5 pt-2 border-t border-gray-100 dark:border-gray-800/60 shrink-0">
-                        <input
-                          type="text"
-                          value={aiInputText}
-                          onChange={(e) => setAiInputText(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") handleSendAiMessage();
-                          }}
-                          placeholder="Posez votre question spirituelle..."
-                          className="flex-1 p-2.5 bg-gray-50 dark:bg-gray-900 border border-gray-150 dark:border-gray-750 text-xs text-gray-800 dark:text-white rounded-xl focus:outline-none"
-                        />
-                        <button
-                          onClick={() => handleSendAiMessage()}
-                          className="p-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl active:scale-95 transition-all cursor-pointer shrink-0"
-                        >
-                          <Send size={12} />
-                        </button>
-                      </div>
-                    </div>
-                  )}
+                <div className="flex flex-col h-full text-center py-6 px-3 space-y-4">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-emerald-600 via-teal-600 to-cyan-500 flex items-center justify-center text-white text-2xl mx-auto shadow-lg shadow-emerald-500/20">
+                    🕌
+                  </div>
+                  <div className="space-y-1.5">
+                    <h4 className="font-extrabold text-sm text-gray-900 dark:text-white uppercase tracking-wider">
+                      Guide Spirituel IA Asrar
+                    </h4>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
+                      L'assistant IA est optimisé pour un affichage plein écran avec mise en page érudite, hiérarchie de titres de H1 à H6, couleurs et emojis.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsAiModalOpen(true)}
+                    className="w-full py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-black uppercase tracking-wider rounded-2xl shadow-lg shadow-emerald-600/20 hover:scale-102 active:scale-98 transition-all cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <Maximize2 size={16} />
+                    <span>Ouvrir en Plein Écran</span>
+                  </button>
                 </div>
               )}
             </div>
@@ -3257,16 +4134,31 @@ export const Community: React.FC = () => {
                   <Pin size={13} /> {posts.find((p) => p.id === activeContextMenuPostId)?.isPinned ? "Désépingler" : "Épingler le message"}
                 </button>
 
+                <button
+                  onClick={() => {
+                    const post = posts.find((p) => p.id === activeContextMenuPostId);
+                    setIsSelectionMode(true);
+                    if (post && canUserDeletePost(post, user)) {
+                      setSelectedPostIds([post.id]);
+                    }
+                    setActiveContextMenuPostId(null);
+                  }}
+                  className="w-full text-left px-2.5 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg text-[11px] sm:text-xs font-bold text-gray-700 dark:text-gray-200 flex items-center gap-2 cursor-pointer"
+                >
+                  <CheckSquare size={13} /> Sélectionner
+                </button>
+
                 {(() => {
                   const currentPost = posts.find((p) => p.id === activeContextMenuPostId);
                   if (!currentPost) return null;
                   const canModify = canUserModifyPost(currentPost, user, messageEditDeleteLimitMinutes);
+                  const canDelete = canUserDeletePost(currentPost, user);
                   const isAuthor = currentPost.authorId === user?.uid;
-                  const isAdmin = user?.role === "admin";
+                  const isAdmin = checkIsAdmin(user);
 
-                  if (canModify) {
-                    return (
-                      <>
+                  return (
+                    <>
+                      {canModify && (
                         <button
                           onClick={() => {
                             setEditingPostId(currentPost.id);
@@ -3277,25 +4169,27 @@ export const Community: React.FC = () => {
                         >
                           <Edit3 size={13} /> {tLocal("editPostBtn") || "Modifier"}
                         </button>
+                      )}
+
+                      {canDelete && (
                         <button
-                          onClick={() => handleDeletePost(currentPost.id)}
+                          onClick={() => {
+                            handleDeletePost(currentPost.id);
+                            setActiveContextMenuPostId(null);
+                          }}
                           className="w-full text-left px-2.5 py-1.5 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg text-[11px] sm:text-xs font-bold text-red-600 dark:text-red-400 flex items-center gap-2 cursor-pointer"
                         >
                           <Trash2 size={13} /> {tLocal("deletePostBtn") || "Supprimer"}
                         </button>
-                      </>
-                    );
-                  }
+                      )}
 
-                  if (isAuthor && !canModify && !isAdmin) {
-                    return (
-                      <div className="px-2.5 py-1.5 text-[10px] italic text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 rounded-lg font-medium">
-                        ⏱️ Délai expiré (&gt; {formatLimitText(messageEditDeleteLimitMinutes)})
-                      </div>
-                    );
-                  }
-
-                  return null;
+                      {isAuthor && !canModify && !isAdmin && (
+                        <div className="px-2.5 py-1.5 text-[10px] italic text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 rounded-lg font-medium">
+                          ⏱️ Modification expirée (&gt; {formatLimitText(messageEditDeleteLimitMinutes)})
+                        </div>
+                      )}
+                    </>
+                  );
                 })()}
               </div>
             </motion.div>
@@ -3639,54 +4533,216 @@ export const Community: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* STUNNING LIGHTBOX MODAL */}
+      {/* STUNNING LIGHTBOX MODAL WITH HIGH RESOLUTION DOWNLOAD */}
       <AnimatePresence>
         {lightboxImages.length > 0 && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/95 z-50 flex flex-col justify-between p-3 sm:p-6 select-none"
           >
-            <button
-              onClick={() => setLightboxImages([])}
-              className="absolute top-4 right-4 p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors cursor-pointer"
-            >
-              <X size={20} />
-            </button>
+            {/* TOP TOOLBAR */}
+            <div className="w-full flex items-center justify-between gap-2 z-10 bg-black/40 backdrop-blur-md px-3 sm:px-5 py-2.5 rounded-2xl border border-white/10 shrink-0">
+              {/* Left: Metadata & Counter */}
+              <div className="flex items-center gap-2 sm:gap-3">
+                <span className="text-white/90 text-xs sm:text-sm font-bold tracking-wider">
+                  {lightboxIndex + 1} / {lightboxImages.length}
+                </span>
+                <div className="flex items-center gap-1.5 px-2.5 py-1 bg-white/10 backdrop-blur-md rounded-full text-[11px] font-semibold text-white/90 border border-white/10">
+                  <Sparkles size={12} className="text-amber-400" />
+                  <span>{lightboxMeta ? `${lightboxMeta.width} × ${lightboxMeta.height} px` : "HD"}</span>
+                  <span className="hidden sm:inline text-[9px] uppercase font-bold text-emerald-400 bg-emerald-950/70 px-1.5 py-0.5 rounded">Haute Résolution</span>
+                </div>
+              </div>
 
-            <div className="relative max-w-5xl w-full max-h-[80vh] flex items-center justify-center">
+              {/* Center: Interactive Zoom & Orientation Controls */}
+              <div className="hidden md:flex items-center gap-1 bg-white/10 px-2 py-1 rounded-xl border border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setLightboxZoom(prev => Math.max(50, prev - 25))}
+                  className="p-1.5 hover:bg-white/20 text-white rounded-lg transition-colors cursor-pointer"
+                  title="Zoom arrière (-25%)"
+                >
+                  <ZoomOut size={16} />
+                </button>
+                <span className="text-xs font-mono font-bold text-white px-1.5 min-w-[45px] text-center">
+                  {lightboxZoom}%
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setLightboxZoom(prev => Math.min(300, prev + 25))}
+                  className="p-1.5 hover:bg-white/20 text-white rounded-lg transition-colors cursor-pointer"
+                  title="Zoom avant (+25%)"
+                >
+                  <ZoomIn size={16} />
+                </button>
+                <div className="h-4 w-px bg-white/20 mx-1" />
+                <button
+                  type="button"
+                  onClick={() => setLightboxRotation(prev => (prev + 90) % 360)}
+                  className="p-1.5 hover:bg-white/20 text-white rounded-lg transition-colors cursor-pointer"
+                  title="Pivoter de 90°"
+                >
+                  <RotateCw size={16} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setLightboxZoom(100);
+                    setLightboxRotation(0);
+                  }}
+                  className="p-1.5 hover:bg-white/20 text-white rounded-lg transition-colors cursor-pointer"
+                  title="Réinitialiser zoom et rotation"
+                >
+                  <Maximize2 size={16} />
+                </button>
+              </div>
+
+              {/* Right: Actions */}
+              <div className="flex items-center gap-2">
+                {/* Ultra HD 2X Button */}
+                <button
+                  type="button"
+                  disabled={isDownloadingHD}
+                  onClick={async () => {
+                    setIsDownloadingHD(true);
+                    const currentUrl = lightboxImages[lightboxIndex];
+                    await downloadImageHighRes(currentUrl, `asrarhub-ultra-hd-2x-${Date.now()}.png`, { upscaleFactor: 2 });
+                    setIsDownloadingHD(false);
+                    setDeleteToast("Image Ultra-HD (2X) téléchargée avec succès !");
+                    setTimeout(() => setDeleteToast(null), 3000);
+                  }}
+                  className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-500 hover:to-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg active:scale-95 cursor-pointer border border-emerald-400/30 disabled:opacity-50"
+                  title="Améliorer la netteté et télécharger en résolution doublée Ultra-HD (2X)"
+                >
+                  <Sparkles size={13} className="text-amber-300" />
+                  <span>Ultra HD (2X)</span>
+                </button>
+
+                {/* Primary High-Res Download Button */}
+                <button
+                  type="button"
+                  disabled={isDownloadingHD}
+                  onClick={async () => {
+                    setIsDownloadingHD(true);
+                    const currentUrl = lightboxImages[lightboxIndex];
+                    await downloadImageHighRes(currentUrl, `asrarhub-image-hd-${Date.now()}.png`, { upscaleFactor: 1 });
+                    setIsDownloadingHD(false);
+                    setDeleteToast("Image Haute Résolution téléchargée avec succès !");
+                    setTimeout(() => setDeleteToast(null), 3000);
+                  }}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold transition-all shadow-lg active:scale-95 cursor-pointer disabled:opacity-50"
+                  title="Télécharger l'image en pleine résolution"
+                >
+                  {isDownloadingHD ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+                  <span>Télécharger HD</span>
+                </button>
+
+                {/* Close Button */}
+                <button
+                  type="button"
+                  onClick={() => setLightboxImages([])}
+                  className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors cursor-pointer ml-1"
+                  title="Fermer"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            </div>
+
+            {/* MAIN IMAGE STAGE */}
+            <div className="relative flex-1 w-full flex items-center justify-center overflow-hidden my-3">
               {lightboxImages.length > 1 && (
                 <button
+                  type="button"
                   onClick={() => setLightboxIndex(prev => (prev - 1 + lightboxImages.length) % lightboxImages.length)}
-                  className="absolute left-2 top-1/2 -translate-y-1/2 p-3 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors cursor-pointer"
+                  className="absolute left-2 sm:left-4 z-20 p-3 bg-black/60 hover:bg-black/90 text-white rounded-full transition-all cursor-pointer backdrop-blur-sm border border-white/10 active:scale-95 shadow-xl"
+                  title="Image précédente"
                 >
                   <ChevronLeft size={24} />
                 </button>
               )}
 
-              <img
-                src={lightboxImages[lightboxIndex]}
-                alt="Enlarged shared capture"
-                className="max-w-full max-h-[75vh] object-contain rounded-lg shadow-2xl"
-              />
+              <div
+                className="w-full h-full flex items-center justify-center overflow-auto cursor-zoom-in"
+                onDoubleClick={() => setLightboxZoom(prev => prev === 100 ? 175 : 100)}
+                title="Double-cliquez pour zoomer/dézoomer"
+              >
+                <img
+                  key={`lightbox-img-${lightboxIndex}`}
+                  src={lightboxImages[lightboxIndex]}
+                  alt="Capture Haute Résolution"
+                  style={{
+                    transform: `scale(${lightboxZoom / 100}) rotate(${lightboxRotation}deg)`,
+                    transition: "transform 0.2s ease-out"
+                  }}
+                  className="max-w-full max-h-[70vh] sm:max-h-[76vh] object-contain rounded-xl shadow-2xl select-none"
+                />
+              </div>
 
               {lightboxImages.length > 1 && (
                 <button
+                  type="button"
                   onClick={() => setLightboxIndex(prev => (prev + 1) % lightboxImages.length)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-3 bg-white/10 hover:bg-white/20 text-white rounded-full transition-colors cursor-pointer"
+                  className="absolute right-2 sm:right-4 z-20 p-3 bg-black/60 hover:bg-black/90 text-white rounded-full transition-all cursor-pointer backdrop-blur-sm border border-white/10 active:scale-95 shadow-xl"
+                  title="Image suivante"
                 >
                   <ChevronRight size={24} />
                 </button>
               )}
             </div>
 
-            <div className="absolute bottom-4 text-white text-xs font-bold uppercase tracking-wider">
-              Capture {lightboxIndex + 1} / {lightboxImages.length}
+            {/* MOBILE FLOATING ACTIONS / STATUS FOOTER */}
+            <div className="w-full flex sm:hidden items-center justify-center gap-2 pt-1 pb-2">
+              <button
+                type="button"
+                disabled={isDownloadingHD}
+                onClick={async () => {
+                  setIsDownloadingHD(true);
+                  const currentUrl = lightboxImages[lightboxIndex];
+                  await downloadImageHighRes(currentUrl, `asrarhub-image-hd-${Date.now()}.png`, { upscaleFactor: 1 });
+                  setIsDownloadingHD(false);
+                  setDeleteToast("Image HD téléchargée avec succès !");
+                  setTimeout(() => setDeleteToast(null), 3000);
+                }}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-emerald-600 active:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-lg"
+              >
+                {isDownloadingHD ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+                <span>Télécharger HD</span>
+              </button>
+              <button
+                type="button"
+                disabled={isDownloadingHD}
+                onClick={async () => {
+                  setIsDownloadingHD(true);
+                  const currentUrl = lightboxImages[lightboxIndex];
+                  await downloadImageHighRes(currentUrl, `asrarhub-ultra-hd-2x-${Date.now()}.png`, { upscaleFactor: 2 });
+                  setIsDownloadingHD(false);
+                  setDeleteToast("Image Ultra-HD (2X) téléchargée avec succès !");
+                  setTimeout(() => setDeleteToast(null), 3000);
+                }}
+                className="flex-1 flex items-center justify-center gap-1.5 py-2.5 bg-purple-600 active:bg-purple-700 text-white rounded-xl text-xs font-bold shadow-lg"
+              >
+                <Sparkles size={14} className="text-amber-300" />
+                <span>Ultra-HD (2X)</span>
+              </button>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* FULL-SCREEN IA ASRAR SPIRITUAL ASSISTANT MODAL */}
+      <CommunityAiAssistantModal
+        isOpen={isAiModalOpen}
+        onClose={() => setIsAiModalOpen(false)}
+        user={user}
+        navigate={navigate}
+        messages={aiChatMessages}
+        onSendMessage={(text) => handleSendAiMessage(text)}
+        isLoading={isAiLoading}
+        onResetChat={handleResetAiChat}
+      />
 
       {/* PROFESSIONAL DOCUMENT & FILE VIEWER MODAL */}
       <AnimatePresence>
@@ -3695,14 +4751,20 @@ export const Community: React.FC = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-2 sm:p-5 overflow-hidden"
+            className={`fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center overflow-hidden transition-all duration-200 ${
+              isDocViewerFullscreen ? "p-0" : "p-2 sm:p-5"
+            }`}
           >
             <motion.div
               initial={{ scale: 0.94, y: 15 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.94, y: 15 }}
               transition={{ type: "spring", stiffness: 400, damping: 28 }}
-              className="relative w-full max-w-5xl h-[92vh] bg-white dark:bg-[#15202b] rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-gray-200 dark:border-gray-800 text-left"
+              className={`relative bg-white dark:bg-[#15202b] shadow-2xl flex flex-col overflow-hidden text-left transition-all duration-200 ${
+                isDocViewerFullscreen
+                  ? "w-full h-full max-w-none rounded-none border-0"
+                  : "w-full max-w-5xl h-[92vh] rounded-3xl border border-gray-200 dark:border-gray-800"
+              }`}
             >
               {/* TOP HEADER */}
               <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 bg-gray-50 dark:bg-[#1c2a38] border-b border-gray-200 dark:border-gray-800 shrink-0">
@@ -3811,17 +4873,47 @@ export const Community: React.FC = () => {
 
                 {/* RIGHT ACTIONS */}
                 <div className="flex items-center gap-1.5 ml-2">
-                  <a
-                    href={docViewerFile.url}
-                    download={docViewerFile.fileName || "document"}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold transition-all active:scale-95 shadow-md shadow-emerald-500/20 cursor-pointer"
-                    title="Télécharger le fichier"
-                  >
-                    <Download size={14} />
-                    <span className="hidden sm:inline">Télécharger</span>
-                  </a>
+                  {docViewerFile.type === "image" || (docViewerFile.fileName || "").match(/\.(jpg|jpeg|png|webp|gif|svg)$/i) ? (
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        await downloadImageHighRes(docViewerFile.url, docViewerFile.fileName || `asrarhub-doc-img-hd-${Date.now()}.png`);
+                        setDeleteToast("Image Haute Résolution téléchargée !");
+                        setTimeout(() => setDeleteToast(null), 3000);
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold transition-all active:scale-95 shadow-md shadow-emerald-500/20 cursor-pointer"
+                      title="Télécharger l'image en Haute Résolution"
+                    >
+                      <Download size={14} />
+                      <span className="hidden sm:inline">Télécharger HD</span>
+                    </button>
+                  ) : (
+                    <a
+                      href={docViewerFile.url}
+                      download={docViewerFile.fileName || "document"}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-xs font-bold transition-all active:scale-95 shadow-md shadow-emerald-500/20 cursor-pointer"
+                      title="Télécharger le fichier"
+                    >
+                      <Download size={14} />
+                      <span className="hidden sm:inline">Télécharger</span>
+                    </a>
+                  )}
                   <button
-                    onClick={() => setDocViewerFile(null)}
+                    type="button"
+                    onClick={toggleDocViewerFullscreen}
+                    className="p-2 rounded-xl text-gray-500 hover:text-gray-700 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+                    title={isDocViewerFullscreen ? "Quitter le plein écran" : "Afficher en Plein Écran"}
+                  >
+                    {isDocViewerFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (document.fullscreenElement && document.exitFullscreen) {
+                        document.exitFullscreen().catch(() => {});
+                      }
+                      setIsDocViewerFullscreen(false);
+                      setDocViewerFile(null);
+                    }}
                     className="p-2 rounded-xl text-gray-400 hover:text-gray-600 dark:hover:text-white hover:bg-gray-200 dark:hover:bg-gray-800 transition-colors cursor-pointer"
                     title="Fermer"
                   >
@@ -3903,31 +4995,80 @@ export const Community: React.FC = () => {
                   </div>
 
                   <div className="flex items-center gap-2">
+                    {/* View mode toggle (Page par page vs Défilement vertical) for PDF */}
+                    {(docViewerFile.url.startsWith("data:application/pdf") || (docViewerFile.fileName || "").toLowerCase().endsWith(".pdf")) && (
+                      <div className="flex items-center bg-white dark:bg-gray-800 p-0.5 rounded-lg border border-gray-200 dark:border-gray-700 shadow-xs">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDocViewerPdfMode("continuous");
+                            try { localStorage.setItem("asrarhub_pdf_view_mode", "continuous"); } catch (_) {}
+                          }}
+                          className={`flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+                            docViewerPdfMode === "continuous"
+                              ? "bg-emerald-500 text-white shadow-xs"
+                              : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+                          }`}
+                          title="Défilement vertical continu (scroller toutes les pages)"
+                        >
+                          <ScrollText size={13} />
+                          <span className="hidden sm:inline">Défilement continu</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDocViewerPdfMode("single");
+                            try { localStorage.setItem("asrarhub_pdf_view_mode", "single"); } catch (_) {}
+                          }}
+                          className={`flex items-center gap-1 px-2 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+                            docViewerPdfMode === "single"
+                              ? "bg-emerald-500 text-white shadow-xs"
+                              : "text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
+                          }`}
+                          title="Affichage page par page"
+                        >
+                          <BookOpen size={13} />
+                          <span className="hidden sm:inline">Page par page</span>
+                        </button>
+                      </div>
+                    )}
+
                     <button
-                      onClick={() => {
-                        const win = window.open();
-                        if (win) win.document.write(`<iframe src="${docViewerFile.url}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`);
-                      }}
-                      className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 shadow-sm border border-gray-200 dark:border-gray-700 cursor-pointer text-[11px] font-bold"
-                      title="Plein écran / Nouvel onglet"
+                      type="button"
+                      onClick={toggleDocViewerFullscreen}
+                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg shadow-sm border transition-all cursor-pointer text-[11px] font-bold ${
+                        isDocViewerFullscreen
+                          ? "bg-emerald-500 text-white border-emerald-600 shadow-emerald-500/20"
+                          : "bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 border-gray-200 dark:border-gray-700"
+                      }`}
+                      title={isDocViewerFullscreen ? "Quitter le mode plein écran" : "Afficher en Plein Écran"}
                     >
-                      <ExternalLink size={13} />
-                      <span className="hidden sm:inline">Grand Écran</span>
+                      {isDocViewerFullscreen ? <Minimize2 size={13} /> : <Maximize2 size={13} />}
+                      <span className="hidden sm:inline">{isDocViewerFullscreen ? "Fenêtre" : "Plein Écran"}</span>
                     </button>
                   </div>
                 </div>
               )}
 
               {/* MAIN VIEWER DISPLAY BODY */}
-              <div className="flex-1 overflow-auto bg-gray-100 dark:bg-[#111923] p-3 sm:p-6 flex flex-col items-center justify-center relative">
+              <div className={`flex-1 min-h-0 w-full bg-gray-100 dark:bg-[#111923] flex flex-col items-center justify-start relative overflow-hidden ${
+                (docViewerFile.url.startsWith("data:application/pdf") || (docViewerFile.fileName || "").toLowerCase().endsWith(".pdf"))
+                  ? "p-0"
+                  : "p-3 sm:p-6 overflow-auto"
+              }`}>
                 {/* TAB 1: INTERACTIVE VIEWER */}
                 {docViewerTab === "viewer" && (
-                  <div className="w-full h-full flex items-center justify-center overflow-auto">
+                  <div className="w-full h-full min-h-0 flex flex-col items-center justify-start overflow-hidden">
                     {/* 1. PDF FILE */}
                     {(docViewerFile.url.startsWith("data:application/pdf") || (docViewerFile.fileName || "").toLowerCase().endsWith(".pdf")) ? (
                       <PdfCanvasViewer
                         url={docViewerFile.url}
                         zoom={docViewerZoom}
+                        viewMode={docViewerPdfMode}
+                        onViewModeChange={(mode) => {
+                          setDocViewerPdfMode(mode);
+                          try { localStorage.setItem("asrarhub_pdf_view_mode", mode); } catch (_) {}
+                        }}
                         onExtractText={(txt) => setDocViewerTextContent(txt)}
                       />
                     ) : docViewerFile.type === "image" || (docViewerFile.fileName || "").match(/\.(jpg|jpeg|png|webp|gif|svg)$/i) ? (
@@ -4116,6 +5257,85 @@ export const Community: React.FC = () => {
           initialRecipientName={dmRecipient?.name}
         />
       )}
+
+      {/* Guest Authentication Modal for messaging & community participation */}
+      <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
+
+      {/* Delete Confirmation Modal (Single & Batch) */}
+      <AnimatePresence>
+        {postToDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 8 }}
+              className="bg-white dark:bg-[#182533] border border-gray-200 dark:border-gray-700/80 rounded-2xl shadow-2xl p-5 sm:p-6 max-w-md w-full text-center"
+            >
+              <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-950/40 text-red-600 dark:text-red-400 flex items-center justify-center mx-auto mb-3.5">
+                <Trash2 size={24} />
+              </div>
+              <h4 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white mb-1.5">
+                {postToDelete.isBatch
+                  ? `Supprimer ${postToDelete.count} message${(postToDelete.count || 0) > 1 ? "s" : ""} ?`
+                  : "Supprimer ce message ?"}
+              </h4>
+              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mb-4 leading-relaxed">
+                {postToDelete.isBatch
+                  ? `Êtes-vous sûr de vouloir supprimer définitivement les ${postToDelete.count} messages sélectionnés ? Cette action est irréversible.`
+                  : "Êtes-vous sûr de vouloir supprimer définitivement ce message de la communauté ? Cette action est irréversible."}
+              </p>
+              {postToDelete.content && (
+                <div className="bg-gray-50 dark:bg-gray-800/60 rounded-xl p-2.5 mb-4 text-left text-xs text-gray-600 dark:text-gray-300 italic line-clamp-2 border border-gray-150 dark:border-gray-700/50">
+                  "{postToDelete.content}"
+                </div>
+              )}
+              <div className="flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  disabled={isDeleting}
+                  onClick={() => setPostToDelete(null)}
+                  className="px-4 py-2 rounded-xl text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+                >
+                  Annuler
+                </button>
+                <button
+                  type="button"
+                  disabled={isDeleting}
+                  onClick={handleConfirmDelete}
+                  className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs sm:text-sm font-bold bg-red-600 hover:bg-red-700 text-white transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                >
+                  {isDeleting ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      <span>Suppression...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 size={16} />
+                      <span>Supprimer</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Feedback Toast */}
+      <AnimatePresence>
+        {deleteToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 20, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 20, scale: 0.95 }}
+            className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 bg-gray-900/95 dark:bg-black/90 text-white text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-full shadow-2xl backdrop-blur-md flex items-center gap-2 border border-white/10"
+          >
+            <Check size={16} className="text-emerald-400" />
+            <span>{deleteToast}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
@@ -4124,18 +5344,205 @@ export const Community: React.FC = () => {
 interface PdfCanvasViewerProps {
   url: string;
   zoom: number;
+  viewMode?: "continuous" | "single";
+  onViewModeChange?: (mode: "continuous" | "single") => void;
   onExtractText?: (text: string) => void;
 }
 
-const PdfCanvasViewer: React.FC<PdfCanvasViewerProps> = ({ url, zoom, onExtractText }) => {
+// Single Page Item for Continuous Vertical Scrolling Mode
+const PdfSinglePageItem: React.FC<{
+  pdfDoc: any;
+  pageNum: number;
+  numPages: number;
+  zoom: number;
+  onIntersect: (pageNum: number) => void;
+}> = ({ pdfDoc, pageNum, numPages, zoom, onIntersect }) => {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const renderTaskRef = useRef<any>(null);
+  const [rendered, setRendered] = useState(false);
+  const [isInViewport, setIsInViewport] = useState(pageNum <= 4);
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            setIsInViewport(true);
+            if (entry.intersectionRatio >= 0.2) {
+              onIntersect(pageNum);
+            }
+          }
+        });
+      },
+      {
+        rootMargin: "600px 0px",
+        threshold: [0, 0.2, 0.5]
+      }
+    );
+
+    observer.observe(containerRef.current);
+    return () => observer.disconnect();
+  }, [pageNum, onIntersect]);
+
+  useEffect(() => {
+    if (!pdfDoc || !canvasRef.current || !isInViewport) return;
+    let isCancelled = false;
+
+    const render = async () => {
+      if (renderTaskRef.current) {
+        try {
+          renderTaskRef.current.cancel();
+        } catch (_) {}
+      }
+
+      try {
+        const page = await pdfDoc.getPage(pageNum);
+        if (isCancelled) return;
+
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+
+        const baseScale = 1.3;
+        const scale = baseScale * (zoom / 100);
+        const viewport = page.getViewport({ scale });
+
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+
+        const renderContext: any = {
+          canvasContext: ctx,
+          viewport: viewport,
+          canvas: canvas
+        };
+
+        const task = page.render(renderContext);
+        renderTaskRef.current = task;
+        await task.promise;
+        if (!isCancelled) {
+          setRendered(true);
+        }
+      } catch (e: any) {
+        if (e?.name !== "RenderingCancelledException") {
+          console.error(`Page ${pageNum} render error:`, e);
+        }
+      }
+    };
+
+    render();
+
+    return () => {
+      isCancelled = true;
+      if (renderTaskRef.current) {
+        try {
+          renderTaskRef.current.cancel();
+        } catch (_) {}
+      }
+    };
+  }, [pdfDoc, pageNum, zoom, isInViewport]);
+
+  return (
+    <div
+      id={`pdf-continuous-page-${pageNum}`}
+      ref={containerRef}
+      className="flex flex-col items-center mb-6 sm:mb-8 last:mb-4 w-full shrink-0 scroll-mt-16 select-none"
+      style={{ touchAction: "pan-x pan-y" }}
+    >
+      {/* Page indicator badge */}
+      <div className="flex items-center gap-2 mb-2 px-3 py-1 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md rounded-full text-[11px] font-bold text-gray-700 dark:text-gray-300 shadow-sm border border-gray-200/60 dark:border-gray-700/60 select-none">
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+        <span>Page {pageNum} sur {numPages}</span>
+      </div>
+
+      <div
+        className="relative shadow-2xl rounded-2xl bg-white border border-gray-200 dark:border-gray-800 overflow-hidden max-w-full"
+        style={{ touchAction: "pan-x pan-y" }}
+      >
+        {!rendered && (
+          <div className="w-[300px] h-[420px] sm:w-[520px] sm:h-[700px] max-w-full flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 animate-pulse text-gray-400">
+            <Loader2 className="animate-spin mb-2 text-emerald-500" size={28} />
+            <span className="text-xs font-semibold">Chargement page {pageNum}...</span>
+          </div>
+        )}
+        <canvas
+          ref={canvasRef}
+          className={`block max-w-full h-auto transition-opacity duration-200 ${
+            !rendered ? "opacity-0 absolute top-0 left-0" : "opacity-100"
+          }`}
+          style={{ touchAction: "pan-x pan-y" }}
+        />
+      </div>
+    </div>
+  );
+};
+
+const PdfCanvasViewer: React.FC<PdfCanvasViewerProps> = ({
+  url,
+  zoom,
+  viewMode = "continuous",
+  onViewModeChange,
+  onExtractText
+}) => {
   const [numPages, setNumPages] = useState<number>(0);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [loading, setLoading] = useState<boolean>(true);
   const [useFallbackIframe, setUseFallbackIframe] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [pdfDoc, setPdfDoc] = useState<any>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const [internalMode, setInternalMode] = useState<"continuous" | "single">(viewMode);
+
+  const activeMode = viewMode || internalMode;
+  const singleCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const renderTaskRef = useRef<any>(null);
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+
+  const handleModeToggle = (mode: "continuous" | "single") => {
+    setInternalMode(mode);
+    onViewModeChange?.(mode);
+  };
+
+  const scrollToPage = (pageNum: number) => {
+    const target = Math.max(1, Math.min(numPages, pageNum));
+    setCurrentPage(target);
+    if (activeMode === "continuous") {
+      const el = document.getElementById(`pdf-continuous-page-${target}`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
+  };
+
+  const touchStartXRef = useRef<number | null>(null);
+  const touchStartYRef = useRef<number | null>(null);
+
+  const handleSingleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      touchStartXRef.current = e.touches[0].clientX;
+      touchStartYRef.current = e.touches[0].clientY;
+    }
+  };
+
+  const handleSingleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartXRef.current === null || touchStartYRef.current === null) return;
+    const touchEndX = e.changedTouches[0].clientX;
+    const touchEndY = e.changedTouches[0].clientY;
+    const diffX = touchStartXRef.current - touchEndX;
+    const diffY = touchStartYRef.current - touchEndY;
+
+    // If horizontal swipe is dominant and > 50px
+    if (Math.abs(diffX) > 50 && Math.abs(diffX) > Math.abs(diffY) * 1.3) {
+      if (diffX > 0 && currentPage < numPages) {
+        scrollToPage(currentPage + 1);
+      } else if (diffX < 0 && currentPage > 1) {
+        scrollToPage(currentPage - 1);
+      }
+    }
+    touchStartXRef.current = null;
+    touchStartYRef.current = null;
+  };
 
   useEffect(() => {
     let isMounted = true;
@@ -4224,8 +5631,9 @@ const PdfCanvasViewer: React.FC<PdfCanvasViewerProps> = ({ url, zoom, onExtractT
     };
   }, [url]);
 
+  // Render single page when activeMode === "single"
   useEffect(() => {
-    if (!pdfDoc || !canvasRef.current || useFallbackIframe) return;
+    if (!pdfDoc || !singleCanvasRef.current || useFallbackIframe || activeMode !== "single") return;
     let isCancelled = false;
 
     const renderPage = async () => {
@@ -4239,7 +5647,7 @@ const PdfCanvasViewer: React.FC<PdfCanvasViewerProps> = ({ url, zoom, onExtractT
         const page = await pdfDoc.getPage(currentPage);
         if (isCancelled) return;
 
-        const canvas = canvasRef.current;
+        const canvas = singleCanvasRef.current;
         if (!canvas) return;
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
@@ -4277,7 +5685,7 @@ const PdfCanvasViewer: React.FC<PdfCanvasViewerProps> = ({ url, zoom, onExtractT
         } catch (_) {}
       }
     };
-  }, [pdfDoc, currentPage, zoom, useFallbackIframe]);
+  }, [pdfDoc, currentPage, zoom, useFallbackIframe, activeMode]);
 
   if (useFallbackIframe) {
     return (
@@ -4293,20 +5701,22 @@ const PdfCanvasViewer: React.FC<PdfCanvasViewerProps> = ({ url, zoom, onExtractT
 
   return (
     <div className="flex flex-col items-center w-full h-full overflow-hidden relative">
-      {/* PAGE NAVIGATION CONTROLS */}
+      {/* FLOATING PAGE NAVIGATION & MODE CONTROLS */}
       {numPages > 1 && (
-        <div className="flex items-center gap-3 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md px-4 py-2 rounded-2xl shadow-xl border border-gray-200/80 dark:border-gray-700/80 mb-3 z-20 shrink-0">
+        <div className="flex flex-wrap items-center justify-center gap-2 sm:gap-3 bg-white/95 dark:bg-gray-800/95 backdrop-blur-md px-3 sm:px-4 py-1.5 sm:py-2 rounded-2xl shadow-xl border border-gray-200/80 dark:border-gray-700/80 my-1 sm:my-2 z-20 shrink-0 max-w-[95%]">
+          {/* Previous Page Button */}
           <button
             disabled={currentPage <= 1}
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            className="p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:hover:bg-transparent text-gray-700 dark:text-gray-200 transition-colors cursor-pointer"
+            onClick={() => scrollToPage(currentPage - 1)}
+            className="p-1 sm:p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:hover:bg-transparent text-gray-700 dark:text-gray-200 transition-colors cursor-pointer"
             title="Page précédente"
           >
-            <ChevronLeft size={18} />
+            <ChevronLeft size={17} />
           </button>
 
-          <div className="flex items-center gap-1.5 text-xs font-black text-gray-900 dark:text-white">
-            <span>Page</span>
+          {/* Current Page Counter & Input */}
+          <div className="flex items-center gap-1 sm:gap-1.5 text-xs font-black text-gray-900 dark:text-white">
+            <span className="hidden xs:inline">Page</span>
             <input
               type="number"
               min={1}
@@ -4314,21 +5724,57 @@ const PdfCanvasViewer: React.FC<PdfCanvasViewerProps> = ({ url, zoom, onExtractT
               value={currentPage}
               onChange={(e) => {
                 const val = parseInt(e.target.value);
-                if (val >= 1 && val <= numPages) setCurrentPage(val);
+                if (val >= 1 && val <= numPages) scrollToPage(val);
               }}
-              className="w-12 text-center bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg py-0.5 font-bold focus:outline-none"
+              className="w-10 sm:w-12 text-center bg-gray-100 dark:bg-gray-900 border border-gray-300 dark:border-gray-700 rounded-lg py-0.5 font-bold focus:outline-none text-xs"
             />
             <span>/ {numPages}</span>
           </div>
 
+          {/* Next Page Button */}
           <button
             disabled={currentPage >= numPages}
-            onClick={() => setCurrentPage((p) => Math.min(numPages, p + 1))}
-            className="p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:hover:bg-transparent text-gray-700 dark:text-gray-200 transition-colors cursor-pointer"
+            onClick={() => scrollToPage(currentPage + 1)}
+            className="p-1 sm:p-1.5 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30 disabled:hover:bg-transparent text-gray-700 dark:text-gray-200 transition-colors cursor-pointer"
             title="Page suivante"
           >
-            <ChevronRight size={18} />
+            <ChevronRight size={17} />
           </button>
+
+          {/* Divider */}
+          <div className="h-4 w-px bg-gray-300 dark:bg-gray-700 mx-0.5 sm:mx-1" />
+
+          {/* View Mode Switcher Pill */}
+          <div className="flex items-center bg-gray-100 dark:bg-gray-900/80 p-0.5 rounded-xl border border-gray-200 dark:border-gray-700/60">
+            <button
+              type="button"
+              onClick={() => handleModeToggle("continuous")}
+              className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                activeMode === "continuous"
+                  ? "bg-emerald-500 text-white shadow-xs"
+                  : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+              }`}
+              title="Défilement vertical continu (scroller toutes les pages)"
+            >
+              <ScrollText size={13} />
+              <span className="hidden sm:inline">Défilement continu</span>
+              <span className="sm:hidden">Vertical</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleModeToggle("single")}
+              className={`flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold transition-all cursor-pointer ${
+                activeMode === "single"
+                  ? "bg-emerald-500 text-white shadow-xs"
+                  : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+              }`}
+              title="Affichage page par page (feuilleter)"
+            >
+              <BookOpen size={13} />
+              <span className="hidden sm:inline">Page par page</span>
+              <span className="sm:hidden">1 Page</span>
+            </button>
+          </div>
         </div>
       )}
 
@@ -4360,14 +5806,60 @@ const PdfCanvasViewer: React.FC<PdfCanvasViewerProps> = ({ url, zoom, onExtractT
         </div>
       )}
 
-      {/* CANVAS ELEMENT */}
+      {/* RENDER BODY: CONTINUOUS OR SINGLE PAGE */}
       {!loading && !error && (
-        <div className="flex-1 w-full overflow-auto flex justify-center items-start p-2 sm:p-4">
-          <canvas
-            ref={canvasRef}
-            className="shadow-2xl rounded-2xl bg-white border border-gray-200 dark:border-gray-800 max-w-full transition-shadow"
-          />
-        </div>
+        activeMode === "continuous" ? (
+          <div
+            ref={scrollContainerRef}
+            className="flex-1 min-h-0 w-full overflow-y-auto overflow-x-auto flex flex-col items-center p-2 sm:p-4 space-y-2 sm:space-y-4 scroll-smooth select-none"
+            style={{
+              touchAction: "pan-x pan-y",
+              WebkitOverflowScrolling: "touch",
+              overscrollBehaviorY: "contain"
+            }}
+          >
+            {Array.from({ length: numPages }, (_, i) => i + 1).map((pNum) => (
+              <PdfSinglePageItem
+                key={`pdf-page-${pNum}`}
+                pdfDoc={pdfDoc}
+                pageNum={pNum}
+                numPages={numPages}
+                zoom={zoom}
+                onIntersect={(activeNum) => setCurrentPage(activeNum)}
+              />
+            ))}
+
+            {/* Quick Scroll To Top Floating Button */}
+            {currentPage > 1 && (
+              <button
+                type="button"
+                onClick={() => scrollToPage(1)}
+                className="fixed bottom-6 right-6 sm:bottom-10 sm:right-10 p-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-full shadow-2xl transition-all active:scale-95 z-30 flex items-center gap-1.5 text-xs font-bold cursor-pointer hover:shadow-emerald-500/40"
+                title="Remonter tout en haut (Page 1)"
+              >
+                <ArrowUp size={16} />
+                <span className="hidden sm:inline">Haut</span>
+              </button>
+            )}
+          </div>
+        ) : (
+          <div
+            className="flex-1 min-h-0 w-full overflow-y-auto overflow-x-auto flex flex-col items-center justify-start p-2 sm:p-4 select-none"
+            style={{
+              touchAction: "pan-x pan-y",
+              WebkitOverflowScrolling: "touch",
+              overscrollBehaviorY: "contain"
+            }}
+            onTouchStart={handleSingleTouchStart}
+            onTouchEnd={handleSingleTouchEnd}
+          >
+            <canvas
+              ref={singleCanvasRef}
+              className="shadow-2xl rounded-2xl bg-white border border-gray-200 dark:border-gray-800 max-w-full transition-shadow my-auto sm:my-0"
+              style={{ touchAction: "pan-x pan-y" }}
+            />
+          </div>
+        )
       )}
     </div>
   );

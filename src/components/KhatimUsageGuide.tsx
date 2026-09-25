@@ -301,7 +301,7 @@ export const KhatimUsageGuide: React.FC<KhatimUsageGuideProps> = ({
                 <p className="text-xs text-gray-300 leading-relaxed">{t.step1Desc}</p>
                 <ul className="space-y-2 pt-2">
                   {t.step1Bullets.map((bullet, idx) => (
-                    <li key={idx} className="flex items-start gap-2 text-xs text-purple-100/90">
+                    <li key={`khatimusageguide-item-${idx}`} className="flex items-start gap-2 text-xs text-purple-100/90">
                       <CheckCircle2 size={14} className="text-emerald-400 shrink-0 mt-0.5" />
                       <span>{bullet}</span>
                     </li>
@@ -319,7 +319,7 @@ export const KhatimUsageGuide: React.FC<KhatimUsageGuideProps> = ({
                 <p className="text-xs text-gray-300 leading-relaxed">{t.step2Desc}</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
                   {t.planetaryHours.map((item, idx) => (
-                    <div key={idx} className="p-3 bg-zinc-900/80 rounded-xl border border-purple-500/20 space-y-1">
+                    <div key={`khatimusageguide-item-${idx}`} className="p-3 bg-zinc-900/80 rounded-xl border border-purple-500/20 space-y-1">
                       <div className="flex items-center justify-between text-xs font-bold text-amber-300">
                         <span>{item.day}</span>
                         <Sun size={14} className="text-amber-400" />
@@ -343,7 +343,7 @@ export const KhatimUsageGuide: React.FC<KhatimUsageGuideProps> = ({
                 <p className="text-xs text-gray-300 leading-relaxed">{t.step3Desc}</p>
                 <ul className="space-y-2 pt-2">
                   {t.step3Bullets.map((bullet, idx) => (
-                    <li key={idx} className="flex items-start gap-2 text-xs text-purple-100/90">
+                    <li key={`khatimusageguide-item-${idx}`} className="flex items-start gap-2 text-xs text-purple-100/90">
                       <CheckCircle2 size={14} className="text-amber-400 shrink-0 mt-0.5" />
                       <span>{bullet}</span>
                     </li>
@@ -361,7 +361,7 @@ export const KhatimUsageGuide: React.FC<KhatimUsageGuideProps> = ({
                 <p className="text-xs text-gray-300 leading-relaxed">{t.step4Desc}</p>
                 <ul className="space-y-2 pt-2">
                   {t.step4Bullets.map((bullet, idx) => (
-                    <li key={idx} className="flex items-start gap-2 text-xs text-purple-100/90">
+                    <li key={`khatimusageguide-item-${idx}`} className="flex items-start gap-2 text-xs text-purple-100/90">
                       <CheckCircle2 size={14} className="text-purple-400 shrink-0 mt-0.5" />
                       <span>{bullet}</span>
                     </li>
@@ -379,7 +379,7 @@ export const KhatimUsageGuide: React.FC<KhatimUsageGuideProps> = ({
                 <p className="text-xs text-gray-300 leading-relaxed">{t.step5Desc}</p>
                 <ul className="space-y-2 pt-2">
                   {t.step5Bullets.map((bullet, idx) => (
-                    <li key={idx} className="flex items-start gap-2 text-xs text-purple-100/90">
+                    <li key={`khatimusageguide-item-${idx}`} className="flex items-start gap-2 text-xs text-purple-100/90">
                       <CheckCircle2 size={14} className="text-emerald-400 shrink-0 mt-0.5" />
                       <span>{bullet}</span>
                     </li>
@@ -397,7 +397,7 @@ export const KhatimUsageGuide: React.FC<KhatimUsageGuideProps> = ({
                 <p className="text-xs text-gray-300 leading-relaxed">{t.step6Desc}</p>
                 <ul className="space-y-2 pt-2">
                   {t.step6Bullets.map((bullet, idx) => (
-                    <li key={idx} className="flex items-start gap-2 text-xs text-purple-100/90">
+                    <li key={`khatimusageguide-item-${idx}`} className="flex items-start gap-2 text-xs text-purple-100/90">
                       <CheckCircle2 size={14} className="text-indigo-400 shrink-0 mt-0.5" />
                       <span>{bullet}</span>
                     </li>

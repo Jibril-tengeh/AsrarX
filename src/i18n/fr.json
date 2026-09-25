@@ -971,7 +971,7 @@
       "syncButton": "Synchroniser maintenant",
       "syncing": "Synchronisation en cours...",
       "success": "Synchronisation hors-ligne terminée avec succès.",
-      "autoSaveTitle": "Sauvegarde automatique sur Firestore",
+      "autoSaveTitle": "Sauvegarde automatique sur le Cloud",
       "autoSaveDesc": "Désactivez cette option pour économiser vos données mobiles. Vos modifications seront conservées localement."
     },
     "version": {
@@ -985,9 +985,9 @@
       "clearCacheBtn": "Vider le cache SWR",
       "cleaning": "Nettoyage...",
       "cleaningStatus": "Nettoyage du cache SWR...",
-      "adminSyncTitle": "Administration : Collection Firebase `app_versions`",
-      "adminSyncDesc": "Synchronisez l'historique des versions vers la base de données Firestore pour tous les utilisateurs.",
-      "syncFirestore": "Sync Firestore app_versions",
+      "adminSyncTitle": "Administration : Synchronisation Cloud `app_versions`",
+      "adminSyncDesc": "Synchronisez l'historique des versions vers le Cloud pour tous les utilisateurs.",
+      "syncFirestore": "Synchroniser le Cloud",
       "synced": "Synchronisé !"
     }
   },
@@ -1699,15 +1699,17 @@
     "statusArchived": "Archivé",
     "adminReplies": "Réponses de l'Administration ({count}) :",
     "replyViaGmail": "Relancer par Gmail",
+    "openMailApp": "App Email",
+    "copyDetails": "Copier le message",
     "linkedEmail": "Email lié :",
     "version": "AsrarHub Support v2.5"
   },
   "changelog": {
     "title": "Journal des Mises à Jour",
     "modalTitle": "Journal des Modifications",
-    "subtitle": "Historique synchronisé depuis la collection Firestore app_versions",
+    "subtitle": "Historique synchronisé depuis le Cloud",
     "modalSubtitle": "Historique des évolutions, optimisations et correctifs d'AsrarHub",
-    "syncFirestore": "Sync Firestore",
+    "syncFirestore": "Synchroniser le Cloud",
     "synced": "Synchronisé",
     "fullScreen": "Plein écran",
     "searchPlaceholder": "Rechercher une fonctionnalité, correctif...",

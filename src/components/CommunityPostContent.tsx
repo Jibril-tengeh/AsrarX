@@ -1,9 +1,24 @@
 import React, { useState, useRef } from "react";
-import { Sparkles, Maximize2, Copy, Check, Grid, AlignLeft, Download } from "lucide-react";
+import { 
+  Sparkles, 
+  Maximize2, 
+  Copy, 
+  Check, 
+  Grid, 
+  AlignLeft, 
+  Download,
+  Calculator,
+  Flame,
+  Wind,
+  Droplets,
+  Mountain,
+  Quote
+} from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { toCanvas } from "html-to-image";
 import { downloadCanvasImage } from "../utils/downloadHelper";
 import { getKhatimGridData } from "./KhatimVisualizer";
+import { detectEmojiOnlyMessage } from "../utils/emojiHelper";
 
 interface CommunityPostContentProps {
   content: string;
@@ -126,6 +141,151 @@ const getCommunityCellFontSize = (val: string | number, cols: number) => {
   if (len > 8) return 'text-[3.8px] sm:text-[5px]';
   return 'text-[5px] sm:text-[6.5px] md:text-[8px]';
 };
+
+export function cleanRawBrackets(text: string): string {
+  if (!text) return "";
+  return text
+    .split("\n")
+    .filter(line => {
+      const trimmed = line.trim();
+      if (/^📜?\s*\[Style Parchemin/i.test(trimmed)) return false;
+      if (/^🖼️?\s*\[Format Image/i.test(trimmed)) return false;
+      if (/^📊?\s*\[Format Matrice/i.test(trimmed)) return false;
+      if (/^🔒?\s*\[SAUVEGARDE PRIVÉE/i.test(trimmed)) return false;
+      if (/^\[Partage de la Communauté/i.test(trimmed)) return false;
+      if (/^✨\s*\[.*?\]$/i.test(trimmed)) return false;
+      if (/^📊\s*DÉTAILS DU CALCUL \/ MATRICE\s*:/i.test(trimmed)) return false;
+      return true;
+    })
+    .join("\n")
+    .trim();
+}
+
+export interface AbjadPostData {
+  isAbjad: boolean;
+  calculatedText: string;
+  totalMashriqi: string;
+  totalMaghribi: string;
+  wordsCount?: string;
+  lettersCount?: string;
+  elements?: {
+    fire: string;
+    air: string;
+    water: string;
+    earth: string;
+  };
+  temperament?: string;
+  authorNote?: string;
+  proposer?: string;
+}
+
+export function parseAbjadCalculation(content: string): AbjadPostData {
+  if (!content) {
+    return {
+      isAbjad: false,
+      calculatedText: "",
+      totalMashriqi: "",
+      totalMaghribi: "",
+    };
+  }
+
+  const isAbjad = 
+    content.includes("Calcul Abjad") || 
+    content.includes("Ilm al-Huruf") || 
+    (content.includes("Mashriqi") && content.includes("Maghribi")) ||
+    (content.includes("Total Abjad") && (content.includes("Oriental") || content.includes("Orientale")));
+
+  if (!isAbjad) {
+    return {
+      isAbjad: false,
+      calculatedText: "",
+      totalMashriqi: "",
+      totalMaghribi: "",
+    };
+  }
+
+  // Calculated text
+  let calculatedText = "";
+  const calcTextMatch = content.match(/Texte calcul[ée]\s*:\s*"?([^"\n\r]+)"?/i) || 
+                        content.match(/Texte\s*:\s*"?([^"\n\r]+)"?/i) ||
+                        content.match(/Item\s*:\s*Calcul Abjad\s*:\s*"?([^"\n\r]+)"?/i) ||
+                        content.match(/Item\s*:\s*"?([^"\n\r]+)"?/i);
+  if (calcTextMatch) {
+    calculatedText = calcTextMatch[1].trim();
+  }
+
+  // Mashriqi
+  let totalMashriqi = "";
+  const mashriqiMatch = content.match(/Total Abjad Orientale?\s*(?:\([^)]*\))?\s*:\s*(\d+)/i) ||
+                        content.match(/Mashriqi\s*(?:\([^)]*\))?\s*:\s*(\d+)/i);
+  if (mashriqiMatch) {
+    totalMashriqi = mashriqiMatch[1].trim();
+  }
+
+  // Maghribi
+  let totalMaghribi = "";
+  const maghribiMatch = content.match(/Total Abjad Occidentale?\s*(?:\([^)]*\))?\s*:\s*(\d+)/i) ||
+                        content.match(/Total Abjad Maghr[ée]bin\s*:\s*(\d+)/i) ||
+                        content.match(/Maghribi\s*(?:\([^)]*\))?\s*:\s*(\d+)/i);
+  if (maghribiMatch) {
+    totalMaghribi = maghribiMatch[1].trim();
+  }
+
+  // Words & letters count
+  let wordsCount = "";
+  let lettersCount = "";
+  const wordsMatch = content.match(/Nombre de mots\s*:\s*(\d+)/i);
+  if (wordsMatch) wordsCount = wordsMatch[1].trim();
+
+  const lettersMatch = content.match(/Nombre de lettres\s*:\s*(\d+)/i);
+  if (lettersMatch) lettersCount = lettersMatch[1].trim();
+
+  // Elements: Feu 1, Air 2, Eau 1, Terre 1 OR Feu 25%, Air 50%, Eau 25%, Terre 0%
+  let elements: { fire: string; air: string; water: string; earth: string } | undefined = undefined;
+  const elementsMatch = content.match(/[EÉ]l[ée]ments\s*:\s*Feu\s*([^,%\n\r]+%?),?\s*Air\s*([^,%\n\r]+%?),?\s*Eau\s*([^,%\n\r]+%?),?\s*Terre\s*([^,%\n\r]+%?)/i);
+  if (elementsMatch) {
+    elements = {
+      fire: elementsMatch[1].trim(),
+      air: elementsMatch[2].trim(),
+      water: elementsMatch[3].trim(),
+      earth: elementsMatch[4].trim(),
+    };
+  }
+
+  // Temperament
+  let temperament = "";
+  const tempMatch = content.match(/Temp[ée]rament(?: Dominant)?\s*:\s*([^\n\r]+)/i);
+  if (tempMatch) {
+    temperament = tempMatch[1].trim();
+  }
+
+  // Author note
+  let authorNote = "";
+  const noteMatch = content.match(/(?:Note\s*\/\s*Explication de l'auteur|Note de l'auteur)\s*:\s*[\n\r\s]*"?([^"\n\r]+)"?/i);
+  if (noteMatch) {
+    authorNote = noteMatch[1].trim();
+  }
+
+  // Proposer
+  let proposer = "";
+  const propMatch = content.match(/Propos[ée] par\s*:\s*([^\n\r]+)/i);
+  if (propMatch) {
+    proposer = propMatch[1].trim();
+  }
+
+  return {
+    isAbjad: true,
+    calculatedText,
+    totalMashriqi,
+    totalMaghribi,
+    wordsCount,
+    lettersCount,
+    elements,
+    temperament,
+    authorNote,
+    proposer,
+  };
+}
 
 export function parsePostContent(content: string) {
   if (!content) {
@@ -320,27 +480,253 @@ export const CommunityPostContent: React.FC<CommunityPostContentProps> = ({
   const rows = activeGrid ? activeGrid.length : 0;
   const cols = activeGrid && activeGrid[0] ? activeGrid[0].length : 0;
 
+  const abjadData = parseAbjadCalculation(content);
+  const [isAbjadCopied, setIsAbjadCopied] = useState(false);
+
+  const handleCopyAbjad = () => {
+    const summary = [
+      abjadData.calculatedText ? `Calcul Abjad : "${abjadData.calculatedText}"` : '',
+      abjadData.totalMashriqi ? `Total Mashriqi (Oriental) : ${abjadData.totalMashriqi}` : '',
+      abjadData.totalMaghribi ? `Total Maghribi (Occidental) : ${abjadData.totalMaghribi}` : '',
+      abjadData.elements ? `Éléments : Feu ${abjadData.elements.fire}, Air ${abjadData.elements.air}, Eau ${abjadData.elements.water}, Terre ${abjadData.elements.earth}` : '',
+      abjadData.authorNote ? `Note : "${abjadData.authorNote}"` : ''
+    ].filter(Boolean).join('\n');
+    navigator.clipboard.writeText(summary);
+    setIsAbjadCopied(true);
+    setTimeout(() => setIsAbjadCopied(false), 2000);
+  };
+
+  const cleanText = cleanRawBrackets(parsed.headerText);
+  const emojiCheck = detectEmojiOnlyMessage(cleanText);
+
   return (
     <div className="w-full min-w-0 max-w-full space-y-3 text-left overflow-hidden">
-      {/* Header text content formatted nicely */}
-      {parsed.headerText && (
-        <div
-          className={`text-xs sm:text-sm leading-relaxed whitespace-pre-wrap break-words min-w-0 ${
-            isParchmentStyle
-              ? "p-4 sm:p-5 bg-[#fef3c7] text-[#451a03] border-2 border-double border-amber-700/60 rounded-2xl shadow-inner font-serif relative"
-              : parsed.isSharedTool
-              ? "p-3 sm:p-4 bg-gradient-to-r from-purple-950/40 via-black/30 to-purple-950/20 dark:bg-white/5 border border-purple-500/30 dark:border-teal-500/30 rounded-2xl shadow-sm text-gray-900 dark:text-gray-100"
-              : ""
-          }`}
-        >
-          {isParchmentStyle && (
-            <div className="text-center font-arabic text-amber-900 text-sm font-bold mb-2">
+      {/* Visual Majestic Abjad Calculation Card */}
+      {abjadData.isAbjad ? (
+        <div className={`w-full rounded-2xl overflow-hidden border shadow-md transition-all ${
+          isParchmentStyle
+            ? "bg-gradient-to-b from-[#fffef7] via-[#fffbf0] to-[#fdf4d8] text-[#3f1e04] border-2 border-double border-amber-600/40 shadow-amber-950/10"
+            : "bg-gradient-to-br from-slate-900 via-[#131c2c] to-slate-950 text-white border border-amber-500/30 shadow-black/40"
+        }`}>
+          {/* Top Bar with Badge & Copy Action */}
+          <div className={`px-3.5 py-2.5 flex items-center justify-between border-b ${
+            isParchmentStyle 
+              ? "border-amber-600/20 bg-amber-500/10" 
+              : "border-amber-500/20 bg-amber-500/5"
+          }`}>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className={`p-1 rounded-lg shrink-0 ${
+                isParchmentStyle ? "bg-amber-600/15 text-amber-900" : "bg-amber-500/20 text-amber-400"
+              }`}>
+                <Calculator size={13} />
+              </span>
+              <span className={`text-[11px] font-black uppercase tracking-wider truncate ${
+                isParchmentStyle ? "text-amber-900" : "text-amber-300"
+              }`}>
+                Calcul Abjad • Ilm al-Huruf
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={handleCopyAbjad}
+                className={`p-1.5 rounded-lg text-xs transition-all cursor-pointer flex items-center gap-1 ${
+                  isParchmentStyle
+                    ? "text-amber-900/80 hover:bg-amber-600/20"
+                    : "text-amber-300/80 hover:bg-amber-500/20 hover:text-white"
+                }`}
+                title="Copier les détails du calcul"
+              >
+                {isAbjadCopied ? <Check size={13} className="text-emerald-500" /> : <Copy size={13} />}
+                <span className="text-[10px] font-bold hidden sm:inline">
+                  {isAbjadCopied ? "Copié" : "Copier"}
+                </span>
+              </button>
+            </div>
+          </div>
+
+          <div className="p-4 sm:p-5 space-y-3.5">
+            {/* Calligraphic Basmala */}
+            <div className={`text-center font-arabic text-base sm:text-lg font-bold select-none ${
+              isParchmentStyle ? "text-amber-900" : "text-amber-300"
+            }`}>
               ﷽
             </div>
-          )}
-          {parsed.headerText}
+
+            {/* Calculated Arabic Word / Phrase */}
+            {abjadData.calculatedText && (
+              <div className="text-center py-1">
+                <div className={`text-[10px] uppercase font-bold tracking-widest mb-1 ${
+                  isParchmentStyle ? "text-amber-800/80" : "text-amber-400/80"
+                }`}>
+                  Texte Analysé
+                </div>
+                <div className={`font-arabic text-2xl sm:text-3xl font-extrabold tracking-wide py-2 px-5 inline-block rounded-xl shadow-xs border ${
+                  isParchmentStyle
+                    ? "text-amber-950 bg-amber-500/15 border-amber-600/30"
+                    : "text-amber-200 bg-amber-500/10 border-amber-500/30"
+                }`}>
+                  {abjadData.calculatedText}
+                </div>
+                {(abjadData.wordsCount || abjadData.lettersCount) && (
+                  <div className={`text-[11px] mt-1.5 font-medium ${
+                    isParchmentStyle ? "text-amber-900/80" : "text-gray-400"
+                  }`}>
+                    {abjadData.wordsCount ? `${abjadData.wordsCount} mot${Number(abjadData.wordsCount) > 1 ? 's' : ''}` : ''}
+                    {abjadData.wordsCount && abjadData.lettersCount ? ' • ' : ''}
+                    {abjadData.lettersCount ? `${abjadData.lettersCount} lettres` : ''}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Two Numerical Total Cards */}
+            <div className="grid grid-cols-2 gap-2.5">
+              <div className={`p-2.5 sm:p-3 rounded-xl border text-center transition-all shadow-xs ${
+                isParchmentStyle
+                  ? "bg-amber-100/70 border-amber-700/25 text-amber-950"
+                  : "bg-slate-800/80 border-amber-500/30 text-white"
+              }`}>
+                <div className={`text-[10px] uppercase font-bold tracking-wider ${
+                  isParchmentStyle ? "text-amber-900" : "text-amber-400"
+                }`}>
+                  Mashriqi (Oriental)
+                </div>
+                <div className={`text-xl sm:text-2xl font-black font-mono mt-0.5 ${
+                  isParchmentStyle ? "text-amber-800" : "text-amber-300"
+                }`}>
+                  {abjadData.totalMashriqi || "—"}
+                </div>
+              </div>
+
+              <div className={`p-2.5 sm:p-3 rounded-xl border text-center transition-all shadow-xs ${
+                isParchmentStyle
+                  ? "bg-teal-50/80 border-teal-700/25 text-teal-950"
+                  : "bg-slate-800/80 border-teal-500/30 text-white"
+              }`}>
+                <div className={`text-[10px] uppercase font-bold tracking-wider ${
+                  isParchmentStyle ? "text-teal-900" : "text-teal-400"
+                }`}>
+                  Maghribi (Occidental)
+                </div>
+                <div className={`text-xl sm:text-2xl font-black font-mono mt-0.5 ${
+                  isParchmentStyle ? "text-teal-800" : "text-teal-300"
+                }`}>
+                  {abjadData.totalMaghribi || "—"}
+                </div>
+              </div>
+            </div>
+
+            {/* 4 Elements Breakdown */}
+            {abjadData.elements && (
+              <div className={`p-2.5 rounded-xl border ${
+                isParchmentStyle ? "bg-amber-50/80 border-amber-600/20" : "bg-black/30 border-white/10"
+              }`}>
+                <div className={`text-[10px] font-bold uppercase tracking-wider mb-2 text-center ${
+                  isParchmentStyle ? "text-amber-900" : "text-gray-300"
+                }`}>
+                  Répartition Élémentaire
+                </div>
+                <div className="grid grid-cols-4 gap-1.5 text-center">
+                  <div className="p-1.5 rounded-lg bg-red-500/10 text-red-700 dark:text-red-400 border border-red-500/20">
+                    <div className="flex items-center justify-center gap-1 text-[10px] font-bold">
+                      <Flame size={11} className="text-red-500" /> Feu
+                    </div>
+                    <div className="text-xs font-black font-mono mt-0.5">{abjadData.elements.fire || "0"}</div>
+                  </div>
+                  <div className="p-1.5 rounded-lg bg-sky-500/10 text-sky-700 dark:text-sky-400 border border-sky-500/20">
+                    <div className="flex items-center justify-center gap-1 text-[10px] font-bold">
+                      <Wind size={11} className="text-sky-500" /> Air
+                    </div>
+                    <div className="text-xs font-black font-mono mt-0.5">{abjadData.elements.air || "0"}</div>
+                  </div>
+                  <div className="p-1.5 rounded-lg bg-blue-500/10 text-blue-700 dark:text-blue-400 border border-blue-500/20">
+                    <div className="flex items-center justify-center gap-1 text-[10px] font-bold">
+                      <Droplets size={11} className="text-blue-500" /> Eau
+                    </div>
+                    <div className="text-xs font-black font-mono mt-0.5">{abjadData.elements.water || "0"}</div>
+                  </div>
+                  <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/20">
+                    <div className="flex items-center justify-center gap-1 text-[10px] font-bold">
+                      <Mountain size={11} className="text-emerald-500" /> Terre
+                    </div>
+                    <div className="text-xs font-black font-mono mt-0.5">{abjadData.elements.earth || "0"}</div>
+                  </div>
+                </div>
+                {abjadData.temperament && (
+                  <div className={`mt-2 text-[11px] text-center font-medium ${
+                    isParchmentStyle ? "text-amber-900" : "text-amber-300/90"
+                  }`}>
+                    Tempérament : <span className="font-bold">{abjadData.temperament}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Author Note / Explanation */}
+            {abjadData.authorNote && (
+              <div className={`p-3 rounded-xl border text-xs ${
+                isParchmentStyle
+                  ? "bg-amber-100/60 border-amber-600/25 text-amber-950"
+                  : "bg-white/5 border-white/10 text-gray-200"
+              }`}>
+                <div className="flex items-center gap-1.5 font-semibold text-[10px] uppercase mb-1 opacity-75">
+                  <Quote size={11} className="shrink-0" />
+                  <span>Note de l'auteur :</span>
+                </div>
+                <p className="leading-relaxed pl-3 border-l-2 border-amber-500/60 italic">
+                  "{abjadData.authorNote}"
+                </p>
+              </div>
+            )}
+
+            {/* Proposer Attribution */}
+            {abjadData.proposer && (
+              <div className={`text-[10px] text-right font-medium opacity-75 pt-1 ${
+                isParchmentStyle ? "text-amber-950" : "text-gray-400"
+              }`}>
+                Proposé par : <span className="font-bold">{abjadData.proposer}</span>
+              </div>
+            )}
+          </div>
         </div>
-      )}
+      ) : cleanText ? (
+        emojiCheck.isOnlyEmoji ? (
+          <div className="py-1 select-none flex items-center">
+            {emojiCheck.count === 1 ? (
+              <span className="text-5xl sm:text-6xl leading-none tracking-normal inline-block hover:scale-110 transition-transform duration-200">
+                {cleanText}
+              </span>
+            ) : emojiCheck.count <= 3 ? (
+              <span className="text-3xl sm:text-4xl leading-none tracking-tight inline-flex items-center gap-2">
+                {cleanText}
+              </span>
+            ) : (
+              <span className="text-2xl sm:text-3xl leading-none tracking-tight inline-flex items-center gap-1.5">
+                {cleanText}
+              </span>
+            )}
+          </div>
+        ) : (
+          <div
+            className={`text-[15px] sm:text-base leading-relaxed whitespace-pre-wrap break-words min-w-0 ${
+              isParchmentStyle
+                ? "p-4 sm:p-5 bg-[#fef3c7] text-[#451a03] border-2 border-double border-amber-700/60 rounded-2xl shadow-inner font-serif relative"
+                : parsed.isSharedTool
+                ? "p-3 sm:p-4 bg-gradient-to-r from-purple-950/40 via-black/30 to-purple-950/20 dark:bg-white/5 border border-purple-500/30 dark:border-teal-500/30 rounded-2xl shadow-sm text-gray-900 dark:text-gray-100"
+                : ""
+            }`}
+          >
+            {isParchmentStyle && (
+              <div className="text-center font-arabic text-amber-900 text-sm font-bold mb-2">
+                ﷽
+              </div>
+            )}
+            {cleanText}
+          </div>
+        )
+      ) : null}
 
       {/* Visual Majestic Khatim Matrix Card (Matching Image 2 Style) */}
       {activeGrid && (
@@ -577,7 +963,7 @@ export const CommunityPostContent: React.FC<CommunityPostContentProps> = ({
 
       {/* Footer text content if any */}
       {parsed.footerText && (
-        <div className="text-xs leading-relaxed whitespace-pre-wrap break-words text-gray-700 dark:text-gray-200 mt-2">
+        <div className="text-sm sm:text-[15px] leading-relaxed whitespace-pre-wrap break-words text-gray-700 dark:text-gray-200 mt-2">
           {parsed.footerText}
         </div>
       )}

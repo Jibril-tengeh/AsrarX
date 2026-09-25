@@ -269,7 +269,7 @@ export const CombustionEclipseCalculator: React.FC = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3">
           {weeklySchedule.map((item, idx) => (
             <div
-              key={idx}
+              key={`weekly-${item.dayLabel || idx}-${idx}`}
               className={`p-4 rounded-2xl border transition-all ${
                 item.isCombustion
                   ? 'bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800/40 text-rose-900 dark:text-rose-200'

@@ -411,7 +411,7 @@ export const Version3DVideoNotificationModal: React.FC<Version3DVideoNotificatio
                 {localizedRel.highlights && localizedRel.highlights.length > 0 && (
                   <div className="p-3 rounded-2xl bg-white/[0.04] border border-white/10 max-h-36 overflow-y-auto space-y-1.5 scrollbar-thin scrollbar-thumb-white/20">
                     {localizedRel.highlights.slice(0, 4).map((item, idx) => (
-                      <div key={idx} className="flex items-start gap-2 text-xs text-gray-200">
+                      <div key={`version3dvideonotificationmodal-idx-${idx}`} className="flex items-start gap-2 text-xs text-gray-200">
                         <span 
                           className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" 
                           style={{ backgroundColor: preset.accentColor }} 

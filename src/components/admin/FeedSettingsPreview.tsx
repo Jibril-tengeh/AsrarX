@@ -635,7 +635,7 @@ export const FeedSettingsPreview: React.FC<FeedSettingsPreviewProps> = ({
                     <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
                       {['✨ Zikr', '🌙 Lune', '📿 Wird', '🛡️ Protec', '⭐ Asrar'].map((s, i) => (
                         <div
-                          key={i}
+                          key={`feedsettingspreview-i-${i}`}
                           className="flex flex-col items-center gap-1 shrink-0"
                         >
                           <div className="w-10 h-10 rounded-full p-0.5 bg-gradient-to-tr from-amber-500 to-emerald-500">
@@ -718,7 +718,7 @@ export const FeedSettingsPreview: React.FC<FeedSettingsPreviewProps> = ({
                         { title: 'Heures Planétaires', desc: 'Moments propices aux douas', icon: '⏳', color: 'from-blue-600 to-blue-800' }
                       ].map((tool, i) => (
                         <div
-                          key={i}
+                          key={`feedsettingspreview-i-${i}`}
                           className="p-3 rounded-2xl bg-gray-800 border border-gray-700 space-y-1.5 shadow-xs"
                         >
                           <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${tool.color} flex items-center justify-center text-sm shadow-xs`}>
@@ -783,7 +783,7 @@ export const FeedSettingsPreview: React.FC<FeedSettingsPreviewProps> = ({
                       <div className="flex items-center gap-1 h-3 pt-1">
                         {[40, 75, 30, 90, 60, 45, 80, 100, 50, 70, 35, 85, 40].map((h, idx) => (
                           <div
-                            key={idx}
+                            key={`feedsettingspreview-item-${idx}`}
                             className="flex-1 bg-purple-400/60 rounded-full"
                             style={{ height: `${h}%` }}
                           />
@@ -794,7 +794,7 @@ export const FeedSettingsPreview: React.FC<FeedSettingsPreviewProps> = ({
                     <div className="space-y-1.5">
                       {['Récitation de Protection Nocturne', 'Wird al-Nawawi Audio', 'Salawat al-Fatih 100x'].map((title, idx) => (
                         <div
-                          key={idx}
+                          key={`feedsettingspreview-item-${idx}`}
                           className="p-2.5 bg-gray-800 rounded-xl border border-gray-700 flex items-center justify-between text-xs text-gray-200"
                         >
                           <div className="flex items-center gap-2">
@@ -849,7 +849,7 @@ export const FeedSettingsPreview: React.FC<FeedSettingsPreviewProps> = ({
                         { title: 'Encens Oudh Pur Royal', price: '15 000 FCFA', badge: 'Purifiant', img: '🌿' }
                       ].map((item, idx) => (
                         <div
-                          key={idx}
+                          key={`feedsettingspreview-item-${idx}`}
                           className="p-3 rounded-2xl bg-gray-800 border border-gray-700 space-y-1.5 text-white"
                         >
                           <div className="w-full h-14 bg-gray-700/60 rounded-xl flex items-center justify-center text-2xl">
@@ -877,7 +877,7 @@ export const FeedSettingsPreview: React.FC<FeedSettingsPreviewProps> = ({
                       </div>
                       <div className="grid grid-cols-5 gap-1 text-center pt-1 border-t border-indigo-800/60">
                         {['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'].map((p, i) => (
-                          <div key={i} className={`p-1 rounded-lg ${i === 3 ? 'bg-indigo-600 font-bold' : 'bg-gray-800/60'}`}>
+                          <div key={`feedsettingspreview-i-${i}`} className={`p-1 rounded-lg ${i === 3 ? 'bg-indigo-600 font-bold' : 'bg-gray-800/60'}`}>
                             <span className="text-[8px] block text-gray-300">{p}</span>
                             <span className="text-[9px] font-mono block">18:45</span>
                           </div>

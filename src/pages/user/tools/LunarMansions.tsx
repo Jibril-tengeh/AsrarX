@@ -690,7 +690,7 @@ export const LunarMansions: React.FC = () => {
                       </h3>
                       <ul className="space-y-2 text-xs sm:text-sm">
                         {activeMansion.propitious.map((item, i) => (
-                          <li key={i} className="flex items-center gap-2 text-indigo-100 break-words">
+                          <li key={`propitious-${activeMansion.id}-${i}`} className="flex items-center gap-2 text-indigo-100 break-words">
                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
                             {item}
                           </li>
@@ -705,7 +705,7 @@ export const LunarMansions: React.FC = () => {
                       </h3>
                       <ul className="space-y-2 text-xs sm:text-sm">
                         {activeMansion.unpropitious.map((item, i) => (
-                          <li key={i} className="flex items-center gap-2 text-indigo-100 break-words">
+                          <li key={`unpropitious-${activeMansion.id}-${i}`} className="flex items-center gap-2 text-indigo-100 break-words">
                             <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0"></span>
                             {item}
                           </li>
@@ -778,13 +778,13 @@ export const LunarMansions: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-px bg-gray-100 dark:bg-gray-700 w-full min-w-0">
-              {filteredMansions.map((mansion) => {
+              {filteredMansions.map((mansion, mIdx) => {
                 const locM = getLocalizedMansion(mansion);
                 const isToday = locM.id === activeTodayMansion?.id;
                 const isCurrent = activeMansion?.id === locM.id;
                 return (
                   <button 
-                    key={locM.id} 
+                    key={`mansion-card-${locM.id || mansion.id}-${mIdx}`} 
                     onClick={() => {
                       setCurrentMansion(mansion);
                       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -872,14 +872,14 @@ export const LunarMansions: React.FC = () => {
                     <span className="break-words">{labels.recMansions}</span>
                   </h3>
                   <div className="space-y-3">
-                    {advisor.rec.map(mId => {
+                    {advisor.rec.map((mId, recIdx) => {
                       const m = MANSIONS.find(item => item.id === mId);
                       if (!m) return null;
                       const locM = getLocalizedMansion(m);
                       const extra = getExtraData(m.id);
                       return (
                         <div 
-                          key={m.id}
+                          key={`adv-rec-${m.id}-${recIdx}`}
                           onClick={() => {
                             setCurrentMansion(m);
                             setActiveTab('overview');
@@ -907,13 +907,13 @@ export const LunarMansions: React.FC = () => {
                     <span className="break-words">{labels.avoidMansions}</span>
                   </h3>
                   <div className="space-y-3">
-                    {advisor.avoid.map(mId => {
+                    {advisor.avoid.map((mId, avIdx) => {
                       const m = MANSIONS.find(item => item.id === mId);
                       if (!m) return null;
                       const locM = getLocalizedMansion(m);
                       return (
                         <div 
-                          key={m.id}
+                          key={`adv-avoid-${m.id}-${avIdx}`}
                           onClick={() => {
                             setCurrentMansion(m);
                             setActiveTab('overview');

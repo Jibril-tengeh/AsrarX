@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Haptics, ImpactStyle } from '@capacitor/haptics';
 import { hapticDhikrCount, hapticImpact, hapticNotification, getHapticsConfig } from '../../../utils/haptics';
 import { db } from '../../../lib/firebase';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot, doc } from 'firebase/firestore';
 import { getZikrCache, setZikrCache, syncTasbihSessionOffline } from '../../../utils/zikrSyncEngine';
 import { RealisticDigitalCounter } from '../../../components/tasbih/RealisticDigitalCounter';
 import { COUNTER_SKINS } from '../../../components/tasbih/counterSkins';
@@ -453,18 +453,62 @@ export const Tasbih: React.FC = () => {
   
   const [activeTab, setActiveTab] = useState<'main' | 'settings' | 'history' | 'stats'>('main');
 
+  const [adminTasbihSettings, setAdminTasbihSettings] = useState<{
+    defaultMode: 'realistic' | 'modern';
+    defaultSkin: string;
+    allowUserToggle: boolean;
+  }>({
+    defaultMode: 'modern',
+    defaultSkin: 'brick_terracotta',
+    allowUserToggle: true
+  });
+
   const [counterDisplayMode, setCounterDisplayMode] = useState<'realistic' | 'modern'>(() => {
     try {
-      return (localStorage.getItem('tasbih_display_mode') as 'realistic' | 'modern') || 'realistic';
+      const saved = localStorage.getItem('tasbih_display_mode');
+      if (saved === 'realistic' || saved === 'modern') {
+        return saved;
+      }
+      return 'modern'; // Minimalist by default (as requested)
     } catch {
-      return 'realistic';
+      return 'modern';
     }
   });
+
+  // Real-time synchronization with Admin Panel settings
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, 'settings', 'features'), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        const defaultMode = (data.tasbih_default_display_mode as 'realistic' | 'modern') || 'modern';
+        const defaultSkin = (data.tasbih_default_skin as string) || 'brick_terracotta';
+        const allowUserToggle = data.tasbih_allow_user_toggle !== false;
+
+        setAdminTasbihSettings({
+          defaultMode,
+          defaultSkin,
+          allowUserToggle
+        });
+
+        const userOverridden = localStorage.getItem('tasbih_display_mode_user_override');
+        // If the admin locks the mode OR if the user hasn't explicitly overridden it
+        if (!allowUserToggle) {
+          setCounterDisplayMode(defaultMode);
+        } else if (!userOverridden) {
+          setCounterDisplayMode(defaultMode);
+        }
+      }
+    }, (err) => {
+      console.warn("Tasbih admin settings sync fallback:", err);
+    });
+    return () => unsub();
+  }, []);
 
   const handleToggleDisplayMode = (mode: 'realistic' | 'modern') => {
     setCounterDisplayMode(mode);
     try {
       localStorage.setItem('tasbih_display_mode', mode);
+      localStorage.setItem('tasbih_display_mode_user_override', 'true');
     } catch (e) {}
   };
 
@@ -873,7 +917,7 @@ export const Tasbih: React.FC = () => {
       </div>
 
       {/* Mode Switcher */}
-      {activeTab === 'main' && (
+      {activeTab === 'main' && adminTasbihSettings.allowUserToggle !== false && (
         <div className="flex items-center justify-center mb-4">
           <div className="bg-gray-200/80 dark:bg-gray-800/80 p-1 rounded-2xl flex items-center gap-1 shadow-inner border border-gray-300/40 dark:border-gray-700/60">
             <button
@@ -926,6 +970,7 @@ export const Tasbih: React.FC = () => {
               autoIncrementSpeed={autoIncrementSpeed}
               onChangeAutoIncrementSpeed={(speed) => setAutoIncrementSpeed(speed)}
               lang={lang}
+              defaultSkinId={adminTasbihSettings.defaultSkin}
             />
           ) : (
             /* MINIMALIST MODERN COUNTER */

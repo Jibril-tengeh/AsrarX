@@ -234,7 +234,7 @@ export const FaraidCalculator: React.FC = () => {
                  <h2 className="text-sm font-black uppercase tracking-widest text-red-200 mb-6 border-b border-red-500/50 pb-4">Répartition de l'Héritage</h2>
                  <div className="space-y-6">
                    {results.shares.map((share, idx) => (
-                     <div key={idx} className="bg-red-700/50 p-4 rounded-2xl shadow-inner">
+                     <div key={`share-${share.role || idx}-${idx}`} className="bg-red-700/50 p-4 rounded-2xl shadow-inner">
                         <div className="flex justify-between items-center mb-1">
                            <span className="font-bold text-lg">{share.role}</span>
                            <span className="font-mono text-xl font-bold text-white tabular-nums">{share.amount.toLocaleString()}</span>

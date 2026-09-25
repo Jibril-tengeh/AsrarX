@@ -18,11 +18,13 @@ import {
   Bookmark,
   Layers,
   Wand2,
+  Share2,
 } from "lucide-react";
 import { useLanguage } from "../contexts/LanguageContext";
 import { useFeatures } from "../contexts/FeatureContext";
 import { useAuth } from "../contexts/AuthContext";
 import { tools, ToolItem } from "../data/tools";
+import { ToolShareModal, ToolShareData } from "./tools/ToolShareModal";
 
 // Curated high quality cinematic spiritual looping video backgrounds
 // with reliable CDNs and instant CSS/Canvas fallbacks
@@ -428,6 +430,9 @@ export const ToolsVideoSlider: React.FC<ToolsVideoSliderProps> = ({ className = 
   const timerRef = useRef<any>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
+  const [shareModalTool, setShareModalTool] = useState<ToolShareData | null>(null);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+
   // Auto-slide effect with pause on hover
   useEffect(() => {
     if (!isPlaying || isHovered || autoplaySpeed <= 0) {
@@ -475,6 +480,38 @@ export const ToolsVideoSlider: React.FC<ToolsVideoSliderProps> = ({ className = 
   };
 
   const isSaved = savedTools.includes(currentTool.id);
+
+  const handleShareCurrentTool = async (e: React.MouseEvent, tool: ToolItem) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const title = getToolTitle(tool);
+    const desc = getToolDesc(tool);
+    const directUrl = `${window.location.origin}${tool.path.startsWith('/') ? tool.path : '/' + tool.path}`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `${title} - AsrarHub`,
+          text: `Découvrez l'outil spirituel "${title}" sur AsrarHub : ${desc}`,
+          url: directUrl,
+        });
+        return;
+      } catch (err: any) {
+        if (err.name === 'AbortError') return;
+        console.warn('Native share failed in slider:', err);
+      }
+    }
+
+    setShareModalTool({
+      id: tool.id,
+      title,
+      description: desc,
+      path: tool.path,
+      color: tool.color,
+      icon: tool.icon
+    });
+    setIsShareModalOpen(true);
+  };
 
   // Dynamic localized tool names & description
   const getToolTitle = (tool: ToolItem) => {
@@ -654,22 +691,39 @@ export const ToolsVideoSlider: React.FC<ToolsVideoSliderProps> = ({ className = 
                 })()}
               </div>
 
-              {/* Bookmark Toggle */}
-              <button
-                onClick={(e) => toggleBookmark(e, currentTool.id)}
-                className={`p-1.5 rounded-full backdrop-blur-md transition-all border ${
-                  isSaved
-                    ? "bg-amber-500 text-white border-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.6)]"
-                    : "bg-black/30 text-white/70 hover:text-white border-white/15 hover:bg-black/50"
-                }`}
-                title={
-                  isSaved 
-                    ? (language === 'fr' ? "Retirer des favoris" : language === 'ha' ? "Cire daga wanda aka fi so" : "Remove from favorites")
-                    : (language === 'fr' ? "Ajouter aux favoris" : language === 'ha' ? "Ajiye a matsayin wanda aka fi so" : "Add to favorites")
-                }
-              >
-                <Bookmark size={14} className={isSaved ? "fill-current" : ""} />
-              </button>
+              <div className="flex items-center gap-1.5">
+                {/* Social Share via Web Share API */}
+                <button
+                  onClick={(e) => handleShareCurrentTool(e, currentTool)}
+                  className="p-1.5 rounded-full backdrop-blur-md transition-all border bg-black/30 text-white/70 hover:text-white border-white/15 hover:bg-black/50 hover:scale-105 active:scale-95"
+                  title={
+                    language === 'fr'
+                      ? "Partager cet outil avec des amis"
+                      : language === 'ha'
+                      ? "Raba wannan kayan aiki"
+                      : "Share this tool"
+                  }
+                >
+                  <Share2 size={14} />
+                </button>
+
+                {/* Bookmark Toggle */}
+                <button
+                  onClick={(e) => toggleBookmark(e, currentTool.id)}
+                  className={`p-1.5 rounded-full backdrop-blur-md transition-all border ${
+                    isSaved
+                      ? "bg-amber-500 text-white border-amber-300 shadow-[0_0_12px_rgba(245,158,11,0.6)]"
+                      : "bg-black/30 text-white/70 hover:text-white border-white/15 hover:bg-black/50"
+                  }`}
+                  title={
+                    isSaved 
+                      ? (language === 'fr' ? "Retirer des favoris" : language === 'ha' ? "Cire daga wanda aka fi so" : "Remove from favorites")
+                      : (language === 'fr' ? "Ajouter aux favoris" : language === 'ha' ? "Ajiye a matsayin wanda aka fi so" : "Add to favorites")
+                  }
+                >
+                  <Bookmark size={14} className={isSaved ? "fill-current" : ""} />
+                </button>
+              </div>
             </div>
 
             {/* Middle Section: Icon + Title + Description */}
@@ -739,6 +793,13 @@ export const ToolsVideoSlider: React.FC<ToolsVideoSliderProps> = ({ className = 
           })}
         </div>
       </div>
+
+      {/* Social Web Share Modal Fallback */}
+      <ToolShareModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        tool={shareModalTool}
+      />
     </section>
   );
 };

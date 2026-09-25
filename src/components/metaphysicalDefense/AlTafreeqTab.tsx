@@ -92,7 +92,7 @@ export default function AlTafreeqTab({ language }: AlTafreeqTabProps) {
             className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white font-bold focus:ring-2 focus:ring-cyan-500 outline-none"
           >
             {CONFLICT_PRESETS.map((c, idx) => (
-              <option key={idx} value={c.text}>
+              <option key={`altafreeqtab-idx-${idx}`} value={c.text}>
                 {language === 'en' ? c.en : language === 'ha' ? c.ha : c.fr}
               </option>
             ))}
@@ -139,7 +139,7 @@ export default function AlTafreeqTab({ language }: AlTafreeqTabProps) {
               const x = 160 + 75 * Math.cos(angle);
               const y = 140 + 75 * Math.sin(angle);
               return (
-                <text key={idx} x={x} y={y + 6} textAnchor="middle" fill="#7dd3fc" fontSize="20" fontFamily="serif" fontWeight="bold">
+                <text key={`altafreeqtab-idx-${idx}`} x={x} y={y + 6} textAnchor="middle" fill="#7dd3fc" fontSize="20" fontFamily="serif" fontWeight="bold">
                   {letter}
                 </text>
               );
@@ -174,7 +174,7 @@ export default function AlTafreeqTab({ language }: AlTafreeqTabProps) {
 
             <div className="flex flex-wrap gap-2">
               {extractedColdLetters.map((letter, idx) => (
-                <div key={idx} className="px-3.5 py-2 bg-white dark:bg-gray-800 rounded-xl border border-cyan-300 dark:border-cyan-700 text-cyan-900 dark:text-cyan-100 font-bold text-base shadow-sm">
+                <div key={`altafreeqtab-idx-${idx}`} className="px-3.5 py-2 bg-white dark:bg-gray-800 rounded-xl border border-cyan-300 dark:border-cyan-700 text-cyan-900 dark:text-cyan-100 font-bold text-base shadow-sm">
                   {letter}
                 </div>
               ))}

@@ -144,7 +144,7 @@ export default function MizanThawabitTab({ t }: MizanThawabitTabProps) {
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-slate-800 text-gray-800 dark:text-slate-200">
               {starComparisonData.list.map((star, idx) => (
-                <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-slate-800/50">
+                <tr key={`mizanthawabittab-item-${idx}`} className="hover:bg-gray-50 dark:hover:bg-slate-800/50">
                   <td className="py-2.5 px-3 font-arabic text-sm font-bold text-amber-600 dark:text-amber-400">
                     {star.nameAr} ({star.nameFr})
                   </td>

@@ -27,9 +27,9 @@ export const SyncStatusBadge: React.FC = () => {
     fr: {
       title: 'Sauvegarde Cloud & Synchro',
       synced: 'Données synchronisées',
-      syncedTooltip: 'Vos données sont sauvegardées en toute sécurité sur Firebase.',
+      syncedTooltip: 'Vos données sont sauvegardées en toute sécurité sur le Cloud.',
       syncing: 'Synchronisation...',
-      syncingTooltip: 'Sauvegarde de vos modifications sur Firebase...',
+      syncingTooltip: 'Sauvegarde de vos modifications sur le Cloud...',
       verifying: 'Vérification de la connexion...',
       offline: 'Hors ligne (Local)',
       offlineTooltip: 'Vous êtes hors ligne. Vos données et articles restent accessibles via le Cache local (IndexedDB).',
@@ -48,7 +48,7 @@ export const SyncStatusBadge: React.FC = () => {
       statusLabel: 'Statut',
       accountLabel: 'Compte lié',
       storageLabel: 'Stockage principal',
-      cloudStorage: 'Cloud Firebase',
+      cloudStorage: 'Cloud Sécurisé',
       localStorage: 'Mémoire locale (Cache)',
       guestStorage: 'Mémoire de l\'appareil',
       guestAccount: 'Aucun (Invité)',
@@ -66,9 +66,9 @@ export const SyncStatusBadge: React.FC = () => {
     en: {
       title: 'Cloud Backup & Sync',
       synced: 'Data synchronized',
-      syncedTooltip: 'Your data is securely backed up to Firebase.',
+      syncedTooltip: 'Your data is securely backed up to the Cloud.',
       syncing: 'Syncing...',
-      syncingTooltip: 'Saving your changes to Firebase...',
+      syncingTooltip: 'Saving your changes to the Cloud...',
       verifying: 'Verifying connection...',
       offline: 'Offline (Local)',
       offlineTooltip: 'You are offline. Your articles and changes remain accessible via local Cache (IndexedDB).',
@@ -87,7 +87,7 @@ export const SyncStatusBadge: React.FC = () => {
       statusLabel: 'Status',
       accountLabel: 'Linked Account',
       storageLabel: 'Primary Storage',
-      cloudStorage: 'Firebase Cloud',
+      cloudStorage: 'Secure Cloud',
       localStorage: 'Device Storage (Cache)',
       guestStorage: 'Device Memory',
       guestAccount: 'None (Guest)',
@@ -105,9 +105,9 @@ export const SyncStatusBadge: React.FC = () => {
     ha: {
       title: 'Adana a Gajimare',
       synced: 'An daidaita bayanai',
-      syncedTooltip: 'Ana adana bayananku lami lafiya a Firebase.',
+      syncedTooltip: 'Ana adana bayananku lami lafiya a Gajimare.',
       syncing: 'Ana daidaitawa...',
-      syncingTooltip: 'Ana adana canje-canjenku a Firebase...',
+      syncingTooltip: 'Ana adana canje-canjenku a Gajimare...',
       verifying: 'Tabbatar da haɗin yanar gizo...',
       offline: 'Ba ya kan layi (Cache)',
       offlineTooltip: 'Ba kwa kan layi. An adana bayananku a wayarku (Cache), kuma za su daidaita idan kun shiga layi.',
@@ -126,7 +126,7 @@ export const SyncStatusBadge: React.FC = () => {
       statusLabel: 'Matsayi',
       accountLabel: 'Asusunku',
       storageLabel: 'Babban Ma\'ajiya',
-      cloudStorage: 'Firebase Cloud',
+      cloudStorage: 'Gajimare Mai Tsaro',
       localStorage: 'Ma\'ajiyar Waya (Cache)',
       guestStorage: 'Ma\'ajiyar Na\'ura',
       guestAccount: 'Babu (Bako)',
@@ -340,7 +340,7 @@ export const SyncStatusBadge: React.FC = () => {
           !isVerifying && (syncState === 'offline' || syncState === 'cache') ? 'animate-pulse' : ''
         }`}
         title={getStatusLabel()}
-        id="firebase-sync-status-badge"
+        id="cloud-sync-status-badge"
       >
         <span className="relative flex h-2 w-2 items-center justify-center">
           {isVerifying && (

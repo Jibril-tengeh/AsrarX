@@ -751,7 +751,7 @@ export const SirrAlAsrar: React.FC = () => {
                     { n: 'Musa', m: 'Khadija', arN: 'موسى', arM: 'خديجة' }
                   ].map((preset, idx) => (
                     <button
-                      key={idx}
+                      key={`preset-${preset.n}-${preset.m}-${idx}`}
                       type="button"
                       onClick={() => {
                         setName(preset.n);
@@ -1048,7 +1048,7 @@ export const SirrAlAsrar: React.FC = () => {
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                       {result.matchingNames.map((asma: any, idx: number) => (
-                        <div key={idx} className="bg-gray-50 dark:bg-gray-900 p-4 rounded-2xl border border-gray-200 dark:border-gray-700 flex flex-col justify-between">
+                        <div key={`matching-name-${asma.ar || asma.tr || idx}-${idx}`} className="bg-gray-50 dark:bg-gray-900 p-4 rounded-2xl border border-gray-200 dark:border-gray-700 flex flex-col justify-between">
                           <div>
                             <div className="flex justify-between items-center mb-2">
                               <span className="text-xs font-bold text-violet-600 dark:text-violet-400">Abjad: {asma.abjad}</span>

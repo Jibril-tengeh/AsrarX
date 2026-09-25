@@ -218,7 +218,7 @@ export const Journal: React.FC = () => {
                         <h4 className="text-xs uppercase tracking-widest font-bold text-gray-400 mb-2">{t('journal.wirdsLabel')}</h4>
                         <div className="flex flex-wrap gap-2">
                           {entry.wirdsCompleted.map((wird, idx) => (
-                            <span key={idx} className="flex items-center gap-1 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 px-3 py-1 rounded-full text-xs font-bold border border-emerald-100 dark:border-emerald-800/30">
+                            <span key={`wird-${wird}-${idx}`} className="flex items-center gap-1 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 px-3 py-1 rounded-full text-xs font-bold border border-emerald-100 dark:border-emerald-800/30">
                               <CheckCircle2 size={12} /> {wird}
                             </span>
                           ))}

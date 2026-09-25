@@ -196,7 +196,7 @@ export default function KhatamBurujTab({ language }: KhatamBurujTabProps) {
               const y3 = 250 - r * Math.cos(angle3);
 
               return (
-                <g key={idx}>
+                <g key={`khatamburujtab-idx-${idx}`}>
                   <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#f59e0b" strokeWidth="0.8" opacity="0.4" />
                   <line x1={x1} y1={y1} x2={x3} y2={y3} stroke="#d97706" strokeWidth="0.8" opacity="0.4" />
                 </g>

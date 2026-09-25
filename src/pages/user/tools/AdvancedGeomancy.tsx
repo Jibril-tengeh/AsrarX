@@ -77,7 +77,7 @@ export const AdvancedGeomancy: React.FC = () => {
   const renderDotsVisual = (dots: [number, number, number, number]) => (
     <div className="flex flex-col items-center justify-center space-y-1 py-1.5 px-2.5 bg-amber-500/5 dark:bg-stone-900/60 rounded-lg border border-amber-500/20 dark:border-amber-500/30">
       {dots.map((val, idx) => (
-        <div key={idx} className="flex items-center space-x-1 h-2.5">
+        <div key={`dot-row-${idx}-${val}`} className="flex items-center space-x-1 h-2.5">
           {val === 1 ? (
             <div className="w-2 h-2 rounded-full bg-amber-500 dark:bg-amber-400 shadow-sm" />
           ) : (
@@ -233,7 +233,7 @@ export const AdvancedGeomancy: React.FC = () => {
             <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
               {houses.map((fig, idx) => (
                 <div 
-                  key={idx}
+                  key={`geom-house-${fig.nameAr || idx}-${idx}`}
                   className="p-3 bg-stone-50 dark:bg-stone-950/70 border border-stone-200 dark:border-stone-800 hover:border-amber-500/50 rounded-xl flex flex-col items-center text-center space-y-2 transition-all shadow-sm"
                 >
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-amber-500/15 dark:bg-amber-500/20 text-amber-800 dark:text-amber-300 border border-amber-500/30">

@@ -235,7 +235,7 @@ export const IncenseEncyclopediaWidget: React.FC = () => {
           </span>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             {(language === 'ha' ? selectedIncense.virtuesHa : language === 'en' ? selectedIncense.virtuesEn : selectedIncense.virtuesFr).map((v, idx) => (
-              <div key={idx} className="p-2.5 rounded-xl bg-gray-900 border border-amber-500/20 text-xs font-semibold text-emerald-300 flex items-center gap-2">
+              <div key={`incenseencyclopediawidget-item-${idx}`} className="p-2.5 rounded-xl bg-gray-900 border border-amber-500/20 text-xs font-semibold text-emerald-300 flex items-center gap-2">
                 <CheckCircle2 size={14} className="text-emerald-400 shrink-0" />
                 <span>{v}</span>
               </div>

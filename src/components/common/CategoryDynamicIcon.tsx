@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import * as Icons from 'lucide-react';
 import { useFeatures } from '../../contexts/FeatureContext';
+import { getCategoryFallbackIcon } from '../../data/defaultCategories';
 import {
   FolderOpen, Folder, Shield, Moon, BookOpen, Heart, Key, Sparkles, Flame,
   Coins, Compass, Sun, Feather, Star, Volume2, Library, Music, Layers, Crown,
@@ -9,7 +10,8 @@ import {
   Gift, HelpCircle, User, Users, Check, X, Target, Droplets, Mountain, Lightbulb,
   Scroll, Book, BookMarked, Radio, Disc, Play, Activity, AlertTriangle,
   CheckCircle, CheckCircle2, Wallet, CreditCard, FlameKindling, ShieldAlert,
-  Sparkle as StarFour, Fingerprint, KeyRound, MoonStar, SunMedium
+  Sparkle as StarFour, Fingerprint, KeyRound, MoonStar, SunMedium,
+  Leaf, TrendingUp, Unlock, Sprout, FlaskConical, DoorOpen
 } from 'lucide-react';
 
 interface DynamicIconProps {
@@ -88,7 +90,13 @@ const ICON_REGISTRY: Record<string, React.ComponentType<any>> = {
   creditcard: CreditCard,
   flamekindling: FlameKindling,
   shieldalert: ShieldAlert,
-  fingerprint: Fingerprint
+  fingerprint: Fingerprint,
+  leaf: Leaf,
+  trendingup: TrendingUp,
+  unlock: Unlock,
+  sprout: Sprout,
+  flaskconical: FlaskConical,
+  dooropen: DoorOpen
 };
 
 // Case-insensitive lookup cache across all 500+ Lucide icons
@@ -171,7 +179,7 @@ export const CategoryDynamicIcon: React.FC<DynamicIconProps> = ({
     const finalClassName = resolveLuminousIconColor(name, className);
 
     if (!name || typeof name !== 'string') {
-      return <FolderOpen size={size} strokeWidth={strokeWidth} className={finalClassName} />;
+      return <Sparkles size={size} strokeWidth={strokeWidth} className={finalClassName} />;
     }
 
     const key = name.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -188,10 +196,10 @@ export const CategoryDynamicIcon: React.FC<DynamicIconProps> = ({
       return <IconComp size={size} strokeWidth={strokeWidth} className={finalClassName} />;
     }
 
-    return <FolderOpen size={size} strokeWidth={strokeWidth} className={finalClassName} />;
+    return <Sparkles size={size} strokeWidth={strokeWidth} className={finalClassName} />;
   } catch {
     const fallbackClass = resolveLuminousIconColor(name, className);
-    return <FolderOpen size={size} strokeWidth={strokeWidth} className={fallbackClass} />;
+    return <Sparkles size={size} strokeWidth={strokeWidth} className={fallbackClass} />;
   }
 };
 
@@ -428,6 +436,15 @@ export const CategoryVideoOrIconBadge: React.FC<CategoryVideoOrIconBadgeProps> =
   // Determine luminous palette tailored to the category
   const palette = getCategoryLuminousTheme(theme || categoryName, iconName);
 
+  // Resolve clear semantic icon: never allow generic folder icons ('FolderOpen', 'folder', empty) to block the category
+  const isGenericFolder = !iconName || 
+    iconName.toLowerCase().replace(/[^a-z]/g, '') === 'folderopen' || 
+    iconName.toLowerCase().replace(/[^a-z]/g, '') === 'folder';
+
+  const resolvedIconName = isGenericFolder 
+    ? getCategoryFallbackIcon(categoryName || theme) 
+    : iconName;
+
   // Real video asset: only used if style is 'video' or explicit prop provided and not error
   const hasRealVideo = Boolean(
     (effectiveStyle === 'video' || videoUrl) &&
@@ -474,7 +491,7 @@ export const CategoryVideoOrIconBadge: React.FC<CategoryVideoOrIconBadgeProps> =
       >
         <div className="relative z-20 flex items-center justify-center transition-transform duration-300 group-hover/badge:scale-110">
           <CategoryDynamicIcon
-            name={iconName}
+            name={resolvedIconName}
             size={targetIconSize}
             strokeWidth={2.4}
             className={`${iconClass}`}
@@ -494,7 +511,7 @@ export const CategoryVideoOrIconBadge: React.FC<CategoryVideoOrIconBadgeProps> =
       >
         <div className="relative z-20 flex items-center justify-center transition-transform duration-300 group-hover/badge:scale-110">
           <CategoryDynamicIcon
-            name={iconName}
+            name={resolvedIconName}
             size={targetIconSize}
             strokeWidth={2.4}
             className={`${iconClass}`}
@@ -559,15 +576,18 @@ export const CategoryVideoOrIconBadge: React.FC<CategoryVideoOrIconBadgeProps> =
           </div>
         )}
 
-        {/* Dynamic Luminous SVG Icon: 100% crisp pure white (or theme colored if chosen) */}
-        <div className={`relative z-20 ${iconClass} ${isColoredIcon ? '' : 'drop-shadow-[0_1px_3px_rgba(0,0,0,0.4)]'} flex items-center justify-center transition-transform duration-300 group-hover/badge:scale-110`}>
-          <CategoryDynamicIcon 
-            name={iconName} 
-            size={targetIconSize} 
-            strokeWidth={2.4} 
-            className={iconClass} 
-          />
-        </div>
+        {/* Dynamic Luminous SVG Icon: 100% crisp pure white (or theme colored if chosen).
+            Never render over video loop because the video already possesses its own animated sacred emblem! */}
+        {!hasRealVideo && (
+          <div className={`relative z-20 ${iconClass} ${isColoredIcon ? '' : 'drop-shadow-[0_1px_3px_rgba(0,0,0,0.4)]'} flex items-center justify-center transition-transform duration-300 group-hover/badge:scale-110`}>
+            <CategoryDynamicIcon 
+              name={resolvedIconName} 
+              size={targetIconSize} 
+              strokeWidth={2.4} 
+              className={iconClass} 
+            />
+          </div>
+        )}
 
         {/* Top-edge glassy reflection for jewel depth */}
         <div className="absolute top-0 inset-x-0 h-1/2 bg-gradient-to-b from-white/30 via-white/10 to-transparent pointer-events-none z-30" />

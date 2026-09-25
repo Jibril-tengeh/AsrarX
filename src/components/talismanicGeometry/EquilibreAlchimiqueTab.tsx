@@ -182,7 +182,7 @@ export default function EquilibreAlchimiqueTab({ language }: EquilibreAlchimique
 
             {/* Grid 4x4 Lines */}
             {[1, 2, 3].map((i) => (
-              <g key={i}>
+              <g key={`equilibrealchimiquetab-i-${i}`}>
                 <line x1={10 + i * 75} y1="10" x2={10 + i * 75} y2="310" stroke="#10b981" strokeWidth="1.5" />
                 <line x1="10" y1={10 + i * 75} x2="310" y2={10 + i * 75} stroke="#10b981" strokeWidth="1.5" />
               </g>
@@ -229,7 +229,7 @@ export default function EquilibreAlchimiqueTab({ language }: EquilibreAlchimique
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {quadrants.map((q, idx) => (
               <div
-                key={idx}
+                key={`equilibrealchimiquetab-item-${idx}`}
                 className="p-4 rounded-2xl bg-gray-50 dark:bg-gray-800/80 border border-gray-200 dark:border-gray-700 hover:border-emerald-500 space-y-2 transition-all"
               >
                 <div className="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 pb-1.5">

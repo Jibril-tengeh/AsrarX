@@ -971,7 +971,7 @@
       "syncButton": "Sync Now",
       "syncing": "Syncing data...",
       "success": "Offline synchronization completed successfully.",
-      "autoSaveTitle": "Automatic Cloud Backup to Firestore",
+      "autoSaveTitle": "Automatic Cloud Backup",
       "autoSaveDesc": "Disable this option to save mobile data. Your changes will be saved locally."
     },
     "version": {
@@ -985,9 +985,9 @@
       "clearCacheBtn": "Clear SWR Cache",
       "cleaning": "Cleaning...",
       "cleaningStatus": "Cleaning SWR cache...",
-      "adminSyncTitle": "Administration: Firebase `app_versions` Collection",
-      "adminSyncDesc": "Synchronize version history to the Firestore database for all users.",
-      "syncFirestore": "Sync Firestore app_versions",
+      "adminSyncTitle": "Administration: Cloud `app_versions` Collection",
+      "adminSyncDesc": "Synchronize version history to the Cloud for all users.",
+      "syncFirestore": "Sync Cloud",
       "synced": "Synchronized!"
     }
   },
@@ -1699,15 +1699,17 @@
     "statusArchived": "Archived",
     "adminReplies": "Administration Replies ({count}):",
     "replyViaGmail": "Follow up via Gmail",
+    "openMailApp": "Email App",
+    "copyDetails": "Copy message",
     "linkedEmail": "Linked Email:",
     "version": "AsrarHub Support v2.5"
   },
   "changelog": {
     "title": "Updates & Changelog",
     "modalTitle": "Release Notes & Changelog",
-    "subtitle": "History synchronized from Firestore `app_versions` collection",
+    "subtitle": "History synchronized from Cloud database",
     "modalSubtitle": "History of evolutions, optimizations, and bugfixes in AsrarHub",
-    "syncFirestore": "Sync Firestore",
+    "syncFirestore": "Sync Cloud",
     "synced": "Synchronized",
     "fullScreen": "Full Screen",
     "searchPlaceholder": "Search for a feature, bugfix...",

@@ -146,7 +146,7 @@ export const BuniKhatimVisualizer: React.FC<BuniKhatimVisualizerProps> = ({
                 const x2 = 150 + 40 * Math.cos(angle);
                 const y2 = 150 + 40 * Math.sin(angle);
                 return (
-                  <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="currentColor" strokeWidth="0.8" opacity="0.6" />
+                  <line key={`bunikhatimvisualizer-i-${i}`} x1={x1} y1={y1} x2={x2} y2={y2} stroke="currentColor" strokeWidth="0.8" opacity="0.6" />
                 );
               })}
               <text x="150" y="155" textAnchor="middle" className="text-xs font-serif font-bold fill-amber-950" style={{ fontSize: '12px' }}>
@@ -216,7 +216,7 @@ export const BuniKhatimVisualizer: React.FC<BuniKhatimVisualizerProps> = ({
             <div className="grid grid-cols-3 gap-1 w-48 h-48 border-2 border-amber-900 p-1.5 bg-amber-100/80 rounded-xl shadow-md">
               {['٤', '٩', '٢', '٣', '٥', '٧', '٨', '١', '٦'].map((val, idx) => (
                 <div
-                  key={idx}
+                  key={`bunikhatimvisualizer-item-${idx}`}
                   className={`flex items-center justify-center border border-amber-800/40 rounded font-arabic font-bold text-amber-950 text-base ${
                     idx === 4 ? 'bg-amber-300/80 shadow-sm' : 'bg-amber-50'
                   }`}
@@ -236,7 +236,7 @@ export const BuniKhatimVisualizer: React.FC<BuniKhatimVisualizerProps> = ({
           <div className="p-4 flex flex-col items-center">
             <div className="grid grid-cols-8 gap-0.5 w-52 h-52 border-2 border-amber-900 p-1 bg-amber-900 rounded-lg">
               {Array.from({ length: 64 }).map((_, i) => (
-                <div key={i} className="bg-amber-100 text-[8px] font-mono font-bold flex items-center justify-center text-amber-950">
+                <div key={`bunikhatimvisualizer-i-${i}`} className="bg-amber-100 text-[8px] font-mono font-bold flex items-center justify-center text-amber-950">
                   {((i * 13) % 99) + 1}
                 </div>
               ))}

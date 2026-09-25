@@ -439,7 +439,7 @@ export const Secret3DVideoPaywallCard: React.FC<Secret3DVideoPaywallCardProps> =
                 : feat.labelEn;
               return (
                 <div 
-                  key={idx}
+                  key={`secret3dvideopaywallcard-idx-${idx}`}
                   className="flex items-center sm:flex-col sm:text-center gap-2 p-2.5 rounded-xl bg-white/5 dark:bg-black/40 backdrop-blur-md border border-amber-400/20 hover:border-amber-400/40 transition-colors"
                 >
                   <div className="p-1.5 rounded-lg bg-amber-500/20 text-amber-300 shrink-0">

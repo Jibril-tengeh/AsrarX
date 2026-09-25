@@ -1361,6 +1361,8 @@ export default function App() {
     }} />;
   }
 
+  const isCommunity = location.pathname === '/community';
+
   return (
     <MaintenanceOverlay>
       <NavigationProgressBar />
@@ -1368,13 +1370,13 @@ export default function App() {
       <ContentProtectionManager />
       <NetworkStatus />
       <ErrorToastContainer />
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors flex flex-col font-sans mb-16 sm:mb-0 w-full max-w-full m-0 p-0 pt-0 overflow-x-hidden">
-        <FloatingBackButton />
-        {!isFullscreen && <Header />}
-        <FloatingFullscreenExitButton />
-        <FloatingToolFullscreenButton />
+      <div className={`bg-gray-50 dark:bg-gray-900 transition-colors flex flex-col font-sans ${isCommunity ? 'h-[100dvh] max-h-[100dvh] overflow-hidden' : 'min-h-screen mb-16 sm:mb-0'} w-full max-w-full m-0 p-0 pt-0 overflow-x-hidden`}>
+        {!isCommunity && <FloatingBackButton />}
+        {!isFullscreen && !isCommunity && <Header />}
+        {!isCommunity && <FloatingFullscreenExitButton />}
+        {!isCommunity && <FloatingToolFullscreenButton />}
         <DailyRewardHandler />
-        <main className={`flex flex-col flex-1 w-full max-w-full text-gray-900 dark:text-gray-100 pb-20 m-0 p-0 ${isFullscreen ? 'pt-0' : 'pt-[48px] sm:pt-[54px]'} min-w-0 overflow-x-hidden`}>
+        <main className={`flex flex-col flex-1 w-full max-w-full text-gray-900 dark:text-gray-100 ${isCommunity ? 'h-[100dvh] max-h-[100dvh] pt-0 pb-0 overflow-hidden' : (isFullscreen ? 'pt-0 pb-0' : 'pt-[48px] sm:pt-[54px] pb-20')} m-0 p-0 min-w-0 overflow-x-hidden`}>
           <React.Suspense fallback={
             <div className="flex items-center justify-center min-h-[60vh] w-full py-12">
               <AsrarHubLoader size="lg" text="Chargement..." />
@@ -1387,7 +1389,7 @@ export default function App() {
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -12 }}
                 transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-                className="w-full max-w-full flex flex-col flex-1 min-h-0 min-w-0 overflow-x-hidden"
+                className={`w-full max-w-full flex flex-col flex-1 min-h-0 min-w-0 ${isCommunity ? 'h-full max-h-full overflow-hidden' : 'overflow-x-hidden'}`}
               >
                 <Routes location={location}>
                 <Route path="/" element={<Navigate to="/user/dashboard" replace />} />
@@ -1541,10 +1543,10 @@ export default function App() {
           </AnimatePresence>
         </React.Suspense>
       </main>
-        {featureToggles['tool_inspector'] === 'active' && <LayoutTester />}
-        <FaqButton />
-        {featureToggles?.sacredAudioPlayerVisible !== false && <SacredAudioPlayer />}
-        {!isFullscreen && <BottomNav />}
+        {!isCommunity && featureToggles['tool_inspector'] === 'active' && <LayoutTester />}
+        {!isCommunity && <FaqButton />}
+        {!isCommunity && featureToggles?.sacredAudioPlayerVisible !== false && <SacredAudioPlayer />}
+        {!isFullscreen && !isCommunity && <BottomNav />}
 
         {/* Global Floating Repeat Mode (visible only when Quran is playing and NOT on the Quran page itself) */}
         <AnimatePresence>

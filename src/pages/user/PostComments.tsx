@@ -11,8 +11,10 @@ import {
 } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { useAuth } from "../../contexts/AuthContext";
-import { Send, Reply, ThumbsUp, Heart, Smile } from "lucide-react";
+import { Send, Reply, ThumbsUp, Heart, Smile, MessageSquare } from "lucide-react";
 import { useLanguage } from "../../contexts/LanguageContext";
+import { EmojiPickerPopover } from "../../components/chat/EmojiPickerPopover";
+import { detectEmojiOnlyMessage } from "../../utils/emojiHelper";
 
 interface Comment {
   id: string;
@@ -30,6 +32,7 @@ interface PostCommentsProps {
 
 const localTranslations: Record<string, Record<string, string>> = {
   fr: {
+    commentsTitle: "Commentaires & Réponses",
     writeComment: "Écrire un commentaire...",
     replyTo: "en réponse à",
     replyBtn: "Répondre",
@@ -39,6 +42,7 @@ const localTranslations: Record<string, Record<string, string>> = {
     responseTo: "Réponse à"
   },
   en: {
+    commentsTitle: "Comments & Replies",
     writeComment: "Write a comment...",
     replyTo: "in reply to",
     replyBtn: "Reply",
@@ -48,6 +52,7 @@ const localTranslations: Record<string, Record<string, string>> = {
     responseTo: "Reply to"
   },
   ha: {
+    commentsTitle: "Sharhi da Martani",
     writeComment: "Rubuta sharhi...",
     replyTo: "don mayar da martani ga",
     replyBtn: "Mayar da martani",
@@ -68,8 +73,6 @@ export const PostComments: React.FC<PostCommentsProps> = ({ postId }) => {
   const [newComment, setNewComment] = useState("");
   const [replyTo, setReplyTo] = useState<Comment | null>(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-
-  const emojis = ["😊", "😂", "🥰", "👍", "❤️", "🙏", "🔥", "✨", "💯", "🕌", "💡", "👏"];
 
   useEffect(() => {
     const q = query(
@@ -135,12 +138,39 @@ export const PostComments: React.FC<PostCommentsProps> = ({ postId }) => {
   };
 
   return (
-    <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700/60">
+    <div className="mt-3 p-3.5 sm:p-4 rounded-2xl bg-white/95 dark:bg-[#15202e]/95 backdrop-blur-md border border-gray-200/90 dark:border-gray-700/80 shadow-xl text-left">
+      {/* Header */}
+      <div className="flex items-center justify-between pb-2.5 mb-3 border-b border-gray-100 dark:border-gray-800">
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-600 dark:text-teal-400">
+            <MessageSquare size={13} />
+          </div>
+          <h4 className="text-xs font-black uppercase tracking-wider text-gray-800 dark:text-gray-200">
+            {tLocal("commentsTitle")}
+          </h4>
+        </div>
+        <span className="text-[11px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-mono">
+          {comments.length}
+        </span>
+      </div>
+
       <div className="space-y-4 mb-4 max-h-[300px] overflow-y-auto pr-1 scrollbar-thin">
         {comments.length === 0 ? (
-          <p className="text-xs text-center py-4 text-gray-400 italic">
-            {tLocal("noComments")}
-          </p>
+          <div className="flex flex-col items-center justify-center py-5 px-4 text-center rounded-2xl bg-gray-50/90 dark:bg-gray-850/80 border border-dashed border-gray-200 dark:border-gray-700/80 my-1">
+            <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-950/60 flex items-center justify-center text-emerald-600 dark:text-teal-400 mb-2 shadow-xs">
+              <MessageSquare size={18} />
+            </div>
+            <p className="text-xs sm:text-sm font-bold text-gray-800 dark:text-gray-100">
+              {tLocal("noComments")}
+            </p>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 max-w-xs">
+              {lang === "ha"
+                ? "Fara tattaunawa ta hanyar rubuta sharhinku a kasa."
+                : lang === "en"
+                ? "Start the conversation by writing your comment below."
+                : "Partagez votre avis ou posez votre question ci-dessous."}
+            </p>
+          </div>
         ) : (
           comments.map((comment, cIdx) => {
             const hasLiked = comment.likes?.includes(user?.uid || "") || false;
@@ -171,9 +201,29 @@ export const PostComments: React.FC<PostCommentsProps> = ({ postId }) => {
                           : "..."}
                       </span>
                     </div>
-                    <p className="text-gray-700 dark:text-gray-300 text-xs sm:text-sm whitespace-pre-wrap leading-relaxed break-words">
-                      {comment.content}
-                    </p>
+                    {(() => {
+                      const emojiCheck = detectEmojiOnlyMessage(comment.content);
+                      if (emojiCheck.isOnlyEmoji) {
+                        return (
+                          <div className="py-1 select-none">
+                            {emojiCheck.count === 1 ? (
+                              <span className="text-4xl sm:text-5xl leading-none inline-block">
+                                {comment.content}
+                              </span>
+                            ) : (
+                              <span className="text-2xl sm:text-3xl leading-none inline-flex items-center gap-1.5">
+                                {comment.content}
+                              </span>
+                            )}
+                          </div>
+                        );
+                      }
+                      return (
+                        <p className="text-gray-800 dark:text-gray-200 text-xs sm:text-sm whitespace-pre-wrap leading-relaxed break-words font-normal">
+                          {comment.content}
+                        </p>
+                      );
+                    })()}
                   </div>
                   
                   {/* Action buttons below comment bubble */}
@@ -230,20 +280,37 @@ export const PostComments: React.FC<PostCommentsProps> = ({ postId }) => {
           )}
           
           <div className="flex items-center gap-2 relative">
-            <button
-              type="button"
-              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-              className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors cursor-pointer"
-            >
-              <Smile size={20} />
-            </button>
+            <div className="relative shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                className={`p-2 rounded-xl transition-colors cursor-pointer ${
+                  showEmojiPicker
+                    ? "text-emerald-500 bg-emerald-500/10 dark:bg-teal-400/20"
+                    : "text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
+                }`}
+                title="Sélecteur d'emojis complet"
+              >
+                <Smile size={20} />
+              </button>
+
+              <EmojiPickerPopover
+                isOpen={showEmojiPicker}
+                onClose={() => setShowEmojiPicker(false)}
+                onSelectEmoji={(emoji) => {
+                  handleInsertEmoji(emoji);
+                  setShowEmojiPicker(false);
+                }}
+                anchorDirection="up"
+              />
+            </div>
 
             <input
               type="text"
               value={newComment}
               onChange={(e) => setNewComment(e.target.value)}
               placeholder={tLocal("writeComment")}
-              className="flex-1 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-750 rounded-2xl px-4 py-2.5 text-xs sm:text-sm text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="flex-1 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-2.5 text-xs sm:text-sm text-gray-900 dark:text-white placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
             />
             
             <button
@@ -254,22 +321,6 @@ export const PostComments: React.FC<PostCommentsProps> = ({ postId }) => {
               <Send size={16} />
             </button>
           </div>
-
-          {/* Quick Emoji Picker */}
-          {showEmojiPicker && (
-            <div className="absolute left-0 bottom-full mb-2 bg-white dark:bg-gray-850 p-2.5 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-700 flex gap-1.5 flex-wrap max-w-xs z-20">
-              {emojis.map((emoji, eIdx) => (
-                <button
-                  key={`emoji-${emoji}-${eIdx}`}
-                  type="button"
-                  onClick={() => handleInsertEmoji(emoji)}
-                  className="w-8 h-8 flex items-center justify-center hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg text-lg transition-transform hover:scale-110 active:scale-95 cursor-pointer"
-                >
-                  {emoji}
-                </button>
-              ))}
-            </div>
-          )}
         </form>
       )}
     </div>

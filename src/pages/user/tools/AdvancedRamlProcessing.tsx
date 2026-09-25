@@ -113,7 +113,7 @@ export const AdvancedRamlProcessing: React.FC = () => {
     return (
       <div className="flex flex-col items-center gap-1 font-mono my-1">
         {lines.map((lineVal, idx) => (
-          <div key={idx} className="flex items-center justify-center gap-1">
+          <div key={`raml-dot-${idx}-${lineVal}`} className="flex items-center justify-center gap-1">
             {lineVal === 1 ? (
               <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shadow-sm" />
             ) : (
@@ -403,7 +403,7 @@ export const AdvancedRamlProcessing: React.FC = () => {
                       const yText = 200 + 178 * Math.sin(rad);
 
                       return (
-                        <g key={i}>
+                        <g key={`advancedramlprocessing-i-${i}`}>
                           <line x1={xInner} y1={yInner} x2={xOuter} y2={yOuter} stroke="#78350f" strokeWidth="1" />
                           <circle cx={xOuter} cy={yOuter} r="14" fill="#0f172a" stroke="#f59e0b" strokeWidth="1.5" />
                           <text
@@ -546,7 +546,7 @@ export const AdvancedRamlProcessing: React.FC = () => {
                 </h4>
                 <ul className="space-y-2 text-xs text-slate-200">
                   {t.saatTachtSection.preparationSteps.map((step, idx) => (
-                    <li key={idx} className="flex items-start gap-2.5 p-2.5 rounded-xl bg-cyan-950/30 border border-cyan-500/10">
+                    <li key={`prep-step-${idx}-${step.slice(0, 10)}`} className="flex items-start gap-2.5 p-2.5 rounded-xl bg-cyan-950/30 border border-cyan-500/10">
                       <span className="w-5 h-5 rounded-full bg-cyan-500/20 text-cyan-300 text-[10px] font-bold flex items-center justify-center shrink-0 mt-0.5">
                         {idx + 1}
                       </span>
@@ -649,7 +649,7 @@ export const AdvancedRamlProcessing: React.FC = () => {
                   <div className="space-y-4">
                     {tafsheeData.redundancies.map((item, idx) => (
                       <div
-                        key={idx}
+                        key={`redundancy-${item.figure.nameAr || idx}-${idx}`}
                         className="p-5 rounded-2xl bg-slate-900/80 border border-rose-500/30 space-y-3"
                       >
                         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800 pb-2">

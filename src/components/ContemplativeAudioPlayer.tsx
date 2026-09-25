@@ -582,7 +582,7 @@ export const ContemplativeAudioPlayer: React.FC<ContemplativeAudioPlayerProps> =
             const isCurrentVerse = isPlaying && idx === activeVerseIndex;
             return (
               <motion.div
-                key={idx}
+                key={`contemplativeaudioplayer-item-${idx}`}
                 animate={isCurrentVerse ? { scale: [1, 1.01, 1] } : { scale: 1 }}
                 transition={{ duration: 0.3 }}
                 onClick={() => {
@@ -658,7 +658,7 @@ export const ContemplativeAudioPlayer: React.FC<ContemplativeAudioPlayerProps> =
           <div className="flex items-end justify-center gap-1 h-4 mt-2">
             {[40, 70, 30, 90, 60, 100, 50, 80, 45, 95, 60, 35].map((height, idx) => (
               <motion.div
-                key={idx}
+                key={`contemplativeaudioplayer-item-${idx}`}
                 animate={{ height: ['20%', `${height}%`, '20%'] }}
                 transition={{
                   repeat: Infinity,

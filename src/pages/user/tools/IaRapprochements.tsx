@@ -6,6 +6,7 @@ import { ToolInfoTooltip } from '../../../components/ToolInfoTooltip';
 import { motion, AnimatePresence } from 'motion/react';
 import { calculateAbjadValue } from '../../../utils/abjad';
 import { getCurrentCelestialContext } from '../../../utils/celestial';
+import { getApiUrl } from '../../../lib/api';
 
 interface RapprochementResult {
   synthesis: string;
@@ -45,7 +46,7 @@ export const IaRapprochements: React.FC = () => {
     setResult(null);
 
     try {
-      const response = await fetch('/api/gemini/spiritual-rapprochements', {
+      const response = await fetch(getApiUrl('/api/gemini/spiritual-rapprochements'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

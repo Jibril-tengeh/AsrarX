@@ -19,7 +19,11 @@ import {
   Shield, 
   ZoomIn, 
   ZoomOut,
-  BookOpen
+  BookOpen,
+  Tag,
+  ShoppingBag,
+  ShieldCheck,
+  Coins
 } from 'lucide-react';
 import { PdfDocument } from '../../types/pdfDocument';
 import { 
@@ -28,15 +32,26 @@ import {
   downloadAndCachePdf, 
   removePdfFromOfflineVault 
 } from '../../utils/pdfOfflineVault';
+import { 
+  evaluatePdfAccess, 
+  isAuthenticAdmin, 
+  formatPdfPrice,
+  getProtectedPdfDownloadUrl
+} from '../../utils/pdfSecurity';
+import { PdfPurchaseModal } from './PdfPurchaseModal';
+import { PdfBookCover3D } from './PdfBookCover3D';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
+import { get as getIdb } from 'idb-keyval';
+import { AsrarHubWatermark } from '../AsrarHubWatermark';
 
 interface PdfViewerModalProps {
   pdf: PdfDocument | null;
   isOpen: boolean;
   onClose: () => void;
   onDownloadedChange?: (pdfId: string, isDownloaded: boolean) => void;
+  onPurchaseSuccess?: (pdf: PdfDocument) => void;
 }
 
 export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({
@@ -44,6 +59,7 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({
   isOpen,
   onClose,
   onDownloadedChange,
+  onPurchaseSuccess,
 }) => {
   const { user, isPremium } = useAuth();
   const { language } = useLanguage();
@@ -58,13 +74,25 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({
   const [zoomLevel, setZoomLevel] = useState(100);
   const [copiedLink, setCopiedLink] = useState(false);
   const [activeTab, setActiveTab] = useState<'reader' | 'info'>('reader');
+  const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
+  const [refreshAccessKey, setRefreshAccessKey] = useState(0);
 
-  const isAdmin = user?.role === 'admin' || sessionStorage.getItem('admin_bypass') === 'true';
-  const isPremiumUser = !!(isPremium || isAdmin || user?.subscriptionTier === 'premium' || user?.subscriptionTier === 'pro');
+  // Authenticate Admin and evaluate cryptographic access strictly
+  const isAdmin = isAuthenticAdmin(user);
+  const accessState = pdf ? evaluatePdfAccess(pdf, user, isPremium) : null;
+  const canAccessContent = Boolean(accessState?.canAccess || isAdmin);
 
   // Check offline availability and load local blob or online URL
   useEffect(() => {
     if (!pdf || !isOpen) {
+      setActivePdfUrl('');
+      setIsOfflineSource(false);
+      return;
+    }
+
+    // ANTI-HACK PROTECTION:
+    // If user has not purchased or lack VIP permission, never load the URL in memory or DOM
+    if (!canAccessContent) {
       setActivePdfUrl('');
       setIsOfflineSource(false);
       return;
@@ -86,10 +114,41 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({
         }
       }
 
-      // Default to online PDF URL
+      // Query protected Firestore collection strictly validated by Firestore Security Rules
+      const protectedRes = await getProtectedPdfDownloadUrl(pdf, user, isPremium);
       if (isMounted) {
-        setActivePdfUrl(pdf.pdfUrl);
-        setIsOfflineSource(false);
+        if (protectedRes.success && protectedRes.url) {
+          let resolved = protectedRes.url;
+          if (resolved.startsWith('idb:')) {
+            try {
+              const idbKey = resolved.replace('idb:', '');
+              const blob = await getIdb(idbKey);
+              if (blob) {
+                resolved = URL.createObjectURL(blob);
+              }
+            } catch (err) {
+              console.warn('Error reading PDF from local IndexedDB:', err);
+            }
+          }
+          setActivePdfUrl(resolved);
+          setIsOfflineSource(false);
+        } else {
+          // If Firestore secure access failed, check if PDF has local idb or direct url for authorized user
+          if (pdf.pdfUrl?.startsWith('idb:')) {
+            try {
+              const idbKey = pdf.pdfUrl.replace('idb:', '');
+              const blob = await getIdb(idbKey);
+              if (blob) {
+                setActivePdfUrl(URL.createObjectURL(blob));
+                setIsOfflineSource(false);
+                return;
+              }
+            } catch (err) {}
+          }
+          setActivePdfUrl('');
+          setIsOfflineSource(false);
+          console.warn('PDF access blocked by Firestore rules:', protectedRes.error);
+        }
       }
     };
 
@@ -98,16 +157,40 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({
     return () => {
       isMounted = false;
     };
-  }, [pdf, isOpen]);
+  }, [pdf, isOpen, canAccessContent, refreshAccessKey]);
 
   // Handle Download for Offline use
   const handleDownloadOffline = async () => {
     if (!pdf || isDownloading) return;
+
+    if (!canAccessContent) {
+      if (accessState?.requiresPurchase || accessState?.reason === 'locked_for_sale') {
+        setIsPurchaseModalOpen(true);
+      } else {
+        navigate('/payment');
+      }
+      return;
+    }
+
     setIsDownloading(true);
     setDownloadProgress(10);
 
     try {
-      const result = await downloadAndCachePdf(pdf, (progress) => {
+      // Enforce download URL acquisition permitted by Firestore Security Rules
+      const protectedRes = await getProtectedPdfDownloadUrl(pdf, user, isPremium);
+      if (!protectedRes.success || !protectedRes.url) {
+        alert(protectedRes.error || 'Accès au lien de téléchargement refusé par les règles de sécurité Firestore');
+        setIsDownloading(false);
+        setDownloadProgress(0);
+        return;
+      }
+
+      const pdfWithSecureUrl: PdfDocument = {
+        ...pdf,
+        pdfUrl: protectedRes.url,
+      };
+
+      const result = await downloadAndCachePdf(pdfWithSecureUrl, (progress) => {
         setDownloadProgress(progress);
       });
 
@@ -138,7 +221,15 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({
       await removePdfFromOfflineVault(pdf.id);
       setIsDownloaded(false);
       setIsOfflineSource(false);
-      setActivePdfUrl(pdf.pdfUrl);
+      let fallbackUrl = pdf.pdfUrl;
+      if (fallbackUrl?.startsWith('idb:')) {
+        try {
+          const idbKey = fallbackUrl.replace('idb:', '');
+          const blob = await getIdb(idbKey);
+          if (blob) fallbackUrl = URL.createObjectURL(blob);
+        } catch (e) {}
+      }
+      setActivePdfUrl(fallbackUrl);
       if (onDownloadedChange) onDownloadedChange(pdf.id, false);
     }
   };
@@ -170,8 +261,11 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({
   // Check Maintenance Lock (Admins can bypass)
   const isMaintenanceBlocked = pdf.isMaintenance && !isAdmin;
 
-  // Check Premium Lock (Premium users & Admins can bypass)
-  const isPremiumBlocked = pdf.isPremium && !isPremiumUser;
+  // Check Purchase Lock (Book is for sale and user has not bought it)
+  const isPurchaseBlocked = !isMaintenanceBlocked && !canAccessContent && Boolean(accessState?.requiresPurchase || accessState?.reason === 'locked_for_sale');
+
+  // Check Premium Lock (VIP subscription required)
+  const isPremiumBlocked = !isMaintenanceBlocked && !canAccessContent && accessState?.reason === 'locked_premium';
 
   return (
     <div className="fixed inset-0 z-[150] flex items-center justify-center p-0 sm:p-4 md:p-6 overflow-hidden">
@@ -197,8 +291,8 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({
           <div className="bg-slate-950 border-b border-slate-800 px-3 sm:px-5 py-2.5 sm:py-3 flex items-center justify-between gap-2.5 shrink-0">
             {/* Left Title & Status */}
             <div className="flex items-center gap-2.5 min-w-0 flex-1">
-              <div className="w-8 h-8 sm:w-9 sm:h-9 shrink-0 rounded-xl bg-red-500/20 border border-red-500/30 text-red-400 flex items-center justify-center font-black text-xs shadow-sm">
-                PDF
+              <div className="shrink-0 flex items-center justify-center">
+                <PdfBookCover3D size="xs" pdf={pdf} language={language} showShadow={false} />
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -215,6 +309,13 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({
                     <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-400 border border-sky-500/30">
                       <Globe size={10} />
                       <span>{language === 'fr' ? 'En ligne' : 'Online Stream'}</span>
+                    </span>
+                  )}
+                  {pdf.isForSale && (
+                    <span className="inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                      <Tag size={10} />
+                      <span>{formatPdfPrice(pdf.price || 0, pdf.currency || 'FCFA')}</span>
+                      {canAccessContent && <Check size={10} className="text-emerald-400" />}
                     </span>
                   )}
                   {pdf.isPremium && (
@@ -258,8 +359,8 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({
                 </button>
               </div>
 
-              {/* Download Offline Button */}
-              {!isMaintenanceBlocked && !isPremiumBlocked && (
+              {/* Download Offline Button (Strictly hidden/disabled if unauthorized) */}
+              {!isMaintenanceBlocked && !isPremiumBlocked && !isPurchaseBlocked && (
                 <>
                   {isDownloaded ? (
                     <button
@@ -359,11 +460,85 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({
                   {language === 'fr' ? 'Fermer le lecteur' : 'Close Reader'}
                 </button>
               </div>
+            ) : isPurchaseBlocked ? (
+              /* Case 2: Purchase Required for this PDF Book */
+              <div className="flex-1 flex flex-col items-center justify-center p-6 text-center max-w-lg mx-auto overflow-y-auto">
+                <div className="mb-4 transform hover:scale-105 transition-transform flex items-center justify-center">
+                  <PdfBookCover3D size="md" pdf={pdf} language={language} showShadow={true} />
+                </div>
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-black uppercase tracking-wider mb-2">
+                  <Coins size={13} />
+                  <span>{language === 'fr' ? 'Livre Disponible à l\'Achat' : 'Book for Sale'}</span>
+                </div>
+                <h3 className="text-lg sm:text-xl font-black text-white mb-2">
+                  {localizedTitle}
+                </h3>
+                <p className="text-xs sm:text-sm text-slate-300 mb-4 leading-relaxed">
+                  {localizedDesc || (language === 'fr'
+                    ? "Ce livre précieux fait l'objet d'une tarification individuelle. Réglez le montant pour débloquer immédiatement la lecture intégrale et le stockage hors-ligne."
+                    : "This book requires individual purchase. Pay once to unlock full reading and offline saving.")}
+                </p>
+
+                {/* Price Display Box */}
+                <div className="w-full bg-slate-900/90 border border-slate-800 rounded-2xl p-4 mb-6 text-center space-y-2">
+                  <div className="flex items-center justify-center gap-2">
+                    <span className="text-2xl sm:text-3xl font-black text-emerald-400">
+                      {formatPdfPrice(pdf.price || 0, pdf.currency || 'FCFA')}
+                    </span>
+                    {pdf.originalPrice && pdf.originalPrice > (pdf.price || 0) && (
+                      <span className="text-xs line-through text-slate-500 font-bold">
+                        {formatPdfPrice(pdf.originalPrice, pdf.currency || 'FCFA')}
+                      </span>
+                    )}
+                  </div>
+
+                  {isPremium && pdf.vipDiscountPercent && pdf.vipDiscountPercent > 0 && (
+                    <div className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-300 bg-amber-500/10 px-2.5 py-0.5 rounded-full border border-amber-500/20">
+                      <Sparkles size={11} />
+                      <span>{language === 'fr' ? `Remise Membre VIP de ${pdf.vipDiscountPercent}% incluse` : `VIP ${pdf.vipDiscountPercent}% discount applied`}</span>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-center gap-3 text-[11px] text-slate-400 pt-1">
+                    <span className="flex items-center gap-1">
+                      <Check size={12} className="text-emerald-400" />
+                      <span>{language === 'fr' ? 'Accès à vie' : 'Lifetime access'}</span>
+                    </span>
+                    <span>•</span>
+                    <span className="flex items-center gap-1">
+                      <HardDrive size={12} className="text-emerald-400" />
+                      <span>{language === 'fr' ? 'Hors-ligne illimité' : 'Offline ready'}</span>
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row items-center gap-3 w-full justify-center">
+                  <button
+                    type="button"
+                    onClick={() => setIsPurchaseModalOpen(true)}
+                    className="w-full sm:w-auto px-6 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-black text-xs shadow-lg shadow-emerald-500/20 transition-all cursor-pointer flex items-center justify-center gap-2 active:scale-95"
+                  >
+                    <ShoppingBag size={16} />
+                    <span>
+                      {language === 'fr' 
+                        ? `Acheter ce livre (${formatPdfPrice(pdf.price || 0, pdf.currency || 'FCFA')})` 
+                        : `Buy Book (${formatPdfPrice(pdf.price || 0, pdf.currency || 'FCFA')})`}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="w-full sm:w-auto px-4 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition-all cursor-pointer"
+                  >
+                    {language === 'fr' ? 'Fermer' : 'Close'}
+                  </button>
+                </div>
+              </div>
             ) : isPremiumBlocked ? (
-              /* Case 2: Premium Blocked */
+              /* Case 3: Premium Blocked */
               <div className="flex-1 flex flex-col items-center justify-center p-6 text-center max-w-lg mx-auto">
-                <div className="w-16 h-16 rounded-3xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center mb-4 shadow-xl">
-                  <Lock size={32} />
+                <div className="mb-4 transform hover:scale-105 transition-transform flex items-center justify-center">
+                  <PdfBookCover3D size="md" pdf={pdf} language={language} showShadow={true} />
                 </div>
                 <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs font-black uppercase tracking-wider mb-2">
                   <Sparkles size={13} />
@@ -399,12 +574,12 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({
                 </div>
               </div>
             ) : activeTab === 'info' ? (
-              /* Case 3: Info Tab Details */
+              /* Case 4: Info Tab Details */
               <div className="flex-1 overflow-y-auto p-5 sm:p-8 max-w-3xl mx-auto space-y-6">
                 <div className="bg-slate-900 border border-slate-800 rounded-3xl p-5 sm:p-7 space-y-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-2xl bg-red-500/20 border border-red-500/30 text-red-400 flex items-center justify-center font-black text-base">
-                      PDF
+                  <div className="flex items-center gap-4">
+                    <div className="shrink-0 flex items-center justify-center">
+                      <PdfBookCover3D size="sm" pdf={pdf} language={language} showShadow={true} />
                     </div>
                     <div>
                       <h2 className="text-base sm:text-xl font-bold text-white">
@@ -441,34 +616,64 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({
                 </div>
 
                 <div className="flex flex-wrap gap-3">
-                  <button
-                    onClick={() => setActiveTab('reader')}
-                    className="flex-1 py-3 px-5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-md"
-                  >
-                    <BookOpen size={16} />
-                    <span>{language === 'fr' ? 'Ouvrir le Lecteur Intégré' : 'Open Reader'}</span>
-                  </button>
-                  <a
-                    href={activePdfUrl || pdf.pdfUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="py-3 px-5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer border border-slate-700"
-                  >
-                    <ExternalLink size={16} />
-                    <span>{language === 'fr' ? 'Ouvrir dans un nouvel onglet' : 'Open in New Tab'}</span>
-                  </a>
+                  {isPurchaseBlocked ? (
+                    <button
+                      onClick={() => setIsPurchaseModalOpen(true)}
+                      className="flex-1 py-3 px-5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-md active:scale-95"
+                    >
+                      <ShoppingBag size={16} />
+                      <span>{language === 'fr' ? `Acheter pour lire (${formatPdfPrice(pdf.price || 0, pdf.currency || 'FCFA')})` : `Buy Book to Read`}</span>
+                    </button>
+                  ) : isPremiumBlocked ? (
+                    <button
+                      onClick={() => {
+                        onClose();
+                        navigate('/payment');
+                      }}
+                      className="flex-1 py-3 px-5 rounded-2xl bg-gradient-to-r from-amber-500 to-yellow-600 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-md"
+                    >
+                      <Sparkles size={16} />
+                      <span>{language === 'fr' ? 'Débloquer l\'accès VIP' : 'Unlock VIP Access'}</span>
+                    </button>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => setActiveTab('reader')}
+                        className="flex-1 py-3 px-5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer shadow-md"
+                      >
+                        <BookOpen size={16} />
+                        <span>{language === 'fr' ? 'Ouvrir le Lecteur Intégré' : 'Open Reader'}</span>
+                      </button>
+                      <a
+                        href={activePdfUrl || pdf.pdfUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="py-3 px-5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs flex items-center justify-center gap-2 cursor-pointer border border-slate-700"
+                      >
+                        <ExternalLink size={16} />
+                        <span>{language === 'fr' ? 'Ouvrir dans un nouvel onglet' : 'Open in New Tab'}</span>
+                      </a>
+                    </>
+                  )}
                 </div>
               </div>
             ) : (
-              /* Case 4: Full Interactive PDF Viewer / Iframe Object */
+              /* Case 5: Full Interactive PDF Viewer / Iframe Object (Legitimate Access) */
               <div className="flex-1 flex flex-col w-full h-full relative overflow-hidden bg-slate-900">
                 {activePdfUrl ? (
-                  <iframe
-                    src={`${activePdfUrl}#toolbar=1&navpanes=1`}
-                    title={pdf.title}
-                    className="w-full h-full border-0 rounded-none bg-slate-900"
-                    style={{ minHeight: '100%' }}
-                  />
+                  <>
+                    <iframe
+                      src={`${activePdfUrl}#toolbar=1&navpanes=1`}
+                      title={pdf.title}
+                      className="w-full h-full border-0 rounded-none bg-slate-900 relative z-0"
+                      style={{ minHeight: '100%' }}
+                    />
+                    <AsrarHubWatermark 
+                      variant="dark"
+                      showCentralSeal={true}
+                      className="pointer-events-none z-10"
+                    />
+                  </>
                 ) : (
                   <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
                     <RefreshCw size={28} className="animate-spin text-emerald-400 mb-3" />
@@ -482,7 +687,7 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({
           </div>
 
           {/* Bottom Bar Controls for Zoom / Download */}
-          {!isMaintenanceBlocked && !isPremiumBlocked && activeTab === 'reader' && (
+          {!isMaintenanceBlocked && !isPremiumBlocked && !isPurchaseBlocked && activeTab === 'reader' && (
             <div className="bg-slate-950 border-t border-slate-800 px-4 py-2 flex items-center justify-between text-xs text-slate-400 shrink-0">
               <div className="flex items-center gap-2">
                 <span className="font-mono text-[11px]">
@@ -504,6 +709,20 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({
             </div>
           )}
         </motion.div>
+
+        {/* Secure PDF Purchase Modal */}
+        <PdfPurchaseModal
+          isOpen={isPurchaseModalOpen}
+          onClose={() => setIsPurchaseModalOpen(false)}
+          pdf={pdf}
+          onSuccess={(purchasedPdf) => {
+            setIsPurchaseModalOpen(false);
+            setRefreshAccessKey((k) => k + 1);
+            if (onPurchaseSuccess) {
+              onPurchaseSuccess(purchasedPdf);
+            }
+          }}
+        />
       </div>
   );
 };

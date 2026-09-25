@@ -228,7 +228,7 @@ export const VedicDashasTab: React.FC<VedicDashasTabProps> = ({ t, lang }) => {
             <div className="space-y-3">
               {calculateTimeline.timeline.map((dasha, idx) => (
                 <div
-                  key={idx}
+                  key={`vedicdashastab-item-${idx}`}
                   className={`p-4 rounded-2xl border transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
                     dasha.isActive
                       ? 'bg-indigo-50 dark:bg-indigo-950/40 border-indigo-500/60 shadow-sm'

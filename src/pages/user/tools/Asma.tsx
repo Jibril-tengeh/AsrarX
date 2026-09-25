@@ -692,7 +692,7 @@ export const Asma: React.FC = () => {
               
               return (
                 <motion.div
-                  key={idx}
+                  key={`asma-item-${item.arabic || item.transliteration || idx}-${idx}`}
                   layout
                   onClick={() => {
                     setExpandedId(isExpanded ? null : idx);

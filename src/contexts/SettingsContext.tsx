@@ -6,6 +6,12 @@ export interface SettingsContextType {
   batterySaver: boolean;
   setBatterySaver: (enabled: boolean) => void;
   toggleBatterySaver: () => void;
+  // Low Resource Mode (first-class alias)
+  lowResourceMode: boolean;
+  setLowResourceMode: (enabled: boolean) => void;
+  toggleLowResourceMode: () => void;
+  autoLowResourceOnBattery: boolean;
+  setAutoLowResourceOnBattery: (enabled: boolean) => void;
   backgroundSyncFrequencyMs: number;
   diagnosticCheckFrequencyMs: number;
   reduceAnimations: boolean;
@@ -15,8 +21,24 @@ export interface SettingsContextType {
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
 
 const BATTERY_SAVER_STORAGE_KEY = 'asrar_battery_saver';
+const AUTO_LOW_RESOURCE_STORAGE_KEY = 'asrar_auto_low_resource';
 
 export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [autoLowResourceOnBattery, setAutoLowResourceOnBatteryState] = useState<boolean>(() => {
+    try {
+      const stored = localStorage.getItem(AUTO_LOW_RESOURCE_STORAGE_KEY);
+      return stored !== 'false'; // default to true
+    } catch (e) {
+      return true;
+    }
+  });
+
+  const setAutoLowResourceOnBattery = useCallback((enabled: boolean) => {
+    setAutoLowResourceOnBatteryState(enabled);
+    try {
+      localStorage.setItem(AUTO_LOW_RESOURCE_STORAGE_KEY, String(enabled));
+    } catch (e) {}
+  }, []);
   const [batterySaver, setBatterySaverState] = useState<boolean>(() => {
     try {
       const stored = localStorage.getItem(BATTERY_SAVER_STORAGE_KEY);
@@ -107,6 +129,11 @@ export const SettingsProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         batterySaver,
         setBatterySaver,
         toggleBatterySaver,
+        lowResourceMode: batterySaver,
+        setLowResourceMode: setBatterySaver,
+        toggleLowResourceMode: toggleBatterySaver,
+        autoLowResourceOnBattery,
+        setAutoLowResourceOnBattery,
         backgroundSyncFrequencyMs,
         diagnosticCheckFrequencyMs,
         reduceAnimations,

@@ -247,7 +247,7 @@ export const ShareToCommunityModal: React.FC<ShareToCommunityModalProps> = ({
             window.dispatchEvent(new Event("asrarhub_local_dms_changed"));
           } else {
             const localPosts = JSON.parse(localStorage.getItem("asrarhub_local_posts") || "[]");
-            localPosts.unshift(localPostPayload);
+            localPosts.push(localPostPayload);
             localStorage.setItem("asrarhub_local_posts", JSON.stringify(localPosts));
             window.dispatchEvent(new Event("asrarhub_local_posts_changed"));
           }

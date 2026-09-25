@@ -492,7 +492,7 @@ export default function SacredMapModal({
                   </div>
                   {mapSearchResults.map((res, idx) => (
                     <button
-                      key={idx}
+                      key={`sacredmapmodal-idx-${idx}`}
                       onClick={() => handleSelectSearchResult(res)}
                       className="w-full text-left px-3 py-2 text-xs hover:bg-amber-50 dark:hover:bg-amber-950/40 border-b border-gray-100 dark:border-gray-800/40 flex items-start gap-2 text-gray-800 dark:text-gray-200 transition-colors"
                     >
@@ -581,7 +581,7 @@ export default function SacredMapModal({
               { label: '🗽 Amériques', lat: 20.0, lng: -75.0, zoom: 4, name: 'Amériques' }
             ].map((reg, idx) => (
               <button
-                key={idx}
+                key={`sacredmapmodal-idx-${idx}`}
                 onClick={() => flyToCoords(reg.lat, reg.lng, reg.zoom, reg.name)}
                 className="px-2.5 py-1 rounded-xl bg-slate-900/85 hover:bg-amber-600 backdrop-blur-md text-white text-[10px] font-bold border border-white/20 shadow-lg whitespace-nowrap transition-colors cursor-pointer"
               >

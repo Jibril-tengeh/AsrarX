@@ -29,6 +29,7 @@ import {
   captureDeviceInfo, 
   generateGmailComposeUrl, 
   generateMailtoUrl, 
+  formatFullEmailSupportBody,
   getAdminSupportConfig 
 } from '../services/SupportService';
 import { 
@@ -63,6 +64,8 @@ export const FloatingSupportContact: React.FC<FloatingSupportContactProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedTicket, setSubmittedTicket] = useState<SupportMessage | null>(null);
   const [copiedTicketId, setCopiedTicketId] = useState(false);
+  const [copiedMsgId, setCopiedMsgId] = useState<string | null>(null);
+  const [copiedFullBody, setCopiedFullBody] = useState(false);
 
   useEffect(() => {
     getAdminSupportConfig().then(cfg => {
@@ -130,6 +133,13 @@ export const FloatingSupportContact: React.FC<FloatingSupportContactProps> = ({
     navigator.clipboard.writeText(code);
     setCopiedTicketId(true);
     setTimeout(() => setCopiedTicketId(false), 2000);
+  };
+
+  const copyFullMessage = (m: SupportMessage) => {
+    const fullText = formatFullEmailSupportBody(m);
+    navigator.clipboard.writeText(fullText);
+    setCopiedMsgId(m.id);
+    setTimeout(() => setCopiedMsgId(null), 2500);
   };
 
   const unreadRepliesCount = userMessages.reduce((acc, m) => {
@@ -290,7 +300,7 @@ export const FloatingSupportContact: React.FC<FloatingSupportContactProps> = ({
                     </div>
 
                     {/* Action buttons */}
-                    <div className="pt-3 flex flex-col sm:flex-row gap-2.5 justify-center max-w-md mx-auto">
+                    <div className="pt-3 flex flex-wrap gap-2.5 justify-center max-w-md mx-auto">
                       <a
                         href={generateGmailComposeUrl(submittedTicket, adminGmail)}
                         target="_blank"
@@ -300,6 +310,13 @@ export const FloatingSupportContact: React.FC<FloatingSupportContactProps> = ({
                         <Mail size={15} />
                         {t('supportModal.openGmail', 'Ouvrir dans Gmail ({email})', { email: adminGmail })}
                         <ExternalLink size={12} />
+                      </a>
+                      <a
+                        href={generateMailtoUrl(submittedTicket, adminGmail)}
+                        className="px-4 py-2.5 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 font-bold text-xs rounded-xl transition-colors flex items-center justify-center gap-2"
+                      >
+                        <Mail size={15} />
+                        {t('supportModal.openMailApp', 'App Email')}
                       </a>
                       <button
                         type="button"
@@ -567,18 +584,49 @@ export const FloatingSupportContact: React.FC<FloatingSupportContactProps> = ({
                               </div>
                             )}
 
-                            {/* Quick Gmail link */}
-                            <div className="pt-1 flex items-center justify-end">
-                              <a
-                                href={generateGmailComposeUrl(msg, adminGmail)}
-                                target="_blank"
-                                rel="noreferrer"
-                                className="text-[11px] font-bold text-red-600 hover:text-red-700 dark:text-red-400 flex items-center gap-1"
+                            {/* Quick follow up & copy actions */}
+                            <div className="pt-2.5 mt-2.5 border-t border-gray-100 dark:border-gray-700/60 flex flex-wrap items-center justify-between gap-2">
+                              <button
+                                type="button"
+                                onClick={() => copyFullMessage(msg)}
+                                className="text-[11px] font-medium text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 flex items-center gap-1.5 transition-colors px-2 py-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-750"
+                                title={t('supportModal.copyDetails', 'Copier le message')}
                               >
-                                <Mail size={12} />
-                                {t('supportModal.replyViaGmail', 'Relancer par Gmail')}
-                                <ExternalLink size={10} />
-                              </a>
+                                {copiedMsgId === msg.id ? (
+                                  <>
+                                    <Check size={12} className="text-emerald-500" />
+                                    <span className="text-emerald-600 dark:text-emerald-400 font-bold">{t('supportModal.copied', 'Copié !')}</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Copy size={12} />
+                                    <span>{t('supportModal.copyDetails', 'Copier le message')}</span>
+                                  </>
+                                )}
+                              </button>
+
+                              <div className="flex items-center gap-1.5 sm:gap-2">
+                                <a
+                                  href={generateMailtoUrl(msg, adminGmail)}
+                                  className="text-[11px] font-medium text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white flex items-center gap-1 transition-colors px-2 py-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-750"
+                                  title={t('supportModal.openMailApp', 'App Email')}
+                                >
+                                  <Mail size={12} />
+                                  <span>{t('supportModal.openMailApp', 'App Email')}</span>
+                                </a>
+
+                                <a
+                                  href={generateGmailComposeUrl(msg, adminGmail)}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-[11px] font-bold text-red-600 hover:text-red-700 dark:text-red-400 flex items-center gap-1 transition-colors px-2 py-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30"
+                                  title={t('supportModal.replyViaGmail', 'Relancer par Gmail')}
+                                >
+                                  <Mail size={12} />
+                                  <span>{t('supportModal.replyViaGmail', 'Relancer par Gmail')}</span>
+                                  <ExternalLink size={10} />
+                                </a>
+                              </div>
                             </div>
                           </div>
                         );

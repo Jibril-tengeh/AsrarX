@@ -244,7 +244,7 @@ export const ReferralWelcomeModal: React.FC<ReferralWelcomeModalProps> = ({
                 className="grid grid-cols-2 gap-2 w-full mb-6 text-left"
               >
                 {featuresList.map((feat, idx) => (
-                  <div key={idx} className="flex items-center gap-2 p-2.5 rounded-xl bg-white/5 border border-white/10 text-xs text-gray-200">
+                  <div key={`referralwelcomemodal-item-${idx}`} className="flex items-center gap-2 p-2.5 rounded-xl bg-white/5 border border-white/10 text-xs text-gray-200">
                     <CheckCircle2 size={14} className="text-emerald-400 shrink-0" />
                     <span className="truncate">{feat}</span>
                   </div>

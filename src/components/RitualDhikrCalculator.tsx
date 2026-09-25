@@ -1134,7 +1134,7 @@ export const RitualDhikrCalculator: React.FC = () => {
           <div className="space-y-2">
             {weeklyPortions.map((portion, idx) => (
               <div
-                key={idx}
+                key={`ritualdhikrcalculator-item-${idx}`}
                 className={`p-3.5 rounded-2xl border flex items-center justify-between transition-colors ${
                   weeklyDone[idx] ? 'bg-emerald-50 dark:bg-emerald-950/30 border-emerald-300' : 'bg-gray-50 dark:bg-gray-900 border-gray-200 dark:border-gray-700'
                 }`}
@@ -1318,7 +1318,7 @@ export const RitualDhikrCalculator: React.FC = () => {
                 const segText = seg.join(' ');
                 const val = calculateAbjadValue(segText);
                 return (
-                  <div key={i} className="p-3 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 flex justify-between items-center text-xs">
+                  <div key={`ritualdhikrcalculator-i-${i}`} className="p-3 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 flex justify-between items-center text-xs">
                     <span className="font-arabic text-sm font-bold text-emerald-800 dark:text-emerald-300" dir="rtl">{segText}</span>
                     <div className="flex items-center gap-2">
                       <span className="font-mono font-bold text-purple-600 dark:text-purple-400">{val}</span>
@@ -1384,7 +1384,7 @@ export const RitualDhikrCalculator: React.FC = () => {
               const harmonyPercent = Math.max(10, 100 - Math.min(90, Math.floor(diff / 20)));
 
               return (
-                <div key={idx} className="p-4 bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-2">
+                <div key={`ritualdhikrcalculator-item-${idx}`} className="p-4 bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-700 space-y-2">
                   <div className="flex justify-between items-center">
                     <span className="text-xs font-bold text-gray-900 dark:text-white">{sal.name}</span>
                     <div className="flex items-center gap-2">
@@ -1502,7 +1502,7 @@ export const RitualDhikrCalculator: React.FC = () => {
               <p className="text-xs text-gray-400 py-2 text-center">{t.noParticipants}</p>
             ) : (
               participants.map((p, idx) => (
-                <div key={idx} className="p-3 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 flex justify-between items-center text-xs">
+                <div key={`ritualdhikrcalculator-item-${idx}`} className="p-3 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 flex justify-between items-center text-xs">
                   <span className="font-arabic font-bold text-base text-gray-900 dark:text-white" dir="rtl">{p.name}</span>
                   <div className="flex items-center gap-3">
                     <span className="font-mono font-bold text-emerald-600">Abjad: {p.abjad}</span>

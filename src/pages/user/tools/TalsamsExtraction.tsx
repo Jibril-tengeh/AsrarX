@@ -700,7 +700,7 @@ export const TalsamsExtraction: React.FC = () => {
               {Array.from({ length: wafqGridData.size + 1 }).map((_, i) => {
                 const pos = i * wafqGridData.cellSize;
                 return (
-                  <React.Fragment key={i}>
+                  <React.Fragment key={`talsamsextraction-i-${i}`}>
                     <line x1={pos} y1="0" x2={pos} y2="280" stroke="#334155" strokeWidth="1" />
                     <line x1="0" y1={pos} x2="280" y2={pos} stroke="#334155" strokeWidth="1" />
                   </React.Fragment>

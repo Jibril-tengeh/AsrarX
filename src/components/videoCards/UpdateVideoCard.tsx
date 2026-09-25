@@ -179,7 +179,7 @@ export const UpdateVideoCard: React.FC<UpdateVideoCardProps> = ({
           {localizedRel.highlights && localizedRel.highlights.length > 0 && (
             <ul className="space-y-2 pt-1">
               {localizedRel.highlights.slice(0, 4).map((item, idx) => (
-                <li key={idx} className="flex items-start gap-2.5 text-xs sm:text-[13px] text-gray-200 leading-relaxed font-medium">
+                <li key={`updatevideocard-idx-${idx}`} className="flex items-start gap-2.5 text-xs sm:text-[13px] text-gray-200 leading-relaxed font-medium">
                   <span 
                     className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 shadow-sm"
                     style={{ backgroundColor: preset.accentColor }}

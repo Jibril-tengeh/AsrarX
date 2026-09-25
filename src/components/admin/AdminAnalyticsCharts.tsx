@@ -64,7 +64,7 @@ export const DauAreaChart: React.FC<{ data: DauItem[] }> = ({ data }) => {
           const y = paddingY + ratio * chartHeight;
           const val = Math.round(maxVal - ratio * (maxVal - minVal));
           return (
-            <g key={idx}>
+            <g key={`adminanalyticscharts-item-${idx}`}>
               <line
                 x1={paddingX}
                 y1={y}
@@ -102,7 +102,7 @@ export const DauAreaChart: React.FC<{ data: DauItem[] }> = ({ data }) => {
 
         {/* Interactive Points */}
         {points.map((p, idx) => (
-          <g key={idx} className="cursor-pointer group/point">
+          <g key={`adminanalyticscharts-item-${idx}`} className="cursor-pointer group/point">
             <circle
               cx={p.x}
               cy={p.y}
@@ -135,7 +135,7 @@ export const ToolUsageBarChart: React.FC<{ data: ToolUsageItem[] }> = ({ data })
       {data.map((item, idx) => {
         const percentage = Math.round((item.usage / maxUsage) * 100);
         return (
-          <div key={idx} className="group">
+          <div key={`adminanalyticscharts-item-${idx}`} className="group">
             <div className="flex justify-between items-center text-xs mb-1">
               <span className="font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-md shrink-0" style={{ backgroundColor: item.fill }} />
@@ -225,7 +225,7 @@ export const UserDistributionDonut: React.FC<{ data: UserStatusItem[] }> = ({ da
       <div className="flex flex-wrap justify-center gap-3 text-xs font-semibold pt-4 border-t border-gray-100 dark:border-gray-700/60 w-full mt-2">
         {data.map((item, idx) => (
           <div
-            key={idx}
+            key={`adminanalyticscharts-item-${idx}`}
             className="flex items-center gap-1.5 px-2 py-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-750 transition-colors cursor-pointer"
           >
             <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: item.color }} />

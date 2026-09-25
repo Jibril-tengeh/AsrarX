@@ -596,7 +596,7 @@ export const RouhaniyyaExtractor: React.FC = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   {extractionData.auxiliaries.map((aux, idx) => (
                     <div
-                      key={idx}
+                      key={`aux-${aux.levelKey || idx}-${idx}`}
                       className="p-4 sm:p-5 rounded-2xl bg-slate-900/80 border border-emerald-500/30 space-y-3 min-w-0 overflow-hidden"
                     >
                       <div className="flex items-center justify-between border-b border-emerald-500/20 pb-2 gap-2">
@@ -648,7 +648,7 @@ export const RouhaniyyaExtractor: React.FC = () => {
                 <div className="space-y-3 sm:space-y-4">
                   {extractionData.vocalizations.map((voc, idx) => (
                     <div
-                      key={idx}
+                      key={`voc-${voc.schemeNameTrans || idx}-${idx}`}
                       className="p-4 sm:p-5 rounded-2xl bg-slate-900/80 border border-rose-500/30 space-y-3 min-w-0 overflow-hidden"
                     >
                       <div className="flex items-center justify-between border-b border-rose-500/20 pb-2">

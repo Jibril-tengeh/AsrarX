@@ -4,6 +4,7 @@ import {
   Check, Palette, Type, Sliders, Layers, Crown, Shield, Wand2, Eye, Layout, FileText, Share2,
   ListPlus, Plus, Trash2, RotateCw, Box
 } from 'lucide-react';
+import { getApiUrl } from '../../lib/api';
 
 interface BookCoverStudioProps {
   onSelectCover?: (coverDataUrl: string) => void;
@@ -696,7 +697,7 @@ export const BookCoverStudio: React.FC<BookCoverStudioProps> = ({
     setIsGeneratingAi(true);
     setAiEnhancedPrompt(null);
     try {
-      const res = await fetch('/api/admin/generate-book-cover', {
+      const res = await fetch(getApiUrl('/api/admin/generate-book-cover'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1288,7 +1289,7 @@ export const BookCoverStudio: React.FC<BookCoverStudioProps> = ({
                 {showBullets && (
                   <div className="space-y-2">
                     {bulletPoints.map((point, index) => (
-                      <div key={index} className="flex items-center gap-2">
+                      <div key={`cover-studio-item-${index}`} className="flex items-center gap-2">
                         <span className="w-6 h-6 rounded-lg bg-blue-600 text-white font-bold text-xs flex items-center justify-center shrink-0">
                           ✓
                         </span>

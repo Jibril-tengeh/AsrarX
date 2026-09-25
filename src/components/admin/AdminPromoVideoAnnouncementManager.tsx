@@ -577,7 +577,7 @@ export const AdminPromoVideoAnnouncementManager: React.FC<AdminPromoVideoAnnounc
                 </div>
 
                 {((activeLangTab === 'fr' ? announcement.perksFr : activeLangTab === 'en' ? announcement.perksEn : announcement.perksHa) || []).map((perk, idx) => (
-                  <div key={idx} className="flex items-center gap-2">
+                  <div key={`adminpromovideoannouncementmanager-item-${idx}`} className="flex items-center gap-2">
                     <input
                       type="text"
                       value={perk}

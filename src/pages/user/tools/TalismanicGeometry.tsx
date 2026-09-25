@@ -915,7 +915,7 @@ export const TalismanicGeometry: React.FC = () => {
             <div className="grid grid-cols-3 gap-3 text-center">
               {ghazaliData.cells.map((val, idx) => (
                 <div
-                  key={idx}
+                  key={`ghazali-cell-${idx}-${val}`}
                   className="p-5 bg-purple-900/40 border border-purple-400/30 rounded-2xl text-amber-300 font-extrabold text-xl sm:text-2xl shadow-inner flex flex-col items-center justify-center"
                 >
                   <span>{val}</span>
@@ -1028,7 +1028,7 @@ export const TalismanicGeometry: React.FC = () => {
             <div className="flex flex-wrap gap-2">
               {MIRROR_PRESETS.map((preset, idx) => (
                 <button
-                  key={idx}
+                  key={`mirror-preset-${preset.label || idx}-${idx}`}
                   onClick={() => setMirrorInput(preset.ar)}
                   className="px-3 py-1.5 rounded-xl bg-gray-100 dark:bg-gray-800 hover:bg-teal-50 dark:hover:bg-teal-950 text-xs font-semibold text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 transition-all cursor-pointer"
                 >

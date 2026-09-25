@@ -340,7 +340,7 @@ export const MaghrebiGeomancyTab: React.FC<MaghrebiGeomancyTabProps> = ({ houses
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {jiwarList.map((j, idx) => (
                 <div 
-                  key={idx}
+                  key={`maghrebigeomancytab-idx-${idx}`}
                   className={`p-4 rounded-xl border transition-all ${
                     j.compatibility === 'combative' 
                       ? 'bg-red-500/10 dark:bg-red-950/20 border-red-500/30' 

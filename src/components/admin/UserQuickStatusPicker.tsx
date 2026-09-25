@@ -125,7 +125,7 @@ export const UserQuickStatusPicker: React.FC<UserQuickStatusPickerProps> = ({
             const isCurrent = currentStatus === st;
             return (
               <button
-                key={st}
+                key={`expanded-st-${userId || 'u'}-${st}`}
                 type="button"
                 disabled={disabled || isUpdating}
                 onClick={() => handleSelect(st)}
@@ -184,7 +184,7 @@ export const UserQuickStatusPicker: React.FC<UserQuickStatusPickerProps> = ({
                 const isCurrent = currentStatus === st;
                 return (
                   <button
-                    key={st}
+                    key={`drop-st-${userId || 'u'}-${st}`}
                     type="button"
                     onClick={() => handleSelect(st)}
                     className={`w-full flex items-center justify-between px-3 py-2 text-xs font-bold transition-colors cursor-pointer ${
@@ -225,7 +225,7 @@ export const UserQuickStatusPicker: React.FC<UserQuickStatusPickerProps> = ({
 
         return (
           <button
-            key={st}
+            key={`pill-st-${userId || 'u'}-${st}`}
             type="button"
             disabled={disabled || isUpdating}
             onClick={() => handleSelect(st)}

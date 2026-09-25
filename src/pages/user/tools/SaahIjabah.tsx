@@ -397,7 +397,7 @@ export const SaahIjabah: React.FC = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   {element.names.map((n, idx) => (
                     <div
-                      key={idx}
+                      key={`saah-name-${n}-${idx}`}
                       className="p-3 bg-gray-50 dark:bg-gray-900/60 rounded-xl border border-gray-200 dark:border-gray-700 flex items-center justify-between"
                     >
                       <span className="font-arabic font-bold text-lg text-emerald-600 dark:text-emerald-400">{n}</span>

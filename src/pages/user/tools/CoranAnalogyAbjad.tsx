@@ -186,7 +186,7 @@ export const CoranAnalogyAbjad: React.FC = () => {
 
         {matches.map((item, idx) => (
           <div
-            key={idx}
+            key={`analogy-match-${item.surah}-${item.ayahNo}-${idx}`}
             className="bg-white dark:bg-gray-800 p-5 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm space-y-3 relative overflow-hidden"
           >
             <div className="flex items-center justify-between">

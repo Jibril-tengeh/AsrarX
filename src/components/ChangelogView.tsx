@@ -133,7 +133,7 @@ export const ChangelogView: React.FC<ChangelogViewProps> = ({
                 onClick={handleSyncFirestore}
                 disabled={isSyncingFirestore}
                 className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
-                title="Synchroniser la collection Firebase app_versions"
+                title="Synchroniser l'historique des versions Cloud"
               >
                 {syncSuccess ? (
                   <>
@@ -143,7 +143,7 @@ export const ChangelogView: React.FC<ChangelogViewProps> = ({
                 ) : (
                   <>
                     <UploadCloud size={14} className={isSyncingFirestore ? 'animate-bounce' : ''} />
-                    <span>{t('changelog.syncFirestore', 'Sync Firestore')}</span>
+                    <span>{t('changelog.syncFirestore', 'Synchroniser le Cloud')}</span>
                   </>
                 )}
               </button>
@@ -290,7 +290,7 @@ export const ChangelogView: React.FC<ChangelogViewProps> = ({
                 {/* Highlights List */}
                 <ul className="space-y-2 text-xs text-gray-600 dark:text-gray-300 pt-1">
                   {loc.highlights.map((item, idx) => (
-                    <li key={idx} className="flex items-start gap-2.5">
+                    <li key={`changelogview-item-${idx}`} className="flex items-start gap-2.5">
                       <div className="p-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0 mt-0.5">
                         <Check size={12} />
                       </div>

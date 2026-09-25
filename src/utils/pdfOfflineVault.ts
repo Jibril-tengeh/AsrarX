@@ -190,8 +190,24 @@ export async function downloadAndCachePdf(
       return { success: false, error: 'URL du fichier PDF manquante' };
     }
 
-    // Check if the URL is a Data URI
-    if (pdf.pdfUrl.startsWith('data:application/pdf') || pdf.pdfUrl.startsWith('data:image/')) {
+    // Check if the URL is from IndexedDB
+    if (pdf.pdfUrl.startsWith('idb:')) {
+      try {
+        const { get } = await import('idb-keyval');
+        const key = pdf.pdfUrl.replace('idb:', '');
+        const blob = await get(key);
+        if (blob) {
+          await savePdfToOfflineVault(pdf, blob);
+          if (onProgress) onProgress(100);
+          return { success: true };
+        }
+      } catch (err) {
+        console.warn('Error reading PDF blob from IDB for offline vault:', err);
+      }
+    }
+
+    // Check if the URL is a Data URI or local blob
+    if (pdf.pdfUrl.startsWith('blob:') || pdf.pdfUrl.startsWith('data:application/pdf') || pdf.pdfUrl.startsWith('data:image/')) {
       const res = await fetch(pdf.pdfUrl);
       const blob = await res.blob();
       await savePdfToOfflineVault(pdf, blob);

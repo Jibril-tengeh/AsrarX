@@ -134,7 +134,7 @@ export default function MizanTaraneemTab({ language }: MizanTaraneemTabProps) {
             className="w-full px-4 py-2.5 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white font-bold focus:ring-2 focus:ring-cyan-500 outline-none"
           >
             {PRESET_ENTITIES.map((p, idx) => (
-              <option key={idx} value={p.text}>
+              <option key={`mizantaraneemtab-item-${idx}`} value={p.text}>
                 {p.name} - {p.type}
               </option>
             ))}

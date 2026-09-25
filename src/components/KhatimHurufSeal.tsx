@@ -348,7 +348,7 @@ export const KhatimHurufSeal: React.FC = () => {
               const n2 = nodeCoords[(i + 2) % nodeCoords.length];
               return (
                 <line
-                  key={i}
+                  key={`khatimhurufseal-i-${i}`}
                   x1={n1.x}
                   y1={n1.y}
                   x2={n2.x}
@@ -386,7 +386,7 @@ export const KhatimHurufSeal: React.FC = () => {
 
             {/* Nodes (Letters placed on the circle perimeter) */}
             {nodeCoords.map((node, i) => (
-              <g key={i}>
+              <g key={`khatimhurufseal-i-${i}`}>
                 {/* Node Outer Circle */}
                 <circle cx={node.x} cy={node.y} r="18" fill={colors.nodeBg} stroke={colors.accent} strokeWidth="2" />
 

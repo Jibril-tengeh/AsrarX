@@ -17,6 +17,7 @@ import { SacredKhatim3DDisplay } from './SacredKhatim3DDisplay';
 import { getSealVersionInfo } from '../utils/lunarSealVersions';
 import { calculateSolarTimes } from '../utils/solarCalculator';
 import { getInitialCalendarScales, saveCalendarScales, subscribeCalendarScales } from '../lib/calendarScale';
+import { getApiUrl } from '../lib/api';
 import {
   getLocalizedHijriMonths,
   getLocalizedMysticEvent,
@@ -769,7 +770,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
     setAiCounsel(null);
     try {
       const phaseData = getMoonDayMystery(selectedHijriDay || 1);
-      const response = await fetch('/api/gemini/asrar-conseil', {
+      const response = await fetch(getApiUrl('/api/gemini/asrar-conseil'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -3322,7 +3323,7 @@ export const MysticCalendarModal: React.FC<MysticCalendarModalProps> = ({ isOpen
                           </span>
                           <div className="flex flex-wrap gap-1.5 mt-1">
                             {activeMoonMystery.recommendedAsma.map((name, idx) => (
-                              <span key={idx} className="bg-amber-950/40 text-amber-200 border border-amber-500/30 text-xs px-2.5 py-0.5 rounded-lg font-serif font-bold">
+                              <span key={`mysticcalendarmodal-item-${idx}`} className="bg-amber-950/40 text-amber-200 border border-amber-500/30 text-xs px-2.5 py-0.5 rounded-lg font-serif font-bold">
                                 {name}
                               </span>
                             ))}

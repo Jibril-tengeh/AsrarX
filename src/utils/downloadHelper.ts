@@ -253,6 +253,152 @@ export async function downloadPdfDoc(
 }
 
 /**
+ * Downloads an image in High Resolution (Haute Résolution / HD), with optional Ultra HD upscale (2x).
+ * Supports both base64 data URLs, object URLs, and remote URLs across Web and Capacitor mobile.
+ */
+export async function downloadImageHighRes(
+  imageUrl: string,
+  fileName: string = 'asrarhub-image-hd.png',
+  options?: {
+    upscaleFactor?: number; // 1 = full native HD, 2 = Ultra-HD 2x bicubic upscale
+    format?: 'image/png' | 'image/jpeg';
+    quality?: number; // 0.95 - 1.0
+    skipWatermark?: boolean;
+  }
+): Promise<boolean> {
+  const upscale = Math.max(1, Math.min(options?.upscaleFactor || 1, 4));
+  const format = options?.format || 'image/png';
+  const quality = options?.quality ?? (format === 'image/jpeg' ? 0.96 : 1.0);
+  const ext = format === 'image/jpeg' ? '.jpg' : '.png';
+  const cleanFileName = fileName.toLowerCase().endsWith(ext) ? fileName : `${fileName.replace(/\.[^/.]+$/, '')}${ext}`;
+
+  notifyDownloadStart(cleanFileName);
+
+  try {
+    // Load image into an HTMLImageElement
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+
+    await new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error('Impossible de charger l\'image en haute résolution.'));
+      img.src = imageUrl;
+    });
+
+    const naturalWidth = img.naturalWidth || img.width || 1200;
+    const naturalHeight = img.naturalHeight || img.height || 800;
+    const targetWidth = naturalWidth * upscale;
+    const targetHeight = naturalHeight * upscale;
+
+    // Create high-resolution offscreen canvas
+    const canvas = document.createElement('canvas');
+    canvas.width = targetWidth;
+    canvas.height = targetHeight;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+      throw new Error('Canvas 2D context non disponible');
+    }
+
+    // High quality rendering configuration
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
+
+    // If JPEG, fill white background to avoid transparent black pixels
+    if (format === 'image/jpeg') {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, targetWidth, targetHeight);
+    }
+
+    ctx.drawImage(img, 0, 0, targetWidth, targetHeight);
+
+    // Apply watermark optionally (default keeps clean HD image)
+    const finalCanvas = options?.skipWatermark !== false ? canvas : applyAsrarHubWatermark(canvas);
+    const dataUrl = finalCanvas.toDataURL(format, quality);
+
+    const extraData = {
+      dataUrl,
+      fileType: 'image' as const,
+      toolRoute: typeof window !== 'undefined' ? window.location.pathname : undefined,
+    };
+
+    if (Capacitor.isNativePlatform()) {
+      const base64Data = dataUrl.split(',')[1];
+      const path = `AsrarHub/${cleanFileName}`;
+
+      try {
+        await Filesystem.requestPermissions();
+      } catch (pErr) {
+        console.warn('Filesystem requestPermissions warning:', pErr);
+      }
+
+      try {
+        await Filesystem.writeFile({
+          path,
+          data: base64Data,
+          directory: Directory.Documents,
+          recursive: true
+        });
+        notifyDownloadSuccess(cleanFileName, undefined, extraData);
+        return true;
+      } catch (docErr) {
+        try {
+          await Filesystem.writeFile({
+            path: cleanFileName,
+            data: base64Data,
+            directory: Directory.Cache,
+            recursive: true
+          });
+          notifyDownloadSuccess(cleanFileName, undefined, extraData);
+          return true;
+        } catch (cacheErr) {
+          const link = document.createElement('a');
+          link.download = cleanFileName;
+          link.href = dataUrl;
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          notifyDownloadSuccess(cleanFileName, undefined, extraData);
+          return true;
+        }
+      }
+    } else {
+      // Browser high resolution download via Blob
+      const res = await fetch(dataUrl);
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
+
+      const link = document.createElement('a');
+      link.download = cleanFileName;
+      link.href = blobUrl;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 10000);
+
+      notifyDownloadSuccess(cleanFileName, undefined, extraData);
+      return true;
+    }
+  } catch (err) {
+    console.error('Erreur lors du téléchargement en haute résolution:', err);
+    // Direct fallback if canvas processing failed
+    try {
+      const link = document.createElement('a');
+      link.download = cleanFileName;
+      link.href = imageUrl;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      notifyDownloadSuccess(cleanFileName);
+      return true;
+    } catch (fallbackErr) {
+      notifyDownloadError(cleanFileName);
+      return false;
+    }
+  }
+}
+
+/**
  * Custom React hook for storage permissions and file exports
  */
 export function useStorageAccess() {

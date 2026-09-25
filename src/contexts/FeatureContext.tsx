@@ -13,7 +13,24 @@ const FeatureContext = createContext<FeatureContextType>({ featureToggles: {} })
 export const useFeatures = () => useContext(FeatureContext);
 
 export const FeatureProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [featureToggles, setFeatureToggles] = useState<any>({});
+  const [featureToggles, setFeatureToggles] = useState<any>(() => {
+    try {
+      const stored = localStorage.getItem('asrar_font_toggles');
+      if (stored) {
+        return {
+          watermark_enabled: true,
+          watermark_opacity: 0.08,
+          watermark_show_seal: true,
+          ...JSON.parse(stored)
+        };
+      }
+    } catch (_) {}
+    return {
+      watermark_enabled: true,
+      watermark_opacity: 0.08,
+      watermark_show_seal: true,
+    };
+  });
 
   // Apply typography and sizing variables to documentElement dynamically
   const applyTypographyAndSizing = (data: any) => {
@@ -83,6 +100,15 @@ export const FeatureProvider: React.FC<{ children: React.ReactNode }> = ({ child
       root.classList.remove('has-custom-category-title-size');
     }
 
+    const aiChatSize = Number(mergedData.textSizeAiChat);
+    if (aiChatSize && aiChatSize >= 10 && aiChatSize <= 40) {
+      root.style.setProperty('--app-ai-chat-font-size', `${aiChatSize}px`);
+      root.classList.add('has-custom-ai-chat-size');
+    } else {
+      root.style.setProperty('--app-ai-chat-font-size', '15px');
+      root.classList.remove('has-custom-ai-chat-size');
+    }
+
     if (mergedData.cardPadding && Number(mergedData.cardPadding) >= 10 && Number(mergedData.cardPadding) <= 50) {
       root.style.setProperty('--app-card-padding', `${mergedData.cardPadding}px`);
       root.classList.add('has-custom-card-padding');
@@ -126,6 +152,17 @@ export const FeatureProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setOffsetProp('--feed-store-offset', mergedData.feedStoreOffset, 0);
     setOffsetProp('--feed-journal-offset', mergedData.feedJournalOffset, 0);
     setOffsetProp('--feed-home-slider-offset', mergedData.feedHomeSliderOffset, 0);
+
+    // Dynamic AsrarHub Watermark Configuration
+    if (mergedData.watermark_opacity !== undefined && mergedData.watermark_opacity !== null && mergedData.watermark_opacity !== '') {
+      const num = Number(mergedData.watermark_opacity);
+      if (!isNaN(num) && num >= 0) {
+        const op = num > 1 ? num / 100 : num;
+        root.style.setProperty('--app-watermark-opacity', `${op}`);
+      }
+    } else {
+      root.style.setProperty('--app-watermark-opacity', '0.08');
+    }
   };
 
   // Synchronous immediate initialization from localStorage to prevent flash

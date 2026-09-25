@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { User, Bell, Clock, Save, Shield, Moon, Sun, Smartphone, Laptop, Tablet, Globe, Trash2, Award, Medal, Star, Target, LogOut, Camera, Image as ImageIcon, RefreshCw, Sparkles, LogIn, ChevronDown, Plus, XCircle, CheckCircle, FileText, BookOpen, ScrollText, Heart, X, Share2, Wifi, Database, HardDrive, HardDriveDownload, Mic, MapPin, FolderCheck, Mail, MessageSquare, Info, Tag, ExternalLink, Check, Gift, HelpCircle, Compass, AlertTriangle, Vibrate, BatteryCharging, Zap, ZapOff, Gauge } from 'lucide-react';
+import { User, Bell, Clock, Save, Shield, Moon, Sun, Smartphone, Laptop, Tablet, Globe, Trash2, Award, Medal, Star, Target, LogOut, Camera, Image as ImageIcon, RefreshCw, Sparkles, LogIn, ChevronDown, Plus, XCircle, CheckCircle, FileText, BookOpen, ScrollText, Heart, X, Share2, Wifi, Database, HardDrive, HardDriveDownload, Mic, MapPin, FolderCheck, Mail, MessageSquare, Info, Tag, ExternalLink, Check, Gift, HelpCircle, Compass, AlertTriangle, Vibrate, Battery, BatteryCharging, BatteryWarning, Cpu, Zap, ZapOff, Gauge } from 'lucide-react';
 import { useHaptics } from '../../utils/haptics';
+import { usePerformanceMonitor } from '../../hooks/usePerformanceMonitor';
 import { 
   getAllOfflineSecrets, 
   removeSecretFromOfflineVault, 
@@ -194,7 +195,18 @@ export const UserProfile: React.FC = () => {
   const { theme, setTheme } = useTheme();
   const { user } = useAuth();
   const { featureToggles } = useFeatures();
-  const { batterySaver, setBatterySaver, toggleBatterySaver, backgroundSyncFrequencyMs } = useSettings();
+  const {
+    batterySaver,
+    setBatterySaver,
+    toggleBatterySaver,
+    lowResourceMode,
+    setLowResourceMode,
+    toggleLowResourceMode,
+    autoLowResourceOnBattery,
+    setAutoLowResourceOnBattery,
+    backgroundSyncFrequencyMs,
+  } = useSettings();
+  const perf = usePerformanceMonitor();
   const { config: hapticsConfig, updateConfig: updateHapticsConfig, triggerTest: testHaptics } = useHaptics();
   const navigate = useNavigate();
   
@@ -1843,48 +1855,125 @@ export const UserProfile: React.FC = () => {
 
       <CollapsibleSection
         id="battery-saver-section"
-        title={t('profile.batterySaver.title', 'Économiseur de Batterie & Performances')}
+        title={language === 'fr' ? 'Mode Basse Consommation & Performances (Low Resource Mode)' : t('profile.batterySaver.title', 'Économiseur de Batterie & Performances')}
         icon={<BatteryCharging className="text-emerald-500" size={20} />}
       >
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-5 leading-relaxed">
-          {t('profile.batterySaver.subtitle', "Optimisez l'autonomie de votre batterie et réduisez la consommation de données mobiles en allégeant les animations et en espaçant les synchronisations en arrière-plan.")}
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 leading-relaxed">
+          {language === 'fr'
+            ? "Surveille les performances de votre appareil (batterie et CPU) et réduit l'impact énergétique en désactivant les animations secondaires et en espaçant les requêtes d'arrière-plan."
+            : t('profile.batterySaver.subtitle', "Optimisez l'autonomie de votre batterie et réduisez la consommation de données mobiles en allégeant les animations et en espaçant les synchronisations en arrière-plan.")}
         </p>
 
-        {/* Master Battery Saver Toggle */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between border border-gray-100 dark:border-gray-700 rounded-2xl p-4 bg-gray-50 dark:bg-gray-800/50 gap-4 mb-4">
+        {/* Live Performance & Battery Status Bar */}
+        <div className="mb-4 p-3 bg-white dark:bg-gray-800/80 rounded-2xl border border-gray-150 dark:border-gray-700/80 flex flex-wrap items-center justify-between gap-3 text-xs shadow-2xs">
+          <div className="flex items-center gap-2">
+            <div className={`p-2 rounded-xl flex items-center justify-center ${
+              perf.isHighConsumptionDetected
+                ? 'bg-amber-100 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400'
+                : 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400'
+            }`}>
+              {perf.isHighConsumptionDetected ? <BatteryWarning size={18} /> : <Battery size={18} />}
+            </div>
+            <div>
+              <div className="flex items-center gap-1.5 font-bold text-gray-900 dark:text-white">
+                <span>{language === 'fr' ? 'Batterie' : 'Battery'}:</span>
+                <span>
+                  {perf.batteryLevel !== null ? `${perf.batteryLevel}%` : (language === 'fr' ? 'Standard' : 'Standard')}
+                </span>
+                {perf.isCharging && (
+                  <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-0.5">
+                    <Zap size={11} />
+                    {language === 'fr' ? 'En charge' : 'Charging'}
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                {perf.isHighConsumptionDetected
+                  ? (language === 'fr' ? '⚠️ Forte consommation détectée' : '⚠️ High battery drain detected')
+                  : (language === 'fr' ? 'Consommation stable' : 'Normal consumption')}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 px-2.5 py-1 rounded-xl bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 font-mono font-bold text-[11px]">
+              <Cpu size={13} className="text-gray-400" />
+              <span>{perf.fps} FPS</span>
+            </div>
+            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+              perf.isLowResourceActive
+                ? 'bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300'
+                : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
+            }`}>
+              {perf.isLowResourceActive
+                ? (language === 'fr' ? 'Mode Éco Actif' : 'Eco Mode On')
+                : (language === 'fr' ? 'Mode Standard' : 'Standard Mode')}
+            </span>
+          </div>
+        </div>
+
+        {/* Master Low Resource Mode Toggle */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between border border-gray-100 dark:border-gray-700 rounded-2xl p-4 bg-gray-50 dark:bg-gray-800/50 gap-4 mb-3">
           <div className="flex items-center gap-3">
-            <div className={`p-2.5 rounded-xl transition-colors ${batterySaver ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400' : 'bg-gray-100 dark:bg-gray-700 text-gray-400'}`}>
-              {batterySaver ? <BatteryCharging size={22} /> : <ZapOff size={22} />}
+            <div className={`p-2.5 rounded-xl transition-colors ${perf.isLowResourceActive ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400' : 'bg-gray-100 dark:bg-gray-700 text-gray-400'}`}>
+              {perf.isLowResourceActive ? <BatteryCharging size={22} /> : <ZapOff size={22} />}
             </div>
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-bold text-gray-900 dark:text-white text-sm sm:text-base">
-                  {t('profile.batterySaver.toggleTitle', "Mode Économie d'Énergie")}
+                  {language === 'fr' ? 'Mode Basse Consommation (Low Resource Mode)' : t('profile.batterySaver.toggleTitle', "Mode Économie d'Énergie")}
                 </h3>
-                {batterySaver && (
+                {perf.isLowResourceActive && (
                   <span className="text-[10px] uppercase font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 px-2 py-0.5 rounded-full">
                     {t('profile.batterySaver.activeBadge', 'Actif')}
                   </span>
                 )}
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                {t('profile.batterySaver.toggleDesc', "Réduit l'intensité des animations et espace les synchronisations en arrière-plan à 30 minutes")}
+                {language === 'fr'
+                  ? "Désactive les animations non essentielles et espace les synchronisations et vérifications pour préserver la batterie"
+                  : t('profile.batterySaver.toggleDesc', "Réduit l'intensité des animations et espace les synchronisations en arrière-plan à 30 minutes")}
               </p>
             </div>
           </div>
           <div
             role="button"
-            aria-label="Toggle battery saver"
+            aria-label="Toggle low resource mode"
             tabIndex={0}
-            onClick={() => toggleBatterySaver()}
-            className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors shrink-0 ${batterySaver ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+            onClick={() => perf.toggleLowResource()}
+            className={`w-12 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors shrink-0 ${perf.isLowResourceActive ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`}
           >
             <motion.div
               className="w-4 h-4 bg-white rounded-full shadow-sm"
-              animate={{ x: batterySaver ? 24 : 0 }}
+              animate={{ x: perf.isLowResourceActive ? 24 : 0 }}
               transition={{ type: "spring", stiffness: 500, damping: 30 }}
             />
           </div>
+        </div>
+
+        {/* Auto Enable on Low Battery / High Drain */}
+        <div className="flex items-center justify-between border border-gray-100 dark:border-gray-700/80 rounded-2xl p-3.5 bg-white dark:bg-gray-800/40 gap-3 mb-4">
+          <div>
+            <h4 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white">
+              {language === 'fr' ? 'Activation automatique si batterie faible (≤ 20%)' : 'Auto-enable on low battery (≤ 20%)'}
+            </h4>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+              {language === 'fr'
+                ? 'Bascule automatiquement en basse consommation en cas de batterie faible ou de décharge rapide'
+                : 'Automatically switches to low resource mode when battery is critical or draining fast'}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setAutoLowResourceOnBattery(!autoLowResourceOnBattery)}
+            className={`w-10 h-5 flex items-center rounded-full p-0.5 cursor-pointer transition-colors shrink-0 ${autoLowResourceOnBattery ? 'bg-emerald-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+          >
+            <motion.div
+              className="w-4 h-4 bg-white rounded-full shadow-xs"
+              animate={{ x: autoLowResourceOnBattery ? 20 : 0 }}
+              transition={{ type: "spring", stiffness: 500, damping: 30 }}
+            />
+          </button>
         </div>
 
         {/* Feature Breakdown Grid */}
@@ -1899,12 +1988,12 @@ export const UserProfile: React.FC = () => {
                 {t('profile.batterySaver.syncTitle', 'Fréquence de Synchronisation')}
               </h4>
               <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
-                {batterySaver
+                {perf.isLowResourceActive
                   ? t('profile.batterySaver.syncEco', 'Mode Éco : Synchro espacée toutes les 30 minutes')
                   : t('profile.batterySaver.syncNormal', 'Mode Standard : Synchro régulière toutes les 10 minutes')}
               </p>
               <span className="inline-block mt-1.5 text-[10px] font-bold px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
-                {batterySaver ? '30 min interval' : '10 min interval'}
+                {perf.isLowResourceActive ? '30 min interval' : '10 min interval'}
               </span>
             </div>
           </div>
@@ -1919,12 +2008,12 @@ export const UserProfile: React.FC = () => {
                 {t('profile.batterySaver.animationTitle', 'Intensité des Animations')}
               </h4>
               <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
-                {batterySaver
+                {perf.isLowResourceActive
                   ? t('profile.batterySaver.animationEco', 'Allégée : Boucles infinies et effets GPU minimisés')
                   : t('profile.batterySaver.animationNormal', 'Complète : Transitions et effets dynamiques fluides')}
               </p>
               <span className="inline-block mt-1.5 text-[10px] font-bold px-2 py-0.5 rounded-md bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
-                {batterySaver ? t('profile.batterySaver.animLow', 'Faible impact GPU') : t('profile.batterySaver.animHigh', 'Haute fluidité')}
+                {perf.isLowResourceActive ? t('profile.batterySaver.animLow', 'Faible impact GPU') : t('profile.batterySaver.animHigh', 'Haute fluidité')}
               </span>
             </div>
           </div>
@@ -2239,7 +2328,7 @@ export const UserProfile: React.FC = () => {
           {user?.purchasedItems && user.purchasedItems.length > 0 ? (
             <div className="space-y-3">
               {user.purchasedItems.map((item, idx) => (
-                <div key={idx} className="bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl p-3 flex items-center justify-between">
+                <div key={`purchased-item-${item}-${idx}`} className="bg-gray-50 dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl p-3 flex items-center justify-between">
                   <span className="text-sm font-medium text-gray-900 dark:text-white">{item}</span>
                   <span className="text-xs text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-100 dark:bg-emerald-900/30 px-2 py-1 rounded-full">{t('profile.adsAndPurchases.purchased', 'Acheté')}</span>
                 </div>
@@ -2330,7 +2419,7 @@ export const UserProfile: React.FC = () => {
         <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-700 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h4 className="font-bold text-gray-900 dark:text-white text-sm">
-              {t('profile.offlineMode.autoSaveTitle', 'Sauvegarde automatique sur Firestore')}
+              {t('profile.offlineMode.autoSaveTitle', 'Sauvegarde automatique sur le Cloud')}
             </h4>
             <p className="text-xs text-gray-500 dark:text-gray-450 mt-1 leading-relaxed">
               {t('profile.offlineMode.autoSaveDesc', 'Désactivez cette option pour économiser vos données mobiles. Vos modifications seront conservées localement.')}
@@ -2713,15 +2802,15 @@ export const UserProfile: React.FC = () => {
             )}
           </div>
 
-          {/* Admin Sync Firebase app_versions Collection Button */}
+          {/* Admin Sync Cloud app_versions Collection Button */}
           {user?.role === 'admin' && (
             <div className="p-3.5 bg-amber-50 dark:bg-amber-950/30 rounded-2xl border border-amber-200 dark:border-amber-900/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
               <div>
                 <span className="font-bold text-amber-900 dark:text-amber-300 block">
-                  {t('profile.version.adminSyncTitle', 'Administration : Collection Firebase `app_versions`')}
+                  {t('profile.version.adminSyncTitle', 'Administration : Synchronisation Cloud `app_versions`')}
                 </span>
                 <span className="text-amber-700 dark:text-amber-400 text-[11px]">
-                  {t('profile.version.adminSyncDesc', "Synchronisez l'historique des versions vers la base de données Firestore pour tous les utilisateurs.")}
+                  {t('profile.version.adminSyncDesc', "Synchronisez l'historique des versions vers le Cloud pour tous les utilisateurs.")}
                 </span>
               </div>
               <button
@@ -2733,7 +2822,7 @@ export const UserProfile: React.FC = () => {
                     setReleasesSyncSuccess(true);
                     setTimeout(() => setReleasesSyncSuccess(false), 3000);
                   } catch (e) {
-                    console.warn("Firestore sync error:", e);
+                    console.warn("Cloud sync error:", e);
                   } finally {
                     setIsSyncingReleases(false);
                   }
@@ -2749,7 +2838,7 @@ export const UserProfile: React.FC = () => {
                 ) : (
                   <>
                     <Database size={14} className={isSyncingReleases ? 'animate-bounce' : ''} />
-                    <span>{t('profile.version.syncFirestore', 'Sync Firestore app_versions')}</span>
+                    <span>{t('profile.version.syncFirestore', 'Synchroniser le Cloud')}</span>
                   </>
                 )}
               </button>

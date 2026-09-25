@@ -9,6 +9,7 @@ import { useAuth } from '../../../contexts/AuthContext';
 import { db } from '../../../lib/firebase';
 import { collection, addDoc } from 'firebase/firestore';
 import { exportWirdToImage } from '../../../utils/wirdExporter';
+import { AsrarHubWatermark } from '../../../components/AsrarHubWatermark';
 
 // Abjad calculation map
 const ABJAD_MAP: Record<string, number> = {
@@ -327,7 +328,9 @@ export const CustomDuaGenerator: React.FC = () => {
 
         {/* Right Prayer Display & Counter */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 sm:p-8 shadow-sm border border-gray-100 dark:border-gray-700 space-y-6">
+          <div className="bg-white dark:bg-gray-800 rounded-3xl p-6 sm:p-8 shadow-sm border border-gray-100 dark:border-gray-700 space-y-6 relative overflow-hidden">
+            <AsrarHubWatermark variant="gold" showCentralSeal={true} className="z-0 pointer-events-none" />
+            <div className="relative z-10 space-y-6">
             <div className="flex flex-wrap items-center justify-between gap-4 border-b border-gray-100 dark:border-gray-750 pb-4">
               <div>
                 <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">
@@ -366,7 +369,7 @@ export const CustomDuaGenerator: React.FC = () => {
               </p>
               <div className="flex flex-wrap justify-center gap-2">
                 {selectedPreset.arabicNames.map((nm, idx) => (
-                  <span key={idx} className="px-3 py-1 bg-amber-100 dark:bg-amber-900/40 text-amber-900 dark:text-amber-200 rounded-full font-serif font-bold text-sm">
+                  <span key={`dua-name-${nm}-${idx}`} className="px-3 py-1 bg-amber-100 dark:bg-amber-900/40 text-amber-900 dark:text-amber-200 rounded-full font-serif font-bold text-sm">
                     {nm}
                   </span>
                 ))}
@@ -476,6 +479,7 @@ export const CustomDuaGenerator: React.FC = () => {
                   🎉 Objectif de Récitation Atteint ! Qu'Allah exauce votre invocation.
                 </div>
               )}
+            </div>
             </div>
           </div>
         </div>

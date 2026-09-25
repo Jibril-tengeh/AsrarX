@@ -1835,7 +1835,7 @@ export const AdminVersionControlManager: React.FC = () => {
 
                         <div className="space-y-1.5">
                           {localized.highlights.map((item, idx) => (
-                            <div key={idx} className="flex items-start gap-2.5 text-xs sm:text-sm text-gray-700 dark:text-gray-200">
+                            <div key={`adminversioncontrolmanager-item-${idx}`} className="flex items-start gap-2.5 text-xs sm:text-sm text-gray-700 dark:text-gray-200">
                               <span className="text-purple-500 font-black mt-0.5">•</span>
                               <span className="leading-relaxed">{item}</span>
                             </div>
@@ -1931,7 +1931,7 @@ export const AdminVersionControlManager: React.FC = () => {
             {/* Content Diff Body */}
             <div className="p-6 overflow-y-auto space-y-6 flex-1">
               {selectedCommit.changes.map((ch, idx) => (
-                <div key={idx} className="border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm">
+                <div key={`adminversioncontrolmanager-item-${idx}`} className="border border-gray-200 dark:border-gray-700 rounded-2xl overflow-hidden shadow-sm">
                   <div className="bg-gray-100 dark:bg-gray-700/70 px-4 py-2.5 flex items-center justify-between text-xs font-mono font-bold">
                     <span className="flex items-center gap-2 text-gray-800 dark:text-gray-200">
                       <FileCode size={15} className="text-emerald-500" />
@@ -2033,7 +2033,7 @@ export const AdminVersionControlManager: React.FC = () => {
                 </h4>
                 <div className="space-y-3">
                   {selectedPR.changes.map((ch, idx) => (
-                    <div key={idx} className="bg-gray-50 dark:bg-gray-750 p-4 rounded-2xl border border-gray-200 dark:border-gray-700 text-xs">
+                    <div key={`adminversioncontrolmanager-item-${idx}`} className="bg-gray-50 dark:bg-gray-750 p-4 rounded-2xl border border-gray-200 dark:border-gray-700 text-xs">
                       <div className="flex items-center justify-between font-mono font-bold text-gray-800 dark:text-gray-200 mb-1">
                         <span>{ch.path}</span>
                         <span className="text-emerald-500">+{ch.additions} / -{ch.deletions}</span>
@@ -3011,7 +3011,7 @@ export const AdminVersionControlManager: React.FC = () => {
                       ) : (
                         <div className="space-y-2">
                           {editingAppRelease.highlights.map((item, idx) => (
-                            <div key={idx} className="flex items-center gap-2">
+                            <div key={`adminversioncontrolmanager-item-${idx}`} className="flex items-center gap-2">
                               <span className="font-bold text-purple-500 w-5 text-center">{idx + 1}.</span>
                               <input
                                 type="text"
@@ -3112,7 +3112,7 @@ export const AdminVersionControlManager: React.FC = () => {
                       ) : (
                         <div className="space-y-2">
                           {(editingAppRelease.highlightsEn || []).map((item, idx) => (
-                            <div key={idx} className="flex items-center gap-2">
+                            <div key={`adminversioncontrolmanager-item-${idx}`} className="flex items-center gap-2">
                               <span className="font-bold text-purple-500 w-5 text-center">{idx + 1}.</span>
                               <input
                                 type="text"
@@ -3213,7 +3213,7 @@ export const AdminVersionControlManager: React.FC = () => {
                       ) : (
                         <div className="space-y-2">
                           {(editingAppRelease.highlightsHa || []).map((item, idx) => (
-                            <div key={idx} className="flex items-center gap-2">
+                            <div key={`adminversioncontrolmanager-item-${idx}`} className="flex items-center gap-2">
                               <span className="font-bold text-purple-500 w-5 text-center">{idx + 1}.</span>
                               <input
                                 type="text"

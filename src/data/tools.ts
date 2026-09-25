@@ -39,6 +39,8 @@ export interface ToolItem {
   comingSoon?: boolean;
 }
 
+export type Tool = ToolItem;
+
 export const tools: ToolItem[] = [
   // Simple Tools
   {

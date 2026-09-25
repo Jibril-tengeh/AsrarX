@@ -731,7 +731,7 @@ export const AlBuniShams: React.FC = () => {
           </div>
           <div className="grid grid-cols-4 gap-1.5 max-w-[240px] mx-auto dir-rtl font-arabic font-extrabold text-amber-950 dark:text-amber-100 text-sm">
             {cells4x4.map((val, idx) => (
-              <div key={idx} className="aspect-square flex items-center justify-center bg-amber-100/80 dark:bg-amber-900/40 border border-amber-800/30 rounded shadow-inner">
+              <div key={`wafq-4x4-${idx}-${val}`} className="aspect-square flex items-center justify-center bg-amber-100/80 dark:bg-amber-900/40 border border-amber-800/30 rounded shadow-inner">
                 {val}
               </div>
             ))}
@@ -757,7 +757,7 @@ export const AlBuniShams: React.FC = () => {
           </div>
           <div className="grid grid-cols-3 gap-2 max-w-[200px] mx-auto dir-rtl font-arabic font-extrabold text-amber-950 dark:text-amber-100 text-base">
             {cells3x3.map((val, idx) => (
-              <div key={idx} className="aspect-square flex items-center justify-center bg-amber-100/80 dark:bg-amber-900/40 border border-amber-800/30 rounded shadow-inner">
+              <div key={`wafq-3x3-${idx}-${val}`} className="aspect-square flex items-center justify-center bg-amber-100/80 dark:bg-amber-900/40 border border-amber-800/30 rounded shadow-inner">
                 {val}
               </div>
             ))}
@@ -804,7 +804,7 @@ export const AlBuniShams: React.FC = () => {
           <strong className="block text-amber-950 mb-1 font-sans mt-3">{t('shams.parchment.stepsHeading', 'Étapes du Rituel :')}</strong>
           <ul className="list-disc pl-4 space-y-1">
             {steps.map((st, idx) => (
-              <li key={idx}>{st}</li>
+              <li key={`parch-step-${idx}-${st.slice(0, 10)}`}>{st}</li>
             ))}
           </ul>
         </div>
@@ -849,7 +849,7 @@ export const AlBuniShams: React.FC = () => {
           <span className="text-xs font-bold text-amber-900 block mb-3 uppercase tracking-wider">وفق المثلث الغزالي المستخرج</span>
           <div className="grid grid-cols-3 gap-1.5 max-w-[240px] mx-auto bg-amber-950 p-2 rounded-xl shadow-md border-2 border-amber-700">
             {generatedData.wafq3x3Cells.map((val: number, idx: number) => (
-              <div key={idx} className="bg-amber-100/90 text-amber-950 font-bold text-sm h-12 flex items-center justify-center rounded border border-amber-800/30 font-mono">
+              <div key={`gen-wafq-${idx}-${val}`} className="bg-amber-100/90 text-amber-950 font-bold text-sm h-12 flex items-center justify-center rounded border border-amber-800/30 font-mono">
                 {val}
               </div>
             ))}
@@ -1589,7 +1589,7 @@ export const AlBuniShams: React.FC = () => {
                 <div className="grid grid-cols-3 gap-2 max-w-[260px] mx-auto bg-gray-900 dark:bg-black p-3 rounded-2xl shadow-lg border-2 border-amber-500/40">
                   {generatedData.wafq3x3Cells.map((cellVal: number, idx: number) => (
                     <div 
-                      key={idx}
+                      key={`gen-wafq3x3-${idx}-${cellVal}`}
                       className="bg-amber-100 dark:bg-gray-800 text-amber-950 dark:text-amber-200 font-bold text-base h-12 flex items-center justify-center rounded-xl border border-amber-500/30 font-mono shadow-inner"
                     >
                       {cellVal}
@@ -1632,7 +1632,7 @@ export const AlBuniShams: React.FC = () => {
 
                   <div className="grid grid-cols-3 gap-1.5 max-w-[200px] mx-auto my-4 bg-amber-950 p-2 rounded-xl">
                     {[4, 9, 2, 3, 5, 7, 8, 1, 6].map((num, i) => (
-                      <div key={i} className="bg-amber-100 text-amber-950 font-bold text-sm h-10 flex items-center justify-center rounded font-mono">
+                      <div key={`albunishams-i-${i}`} className="bg-amber-100 text-amber-950 font-bold text-sm h-10 flex items-center justify-center rounded font-mono">
                         {num}
                       </div>
                     ))}
@@ -1731,7 +1731,7 @@ export const AlBuniShams: React.FC = () => {
                 ].map((item, idx) => {
                   const elemKey = item.elem === 'Feu' ? 'fire' : item.elem === 'Air' ? 'air' : item.elem === 'Eau' ? 'water' : 'earth';
                   return (
-                    <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                    <tr key={`huruf-${item.char}-${item.val}-${idx}`} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                       <td className="py-2 px-3 font-bold text-amber-600 dark:text-amber-400 text-base font-arabic">{item.char}</td>
                       <td className="py-2 px-3 font-medium text-gray-900 dark:text-white">{item.name}</td>
                       <td className="py-2 px-3 font-mono text-gray-700 dark:text-gray-300 font-bold">{item.val}</td>
@@ -1827,7 +1827,7 @@ export const AlBuniShams: React.FC = () => {
                   <strong className="block text-amber-700 dark:text-amber-300 mb-2">{t('shams.modal.methodHeading', 'Méthode de Pratique & Riyada :')}</strong>
                   <ol className="list-decimal pl-4 space-y-1.5 text-gray-700 dark:text-gray-300">
                     {getSecretSteps(selectedSecret, language).map((st, i) => (
-                      <li key={i}>{st}</li>
+                      <li key={`albunishams-i-${i}`}>{st}</li>
                     ))}
                   </ol>
                 </div>

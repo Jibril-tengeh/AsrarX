@@ -971,7 +971,7 @@
       "syncButton": "Haɗa Yanzu",
       "syncing": "Ana haɗawa...",
       "success": "An kammala haɗawar wajen layi cikin nasara.",
-      "autoSaveTitle": "Ajiye Kai Tsaye a Gajimare na Firestore",
+      "autoSaveTitle": "Ajiye Kai Tsaye a Gajimare",
       "autoSaveDesc": "Kashe wannan zaɓi don rage amfani da data. Sauye-sauyenku za su ci gaba da zama a cikin waya."
     },
     "version": {
@@ -985,9 +985,9 @@
       "clearCacheBtn": "Share Cache na SWR",
       "cleaning": "Ana sharewa...",
       "cleaningStatus": "Ana share cache na SWR...",
-      "adminSyncTitle": "Gudanarwa: Tarin Firebase `app_versions`",
-      "adminSyncDesc": "Daidaita tarihin sigogi zuwa ma'adanar bayanan Firestore ga dukkan masu amfani.",
-      "syncFirestore": "Sync Firestore app_versions",
+      "adminSyncTitle": "Gudanarwa: Tarin Gajimare `app_versions`",
+      "adminSyncDesc": "Daidaita tarihin sigogi zuwa ma'adanar gajimare ga dukkan masu amfani.",
+      "syncFirestore": "Daidaita Gajimare",
       "synced": "An daidaita!"
     }
   },
@@ -1699,15 +1699,17 @@
     "statusArchived": "An adana",
     "adminReplies": "Amsoshin Shugabanni ({count}):",
     "replyViaGmail": "Bi sawu ta Gmail",
+    "openMailApp": "Manhajar Email",
+    "copyDetails": "Kwafi saƙo",
     "linkedEmail": "Adireshin Imel:",
     "version": "AsrarHub Support v2.5"
   },
   "changelog": {
     "title": "Tarihin Sabuntawar Manhaja",
     "modalTitle": "Tarihin Sauye-sauye da Gyare-gyare",
-    "subtitle": "Tarihin da aka daidaita daga ma'adanar Firestore ta app_versions",
+    "subtitle": "Tarihin da aka daidaita daga gajimare",
     "modalSubtitle": "Tarihin ci gaba, ingantawa da gyare-gyaren kura-kurai na AsrarHub",
-    "syncFirestore": "Sync Firestore",
+    "syncFirestore": "Daidaita Gajimare",
     "synced": "An daidaita",
     "fullScreen": "Cikakken allo",
     "searchPlaceholder": "Nemi wani aiki, gyara...",

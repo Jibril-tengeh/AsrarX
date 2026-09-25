@@ -325,7 +325,7 @@ export default function HissnAqlTab({ t }: HissnAqlTabProps) {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 pt-2">
           {awradList.map((item, idx) => (
             <div
-              key={idx}
+              key={`hissnaqltab-item-${idx}`}
               className="p-4 rounded-xl bg-gray-50 dark:bg-slate-800/80 border border-gray-200 dark:border-slate-700/60 space-y-2 hover:border-emerald-500 transition-all"
             >
               <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 block font-arabic">

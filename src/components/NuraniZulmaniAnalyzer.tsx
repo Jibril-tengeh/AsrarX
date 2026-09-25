@@ -220,7 +220,7 @@ Total Abjad: ${totalAbjad}`;
             <div className="flex flex-wrap gap-1.5 font-arabic text-lg" dir="rtl">
               {luminousFound.length > 0 ? (
                 luminousFound.map((ch, idx) => (
-                  <span key={idx} className="w-8 h-8 flex items-center justify-center bg-amber-500 text-white rounded-lg shadow-sm font-bold">
+                  <span key={`nuranizulmanianalyzer-item-${idx}`} className="w-8 h-8 flex items-center justify-center bg-amber-500 text-white rounded-lg shadow-sm font-bold">
                     {ch}
                   </span>
                 ))
@@ -263,7 +263,7 @@ Total Abjad: ${totalAbjad}`;
             <div className="flex flex-wrap gap-1.5 font-arabic text-lg" dir="rtl">
               {darkFound.length > 0 ? (
                 darkFound.map((ch, idx) => (
-                  <span key={idx} className="w-8 h-8 flex items-center justify-center bg-indigo-700 text-white rounded-lg shadow-sm font-bold">
+                  <span key={`nuranizulmanianalyzer-item-${idx}`} className="w-8 h-8 flex items-center justify-center bg-indigo-700 text-white rounded-lg shadow-sm font-bold">
                     {ch}
                   </span>
                 ))
@@ -302,7 +302,7 @@ Total Abjad: ${totalAbjad}`;
             const isLum = ['ا', 'أ', 'إ', 'آ', 'ح', 'ه', 'هـ', 'ك', 'م', 'ص', 'ر', 'س', 'ط', 'ي', 'ق', 'ل', 'ن', 'ع'].includes(ch);
             return (
               <div
-                key={idx}
+                key={`nuranizulmanianalyzer-item-${idx}`}
                 className={`p-3 rounded-xl border flex flex-col justify-between ${
                   isLum
                     ? 'bg-amber-50/50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800/40'

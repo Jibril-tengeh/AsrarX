@@ -397,9 +397,9 @@ export const deleteSupportMessage = async (messageId: string): Promise<void> => 
 };
 
 /**
- * Format email body containing full user details and ticket context
+ * Format full email body containing full user details and ticket context (for copying / logging)
  */
-export const formatEmailSupportBody = (message: SupportMessage): string => {
+export const formatFullEmailSupportBody = (message: SupportMessage): string => {
   const dateFormatted = new Date(message.createdAt).toLocaleString('fr-FR', {
     day: '2-digit',
     month: '2-digit',
@@ -409,66 +409,97 @@ export const formatEmailSupportBody = (message: SupportMessage): string => {
   });
 
   const tierBadge = message.isPremium 
-    ? '⭐⭐⭐ MEMBRE PREMIUM ACTIF ⭐⭐⭐' 
+    ? 'MEMBRE PREMIUM ACTIF' 
     : message.accountTier === 'trial' 
-      ? '⏳ ESSAI GRATUIT 24H ACTIF' 
-      : '👤 COMPTE STANDARD / GRATUIT';
+      ? 'ESSAI GRATUIT 24H ACTIF' 
+      : 'COMPTE STANDARD / GRATUIT';
 
-  return `══════════════════════════════════════════════════════
-🕌 ASRARHUB - DOSSIER CONTACT & SUPPORT CLIENT
-══════════════════════════════════════════════════════
-📌 TICKET N°: ${message.ticketNumber}
-📅 DATE D'ENVOI: ${dateFormatted}
-⚡ PRIORITÉ: ${message.priority.toUpperCase()}
-📂 CATÉGORIE: ${message.category.toUpperCase()}
+  return `==================================================
+ASRARHUB - DOSSIER SUPPORT CLIENT
+==================================================
+TICKET N : ${message.ticketNumber}
+DATE : ${dateFormatted}
+PRIORITE : ${message.priority.toUpperCase()}
+CATEGORIE : ${message.category.toUpperCase()}
 
-──────────────────────────────────────────────────────
-👤 INFORMATIONS UTILISATEUR / PROFIL
-──────────────────────────────────────────────────────
-• Nom: ${message.userName}
-• Email: ${message.userEmail}
-• Statut Compte: ${tierBadge}
-• Points Spirituels: ${message.spiritualPoints || 0} pts
-• Téléphone: ${message.userPhone || 'Non renseigné'}
-• Pays: ${message.userCountry || 'Non renseigné'}
-• UID Firebase: ${message.userId}
+--------------------------------------------------
+INFORMATIONS UTILISATEUR
+--------------------------------------------------
+Nom : ${message.userName}
+Email : ${message.userEmail}
+Statut : ${tierBadge}
+Points Spirituels : ${message.spiritualPoints || 0} pts
+Telephone : ${message.userPhone || 'Non renseigne'}
+Pays : ${message.userCountry || 'Non renseigne'}
+UID Firebase : ${message.userId}
 
-──────────────────────────────────────────────────────
-📱 DIAGNOSTIC APPAREIL & ENVIRONNEMENT TECHNIQUE
-──────────────────────────────────────────────────────
-• Plateforme: ${message.deviceInfo?.platform || 'Web'}
-• Appareil: ${message.deviceInfo?.deviceType || 'desktop'} (${message.deviceInfo?.os || 'OS inconnu'})
-• Navigateur: ${message.deviceInfo?.browser || 'Inconnu'}
-• Langue active: ${message.deviceInfo?.language?.toUpperCase() || 'FR'}
-• Résolution Écran: ${message.deviceInfo?.screen || 'N/A'}
-• Statut Réseau: ${message.deviceInfo?.isOnline ? 'En ligne (Online)' : 'Hors-ligne (Offline)'}
-• Version App: ${message.deviceInfo?.appVersion || '2.5.0'}
+--------------------------------------------------
+DIAGNOSTIC APPAREIL & TECHNIQUE
+--------------------------------------------------
+Plateforme : ${message.deviceInfo?.platform || 'Web'}
+Appareil : ${message.deviceInfo?.deviceType || 'desktop'} (${message.deviceInfo?.os || 'OS inconnu'})
+Navigateur : ${message.deviceInfo?.browser || 'Inconnu'}
+Langue : ${message.deviceInfo?.language?.toUpperCase() || 'FR'}
+Reseau : ${message.deviceInfo?.isOnline ? 'En ligne' : 'Hors-ligne'}
+Version App : ${message.deviceInfo?.appVersion || '2.5.0'}
 
-══════════════════════════════════════════════════════
-✉️ SUJET: ${message.subject}
-══════════════════════════════════════════════════════
+==================================================
+SUJET : ${message.subject}
+==================================================
 ${message.message}
 
-══════════════════════════════════════════════════════
-📩 Message généré depuis l'application AsrarHub.
-Pour répondre à l'utilisateur, écrivez directement à : ${message.userEmail}
-══════════════════════════════════════════════════════`;
+==================================================
+Message genere depuis AsrarHub.
+Repondre a : ${message.userEmail}
+==================================================`;
 };
 
 /**
- * Generate a direct web Gmail compose URL with pre-filled recipient, subject, and rich message body
+ * Backwards compatibility alias
+ */
+export const formatEmailSupportBody = formatFullEmailSupportBody;
+
+/**
+ * Format a compact, URL-safe body that never exceeds query string limits (prevents Gmail Error 400)
+ */
+export const formatCompactEmailBody = (message: SupportMessage, maxMsgLength: number = 320): string => {
+  const tier = message.isPremium ? 'Premium' : message.accountTier === 'trial' ? 'Essai 24h' : 'Standard';
+  const cleanSubject = message.subject.trim();
+  
+  const rawMsg = message.message.trim();
+  const truncatedMsg = rawMsg.length > maxMsgLength 
+    ? rawMsg.substring(0, maxMsgLength) + '\n[... Message complet dans l\'app AsrarHub]' 
+    : rawMsg;
+
+  return `[AsrarHub Support - Ticket #${message.ticketNumber}]
+Utilisateur : ${message.userName} (${message.userEmail})
+Statut : ${tier} | Categorie : ${message.category}
+
+Sujet : ${cleanSubject}
+
+Message :
+${truncatedMsg}
+
+---
+Ticket #${message.ticketNumber} sur AsrarHub`;
+};
+
+/**
+ * Generate a direct web Gmail compose URL with pre-filled recipient, subject, and URL-safe compact body.
+ * Guaranteed to stay well within Gmail Web URI limits (< 1500 chars) to prevent HTTP 400 Bad Request.
  */
 export const generateGmailComposeUrl = (message: SupportMessage, targetAdminEmail?: string): string => {
   const to = encodeURIComponent(targetAdminEmail || message.emailDispatchedTo || DEFAULT_ADMIN_GMAIL);
-  const subjectPrefix = message.isPremium ? '[PREMIUM ⭐]' : '[STANDARD]';
-  const subject = encodeURIComponent(`${subjectPrefix} Ticket ${message.ticketNumber} : ${message.subject}`);
-  const body = encodeURIComponent(formatEmailSupportBody(message));
+  const subjectPrefix = message.isPremium ? '[PREMIUM]' : '[SUPPORT]';
+  const safeSubject = `${subjectPrefix} Ticket #${message.ticketNumber} : ${message.subject.slice(0, 60)}`.trim();
+  const subject = encodeURIComponent(safeSubject);
+  const body = encodeURIComponent(formatCompactEmailBody(message, 300));
 
   return `https://mail.google.com/mail/?view=cm&fs=1&to=${to}&su=${subject}&body=${body}`;
 };
 
 /**
- * Generate a Gmail reply URL from Admin to User
+ * Generate a Gmail reply URL from Admin to User (URL-safe length)
  */
 export const generateGmailReplyToUserUrl = (
   message: SupportMessage, 
@@ -476,17 +507,20 @@ export const generateGmailReplyToUserUrl = (
   adminEmail?: string
 ): string => {
   const to = encodeURIComponent(message.userEmail);
-  const subject = encodeURIComponent(`Re: [${message.ticketNumber}] ${message.subject} - Support AsrarHub`);
+  const safeSubject = `Re: [${message.ticketNumber}] ${message.subject.slice(0, 50)} - AsrarHub`.trim();
+  const subject = encodeURIComponent(safeSubject);
   
+  const snippet = message.message.length > 250 
+    ? message.message.slice(0, 240) + '...' 
+    : message.message;
+
   const bodyContent = `Assalam Alaykoum ${message.userName},
 
-${replyText ? replyText + '\n\n' : ''}Nous faisons suite à votre message (Ticket ${message.ticketNumber}) :
---------------------------------------------------
-"${message.message}"
---------------------------------------------------
+${replyText ? replyText.trim() + '\n\n' : ''}Suite a votre ticket #${message.ticketNumber} :
+"${snippet}"
 
 BarakAllahu Fik,
-La Direction Spirituelle AsrarHub
+Direction Spirituelle AsrarHub
 Email : ${adminEmail || DEFAULT_ADMIN_GMAIL}`;
 
   const body = encodeURIComponent(bodyContent);
@@ -494,13 +528,14 @@ Email : ${adminEmail || DEFAULT_ADMIN_GMAIL}`;
 };
 
 /**
- * Generate a standard mailto: link
+ * Generate a standard mailto: link (URL-safe length for native mail clients)
  */
 export const generateMailtoUrl = (message: SupportMessage, targetAdminEmail?: string): string => {
   const to = targetAdminEmail || message.emailDispatchedTo || DEFAULT_ADMIN_GMAIL;
-  const subjectPrefix = message.isPremium ? '[PREMIUM ⭐]' : '[STANDARD]';
-  const subject = encodeURIComponent(`${subjectPrefix} Ticket ${message.ticketNumber} : ${message.subject}`);
-  const body = encodeURIComponent(formatEmailSupportBody(message));
+  const subjectPrefix = message.isPremium ? '[PREMIUM]' : '[SUPPORT]';
+  const safeSubject = `${subjectPrefix} Ticket #${message.ticketNumber} : ${message.subject.slice(0, 60)}`.trim();
+  const subject = encodeURIComponent(safeSubject);
+  const body = encodeURIComponent(formatCompactEmailBody(message, 300));
 
   return `mailto:${to}?subject=${subject}&body=${body}`;
 };

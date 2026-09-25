@@ -262,7 +262,7 @@ export const AbjadCalculator: React.FC = () => {
               <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1">
                 {QUICK_PRESETS.map((p, idx) => (
                   <button
-                    key={idx}
+                    key={`abjad-preset-${p.label || idx}-${idx}`}
                     type="button"
                     onClick={() => setInputText(p.text)}
                     className="px-2 py-1 rounded-lg bg-gray-100 dark:bg-gray-700/80 hover:bg-gray-200 dark:hover:bg-gray-600 text-[11px] font-medium text-gray-700 dark:text-gray-200 whitespace-nowrap transition-all cursor-pointer"
@@ -395,7 +395,7 @@ export const AbjadCalculator: React.FC = () => {
                       <div className="p-4 pt-0 flex flex-wrap gap-2.5 justify-end border-t border-gray-100 dark:border-gray-700" dir="rtl">
                         {calculation.words.map((item, i) => (
                           <div
-                            key={i}
+                            key={`abjadcalculator-i-${i}`}
                             className="flex flex-col items-center bg-gray-50 dark:bg-gray-900 rounded-2xl p-3 min-w-[5rem] border border-gray-200 dark:border-gray-700 shadow-2xs"
                           >
                             <span className="text-xl font-bold text-gray-900 dark:text-white mb-1 font-arabic">
@@ -444,7 +444,7 @@ export const AbjadCalculator: React.FC = () => {
                       <div className="p-4 pt-0 flex flex-wrap gap-2 justify-end border-t border-gray-100 dark:border-gray-700" dir="rtl">
                         {calculation.characters.map((item, i) => (
                           <div
-                            key={i}
+                            key={`abjadcalculator-i-${i}`}
                             className="flex flex-col items-center rounded-xl p-2 min-w-[3.2rem] bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700"
                           >
                             <span className="text-lg font-bold text-gray-900 dark:text-white mb-0.5 font-arabic">

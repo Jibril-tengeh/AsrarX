@@ -221,9 +221,9 @@ export const GrandOaths: React.FC = () => {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-1 space-y-4">
-            {oaths.map((oath) => (
+            {oaths.map((oath, oIdx) => (
               <button
-                key={oath.id}
+                key={oath.id ? `grand-oath-${oath.id}-${oIdx}` : `grand-oath-${oIdx}`}
                 id={`btn-oath-${oath.id}`}
                 onClick={() => setSelected(oath)}
                 className={`w-full text-left p-5 rounded-2xl border transition-all relative overflow-hidden ${
@@ -315,7 +315,7 @@ export const GrandOaths: React.FC = () => {
                             </h3>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                               {selected.syriacNames.map((name, i) => (
-                                <div key={i} className="flex justify-between items-center p-4 rounded-xl border border-amber-100 dark:border-amber-900/30 bg-amber-50 dark:bg-amber-900/10 shadow-sm">
+                                <div key={`grandoaths-i-${i}`} className="flex justify-between items-center p-4 rounded-xl border border-amber-100 dark:border-amber-900/30 bg-amber-50 dark:bg-amber-900/10 shadow-sm">
                                   <div>
                                     <p className="font-bold text-gray-900 dark:text-white">{name.name}</p>
                                     <p className="text-sm text-amber-700 dark:text-amber-400">

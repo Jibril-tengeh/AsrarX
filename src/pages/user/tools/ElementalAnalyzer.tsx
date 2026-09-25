@@ -298,7 +298,7 @@ export const ElementalAnalyzer: React.FC = () => {
                 {result.details.map((item, i) => {
                   const elBase = ELEMENTS_BASE[item.element as keyof typeof ELEMENTS_BASE];
                   return (
-                    <div key={i} className={`flex items-center gap-1 px-3 py-1.5 rounded-lg border ${elBase.borderColor} ${elBase.bgColor}`}>
+                    <div key={`elementalanalyzer-i-${i}`} className={`flex items-center gap-1 px-3 py-1.5 rounded-lg border ${elBase.borderColor} ${elBase.bgColor}`}>
                       <span className="font-arabic font-bold text-lg">{item.char}</span>
                       <elBase.icon size={14} className={elBase.color} />
                     </div>

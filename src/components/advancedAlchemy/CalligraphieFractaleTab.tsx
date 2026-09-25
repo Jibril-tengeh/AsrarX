@@ -145,7 +145,7 @@ export default function CalligraphieFractaleTab({ language }: CalligraphieFracta
             className="w-full px-3 py-2 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white font-bold outline-none"
           >
             {DIVINE_PRESETS.map((p, idx) => (
-              <option key={idx} value={p.text}>
+              <option key={`calligraphiefractaletab-item-${idx}`} value={p.text}>
                 {language === 'en' ? p.nameEn : language === 'ha' ? p.nameHa : p.nameFr}
               </option>
             ))}
@@ -239,7 +239,7 @@ export default function CalligraphieFractaleTab({ language }: CalligraphieFracta
           {/* Fractal Micro-Letter Nodes */}
           {fractalNodes.map((n, idx) => (
             <text
-              key={idx}
+              key={`calligraphiefractaletab-item-${idx}`}
               x={n.x}
               y={n.y}
               transform={`rotate(${n.angle}, ${n.x}, ${n.y})`}

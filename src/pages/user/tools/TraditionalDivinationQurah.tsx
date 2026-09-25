@@ -720,7 +720,7 @@ export const TraditionalDivinationQurah: React.FC = () => {
                   <div className="flex flex-wrap gap-2 pt-1">
                     {customChoices.map((choice, idx) => (
                       <div
-                        key={idx}
+                        key={`custom-choice-${choice}-${idx}`}
                         className="bg-white dark:bg-slate-900 border border-stone-200 dark:border-slate-800 px-3 py-1 rounded-xl text-xs flex items-center gap-2 text-stone-800 dark:text-slate-200 shadow-xs"
                       >
                         <span>{choice}</span>
@@ -779,7 +779,7 @@ export const TraditionalDivinationQurah: React.FC = () => {
                       const fillColor = colors[idx % colors.length];
 
                       return (
-                        <g key={idx}>
+                        <g key={`dial-slice-${item.label || idx}-${idx}`}>
                           <path d={pathData} fill={fillColor} stroke="#b45309" strokeWidth="0.5" />
                         </g>
                       );

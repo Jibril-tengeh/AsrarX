@@ -7,9 +7,16 @@ import {
   LayoutList, Check, Grid2X2, Grid3X3
 } from 'lucide-react';
 import { CategoryItem } from '../../types';
-import { getCategoryFallbackThumbnail, getCategoryFallbackHook } from '../../data/defaultCategories';
+import { getCategoryFallbackThumbnail, getCategoryFallbackHook, getCategoryFallbackIcon, isMockCategory } from '../../data/defaultCategories';
 import { sanitizeImageSource } from '../../utils/articleImageUtils';
 import { CategoryDynamicIcon, CategoryVideoOrIconBadge } from '../common/CategoryDynamicIcon';
+import { 
+  is3DCardEffectEnabled, 
+  get3DCardTheme, 
+  get3DCardIntensity, 
+  get3DCardContainerClasses, 
+  Card3DTopShine 
+} from '../../utils/card3dUtils';
 
 export type HomeCategoryLayoutMode = 'grid4' | 'grid3' | 'grid2' | 'banner' | 'list';
 
@@ -20,6 +27,7 @@ interface HomeCategoriesGridProps {
   language?: string;
   searchQuery?: string;
   featureToggles?: any;
+  isLoading?: boolean;
 }
 
 export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
@@ -28,7 +36,8 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
   onSelectCategory,
   language = 'fr',
   searchQuery = '',
-  featureToggles: rawFeatureToggles
+  featureToggles: rawFeatureToggles,
+  isLoading = false
 }) => {
   const featureToggles: any = rawFeatureToggles || {};
   // Configured layout mode from Admin settings: 'grid3' | 'grid4' | 'grid2' | 'banner' | 'list'
@@ -79,8 +88,34 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
 
   // Filter categories by search if provided, ensure only enabled categories are shown & deduplicate strictly
   const filteredCategories = useMemo(() => {
-    // Only display categories where enabled !== false
-    let list = (categories || []).filter(cat => cat.enabled !== false);
+    // Only display categories where enabled !== false and exclude all mock/preset categories
+    let list = (categories || []).filter(cat => cat.enabled !== false && !isMockCategory(cat));
+
+    // Fallback instantané : si la liste est vide (en attente de réponse réseau Firestore), synthétiser immédiatement les vraies catégories depuis les articles déjà en mémoire !
+    if (list.length === 0 && (!searchQuery || !searchQuery.trim()) && articles && articles.length > 0) {
+      const catMap = new Map<string, any>();
+      articles.forEach((art: any) => {
+        const rawName = (art.category || '').toString().trim();
+        if (!rawName || isMockCategory({ id: rawName, name: rawName })) return;
+        const key = rawName.toLowerCase();
+        if (!catMap.has(key)) {
+          catMap.set(key, {
+            id: key,
+            name: rawName,
+            thumbnail: art.imageUrl || art.thumbnail || getCategoryFallbackThumbnail(rawName),
+            hook: getCategoryFallbackHook(rawName),
+            iconName: getCategoryFallbackIcon(rawName),
+            theme: key,
+            enabled: true,
+            isCustom: true,
+            subCategories: [],
+            createdAt: art.createdAt || Date.now()
+          });
+        }
+      });
+      list = Array.from(catMap.values());
+    }
+
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
       list = list.filter(cat => {
@@ -104,7 +139,7 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
       seen.add(uniqueKey);
       return true;
     });
-  }, [categories, searchQuery]);
+  }, [categories, searchQuery, articles]);
 
   // Real user-created and database categories for Grid 3 and Grid 4
   const grid4Items = useMemo(() => {
@@ -114,10 +149,14 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
       let displayName = cat.name;
       if (language === 'en' && cat.name_en) displayName = cat.name_en;
       if (language === 'ha' && cat.name_ha) displayName = cat.name_ha;
+      const rawIcon = cat.iconName;
+      const isFolder = !rawIcon || rawIcon.toLowerCase().replace(/[^a-z]/g, '') === 'folderopen' || rawIcon.toLowerCase().replace(/[^a-z]/g, '') === 'folder';
+      const resolvedIcon = isFolder ? getCategoryFallbackIcon(cat.name || cat.id) : rawIcon;
       return {
         ...cat,
         displayName,
-        theme: cat.iconName ? cat.iconName.toLowerCase() : 'custom',
+        iconName: resolvedIcon,
+        theme: resolvedIcon.toLowerCase(),
         isCanonical: false
       };
     });
@@ -161,9 +200,12 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
     const iconStyle = featureToggles?.home_categories_icon_style || 'luminous';
     const showVideos = iconStyle === 'video' || (iconStyle === undefined && featureToggles?.home_categories_use_video_presets === true);
     const videoUrl = cat.videoUrl || (showVideos ? getCategoryVideoUrl(cat) : undefined);
+    const rawIcon = cat.iconName;
+    const isFolder = !rawIcon || rawIcon.toLowerCase().replace(/[^a-z]/g, '') === 'folderopen' || rawIcon.toLowerCase().replace(/[^a-z]/g, '') === 'folder';
+    const resolvedIcon = isFolder ? getCategoryFallbackIcon(cat.name || cat.displayName || cat.id) : rawIcon;
     return (
       <CategoryVideoOrIconBadge
-        iconName={cat.iconName}
+        iconName={resolvedIcon}
         videoUrl={videoUrl}
         thumbnailUrl={cat.thumbnail}
         categoryName={cat.displayName || cat.name}
@@ -203,96 +245,152 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
     'Explorez nos secrets, invocations et pratiques spirituelles authentiques classés par domaines.'
   );
 
+  // 3D Card Relief Effect configuration
+  const is3D = is3DCardEffectEnabled(featureToggles, 'category');
+  const cardTheme = get3DCardTheme(featureToggles);
+  const cardIntensity = get3DCardIntensity(featureToggles);
+
   /* ========================================================================= */
   /* MODEL: GRILLE 3 COLONNES                                                  */
   /* ========================================================================= */
-  const renderGrid3Layout = () => (
-    <div className="grid grid-cols-3 gap-2.5 sm:gap-3.5 md:gap-4 w-full">
-      {grid4Items.map((cat, idx) => {
-        return (
-          <motion.div
-            key={`cat-grid3-${cat.id || idx}-${idx}`}
-            whileHover={{ y: -4, scale: 1.03 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => {
-              if (cat.id === 'favoris') {
-                onSelectCategory({ id: 'favoris', name: 'Favoris' } as any);
-              } else {
-                onSelectCategory(cat as any);
-              }
-            }}
-            className="relative bg-white dark:bg-gray-850 rounded-2xl sm:rounded-3xl p-2 sm:p-3 py-3.5 sm:py-4 border border-gray-200/90 dark:border-gray-700/80 hover:border-emerald-500/70 dark:hover:border-emerald-400/70 shadow-xs hover:shadow-md transition-all duration-300 flex flex-col items-center justify-center gap-1.5 sm:gap-2 text-center cursor-pointer min-h-[105px] sm:min-h-[120px] group overflow-hidden"
-          >
-            {/* Vraie Vidéo & Icône Lumineuse Agrandie */}
-            <div className="relative z-10 flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-108">
-              {renderCategoryBadge(cat, 'md')}
-            </div>
+  const renderGrid3Layout = () => {
+    const card3DClass = is3D 
+      ? get3DCardContainerClasses(cardTheme, cardIntensity) 
+      : 'bg-white dark:bg-gray-850 border border-gray-200/90 dark:border-gray-700/80 hover:border-emerald-500/70 dark:hover:border-emerald-400/70 shadow-xs hover:shadow-md';
 
-            {/* Titre */}
-            {showCategoryNames && (
-              <span
-                style={{
-                  fontSize: configuredTitleSize ? `${configuredTitleSize}px` : undefined,
-                  lineHeight: '1.2'
-                }}
-                className="relative z-10 text-[13px] sm:text-sm font-extrabold text-gray-900 dark:text-gray-100 text-center line-clamp-2 px-0.5 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors"
-              >
-                {cat.displayName}
-              </span>
-            )}
-          </motion.div>
-        );
-      })}
-    </div>
-  );
+    return (
+      <div className="grid grid-cols-3 gap-2.5 sm:gap-3.5 md:gap-4 w-full">
+        {grid4Items.map((cat, idx) => {
+          return (
+            <motion.div
+              key={`cat-grid3-${cat.id || idx}-${idx}`}
+              whileHover={{ y: -4, scale: 1.02 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => {
+                if (cat.id === 'favoris') {
+                  onSelectCategory({ id: 'favoris', name: 'Favoris' } as any);
+                } else {
+                  onSelectCategory(cat as any);
+                }
+              }}
+              className={`relative rounded-2xl sm:rounded-3xl p-2 sm:p-3 py-3.5 sm:py-4 transition-all duration-300 flex flex-col items-center justify-center gap-1.5 sm:gap-2 text-center cursor-pointer min-h-[105px] sm:min-h-[120px] group overflow-hidden ${card3DClass}`}
+            >
+              {/* Glossy 3D top specular reflection */}
+              {is3D && <Card3DTopShine />}
+
+              {/* Vraie Vidéo & Icône Lumineuse Agrandie avec halo 3D tactile */}
+              <div className={`relative z-10 flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-108 ${
+                is3D && cardTheme === 'gold_amber' 
+                  ? 'p-1 rounded-full bg-amber-600/20 shadow-[inset_0_1px_2px_rgba(255,255,255,0.6)]' 
+                  : ''
+              }`}>
+                {renderCategoryBadge(cat, 'md')}
+              </div>
+
+              {/* Titre */}
+              {showCategoryNames && (
+                <span
+                  style={{
+                    fontSize: configuredTitleSize ? `${configuredTitleSize}px` : undefined,
+                    lineHeight: '1.2'
+                  }}
+                  className={`relative z-10 text-[13px] sm:text-sm text-center line-clamp-2 px-0.5 transition-colors ${
+                    is3D
+                      ? cardTheme === 'gold_amber'
+                        ? 'font-black text-amber-950 drop-shadow-[0_1px_0_rgba(255,255,255,0.4)]'
+                        : cardTheme === 'emerald_asrar'
+                        ? 'font-black text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.3)]'
+                        : 'font-extrabold text-gray-900 dark:text-white'
+                      : 'font-extrabold text-gray-900 dark:text-gray-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400'
+                  }`}
+                >
+                  {cat.displayName}
+                </span>
+              )}
+            </motion.div>
+          );
+        })}
+      </div>
+    );
+  };
 
   /* ========================================================================= */
   /* MODEL 4: GRILLE 4 COLONNES & VIDÉOS RÉELLES                               */
   /* ========================================================================= */
-  const renderGrid4Layout = () => (
-    <div className="grid grid-cols-4 gap-2 sm:gap-3 md:gap-3.5 w-full">
-      {grid4Items.map((cat, idx) => {
-        return (
-          <motion.div
-            key={`cat-grid4-${cat.id || idx}-${idx}`}
-            whileHover={{ y: -4, scale: 1.03 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => {
-              if (cat.id === 'favoris') {
-                onSelectCategory({ id: 'favoris', name: 'Favoris' } as any);
-              } else {
-                onSelectCategory(cat as any);
-              }
-            }}
-            className="relative bg-white dark:bg-gray-850 rounded-2xl sm:rounded-3xl p-1.5 sm:p-2.5 py-3 sm:py-3.5 border border-gray-200/90 dark:border-gray-700/80 hover:border-emerald-500/70 dark:hover:border-emerald-400/70 shadow-xs hover:shadow-md transition-all duration-300 flex flex-col items-center justify-center gap-1.5 sm:gap-2 text-center cursor-pointer min-h-[96px] sm:min-h-[112px] group overflow-hidden"
-          >
-            {/* Vraie Vidéo & Icône Lumineuse Agrandie */}
-            <div className="relative z-10 flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-108">
-              {renderCategoryBadge(cat)}
-            </div>
+  const renderGrid4Layout = () => {
+    const card3DClass = is3D 
+      ? get3DCardContainerClasses(cardTheme, cardIntensity) 
+      : 'bg-white dark:bg-gray-850 border border-gray-200/90 dark:border-gray-700/80 hover:border-emerald-500/70 dark:hover:border-emerald-400/70 shadow-xs hover:shadow-md';
 
-            {/* Titre */}
-            {showCategoryNames && (
-              <span
-                style={{
-                  fontSize: configuredTitleSize ? `${configuredTitleSize}px` : undefined,
-                  lineHeight: '1.2'
-                }}
-                className="relative z-10 text-[13px] sm:text-sm font-extrabold text-gray-900 dark:text-gray-100 text-center line-clamp-2 px-0.5 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors"
-              >
-                {cat.displayName}
-              </span>
-            )}
-          </motion.div>
-        );
-      })}
-    </div>
-  );
+    return (
+      <div className="grid grid-cols-4 gap-2 sm:gap-3 md:gap-3.5 w-full">
+        {grid4Items.map((cat, idx) => {
+          return (
+            <motion.div
+              key={`cat-grid4-${cat.id || idx}-${idx}`}
+              whileHover={{ y: -4, scale: 1.02 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => {
+                if (cat.id === 'favoris') {
+                  onSelectCategory({ id: 'favoris', name: 'Favoris' } as any);
+                } else {
+                  onSelectCategory(cat as any);
+                }
+              }}
+              className={`relative rounded-2xl sm:rounded-3xl p-1.5 sm:p-2.5 py-3 sm:py-3.5 transition-all duration-300 flex flex-col items-center justify-center gap-1.5 sm:gap-2 text-center cursor-pointer min-h-[96px] sm:min-h-[112px] group overflow-hidden ${card3DClass}`}
+            >
+              {/* Glossy 3D top specular reflection */}
+              {is3D && <Card3DTopShine />}
+
+              {/* Vraie Vidéo & Icône Lumineuse Agrandie avec halo 3D tactile */}
+              <div className={`relative z-10 flex items-center justify-center shrink-0 transition-transform duration-300 group-hover:scale-108 ${
+                is3D && cardTheme === 'gold_amber' 
+                  ? 'p-0.5 rounded-full bg-amber-600/20 shadow-[inset_0_1px_2px_rgba(255,255,255,0.6)]' 
+                  : ''
+              }`}>
+                {renderCategoryBadge(cat)}
+              </div>
+
+              {/* Titre */}
+              {showCategoryNames && (
+                <span
+                  style={{
+                    fontSize: configuredTitleSize ? `${configuredTitleSize}px` : undefined,
+                    lineHeight: '1.2'
+                  }}
+                  className={`relative z-10 text-[13px] sm:text-sm text-center line-clamp-2 px-0.5 transition-colors ${
+                    is3D
+                      ? cardTheme === 'gold_amber'
+                        ? 'font-black text-amber-950 drop-shadow-[0_1px_0_rgba(255,255,255,0.4)]'
+                        : cardTheme === 'emerald_asrar'
+                        ? 'font-black text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.3)]'
+                        : 'font-extrabold text-gray-900 dark:text-white'
+                      : 'font-extrabold text-gray-900 dark:text-gray-100 group-hover:text-emerald-600 dark:group-hover:text-emerald-400'
+                  }`}
+                >
+                  {cat.displayName}
+                </span>
+              )}
+            </motion.div>
+          );
+        })}
+      </div>
+    );
+  };
 
   /* ========================================================================= */
   /* MODEL 1: GRILLE DE 2 COLONNES (Grid 2 Cols)                              */
   /* ========================================================================= */
-  const renderGrid2Layout = () => (
+  const renderGrid2Layout = () => {
+    const grid2Container3D = is3D ? (
+      cardTheme === 'gold_amber' 
+        ? 'card-3d-clay border-b-[5.5px] border-amber-600 shadow-[0_10px_20px_-3px_rgba(217,119,6,0.35)]'
+        : cardTheme === 'emerald_asrar'
+        ? 'card-3d-clay border-b-[5.5px] border-emerald-800 shadow-[0_10px_20px_-3px_rgba(5,150,105,0.35)]'
+        : 'card-3d-clay border-b-[5.5px] border-gray-300 dark:border-gray-900'
+    ) : 'border border-gray-200/80 dark:border-gray-800 hover:border-emerald-500/60 dark:hover:border-emerald-500/60 shadow-md hover:shadow-xl';
+
+    return (
     <div className="grid grid-cols-2 gap-3 sm:gap-4 md:gap-5 w-full">
       {filteredCategories.map((cat, idx) => {
         let displayName = cat.name;
@@ -316,8 +414,11 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
             whileHover={{ y: -3 }}
             whileTap={{ scale: 0.97 }}
             onClick={() => onSelectCategory(cat)}
-            className="group relative cursor-pointer overflow-hidden rounded-2xl sm:rounded-3xl border border-gray-200/80 dark:border-gray-800 hover:border-emerald-500/60 dark:hover:border-emerald-500/60 bg-gray-950 shadow-md hover:shadow-xl transition-all duration-300 flex flex-col justify-between min-h-[220px] sm:min-h-[260px] md:min-h-[290px]"
+            className={`group relative cursor-pointer overflow-hidden rounded-2xl sm:rounded-3xl bg-gray-950 transition-all duration-300 flex flex-col justify-between min-h-[220px] sm:min-h-[260px] md:min-h-[290px] ${grid2Container3D}`}
           >
+            {/* Top specular reflection in 3D mode */}
+            {is3D && <Card3DTopShine />}
+
             {/* Full-bleed Thumbnail Image */}
             <div className="absolute inset-0 z-0 overflow-hidden">
               <img
@@ -339,8 +440,12 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
               </div>
 
               {showCounts && (
-                <span className="px-2 sm:px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold bg-emerald-600/90 hover:bg-emerald-500 backdrop-blur-md text-white shadow-xs border border-emerald-400/30 flex items-center gap-1 transition-colors">
-                  <Tag size={11} className="text-emerald-200 shrink-0" />
+                <span className={`px-2 sm:px-2.5 py-1 rounded-full text-[10px] sm:text-xs font-bold flex items-center gap-1 transition-colors ${
+                  is3D && cardTheme === 'gold_amber'
+                    ? 'btn-3d-tactile-amber text-amber-950'
+                    : 'bg-emerald-600/90 hover:bg-emerald-500 backdrop-blur-md text-white shadow-xs border border-emerald-400/30'
+                }`}>
+                  <Tag size={11} className={is3D && cardTheme === 'gold_amber' ? 'text-amber-800 shrink-0' : 'text-emerald-200 shrink-0'} />
                   <span>{artCount}</span>
                   <span className="hidden xs:inline text-[9px] font-medium opacity-90">
                     {artCount > 1 ? 'arts' : 'art'}
@@ -379,7 +484,9 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
                 <span className="opacity-90 group-hover:opacity-100">
                   {language === 'en' ? 'Explore' : language === 'ha' ? 'Duba' : 'Explorer'}
                 </span>
-                <div className="w-5 h-5 rounded-full bg-emerald-500/20 group-hover:bg-emerald-500 text-white flex items-center justify-center transition-all group-hover:translate-x-0.5">
+                <div className={`w-5 h-5 rounded-full flex items-center justify-center transition-all group-hover:translate-x-0.5 ${
+                  is3D && cardTheme === 'gold_amber' ? 'btn-3d-tactile-amber text-amber-950' : 'bg-emerald-500/20 group-hover:bg-emerald-500 text-white'
+                }`}>
                   <ArrowRight size={12} />
                 </div>
               </div>
@@ -388,7 +495,8 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
         );
       })}
     </div>
-  );
+    );
+  };
 
   /* ========================================================================= */
   /* MODEL 2: GRANDE CARTE / BANNIÈRE 1 COLONNE AVEC LUMIÈRE D'OR              */
@@ -417,8 +525,15 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
             whileHover={{ y: -3 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => onSelectCategory(cat)}
-            className="group cursor-pointer overflow-hidden rounded-2xl sm:rounded-3xl border border-gray-200 dark:border-gray-800 hover:border-emerald-500/60 dark:hover:border-emerald-500/60 bg-white dark:bg-gray-850 shadow-md hover:shadow-xl transition-all duration-300"
+            className={`group cursor-pointer overflow-hidden rounded-2xl sm:rounded-3xl transition-all duration-300 ${
+              is3D 
+                ? get3DCardContainerClasses(cardTheme, cardIntensity, 'rounded-2xl sm:rounded-3xl') 
+                : 'border border-gray-200 dark:border-gray-800 hover:border-emerald-500/60 dark:hover:border-emerald-500/60 bg-white dark:bg-gray-850 shadow-md hover:shadow-xl'
+            }`}
           >
+            {/* Top specular shine in 3D mode */}
+            {is3D && <Card3DTopShine />}
+
             {/* Top Large Banner Image with Overlay */}
             <div className="relative h-52 xs:h-60 sm:h-72 md:h-80 w-full overflow-hidden bg-gray-900">
               <img
@@ -516,8 +631,15 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
             whileHover={{ y: -2 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => onSelectCategory(cat)}
-            className="group cursor-pointer overflow-hidden rounded-2xl sm:rounded-3xl border border-gray-200 dark:border-gray-800 hover:border-emerald-500/60 dark:hover:border-emerald-500/60 bg-white dark:bg-gray-850 shadow-md hover:shadow-xl transition-all duration-300 flex flex-row items-stretch"
+            className={`group cursor-pointer overflow-hidden rounded-2xl sm:rounded-3xl transition-all duration-300 flex flex-row items-stretch ${
+              is3D 
+                ? get3DCardContainerClasses(cardTheme, cardIntensity, 'rounded-2xl sm:rounded-3xl flex flex-row items-stretch') 
+                : 'border border-gray-200 dark:border-gray-800 hover:border-emerald-500/60 dark:hover:border-emerald-500/60 bg-white dark:bg-gray-850 shadow-md hover:shadow-xl'
+            }`}
           >
+            {/* Top specular shine in 3D mode */}
+            {is3D && <Card3DTopShine />}
+
             {/* Left Thumbnail with Badge Overlay (Exact style of Screenshot 2) */}
             <div className="w-28 xs:w-36 sm:w-44 md:w-48 shrink-0 relative overflow-hidden bg-gray-900 rounded-l-2xl sm:rounded-l-3xl">
               <img
@@ -701,8 +823,12 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
               {/* Metrics Chips */}
               {showCounts && (
                 <div className={`flex items-center gap-1.5 text-[11px] font-bold text-gray-500 dark:text-gray-400 ${!showLayoutSwitcher ? 'justify-center mx-auto' : ''}`}>
-                  <span className="px-2.5 py-1 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200/60 dark:border-gray-700 shadow-2xs">
-                    {(activeLayoutMode === 'grid4' || activeLayoutMode === 'grid3') ? grid4Items.length : categories.length} {language === 'en' ? 'Categories' : language === 'ha' ? 'Bangarori' : 'Catégories'}
+                  <span className="px-2.5 py-1 rounded-xl bg-gray-100 dark:bg-gray-800 border border-gray-200/60 dark:border-gray-700 shadow-2xs inline-flex items-center gap-1">
+                    {isLoading && grid4Items.length === 0 ? (
+                      <span className="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+                    ) : (
+                      (activeLayoutMode === 'grid4' || activeLayoutMode === 'grid3') ? grid4Items.length : filteredCategories.length
+                    )} {language === 'en' ? 'Categories' : language === 'ha' ? 'Bangarori' : 'Catégories'}
                   </span>
                   <span className="px-2.5 py-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200/60 dark:border-emerald-800/40 shadow-2xs">
                     {articles.length} {language === 'en' ? 'Articles' : language === 'ha' ? 'Rubuce-rubuce' : 'Articles'}
@@ -715,7 +841,63 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
       )}
 
       {/* Categories Content Rendering based on activeLayoutMode */}
-      {activeLayoutMode === 'grid3' ? (
+      {isLoading && grid4Items.length === 0 ? (
+        activeLayoutMode === 'grid3' ? (
+          <div className="grid grid-cols-3 gap-2.5 sm:gap-3.5 md:gap-4 w-full">
+            {[1, 2, 3, 4, 5, 6].map(i => (
+              <div key={`skel-g3-${i}`} className="p-3 rounded-2xl bg-white dark:bg-gray-800/60 border border-gray-100 dark:border-gray-700/60 flex flex-col items-center text-center gap-2 animate-pulse">
+                <div className="w-12 h-12 rounded-2xl bg-gray-200 dark:bg-gray-700" />
+                <div className="w-16 h-3 rounded bg-gray-200 dark:bg-gray-700" />
+                <div className="w-10 h-2 rounded bg-gray-100 dark:bg-gray-750" />
+              </div>
+            ))}
+          </div>
+        ) : activeLayoutMode === 'grid4' ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-3.5 w-full">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
+              <div key={`skel-g4-${i}`} className="p-3.5 rounded-2xl bg-white dark:bg-gray-800/60 border border-gray-100 dark:border-gray-700/60 flex flex-col items-center text-center gap-2 animate-pulse">
+                <div className="w-12 h-12 rounded-2xl bg-gray-200 dark:bg-gray-700" />
+                <div className="w-20 h-3.5 rounded bg-gray-200 dark:bg-gray-700" />
+                <div className="w-12 h-2 rounded bg-gray-100 dark:bg-gray-750" />
+              </div>
+            ))}
+          </div>
+        ) : activeLayoutMode === 'banner' ? (
+          <div className="space-y-3.5 w-full">
+            {[1, 2, 3].map(i => (
+              <div key={`skel-ban-${i}`} className="h-24 rounded-3xl bg-white dark:bg-gray-800/60 border border-gray-100 dark:border-gray-700/60 p-4 flex items-center gap-4 animate-pulse">
+                <div className="w-16 h-16 rounded-2xl bg-gray-200 dark:bg-gray-700 shrink-0" />
+                <div className="flex-1 space-y-2">
+                  <div className="w-32 h-4 rounded bg-gray-200 dark:bg-gray-700" />
+                  <div className="w-48 h-2.5 rounded bg-gray-100 dark:bg-gray-750" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : activeLayoutMode === 'list' ? (
+          <div className="space-y-2 w-full">
+            {[1, 2, 3, 4, 5].map(i => (
+              <div key={`skel-list-${i}`} className="p-3 rounded-2xl bg-white dark:bg-gray-800/60 border border-gray-100 dark:border-gray-700/60 flex items-center gap-3 animate-pulse">
+                <div className="w-10 h-10 rounded-xl bg-gray-200 dark:bg-gray-700 shrink-0" />
+                <div className="flex-1 space-y-1.5">
+                  <div className="w-28 h-3.5 rounded bg-gray-200 dark:bg-gray-700" />
+                  <div className="w-40 h-2 rounded bg-gray-100 dark:bg-gray-750" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 w-full">
+            {[1, 2, 3, 4].map(i => (
+              <div key={`skel-g2-${i}`} className="p-3.5 rounded-2xl bg-white dark:bg-gray-800/60 border border-gray-100 dark:border-gray-700/60 flex flex-col items-center text-center gap-2.5 animate-pulse">
+                <div className="w-14 h-14 rounded-2xl bg-gray-200 dark:bg-gray-700" />
+                <div className="w-24 h-3.5 rounded bg-gray-200 dark:bg-gray-700" />
+                <div className="w-14 h-2 rounded bg-gray-100 dark:bg-gray-750" />
+              </div>
+            ))}
+          </div>
+        )
+      ) : activeLayoutMode === 'grid3' ? (
         grid4Items.length === 0 ? (
           <div className="p-8 text-center bg-white dark:bg-gray-800/60 rounded-3xl border border-gray-100 dark:border-gray-700/60 my-6">
             <div className="w-14 h-14 mx-auto rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mb-3">

@@ -184,7 +184,7 @@ export const IlmJafar: React.FC = () => {
               </h3>
               <div className="flex flex-wrap gap-1 sm:gap-1.5 justify-end" dir="rtl">
                 {result.original.map((char, i) => (
-                  <span key={i} className="w-7 h-7 flex items-center justify-center bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-750 font-arabic text-base font-bold shadow-sm">
+                  <span key={`ilmjafar-i-${i}`} className="w-7 h-7 flex items-center justify-center bg-white dark:bg-gray-800 rounded border border-gray-200 dark:border-gray-750 font-arabic text-base font-bold shadow-sm">
                     {char}
                   </span>
                 ))}
@@ -197,7 +197,7 @@ export const IlmJafar: React.FC = () => {
               </h3>
               <div className="flex flex-wrap gap-1 sm:gap-1.5 justify-end" dir="rtl">
                 {result.taksir.map((char, i) => (
-                  <span key={i} className="w-7 h-7 flex items-center justify-center bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded border border-purple-200/40 dark:border-purple-800/30 font-arabic text-base font-bold shadow-sm">
+                  <span key={`ilmjafar-i-${i}`} className="w-7 h-7 flex items-center justify-center bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 rounded border border-purple-200/40 dark:border-purple-800/30 font-arabic text-base font-bold shadow-sm">
                     {char}
                   </span>
                 ))}
@@ -210,7 +210,7 @@ export const IlmJafar: React.FC = () => {
               </h3>
               <div className="flex flex-wrap gap-1 sm:gap-1.5 justify-end" dir="rtl">
                 {result.unique.map((char, i) => (
-                  <span key={i} className="w-7 h-7 flex items-center justify-center bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded border border-emerald-200/40 dark:border-emerald-800/30 font-arabic text-base font-bold shadow-sm">
+                  <span key={`ilmjafar-i-${i}`} className="w-7 h-7 flex items-center justify-center bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 rounded border border-emerald-200/40 dark:border-emerald-800/30 font-arabic text-base font-bold shadow-sm">
                     {char}
                   </span>
                 ))}

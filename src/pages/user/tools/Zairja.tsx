@@ -14,6 +14,7 @@ import { toCanvas } from 'html-to-image';
 import { downloadCanvasImage } from '../../../utils/downloadHelper';
 import { calculateAbjadValue } from '../../../utils/abjad';
 import { useFeatures } from '../../../contexts/FeatureContext';
+import { getApiUrl } from '../../../lib/api';
 
 interface ZairjaOracleResult {
   arabicVerse: string;
@@ -348,7 +349,7 @@ export const Zairja: React.FC = () => {
     const chosenMaqam = maqams[abjadSum % maqams.length];
 
     try {
-      const response = await fetch('/api/zairja/oracle', {
+      const response = await fetch(getApiUrl('/api/zairja/oracle'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -780,7 +781,7 @@ Corde Numérique Sacrée : ${answer.numericString}
                   <p className="text-[11px] text-zinc-400">{txt.degreesDesc}</p>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 pt-1">
                     {answer.burujDegrees.map((d, i) => (
-                      <div key={i} className={`p-2.5 rounded-xl text-center border ${
+                      <div key={`zairja-i-${i}`} className={`p-2.5 rounded-xl text-center border ${
                         d.sign === ascendantSign 
                           ? 'bg-purple-900/40 border-purple-500 text-purple-100 shadow-md ring-1 ring-purple-400/50' 
                           : 'bg-zinc-900/80 border-zinc-800 text-zinc-300'

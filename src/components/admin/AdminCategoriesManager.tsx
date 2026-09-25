@@ -14,7 +14,8 @@ import { CategoryItem, SubCategoryItem } from '../../types';
 import {
   PRESET_THUMBNAILS, PRESET_ICONS, DEFAULT_CATEGORIES_PRESETS,
   normalizeCategoryId, normalizeSubCategoryId,
-  getCategoryFallbackThumbnail, getCategoryFallbackHook, getSubCategoryFallbackHook
+  getCategoryFallbackThumbnail, getCategoryFallbackHook, getSubCategoryFallbackHook,
+  getCategoryFallbackIcon, isMockCategory
 } from '../../data/defaultCategories';
 import { getCategoryFallbackVideo } from '../../data/categoryIconsData';
 import { sanitizeImageSource } from '../../utils/articleImageUtils';
@@ -551,6 +552,46 @@ export const AdminCategoriesManager: React.FC<AdminCategoriesManagerProps> = ({
     }
   };
 
+  const handleToggleCategoryBannerThumbnail = async (nextVal: boolean) => {
+    try {
+      if (handleToggleFeature) {
+        await handleToggleFeature('category_banner_show_thumbnail', nextVal, "Visibilité Thumbnail Bannière Catégorie");
+      }
+      await setDoc(doc(db, 'settings', 'features'), {
+        category_banner_show_thumbnail: nextVal
+      }, { merge: true });
+
+      const localSaved = localStorage.getItem('asrar_font_toggles');
+      let localObj = localSaved ? JSON.parse(localSaved) : {};
+      localObj['category_banner_show_thumbnail'] = nextVal;
+      localStorage.setItem('asrar_font_toggles', JSON.stringify(localObj));
+      window.dispatchEvent(new Event('asrar_font_updated'));
+      onShowToast(nextVal ? "Image Thumbnail de la catégorie activée et visible" : "Image Thumbnail masquée", "success");
+    } catch (e) {
+      console.warn("Banner thumbnail toggle error:", e);
+    }
+  };
+
+  const handleUpdateCategoryBannerThumbnailStyle = async (mode: 'side' | 'cover' | 'both') => {
+    try {
+      if (handleToggleFeature) {
+        await handleToggleFeature('category_banner_thumbnail_style', mode, `Style Thumbnail Bannière : ${mode}`);
+      }
+      await setDoc(doc(db, 'settings', 'features'), {
+        category_banner_thumbnail_style: mode
+      }, { merge: true });
+
+      const localSaved = localStorage.getItem('asrar_font_toggles');
+      let localObj = localSaved ? JSON.parse(localSaved) : {};
+      localObj['category_banner_thumbnail_style'] = mode;
+      localStorage.setItem('asrar_font_toggles', JSON.stringify(localObj));
+      window.dispatchEvent(new Event('asrar_font_updated'));
+      onShowToast(`Style Thumbnail : ${mode === 'side' ? 'Vignette Latérale Nette' : mode === 'cover' ? 'Arrière-plan Lumineux' : 'Double Affichage (Vignette + Fond)'}`, "success");
+    } catch (e) {
+      console.warn("Thumbnail style update error:", e);
+    }
+  };
+
   // Category Edit Modal State
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const [isIconPickerModalOpen, setIsIconPickerModalOpen] = useState(false);
@@ -564,7 +605,7 @@ export const AdminCategoriesManager: React.FC<AdminCategoriesManagerProps> = ({
     hook_en: '',
     hook_ha: '',
     thumbnail: '',
-    iconName: 'FolderOpen',
+    iconName: 'Sparkles',
     videoUrl: '',
     enabled: true
   });
@@ -626,7 +667,7 @@ export const AdminCategoriesManager: React.FC<AdminCategoriesManagerProps> = ({
 
   // Category View Filter: Show user-created categories vs default mock presets
   const [categoryTypeFilter, setCategoryTypeFilter] = useState<'all' | 'custom' | 'mock'>('all');
-  const isCustomCategory = (cat: CategoryItem) => Boolean(cat.isCustom || !DEFAULT_CATEGORIES_PRESETS.some(p => p.id === cat.id));
+  const isCustomCategory = (cat: CategoryItem) => Boolean(cat.isCustom || (!isMockCategory(cat) && !DEFAULT_CATEGORIES_PRESETS.some(p => p.id === cat.id)));
   const customCategories = useMemo(() => categories.filter(isCustomCategory), [categories]);
   const mockCategories = useMemo(() => categories.filter(cat => !isCustomCategory(cat)), [categories]);
 
@@ -780,7 +821,7 @@ export const AdminCategoriesManager: React.FC<AdminCategoriesManagerProps> = ({
       hook_en: cat.hook_en || '',
       hook_ha: cat.hook_ha || '',
       thumbnail: cat.thumbnail || getCategoryFallbackThumbnail(cat.name),
-      iconName: cat.iconName || 'FolderOpen',
+      iconName: cat.iconName || getCategoryFallbackIcon(cat.name),
       videoUrl: cat.videoUrl || '',
       enabled: cat.enabled !== false
     });
@@ -2608,6 +2649,219 @@ export const AdminCategoriesManager: React.FC<AdminCategoriesManagerProps> = ({
           </div>
         </div>
 
+        {/* Category Hero Banner & Thumbnail Settings (Light Mode & High Visibility) */}
+        <div className="mt-5 p-4 sm:p-6 bg-gradient-to-br from-emerald-50/60 via-teal-50/20 to-white dark:from-emerald-950/30 dark:via-teal-950/20 dark:to-gray-800 rounded-2xl sm:rounded-3xl border-2 border-emerald-200/90 dark:border-emerald-800/80 shadow-xs space-y-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="p-2 rounded-xl bg-emerald-600 text-white shadow-xs">
+                  <ImageIcon size={18} />
+                </span>
+                <h3 className="text-sm sm:text-base font-extrabold text-gray-900 dark:text-white">
+                  Bannière d'En-tête de Catégorie & Image Thumbnail (Visuel Clair)
+                </h3>
+                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold border flex items-center gap-1 ${
+                  featureToggles?.category_banner_show_thumbnail !== false
+                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/60 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700'
+                    : 'bg-amber-100 text-amber-800 dark:bg-amber-900/60 dark:text-amber-300 border-amber-300 dark:border-amber-700'
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${featureToggles?.category_banner_show_thumbnail !== false ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                  {featureToggles?.category_banner_show_thumbnail !== false ? 'Thumbnail Visible' : 'Thumbnail Masqué'}
+                </span>
+              </div>
+              <p className="text-xs text-gray-600 dark:text-gray-300 max-w-2xl leading-relaxed">
+                La carte de catégorie est configurée avec un fond clair, éclatant et sans fond noir. Activez ou masquez la visibilité de l'image thumbnail et définissez son style de présentation.
+              </p>
+            </div>
+
+            {/* Thumbnail Visibility Switch */}
+            <div className="flex items-center gap-3 shrink-0 self-start md:self-center">
+              <div className="text-right">
+                <span className="text-xs font-bold text-gray-700 dark:text-gray-300 block">
+                  {featureToggles?.category_banner_show_thumbnail !== false ? 'Image Thumbnail Visible' : 'Image Thumbnail Masquée'}
+                </span>
+                <span className="text-[10px] text-gray-500 dark:text-gray-400">
+                  {featureToggles?.category_banner_show_thumbnail !== false ? 'Affichée dans la carte' : 'Icône seule'}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleToggleCategoryBannerThumbnail(featureToggles?.category_banner_show_thumbnail === false)}
+                className={`relative inline-flex h-8 w-16 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                  featureToggles?.category_banner_show_thumbnail !== false ? 'bg-emerald-600' : 'bg-gray-300 dark:bg-gray-650'
+                }`}
+                title="Activer ou désactiver l'image thumbnail de catégorie"
+              >
+                <span
+                  className={`pointer-events-none inline-block h-7 w-7 transform rounded-full bg-white shadow-md ring-0 transition duration-200 ease-in-out flex items-center justify-center text-[10px] font-bold ${
+                    featureToggles?.category_banner_show_thumbnail !== false ? 'translate-x-8 text-emerald-600' : 'translate-x-0 text-gray-400'
+                  }`}
+                >
+                  {featureToggles?.category_banner_show_thumbnail !== false ? 'OUI' : 'NON'}
+                </span>
+              </button>
+            </div>
+          </div>
+
+          {/* 3 Styles de présentation du Thumbnail */}
+          {featureToggles?.category_banner_show_thumbnail !== false && (
+            <div className="space-y-3 pt-2">
+              <label className="text-xs font-bold text-gray-700 dark:text-gray-300 block">
+                Style d'affichage du Thumbnail de Catégorie :
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* Style 1: Side Card (Recommandé) */}
+                <div
+                  onClick={() => handleUpdateCategoryBannerThumbnailStyle('side')}
+                  className={`p-3.5 rounded-2xl border-2 cursor-pointer transition-all duration-200 flex flex-col justify-between relative overflow-hidden ${
+                    (featureToggles?.category_banner_thumbnail_style || 'side') === 'side'
+                      ? 'border-emerald-500 bg-white dark:bg-emerald-950/20 shadow-md ring-2 ring-emerald-500/20'
+                      : 'border-gray-200 dark:border-gray-700 bg-white/70 dark:bg-gray-800/60 hover:border-emerald-300'
+                  }`}
+                >
+                  {(featureToggles?.category_banner_thumbnail_style || 'side') === 'side' && (
+                    <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-xs">
+                      <Check size={12} />
+                    </div>
+                  )}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300">
+                        <ImageIcon size={18} />
+                      </div>
+                      <div>
+                        <h4 className="text-xs sm:text-sm font-extrabold text-gray-900 dark:text-white">
+                          Vignette Nette Latérale
+                        </h4>
+                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
+                          Recommandé
+                        </span>
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
+                      L'image thumbnail apparaît dans une grande vignette nette, propre et lumineuse à côté du titre.
+                    </p>
+                  </div>
+                  <div className="mt-3 pt-2 border-t border-gray-100 dark:border-gray-700/60 flex items-center justify-between text-[10px] font-bold">
+                    <span className={(featureToggles?.category_banner_thumbnail_style || 'side') === 'side' ? 'text-emerald-600 dark:text-emerald-400' : 'text-gray-400'}>
+                      {(featureToggles?.category_banner_thumbnail_style || 'side') === 'side' ? '✓ Actif' : 'Choisir ce style'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Style 2: Dual (Vignette + Halo Doux) */}
+                <div
+                  onClick={() => handleUpdateCategoryBannerThumbnailStyle('both')}
+                  className={`p-3.5 rounded-2xl border-2 cursor-pointer transition-all duration-200 flex flex-col justify-between relative overflow-hidden ${
+                    featureToggles?.category_banner_thumbnail_style === 'both'
+                      ? 'border-emerald-500 bg-white dark:bg-emerald-950/20 shadow-md ring-2 ring-emerald-500/20'
+                      : 'border-gray-200 dark:border-gray-700 bg-white/70 dark:bg-gray-800/60 hover:border-emerald-300'
+                  }`}
+                >
+                  {featureToggles?.category_banner_thumbnail_style === 'both' && (
+                    <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-xs">
+                      <Check size={12} />
+                    </div>
+                  )}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 rounded-xl bg-teal-100 text-teal-700 dark:bg-teal-900/50 dark:text-teal-300">
+                        <Sparkles size={18} />
+                      </div>
+                      <div>
+                        <h4 className="text-xs sm:text-sm font-extrabold text-gray-900 dark:text-white">
+                          Double Visibilité
+                        </h4>
+                        <span className="text-[10px] text-teal-600 dark:text-teal-400 font-bold">
+                          Vignette + Halo Clair
+                        </span>
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
+                      La vignette nette au premier plan accompagnée d'un doux halo lumineux translucide en arrière-plan.
+                    </p>
+                  </div>
+                  <div className="mt-3 pt-2 border-t border-gray-100 dark:border-gray-700/60 flex items-center justify-between text-[10px] font-bold">
+                    <span className={featureToggles?.category_banner_thumbnail_style === 'both' ? 'text-teal-600 dark:text-teal-400' : 'text-gray-400'}>
+                      {featureToggles?.category_banner_thumbnail_style === 'both' ? '✓ Actif' : 'Choisir ce style'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Style 3: Clean Cover (Arrière-plan Lumineux) */}
+                <div
+                  onClick={() => handleUpdateCategoryBannerThumbnailStyle('cover')}
+                  className={`p-3.5 rounded-2xl border-2 cursor-pointer transition-all duration-200 flex flex-col justify-between relative overflow-hidden ${
+                    featureToggles?.category_banner_thumbnail_style === 'cover'
+                      ? 'border-emerald-500 bg-white dark:bg-emerald-950/20 shadow-md ring-2 ring-emerald-500/20'
+                      : 'border-gray-200 dark:border-gray-700 bg-white/70 dark:bg-gray-800/60 hover:border-emerald-300'
+                  }`}
+                >
+                  {featureToggles?.category_banner_thumbnail_style === 'cover' && (
+                    <div className="absolute top-2 right-2 w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-xs">
+                      <Check size={12} />
+                    </div>
+                  )}
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="p-2 rounded-xl bg-cyan-100 text-cyan-700 dark:bg-cyan-900/50 dark:text-cyan-300">
+                        <Layers size={18} />
+                      </div>
+                      <div>
+                        <h4 className="text-xs sm:text-sm font-extrabold text-gray-900 dark:text-white">
+                          Bannière d'Arrière-plan
+                        </h4>
+                        <span className="text-[10px] text-cyan-600 dark:text-cyan-400 font-bold">
+                          Lumineux & Flouté
+                        </span>
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-relaxed">
+                      L'image couvre l'arrière-plan avec un voile blanc translucide pour préserver la clarté et la netteté.
+                    </p>
+                  </div>
+                  <div className="mt-3 pt-2 border-t border-gray-100 dark:border-gray-700/60 flex items-center justify-between text-[10px] font-bold">
+                    <span className={featureToggles?.category_banner_thumbnail_style === 'cover' ? 'text-cyan-600 dark:text-cyan-400' : 'text-gray-400'}>
+                      {featureToggles?.category_banner_thumbnail_style === 'cover' ? '✓ Actif' : 'Choisir ce style'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Aperçu en direct du visuel clair */}
+          <div className="pt-3 border-t border-emerald-200/60 dark:border-emerald-800/60 space-y-2">
+            <span className="text-[11px] font-extrabold text-emerald-800 dark:text-emerald-300 uppercase tracking-wider block">
+              Aperçu en direct (Carte Claire & Thumbnail Haute Visibilité) :
+            </span>
+            <div className="relative overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-br from-white via-emerald-50/30 to-white dark:from-gray-900 dark:via-gray-850 dark:to-gray-900 p-4 shadow-sm">
+              <div className="flex items-center gap-3">
+                {featureToggles?.category_banner_show_thumbnail !== false && (
+                  <div className="w-16 h-16 rounded-xl overflow-hidden shadow-xs border border-emerald-300 dark:border-gray-700 shrink-0 bg-emerald-100">
+                    <img
+                      src={categories[0]?.thumbnail || getCategoryFallbackThumbnail(categories[0]?.name || 'Exemple')}
+                      alt="Thumbnail"
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
+                <div>
+                  <h4 className="text-sm font-black text-gray-900 dark:text-white">
+                    {categories[0]?.name || "Al-A'raf: Verse 137"}
+                  </h4>
+                  <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 border border-emerald-200">
+                    1 article disponible
+                  </span>
+                  <p className="text-xs text-gray-600 dark:text-gray-300 italic mt-1 border-l-2 border-emerald-500 pl-2">
+                    « Découvrez l'ensemble des enseignements et secrets spirituels... »
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Search Input Bar */}
         <div className="mt-5 pt-4 border-t border-gray-100 dark:border-gray-700 flex items-center gap-3">
           <div className="relative flex-1">
@@ -2736,7 +2990,7 @@ export const AdminCategoriesManager: React.FC<AdminCategoriesManagerProps> = ({
                     {/* Floating Badges */}
                     <div className="absolute top-3 left-3 right-3 flex items-center justify-between pointer-events-none">
                       <span className="px-3 py-1.5 rounded-xl bg-black/65 backdrop-blur-md text-white text-xs font-black flex items-center gap-2 border border-white/15 shadow-sm pointer-events-auto">
-                        {renderIcon(cat.iconName || 'FolderOpen', 18, 'text-emerald-300')}
+                        {renderIcon(cat.iconName || getCategoryFallbackIcon(cat.name), 18, 'text-emerald-300')}
                         <span>{cat.name}</span>
                         {cat.videoUrl && (
                           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse ml-0.5" title="Badge vidéo HD actif" />
@@ -2781,7 +3035,7 @@ export const AdminCategoriesManager: React.FC<AdminCategoriesManagerProps> = ({
                     {/* Bottom Category Info Overlay */}
                     <div className="absolute bottom-3 left-3 right-3 text-white flex items-center gap-3">
                       <CategoryVideoOrIconBadge
-                        iconName={cat.iconName || 'FolderOpen'}
+                        iconName={cat.iconName || getCategoryFallbackIcon(cat.name)}
                         videoUrl={cat.videoUrl}
                         thumbnailUrl={cat.thumbnail}
                         categoryName={cat.name}

@@ -1881,7 +1881,7 @@ export const ScienceOfLetters: React.FC = () => {
                     <div className="pt-2 flex flex-wrap gap-1.5 text-xs border-t border-indigo-900/40 w-full max-w-full">
                       <span className="text-emerald-400 font-bold shrink-0">{dict.benefits} :</span>
                       {locSelectedLetter.secretWird.benefits.map((b, idx) => (
-                        <span key={idx} className="bg-indigo-900/40 text-indigo-200 px-2.5 py-0.5 rounded-md text-[11px] break-words">
+                        <span key={`benefit-${idx}-${b.slice(0, 10)}`} className="bg-indigo-900/40 text-indigo-200 px-2.5 py-0.5 rounded-md text-[11px] break-words">
                           ✓ {b}
                         </span>
                       ))}
@@ -1953,7 +1953,7 @@ export const ScienceOfLetters: React.FC = () => {
                 <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3">{dict.componentLetters} ({extractedResult.foundLetters.length})</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 w-full max-w-full">
                   {extractedResult.foundLetters.map((l: LetterInfo, idx: number) => (
-                    <div key={idx} className="p-3 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 flex items-center justify-between min-w-0">
+                    <div key={`found-letter-${l.char}-${idx}`} className="p-3 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 flex items-center justify-between min-w-0">
                       <span className="text-2xl font-arabic font-bold text-emerald-600 dark:text-emerald-400 shrink-0">{l.char}</span>
                       <div className="text-right min-w-0 truncate">
                         <p className="text-xs font-bold text-gray-800 dark:text-gray-200 truncate">{l.name}</p>

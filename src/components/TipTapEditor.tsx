@@ -1408,7 +1408,7 @@ const MenuBar = ({ editor, isFullScreen, onToggleFullScreen }: { editor: any; is
             <div className="grid grid-cols-2 gap-3 max-h-80 overflow-y-auto p-1">
               {getAllEditorImages().map((img, idx) => (
                 <div
-                  key={idx}
+                  key={`tiptapeditor-item-${idx}`}
                   onClick={() => handleOpenCropperForExistingImage(img)}
                   className="group relative rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 overflow-hidden hover:border-emerald-500 hover:ring-2 hover:ring-emerald-500/30 transition-all cursor-pointer flex flex-col"
                 >

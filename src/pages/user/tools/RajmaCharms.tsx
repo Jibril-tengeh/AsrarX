@@ -1551,7 +1551,7 @@ export default function RajmaCharms() {
                     <g stroke={`url(#goldGrad_${selectedCharm.id})`} strokeWidth="1" opacity="0.65">
                       {Array.from({ length: 12 }).map((_, i) => (
                         <line
-                          key={i}
+                          key={`rajmacharms-i-${i}`}
                           x1="250"
                           y1="250"
                           x2={250 + 210 * Math.cos((i * 30 * Math.PI) / 180)}
@@ -2270,7 +2270,7 @@ export default function RajmaCharms() {
                     <g stroke={`url(#parchmentGold_${selectedCharm.id})`} strokeWidth="1" opacity="0.65">
                       {Array.from({ length: 12 }).map((_, i) => (
                         <line
-                          key={i}
+                          key={`rajmacharms-i-${i}`}
                           x1="250"
                           y1="250"
                           x2={250 + 210 * Math.cos((i * 30 * Math.PI) / 180)}

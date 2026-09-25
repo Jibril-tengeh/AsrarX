@@ -7,7 +7,8 @@ import {
 import { CategoryItem } from '../../types';
 import { 
   PRESET_THUMBNAILS, 
-  normalizeCategoryId, getCategoryFallbackThumbnail, getCategoryFallbackHook 
+  normalizeCategoryId, getCategoryFallbackThumbnail, getCategoryFallbackHook,
+  getCategoryFallbackIcon
 } from '../../data/defaultCategories';
 import { getCategoryFallbackVideo } from '../../data/categoryIconsData';
 import { sanitizeImageSource } from '../../utils/articleImageUtils';
@@ -62,7 +63,7 @@ export const CategoryEditModal: React.FC<CategoryEditModalProps> = ({
         hook_en: categoryToEdit.hook_en || '',
         hook_ha: categoryToEdit.hook_ha || '',
         thumbnail: categoryToEdit.thumbnail || getCategoryFallbackThumbnail(categoryToEdit.name),
-        iconName: categoryToEdit.iconName || 'FolderOpen',
+        iconName: categoryToEdit.iconName || getCategoryFallbackIcon(categoryToEdit.name),
         videoUrl: categoryToEdit.videoUrl || ''
       });
     } else {

@@ -296,7 +296,7 @@ export default function KhatamRiyahTab({ language }: KhatamRiyahTabProps) {
               const rad = (w.angle * Math.PI) / 180;
               const xFar = 250 + 180 * Math.sin(rad);
               const yFar = 250 - 180 * Math.cos(rad);
-              return <line key={idx} x1="250" y1="250" x2={xFar} y2={yFar} stroke="#0284c7" strokeWidth="1" opacity="0.6" />;
+              return <line key={`khatamriyahtab-idx-${idx}`} x1="250" y1="250" x2={xFar} y2={yFar} stroke="#0284c7" strokeWidth="1" opacity="0.6" />;
             })}
 
             {/* Central Text */}
