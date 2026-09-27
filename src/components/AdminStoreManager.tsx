@@ -163,8 +163,8 @@ export const AdminStoreManager = ({
       <div className={`grid gap-4 ${
         productsLayoutMode === 'grid' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1'
       }`}>
-        {products.map(p => (
-          <div key={p.id} className={`border border-gray-200 dark:border-gray-700 p-4 rounded-xl flex ${
+        {products.map((p, pIdx) => (
+          <div key={p.id ? `store-prod-${p.id}-${pIdx}` : `store-prod-${pIdx}`} className={`border border-gray-200 dark:border-gray-700 p-4 rounded-xl flex ${
             productsLayoutMode === 'grid' ? 'flex-col' : 'flex-col md:flex-row gap-4 items-center'
           }`}>
             <img src={p.image} className={`object-cover rounded-lg ${

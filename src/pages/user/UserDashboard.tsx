@@ -19,7 +19,7 @@ import { PullToRefresh } from '../../components/PullToRefresh';
 import { OfflineDashboardSection } from '../../components/OfflineDashboardSection';
 import { PromoAnnouncementBanner } from '../../components/videoCards/PromoAnnouncementBanner';
 import { HomeCategoriesGrid } from '../../components/home/HomeCategoriesGrid';
-import { getCategoryFallbackThumbnail, getCategoryFallbackHook, getCategoryFallbackIcon, isMockCategory } from '../../data/defaultCategories';
+import { getCategoryFallbackThumbnail, getCategoryFallbackHook, getCategoryFallbackIcon, isMockCategory, getCanonicalCategories } from '../../data/defaultCategories';
 import { sanitizeImageSource } from '../../utils/articleImageUtils';
 
 import { INITIAL_DEFAULT_ARTICLES, DefaultArticle } from '../../data/defaultArticles';
@@ -110,10 +110,14 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
   const [displayType, setDisplayType] = useState<HomeDisplayType>(() => {
     if (lockedTarget) return lockedTarget;
     try {
+      const isUserExplicit = localStorage.getItem('asrar_home_display_type_user_set') === 'true';
       const saved = localStorage.getItem('asrar_home_display_type');
-      if (saved === 'categories' || saved === 'articles') return saved as HomeDisplayType;
+      if (isUserExplicit && (saved === 'categories' || saved === 'articles')) {
+        return saved as HomeDisplayType;
+      }
     } catch (e) {}
-    return featureToggles?.home_only_categories_grid === true ? 'categories' : 'articles';
+    // Default automatically to 'categories' without any delay
+    return featureToggles?.home_display_mode === 'fixed_articles' ? 'articles' : 'categories';
   });
 
   // Effective display type resolves immediately without recursive effect loop
@@ -124,6 +128,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
     setDisplayType(mode);
     try {
       localStorage.setItem('asrar_home_display_type', mode);
+      localStorage.setItem('asrar_home_display_type_user_set', 'true');
     } catch (e) {}
     if (mode === 'categories') {
       if (filter !== 'all' && filter !== 'favoris' && filter !== 'offline') {
@@ -233,17 +238,10 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
-  const [isCategoriesLoading, setIsCategoriesLoading] = useState<boolean>(() => {
-    try {
-      const cached = localStorage.getItem('asrarhub_cached_categories');
-      if (cached) {
-        const parsed = JSON.parse(cached);
-        if (Array.isArray(parsed) && parsed.length > 0) return false;
-      }
-    } catch (e) {}
-    return true;
-  });
+  // Instant zero-delay category display: canonical spiritual categories are available at 0ms
+  const [isCategoriesLoading, setIsCategoriesLoading] = useState<boolean>(false);
   const [categories, setCategories] = useState<any[]>(() => {
+    const canonicals = getCanonicalCategories();
     try {
       let deletedIds: string[] = [];
       try { deletedIds = JSON.parse(localStorage.getItem('asrarhub_deleted_categories') || '[]'); } catch (e) {}
@@ -251,52 +249,26 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
       if (cached) {
         const parsed = JSON.parse(cached);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const validRealCats = parsed.filter((c: any) => !deletedIds.includes(c.id) && !isMockCategory(c));
-          const seen = new Set<string>();
-          const deduped = validRealCats.filter((c: any) => {
+          const validRealCats = parsed.filter((c: any) => !deletedIds.includes(c.id));
+          const catMap = new Map<string, any>();
+          
+          // First add canonicals
+          canonicals.forEach(c => catMap.set((c.id || c.name || '').toLowerCase().trim(), c));
+          
+          // Then override or add user categories
+          validRealCats.forEach(c => {
             const k = (c.id || c.name || '').toLowerCase().trim();
-            if (!k || seen.has(k)) return false;
-            seen.add(k);
-            return true;
+            if (k) catMap.set(k, c);
           });
+
+          const deduped = Array.from(catMap.values());
           if (deduped.length > 0) return deduped;
         }
       }
     } catch (e) {}
 
-    // Fallback instantané à 0ms : dériver immédiatement les catégories réelles depuis les articles en cache local
-    try {
-      const cachedArticles = localStorage.getItem('asrarhub_cached_articles_list') || localStorage.getItem('asrarhub_cached_explore_articles');
-      if (cachedArticles) {
-        const parsedArticles = JSON.parse(cachedArticles);
-        if (Array.isArray(parsedArticles) && parsedArticles.length > 0) {
-          const catMap = new Map<string, any>();
-          parsedArticles.forEach((art: any) => {
-            const rawCat = (art.category || '').toString().trim();
-            if (!rawCat || isMockCategory({ id: rawCat, name: rawCat })) return;
-            const key = rawCat.toLowerCase();
-            if (!catMap.has(key)) {
-              catMap.set(key, {
-                id: key,
-                name: rawCat,
-                thumbnail: art.imageUrl || art.thumbnail || getCategoryFallbackThumbnail(rawCat),
-                hook: getCategoryFallbackHook(rawCat),
-                iconName: getCategoryFallbackIcon(rawCat),
-                theme: key,
-                enabled: true,
-                isCustom: true,
-                subCategories: [],
-                createdAt: art.createdAt || Date.now()
-              });
-            }
-          });
-          const derived = Array.from(catMap.values());
-          if (derived.length > 0) return derived;
-        }
-      }
-    } catch (e) {}
-
-    return [];
+    // Instant zero-delay default at 0ms: full canonical spiritual categories
+    return canonicals;
   });
   const [selectedSubCategory, setSelectedSubCategory] = useState<string>('');
   const isCalendarOpen = location.search.includes('calendar=true');
@@ -1031,90 +1003,117 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
       let currentDeletedIds: string[] = [];
       try { currentDeletedIds = JSON.parse(localStorage.getItem('asrarhub_deleted_categories') || '[]'); } catch (e) {}
 
+      const catMap = new Map<string, any>();
+
+      // 1. First populate with canonical spiritual categories (guaranteed 0ms availability)
+      getCanonicalCategories().forEach(c => {
+        const k = (c.id || c.name || '').toLowerCase().trim();
+        if (k) catMap.set(k, c);
+      });
+
+      // 2. Overlay Firestore custom categories
       if (!snapshot.empty) {
-        // Strictly only real categories created by user/admin from Firestore (never inject mock categories)
-        const list = snapshot.docs
-          .map(doc => ({ ...doc.data(), id: doc.id }))
-          .filter((cat: any) => !currentDeletedIds.includes(cat.id) && !isMockCategory(cat));
-        list.sort((a: any, b: any) => (a.createdAt || 0) - (b.createdAt || 0));
-
-        // Automatically delete any lingering mock preset category documents from Firestore
-        const mockDocs = snapshot.docs.filter(doc => isMockCategory({ ...doc.data(), id: doc.id }));
-        if (mockDocs.length > 0) {
-          for (const mDoc of mockDocs) {
-            try {
-              await deleteDoc(doc(db, 'categories', mDoc.id));
-            } catch (err) {
-              console.warn("Could not delete mock category doc:", mDoc.id, err);
-            }
+        snapshot.docs.forEach(doc => {
+          const data = doc.data();
+          const id = doc.id;
+          if (currentDeletedIds.includes(id)) return;
+          const k = (id || data.name || '').toLowerCase().trim();
+          if (k) {
+            const isFolder = !data.iconName || data.iconName.toLowerCase().replace(/[^a-z]/g, '') === 'folderopen' || data.iconName.toLowerCase().replace(/[^a-z]/g, '') === 'folder';
+            catMap.set(k, {
+              ...data,
+              id,
+              iconName: isFolder ? getCategoryFallbackIcon(data.name || id) : data.iconName
+            });
           }
-        }
-
-        const seenCats = new Set<string>();
-        const dedupedList = list.filter((c: any) => {
-          const k = (c.id || c.name || '').toLowerCase().trim();
-          if (!k || seenCats.has(k)) return false;
-          seenCats.add(k);
-          return true;
-        }).map((c: any) => {
-          const isFolder = !c.iconName || c.iconName.toLowerCase().replace(/[^a-z]/g, '') === 'folderopen' || c.iconName.toLowerCase().replace(/[^a-z]/g, '') === 'folder';
-          return isFolder ? { ...c, iconName: getCategoryFallbackIcon(c.name || c.id) } : c;
         });
-        setCategories(dedupedList);
-        setIsCategoriesLoading(false);
-        try {
-          localStorage.setItem('asrarhub_cached_categories', JSON.stringify(dedupedList));
-        } catch (e) {}
-      } else {
-        // Only empty out if we don't already have real derived categories from articles
-        setCategories(prev => {
-          if (prev.length > 0) return prev;
-          return [];
-        });
-        setIsCategoriesLoading(false);
       }
+
+      // 3. Overlay any categories currently used by articles
+      if (items && items.length > 0) {
+        items.forEach((art: any) => {
+          const rawCat = (art.category || '').toString().trim();
+          if (!rawCat) return;
+          const k = rawCat.toLowerCase();
+          if (!catMap.has(k)) {
+            catMap.set(k, {
+              id: k,
+              name: rawCat,
+              thumbnail: art.imageUrl || art.thumbnail || getCategoryFallbackThumbnail(rawCat),
+              hook: getCategoryFallbackHook(rawCat),
+              iconName: getCategoryFallbackIcon(rawCat),
+              theme: k,
+              enabled: true,
+              isCustom: true,
+              subCategories: [],
+              createdAt: art.createdAt || Date.now()
+            });
+          }
+        });
+      }
+
+      const mergedList = Array.from(catMap.values());
+      setCategories(mergedList);
+      setIsCategoriesLoading(false);
+      try {
+        localStorage.setItem('asrarhub_cached_categories', JSON.stringify(mergedList));
+      } catch (e) {}
     }, (error) => {
-      console.warn("Categories fetch note (using local fallback):", error);
-      setCategories(prev => prev.filter((c: any) => !isMockCategory(c)));
+      console.warn("Categories fetch note (using canonical fallback):", error);
       setIsCategoriesLoading(false);
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [items]);
 
-  // Instant category synthesis: if categories are empty but items exist in cache, hydrate categories immediately at 0ms
+  // Instant category synthesis: always ensure every article's category is represented
   useEffect(() => {
-    if (categories.length === 0 && items && items.length > 0) {
-      const catMap = new Map<string, any>();
-      items.forEach((art: any) => {
-        const rawCat = (art.category || '').toString().trim();
-        if (!rawCat || isMockCategory({ id: rawCat, name: rawCat })) return;
-        const key = rawCat.toLowerCase();
-        if (!catMap.has(key)) {
-          catMap.set(key, {
-            id: key,
-            name: rawCat,
-            thumbnail: art.imageUrl || art.thumbnail || getCategoryFallbackThumbnail(rawCat),
-            hook: getCategoryFallbackHook(rawCat),
-            iconName: getCategoryFallbackIcon(rawCat),
-            theme: key,
-            enabled: true,
-            isCustom: true,
-            subCategories: [],
-            createdAt: art.createdAt || Date.now()
-          });
-        }
-      });
-      const derived = Array.from(catMap.values());
-      if (derived.length > 0) {
-        setCategories(derived);
-        setIsCategoriesLoading(false);
+    if (items && items.length > 0) {
+      setCategories(prev => {
+        const catMap = new Map<string, any>();
+        (prev || []).forEach(c => {
+          const k = (c.id || c.name || '').toLowerCase().trim();
+          if (k) catMap.set(k, c);
+        });
+
+        // Ensure all canonical categories are in map
+        getCanonicalCategories().forEach(c => {
+          const k = (c.id || c.name || '').toLowerCase().trim();
+          if (!catMap.has(k)) catMap.set(k, c);
+        });
+
+        let hasNew = false;
+        items.forEach((art: any) => {
+          const rawCat = (art.category || '').toString().trim();
+          if (!rawCat) return;
+          const k = rawCat.toLowerCase();
+          if (!catMap.has(k)) {
+            hasNew = true;
+            catMap.set(k, {
+              id: k,
+              name: rawCat,
+              thumbnail: art.imageUrl || art.thumbnail || getCategoryFallbackThumbnail(rawCat),
+              hook: getCategoryFallbackHook(rawCat),
+              iconName: getCategoryFallbackIcon(rawCat),
+              theme: k,
+              enabled: true,
+              isCustom: true,
+              subCategories: [],
+              createdAt: art.createdAt || Date.now()
+            });
+          }
+        });
+
+        if (!hasNew && prev && prev.length === catMap.size) return prev;
+        const result = Array.from(catMap.values());
         try {
-          localStorage.setItem('asrarhub_cached_categories', JSON.stringify(derived));
+          localStorage.setItem('asrarhub_cached_categories', JSON.stringify(result));
         } catch (e) {}
-      }
+        return result;
+      });
+      setIsCategoriesLoading(false);
     }
-  }, [items, categories.length]);
+  }, [items]);
 
   const filteredItems = React.useMemo(() => {
     const raw = items.filter(item => {
@@ -1200,6 +1199,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
         <AnimatePresence>
           {isSearchOpen && (
             <motion.div
+              key="dashboard-search-bar"
               initial={{ width: 40, opacity: 0 }}
               animate={{ width: '100%', maxWidth: '400px', opacity: 1 }}
               exit={{ width: 40, opacity: 0 }}
@@ -1511,23 +1511,27 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
           {/* Categories Filter Modal */}
           <AnimatePresence>
             {isCategoryModalOpen && (
-              <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+              <motion.div
+                key="categories-filter-modal-wrap"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-[110] flex items-center justify-center p-4 pointer-events-none"
+              >
                 {/* Backdrop */}
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
+                <div
                   onClick={() => setIsCategoryModalOpen(false)}
-                  className="fixed inset-0 bg-black/60 backdrop-blur-sm"
+                  className="fixed inset-0 bg-black/60 backdrop-blur-sm pointer-events-auto"
                 />
 
                 {/* Modal container */}
                 <motion.div
+                  key="categories-filter-dialog"
                   initial={{ opacity: 0, scale: 0.95, y: 20 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.95, y: 20 }}
                   transition={{ type: 'spring', duration: 0.35 }}
-                  className="relative w-full max-w-lg bg-white dark:bg-gray-800 rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden flex flex-col max-h-[85vh] z-[120]"
+                  className="relative w-full max-w-lg bg-white dark:bg-gray-800 rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden flex flex-col max-h-[85vh] z-[120] pointer-events-auto"
                 >
                   {/* Header */}
                   <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700/50 flex justify-between items-center bg-gray-50 dark:bg-gray-800/80 backdrop-blur-md">
@@ -1707,7 +1711,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
                     </button>
                   </div>
                 </motion.div>
-              </div>
+              </motion.div>
             )}
           </AnimatePresence>
         </div>
@@ -2515,6 +2519,7 @@ export const UserDashboard: React.FC<Props> = ({ initialFilter = 'all' }) => {
           <AnimatePresence initial={false}>
             {isHistoryExpanded && (
               <motion.div
+                key="reading-history-expanded-panel"
                 initial={{ height: 0, opacity: 0, marginTop: 0 }}
                 animate={{ height: 'auto', opacity: 1, marginTop: 16 }}
                 exit={{ height: 0, opacity: 0, marginTop: 0 }}

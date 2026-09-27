@@ -48,8 +48,6 @@ export const FreeTrial24hModal: React.FC<FreeTrial24hModalProps> = ({ isOpen, on
     return () => clearInterval(interval);
   }, [trialTimeLeftMs]);
 
-  if (!isOpen) return null;
-
   const handleActivate = async () => {
     if (!user?.freeTrialActivated) {
       await activate24hTrial();
@@ -69,28 +67,33 @@ export const FreeTrial24hModal: React.FC<FreeTrial24hModalProps> = ({ isOpen, on
 
   return createPortal(
     <AnimatePresence>
-      <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
-        {/* Backdrop */}
-        <motion.div
+      {isOpen && (
+        <motion.div 
+          key="free-trial-modal-overlay"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          onClick={() => {
-            markTrialPopupSeen();
-            onClose();
-          }}
-          className="fixed inset-0 bg-black/85 backdrop-blur-xl"
-        />
-
-        {/* Modal Container with 3D Card Depth */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 10 }}
-          transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          style={{ transformStyle: 'preserve-3d', perspective: 1000 }}
-          className="relative w-full max-w-xl bg-gradient-to-b from-gray-900 via-gray-950 to-black border-2 border-amber-500/60 rounded-3xl p-6 sm:p-8 text-white shadow-[0_25px_60px_-15px_rgba(245,158,11,0.35),0_0_35px_rgba(245,158,11,0.2)] overflow-hidden transform-gpu hover:scale-[1.01] transition-transform duration-300"
+          className="fixed inset-0 z-[10000] flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
         >
+          {/* Backdrop */}
+          <div
+            onClick={() => {
+              markTrialPopupSeen();
+              onClose();
+            }}
+            className="fixed inset-0 bg-black/85 backdrop-blur-xl"
+          />
+
+          {/* Modal Container with 3D Card Depth */}
+          <motion.div
+            key="free-trial-modal-card"
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 10 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            style={{ transformStyle: 'preserve-3d', perspective: 1000 }}
+            className="relative w-full max-w-xl bg-gradient-to-b from-gray-900 via-gray-950 to-black border-2 border-amber-500/60 rounded-3xl p-6 sm:p-8 text-white shadow-[0_25px_60px_-15px_rgba(245,158,11,0.35),0_0_35px_rgba(245,158,11,0.2)] overflow-hidden transform-gpu hover:scale-[1.01] transition-transform duration-300"
+          >
           {/* Ambient Glow */}
           <div className="absolute -top-24 -left-24 w-60 h-60 bg-amber-500/25 rounded-full blur-3xl pointer-events-none" />
           <div className="absolute -bottom-24 -right-24 w-60 h-60 bg-yellow-500/20 rounded-full blur-3xl pointer-events-none" />
@@ -252,7 +255,8 @@ export const FreeTrial24hModal: React.FC<FreeTrial24hModalProps> = ({ isOpen, on
             </div>
           </div>
         </motion.div>
-      </div>
+      </motion.div>
+      )}
     </AnimatePresence>,
     document.body
   );

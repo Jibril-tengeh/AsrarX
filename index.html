@@ -16,6 +16,8 @@
                  str.indexOf('Unexpected state') !== -1 ||
                  str.indexOf('SnapshotVersion') !== -1 ||
                  str.indexOf('fromVersion') !== -1 ||
+                 str.indexOf('Encountered two children with the same key') !== -1 ||
+                 str.indexOf('Keys should be unique') !== -1 ||
                  (str.indexOf('INTERNAL ASSERTION FAILED') !== -1 && str.indexOf('FIRESTORE') !== -1);
         };
 

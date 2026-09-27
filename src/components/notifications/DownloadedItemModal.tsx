@@ -148,28 +148,32 @@ export const DownloadedItemModal: React.FC<DownloadedItemModalProps> = ({
     }
   };
 
-  if (!isOpen) return null;
-
   const isImage = currentItem?.fileType === 'image' || currentItem?.fileName?.match(/\.(png|jpe?g|webp|svg)$/i);
 
   return (
     <AnimatePresence>
-      <div 
-        id="downloaded-item-modal-overlay"
-        className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-md overflow-hidden"
-        onClick={onClose}
-      >
-        <motion.div
-          id="downloaded-item-modal-container"
-          initial={{ opacity: 0, scale: 0.92, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.92, y: 20 }}
-          transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className={`bg-gray-900 border border-amber-500/30 rounded-3xl shadow-2xl flex flex-col overflow-hidden w-full text-white ${
-            isFullscreen ? 'fixed inset-2 z-[100000] max-w-none h-[calc(100vh-16px)]' : 'max-w-2xl max-h-[90vh]'
-          }`}
-          onClick={(e) => e.stopPropagation()}
+      {isOpen && (
+        <motion.div 
+          key="downloaded-item-modal-overlay"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          id="downloaded-item-modal-overlay"
+          className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-md overflow-hidden"
+          onClick={onClose}
         >
+          <motion.div
+            key="downloaded-item-modal-container"
+            id="downloaded-item-modal-container"
+            initial={{ opacity: 0, scale: 0.92, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.92, y: 20 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            className={`bg-gray-900 border border-amber-500/30 rounded-3xl shadow-2xl flex flex-col overflow-hidden w-full text-white ${
+              isFullscreen ? 'fixed inset-2 z-[100000] max-w-none h-[calc(100vh-16px)]' : 'max-w-2xl max-h-[90vh]'
+            }`}
+            onClick={(e) => e.stopPropagation()}
+          >
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-800 bg-gray-950/80">
             <div className="flex items-center gap-3 min-w-0">
@@ -457,6 +461,7 @@ export const DownloadedItemModal: React.FC<DownloadedItemModalProps> = ({
           <AnimatePresence>
             {copiedToast && (
               <motion.div
+                key="download-modal-copied-toast"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 10 }}
@@ -468,7 +473,8 @@ export const DownloadedItemModal: React.FC<DownloadedItemModalProps> = ({
             )}
           </AnimatePresence>
         </motion.div>
-      </div>
+      </motion.div>
+      )}
     </AnimatePresence>
   );
 };

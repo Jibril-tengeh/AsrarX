@@ -233,18 +233,22 @@ export const OfflineArticlesPopup: React.FC<OfflineArticlesPopupProps> = ({
   return (
     <AnimatePresence>
       {showModal && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto">
+        <motion.div 
+          key="offline-articles-popup-wrapper"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 overflow-y-auto"
+        >
           {/* Backdrop with subtle blur */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+          <div
             onClick={handleDismiss}
             className="fixed inset-0 bg-black/75 backdrop-blur-md transition-opacity"
           />
 
           {/* Modal Container */}
           <motion.div
+            key="offline-articles-popup-container"
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -388,7 +392,7 @@ export const OfflineArticlesPopup: React.FC<OfflineArticlesPopupProps> = ({
               </div>
             </div>
           </motion.div>
-        </div>
+        </motion.div>
       )}
     </AnimatePresence>
   );

@@ -3,6 +3,7 @@ import express from "express";
 import path from "path";
 import cors from "cors";
 import fs from "fs";
+import crypto from "crypto";
 import { initializeApp, getApps, cert } from "firebase-admin/app";
 import { getFirestore, Timestamp } from "firebase-admin/firestore";
 
@@ -42,6 +43,1295 @@ async function startServer() {
   // Health check endpoint for connectivity checks and dev server monitoring
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", timestamp: Date.now() });
+  });
+
+  // OpenAPI 3.0 specification definition for AsrarHub API
+  app.get("/api/openapi.json", (req, res) => {
+    res.json({
+      openapi: "3.0.0",
+      info: {
+        title: "AsrarHub REST API",
+        version: "1.2.0",
+        description: "API de la plateforme AsrarHub : Intelligence Spirituelle, Coran, Rêves, Zairja, Paiements Paystack et Bibliothèque PDF."
+      },
+      servers: [
+        {
+          url: "/",
+          description: "Serveur AsrarHub Dev & Production"
+        }
+      ],
+      paths: {
+        "/api/health": {
+          get: {
+            summary: "Vérification de l'état du serveur",
+            responses: { "200": { description: "Serveur opérationnel" } }
+          }
+        },
+        "/api/quran/tafsir": {
+          post: {
+            summary: "Exégèse Coranique Spirituelle (Tafsir IA)",
+            requestBody: {
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      surahNumber: { type: "integer", example: 2 },
+                      ayahNumber: { type: "integer", example: 255 },
+                      language: { type: "string", example: "fr" }
+                    },
+                    required: ["surahNumber", "ayahNumber"]
+                  }
+                }
+              }
+            },
+            responses: { "200": { description: "Exégèse générée avec succès" } }
+          }
+        },
+        "/api/dreams/interpret": {
+          post: {
+            summary: "Interprétation Islamique des Rêves (Rū'yā)",
+            requestBody: {
+              content: {
+                "application/json": {
+                  schema: {
+                    type: "object",
+                    properties: {
+                      dreamText: { type: "string" },
+                      dreamerContext: { type: "string" },
+                      language: { type: "string" }
+                    },
+                    required: ["dreamText"]
+                  }
+                }
+              }
+            },
+            responses: { "200": { description: "Interprétation onirique générée" } }
+          }
+        },
+        "/api/gemini/asrar-conseil": {
+          post: {
+            summary: "Conseils et orientation spirituelle personnalisée",
+            responses: { "200": { description: "Conseil spirituel retourné" } }
+          }
+        },
+        "/api/zairja/oracle": {
+          post: {
+            summary: "Oracle de la Zairja (Science des Lettres & Abjad)",
+            responses: { "200": { description: "Réponse métaphysique de la Zairja" } }
+          }
+        },
+        "/api/verify-paystack": {
+          post: {
+            summary: "Validation sécurisée de paiement Paystack",
+            responses: { "200": { description: "Paiement validé et statut mis à jour" } }
+          }
+        },
+        "/api/pdf/custom-list": {
+          get: {
+            summary: "Catalogue des livres et manuscrits PDF sacrés",
+            responses: { "200": { description: "Liste des PDFs disponibles" } }
+          }
+        },
+        "/api/v1/secrets": {
+          get: {
+            summary: "API Publique des Secrets & Recettes Spirituelles (Pour sites tiers)",
+            responses: { "200": { description: "Liste paginée des secrets" } }
+          }
+        },
+        "/api/v1/categories": {
+          get: {
+            summary: "API Publique des Catégories & Thématiques spirituelles",
+            responses: { "200": { description: "Liste des catégories" } }
+          }
+        },
+        "/api/v1/tools/abjad": {
+          post: {
+            summary: "Calculateur Abjad (Science des Lettres pour sites externes)",
+            responses: { "200": { description: "Valeur numérique et harmonique métaphysique" } }
+          }
+        },
+        "/api/v1/tools/asma-ul-husna": {
+          get: {
+            summary: "Les 99 Noms d'Allah avec vertus et valeurs numériques",
+            responses: { "200": { description: "Liste des Noms Divins" } }
+          }
+        },
+        "/api/v1/tools/daily-wird": {
+          get: {
+            summary: "Litanie et Wird recommandé du jour",
+            responses: { "200": { description: "Wird du jour" } }
+          }
+        }
+      }
+    });
+  });
+
+  // ==========================================
+  // EXTERNAL DEVELOPER API (v1 Public Endpoints)
+  // Cross-Origin enabled for third-party websites, blogs, apps
+  // ==========================================
+
+  // API Key & Rate Limiting Types
+  interface ApiKeyRecord {
+    id: string;
+    key: string;
+    name: string;
+    userId?: string;
+    rateLimit: number; // requests per minute
+    createdAt: number;
+    lastUsedAt?: number;
+    status: "active" | "revoked" | "blocked";
+    totalRequests?: number;
+    abuseCount?: number;
+    lastIp?: string;
+    lastEndpoint?: string;
+  }
+
+  interface AbuseAlert {
+    id: string;
+    keyId: string;
+    keyName: string;
+    keyString: string;
+    userId?: string;
+    timestamp: number;
+    ip: string;
+    endpoint: string;
+    reason: string;
+    limit: number;
+    attemptedCount: number;
+  }
+
+  // Memory store for API Keys (synced with Firestore)
+  const apiKeysStore = new Map<string, ApiKeyRecord>();
+  // Memory store for Rate Limiting: identifier -> { count, resetTime }
+  const rateLimitStore = new Map<string, { count: number; resetTime: number }>();
+  // Memory store for Abuse Alerts
+  const abuseAlertsStore: AbuseAlert[] = [];
+  // Cache for Firestore user profile rate limits to keep ultra-low latency
+  const userProfileCache = new Map<string, { rateLimit?: number; isBlocked?: boolean; cachedAt: number }>();
+
+  // Default demo / public developer key
+  const DEMO_KEY = "ah_live_demo_asrarhub_2026";
+  apiKeysStore.set(DEMO_KEY, {
+    id: "key_demo_default",
+    key: DEMO_KEY,
+    name: "Clé Démo Publique",
+    rateLimit: 60,
+    createdAt: 1727200000000,
+    status: "active",
+    totalRequests: 0,
+    abuseCount: 0
+  });
+
+  // Helper to fetch user's 'api_rate_limit' from their Firestore profile
+  const getUserRateLimitFromProfile = async (userId: string): Promise<{ rateLimit?: number; isBlocked?: boolean }> => {
+    if (!userId || userId === "guest_developer") return {};
+    const cached = userProfileCache.get(userId);
+    const now = Date.now();
+    if (cached && now - cached.cachedAt < 30000) {
+      return cached;
+    }
+
+    try {
+      const db = getDb();
+      if (!db) return {};
+      const userDoc = await db.collection("users").doc(userId).get();
+      if (userDoc.exists) {
+        const data = userDoc.data();
+        const res = {
+          rateLimit: typeof data?.api_rate_limit === "number" && data.api_rate_limit > 0 ? Number(data.api_rate_limit) : undefined,
+          isBlocked: data?.api_blocked === true || data?.status === "banned" || data?.api_status === "blocked",
+          cachedAt: now
+        };
+        userProfileCache.set(userId, res);
+        return res;
+      }
+    } catch (e) {
+      console.warn("Could not read user profile api_rate_limit:", e);
+    }
+    return {};
+  };
+
+  // Sync API Keys and recent abuse alerts from Firestore on startup
+  const syncApiKeysFromDb = async () => {
+    try {
+      const db = getDb();
+      if (!db) return;
+      const snap = await db.collection("api_keys").get();
+      snap.forEach((doc) => {
+        const d = doc.data() as ApiKeyRecord;
+        if (d && d.key) {
+          apiKeysStore.set(d.key, { ...d, id: doc.id });
+        }
+      });
+
+      // Load recent abuse alerts
+      const alertsSnap = await db.collection("api_abuse_alerts").orderBy("timestamp", "desc").limit(100).get();
+      alertsSnap.forEach((doc) => {
+        abuseAlertsStore.push({ id: doc.id, ...(doc.data() as any) });
+      });
+    } catch (err) {
+      console.warn("Could not load api_keys / alerts from Firestore:", err);
+    }
+  };
+  syncApiKeysFromDb();
+
+  // Universal CORS pre-flight handler for /api/v1/*
+  app.options("/api/v1/*", (req, res) => {
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, x-api-key");
+    res.sendStatus(204);
+  });
+
+  const setPublicApiHeaders = (res: any) => {
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Content-Type, Authorization, x-api-key");
+    res.header("X-Powered-By", "AsrarHub Spiritual API v1");
+  };
+
+  // Rate Limiting & Auth Middleware for /api/v1/* with Firestore user profile 'api_rate_limit'
+  app.use("/api/v1", async (req, res, next) => {
+    // Skip OPTIONS and embed widget
+    if (req.method === "OPTIONS" || req.path.startsWith("/embed")) {
+      return next();
+    }
+
+    // Skip key creation/revocation routes (they manage their own flow)
+    if (req.path.startsWith("/keys")) {
+      return next();
+    }
+
+    const rawApiKey = (req.headers["x-api-key"] || req.query.api_key || "") as string;
+    const clientIp = (req.headers["x-forwarded-for"] || req.socket.remoteAddress || "anonymous") as string;
+    const authHeader = (req.headers["authorization"] || "") as string;
+    let extractedAuthUid = "";
+    if (authHeader.startsWith("Bearer ")) {
+      const token = authHeader.substring(7).trim();
+      // If token is a direct user id or token formatted as uid
+      if (token && !token.includes(".") && token.length >= 10 && token.length <= 128) {
+        extractedAuthUid = token;
+      }
+    }
+    const clientUserId = ((req.headers["x-user-id"] || req.query.userId || extractedAuthUid || "") as string);
+
+    let rateLimit = 30; // 30 req/min default for anonymous callers
+    let identifier = `ip:${clientIp}`;
+    let keyRecord: ApiKeyRecord | undefined;
+
+    if (rawApiKey) {
+      keyRecord = apiKeysStore.get(rawApiKey);
+      if (!keyRecord) {
+        setPublicApiHeaders(res);
+        // Log unauthorized attempt
+        const alert: AbuseAlert = {
+          id: `abuse_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+          keyId: "unknown",
+          keyName: "Tentative Invalide",
+          keyString: rawApiKey.slice(0, 15) + "...",
+          timestamp: Date.now(),
+          ip: clientIp,
+          endpoint: req.originalUrl,
+          reason: "Utilisation d'une clé API inexistante ou invalide",
+          limit: 0,
+          attemptedCount: 1
+        };
+        abuseAlertsStore.unshift(alert);
+        return res.status(401).json({
+          success: false,
+          error: "Clé API invalide ou non reconnue (Invalid API Key).",
+          code: "INVALID_API_KEY"
+        });
+      }
+
+      if (keyRecord.status === "revoked" || keyRecord.status === "blocked") {
+        setPublicApiHeaders(res);
+        const alert: AbuseAlert = {
+          id: `abuse_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+          keyId: keyRecord.id,
+          keyName: keyRecord.name,
+          keyString: keyRecord.key,
+          userId: keyRecord.userId,
+          timestamp: Date.now(),
+          ip: clientIp,
+          endpoint: req.originalUrl,
+          reason: `Tentative d'utilisation d'une clé ${keyRecord.status === "blocked" ? "bloquée par l'administrateur" : "révoquée"}`,
+          limit: keyRecord.rateLimit,
+          attemptedCount: 1
+        };
+        abuseAlertsStore.unshift(alert);
+        return res.status(403).json({
+          success: false,
+          error: `Cette clé API a été ${keyRecord.status === "blocked" ? "bloquée par l'administration" : "révoquée par son propriétaire"}.`,
+          code: keyRecord.status === "blocked" ? "BLOCKED_API_KEY" : "REVOKED_API_KEY"
+        });
+      }
+
+      // Check if user has a custom 'api_rate_limit' configured in their Firestore profile
+      const effectiveUserId = keyRecord.userId || (typeof clientUserId === "string" ? clientUserId : undefined);
+      if (effectiveUserId) {
+        const profileSettings = await getUserRateLimitFromProfile(effectiveUserId);
+        if (profileSettings.isBlocked) {
+          setPublicApiHeaders(res);
+          return res.status(403).json({
+            success: false,
+            error: "L'accès API a été suspendu pour ce profil utilisateur dans Firestore.",
+            code: "USER_API_BLOCKED"
+          });
+        }
+        if (typeof profileSettings.rateLimit === "number" && profileSettings.rateLimit > 0) {
+          rateLimit = profileSettings.rateLimit;
+        } else {
+          rateLimit = keyRecord.rateLimit || 60;
+        }
+      } else {
+        rateLimit = keyRecord.rateLimit || 60;
+      }
+
+      identifier = `key:${keyRecord.key}`;
+      keyRecord.lastUsedAt = Date.now();
+      keyRecord.lastIp = clientIp;
+      keyRecord.lastEndpoint = req.originalUrl;
+      keyRecord.totalRequests = (keyRecord.totalRequests || 0) + 1;
+    } else if (clientUserId) {
+      // Anonymous with user ID
+      const profileSettings = await getUserRateLimitFromProfile(clientUserId);
+      if (typeof profileSettings.rateLimit === "number" && profileSettings.rateLimit > 0) {
+        rateLimit = profileSettings.rateLimit;
+      }
+      identifier = `user:${clientUserId}`;
+    }
+
+    const now = Date.now();
+    const windowMs = 60 * 1000; // 1 minute window
+
+    let current = rateLimitStore.get(identifier);
+    if (!current || now > current.resetTime) {
+      current = { count: 1, resetTime: now + windowMs };
+      rateLimitStore.set(identifier, current);
+    } else {
+      current.count += 1;
+    }
+
+    const remaining = Math.max(0, rateLimit - current.count);
+    const resetSeconds = Math.ceil((current.resetTime - now) / 1000);
+
+    // Standard RFC RateLimit headers
+    res.setHeader("X-RateLimit-Limit", rateLimit.toString());
+    res.setHeader("X-RateLimit-Remaining", remaining.toString());
+    res.setHeader("X-RateLimit-Reset", resetSeconds.toString());
+
+    if (current.count > rateLimit) {
+      setPublicApiHeaders(res);
+      res.setHeader("Retry-After", resetSeconds.toString());
+
+      // Record abuse alert
+      if (keyRecord) {
+        keyRecord.abuseCount = (keyRecord.abuseCount || 0) + 1;
+      }
+      const abuseAlert: AbuseAlert = {
+        id: `abuse_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+        keyId: keyRecord ? keyRecord.id : "ip_limit",
+        keyName: keyRecord ? keyRecord.name : `IP ${clientIp}`,
+        keyString: keyRecord ? keyRecord.key : "none",
+        userId: keyRecord?.userId,
+        timestamp: Date.now(),
+        ip: clientIp,
+        endpoint: req.originalUrl,
+        reason: `Dépassement du quota de débit configuré (${rateLimit} req/min)`,
+        limit: rateLimit,
+        attemptedCount: current.count
+      };
+      abuseAlertsStore.unshift(abuseAlert);
+      if (abuseAlertsStore.length > 200) abuseAlertsStore.pop();
+
+      // Persist abuse alert to Firestore asynchronously
+      if (getApps().length) {
+        try {
+          const db = getDb();
+          db.collection("api_abuse_alerts").doc(abuseAlert.id).set(abuseAlert).catch(() => {});
+          if (keyRecord) {
+            db.collection("api_keys").doc(keyRecord.id).update({
+              totalRequests: keyRecord.totalRequests,
+              abuseCount: keyRecord.abuseCount,
+              lastUsedAt: keyRecord.lastUsedAt,
+              lastIp: clientIp
+            }).catch(() => {});
+          }
+        } catch (_) {}
+      }
+
+      return res.status(429).json({
+        success: false,
+        error: `Limite de débit dépassée (Rate limit exceeded). Quota: ${rateLimit} req/min. Réessayez dans ${resetSeconds}s.`,
+        code: "RATE_LIMIT_EXCEEDED",
+        retryAfter: resetSeconds,
+        limit: rateLimit
+      });
+    }
+
+    next();
+  });
+
+  // ==========================================
+  // API KEY MANAGEMENT ENDPOINTS
+  // ==========================================
+
+  // 1. GET /api/v1/keys - List keys for user
+  app.get("/api/v1/keys", async (req, res) => {
+    setPublicApiHeaders(res);
+    try {
+      const { userId } = req.query;
+      let keys: ApiKeyRecord[] = [];
+
+      if (getApps().length) {
+        try {
+          const db = getDb();
+          let ref: any = db.collection("api_keys");
+          if (userId && typeof userId === "string") {
+            ref = ref.where("userId", "==", userId);
+          }
+          const snap = await ref.orderBy("createdAt", "desc").get();
+          snap.forEach((doc: any) => {
+            keys.push({ id: doc.id, ...doc.data() });
+          });
+        } catch (_) {}
+      }
+
+      if (keys.length === 0) {
+        // Fallback to in-memory store
+        apiKeysStore.forEach((k) => {
+          if (!userId || k.userId === userId) {
+            keys.push(k);
+          }
+        });
+      }
+
+      res.json({ success: true, count: keys.length, data: keys });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message || "Failed to fetch keys" });
+    }
+  });
+
+  // 2. POST /api/v1/keys/generate - Generate a new API key with chosen rate limiting
+  app.post("/api/v1/keys/generate", async (req, res) => {
+    setPublicApiHeaders(res);
+    try {
+      const { name, userId, rateLimit = 60 } = req.body;
+      const keyLabel = (name && typeof name === "string" ? name.trim() : "Mon Application") || "Mon Application";
+      const chosenLimit = Math.min(500, Math.max(10, parseInt(rateLimit) || 60));
+
+      // Generate secure unique API key
+      const randomHex = crypto.randomBytes(16).toString("hex");
+      const generatedKey = `ah_live_${randomHex}`;
+      const keyId = `key_${Date.now()}_${randomHex.substring(0, 6)}`;
+
+      const newKeyRecord: ApiKeyRecord = {
+        id: keyId,
+        key: generatedKey,
+        name: keyLabel,
+        userId: userId || "guest_developer",
+        rateLimit: chosenLimit,
+        createdAt: Date.now(),
+        status: "active"
+      };
+
+      // Save to memory map
+      apiKeysStore.set(generatedKey, newKeyRecord);
+
+      // Save to Firestore if available
+      if (getApps().length) {
+        try {
+          const db = getDb();
+          await db.collection("api_keys").doc(keyId).set(newKeyRecord);
+        } catch (dbErr) {
+          console.warn("Could not save api key to Firestore:", dbErr);
+        }
+      }
+
+      res.status(201).json({
+        success: true,
+        message: "Clé API générée avec succès.",
+        data: newKeyRecord
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message || "Key generation failed" });
+    }
+  });
+
+  // 3. POST /api/v1/keys/:id/revoke or DELETE /api/v1/keys/:id - Revoke an API key
+  const revokeKeyHandler = async (req: express.Request, res: express.Response) => {
+    setPublicApiHeaders(res);
+    try {
+      const { id } = req.params;
+      let foundKey: ApiKeyRecord | undefined;
+
+      // Find in memory
+      for (const [k, record] of apiKeysStore.entries()) {
+        if (record.id === id || record.key === id) {
+          record.status = "revoked";
+          foundKey = record;
+          break;
+        }
+      }
+
+      // Update in Firestore
+      if (getApps().length) {
+        try {
+          const db = getDb();
+          await db.collection("api_keys").doc(id).update({
+            status: "revoked",
+            revokedAt: Date.now()
+          });
+        } catch (_) {}
+      }
+
+      if (!foundKey) {
+        return res.status(404).json({ success: false, error: "Clé API introuvable." });
+      }
+
+      res.json({
+        success: true,
+        message: "Clé API révoquée avec succès. Elle ne pourra plus être utilisée.",
+        data: foundKey
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message || "Revocation failed" });
+    }
+  };
+
+  app.post("/api/v1/keys/:id/revoke", revokeKeyHandler);
+  app.delete("/api/v1/keys/:id", revokeKeyHandler);
+
+  // ==========================================
+  // ADMIN API KEYS & ABUSE SURVEILLANCE ENDPOINTS
+  // ==========================================
+
+  // 1. GET /api/admin/api-keys/stats
+  app.get("/api/admin/api-keys/stats", async (req, res) => {
+    try {
+      const keysList: ApiKeyRecord[] = [];
+      
+      // Fetch latest from Firestore if available
+      if (getApps().length) {
+        try {
+          const db = getDb();
+          const snap = await db.collection("api_keys").orderBy("createdAt", "desc").get();
+          snap.forEach((doc) => {
+            const data = doc.data() as ApiKeyRecord;
+            const mem = apiKeysStore.get(data.key);
+            keysList.push({
+              ...data,
+              id: doc.id,
+              totalRequests: Math.max(data.totalRequests || 0, mem?.totalRequests || 0),
+              abuseCount: Math.max(data.abuseCount || 0, mem?.abuseCount || 0),
+              lastUsedAt: Math.max(data.lastUsedAt || 0, mem?.lastUsedAt || 0),
+              lastIp: mem?.lastIp || data.lastIp,
+              status: mem?.status || data.status || "active"
+            });
+          });
+        } catch (_) {}
+      }
+
+      if (keysList.length === 0) {
+        apiKeysStore.forEach((k) => keysList.push(k));
+      }
+
+      // Compute aggregates
+      let totalRequests = 0;
+      let totalAbuseCount = 0;
+      let activeCount = 0;
+      let blockedCount = 0;
+
+      keysList.forEach((k) => {
+        totalRequests += k.totalRequests || 0;
+        totalAbuseCount += k.abuseCount || 0;
+        if (k.status === "active") activeCount++;
+        else blockedCount++;
+      });
+
+      res.json({
+        success: true,
+        summary: {
+          totalKeys: keysList.length,
+          activeKeys: activeCount,
+          blockedKeys: blockedCount,
+          totalRequests,
+          totalAbuseCount,
+          totalAlerts: abuseAlertsStore.length
+        },
+        keys: keysList,
+        abuseAlerts: abuseAlertsStore.slice(0, 100)
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message || "Failed to fetch stats" });
+    }
+  });
+
+  // 2. POST /api/admin/api-keys/:id/toggle - Admin toggle Block / Unblock
+  app.post("/api/admin/api-keys/:id/toggle", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { status } = req.body; // "active" | "blocked" | "revoked"
+      let targetKey: ApiKeyRecord | undefined;
+
+      for (const [_, record] of apiKeysStore.entries()) {
+        if (record.id === id || record.key === id) {
+          record.status = status || (record.status === "active" ? "blocked" : "active");
+          targetKey = record;
+          break;
+        }
+      }
+
+      if (getApps().length && targetKey) {
+        try {
+          const db = getDb();
+          await db.collection("api_keys").doc(targetKey.id).update({
+            status: targetKey.status,
+            updatedAt: Date.now()
+          });
+        } catch (_) {}
+      }
+
+      if (!targetKey) {
+        return res.status(404).json({ success: false, error: "Clé introuvable" });
+      }
+
+      res.json({ success: true, message: `Statut mis à jour : ${targetKey.status}`, data: targetKey });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message || "Toggle failed" });
+    }
+  });
+
+  // 3. POST /api/admin/api-keys/:id/rate-limit - Admin update Rate Limit (and user profile)
+  app.post("/api/admin/api-keys/:id/rate-limit", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { rateLimit } = req.body;
+      const newLimit = Math.min(2000, Math.max(5, parseInt(rateLimit) || 60));
+
+      let targetKey: ApiKeyRecord | undefined;
+      for (const [_, record] of apiKeysStore.entries()) {
+        if (record.id === id || record.key === id) {
+          record.rateLimit = newLimit;
+          targetKey = record;
+          break;
+        }
+      }
+
+      if (getApps().length && targetKey) {
+        try {
+          const db = getDb();
+          await db.collection("api_keys").doc(targetKey.id).update({
+            rateLimit: newLimit,
+            updatedAt: Date.now()
+          });
+          // Also update user profile in Firestore if user is attached!
+          if (targetKey.userId && targetKey.userId !== "guest_developer") {
+            await db.collection("users").doc(targetKey.userId).set({
+              api_rate_limit: newLimit
+            }, { merge: true });
+            userProfileCache.delete(targetKey.userId);
+          }
+        } catch (_) {}
+      }
+
+      if (!targetKey) {
+        return res.status(404).json({ success: false, error: "Clé introuvable" });
+      }
+
+      res.json({ success: true, message: `Quota de débit mis à jour à ${newLimit} req/min`, data: targetKey });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message || "Update limit failed" });
+    }
+  });
+
+  // 4. POST /api/admin/api-keys/abuse-alerts/clear - Clear alerts
+  app.post("/api/admin/api-keys/abuse-alerts/clear", async (req, res) => {
+    try {
+      abuseAlertsStore.length = 0;
+      if (getApps().length) {
+        try {
+          const db = getDb();
+          const snap = await db.collection("api_abuse_alerts").get();
+          const batch = db.batch();
+          snap.forEach((doc) => batch.delete(doc.ref));
+          await batch.commit();
+        } catch (_) {}
+      }
+      res.json({ success: true, message: "Alertes d'abus réinitialisées." });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message || "Clear alerts failed" });
+    }
+  });
+
+  // 5. GET /api/admin/users/:userId/rate-limit - Read user profile rate limit
+  app.get("/api/admin/users/:userId/rate-limit", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const profile = await getUserRateLimitFromProfile(userId);
+      res.json({
+        success: true,
+        userId,
+        api_rate_limit: profile.rateLimit || 60,
+        isBlocked: !!profile.isBlocked
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message || "Failed to fetch user rate limit" });
+    }
+  });
+
+  // 6. POST /api/admin/users/:userId/rate-limit - Set user profile api_rate_limit in Firestore
+  app.post("/api/admin/users/:userId/rate-limit", async (req, res) => {
+    try {
+      const { userId } = req.params;
+      const { rateLimit, isBlocked } = req.body;
+      const parsedLimit = Math.min(5000, Math.max(5, parseInt(rateLimit) || 60));
+
+      if (getApps().length) {
+        const db = getDb();
+        if (db) {
+          const updateData: any = {
+            api_rate_limit: parsedLimit,
+            updatedAt: Date.now()
+          };
+          if (typeof isBlocked === "boolean") {
+            updateData.api_blocked = isBlocked;
+          }
+          await db.collection("users").doc(userId).set(updateData, { merge: true });
+          userProfileCache.delete(userId);
+        }
+      }
+
+      res.json({
+        success: true,
+        message: `Limite de débit utilisateur mise à jour à ${parsedLimit} req/min dans son profil Firestore.`,
+        userId,
+        api_rate_limit: parsedLimit,
+        isBlocked: !!isBlocked
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message || "Failed to set user rate limit" });
+    }
+  });
+
+  // Seed default secrets fallback
+  const PUBLIC_DEFAULT_SECRETS: any[] = [
+    {
+      id: "art_latif_129",
+      title: "Les Secrets Spirituels du Zikr Ya-Latif (129 Fois)",
+      title_en: "Spiritual Secrets of the Ya-Latif Zikr (129 Times)",
+      title_ha: "Asirin Zikiri Ya-Latif (Sau 129)",
+      hook: "Découvrez la dimension ésotérique du Nom Divin Al-Latif et comment sa récitation apporte soulagement et ouverture.",
+      hook_en: "Discover the esoteric dimension of the Divine Name Al-Latif and how its recitation brings relief and spiritual ease.",
+      hook_ha: "Koyi babban asirin Sunan Allah Al-Latif da yadda amfani da shi yake kawo sauƙi da buɗe ƙofa.",
+      category: "recette",
+      subCategory: "Zikr & Invocations",
+      isPremium: false,
+      thumbnail: "https://images.unsplash.com/photo-1542816417-0983cbe32277?q=80&w=800&auto=format&fit=crop",
+      benefits: [
+        "Soulagement des angoisses et difficultés",
+        "Attraction de la douceur divine et de la bénédiction (Barakah)",
+        "Protection contre les épreuves cachées"
+      ],
+      createdAt: 1727200000000
+    },
+    {
+      id: "art_waqiah_fath",
+      title: "Le Secret d'Ouverture et d'Attraction de la Sourate Al-Waqi'ah",
+      title_en: "The Secret of Opening and Wealth of Surah Al-Waqiah",
+      title_ha: "Asirin Bude Kofofi na Suratul Waqi'ah",
+      hook: "Méthode ancestrale pour attirer la subsistance licite et dissoudre les dettes pressantes.",
+      hook_en: "Ancestral method to attract lawful sustenance and dissolve urgent debts.",
+      hook_ha: "Hanya ta musamman don jawo arziƙi da buɗe ƙofofin sauƙi.",
+      category: "recette",
+      subCategory: "Ouverture & Richesse",
+      isPremium: false,
+      thumbnail: "https://images.unsplash.com/photo-1585036156171-384164a8c675?q=80&w=800&auto=format&fit=crop",
+      benefits: [
+        "Déblocage financier et opportunités imprévues",
+        "Richesse du cœur et sérénité intérieure",
+        "Protection contre l'indigence"
+      ],
+      createdAt: 1727201000000
+    },
+    {
+      id: "art_kursi_tahsin",
+      title: "Le Bouclier Suprême du Verset Al-Kursi (Tahsin)",
+      title_en: "Supreme Shield of Ayat Al-Kursi (Tahsin)",
+      title_ha: "Garkuwar Ayat Al-Kursi don Kariya",
+      hook: "Le protocole de récitation pour ériger une barrière angélique impénétrable autour de son foyer et de sa famille.",
+      hook_en: "Recitation protocol to establish an impenetrable angelic shield around home and family.",
+      hook_ha: "Hanyar zikiri don tsare kai da iyali daga sharrin makiya.",
+      category: "protection",
+      subCategory: "Protection & Ruqyah",
+      isPremium: false,
+      thumbnail: "https://images.unsplash.com/photo-1564769625905-50e93615e769?q=80&w=800&auto=format&fit=crop",
+      benefits: [
+        "Neutralisation du mauvais œil et des jalousies",
+        "Dissolution des nœuds de blocage occulte",
+        "Tranquillité du sommeil et paix dans la demeure"
+      ],
+      createdAt: 1727202000000
+    }
+  ];
+
+  // 1. GET /api/v1/secrets (Public list of secrets for external websites)
+  app.get("/api/v1/secrets", async (req, res) => {
+    setPublicApiHeaders(res);
+    try {
+      const { category, search, page = "1", limit = "10", lang = "fr" } = req.query;
+      const pageNum = Math.max(1, parseInt(page as string) || 1);
+      const limitNum = Math.min(50, Math.max(1, parseInt(limit as string) || 10));
+
+      let items: any[] = [];
+
+      // Try reading live from Firestore if available
+      if (getApps().length) {
+        try {
+          const db = getDb();
+          let queryRef: any = db.collection("articles");
+          const snap = await queryRef.limit(100).get();
+          if (!snap.empty) {
+            snap.forEach((doc: any) => {
+              const d = doc.data();
+              if (d.status === "Published" || !d.status) {
+                items.push({
+                  id: doc.id,
+                  title: (lang === "en" ? d.title_en : lang === "ha" ? d.title_ha : d.title) || d.title,
+                  hook: (lang === "en" ? d.hook_en : lang === "ha" ? d.hook_ha : d.hook) || d.hook || "",
+                  category: d.category || "recette",
+                  subCategory: d.subCategory || "",
+                  isPremium: Boolean(d.isPremium),
+                  thumbnail: d.thumbnail || d.imageUrl || d.image || "",
+                  benefits: Array.isArray(d.benefits) ? d.benefits : [],
+                  createdAt: d.createdAt || Date.now(),
+                  url: `https://asrarhub.com/secret/${doc.id}`
+                });
+              }
+            });
+          }
+        } catch (err) {
+          console.warn("Firestore query fallback to default secrets:", err);
+        }
+      }
+
+      if (items.length === 0) {
+        items = PUBLIC_DEFAULT_SECRETS.map(s => ({
+          ...s,
+          title: (lang === "en" ? s.title_en : lang === "ha" ? s.title_ha : s.title),
+          hook: (lang === "en" ? s.hook_en : lang === "ha" ? s.hook_ha : s.hook),
+          url: `https://asrarhub.com/secret/${s.id}`
+        }));
+      }
+
+      // Filter by category
+      if (category && typeof category === "string" && category !== "all") {
+        const catNorm = category.toLowerCase();
+        items = items.filter(it => (it.category || "").toLowerCase() === catNorm || (it.subCategory || "").toLowerCase().includes(catNorm));
+      }
+
+      // Filter by search
+      if (search && typeof search === "string" && search.trim()) {
+        const q = search.toLowerCase();
+        items = items.filter(it => (it.title || "").toLowerCase().includes(q) || (it.hook || "").toLowerCase().includes(q));
+      }
+
+      const total = items.length;
+      const start = (pageNum - 1) * limitNum;
+      const paginated = items.slice(start, start + limitNum);
+
+      res.json({
+        success: true,
+        source: "AsrarHub Open API v1",
+        page: pageNum,
+        limit: limitNum,
+        total,
+        totalPages: Math.ceil(total / limitNum),
+        data: paginated
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message || "Internal server error" });
+    }
+  });
+
+  // 2. GET /api/v1/secrets/:id (Details of a single secret with its 5 structured sub-sections)
+  app.get("/api/v1/secrets/:id", async (req, res) => {
+    setPublicApiHeaders(res);
+    try {
+      const { id } = req.params;
+      let article: any = null;
+
+      if (getApps().length) {
+        try {
+          const db = getDb();
+          const doc = await db.collection("articles").doc(id).get();
+          if (doc.exists) {
+            article = { id: doc.id, ...doc.data() };
+          }
+        } catch (_) {}
+      }
+
+      if (!article) {
+        article = PUBLIC_DEFAULT_SECRETS.find(s => s.id === id);
+      }
+
+      if (!article) {
+        return res.status(404).json({ success: false, error: "Secret non trouvé." });
+      }
+
+      res.json({
+        success: true,
+        data: {
+          id: article.id,
+          title: article.title,
+          hook: article.hook || "",
+          category: article.category,
+          subCategory: article.subCategory,
+          thumbnail: article.thumbnail || article.imageUrl || "",
+          benefits: article.benefits || [],
+          content: article.content || "",
+          secrets: article.secrets || [],
+          isPremium: Boolean(article.isPremium),
+          url: `https://asrarhub.com/secret/${article.id}`
+        }
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message || "Internal error" });
+    }
+  });
+
+  // 3. GET /api/v1/categories (List of canonical spiritual categories)
+  app.get("/api/v1/categories", (req, res) => {
+    setPublicApiHeaders(res);
+    res.json({
+      success: true,
+      data: [
+        {
+          id: "protection",
+          name: "Protection (Tahsin)",
+          description: "Boucliers spirituels, protection contre le mauvais œil, la sorcellerie et les attaques occultes.",
+          icon: "Shield",
+          color: "#3b82f6"
+        },
+        {
+          id: "fath",
+          name: "Ouverture & Richesse (Fath / Rizq)",
+          description: "Attraction de la subsistance licite, facilitation professionnelle et déblocage de situations.",
+          icon: "Coins",
+          color: "#10b981"
+        },
+        {
+          id: "shifa",
+          name: "Guérison & Santé (Shifa)",
+          description: "Remèdes coraniques, invocations prophétiques et secrets de guérison physique et énergétique.",
+          icon: "Heart",
+          color: "#ef4444"
+        },
+        {
+          id: "mahabba",
+          name: "Amour & Harmonie (Mahabba)",
+          description: "Entente conjugale, concorde familiale et bienveillance parmi les créatures.",
+          icon: "Sparkles",
+          color: "#f59e0b"
+        },
+        {
+          id: "ilm_huruf",
+          name: "Sciences des Lettres (Ilm al-Huruf & Abjad)",
+          description: "Calculs de l'Abjad, kashf, métaphysique des 28 lettres arabes et carrés magiques (Awfaq).",
+          icon: "Layers",
+          color: "#8b5cf6"
+        },
+        {
+          id: "wirds_ahzab",
+          name: "Wirds & Ahzabs Sacrés",
+          description: "Litanies quotidiennes des maîtres, oraisons nocturnes et invocations majeures.",
+          icon: "BookOpen",
+          color: "#06b6d4"
+        }
+      ]
+    });
+  });
+
+  // 4. POST /api/v1/tools/abjad (Calculate authentic Grand Abjad for external websites)
+  app.post("/api/v1/tools/abjad", (req, res) => {
+    setPublicApiHeaders(res);
+    try {
+      const { text } = req.body;
+      if (!text || typeof text !== "string") {
+        return res.status(400).json({ success: false, error: "Le champ 'text' en arabe ou translittéré est requis." });
+      }
+
+      // Grand Abjad (Abjad al-Kabir) values table
+      const abjadMap: Record<string, number> = {
+        'ا': 1, 'أ': 1, 'إ': 1, 'آ': 1, 'ء': 1, 'ى': 1,
+        'ب': 2,
+        'ج': 3,
+        'د': 4,
+        'ه': 5, 'ة': 5,
+        'و': 6, 'ؤ': 6,
+        'ز': 7,
+        'ح': 8,
+        'ط': 9,
+        'ي': 10, 'ئ': 10,
+        'ك': 20,
+        'ل': 30,
+        'م': 40,
+        'ن': 50,
+        'س': 60,
+        'ع': 70,
+        'ف': 80,
+        'ص': 90,
+        'ق': 100,
+        'ر': 200,
+        'ش': 300,
+        'ت': 400,
+        'ث': 500,
+        'خ': 600,
+        'ذ': 700,
+        'ض': 800,
+        'ظ': 900,
+        'غ': 1000
+      };
+
+      // Elements mapping (Nâr = Feu, Turâb = Terre, Hawâ = Air, Mâ' = Eau)
+      const fireLetters = ['ا', 'ه', 'ط', 'م', 'ف', 'ش', 'ذ'];
+      const earthLetters = ['ب', 'و', 'ي', 'ن', 'ص', 'ت', 'ض'];
+      const airLetters = ['ج', 'ز', 'ك', 'س', 'ق', 'ث', 'ظ'];
+      const waterLetters = ['د', 'ح', 'ل', 'ع', 'ر', 'خ', 'غ'];
+
+      let total = 0;
+      const breakdown: { char: string; value: number }[] = [];
+      let fireCount = 0;
+      let earthCount = 0;
+      let airCount = 0;
+      let waterCount = 0;
+
+      for (const char of text) {
+        if (abjadMap[char] !== undefined) {
+          const val = abjadMap[char];
+          total += val;
+          breakdown.push({ char, value: val });
+
+          if (fireLetters.includes(char)) fireCount++;
+          if (earthLetters.includes(char)) earthCount++;
+          if (airLetters.includes(char)) airCount++;
+          if (waterLetters.includes(char)) waterCount++;
+        }
+      }
+
+      // Elemental dominance
+      let dominantElement = "Équilibré";
+      const maxCount = Math.max(fireCount, earthCount, airCount, waterCount);
+      if (maxCount > 0) {
+        if (fireCount === maxCount) dominantElement = "Feu (Nâr - Énergie & Puissance)";
+        else if (waterCount === maxCount) dominantElement = "Eau (Mâ' - Douceur & Guérison)";
+        else if (airCount === maxCount) dominantElement = "Air (Hawâ - Esprit & Éveil)";
+        else if (earthCount === maxCount) dominantElement = "Terre (Turâb - Stabilité & Ancrage)";
+      }
+
+      res.json({
+        success: true,
+        inputText: text,
+        grandAbjadTotal: total,
+        lettersCount: breakdown.length,
+        dominantElement,
+        elementalBreakdown: {
+          fire: fireCount,
+          earth: earthCount,
+          air: airCount,
+          water: waterCount
+        },
+        breakdown
+      });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message || "Erreur de calcul" });
+    }
+  });
+
+  // 5. GET /api/v1/tools/asma-ul-husna (The 99 Divine Names API)
+  app.get("/api/v1/tools/asma-ul-husna", (req, res) => {
+    setPublicApiHeaders(res);
+    const names = [
+      { id: 1, arabic: "الرَّحْمَنُ", transliteration: "Ar-Rahman", translation: "Le Tout-Miséricordieux", abjad: 298, benefit: "Pour obtenir la miséricorde divine et adoucir les cœurs." },
+      { id: 2, arabic: "الرَّحِيمُ", transliteration: "Ar-Rahim", translation: "Le Très-Miséricordieux", abjad: 258, benefit: "Attire la bienveillance et la protection contre toute adversité." },
+      { id: 3, arabic: "المَلِكُ", transliteration: "Al-Malik", translation: "Le Souverain Suprême", abjad: 90, benefit: "Confère autorité, respect et indépendance financière." },
+      { id: 4, arabic: "القُدُّوسُ", transliteration: "Al-Quddus", translation: "L'Infiniment Pur", abjad: 170, benefit: "Purifie l'âme des souillures et apaise les tourments intérieurs." },
+      { id: 5, arabic: "السَّلَامُ", transliteration: "As-Salam", translation: "La Paix et le Salut", abjad: 131, benefit: "Guérison des malades et sécurité face aux ennemis." },
+      { id: 6, arabic: "المُؤْمِنُ", transliteration: "Al-Mu'min", translation: "Le Dispensateur de Sérénité", abjad: 137, benefit: "Protection absolue contre la peur et l'oppression." },
+      { id: 16, arabic: "الوَهَّابُ", transliteration: "Al-Wahhab", translation: "Le Dispensateur Prodigue", abjad: 14, benefit: "Ouverture providentielle et soulagement des indigences." },
+      { id: 17, arabic: "الرَّزَّاقُ", transliteration: "Ar-Razzaq", translation: "Le Grand Pourvoyeur", abjad: 308, benefit: "Abondance de la subsistance licite et opportunités bénies." },
+      { id: 18, arabic: "الفَتَّاحُ", transliteration: "Al-Fattah", translation: "L'Illustre Ouvreur", abjad: 489, benefit: "Dénouement des situations bloquées et victoire." },
+      { id: 30, arabic: "اللَّطِيفُ", transliteration: "Al-Latif", translation: "Le Subtil & Infiniment Doux", abjad: 129, benefit: "Résolution miraculeuse des détresses et paix profonde." }
+    ];
+
+    const { search } = req.query;
+    let filtered = names;
+    if (search && typeof search === "string") {
+      const q = search.toLowerCase();
+      filtered = names.filter(n => n.transliteration.toLowerCase().includes(q) || n.translation.toLowerCase().includes(q) || n.arabic.includes(q));
+    }
+
+    res.json({
+      success: true,
+      count: filtered.length,
+      data: filtered
+    });
+  });
+
+  // 6. GET /api/v1/tools/daily-wird (Daily Wird / Sacred Litany of the Day)
+  app.get("/api/v1/tools/daily-wird", (req, res) => {
+    setPublicApiHeaders(res);
+    const dayIndex = new Date().getDay(); // 0 = Sunday, 1 = Monday...
+    const dailyWirds = [
+      {
+        day: "Dimanche",
+        arabicTitle: "يَا حَيُّ يَا قَيُّومُ",
+        transliteration: "Ya Hayyu Ya Qayyum",
+        translation: "Ô Vivant, Ô Subsistant par Soi",
+        repetitions: 450,
+        benefit: "Revitalise l'énergie spirituelle, protège l'esprit de l'oubli et attire la subsistance."
+      },
+      {
+        day: "Lundi",
+        arabicTitle: "اللَّهُمَّ صَلِّ عَلَى سَيِّدِنَا مُحَمَّدٍ",
+        transliteration: "Salawat Alan Nabi",
+        translation: "Prière et salutations sur le Prophète bien-aimé",
+        repetitions: 1000,
+        benefit: "Effacement des péchés, exaucement des prières et illumination du visage."
+      },
+      {
+        day: "Mardi",
+        arabicTitle: "أَسْتَغْفِرُ اللَّهَ الْعَظِيمَ وَأَتُوبُ إِلَيْهِ",
+        transliteration: "Astaghfirullah Al-Azim",
+        translation: "Je demande pardon à Allah l'Immense et je me repens à Lui",
+        repetitions: 1000,
+        benefit: "Dissolution des blocages karmiques, purification du cœur et pluie de bénédictions."
+      },
+      {
+        day: "Mercredi",
+        arabicTitle: "لَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِاللَّهِ الْعَلِيِّ الْعَظِيمِ",
+        transliteration: "La Hawla Wa La Quwwata Illa Billah",
+        translation: "Il n'y a de force ni de puissance que par Allah le Très-Haut",
+        repetitions: 100,
+        benefit: "Trésor du Paradis qui guérit 99 maux dont le moindre est l'angoisse."
+      },
+      {
+        day: "Jeudi",
+        arabicTitle: "سُبْحَانَ اللَّهِ وَبِحَمْدِهِ سُبْحَانَ اللَّهِ الْعَظِيمِ",
+        transliteration: "Subhanallahi Wa Bihamdihi Subhanallahil Azim",
+        translation: "Gloire à Allah et Louange à Lui, Gloire à Allah l'Immense",
+        repetitions: 300,
+        benefit: "Légère sur la langue, lourde sur la Balance au Jour dernier."
+      },
+      {
+        day: "Vendredi",
+        arabicTitle: "يَا اللَّهُ يَا رَحْمَٰنُ يَا رَحِيمُ",
+        transliteration: "Ya Allah Ya Rahman Ya Rahim",
+        translation: "Ô Allah, Ô Miséricordieux, Ô Clément",
+        repetitions: 1000,
+        benefit: "Heure d'exaucement du vendredi, ouverture des portes célestes et paix."
+      },
+      {
+        day: "Samedi",
+        arabicTitle: "لَا إِلَٰهَ إِلَّا اللَّهُ وَحْدَهُ لَا شَرِيكَ لَهُ",
+        transliteration: "La Ilaha Illallah Wahdahu La Sharika Lah",
+        translation: "Nulle divinité digne d'adoration sauf Allah, l'Unique sans associé",
+        repetitions: 1000,
+        benefit: "La parole la plus noble, rempart inébranlable contre le diable."
+      }
+    ];
+
+    res.json({
+      success: true,
+      today: dailyWirds[dayIndex],
+      date: new Date().toISOString()
+    });
+  });
+
+  // 7. GET /api/v1/embed/daily-wird (Embeddable Widget for external websites / blogs / WordPress)
+  app.get("/api/v1/embed/daily-wird", (req, res) => {
+    setPublicApiHeaders(res);
+    const dayIndex = new Date().getDay();
+    const days = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
+    const formulas = [
+      { ar: "يَا حَيُّ يَا قَيُّومُ", rep: "450 fois", fr: "Ô Vivant, Ô Subsistant" },
+      { ar: "اللَّهُمَّ صَلِّ عَلَى سَيِّدِنَا مُحَمَّدٍ", rep: "1000 fois", fr: "Salawat sur le Prophète ﷺ" },
+      { ar: "أَسْتَغْفِرُ اللَّهَ الْعَظِيمَ", rep: "1000 fois", fr: "Istighfar (Demande de Pardon)" },
+      { ar: "لَا حَوْلَ وَلَا قُوَّةَ إِلَّا بِاللَّهِ", rep: "100 fois", fr: "La Hawla Wa La Quwwata" },
+      { ar: "سُبْحَانَ اللَّهِ وَبِحَمْدِهِ", rep: "300 fois", fr: "Tasbih & Tahmid" },
+      { ar: "يَا اللَّهُ يَا رَحْمَٰنُ يَا رَحِيمُ", rep: "1000 fois", fr: "Noms d'Amour & Miséricorde" },
+      { ar: "لَا إِلَٰهَ إِلَّا اللَّهُ", rep: "1000 fois", fr: "Tawhid Suprême" }
+    ];
+
+    const current = formulas[dayIndex];
+    const todayName = days[dayIndex];
+
+    const html = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wird du Jour - AsrarHub Widget</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, -apple-system, sans-serif; }
+    body { background: transparent; padding: 12px; }
+    .card {
+      background: linear-gradient(135deg, #064e3b 0%, #022c22 100%);
+      color: #fff;
+      border-radius: 18px;
+      padding: 16px 20px;
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .badge {
+      display: inline-block;
+      background: rgba(16, 185, 129, 0.25);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: #6ee7b7;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 8px;
+    }
+    .arabic {
+      font-size: 24px;
+      font-weight: 700;
+      color: #fef08a;
+      direction: rtl;
+      margin: 8px 0;
+      line-height: 1.4;
+    }
+    .fr { font-size: 13px; color: #d1fae5; margin-bottom: 6px; }
+    .rep { font-size: 12px; font-weight: 800; color: #a7f3d0; background: rgba(0,0,0,0.3); padding: 4px 12px; border-radius: 12px; display: inline-block; }
+    .footer { margin-top: 10px; font-size: 10px; color: rgba(255,255,255,0.6); display: flex; justify-content: space-between; align-items: center; }
+    .footer a { color: #6ee7b7; text-decoration: none; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="badge">📿 Wird du ${todayName}</div>
+    <div class="arabic">${current.ar}</div>
+    <div class="fr">${current.fr}</div>
+    <div class="rep">Récitation : ${current.rep}</div>
+    <div class="footer">
+      <span>Alimenté par AsrarHub API</span>
+      <a href="https://asrarhub.com" target="_blank" rel="noopener">Découvrir le secret &rarr;</a>
+    </div>
+  </div>
+</body>
+</html>`;
+
+    res.setHeader("Content-Type", "text/html; charset=utf-8");
+    res.send(html);
   });
 
   // Proxy for Quran audio files to avoid browser CORS restrictions during Web Audio decoding
@@ -96,6 +1386,596 @@ async function startServer() {
     } catch (error: any) {
       console.error("Quran audio proxy error:", error);
       res.status(500).send("Error proxying audio");
+    }
+  });
+
+  // --- PDF & Community Files Storage Subsystems ---
+  const uploadsPdfsDir = path.resolve(process.cwd(), "public", "uploads", "pdfs");
+  if (!fs.existsSync(uploadsPdfsDir)) {
+    try {
+      fs.mkdirSync(uploadsPdfsDir, { recursive: true });
+    } catch (e) {
+      console.warn("Could not create uploads/pdfs directory:", e);
+    }
+  }
+
+  const distUploadsPdfsDir = path.resolve(process.cwd(), "dist", "uploads", "pdfs");
+  if (fs.existsSync(path.resolve(process.cwd(), "dist")) && !fs.existsSync(distUploadsPdfsDir)) {
+    try {
+      fs.mkdirSync(distUploadsPdfsDir, { recursive: true });
+    } catch (e) {}
+  }
+
+  const uploadsCommunityDir = path.resolve(process.cwd(), "public", "uploads", "community");
+  if (!fs.existsSync(uploadsCommunityDir)) {
+    try {
+      fs.mkdirSync(uploadsCommunityDir, { recursive: true });
+    } catch (e) {
+      console.warn("Could not create uploads/community directory:", e);
+    }
+  }
+
+  const distUploadsCommunityDir = path.resolve(process.cwd(), "dist", "uploads", "community");
+  if (fs.existsSync(path.resolve(process.cwd(), "dist")) && !fs.existsSync(distUploadsCommunityDir)) {
+    try {
+      fs.mkdirSync(distUploadsCommunityDir, { recursive: true });
+    } catch (e) {}
+  }
+
+  // Helper: Determine MIME type from file extension
+  const getMimeTypeFromFilename = (filename: string): string => {
+    const ext = path.extname(filename).toLowerCase();
+    switch (ext) {
+      case ".pdf": return "application/pdf";
+      case ".doc": return "application/msword";
+      case ".docx": return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+      case ".xls": return "application/vnd.ms-excel";
+      case ".xlsx": return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+      case ".csv": return "text/csv; charset=utf-8";
+      case ".txt": return "text/plain; charset=utf-8";
+      case ".json": return "application/json; charset=utf-8";
+      case ".zip": return "application/zip";
+      case ".rar": return "application/x-rar-compressed";
+      case ".mp3": return "audio/mpeg";
+      case ".wav": return "audio/wav";
+      case ".m4a": return "audio/mp4";
+      case ".ogg": return "audio/ogg";
+      case ".mp4": return "video/mp4";
+      case ".webm": return "video/webm";
+      case ".png": return "image/png";
+      case ".jpg":
+      case ".jpeg": return "image/jpeg";
+      case ".webp": return "image/webp";
+      case ".gif": return "image/gif";
+      case ".svg": return "image/svg+xml";
+      default: return "application/octet-stream";
+    }
+  };
+
+  // Serve static uploads
+  app.use("/uploads", express.static(path.resolve(process.cwd(), "public", "uploads")));
+
+  // API to upload Community Files (PDFs, Docs, Media) - Persistent, fast, accessible across all devices
+  app.post("/api/community/upload", (req, res) => {
+    try {
+      const { fileName, fileData, fileType } = req.body;
+      if (!fileName || !fileData) {
+        return res.status(400).json({ error: "fileName et fileData requis" });
+      }
+
+      const rawExt = path.extname(fileName) || "";
+      const baseNameWithoutExt = path.basename(fileName, rawExt);
+      const cleanBaseName = baseNameWithoutExt.replace(/[^a-zA-Z0-9_-]/g, "_").substring(0, 80);
+      const cleanExt = rawExt.toLowerCase().replace(/[^a-z0-9.]/g, "") || (fileType === "document" ? ".pdf" : "");
+      const uniqueName = `${Date.now()}_${cleanBaseName}${cleanExt}`;
+      const filePath = path.join(uploadsCommunityDir, uniqueName);
+
+      // Strip Base64 data header if present
+      const base64Data = fileData.replace(/^data:[^;]+;base64,/, "");
+      const buffer = Buffer.from(base64Data, "base64");
+
+      fs.writeFileSync(filePath, buffer);
+
+      try {
+        if (fs.existsSync(path.resolve(process.cwd(), "dist", "uploads", "community"))) {
+          fs.writeFileSync(path.join(distUploadsCommunityDir, uniqueName), buffer);
+        }
+      } catch (copyErr) {}
+
+      const relativeUrl = `/api/community/file/${uniqueName}`;
+      const staticUrl = `/uploads/community/${uniqueName}`;
+
+      return res.json({
+        success: true,
+        url: relativeUrl,
+        staticUrl,
+        filename: uniqueName,
+        originalName: fileName,
+        size: buffer.length
+      });
+    } catch (err: any) {
+      console.error("Error uploading community file:", err);
+      return res.status(500).json({ error: err?.message || "Erreur téléversement fichier communauté" });
+    }
+  });
+
+  // API to safely serve community files inline for viewer, iframe, and download
+  app.get("/api/community/file/:filename", (req, res) => {
+    try {
+      const filename = path.basename(req.params.filename);
+      let targetPath = path.join(uploadsCommunityDir, filename);
+
+      if (!fs.existsSync(targetPath)) {
+        targetPath = path.join(distUploadsCommunityDir, filename);
+      }
+
+      if (!fs.existsSync(targetPath)) {
+        // Also check pdfs dir as fallback
+        targetPath = path.join(uploadsPdfsDir, filename);
+      }
+
+      if (!fs.existsSync(targetPath)) {
+        return res.status(404).send("Fichier communauté introuvable sur le serveur");
+      }
+
+      const mimeType = getMimeTypeFromFilename(filename);
+      res.setHeader("Content-Type", mimeType);
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      res.setHeader("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
+      res.setHeader("Access-Control-Allow-Headers", "*");
+      res.setHeader("Content-Disposition", `inline; filename="${filename}"`);
+      res.sendFile(targetPath);
+    } catch (err: any) {
+      console.error("Error serving community file:", err);
+      res.status(500).send("Erreur lors de la lecture du fichier");
+    }
+  });
+
+  // API to download community file as attachment
+  app.get("/api/community/file/:filename/download", (req, res) => {
+    try {
+      const filename = path.basename(req.params.filename);
+      let targetPath = path.join(uploadsCommunityDir, filename);
+
+      if (!fs.existsSync(targetPath)) {
+        targetPath = path.join(distUploadsCommunityDir, filename);
+      }
+
+      if (!fs.existsSync(targetPath)) {
+        targetPath = path.join(uploadsPdfsDir, filename);
+      }
+
+      if (!fs.existsSync(targetPath)) {
+        return res.status(404).send("Fichier introuvable pour le téléchargement");
+      }
+
+      const mimeType = getMimeTypeFromFilename(filename);
+      res.setHeader("Content-Type", mimeType);
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      res.sendFile(targetPath);
+    } catch (err: any) {
+      console.error("Error downloading community file:", err);
+      res.status(500).send("Erreur lors du téléchargement");
+    }
+  });
+
+  // API to upload PDF document (persistent across all sessions, users, and devices)
+  app.post("/api/pdf/upload-binary", express.raw({ type: "*/*", limit: "100mb" }), (req, res) => {
+    try {
+      const rawFileName = req.headers["x-file-name"] || `doc_${Date.now()}.pdf`;
+      const cleanFileName = decodeURIComponent(String(rawFileName)).replace(/[^a-zA-Z0-9._-]/g, "_");
+      const uniqueName = `${Date.now()}_${cleanFileName}`;
+      const filePath = path.join(uploadsPdfsDir, uniqueName);
+
+      const buffer = Buffer.isBuffer(req.body) ? req.body : Buffer.from(req.body);
+      if (!buffer || buffer.length === 0) {
+        return res.status(400).json({ error: "Fichier PDF vide ou non reçu" });
+      }
+
+      fs.writeFileSync(filePath, buffer);
+
+      try {
+        if (fs.existsSync(path.resolve(process.cwd(), "dist", "uploads", "pdfs"))) {
+          fs.writeFileSync(path.join(distUploadsPdfsDir, uniqueName), buffer);
+        }
+      } catch (copyErr) {}
+
+      const relativeUrl = `/api/pdf/file/${uniqueName}`;
+      return res.json({
+        success: true,
+        url: relativeUrl,
+        filename: uniqueName,
+        size: buffer.length
+      });
+    } catch (err: any) {
+      console.error("Error uploading binary PDF:", err);
+      return res.status(500).json({ error: err?.message || "Erreur téléversement binaire" });
+    }
+  });
+
+  app.post("/api/pdf/upload", (req, res) => {
+    try {
+      const { fileName, fileData } = req.body;
+      if (!fileName || !fileData) {
+        return res.status(400).json({ error: "fileName et fileData requis" });
+      }
+
+      const cleanFileName = fileName.replace(/[^a-zA-Z0-9._-]/g, "_");
+      const uniqueName = `${Date.now()}_${cleanFileName}`;
+      const filePath = path.join(uploadsPdfsDir, uniqueName);
+
+      const base64Data = fileData.replace(/^data:application\/pdf;base64,/, "").replace(/^data:[^;]+;base64,/, "");
+      const buffer = Buffer.from(base64Data, "base64");
+
+      fs.writeFileSync(filePath, buffer);
+
+      try {
+        if (fs.existsSync(path.resolve(process.cwd(), "dist", "uploads", "pdfs"))) {
+          fs.writeFileSync(path.join(distUploadsPdfsDir, uniqueName), buffer);
+        }
+      } catch (copyErr) {}
+
+      const relativeUrl = `/api/pdf/file/${uniqueName}`;
+      return res.json({
+        success: true,
+        url: relativeUrl,
+        filename: uniqueName,
+        size: buffer.length
+      });
+    } catch (err: any) {
+      console.error("Error uploading PDF:", err);
+      return res.status(500).json({ error: err?.message || "Erreur téléversement PDF" });
+    }
+  });
+
+  // API to safely serve PDF document inline for iframe, viewer, and mobile download
+  app.get("/api/pdf/file/:filename", (req, res) => {
+    try {
+      const filename = path.basename(req.params.filename);
+      let targetPath = path.join(uploadsPdfsDir, filename);
+
+      if (!fs.existsSync(targetPath)) {
+        targetPath = path.join(distUploadsPdfsDir, filename);
+      }
+
+      if (!fs.existsSync(targetPath)) {
+        // Check if there is a custom PDF entry with a remote downloadUrl or cloud backup
+        const list = readCustomPdfs();
+        const found = list.find((p: any) => p.pdfUrl?.includes(filename) || p.id === filename.split('_')[0]);
+        if (found && (found.downloadUrl || found.cloudUrl) && !found.downloadUrl?.includes(filename)) {
+          const redirectUrl = found.downloadUrl || found.cloudUrl;
+          return res.redirect(redirectUrl);
+        }
+
+        res.setHeader("Content-Type", "text/html; charset=utf-8");
+        return res.status(404).send(`
+          <!DOCTYPE html>
+          <html lang="fr">
+            <head>
+              <meta charset="utf-8">
+              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+              <title>Document PDF indisponible</title>
+              <style>
+                body {
+                  margin: 0;
+                  padding: 24px 16px;
+                  background: #090d16;
+                  color: #e2e8f0;
+                  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  min-height: 100vh;
+                  box-sizing: border-box;
+                }
+                .card {
+                  background: #111827;
+                  border: 1px solid #1f2937;
+                  border-radius: 20px;
+                  padding: 28px 24px;
+                  max-width: 440px;
+                  text-align: center;
+                  box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+                }
+                .icon {
+                  width: 50px;
+                  height: 50px;
+                  border-radius: 16px;
+                  background: rgba(245, 158, 11, 0.15);
+                  border: 1px solid rgba(245, 158, 11, 0.3);
+                  color: #fbbf24;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  margin: 0 auto 16px;
+                  font-size: 22px;
+                }
+                h2 { margin: 0 0 10px; font-size: 16px; font-weight: 700; color: #f8fafc; }
+                p { margin: 0 0 20px; font-size: 13px; color: #94a3b8; line-height: 1.6; }
+                .btn {
+                  display: inline-block;
+                  padding: 12px 20px;
+                  border-radius: 12px;
+                  background: #059669;
+                  color: #ffffff;
+                  font-weight: 700;
+                  font-size: 13px;
+                  text-decoration: none;
+                  transition: background 0.2s;
+                }
+                .btn:hover { background: #10b981; }
+              </style>
+            </head>
+            <body>
+              <div class="card">
+                <div class="icon">⚠️</div>
+                <h2>Fichier PDF à recharger</h2>
+                <p>
+                  Ce fichier a été enregistré sur le stockage temporaire du serveur avant son redémarrage.
+                  En tant qu'administrateur, vous pouvez le <strong>re-téléverser</strong> ou renseigner un <strong>lien Cloud permanent (Google Drive ou Firebase)</strong> dans l'administration.
+                </p>
+                <a href="/#/admin" class="btn">Accéder à l'Administration PDF</a>
+              </div>
+            </body>
+          </html>
+        `);
+      }
+
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      res.setHeader("Access-Control-Allow-Headers", "*");
+      res.setHeader("Content-Disposition", `inline; filename="${filename}"`);
+      res.sendFile(targetPath);
+    } catch (err: any) {
+      console.error("Error serving PDF file:", err);
+      res.status(500).send("Erreur lors de la lecture du fichier PDF");
+    }
+  });
+
+  // API proxy to stream remote PDFs (prevents CORS & iframe blocking from external CDNs)
+  app.get("/api/pdf/proxy", async (req, res) => {
+    try {
+      const { url } = req.query;
+      if (!url || typeof url !== "string") {
+        return res.status(400).send("Paramètre url manquant");
+      }
+
+      let targetUrl = url.trim();
+
+      // Transform Google Drive viewer/open links into direct download links
+      if (targetUrl.includes("drive.google.com") || targetUrl.includes("docs.google.com")) {
+        const driveFileMatch = targetUrl.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+        const driveIdMatch = targetUrl.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+        const fileId = (driveFileMatch && driveFileMatch[1]) || (driveIdMatch && driveIdMatch[1]);
+        if (fileId) {
+          targetUrl = `https://drive.google.com/uc?export=download&id=${fileId}`;
+        }
+      }
+
+      const parsedUrl = new URL(targetUrl);
+      if (!["http:", "https:"].includes(parsedUrl.protocol)) {
+        return res.status(400).send("Protocole invalide");
+      }
+
+      // If requested file is archive.org and points to a storage node, prefer the primary download gateway
+      if (parsedUrl.hostname.includes("archive.org") && parsedUrl.hostname.startsWith("ia")) {
+        const itemMatch = targetUrl.match(/\/items\/([^\/]+)\/(.+)$/);
+        if (itemMatch) {
+          targetUrl = `https://archive.org/download/${itemMatch[1]}/${itemMatch[2]}`;
+        }
+      }
+
+      let pdfRes: Response | null = null;
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 7000);
+
+        pdfRes = await fetch(targetUrl, {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "application/pdf,*/*"
+          },
+          redirect: 'follow',
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+      } catch (fetchErr: any) {
+        console.warn(`[PDF Proxy] Upstream fetch notice for ${parsedUrl.hostname}: ${fetchErr?.message}`);
+        // Fallback for demo or archive.org documents to local sample PDF
+        const sampleFallbackPath = path.resolve(process.cwd(), "public", "samples", "manuscript_sample.pdf");
+        if (fs.existsSync(sampleFallbackPath)) {
+          res.setHeader("Content-Type", "application/pdf");
+          res.setHeader("Access-Control-Allow-Origin", "*");
+          res.setHeader("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
+          res.setHeader("Access-Control-Allow-Headers", "*");
+          res.setHeader("Content-Disposition", "inline");
+          return res.sendFile(sampleFallbackPath);
+        }
+        return res.status(504).send("Délai d'attente dépassé lors de la connexion au serveur PDF distant");
+      }
+
+      // Handle Google Drive virus scan warning / download confirmation page for large files
+      const contentType = pdfRes.headers.get("content-type") || "";
+      if (contentType.includes("text/html") && targetUrl.includes("drive.google.com")) {
+        const html = await pdfRes.text();
+        const confirmMatch = html.match(/confirm=([0-9A-Za-z_-]+)/) || html.match(/name="confirm"\s+value="([^"]+)"/);
+        if (confirmMatch && confirmMatch[1]) {
+          const cookieHeader = pdfRes.headers.get("set-cookie") || "";
+          const confirmedUrl = `${targetUrl}&confirm=${confirmMatch[1]}`;
+          try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 7000);
+            pdfRes = await fetch(confirmedUrl, {
+              headers: {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                "Accept": "application/pdf,*/*",
+                "Cookie": cookieHeader
+              },
+              signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+          } catch (driveErr) {
+            console.warn('[PDF Proxy] Google Drive confirm fetch notice:', driveErr);
+          }
+        }
+      }
+
+      if (!pdfRes.ok) {
+        // If remote server returned 503 or error, fallback to local sample PDF if available
+        const sampleFallbackPath = path.resolve(process.cwd(), "public", "samples", "manuscript_sample.pdf");
+        if (fs.existsSync(sampleFallbackPath)) {
+          res.setHeader("Content-Type", "application/pdf");
+          res.setHeader("Access-Control-Allow-Origin", "*");
+          res.setHeader("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
+          res.setHeader("Access-Control-Allow-Headers", "*");
+          res.setHeader("Content-Disposition", "inline");
+          return res.sendFile(sampleFallbackPath);
+        }
+        return res.status(pdfRes.status).send("Échec de la récupération du PDF externe");
+      }
+
+      const arrayBuffer = await pdfRes.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      res.setHeader("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS");
+      res.setHeader("Access-Control-Allow-Headers", "*");
+      res.setHeader("Access-Control-Expose-Headers", "Content-Length, Content-Range, Accept-Ranges");
+      res.setHeader("Accept-Ranges", "bytes");
+      res.setHeader("Content-Disposition", "inline");
+      res.setHeader("Cache-Control", "public, max-age=86400");
+      res.send(buffer);
+    } catch (error: any) {
+      console.warn("[PDF Proxy] Operational notice:", error?.message || error);
+      const sampleFallbackPath = path.resolve(process.cwd(), "public", "samples", "manuscript_sample.pdf");
+      if (fs.existsSync(sampleFallbackPath)) {
+        res.setHeader("Content-Type", "application/pdf");
+        res.setHeader("Access-Control-Allow-Origin", "*");
+        res.setHeader("Content-Disposition", "inline");
+        return res.sendFile(sampleFallbackPath);
+      }
+      res.status(500).send("Erreur lors de la lecture du document PDF distant");
+    }
+  });
+
+  // Local persistent catalog file path for offline / server resilience
+  const customPdfsFilePath = path.resolve(process.cwd(), "public", "uploads", "custom_pdfs.json");
+  const readCustomPdfs = (): any[] => {
+    try {
+      if (fs.existsSync(customPdfsFilePath)) {
+        const raw = fs.readFileSync(customPdfsFilePath, "utf-8");
+        return JSON.parse(raw);
+      }
+    } catch (e) {
+      console.warn("Could not read custom_pdfs.json:", e);
+    }
+    return [];
+  };
+
+  const writeCustomPdfs = (items: any[]) => {
+    try {
+      fs.writeFileSync(customPdfsFilePath, JSON.stringify(items, null, 2), "utf-8");
+      // Sync to dist if in production
+      const distFilePath = path.resolve(process.cwd(), "dist", "uploads", "custom_pdfs.json");
+      if (fs.existsSync(path.resolve(process.cwd(), "dist", "uploads"))) {
+        fs.writeFileSync(distFilePath, JSON.stringify(items, null, 2), "utf-8");
+      }
+    } catch (e) {
+      console.warn("Could not write custom_pdfs.json:", e);
+    }
+  };
+
+  // API to save or update PDF document securely on the server
+  app.post("/api/admin/pdf/save", async (req, res) => {
+    try {
+      const { pdfData, downloadUrl } = req.body;
+      if (!pdfData || !pdfData.id || !pdfData.title) {
+        return res.status(400).json({ error: "Données de document PDF incomplètes (id et title requis)" });
+      }
+
+      const id = pdfData.id;
+
+      // 1. Persist to local JSON storage first (failsafe, instantaneous, tamper-proof)
+      const existingList = readCustomPdfs();
+      const idx = existingList.findIndex((p: any) => p.id === id);
+      if (idx >= 0) {
+        existingList[idx] = { ...existingList[idx], ...pdfData, updatedAt: new Date().toISOString() };
+      } else {
+        existingList.unshift({ ...pdfData, publishedAt: pdfData.publishedAt || new Date().toISOString() });
+      }
+      writeCustomPdfs(existingList);
+
+      // 2. Try Firestore Firebase Admin if configured
+      let firestoreSynced = false;
+      const adminDb = getDb();
+      if (adminDb) {
+        try {
+          await adminDb.collection("pdf_documents").doc(id).set(pdfData, { merge: true });
+          if (downloadUrl || pdfData.pdfUrl) {
+            await adminDb.collection("pdf_download_links").doc(id).set({
+              pdfId: id,
+              downloadUrl: downloadUrl || pdfData.pdfUrl,
+              pdfUrl: downloadUrl || pdfData.pdfUrl,
+              title: pdfData.title,
+              isPremium: !!pdfData.isPremium,
+              isForSale: !!pdfData.isForSale,
+              freeForVip: !!pdfData.freeForVip,
+              price: Number(pdfData.price) || 0,
+              updatedAt: Timestamp.now()
+            }, { merge: true });
+          }
+          firestoreSynced = true;
+        } catch (dbErr: any) {
+          console.warn("Firebase Admin Firestore sync notice:", dbErr?.message || dbErr);
+        }
+      }
+
+      return res.json({
+        success: true,
+        pdf: pdfData,
+        firestoreSynced,
+        message: "Document PDF sauvegardé avec succès"
+      });
+    } catch (err: any) {
+      console.error("Error saving PDF on server:", err);
+      return res.status(500).json({ error: err?.message || "Erreur serveur lors de la sauvegarde du PDF" });
+    }
+  });
+
+  // API to delete a PDF document
+  app.post("/api/admin/pdf/delete", async (req, res) => {
+    try {
+      const { id } = req.body;
+      if (!id) return res.status(400).json({ error: "ID requis" });
+
+      const existingList = readCustomPdfs();
+      const updated = existingList.filter((p: any) => p.id !== id);
+      writeCustomPdfs(updated);
+
+      const adminDb = getDb();
+      if (adminDb) {
+        try {
+          await adminDb.collection("pdf_documents").doc(id).delete();
+          await adminDb.collection("pdf_download_links").doc(id).delete();
+        } catch (e) {}
+      }
+
+      return res.json({ success: true, id });
+    } catch (err: any) {
+      return res.status(500).json({ error: err?.message || "Erreur suppression PDF" });
+    }
+  });
+
+  // API to retrieve custom server-saved PDFs
+  app.get("/api/pdf/custom-list", (req, res) => {
+    try {
+      const list = readCustomPdfs();
+      res.setHeader("Cache-Control", "no-cache");
+      return res.json({ success: true, pdfs: list });
+    } catch (e: any) {
+      return res.json({ success: true, pdfs: [] });
     }
   });
 

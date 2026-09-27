@@ -597,14 +597,14 @@ export const ArticleComments: React.FC<ArticleCommentsProps> = ({
             </p>
           </div>
         ) : (
-          parentComments.map((parent) => {
+          parentComments.map((parent, pIdx) => {
             const hasLiked = parent.likes?.includes(user?.uid || '') || false;
             const canDelete =
               isAdmin || (user && user.uid === parent.authorId);
             const replies = repliesMap[parent.id] || [];
 
             return (
-              <div key={parent.id} className="space-y-3">
+              <div key={parent.id ? `cmt-${parent.id}-${pIdx}` : `cmt-idx-${pIdx}`} className="space-y-3">
                 {/* Parent Comment Bubble */}
                 <div className="flex gap-3 items-start group">
                   {/* Author Avatar */}
@@ -692,14 +692,14 @@ export const ArticleComments: React.FC<ArticleCommentsProps> = ({
                 {/* Nested Replies List */}
                 {replies.length > 0 && (
                   <div className="pl-6 sm:pl-10 space-y-2.5 border-l-2 border-emerald-500/20 dark:border-emerald-500/10 ml-4.5">
-                    {replies.map((reply) => {
+                    {replies.map((reply, rIdx) => {
                       const hasLikedReply =
                         reply.likes?.includes(user?.uid || '') || false;
                       const canDeleteReply =
                         isAdmin || (user && user.uid === reply.authorId);
 
                       return (
-                        <div key={reply.id} className="flex gap-2.5 items-start group">
+                        <div key={reply.id ? `reply-${reply.id}-${rIdx}` : `reply-idx-${rIdx}`} className="flex gap-2.5 items-start group">
                           <div className="w-7 h-7 rounded-xl bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-200/60 dark:border-gray-700 flex items-center justify-center shrink-0 text-[11px] font-bold">
                             {reply.authorName?.charAt(0).toUpperCase() || 'R'}
                           </div>

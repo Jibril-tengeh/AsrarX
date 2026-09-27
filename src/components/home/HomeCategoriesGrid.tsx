@@ -7,7 +7,7 @@ import {
   LayoutList, Check, Grid2X2, Grid3X3
 } from 'lucide-react';
 import { CategoryItem } from '../../types';
-import { getCategoryFallbackThumbnail, getCategoryFallbackHook, getCategoryFallbackIcon, isMockCategory } from '../../data/defaultCategories';
+import { getCategoryFallbackThumbnail, getCategoryFallbackHook, getCategoryFallbackIcon, isMockCategory, getCanonicalCategories } from '../../data/defaultCategories';
 import { sanitizeImageSource } from '../../utils/articleImageUtils';
 import { CategoryDynamicIcon, CategoryVideoOrIconBadge } from '../common/CategoryDynamicIcon';
 import { 
@@ -86,37 +86,51 @@ export const HomeCategoriesGrid: React.FC<HomeCategoriesGridProps> = ({
     return (articleCounts[catNameLower] || 0) + (articleCounts[catIdLower] || 0);
   };
 
-  // Filter categories by search if provided, ensure only enabled categories are shown & deduplicate strictly
+  // Filter categories by search if provided, ensure all valid categories are shown & deduplicate strictly
   const filteredCategories = useMemo(() => {
-    // Only display categories where enabled !== false and exclude all mock/preset categories
-    let list = (categories || []).filter(cat => cat.enabled !== false && !isMockCategory(cat));
+    const catMap = new Map<string, any>();
 
-    // Fallback instantané : si la liste est vide (en attente de réponse réseau Firestore), synthétiser immédiatement les vraies catégories depuis les articles déjà en mémoire !
-    if (list.length === 0 && (!searchQuery || !searchQuery.trim()) && articles && articles.length > 0) {
-      const catMap = new Map<string, any>();
-      articles.forEach((art: any) => {
-        const rawName = (art.category || '').toString().trim();
-        if (!rawName || isMockCategory({ id: rawName, name: rawName })) return;
-        const key = rawName.toLowerCase();
+    // 1. Incorporate all categories passed via props
+    (categories || []).forEach(cat => {
+      if (cat.enabled === false) return;
+      const key = (cat.id || cat.name || '').toLowerCase().trim();
+      if (key) catMap.set(key, cat);
+    });
+
+    // 2. Automatically incorporate any category used by articles
+    (articles || []).forEach((art: any) => {
+      const rawName = (art.category || '').toString().trim();
+      if (!rawName) return;
+      const key = rawName.toLowerCase();
+      if (!catMap.has(key)) {
+        catMap.set(key, {
+          id: key,
+          name: rawName,
+          thumbnail: art.imageUrl || art.thumbnail || getCategoryFallbackThumbnail(rawName),
+          hook: getCategoryFallbackHook(rawName),
+          iconName: getCategoryFallbackIcon(rawName),
+          theme: key,
+          enabled: true,
+          isCustom: true,
+          subCategories: [],
+          createdAt: art.createdAt || Date.now()
+        });
+      }
+    });
+
+    // 3. Fallback: If still few, add canonical spiritual categories for rich instant UX
+    if (catMap.size <= 2) {
+      getCanonicalCategories().forEach(c => {
+        const key = (c.id || c.name || '').toLowerCase().trim();
         if (!catMap.has(key)) {
-          catMap.set(key, {
-            id: key,
-            name: rawName,
-            thumbnail: art.imageUrl || art.thumbnail || getCategoryFallbackThumbnail(rawName),
-            hook: getCategoryFallbackHook(rawName),
-            iconName: getCategoryFallbackIcon(rawName),
-            theme: key,
-            enabled: true,
-            isCustom: true,
-            subCategories: [],
-            createdAt: art.createdAt || Date.now()
-          });
+          catMap.set(key, c);
         }
       });
-      list = Array.from(catMap.values());
     }
 
-    if (searchQuery.trim()) {
+    let list = Array.from(catMap.values());
+
+    if (searchQuery && searchQuery.trim()) {
       const q = searchQuery.toLowerCase().trim();
       list = list.filter(cat => {
         const nameMatch = (cat.name || '').toLowerCase().includes(q)

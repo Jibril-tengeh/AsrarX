@@ -102,9 +102,14 @@ import {
   getSubCategoryFallbackHook,
   normalizeCategoryId,
   normalizeSubCategoryId,
-  isMockCategory
+  isMockCategory,
+  getCanonicalCategories
 } from '../../data/defaultCategories';
 import { PROMO_HOURS_OPTIONS, PROMO_HOURLY_OPTIONS, getPromoHourMessage, getPromoHourLabel, PromoDurationHours } from '../../utils/promoConfig';
+import { ArticleSecretItem } from '../../types';
+import { MultiSecretsBuilder } from '../../components/admin/MultiSecretsBuilder';
+import { MultiSecretArticleContent } from '../../components/article/MultiSecretArticleContent';
+import { AdminApiKeysManager } from '../../components/admin/AdminApiKeysManager';
 
 const LayoutSelector = ({ value, onChange, activeColor = 'emerald' }: { value: string, onChange: (val: string) => void, activeColor?: string }) => {
   const isEmerald = activeColor.includes('emerald');
@@ -178,7 +183,7 @@ const LayoutSelector = ({ value, onChange, activeColor = 'emerald' }: { value: s
   );
 };
 
-type AdminTab = 'overview' | 'pdf_documents' | 'branding' | 'floating_button' | 'version_control' | 'referrals' | 'promo_codes' | 'security' | 'support' | 'users' | 'payments' | 'community' | 'features' | 'reciters' | 'ruqyah' | 'content' | 'notifications' | 'settings' | 'articles' | 'store' | 'grand_oaths' | 'categories' | 'seals' | 'book_covers' | 'media_storage';
+type AdminTab = 'overview' | 'api_keys' | 'pdf_documents' | 'branding' | 'floating_button' | 'version_control' | 'referrals' | 'promo_codes' | 'security' | 'support' | 'users' | 'payments' | 'community' | 'features' | 'reciters' | 'ruqyah' | 'content' | 'notifications' | 'settings' | 'articles' | 'store' | 'grand_oaths' | 'categories' | 'seals' | 'book_covers' | 'media_storage';
 
 interface Article {
   id: string;
@@ -201,6 +206,7 @@ interface Article {
   author?: string;
   audioUrl?: string;
   audio_url?: string;
+  secrets?: ArticleSecretItem[];
 }
 
 interface Term {
@@ -248,6 +254,12 @@ interface CommunityPost {
   author: string;
   content: string;
   status: 'pending' | 'approved' | 'rejected';
+  attachments?: {
+    type?: string;
+    url: string;
+    fileName?: string;
+    fileSize?: string;
+  }[];
 }
 
 interface Notification {
@@ -888,8 +900,30 @@ export const AdminDashboard: React.FC = () => {
     title_ha: '', message_ha: ''
   });
 
-  // Categories State
-  const [categories, setCategories] = useState<any[]>([]);
+  // Categories State - instant 0ms availability of canonical spiritual categories
+  const [categories, setCategories] = useState<any[]>(() => {
+    const canonicals = getCanonicalCategories();
+    try {
+      let deletedIds: string[] = [];
+      try { deletedIds = JSON.parse(localStorage.getItem('asrarhub_deleted_categories') || '[]'); } catch (e) {}
+      const cached = localStorage.getItem('asrarhub_cached_categories');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const valid = parsed.filter((c: any) => !deletedIds.includes(c.id));
+          const catMap = new Map<string, any>();
+          canonicals.forEach(c => catMap.set((c.id || c.name || '').toLowerCase().trim(), c));
+          valid.forEach(c => {
+            const k = (c.id || c.name || '').toLowerCase().trim();
+            if (k) catMap.set(k, c);
+          });
+          const list = Array.from(catMap.values());
+          if (list.length > 0) return list;
+        }
+      }
+    } catch (e) {}
+    return canonicals;
+  });
   const [editingCategory, setEditingCategory] = useState<any | null>(null);
   const [editingSubCategory, setEditingSubCategory] = useState<{ categoryId: string; subId: string; name: string; name_en: string; name_ha: string } | null>(null);
   const [newCategory, setNewCategory] = useState({ name: '', name_en: '', name_ha: '' });
@@ -1372,63 +1406,72 @@ export const AdminDashboard: React.FC = () => {
       let deletedIds: string[] = [];
       try { deletedIds = JSON.parse(localStorage.getItem('asrarhub_deleted_categories') || '[]'); } catch (e) {}
 
-      if (!snapshot.empty) {
-        // Automatically delete any mock preset docs from Firestore so they never pollute
-        const mockDocs = snapshot.docs.filter(doc => isMockCategory({ ...doc.data(), id: doc.id }));
-        if (mockDocs.length > 0) {
-          for (const mDoc of mockDocs) {
-            try {
-              await deleteDoc(doc(db, 'categories', mDoc.id));
-            } catch (err) {
-              console.warn("Could not delete mock category doc in AdminDashboard:", mDoc.id, err);
-            }
-          }
-        }
+      const canonicals = getCanonicalCategories();
+      const catMap = new Map<string, any>();
+      canonicals.forEach(c => catMap.set((c.id || c.name || '').toLowerCase().trim(), c));
 
-        const list = snapshot.docs
-          .map(doc => {
-            const data = doc.data();
-            const catName = data.name || '';
-            const resolvedThumb = data.thumbnail || getCategoryFallbackThumbnail(catName);
-            const resolvedHook = data.hook || getCategoryFallbackHook(catName);
-            return {
-              ...data,
-              id: doc.id,
-              thumbnail: resolvedThumb,
-              hook: resolvedHook,
-              subCategories: (data.subCategories || []).map((s: any) => ({
-                ...s,
-                thumbnail: s.thumbnail || resolvedThumb,
-                hook: s.hook || getSubCategoryFallbackHook(s.name, catName)
-              }))
-            };
-          })
-          .filter((cat: any) => !deletedIds.includes(cat.id) && !isMockCategory(cat));
+      if (!snapshot.empty) {
+        snapshot.docs.forEach(doc => {
+          const data = doc.data();
+          const catName = data.name || '';
+          const resolvedThumb = data.thumbnail || getCategoryFallbackThumbnail(catName);
+          const resolvedHook = data.hook || getCategoryFallbackHook(catName);
+          const id = doc.id;
+          if (deletedIds.includes(id) || isMockCategory(data)) return;
+          const k = (id || catName).toLowerCase().trim();
+          catMap.set(k, {
+            ...data,
+            id,
+            thumbnail: resolvedThumb,
+            hook: resolvedHook,
+            subCategories: (data.subCategories || []).map((s: any) => ({
+              ...s,
+              thumbnail: s.thumbnail || resolvedThumb,
+              hook: s.hook || getSubCategoryFallbackHook(s.name, catName)
+            }))
+          });
+        });
+
+        const list = Array.from(catMap.values());
         list.sort((a: any, b: any) => (a.createdAt || 0) - (b.createdAt || 0));
         setCategories(list);
         try {
           localStorage.setItem('asrarhub_cached_categories', JSON.stringify(list));
         } catch (e) {}
       } else {
-        setCategories([]);
+        // If Firestore categories collection is empty, load canonical categories immediately without delay!
+        setCategories(canonicals);
         try {
-          localStorage.setItem('asrarhub_cached_categories', JSON.stringify([]));
+          localStorage.setItem('asrarhub_cached_categories', JSON.stringify(canonicals));
         } catch (e) {}
+        // Auto-seed canonical categories to Firestore so database has full categories structure
+        try {
+          canonicals.forEach(async (cat) => {
+            await setDoc(doc(db, 'categories', cat.id), cat, { merge: true });
+          });
+        } catch (seedErr) {
+          console.warn("Auto-seed canonical categories note:", seedErr);
+        }
       }
     }, (error) => {
       console.warn("Admin Categories listener note:", error);
       let deletedIds: string[] = [];
       try { deletedIds = JSON.parse(localStorage.getItem('asrarhub_deleted_categories') || '[]'); } catch (e) {}
 
+      const canonicals = getCanonicalCategories();
+      const catMap = new Map<string, any>();
+      canonicals.forEach(c => catMap.set((c.id || c.name || '').toLowerCase().trim(), c));
+
       fetchCategoriesFromRest().then(restCats => {
         if (Array.isArray(restCats) && restCats.length > 0) {
-          const list = restCats
-            .filter((c: any) => !isMockCategory(c))
-            .map((c: any) => {
+          restCats
+            .filter((c: any) => !isMockCategory(c) && !deletedIds.includes(c.id))
+            .forEach((c: any) => {
               const catName = c.name || '';
               const resolvedThumb = c.thumbnail || getCategoryFallbackThumbnail(catName);
               const resolvedHook = c.hook || getCategoryFallbackHook(catName);
-              return {
+              const k = (c.id || catName).toLowerCase().trim();
+              catMap.set(k, {
                 ...c,
                 thumbnail: resolvedThumb,
                 hook: resolvedHook,
@@ -1437,18 +1480,13 @@ export const AdminDashboard: React.FC = () => {
                   thumbnail: s.thumbnail || resolvedThumb,
                   hook: s.hook || getSubCategoryFallbackHook(s.name, catName)
                 }))
-              };
-            })
-            .filter((c: any) => !deletedIds.includes(c.id));
-          list.sort((a: any, b: any) => (a.createdAt || 0) - (b.createdAt || 0));
-          setCategories(list);
-          try { localStorage.setItem('asrarhub_cached_categories', JSON.stringify(list)); } catch (e) {}
-        } else {
-          let cached: any[] = [];
-          try { cached = JSON.parse(localStorage.getItem('asrarhub_cached_categories') || '[]'); } catch (e) {}
-          const filtered = cached.filter((c: any) => !deletedIds.includes(c.id) && !isMockCategory(c));
-          setCategories(filtered);
+              });
+            });
         }
+        const list = Array.from(catMap.values());
+        list.sort((a: any, b: any) => (a.createdAt || 0) - (b.createdAt || 0));
+        setCategories(list);
+        try { localStorage.setItem('asrarhub_cached_categories', JSON.stringify(list)); } catch (e) {}
       });
     });
 
@@ -2739,6 +2777,7 @@ export const AdminDashboard: React.FC = () => {
         isPremium: newArticle.isPremium || false,
         category: newArticle.category || 'wird',
         subCategory: (newArticle as any).subCategory || '',
+        secrets: (newArticle as any).secrets || [],
         audioUrl: effectiveAudioUrl,
         audio_url: effectiveAudioUrl,
         audioTitle: effectiveAudioTitle,
@@ -3042,6 +3081,7 @@ export const AdminDashboard: React.FC = () => {
       isPremium: (article as any).isPremium || false,
       category: (article as any).category || '',
       subCategory: (article as any).subCategory || '',
+      secrets: (article as any).secrets || [],
       audioUrl: (article as any).audioUrl || (article as any).audio_url || '',
       audio_url: (article as any).audioUrl || (article as any).audio_url || '',
       audioTitle: (article as any).audioTitle || '',
@@ -3296,6 +3336,7 @@ export const AdminDashboard: React.FC = () => {
       { id: 'referrals', label: 'Parrainage & Récompenses', icon: Gift },
       { id: 'promo_codes', label: 'Gestion des Codes Promo', icon: Tag, badge: promoCodes.length || undefined },
       { id: 'security', label: 'Sécurité & Alertes', icon: ShieldAlert, badge: securityAlerts.length || undefined },
+      { id: 'api_keys', label: 'Clés API & Débit', icon: Icons.Key },
       { id: 'support', label: 'Support & Emails', icon: Mail },
       { id: 'users', label: 'Utilisateurs', icon: Users },
       { id: 'payments', label: 'Paiements Directs', icon: CreditCard },
@@ -3327,8 +3368,8 @@ export const AdminDashboard: React.FC = () => {
             onChange={(e) => setActiveTab(e.target.value as AdminTab)}
             className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 py-3 text-sm font-bold text-gray-750 dark:text-gray-200 outline-none shadow-sm focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 cursor-pointer"
           >
-            {tabs.map((tab) => (
-              <option key={tab.id} value={tab.id} className="font-medium text-gray-700 dark:text-gray-200">
+            {tabs.map((tab, tIdx) => (
+              <option key={`tab-opt-${tab.id}-${tIdx}`} value={tab.id} className="font-medium text-gray-700 dark:text-gray-200">
                 {tab.label} {tab.badge ? `(${tab.badge})` : ''}
               </option>
             ))}
@@ -3337,9 +3378,9 @@ export const AdminDashboard: React.FC = () => {
 
         {/* Desktop/Tablet Horizontal Tabs List */}
         <div className="hidden md:flex overflow-x-auto pb-4 hide-scrollbar gap-2 max-w-full">
-          {tabs.map((tab) => (
+          {tabs.map((tab, tIdx) => (
             <button
-              key={tab.id}
+              key={`tab-btn-${tab.id}-${tIdx}`}
               onClick={() => setActiveTab(tab.id as AdminTab)}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors relative ${
                 activeTab === tab.id
@@ -3815,9 +3856,9 @@ export const AdminDashboard: React.FC = () => {
               { id: 'premium', label: '👑 Premium', count: premiumCount, color: 'text-purple-600 dark:text-purple-400' },
               { id: 'banned', label: '🔴 Bannis', count: bannedCount, color: 'text-red-600 dark:text-red-400' },
               { id: 'alerted', label: '⚠️ Avec Alertes', count: alertedCount, color: 'text-rose-600 dark:text-rose-400' },
-            ].map(tab => (
+            ].map((tab, tabIdx) => (
               <button
-                key={tab.id}
+                key={`user-status-tab-${tab.id}-${tabIdx}`}
                 type="button"
                 onClick={() => setUserStatusFilter(tab.id as any)}
                 className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer shrink-0 flex items-center gap-1.5 ${
@@ -8233,7 +8274,91 @@ export const AdminDashboard: React.FC = () => {
                     📜 Talasam / Carré
                   </button>
                 </div>
+
+                {/* Structure des Secrets Multiples & Sous-titres H3 */}
+                <div className="pt-2 border-t border-emerald-100 dark:border-emerald-900/50">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-800 dark:text-emerald-300 mb-1.5">
+                    <Layers size={13} />
+                    <span>Structure Multi-Secrets & Sous-titres H3 (fermé par défaut côté lecteur) :</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => insertSacredSnippet('<h2>Secret : Titre du Nouveau Secret</h2>')}
+                      className="px-2.5 py-1 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-700 transition-colors shadow-2xs cursor-pointer"
+                      title="Insérer un titre de Secret H2"
+                    >
+                      ➕ Secret (H2)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => insertSacredSnippet('<h3>OBJECTIF</h3><p>Précisez ici l\'objectif spirituel ou le but recherché...</p>')}
+                      className="px-2 py-1 bg-white dark:bg-gray-800 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 rounded-lg text-xs font-bold hover:bg-emerald-50 transition-colors cursor-pointer"
+                      title="Sous-titre H3 Objectif"
+                    >
+                      🎯 OBJECTIF (H3)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => insertSacredSnippet('<h3>EXEMPLE</h3><p>Exemple concret d\'application ou situation vécue...</p>')}
+                      className="px-2 py-1 bg-white dark:bg-gray-800 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-800 rounded-lg text-xs font-bold hover:bg-amber-50 transition-colors cursor-pointer"
+                      title="Sous-titre H3 Exemple"
+                    >
+                      💡 EXEMPLE (H3)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => insertSacredSnippet('<h3>ANNIYYA</h3><p>Formulation sacrée de l\'intention avant de réciter...</p>')}
+                      className="px-2 py-1 bg-white dark:bg-gray-800 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-800 rounded-lg text-xs font-bold hover:bg-rose-50 transition-colors cursor-pointer"
+                      title="Sous-titre H3 Anniyya"
+                    >
+                      🤲 ANNIYYA (H3)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => insertSacredSnippet('<h3>L\'EFFET</h3><p>Description de l\'effet produit, sensation et promptitude...</p>')}
+                      className="px-2 py-1 bg-white dark:bg-gray-800 text-purple-700 dark:text-purple-300 border border-purple-300 dark:border-purple-800 rounded-lg text-xs font-bold hover:bg-purple-50 transition-colors cursor-pointer"
+                      title="Sous-titre H3 L'Effet"
+                    >
+                      ⚡ L'EFFET (H3)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => insertSacredSnippet('<h3>MÉTHODES DE ROUQYA</h3><p>Protocole de récitation, eau coranisée, lavages et horaires...</p>')}
+                      className="px-2 py-1 bg-white dark:bg-gray-800 text-blue-700 dark:text-blue-300 border border-blue-300 dark:border-blue-800 rounded-lg text-xs font-bold hover:bg-blue-50 transition-colors cursor-pointer"
+                      title="Sous-titre H3 Méthodes de Rouqya"
+                    >
+                      🛡️ MÉTHODES DE ROUQYA (H3)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => insertSacredSnippet(`<h2>Secret : Titre du Secret</h2>\n<h3>OBJECTIF</h3>\n<p>Précisez ici l'objectif recherché...</p>\n<h3>EXEMPLE</h3>\n<p>Exemple concret d'application...</p>\n<h3>ANNIYYA</h3>\n<p>Formulation de l'intention sacrée...</p>\n<h3>L'EFFET</h3>\n<p>Effet produit et résultats spirituels...</p>\n<h3>MÉTHODES DE ROUQYA</h3>\n<p>Protocole d'application et de récitation...</p>`)}
+                      className="px-2.5 py-1 bg-slate-900 text-white dark:bg-white dark:text-slate-900 rounded-lg text-xs font-black hover:opacity-90 transition-opacity shadow-xs cursor-pointer"
+                      title="Insérer la structure complète des 5 sous-titres H3"
+                    >
+                      📜 Modèle Complet (5 H3)
+                    </button>
+                  </div>
+                </div>
               </div>
+
+              {/* Multi-Secrets Interactive Builder */}
+              <MultiSecretsBuilder
+                secrets={(newArticle as any).secrets || []}
+                onChange={(updated) => {
+                  setNewArticle(prev => ({
+                    ...prev,
+                    secrets: updated
+                  } as any));
+                }}
+                onSyncToEditor={(compiledHtml) => {
+                  const updated = currentContent 
+                    ? `${currentContent}\n\n${compiledHtml}` 
+                    : compiledHtml;
+                  handleContentChange(updated);
+                  showToast("Structure des secrets générée dans l'éditeur TipTap !", "success");
+                }}
+              />
 
               {/* Rich Content Editor */}
               <div className="space-y-1.5">
@@ -8665,10 +8790,13 @@ export const AdminDashboard: React.FC = () => {
                   </div>
                 )}
 
-                <div 
-                  className="prose dark:prose-invert max-w-none text-xs text-gray-800 dark:text-gray-200 pt-2"
-                  dangerouslySetInnerHTML={{ __html: currentContent || "<p class='text-gray-400'>Aucun contenu rédigé pour le moment.</p>" }}
-                />
+                <div className="pt-2">
+                  <MultiSecretArticleContent
+                    content={currentContent || "<p class='text-gray-400'>Aucun contenu rédigé pour le moment.</p>"}
+                    secrets={(newArticle as any).secrets}
+                    articleTitle={currentTitle || "Titre de l'Article"}
+                  />
+                </div>
               </div>
             </div>
           )}
@@ -9479,6 +9607,23 @@ export const AdminDashboard: React.FC = () => {
                     </span>
                   </div>
                   <p className="text-xs text-gray-600 dark:text-gray-300 break-words">{post.content}</p>
+                  {post.attachments && post.attachments.length > 0 && (
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {post.attachments.map((att, attIdx) => (
+                        <a
+                          key={`admin-att-${post.id}-${attIdx}`}
+                          href={att.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 text-amber-700 dark:text-amber-400 text-[11px] font-semibold hover:bg-amber-500/20 transition-colors"
+                        >
+                          <FileText size={13} />
+                          <span>{att.fileName || "Pièce jointe"}</span>
+                          {att.fileSize && <span className="opacity-70 text-[9px]">({att.fileSize})</span>}
+                        </a>
+                      ))}
+                    </div>
+                  )}
                   <div className="flex flex-wrap items-center gap-2 pt-2">
                     {post.status !== 'approved' && (
                       <button
@@ -9693,6 +9838,7 @@ export const AdminDashboard: React.FC = () => {
           {activeTab === "book_covers" && <BookCoverStudio />}
           {activeTab === "seals" && <LunarSealVarietiesSection language={language} />}
           {activeTab === "support" && <AdminEmailSupportManager />}
+          {activeTab === "api_keys" && <AdminApiKeysManager />}
           {(activeTab === "settings" || activeTab === "security") && renderSettings()}
         </div>
 

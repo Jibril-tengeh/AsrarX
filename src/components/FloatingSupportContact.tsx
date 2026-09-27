@@ -502,7 +502,7 @@ export const FloatingSupportContact: React.FC<FloatingSupportContactProps> = ({
                         </button>
                       </div>
                     ) : (
-                      userMessages.map((msg) => {
+                      userMessages.map((msg, msgIdx) => {
                         const statusColors = {
                           unread: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-400',
                           read: 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400',
@@ -521,7 +521,7 @@ export const FloatingSupportContact: React.FC<FloatingSupportContactProps> = ({
 
                         return (
                           <div
-                            key={msg.id}
+                            key={msg.id ? `support-msg-${msg.id}-${msgIdx}` : `support-msg-${msgIdx}`}
                             className="p-4 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm space-y-3"
                           >
                             <div className="flex items-center justify-between gap-2 flex-wrap">
@@ -558,9 +558,9 @@ export const FloatingSupportContact: React.FC<FloatingSupportContactProps> = ({
                                 <p className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
                                   {t('supportModal.adminReplies', "Réponses de l'Administration ({count}) :", { count: msg.replies.length })}
                                 </p>
-                                {msg.replies.map((reply) => (
+                                {msg.replies.map((reply, replyIdx) => (
                                   <div
-                                    key={reply.id}
+                                    key={reply.id ? `reply-${reply.id}-${replyIdx}` : `reply-${replyIdx}`}
                                     className={`p-3 rounded-xl text-xs ${
                                       reply.sender === 'admin'
                                         ? 'bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-800/40 text-emerald-950 dark:text-emerald-200'

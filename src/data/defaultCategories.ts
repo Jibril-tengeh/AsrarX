@@ -630,41 +630,34 @@ export const getSubCategoryFallbackHook = (subName?: string, catName?: string): 
   return `Méthodes éprouvées, zikrs quotidiens et awrads consacrés à ${subName}${catName ? ` (${catName})` : ''}.`;
 };
 
+// Deprecated mock list - kept safe so real Islamic categories are never rejected or deleted
 export const MOCK_PRESET_CATEGORY_IDS = new Set<string>([
-  'secrets-pratiques',
-  'protection-ruqyah',
-  'richesse-ouverture',
-  'invocations-prières',
-  'sciences-spirituelles',
-  'coran-sourates',
-  'wird',
-  'secret',
-  'recette',
-  'versets-protection',
-  'azkar',
-  'ruqyah',
-  'douas',
-  'ouvertures'
+  '__mock_test_temp__'
 ]);
 
 export const isMockCategory = (cat: any): boolean => {
   if (!cat) return false;
   const id = (cat.id || '').toString().toLowerCase().trim();
-  if (MOCK_PRESET_CATEGORY_IDS.has(id)) return true;
-
-  const name = (cat.name || '').toString().toLowerCase().trim();
-  const nameEn = (cat.name_en || '').toString().toLowerCase().trim();
-
-  // Match the exact default preset mock titles
-  if (name === 'secrets & pratiques' || nameEn === 'secrets & practices') return true;
-  if (name === 'protection & ruqyah' || nameEn === 'protection & ruqyah') return true;
-  if (name === 'richesse & ouverture' || nameEn === 'wealth & openings') return true;
-  if (name === 'invocations & prières' || nameEn === 'invocations & supplications') return true;
-  if (name === 'sciences spirituelles' || nameEn === 'spiritual sciences') return true;
-  if (name === 'coran & sourates' || nameEn === 'quran & surahs') return true;
-  if (name === 'versets & wirds' || nameEn === 'verses & wirds') return true;
-  if (name === "secrets d'asrar" || nameEn === 'secrets of asrar') return true;
-  if (name === 'recettes spirituelles' || nameEn === 'spiritual recipes') return true;
-
+  if (id === '__mock_test_temp__' || id.startsWith('mock_fixture_')) return true;
   return false;
+};
+
+/**
+ * Returns canonical spiritual categories ready for instantaneous 0ms display on load
+ */
+export const getCanonicalCategories = (): CategoryItem[] => {
+  return STANDARD_SCREENSHOT_CATEGORIES.map((cat, idx) => ({
+    id: cat.id,
+    name: cat.name,
+    name_en: cat.name_en,
+    name_ha: cat.name_ha,
+    hook: cat.hook || getCategoryFallbackHook(cat.name),
+    thumbnail: cat.thumbnail || getCategoryFallbackThumbnail(cat.name),
+    iconName: cat.iconName || getCategoryFallbackIcon(cat.name),
+    theme: cat.theme || cat.id,
+    enabled: true,
+    isCustom: false,
+    subCategories: [],
+    createdAt: 1700000000000 + idx
+  }));
 };

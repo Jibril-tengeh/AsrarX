@@ -288,13 +288,13 @@ export const LunarSealVarietiesSection: React.FC<LunarSealVarietiesSectionProps>
             </p>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2 max-h-72 overflow-y-auto pr-1">
-              {LUNAR_SEAL_VARIETIES.map((seal) => {
+              {LUNAR_SEAL_VARIETIES.map((seal, sIdx) => {
                 const currentStatus = adminConfig[seal.id]?.status || seal.defaultStatus;
                 const currentTarget = adminConfig[seal.id]?.targetUser || seal.defaultTargetUser;
 
                 return (
                   <div
-                    key={seal.id}
+                    key={`lunar-seal-admin-${seal.id}-${sIdx}`}
                     className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-purple-50/40 dark:bg-black/70 border-purple-200 dark:border-purple-500/30  border border-purple-500/20 p-2.5 rounded-xl"
                   >
                     <div className="truncate">
@@ -395,12 +395,12 @@ export const LunarSealVarietiesSection: React.FC<LunarSealVarietiesSectionProps>
 
       {/* Seals Grid Switcher */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2.5">
-        {filteredSeals.map((seal) => {
+        {filteredSeals.map((seal, sIdx) => {
           const isSelected = seal.id === selectedSealId;
 
           return (
             <button
-              key={seal.id}
+              key={`lunar-seal-card-${seal.id}-${sIdx}`}
               type="button"
               onClick={() => {
                 setSelectedSealId(seal.id);

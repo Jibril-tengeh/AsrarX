@@ -186,13 +186,13 @@ export const ChangelogModal: React.FC<ChangelogModalProps> = ({
 
             {/* List */}
             <div className="space-y-2 flex-1 overflow-y-auto pr-1">
-              {filteredReleases.map((rel) => {
+              {filteredReleases.map((rel, rIdx) => {
                 const loc = getLocalizedRelease(rel, language);
                 const isSelected = (rawActiveRelease?.version === rel.version);
                 const isCurrent = rel.version === currentAppVersion;
                 return (
                   <button
-                    key={rel.version}
+                    key={`changelog-rel-${rel.version}-${rIdx}`}
                     type="button"
                     onClick={() => setSelectedVersion(rel.version)}
                     className={`w-full text-left p-3 rounded-2xl transition-all flex items-center justify-between gap-2 cursor-pointer ${

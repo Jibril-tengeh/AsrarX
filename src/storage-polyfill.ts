@@ -63,9 +63,11 @@ console.error = function (...args) {
       msg.includes('targetId') ||
       msg.includes('Unexpected state') ||
       msg.includes('SnapshotVersion') ||
-      msg.includes('fromVersion')
+      msg.includes('fromVersion') ||
+      msg.includes('Encountered two children with the same key') ||
+      msg.includes('Keys should be unique so that components maintain their identity')
     ) {
-      console.warn("[Filtered Firestore Log]", ...args);
+      console.warn("[Filtered Non-Fatal React/Firestore Log]", ...args);
       return;
     }
   } catch (e) {

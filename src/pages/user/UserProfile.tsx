@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useLanguage } from '../../contexts/LanguageContext';
-import { User, Bell, Clock, Save, Shield, Moon, Sun, Smartphone, Laptop, Tablet, Globe, Trash2, Award, Medal, Star, Target, LogOut, Camera, Image as ImageIcon, RefreshCw, Sparkles, LogIn, ChevronDown, Plus, XCircle, CheckCircle, FileText, BookOpen, ScrollText, Heart, X, Share2, Wifi, Database, HardDrive, HardDriveDownload, Mic, MapPin, FolderCheck, Mail, MessageSquare, Info, Tag, ExternalLink, Check, Gift, HelpCircle, Compass, AlertTriangle, Vibrate, Battery, BatteryCharging, BatteryWarning, Cpu, Zap, ZapOff, Gauge } from 'lucide-react';
+import { User, Bell, Clock, Save, Shield, Moon, Sun, Smartphone, Laptop, Tablet, Globe, Trash2, Award, Medal, Star, Target, LogOut, Camera, Image as ImageIcon, RefreshCw, Sparkles, LogIn, ChevronDown, Plus, XCircle, CheckCircle, FileText, BookOpen, ScrollText, Heart, X, Share2, Wifi, Database, HardDrive, HardDriveDownload, Mic, MapPin, FolderCheck, Mail, MessageSquare, Info, Tag, ExternalLink, Check, Gift, HelpCircle, Compass, AlertTriangle, Vibrate, Battery, BatteryCharging, BatteryWarning, Cpu, Zap, ZapOff, Gauge, Code } from 'lucide-react';
 import { useHaptics } from '../../utils/haptics';
 import { usePerformanceMonitor } from '../../hooks/usePerformanceMonitor';
 import { 
@@ -2791,6 +2791,15 @@ export const UserProfile: React.FC = () => {
                   <RefreshCw size={14} className={isFlushingVersionCache ? 'animate-spin' : ''} />
                   <span>{isFlushingVersionCache ? t('profile.version.cleaning', 'Nettoyage...') : t('profile.version.clearCacheBtn', 'Vider le cache SWR')}</span>
                 </button>
+
+                <Link
+                  to="/api-docs"
+                  className="px-3.5 py-2.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                  title="Consulter la documentation interactive de l'API AsrarHub"
+                >
+                  <Code size={14} className="text-emerald-500" />
+                  <span>Documentation API</span>
+                </Link>
               </div>
             </div>
 

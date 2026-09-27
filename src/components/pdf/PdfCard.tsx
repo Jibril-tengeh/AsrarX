@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { motion } from 'motion/react';
 import { 
   FileText, 
@@ -32,6 +32,7 @@ import {
 import { useLanguage } from '../../contexts/LanguageContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { PdfBookCover3D } from './PdfBookCover3D';
+import { detectPdfAutoCategories } from '../../utils/pdfAutoTagging';
 
 interface PdfCardProps {
   pdf: PdfDocument;
@@ -58,6 +59,9 @@ export const PdfCard: React.FC<PdfCardProps> = ({
   const isPurchased = accessState.isPurchased;
   const requiresPurchase = accessState.requiresPurchase;
   const isVipLocked = accessState.reason === 'locked_premium';
+
+  // Automatic Category & Thematic Tagging Detection
+  const autoCategories = useMemo(() => detectPdfAutoCategories(pdf), [pdf]);
 
   useEffect(() => {
     let isMounted = true;
@@ -198,6 +202,21 @@ export const PdfCard: React.FC<PdfCardProps> = ({
               <span>{pdf.fileSize || 'PDF'}</span>
             </p>
 
+            {/* Auto-detected Category Tags */}
+            {autoCategories.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                {autoCategories.slice(0, 3).map((tag) => (
+                  <span
+                    key={`list-tag-${pdf.id}-${tag.id}`}
+                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold border ${tag.bgColor} ${tag.textColor} ${tag.borderColor}`}
+                  >
+                    <span>{tag.emoji}</span>
+                    <span>{language === 'en' ? tag.name_en : language === 'ha' ? tag.name_ha : tag.name}</span>
+                  </span>
+                ))}
+              </div>
+            )}
+
             {/* Action Buttons */}
             <div className="flex items-center gap-2 mt-2.5" onClick={(e) => e.stopPropagation()}>
               <button
@@ -255,21 +274,16 @@ export const PdfCard: React.FC<PdfCardProps> = ({
       whileHover={{ y: -3 }}
       className="w-full max-w-full min-w-0 bg-white dark:bg-gray-800 rounded-3xl border border-gray-200/80 dark:border-gray-700/80 shadow-xs hover:shadow-lg transition-all duration-200 flex flex-col overflow-hidden group relative box-border"
     >
-      {/* Top Book Showcase Stage */}
+      {/* Top Book Showcase Stage - Full Bleed Thumbnail */}
       <div 
         onClick={() => onRead(pdf)}
-        className="relative h-60 sm:h-64 w-full bg-gradient-to-b from-slate-950 via-slate-900 to-slate-950 overflow-hidden cursor-pointer flex flex-col items-center justify-center p-3 select-none"
+        className="relative h-60 sm:h-68 w-full bg-slate-950 overflow-hidden cursor-pointer flex flex-col select-none group"
       >
-        {/* Subtle ambient emerald aura */}
-        <div className="absolute inset-0 bg-radial from-emerald-500/12 via-transparent to-transparent pointer-events-none" />
-        
-        {/* Soft bottom pedestal shelf shadow */}
-        <div className="absolute bottom-0 inset-x-0 h-10 bg-gradient-to-t from-black/80 to-transparent pointer-events-none" />
+        {/* Full-bleed Thumbnail filling 100% of the thumbnail container */}
+        <PdfBookCover3D size="full" pdf={pdf} language={language} showShadow={false} className="w-full h-full" />
 
-        {/* Book Cover Thumbnail */}
-        <div className="relative z-10 flex items-center justify-center my-auto transform group-hover:scale-105 transition-transform duration-300">
-          <PdfBookCover3D size="md" pdf={pdf} language={language} showShadow={true} />
-        </div>
+        {/* Soft bottom gradient to blend seamlessly into card content */}
+        <div className="absolute bottom-0 inset-x-0 h-16 bg-gradient-to-t from-slate-950/85 via-slate-950/30 to-transparent pointer-events-none z-10" />
 
         {/* Top Badges */}
         <div className="absolute top-3 left-3 right-3 flex items-center justify-between gap-1.5 z-20 pointer-events-none">
@@ -332,6 +346,21 @@ export const PdfCard: React.FC<PdfCardProps> = ({
           <p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2 mt-2 leading-relaxed break-words">
             {localizedDesc}
           </p>
+
+          {/* Auto-detected Category Tags */}
+          {autoCategories.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
+              {autoCategories.slice(0, 2).map((tag) => (
+                <span
+                  key={`grid-tag-${pdf.id}-${tag.id}`}
+                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold border ${tag.bgColor} ${tag.textColor} ${tag.borderColor}`}
+                >
+                  <span>{tag.emoji}</span>
+                  <span>{language === 'en' ? tag.name_en : language === 'ha' ? tag.name_ha : tag.name}</span>
+                </span>
+              ))}
+            </div>
+          )}
 
           <div className="mt-2.5 flex items-center gap-2 text-[11px] text-gray-400 dark:text-gray-500 min-w-0">
             <span className="truncate">Par {pdf.author || 'Tradition AsrarHub'}</span>

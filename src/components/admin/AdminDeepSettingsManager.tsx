@@ -1433,6 +1433,125 @@ export const AdminDeepSettingsManager: React.FC<AdminDeepSettingsManagerProps> =
                   </button>
                 </div>
 
+                {/* 1.bis Contrôle direct de l'icône Tampon / Sceau (Stamp) et des icônes d'action dans la barre d'outils des articles */}
+                <div className="space-y-3 p-4 bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800">
+                  <div className="border-b border-gray-200 dark:border-gray-700/60 pb-2">
+                    <h4 className="font-extrabold text-sm text-gray-900 dark:text-white flex items-center gap-2">
+                      <span>🎛️ Contrôle & Blocage des Icônes de la Barre d'Outils des Articles</span>
+                      <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 font-bold">
+                        En Direct
+                      </span>
+                    </h4>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                      Activez ou bloquez n'importe quelle icône de lecture d'un simple clic. Les icônes bloquées disparaissent instantanément pour tous les utilisateurs.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2.5">
+                    {[
+                      {
+                        key: 'watermark_icon_visible',
+                        name: "Bouton Sceau / Filigrane (Stamp)",
+                        icon: '🏷️',
+                        desc: "Icône de sceau/tampon dans l'en-tête permettant d'activer ou masquer le filigrane de protection spirituelle.",
+                        visible: featureToggles.watermark_icon_visible !== false
+                      },
+                      {
+                        key: 'reading_mode_icon_visible',
+                        name: "Bouton Mode Lecture (Style Livre)",
+                        icon: '📖',
+                        desc: "Icône de livre permettant de basculer la vue en mode parchemin / lecture apaisée sans distractions.",
+                        visible: featureToggles.reading_mode_icon_visible !== false && featureToggles.article_reading_mode_visible !== false
+                      },
+                      {
+                        key: 'article_viewmode_icon_visible',
+                        name: "Sélecteur Vue Pleine / Accordéon",
+                        icon: '📑',
+                        desc: "Icônes de bascule entre l'affichage complet du texte et le découpage par sous-sections interactives.",
+                        visible: featureToggles.article_viewmode_icon_visible !== false && !featureToggles.lockArticleViewmode
+                      },
+                      {
+                        key: 'article_tts_icon_visible',
+                        name: "Bouton Lecture Vocale (TTS Audio)",
+                        icon: '🔊',
+                        desc: "Icône de haut-parleur déclenchant la lecture vocale mot par mot du secret.",
+                        visible: featureToggles.article_tts_icon_visible !== false && featureToggles.tts_icon_visible !== false
+                      },
+                      {
+                        key: 'article_offline_icon_visible',
+                        name: "Bouton Sauvegarde Hors-Ligne (IndexedDB)",
+                        icon: '💾',
+                        desc: "Icône de disque dur permettant de télécharger le secret pour une consultation sans connexion internet.",
+                        visible: featureToggles.article_offline_icon_visible !== false
+                      },
+                      {
+                        key: 'article_fullscreen_icon_visible',
+                        name: "Bouton Plein Écran (Mode Zen)",
+                        icon: '⛶',
+                        desc: "Icône d'agrandissement pour une immersion totale dans la lecture du secret.",
+                        visible: featureToggles.article_fullscreen_icon_visible !== false
+                      },
+                      {
+                        key: 'article_bookmark_icon_visible',
+                        name: "Bouton Favoris & Classement en Dossiers",
+                        icon: '🔖',
+                        desc: "Icône de signet pour enregistrer l'article dans les favoris et les dossiers personnels.",
+                        visible: featureToggles.article_bookmark_icon_visible !== false
+                      },
+                      {
+                        key: 'article_share_icon_visible',
+                        name: "Bouton Partager l'Article",
+                        icon: '🔗',
+                        desc: "Icône de partage pour diffuser le secret sur les réseaux ou copier le lien direct.",
+                        visible: featureToggles.article_share_icon_visible !== false
+                      },
+                      {
+                        key: 'article_text_resizer_visible',
+                        name: "Ajusteur de Taille de Police (A- / A+)",
+                        icon: '🔠',
+                        desc: "Boutons de réglage de la taille du texte (12px à 36px) au-dessus du contenu.",
+                        visible: featureToggles.article_text_resizer_visible !== false
+                      }
+                    ].map((iconItem) => (
+                      <div 
+                        key={iconItem.key}
+                        className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700/80 shadow-2xs"
+                      >
+                        <div className="space-y-0.5 min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-bold text-xs sm:text-sm text-gray-900 dark:text-white flex items-center gap-1.5">
+                              <span>{iconItem.icon}</span>
+                              <span>{iconItem.name}</span>
+                            </span>
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              iconItem.visible 
+                                ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300' 
+                                : 'bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-300'
+                            }`}>
+                              {iconItem.visible ? 'ACTIVÉE (Visible)' : 'BLOQUÉE / MASQUÉE'}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                            {iconItem.desc}
+                          </p>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleToggleFeature(iconItem.key, !iconItem.visible)}
+                          className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shadow-xs shrink-0 ${
+                            iconItem.visible
+                              ? 'bg-rose-600 text-white hover:bg-rose-700 active:scale-95'
+                              : 'bg-emerald-600 text-white hover:bg-emerald-700 active:scale-95'
+                          }`}
+                        >
+                          {iconItem.visible ? "Bloquer l'icône" : "Activer l'icône"}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
                 {/* 2. Opacity Slider & Steppers */}
                 <div className="p-4 bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 space-y-4">
                   <div className="flex flex-wrap items-center justify-between gap-2">

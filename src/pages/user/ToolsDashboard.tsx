@@ -947,11 +947,11 @@ export const ToolsDashboard: React.FC = () => {
         </button>
 
         {/* Custom groups */}
-        {toolGroups.filter((g) => g.isCustom).map((group) => {
+        {toolGroups.filter((g) => g.isCustom).map((group, gIdx) => {
           const isSelected = activeCategoryFilter === group.id;
           return (
             <button
-              key={group.id}
+              key={group.id ? `custom-group-${group.id}-${gIdx}` : `custom-group-${gIdx}`}
               type="button"
               onClick={() => setActiveCategoryFilter(group.id)}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer shrink-0 border ${
@@ -1131,9 +1131,9 @@ export const ToolsDashboard: React.FC = () => {
             {tools
               .filter((tool) => favoriteToolIds.includes(tool.id))
               .slice(0, 10)
-              .map((fTool) => (
+              .map((fTool, fIdx) => (
                 <button
-                  key={`fav-chip-${fTool.id}`}
+                  key={`fav-chip-${fTool.id}-${fIdx}`}
                   type="button"
                   onClick={() => handleOpenTool(fTool)}
                   className="flex items-center gap-1.5 px-2.5 py-1.5 bg-white dark:bg-gray-800 hover:bg-amber-50 dark:hover:bg-amber-950/30 border border-gray-200/80 dark:border-gray-700/80 rounded-xl text-xs font-semibold text-gray-800 dark:text-gray-200 transition-all shadow-2xs whitespace-nowrap cursor-pointer shrink-0 active:scale-95"

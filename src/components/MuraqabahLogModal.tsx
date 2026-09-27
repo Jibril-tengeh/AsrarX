@@ -208,9 +208,9 @@ export const MuraqabahLogModal: React.FC<MuraqabahLogModalProps> = ({
                       { id: 'kashf', label: 'Kashf (Illumination)' },
                       { id: 'shukr', label: 'Shukr (Gratitude)' },
                       { id: 'fana', label: 'Fana (Absorption)' },
-                    ].map((st) => (
+                    ].map((st, sIdx) => (
                       <button
-                        key={st.id}
+                        key={`muraq-st-${st.id}-${sIdx}`}
                         onClick={() => setSpiritualState(st.id as any)}
                         className={`py-2 px-2 rounded-xl text-[10px] font-bold transition-all border cursor-pointer ${
                           spiritualState === st.id
@@ -299,9 +299,9 @@ export const MuraqabahLogModal: React.FC<MuraqabahLogModalProps> = ({
                     </p>
                   </div>
                 ) : (
-                  entries.map((entry) => (
+                  entries.map((entry, eIdx) => (
                     <div
-                      key={entry.id}
+                      key={entry.id ? `muraq-entry-${entry.id}-${eIdx}` : `muraq-entry-${eIdx}`}
                       className="bg-black/50 border border-amber-500/25 rounded-2xl p-3.5 space-y-2 relative group"
                     >
                       <div className="flex justify-between items-start">

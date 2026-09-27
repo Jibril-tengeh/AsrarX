@@ -45,6 +45,8 @@ import { useLanguage } from '../../contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import { get as getIdb } from 'idb-keyval';
 import { AsrarHubWatermark } from '../AsrarHubWatermark';
+import { getApiUrl } from '../../lib/api';
+import { PdfCanvasViewer } from './PdfCanvasViewer';
 
 interface PdfViewerModalProps {
   pdf: PdfDocument | null;
@@ -77,6 +79,15 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
   const [refreshAccessKey, setRefreshAccessKey] = useState(0);
 
+  // Cross-device viewer mode & load management
+  const isMobile = typeof window !== 'undefined' && (
+    window.innerWidth < 768 ||
+    /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+  );
+  const [viewerMode, setViewerMode] = useState<'canvas' | 'google' | 'direct'>('canvas');
+  const [isLoadingDoc, setIsLoadingDoc] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
   // Authenticate Admin and evaluate cryptographic access strictly
   const isAdmin = isAuthenticAdmin(user);
   const accessState = pdf ? evaluatePdfAccess(pdf, user, isPremium) : null;
@@ -87,6 +98,8 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({
     if (!pdf || !isOpen) {
       setActivePdfUrl('');
       setIsOfflineSource(false);
+      setIsLoadingDoc(false);
+      setLoadError(null);
       return;
     }
 
@@ -95,59 +108,113 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({
     if (!canAccessContent) {
       setActivePdfUrl('');
       setIsOfflineSource(false);
+      setIsLoadingDoc(false);
+      setLoadError(null);
       return;
     }
 
     let isMounted = true;
+    setIsLoadingDoc(true);
+    setLoadError(null);
+
+    // Safety timeout: if PDF resolving exceeds 3.5 seconds, unblock spinner and show fallback
+    const safetyTimer = setTimeout(() => {
+      if (isMounted) {
+        setIsLoadingDoc(false);
+      }
+    }, 3500);
 
     const checkAndLoad = async () => {
-      const offlineExists = await isPdfOfflineAvailable(pdf.id);
-      if (!isMounted) return;
-      setIsDownloaded(offlineExists);
+      try {
+        const offlineExists = await isPdfOfflineAvailable(pdf.id);
+        if (!isMounted) return;
+        setIsDownloaded(offlineExists);
 
-      if (offlineExists) {
-        const offlineData = await getPdfFromOfflineVault(pdf.id);
-        if (offlineData && isMounted) {
-          setActivePdfUrl(offlineData.objectUrl);
-          setIsOfflineSource(true);
-          return;
+        if (offlineExists) {
+          const offlineData = await getPdfFromOfflineVault(pdf.id);
+          if (offlineData && isMounted) {
+            setActivePdfUrl(offlineData.objectUrl);
+            setIsOfflineSource(true);
+            setIsLoadingDoc(false);
+            setLoadError(null);
+            return;
+          }
         }
-      }
 
-      // Query protected Firestore collection strictly validated by Firestore Security Rules
-      const protectedRes = await getProtectedPdfDownloadUrl(pdf, user, isPremium);
-      if (isMounted) {
-        if (protectedRes.success && protectedRes.url) {
-          let resolved = protectedRes.url;
+        // Query protected Firestore collection strictly validated by Firestore Security Rules
+        let resolved = '';
+
+        // Check if local device has the file saved in IndexedDB vault
+        if (pdf.id) {
+          try {
+            const localBlob = await getIdb(`asrar_pdf_blob_${pdf.id}`);
+            if (localBlob && (localBlob instanceof Blob || (localBlob as any).size > 0)) {
+              resolved = URL.createObjectURL(localBlob);
+              setIsOfflineSource(true);
+            }
+          } catch (_) {}
+        }
+
+        if (!resolved) {
+          const protectedRes = await getProtectedPdfDownloadUrl(pdf, user, isPremium);
+          if (protectedRes.success && protectedRes.url) {
+            resolved = protectedRes.url;
+          } else if (canAccessContent && pdf.pdfUrl) {
+            // Direct fallback for legitimate user/admin
+            resolved = pdf.pdfUrl;
+          }
+        }
+
+        // Resolve local IDB or server API relative path
+        if (resolved) {
           if (resolved.startsWith('idb:')) {
             try {
               const idbKey = resolved.replace('idb:', '');
               const blob = await getIdb(idbKey);
               if (blob) {
                 resolved = URL.createObjectURL(blob);
+              } else if (pdf.pdfUrl && !pdf.pdfUrl.startsWith('idb:')) {
+                resolved = pdf.pdfUrl;
               }
             } catch (err) {
               console.warn('Error reading PDF from local IndexedDB:', err);
+              if (pdf.pdfUrl && !pdf.pdfUrl.startsWith('idb:')) {
+                resolved = pdf.pdfUrl;
+              }
             }
           }
-          setActivePdfUrl(resolved);
-          setIsOfflineSource(false);
-        } else {
-          // If Firestore secure access failed, check if PDF has local idb or direct url for authorized user
-          if (pdf.pdfUrl?.startsWith('idb:')) {
-            try {
-              const idbKey = pdf.pdfUrl.replace('idb:', '');
-              const blob = await getIdb(idbKey);
-              if (blob) {
-                setActivePdfUrl(URL.createObjectURL(blob));
-                setIsOfflineSource(false);
-                return;
-              }
-            } catch (err) {}
+
+          if (resolved.startsWith('/')) {
+            resolved = getApiUrl(resolved);
           }
-          setActivePdfUrl('');
-          setIsOfflineSource(false);
-          console.warn('PDF access blocked by Firestore rules:', protectedRes.error);
+        }
+
+        if (isMounted) {
+          if (resolved && !resolved.startsWith('idb:')) {
+            setActivePdfUrl(resolved);
+            setIsOfflineSource(resolved.startsWith('blob:'));
+            setIsLoadingDoc(false);
+            setLoadError(null);
+          } else if (pdf.pdfUrl) {
+            let fallbackUrl = pdf.pdfUrl;
+            if (fallbackUrl.startsWith('/')) {
+              fallbackUrl = getApiUrl(fallbackUrl);
+            }
+            setActivePdfUrl(fallbackUrl);
+            setIsOfflineSource(false);
+            setIsLoadingDoc(false);
+            setLoadError(null);
+          } else {
+            setActivePdfUrl('');
+            setIsOfflineSource(false);
+            setIsLoadingDoc(false);
+            setLoadError("Le fichier de ce document n'est pas accessible directement.");
+          }
+        }
+      } catch (err: any) {
+        if (isMounted) {
+          setIsLoadingDoc(false);
+          setLoadError(err?.message || "Erreur lors du chargement du fichier PDF.");
         }
       }
     };
@@ -156,6 +223,7 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({
 
     return () => {
       isMounted = false;
+      clearTimeout(safetyTimer);
     };
   }, [pdf, isOpen, canAccessContent, refreshAccessKey]);
 
@@ -391,6 +459,19 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({
                 </>
               )}
 
+              {/* Direct Open Link in Top Bar */}
+              {(activePdfUrl || pdf?.pdfUrl) && !isMaintenanceBlocked && !isPremiumBlocked && !isPurchaseBlocked && (
+                <a
+                  href={activePdfUrl || (pdf.pdfUrl?.startsWith('/api') ? getApiUrl(pdf.pdfUrl) : pdf.pdfUrl)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-1.5 sm:p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer"
+                  title={language === 'fr' ? 'Ouvrir dans un nouvel onglet' : 'Open in new tab'}
+                >
+                  <ExternalLink size={16} />
+                </a>
+              )}
+
               {/* Share */}
               <button
                 type="button"
@@ -405,8 +486,9 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({
               <button
                 type="button"
                 onClick={() => setIsFullscreen(!isFullscreen)}
-                className="p-1.5 sm:p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer hidden sm:flex"
+                className="p-1.5 sm:p-2 rounded-xl text-slate-300 hover:text-white hover:bg-slate-800 transition-colors cursor-pointer flex items-center justify-center"
                 title={isFullscreen ? 'Quitter plein écran' : 'Plein écran'}
+                aria-label="Plein écran"
               >
                 {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
               </button>
@@ -659,27 +741,98 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({
               </div>
             ) : (
               /* Case 5: Full Interactive PDF Viewer / Iframe Object (Legitimate Access) */
-              <div className="flex-1 flex flex-col w-full h-full relative overflow-hidden bg-slate-900">
+              <div className="flex-1 flex flex-col w-full h-full relative overflow-hidden bg-slate-950">
                 {activePdfUrl ? (
-                  <>
-                    <iframe
-                      src={`${activePdfUrl}#toolbar=1&navpanes=1`}
-                      title={pdf.title}
-                      className="w-full h-full border-0 rounded-none bg-slate-900 relative z-0"
-                      style={{ minHeight: '100%' }}
-                    />
-                    <AsrarHubWatermark 
-                      variant="dark"
-                      showCentralSeal={true}
-                      className="pointer-events-none z-10"
-                    />
-                  </>
-                ) : (
+                  viewerMode === 'canvas' ? (
+                    <div className="w-full h-full flex flex-col relative z-0">
+                      <PdfCanvasViewer
+                        url={activePdfUrl}
+                        title={pdf.title}
+                        language={language}
+                      />
+                      <AsrarHubWatermark 
+                        variant="dark"
+                        showCentralSeal={true}
+                        className="pointer-events-none z-10 opacity-30"
+                      />
+                    </div>
+                  ) : (
+                    <>
+                      <iframe
+                        src={
+                          viewerMode === 'google' && (activePdfUrl.startsWith('http://') || activePdfUrl.startsWith('https://'))
+                            ? `https://docs.google.com/viewer?url=${encodeURIComponent(activePdfUrl)}&embedded=true`
+                            : `${activePdfUrl}#toolbar=1&navpanes=1`
+                        }
+                        title={pdf.title}
+                        className="w-full h-full border-0 rounded-none bg-slate-900 relative z-0"
+                        style={{ minHeight: '100%' }}
+                      />
+                      <AsrarHubWatermark 
+                        variant="dark"
+                        showCentralSeal={true}
+                        className="pointer-events-none z-10"
+                      />
+                    </>
+                  )
+                ) : isLoadingDoc ? (
                   <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
                     <RefreshCw size={28} className="animate-spin text-emerald-400 mb-3" />
-                    <p className="text-xs text-slate-300">
+                    <p className="text-xs text-slate-300 font-bold mb-1">
                       {language === 'fr' ? 'Chargement du document PDF...' : 'Loading PDF document...'}
                     </p>
+                    <p className="text-[11px] text-slate-400 max-w-xs mb-4">
+                      {language === 'fr' ? 'Préparation et vérification de la lecture' : 'Preparing reading access'}
+                    </p>
+                    {pdf.pdfUrl && (
+                      <a
+                        href={pdf.pdfUrl.startsWith('/api') ? getApiUrl(pdf.pdfUrl) : pdf.pdfUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-emerald-400 text-xs font-bold inline-flex items-center gap-1.5 border border-slate-700 transition-all cursor-pointer"
+                      >
+                        <ExternalLink size={14} />
+                        <span>{language === 'fr' ? 'Ouvrir directement' : 'Open directly'}</span>
+                      </a>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex-1 flex flex-col items-center justify-center p-6 text-center max-w-md mx-auto space-y-4">
+                    <div className="w-16 h-16 rounded-3xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto shadow-xl">
+                      <FileText size={32} />
+                    </div>
+                    <h3 className="text-base sm:text-lg font-bold text-white">
+                      {language === 'fr' ? 'Lecture du Document PDF' : 'Read PDF Document'}
+                    </h3>
+                    <p className="text-xs text-slate-300 leading-relaxed">
+                      {loadError || (language === 'fr'
+                        ? "Le document est prêt. Sur certains appareils mobiles, ouvrez directement le lien dans le lecteur de votre choix."
+                        : "The document is ready. Open directly in your device's PDF reader.")}
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-2 w-full pt-2">
+                      <a
+                        href={activePdfUrl || (pdf.pdfUrl?.startsWith('/api') ? getApiUrl(pdf.pdfUrl) : pdf.pdfUrl)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex-1 py-3 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer"
+                      >
+                        <ExternalLink size={15} />
+                        <span>{language === 'fr' ? 'Ouvrir le PDF' : 'Open PDF'}</span>
+                      </a>
+                      {pdf.pdfUrl && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setViewerMode('canvas');
+                            setActivePdfUrl(pdf.pdfUrl?.startsWith('/api') ? getApiUrl(pdf.pdfUrl) : pdf.pdfUrl);
+                          }}
+                          className="flex-1 py-3 px-4 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center justify-center gap-2 border border-slate-700 transition-all cursor-pointer"
+                        >
+                          <BookOpen size={15} />
+                          <span>{language === 'fr' ? 'Lecteur Intégré' : 'Built-in Reader'}</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 )}
               </div>
@@ -688,22 +841,58 @@ export const PdfViewerModal: React.FC<PdfViewerModalProps> = ({
 
           {/* Bottom Bar Controls for Zoom / Download */}
           {!isMaintenanceBlocked && !isPremiumBlocked && !isPurchaseBlocked && activeTab === 'reader' && (
-            <div className="bg-slate-950 border-t border-slate-800 px-4 py-2 flex items-center justify-between text-xs text-slate-400 shrink-0">
+            <div className="bg-slate-950 border-t border-slate-800 px-3 sm:px-4 py-2 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400 shrink-0">
               <div className="flex items-center gap-2">
-                <span className="font-mono text-[11px]">
-                  {isOfflineSource ? '📦 Stockage Local Sécurisé' : '🌐 Flux Réseau En Ligne'}
+                <span className="font-mono text-[11px] text-slate-400">
+                  {isOfflineSource ? '📦 Stockage Local' : '🌐 En Ligne'}
                 </span>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                {activePdfUrl && (
+                  <div className="inline-flex rounded-lg bg-slate-900 border border-slate-800 p-0.5">
+                    <button
+                      type="button"
+                      onClick={() => setViewerMode('canvas')}
+                      className={`px-2 py-1 rounded text-[11px] font-bold cursor-pointer transition-all ${
+                        viewerMode === 'canvas' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                      }`}
+                      title="Affichage direct haute compatibilité"
+                    >
+                      HD
+                    </button>
+                    {(activePdfUrl.startsWith('http://') || activePdfUrl.startsWith('https://')) && (
+                      <button
+                        type="button"
+                        onClick={() => setViewerMode('google')}
+                        className={`px-2 py-1 rounded text-[11px] font-bold cursor-pointer transition-all ${
+                          viewerMode === 'google' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                        }`}
+                        title="Lecteur Google Docs"
+                      >
+                        Google
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setViewerMode('direct')}
+                      className={`px-2 py-1 rounded text-[11px] font-bold cursor-pointer transition-all ${
+                        viewerMode === 'direct' ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+                      }`}
+                      title="Navigateur iframe"
+                    >
+                      Web
+                    </button>
+                  </div>
+                )}
                 <a
-                  href={activePdfUrl || pdf.pdfUrl}
+                  href={activePdfUrl || (pdf.pdfUrl?.startsWith('/api') ? getApiUrl(pdf.pdfUrl) : pdf.pdfUrl)}
                   download={`${pdf.id}.pdf`}
-                  className="hover:text-emerald-400 transition-colors flex items-center gap-1 text-[11px] font-bold"
+                  className="hover:text-emerald-400 transition-colors flex items-center gap-1 text-[11px] font-bold py-1 px-2 rounded bg-slate-900 border border-slate-800"
                   title="Exporter sur mon appareil"
                 >
                   <Download size={13} />
-                  <span>{language === 'fr' ? 'Exporter PDF' : 'Export'}</span>
+                  <span className="hidden sm:inline">{language === 'fr' ? 'Télécharger' : 'Download'}</span>
                 </a>
               </div>
             </div>

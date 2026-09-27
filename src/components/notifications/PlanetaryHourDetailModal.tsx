@@ -187,8 +187,6 @@ export const PlanetaryHourDetailModal: React.FC<PlanetaryHourDetailModalProps> =
     setMinutesRemaining(mins);
   }, [isOpen]);
 
-  if (!isOpen) return null;
-
   const rawPlanet = multilingualPlanets[currentPlanetIndex] || multilingualPlanets[0];
   const details = PLANETARY_DETAILS[currentPlanetIndex] || PLANETARY_DETAILS[0];
   const planetName = rawPlanet.name[langKey] || rawPlanet.name.fr;
@@ -225,20 +223,26 @@ export const PlanetaryHourDetailModal: React.FC<PlanetaryHourDetailModalProps> =
 
   return (
     <AnimatePresence>
-      <div 
-        id="planetary-hour-modal-overlay"
-        className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-md overflow-hidden"
-        onClick={onClose}
-      >
-        <motion.div
-          id="planetary-hour-modal-container"
-          initial={{ opacity: 0, scale: 0.92, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.92, y: 20 }}
-          transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="bg-gray-900 border border-amber-500/30 rounded-3xl shadow-2xl flex flex-col overflow-hidden w-full max-w-lg max-h-[92vh] text-white"
-          onClick={(e) => e.stopPropagation()}
+      {isOpen && (
+        <motion.div 
+          key="planetary-hour-modal-overlay"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          id="planetary-hour-modal-overlay"
+          className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-md overflow-hidden"
+          onClick={onClose}
         >
+          <motion.div
+            key="planetary-hour-modal-container"
+            id="planetary-hour-modal-container"
+            initial={{ opacity: 0, scale: 0.92, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.92, y: 20 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            className="bg-gray-900 border border-amber-500/30 rounded-3xl shadow-2xl flex flex-col overflow-hidden w-full max-w-lg max-h-[92vh] text-white"
+            onClick={(e) => e.stopPropagation()}
+          >
           {/* Top Cosmic Header Banner */}
           <div className={`relative p-6 bg-gradient-to-br ${details.color} overflow-hidden`}>
             {/* Background Symbols Watermark */}
@@ -372,7 +376,8 @@ export const PlanetaryHourDetailModal: React.FC<PlanetaryHourDetailModalProps> =
             </div>
           </div>
         </motion.div>
-      </div>
+      </motion.div>
+      )}
     </AnimatePresence>
   );
 };

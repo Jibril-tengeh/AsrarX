@@ -15,7 +15,7 @@ import {
   PRESET_THUMBNAILS, PRESET_ICONS, DEFAULT_CATEGORIES_PRESETS,
   normalizeCategoryId, normalizeSubCategoryId,
   getCategoryFallbackThumbnail, getCategoryFallbackHook, getSubCategoryFallbackHook,
-  getCategoryFallbackIcon, isMockCategory
+  getCategoryFallbackIcon, isMockCategory, getCanonicalCategories
 } from '../../data/defaultCategories';
 import { getCategoryFallbackVideo } from '../../data/categoryIconsData';
 import { sanitizeImageSource } from '../../utils/articleImageUtils';
@@ -718,7 +718,7 @@ export const AdminCategoriesManager: React.FC<AdminCategoriesManagerProps> = ({
 
   // Filtered categories (respects categoryTypeFilter: all, custom, mock)
   const filteredCategories = useMemo(() => {
-    let list = categories;
+    let list = (categories && categories.length > 0) ? categories : getCanonicalCategories();
     if (categoryTypeFilter === 'custom') {
       list = list.filter(isCustomCategory);
     } else if (categoryTypeFilter === 'mock') {
@@ -744,7 +744,8 @@ export const AdminCategoriesManager: React.FC<AdminCategoriesManagerProps> = ({
 
   // Overall totals
   const totalSubCategoriesCount = useMemo(() => {
-    return categories.reduce((acc, cat) => acc + (cat.subCategories?.length || 0), 0);
+    const list = (categories && categories.length > 0) ? categories : getCanonicalCategories();
+    return list.reduce((acc, cat) => acc + (cat.subCategories?.length || 0), 0);
   }, [categories]);
 
   // Delete all mock/default preset categories with a single confirmation

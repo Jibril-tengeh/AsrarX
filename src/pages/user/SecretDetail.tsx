@@ -73,6 +73,7 @@ import { PremiumWrapper } from "../../components/PremiumWrapper";
 import { UnverifiedEmailGuard } from "../../components/UnverifiedEmailGuard";
 import { Secret3DVideoPaywallCard } from "../../components/videoCards/Secret3DVideoPaywallCard";
 import { getApiUrl } from "../../lib/api";
+import { MultiSecretArticleContent } from "../../components/article/MultiSecretArticleContent";
 
 const AccordionSection: React.FC<{ 
   title: string; 
@@ -266,6 +267,15 @@ export const SecretDetail: React.FC = () => {
   const [isCheckingPremium, setIsCheckingPremium] = useState(true);
   const [readingMode, setReadingMode] = useState(false);
   const isGloballyWatermarkEnabled = featureToggles?.watermark_enabled !== false;
+  const isWatermarkIconVisible = featureToggles?.watermark_icon_visible !== false && isGloballyWatermarkEnabled;
+  const isReadingModeIconVisible = featureToggles?.reading_mode_icon_visible !== false && featureToggles?.article_reading_mode_visible !== false;
+  const isViewModeIconVisible = featureToggles?.article_viewmode_icon_visible !== false && !featureToggles?.lockArticleViewmode && !featureToggles?.article_reading_mode_locked && !featureToggles?.lockArticleReadingMode;
+  const isTtsIconVisible = featureToggles?.article_tts_icon_visible !== false && featureToggles?.tts_icon_visible !== false;
+  const isOfflineIconVisible = featureToggles?.article_offline_icon_visible !== false;
+  const isFullscreenIconVisible = featureToggles?.article_fullscreen_icon_visible !== false;
+  const isBookmarkIconVisible = featureToggles?.article_bookmark_icon_visible !== false;
+  const isShareIconVisible = featureToggles?.article_share_icon_visible !== false;
+  const isTextResizerVisible = featureToggles?.article_text_resizer_visible !== false;
 
   const [showWatermark, setShowWatermark] = useState<boolean>(() => {
     try {
@@ -1502,7 +1512,7 @@ export const SecretDetail: React.FC = () => {
         </button>
 
         <div className="flex items-center gap-1 sm:gap-1.5">
-          {!featureToggles?.lockArticleViewmode && !featureToggles?.article_reading_mode_locked && !featureToggles?.lockArticleReadingMode && (
+          {isViewModeIconVisible && (
             <div className="flex items-center bg-gray-100 dark:bg-gray-800 p-0.5 rounded-full mr-1">
               <button
                 onClick={() => setViewMode('full')}
@@ -1520,101 +1530,117 @@ export const SecretDetail: React.FC = () => {
               </button>
             </div>
           )}
-          <button
-            onClick={() => setReadingMode(!readingMode)}
-            className={`p-1.5 rounded-full transition-colors flex items-center gap-1.5 ${readingMode ? "bg-[#f4ebd0] text-[#8b6e3f] dark:bg-[#383120] dark:text-[#d4c39c]" : "hover:bg-emerald-50 dark:hover:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"}`}
-            title={t("readingMode", "Mode Lecture")}
-          >
-            <BookType size={18} />
-          </button>
+          {isReadingModeIconVisible && (
+            <button
+              onClick={() => setReadingMode(!readingMode)}
+              className={`p-1.5 rounded-full transition-colors flex items-center gap-1.5 ${readingMode ? "bg-[#f4ebd0] text-[#8b6e3f] dark:bg-[#383120] dark:text-[#d4c39c]" : "hover:bg-emerald-50 dark:hover:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"}`}
+              title={t("readingMode", "Mode Lecture")}
+            >
+              <BookType size={18} />
+            </button>
+          )}
 
-          {/* Bouton Filigrane d'authenticité AsrarHub gravé */}
-          <button
-            onClick={toggleWatermark}
-            className={`p-1.5 rounded-full transition-all flex items-center gap-1.5 ${
-              showWatermark 
-                ? readingMode 
-                  ? "bg-[#f4ebd0] text-[#8b6e3f] dark:bg-[#383120] dark:text-[#d4c39c]" 
-                  : "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"
-                : "text-gray-400 hover:text-gray-600 dark:text-gray-500"
-            }`}
-            title={showWatermark ? t("secretDetail.watermarkActive", "Filigrane AsrarHub gravé : Activé") : t("secretDetail.watermarkDisabled", "Filigrane AsrarHub : Désactivé")}
-            aria-label="Filigrane AsrarHub"
-          >
-            <Stamp size={17} />
-          </button>
+          {/* Bouton Filigrane d'authenticité AsrarHub gravé (Contrôlé par l'admin panel) */}
+          {isWatermarkIconVisible && (
+            <button
+              onClick={toggleWatermark}
+              className={`p-1.5 rounded-full transition-all flex items-center gap-1.5 ${
+                showWatermark 
+                  ? readingMode 
+                    ? "bg-[#f4ebd0] text-[#8b6e3f] dark:bg-[#383120] dark:text-[#d4c39c]" 
+                    : "bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"
+                  : "text-gray-400 hover:text-gray-600 dark:text-gray-500"
+              }`}
+              title={showWatermark ? t("secretDetail.watermarkActive", "Filigrane AsrarHub gravé : Activé") : t("secretDetail.watermarkDisabled", "Filigrane AsrarHub : Désactivé")}
+              aria-label="Filigrane AsrarHub"
+            >
+              <Stamp size={17} />
+            </button>
+          )}
           
           {/* Lecture Vocale (Text-To-Speech) Button */}
-          <button
-            onClick={handleLectureVocale}
-            className={`p-1.5 rounded-full transition-all flex items-center gap-1 ${
-              isSpeaking 
-                ? "bg-red-500 hover:bg-red-600 text-white shadow-md animate-pulse font-bold px-2.5 py-1" 
-                : readingMode
-                  ? "bg-[#f4ebd0] text-[#8b6e3f] hover:bg-[#e8dcb5] dark:bg-[#383120] dark:text-[#d4c39c] dark:hover:bg-[#4a3f35] font-bold px-2.5 py-1"
-                  : "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-100/50 dark:border-emerald-800/30 font-bold px-2.5 py-1 hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
-            }`}
-            title={isSpeaking ? t("secretDetail.lectureVocaleStop", "Arrêter la lecture") : t("secretDetail.lectureVocalePlay", "Lecture Vocale")}
-          >
-            {isSpeaking ? <VolumeX size={15} /> : <Volume2 size={15} />}
-            <span className="text-xs hidden sm:inline">{isSpeaking ? t("secretDetail.lectureVocaleStop", "Arrêter") : t("secretDetail.lectureVocalePlay", "Lecture Vocale")}</span>
-          </button>
+          {isTtsIconVisible && (
+            <button
+              onClick={handleLectureVocale}
+              className={`p-1.5 rounded-full transition-all flex items-center gap-1 ${
+                isSpeaking 
+                  ? "bg-red-500 hover:bg-red-600 text-white shadow-md animate-pulse font-bold px-2.5 py-1" 
+                  : readingMode
+                    ? "bg-[#f4ebd0] text-[#8b6e3f] hover:bg-[#e8dcb5] dark:bg-[#383120] dark:text-[#d4c39c] dark:hover:bg-[#4a3f35] font-bold px-2.5 py-1"
+                    : "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-100/50 dark:border-emerald-800/30 font-bold px-2.5 py-1 hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
+              }`}
+              title={isSpeaking ? t("secretDetail.lectureVocaleStop", "Arrêter la lecture") : t("secretDetail.lectureVocalePlay", "Lecture Vocale")}
+            >
+              {isSpeaking ? <VolumeX size={15} /> : <Volume2 size={15} />}
+              <span className="text-xs hidden sm:inline">{isSpeaking ? t("secretDetail.lectureVocaleStop", "Arrêter") : t("secretDetail.lectureVocalePlay", "Lecture Vocale")}</span>
+            </button>
+          )}
 
           {/* Sauvegarder pour lecture hors ligne (IndexedDB) */}
-          <button
-            onClick={handleToggleOfflineSave}
-            disabled={isSavingOffline}
-            className={`p-1.5 rounded-full transition-all flex items-center gap-1 font-bold px-2.5 py-1 ${
-              isOfflineSaved
-                ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300 border border-emerald-300/80 dark:border-emerald-700 shadow-sm"
-                : readingMode
-                  ? "bg-[#f4ebd0] text-[#8b6e3f] hover:bg-[#e8dcb5] dark:bg-[#383120] dark:text-[#d4c39c]"
-                  : "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-100/50 dark:border-emerald-800/30 hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
-            }`}
-            title={isOfflineSaved ? t("secretDetail.savedOfflineBtn", "Enregistré pour lecture hors ligne") : t("secretDetail.saveOfflineBtn", "Sauvegarder pour lecture hors ligne")}
-          >
-            {isOfflineSaved ? (
-              <>
-                <CheckCircle2 size={15} className="text-emerald-600 dark:text-emerald-400" />
-                <span className="text-xs hidden sm:inline">{t("secretDetail.savedOffline", "Hors ligne")}</span>
-              </>
-            ) : (
-              <>
-                <HardDriveDownload size={15} className={isSavingOffline ? "animate-bounce text-emerald-500" : ""} />
-                <span className="text-xs hidden sm:inline">{t("secretDetail.saveOffline", "Sauvegarder")}</span>
-              </>
-            )}
-          </button>
+          {isOfflineIconVisible && (
+            <button
+              onClick={handleToggleOfflineSave}
+              disabled={isSavingOffline}
+              className={`p-1.5 rounded-full transition-all flex items-center gap-1 font-bold px-2.5 py-1 ${
+                isOfflineSaved
+                  ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300 border border-emerald-300/80 dark:border-emerald-700 shadow-sm"
+                  : readingMode
+                    ? "bg-[#f4ebd0] text-[#8b6e3f] hover:bg-[#e8dcb5] dark:bg-[#383120] dark:text-[#d4c39c]"
+                    : "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-100/50 dark:border-emerald-800/30 hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
+              }`}
+              title={isOfflineSaved ? t("secretDetail.savedOfflineBtn", "Enregistré pour lecture hors ligne") : t("secretDetail.saveOfflineBtn", "Sauvegarder pour lecture hors ligne")}
+            >
+              {isOfflineSaved ? (
+                <>
+                  <CheckCircle2 size={15} className="text-emerald-600 dark:text-emerald-400" />
+                  <span className="text-xs hidden sm:inline">{t("secretDetail.savedOffline", "Hors ligne")}</span>
+                </>
+              ) : (
+                <>
+                  <HardDriveDownload size={15} className={isSavingOffline ? "animate-bounce text-emerald-500" : ""} />
+                  <span className="text-xs hidden sm:inline">{t("secretDetail.saveOffline", "Sauvegarder")}</span>
+                </>
+              )}
+            </button>
+          )}
 
-          <button
-            onClick={() => {
-              toggleFullscreen();
-              setZenMode(true);
-            }}
-            className={`p-1.5 rounded-full transition-all flex items-center gap-1 font-bold px-2.5 py-1 ${
-              isFullscreen
-                ? "bg-amber-500 text-white shadow-md"
-                : "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-100/50 dark:border-emerald-800/30 hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
-            }`}
-            title={t("secretDetail.zenModeTitle", "Mode Plein Écran (Immersion sans distraction)")}
-          >
-            <Maximize2 size={15} />
-            <span className="text-xs hidden sm:inline">{t("secretDetail.zenModeBtn", "Plein Écran")}</span>
-          </button>
-          <button
-            onClick={toggleBookmark}
-            className={`p-1.5 rounded-full transition-colors ${isBookmarked ? "text-amber-500 bg-amber-50 dark:bg-amber-900/20" : "hover:bg-emerald-50 dark:hover:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"}`}
-          >
-            <Bookmark size={18} fill={isBookmarked ? "currentColor" : "none"} />
-          </button>
-          <button
-            onClick={handleShare}
-            className={`p-1.5 rounded-full transition-colors ${readingMode ? "text-stone-600 hover:bg-[#f4ebd0] dark:text-stone-300 dark:hover:bg-[#383120]" : "text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30"}`}
-            title={t("secretDetail.shareBtn", "Partager cet article")}
-            aria-label="Partager"
-          >
-            <Share2 size={18} />
-          </button>
+          {isFullscreenIconVisible && (
+            <button
+              onClick={() => {
+                toggleFullscreen();
+                setZenMode(true);
+              }}
+              className={`p-1.5 rounded-full transition-all flex items-center gap-1 font-bold px-2.5 py-1 ${
+                isFullscreen
+                  ? "bg-amber-500 text-white shadow-md"
+                  : "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 border border-emerald-100/50 dark:border-emerald-800/30 hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
+              }`}
+              title={t("secretDetail.zenModeTitle", "Mode Plein Écran (Immersion sans distraction)")}
+            >
+              <Maximize2 size={15} />
+              <span className="text-xs hidden sm:inline">{t("secretDetail.zenModeBtn", "Plein Écran")}</span>
+            </button>
+          )}
+
+          {isBookmarkIconVisible && (
+            <button
+              onClick={toggleBookmark}
+              className={`p-1.5 rounded-full transition-colors ${isBookmarked ? "text-amber-500 bg-amber-50 dark:bg-amber-900/20" : "hover:bg-emerald-50 dark:hover:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400"}`}
+            >
+              <Bookmark size={18} fill={isBookmarked ? "currentColor" : "none"} />
+            </button>
+          )}
+
+          {isShareIconVisible && (
+            <button
+              onClick={handleShare}
+              className={`p-1.5 rounded-full transition-colors ${readingMode ? "text-stone-600 hover:bg-[#f4ebd0] dark:text-stone-300 dark:hover:bg-[#383120]" : "text-gray-500 hover:text-emerald-600 dark:text-gray-400 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30"}`}
+              title={t("secretDetail.shareBtn", "Partager cet article")}
+              aria-label="Partager"
+            >
+              <Share2 size={18} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -1872,7 +1898,7 @@ export const SecretDetail: React.FC = () => {
 
           <div className="space-y-10 mt-8">
             <section>
-              {readingMode && (
+              {readingMode && isTextResizerVisible && (
                 <div className="flex items-center justify-end mb-4 max-w-3xl mx-auto">
                   <div className="flex items-center gap-1.5 bg-[#f4ebd0]/40 dark:bg-[#383120]/40 px-2.5 py-1 rounded-xl border border-[#e8dcb5]/40 dark:border-[#524830]/30">
                     <span className="text-[10px] font-bold uppercase tracking-wider text-[#8b7556] dark:text-[#a89871] mr-1">Taille :</span>
@@ -1904,25 +1930,27 @@ export const SecretDetail: React.FC = () => {
                   </span>
                   
                   {/* Fine-Tuning Text Size (pointed in blue) */}
-                  <div className="flex items-center gap-1.5 bg-gray-50 dark:bg-gray-900 px-2.5 py-1 rounded-xl border border-gray-200 dark:border-gray-700">
-                    <button 
-                      onClick={() => setArticleFontSize(prev => Math.max(12, prev - 2))}
-                      className="p-1 hover:bg-gray-200 dark:hover:bg-gray-800 rounded text-gray-500 dark:text-gray-400 font-bold text-xs cursor-pointer select-none"
-                      title="Diminuer la taille"
-                    >
-                      A-
-                    </button>
-                    <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 min-w-[28px] text-center font-mono">
-                      {articleFontSize}px
-                    </span>
-                    <button 
-                      onClick={() => setArticleFontSize(prev => Math.min(36, prev + 2))}
-                      className="p-1 hover:bg-gray-200 dark:hover:bg-gray-800 rounded text-gray-500 dark:text-gray-400 font-bold text-xs cursor-pointer select-none"
-                      title="Augmenter la taille"
-                    >
-                      A+
-                    </button>
-                  </div>
+                  {isTextResizerVisible && (
+                    <div className="flex items-center gap-1.5 bg-gray-50 dark:bg-gray-900 px-2.5 py-1 rounded-xl border border-gray-200 dark:border-gray-700">
+                      <button 
+                        onClick={() => setArticleFontSize(prev => Math.max(12, prev - 2))}
+                        className="p-1 hover:bg-gray-200 dark:hover:bg-gray-800 rounded text-gray-500 dark:text-gray-400 font-bold text-xs cursor-pointer select-none"
+                        title="Diminuer la taille"
+                      >
+                        A-
+                      </button>
+                      <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 min-w-[28px] text-center font-mono">
+                        {articleFontSize}px
+                      </span>
+                      <button 
+                        onClick={() => setArticleFontSize(prev => Math.min(36, prev + 2))}
+                        className="p-1 hover:bg-gray-200 dark:hover:bg-gray-800 rounded text-gray-500 dark:text-gray-400 font-bold text-xs cursor-pointer select-none"
+                        title="Augmenter la taille"
+                      >
+                        A+
+                      </button>
+                    </div>
+                  )}
                 </h2>
               )}
               {isSpeaking && (
@@ -2021,6 +2049,29 @@ export const SecretDetail: React.FC = () => {
                   </div>
                 ) : (() => {
                   const isHtml = /<[a-z][\s\S]*>/i.test(displayContent);
+                  const hasMultiSecretsOrH3 = (item?.secrets && item.secrets.length > 0) || /<h[23][^>]*>/i.test(displayContent);
+
+                  // If article contains multiple secrets or structured H3 subtitles (OBJECTIF, EXEMPLE, ANNIYYA, L'EFFET, ROUQYA):
+                  if (hasMultiSecretsOrH3) {
+                    return (
+                      <div className="article-reader-container relative overflow-hidden" style={{ '--article-reader-font-size': `${articleFontSize}px`, fontSize: `${articleFontSize}px` } as React.CSSProperties}>
+                        {isGloballyWatermarkEnabled && showWatermark && (
+                          <AsrarHubWatermark 
+                            variant={watermarkVariant}
+                            opacity={watermarkOpacity}
+                            showCentralSeal={false}
+                          />
+                        )}
+                        <MultiSecretArticleContent
+                          content={displayContent}
+                          secrets={item?.secrets}
+                          articleTitle={item?.title || 'Secret Spirituel'}
+                          readingMode={readingMode}
+                          fontSize={articleFontSize}
+                        />
+                      </div>
+                    );
+                  }
 
                   if (viewMode === 'full') {
                     return (

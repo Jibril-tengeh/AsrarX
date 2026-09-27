@@ -513,9 +513,9 @@ export const DirectAbjadWidget: React.FC = () => {
       {wasatVal === 0 && (
         <div className="flex items-center gap-1.5 flex-wrap pt-1 text-xs">
           <span className="text-gray-500 dark:text-gray-400 font-medium text-[11px] mr-1">{t.quickExamples}</span>
-          {sampleNames.map((item) => (
+          {sampleNames.map((item, idx) => (
             <button
-              key={item.label}
+              key={`preset-sample-${item.label}-${idx}`}
               onClick={() => setInputQuery(item.label)}
               className="px-2.5 py-1 rounded-xl bg-white dark:bg-gray-800 hover:bg-emerald-50 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700 font-medium text-xs transition-all hover:border-emerald-400 cursor-pointer flex items-center gap-1.5 shadow-xs"
             >

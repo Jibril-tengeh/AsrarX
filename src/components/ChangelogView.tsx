@@ -177,7 +177,7 @@ export const ChangelogView: React.FC<ChangelogViewProps> = ({
         </div>
 
         <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
-          {(['all', 'major', 'minor', 'patch'] as const).map((cat) => {
+          {(['all', 'major', 'minor', 'patch'] as const).map((cat, idx) => {
             const catLabel =
               cat === 'all'
                 ? t('changelog.filterAll', 'Toutes')
@@ -189,7 +189,7 @@ export const ChangelogView: React.FC<ChangelogViewProps> = ({
 
             return (
               <button
-                key={cat}
+                key={`cat-filter-${cat}-${idx}`}
                 type="button"
                 onClick={() => setSelectedCategory(cat)}
                 className={`px-2.5 py-1.5 rounded-xl text-xs font-bold capitalize transition-all cursor-pointer whitespace-nowrap ${
@@ -218,13 +218,13 @@ export const ChangelogView: React.FC<ChangelogViewProps> = ({
         </div>
       ) : (
         <div className="space-y-3.5">
-          {filteredReleases.map((rel) => {
+          {filteredReleases.map((rel, rIdx) => {
             const isCurrent = rel.version === currentAppVersion || rel.isCurrent;
             const loc = getLocalizedRelease(rel, language);
 
             return (
               <div
-                key={rel.version}
+                key={`changelog-view-${rel.version}-${rIdx}`}
                 className={`p-5 rounded-3xl border transition-all ${
                   isCurrent
                     ? 'bg-white dark:bg-gray-800/90 border-emerald-300 dark:border-emerald-700 shadow-sm ring-1 ring-emerald-500/20'

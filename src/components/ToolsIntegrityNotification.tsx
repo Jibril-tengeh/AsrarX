@@ -65,11 +65,16 @@ export const ToolsIntegrityNotification: React.FC = () => {
   return (
     <AnimatePresence>
       {isOpen && (
-        <div 
+        <motion.div 
+          key="tools-integrity-notification-overlay"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
           className="fixed inset-0 z-[9999] flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-xs"
           onClick={handleDismiss}
         >
           <motion.div
+            key="tools-integrity-notification-modal-card"
             initial={{ opacity: 0, scale: 0.9, y: 15 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 15 }}
@@ -158,7 +163,7 @@ export const ToolsIntegrityNotification: React.FC = () => {
               </div>
             )}
           </motion.div>
-        </div>
+        </motion.div>
       )}
     </AnimatePresence>
   );

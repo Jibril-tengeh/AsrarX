@@ -77,7 +77,8 @@ import {
 import { AuthModal } from "../../components/AuthModal";
 import { CommunityPostContent } from "../../components/CommunityPostContent";
 import { EmojiPickerPopover } from "../../components/chat/EmojiPickerPopover";
-import { db, auth } from "../../lib/firebase";
+import { db, auth, storage } from "../../lib/firebase";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import {
   collection,
   addDoc,
@@ -131,9 +132,11 @@ interface Post {
   voiceNotes?: string[]; // base64 array
   attachments?: {
     type: "image" | "video" | "audio" | "document";
-    url: string; // base64 urls
+    url: string; // url to file or preview
     fileName?: string;
     fileSize?: string;
+    isUploading?: boolean;
+    uploadId?: string;
   }[];
   reactions?: {
     like?: string[]; // userIds
@@ -435,7 +438,15 @@ export const Community: React.FC = () => {
   const [showAuthModal, setShowAuthModal] = useState(false);
 
   // Media Attachment States
-  const [attachedMedias, setAttachedMedias] = useState<{ type: "image" | "video" | "audio" | "document"; url: string; fileName?: string; fileSize?: string }[]>([]);
+  const [attachedMedias, setAttachedMedias] = useState<{
+    type: "image" | "video" | "audio" | "document";
+    url: string;
+    fileName?: string;
+    fileSize?: string;
+    isUploading?: boolean;
+    uploadId?: string;
+  }[]>([]);
+  const [isUploadingMedia, setIsUploadingMedia] = useState<boolean>(false);
   const [recordedAudio, setRecordedAudio] = useState<string | null>(null);
   const [codeSharingEnabled, setCodeSharingEnabled] = useState(true);
   const [isAttachMenuOpen, setIsAttachMenuOpen] = useState(false);
@@ -574,6 +585,9 @@ export const Community: React.FC = () => {
     setDocViewerCopied(false);
     setDocSearchQuery("");
 
+    const nameLower = (file.fileName || "").toLowerCase();
+    const isTextExt = [".txt", ".json", ".js", ".ts", ".tsx", ".jsx", ".py", ".html", ".css", ".csv", ".md", ".xml", ".sh", ".sql", ".log"].some((ext) => nameLower.endsWith(ext));
+
     if (file.url && file.url.startsWith("data:")) {
       const isTextMime =
         file.url.startsWith("data:text/") ||
@@ -584,9 +598,6 @@ export const Community: React.FC = () => {
         file.url.startsWith("data:text/plain") ||
         file.url.startsWith("data:text/html") ||
         file.url.startsWith("data:text/xml");
-
-      const nameLower = (file.fileName || "").toLowerCase();
-      const isTextExt = [".txt", ".json", ".js", ".ts", ".tsx", ".jsx", ".py", ".html", ".css", ".csv", ".md", ".xml", ".sh", ".sql", ".log"].some((ext) => nameLower.endsWith(ext));
 
       if (isTextMime || isTextExt) {
         try {
@@ -612,6 +623,13 @@ export const Community: React.FC = () => {
       } else {
         setDocViewerTextContent(null);
       }
+    } else if (file.url && isTextExt) {
+      // Fetch text content from server endpoint
+      const targetTextUrl = file.url.startsWith("http") ? file.url : getApiUrl(file.url);
+      fetch(targetTextUrl)
+        .then((res) => (res.ok ? res.text() : Promise.reject()))
+        .then((txt) => setDocViewerTextContent(txt))
+        .catch(() => setDocViewerTextContent(null));
     } else {
       setDocViewerTextContent(null);
     }
@@ -1346,14 +1364,89 @@ export const Community: React.FC = () => {
     });
   };
 
+  // Helper: Reliable file uploader for Community documents and media (PDFs, Docs, etc.)
+  // Uploads to persistent server storage (/api/community/upload) with Firebase Storage cloud fallback
+  const uploadCommunityFile = async (
+    file: File,
+    mediaType: "image" | "video" | "audio" | "document"
+  ): Promise<string> => {
+    // 1. Primary: Server-side persistent storage
+    try {
+      const base64Data = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve((reader.result as string) || "");
+        reader.onerror = (e) => reject(e);
+        reader.readAsDataURL(file);
+      });
+
+      if (base64Data) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 35000);
+
+        const response = await fetch(getApiUrl("/api/community/upload"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            fileName: file.name,
+            fileData: base64Data,
+            fileType: mediaType
+          }),
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+
+        if (response.ok) {
+          const json = await response.json();
+          if (json.url) {
+            return json.url;
+          }
+        }
+      }
+    } catch (serverErr) {
+      console.warn("[Community Upload] Server upload failed or timed out, trying cloud fallback:", serverErr);
+    }
+
+    // 2. Cloud Fallback: Firebase Storage
+    try {
+      if (storage) {
+        const cleanName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+        const storagePath = `community_uploads/${Date.now()}_${cleanName}`;
+        const fileRef = ref(storage, storagePath);
+        await uploadBytes(fileRef, file);
+        const downloadUrl = await getDownloadURL(fileRef);
+        if (downloadUrl) {
+          return downloadUrl;
+        }
+      }
+    } catch (cloudErr) {
+      console.warn("[Community Upload] Firebase storage upload fallback failed:", cloudErr);
+    }
+
+    // 3. Fallback for very small files (< 120KB) as data URL if server and storage are unavailable
+    if (file.size < 120 * 1024) {
+      const dataUrl = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve((reader.result as string) || "");
+        reader.readAsDataURL(file);
+      });
+      if (dataUrl) return dataUrl;
+    }
+
+    throw new Error("Impossible de téléverser le document. Veuillez vérifier votre connexion.");
+  };
+
   // Attach Media File Change (Supports Images, Videos, Audios, Documents)
   const handleMediaAttach = async (e: React.ChangeEvent<HTMLInputElement>, filterType?: "image" | "video" | "audio" | "document") => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    for (const file of Array.from(files) as File[]) {
-      if (file.size > 25 * 1024 * 1024) {
-        alert(lang === "ha" ? "Fayil ɗin ya yi yawa (Max 25MB)." : lang === "en" ? "File too large (Max 25MB)." : "Fichier trop volumineux (Max 25Mo).");
+    const fileList = Array.from(files) as File[];
+    // Reset file input value immediately so user can re-select the same file
+    e.target.value = "";
+
+    for (const file of fileList) {
+      if (file.size > 30 * 1024 * 1024) {
+        alert(lang === "ha" ? "Fayil ɗin ya yi yawa (Max 30MB)." : lang === "en" ? "File too large (Max 30MB)." : "Fichier trop volumineux (Max 30Mo).");
         continue;
       }
 
@@ -1384,47 +1477,66 @@ export const Community: React.FC = () => {
         }
       }
 
-      if (type === "image") {
-        try {
-          const processed = await processHighResImage(file);
-          setAttachedMedias((prev) => [
-            ...prev,
-            {
-              type: "image",
-              url: processed.url,
-              fileName: file.name,
-              fileSize: processed.fileSize
-            }
-          ]);
-        } catch (_) {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            setAttachedMedias((prev) => [
-              ...prev,
-              {
-                type: "image",
-                url: reader.result as string,
-                fileName: file.name,
-                fileSize: file.size >= 1024 * 1024 ? `${(file.size / (1024 * 1024)).toFixed(1)} MB` : `${(file.size / 1024).toFixed(1)} KB`
-              }
-            ]);
-          };
-          reader.readAsDataURL(file);
+      const formattedSize = file.size >= 1024 * 1024 ? `${(file.size / (1024 * 1024)).toFixed(1)} MB` : `${Math.max(1, Math.round(file.size / 1024))} KB`;
+      const uploadId = `upload_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+
+      // Immediately add a pending item with loading indicator
+      setAttachedMedias((prev) => [
+        ...prev,
+        {
+          type,
+          url: "",
+          fileName: file.name,
+          fileSize: formattedSize,
+          isUploading: true,
+          uploadId
         }
-      } else {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          setAttachedMedias((prev) => [
-            ...prev,
-            {
-              type,
-              url: reader.result as string,
-              fileName: file.name,
-              fileSize: file.size >= 1024 * 1024 ? `${(file.size / (1024 * 1024)).toFixed(1)} MB` : `${(file.size / 1024).toFixed(1)} KB`
+      ]);
+      setIsUploadingMedia(true);
+
+      try {
+        let uploadedUrl: string;
+        if (type === "image") {
+          try {
+            const processed = await processHighResImage(file);
+            if (processed.url.length < 80000) {
+              uploadedUrl = processed.url;
+            } else {
+              uploadedUrl = await uploadCommunityFile(file, "image");
             }
-          ]);
-        };
-        reader.readAsDataURL(file);
+          } catch (_) {
+            uploadedUrl = await uploadCommunityFile(file, "image");
+          }
+        } else {
+          uploadedUrl = await uploadCommunityFile(file, type);
+        }
+
+        // Update item with the real permanent URL
+        setAttachedMedias((prev) =>
+          prev.map((item) =>
+            item.uploadId === uploadId
+              ? {
+                  type,
+                  url: uploadedUrl,
+                  fileName: file.name,
+                  fileSize: formattedSize,
+                  isUploading: false
+                }
+              : item
+          )
+        );
+      } catch (err: any) {
+        console.error("Upload error for file:", file.name, err);
+        setAttachedMedias((prev) => prev.filter((item) => item.uploadId !== uploadId));
+        alert(
+          lang === "ha"
+            ? `An sami matsala wajen ɗora ${file.name}. Da fatan za a sake gwadawa.`
+            : lang === "en"
+            ? `Failed to upload ${file.name}. Please check your connection and retry.`
+            : `Échec du téléversement de ${file.name}. Veuillez vérifier votre connexion et réessayer.`
+        );
+      } finally {
+        setIsUploadingMedia(false);
       }
     }
   };
@@ -1438,9 +1550,29 @@ export const Community: React.FC = () => {
       return;
     }
 
-    const audioToSend = voiceAudioUrl || recordedAudio;
+    // Check if any attached media is still actively uploading
+    if (attachedMedias.some((m) => m.isUploading)) {
+      alert(
+        lang === "ha"
+          ? "Ana ɗora fayil ɗin, da fatan a jira..."
+          : lang === "en"
+          ? "File is uploading, please wait a moment..."
+          : "Téléversement du fichier en cours, veuillez patienter un instant..."
+      );
+      return;
+    }
 
-    if (!messageText.trim() && attachedMedias.length === 0 && !audioToSend) {
+    const audioToSend = voiceAudioUrl || recordedAudio;
+    const validAttachments = attachedMedias
+      .filter((m) => m.url && !m.isUploading)
+      .map((m) => ({
+        type: m.type || "document",
+        url: m.url,
+        fileName: m.fileName || "document",
+        fileSize: m.fileSize || "Taille inconnue"
+      }));
+
+    if (!messageText.trim() && validAttachments.length === 0 && !audioToSend) {
       return;
     }
 
@@ -1469,14 +1601,14 @@ export const Community: React.FC = () => {
 
     if (replyToPost) {
       optimisticPost.replyTo = {
-        authorName: replyToPost.authorName,
-        content: replyToPost.content.substring(0, 50),
-        postId: replyToPost.id
+        authorName: replyToPost.authorName || "",
+        content: (replyToPost.content || "").substring(0, 50),
+        postId: replyToPost.id || ""
       };
     }
 
-    if (attachedMedias.length > 0) {
-      optimisticPost.attachments = attachedMedias;
+    if (validAttachments.length > 0) {
+      optimisticPost.attachments = validAttachments;
     }
 
     if (audioToSend) {
@@ -1493,34 +1625,55 @@ export const Community: React.FC = () => {
     setRecordedAudio(null);
     scrollToBottom(true);
 
+    // Sanitize payload strictly: eliminate undefined values to prevent Firestore rejection
     const payload: any = {
       authorId: effectiveUid,
       authorName,
       authorLocation,
       status: "approved",
-      content: optimisticPost.content,
+      content: optimisticPost.content || "",
       createdAt: serverTimestamp(),
-      reactions: optimisticPost.reactions
+      reactions: optimisticPost.reactions || { like: [], love: [], haha: [], wow: [], sad: [], angry: [] }
     };
 
-    if (optimisticPost.replyTo) payload.replyTo = optimisticPost.replyTo;
-    if (optimisticPost.attachments) payload.attachments = optimisticPost.attachments;
-    if (optimisticPost.voiceNotes) payload.voiceNotes = optimisticPost.voiceNotes;
+    if (optimisticPost.replyTo) {
+      payload.replyTo = {
+        authorName: optimisticPost.replyTo.authorName || "",
+        content: optimisticPost.replyTo.content || "",
+        postId: optimisticPost.replyTo.postId || ""
+      };
+    }
+    if (validAttachments.length > 0) {
+      payload.attachments = validAttachments;
+    }
+    if (optimisticPost.voiceNotes && optimisticPost.voiceNotes.length > 0) {
+      payload.voiceNotes = optimisticPost.voiceNotes;
+    }
 
     try {
       await addDoc(collection(db, "community_posts"), payload);
       scrollToBottom(true);
     } catch (err) {
-      console.warn("Error sending message to Firestore, saving to local posts:", err);
+      console.warn("Primary Firestore publish error, attempting with ISO timestamp fallback:", err);
       try {
-        const local = JSON.parse(localStorage.getItem("asrarhub_local_posts") || "[]");
-        local.push({
-          ...optimisticPost,
+        const fallbackPayload = {
+          ...payload,
           createdAt: now.toISOString()
-        });
-        localStorage.setItem("asrarhub_local_posts", JSON.stringify(local));
-      } catch (_) {}
-      scrollToBottom(true);
+        };
+        await addDoc(collection(db, "community_posts"), fallbackPayload);
+        scrollToBottom(true);
+      } catch (err2) {
+        console.error("Fatal error saving post to Firestore:", err2);
+        try {
+          const local = JSON.parse(localStorage.getItem("asrarhub_local_posts") || "[]");
+          local.push({
+            ...optimisticPost,
+            createdAt: now.toISOString()
+          });
+          localStorage.setItem("asrarhub_local_posts", JSON.stringify(local.slice(-50)));
+        } catch (_) {}
+        scrollToBottom(true);
+      }
     }
   };
 
@@ -2431,7 +2584,7 @@ export const Community: React.FC = () => {
                           initial={{ opacity: 0, scale: 0.95, y: -4 }}
                           animate={{ opacity: 1, scale: 1, y: 0 }}
                           exit={{ opacity: 0, scale: 0.95, y: -4 }}
-                          className="absolute right-0 top-11 z-50 w-56 bg-white dark:bg-[#1e2a38] rounded-2xl shadow-2xl border border-gray-200/80 dark:border-gray-700/80 py-1.5 overflow-hidden backdrop-blur-md"
+                          className="absolute right-0 top-11 z-50 w-56 bg-white dark:bg-[#1e2a38] rounded-2xl shadow-2xl border border-gray-200/80 dark:border-gray-700/80 py-1.5 max-h-[calc(100dvh-4rem)] overflow-y-auto no-scrollbar backdrop-blur-md"
                         >
                           <button
                             onClick={() => {
@@ -2764,30 +2917,76 @@ export const Community: React.FC = () => {
                                       <audio src={att.url} controls className="w-full text-xs" />
                                     </div>
                                   );
-                                } else if (att.type === "document") {
+                                } else if (
+                                  att.type === "document" ||
+                                  att.type === "file" ||
+                                  (() => {
+                                    const n = (att.fileName || "").toLowerCase();
+                                    const u = (att.url || "").toLowerCase();
+                                    return (
+                                      n.endsWith(".pdf") ||
+                                      n.endsWith(".doc") ||
+                                      n.endsWith(".docx") ||
+                                      n.endsWith(".xls") ||
+                                      n.endsWith(".xlsx") ||
+                                      n.endsWith(".csv") ||
+                                      n.endsWith(".txt") ||
+                                      n.endsWith(".odt") ||
+                                      n.endsWith(".rtf") ||
+                                      n.endsWith(".zip") ||
+                                      n.endsWith(".rar") ||
+                                      u.includes(".pdf") ||
+                                      u.startsWith("data:application/pdf")
+                                    );
+                                  })()
+                                ) {
+                                  const nameLower = (att.fileName || "").toLowerCase();
+                                  const isPdf = nameLower.endsWith(".pdf") || att.url?.includes(".pdf") || att.url?.startsWith("data:application/pdf");
+                                  const isWord = nameLower.endsWith(".doc") || nameLower.endsWith(".docx");
+                                  const isExcel = nameLower.endsWith(".xls") || nameLower.endsWith(".xlsx") || nameLower.endsWith(".csv");
+                                  const isZip = nameLower.endsWith(".zip") || nameLower.endsWith(".rar");
+                                  const iconColor = isPdf ? "text-red-500 bg-red-500/10 dark:bg-red-500/20" : isWord ? "text-blue-500 bg-blue-500/10 dark:bg-blue-500/20" : isExcel ? "text-emerald-500 bg-emerald-500/10 dark:bg-emerald-500/20" : isZip ? "text-amber-500 bg-amber-500/10 dark:bg-amber-500/20" : "text-amber-600 bg-amber-500/10 dark:bg-amber-500/20";
+                                  const badgeText = isPdf ? "PDF" : isWord ? "DOC" : isExcel ? "EXCEL" : isZip ? "ZIP" : "DOC";
+
                                   return (
                                     <div
                                       key={`att-doc-${post.id}-${i}`}
                                       onClick={() => handleOpenDocViewer(att)}
-                                      className="flex items-center gap-2.5 bg-black/10 dark:bg-white/5 hover:bg-black/15 dark:hover:bg-white/10 p-2.5 rounded-2xl text-left border border-gray-100 dark:border-gray-800 transition-all w-full max-w-[320px] cursor-pointer group shadow-sm"
+                                      className="flex items-center gap-2.5 bg-black/10 dark:bg-white/5 hover:bg-black/15 dark:hover:bg-white/10 p-2.5 rounded-2xl text-left border border-gray-100 dark:border-gray-800 transition-all w-full max-w-[340px] cursor-pointer group shadow-sm"
                                     >
-                                      <div className="p-2.5 bg-amber-500/20 text-amber-600 dark:text-amber-400 rounded-xl shrink-0 group-hover:scale-105 transition-transform">
+                                      <div className={`p-2.5 rounded-xl shrink-0 group-hover:scale-105 transition-transform ${iconColor}`}>
                                         <FileText size={20} />
                                       </div>
                                       <div className="flex-1 min-w-0 pr-1">
-                                        <p className="text-xs font-bold truncate text-gray-900 dark:text-white group-hover:text-emerald-500 transition-colors">
-                                          {att.fileName || "Document"}
-                                        </p>
+                                        <div className="flex items-center gap-1.5">
+                                          <p className="text-xs font-bold truncate text-gray-900 dark:text-white group-hover:text-emerald-500 transition-colors">
+                                            {att.fileName || (isPdf ? "Document.pdf" : "Document")}
+                                          </p>
+                                          <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-black/5 dark:bg-white/10 text-gray-600 dark:text-gray-300 shrink-0">
+                                            {badgeText}
+                                          </span>
+                                        </div>
                                         <p className="text-[10px] text-gray-500 dark:text-gray-400 font-medium">
                                           {att.fileSize || "Fichier"}
                                         </p>
                                       </div>
-                                      <div
-                                        className="px-2.5 py-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-400 rounded-xl font-bold text-[11px] flex items-center gap-1 shrink-0 transition-colors shadow-xs"
-                                        title="Ouvrir dans le lecteur de documents"
-                                      >
-                                        <Eye size={14} />
-                                        <span>Consulter</span>
+                                      <div className="flex items-center gap-1 shrink-0">
+                                        <div
+                                          className="px-2.5 py-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-600 dark:text-emerald-400 rounded-xl font-bold text-[11px] flex items-center gap-1 transition-colors shadow-xs"
+                                          title="Ouvrir dans le lecteur de documents"
+                                        >
+                                          <Eye size={14} />
+                                          <span>Consulter</span>
+                                        </div>
+                                        <a
+                                          href={att.url.includes("/api/community/file/") ? `${att.url}/download` : att.url}
+                                          download={att.fileName || "document"}
+                                          onClick={(e) => e.stopPropagation()}
+                                          className="p-1.5 text-gray-400 hover:text-emerald-500 dark:hover:text-emerald-400 hover:bg-black/5 dark:hover:bg-white/10 rounded-lg transition-colors"
+                                          title="Télécharger directement"
+                                        >
+                                          <Download size={14} />
+                                        </a>
                                       </div>
                                     </div>
                                   );
@@ -3250,20 +3449,37 @@ export const Community: React.FC = () => {
                     <div className="flex flex-wrap gap-2 pt-0.5">
                       {attachedMedias.map((media, idx) => (
                         <div key={`attached-media-preview-${media.url || idx}-${idx}`} className="relative group rounded-lg overflow-hidden border border-gray-200 dark:border-gray-800">
-                          {media.type === "image" ? (
+                          {media.isUploading ? (
+                            <div className="w-20 h-12 bg-amber-500/10 dark:bg-amber-500/20 flex flex-col items-center justify-center gap-1 p-1 text-center">
+                              <Loader2 size={15} className="text-amber-500 animate-spin" />
+                              <span className="text-[8px] font-bold text-amber-600 dark:text-amber-400 leading-tight">Envoi...</span>
+                            </div>
+                          ) : media.type === "image" ? (
                             <img src={media.url} className="w-16 h-12 object-cover" />
                           ) : media.type === "video" ? (
                             <div className="w-16 h-12 bg-black flex items-center justify-center text-[9px] text-white font-bold">🎥 VIDÉO</div>
+                          ) : media.type === "document" ? (
+                            <div className="w-24 h-12 bg-amber-500/10 dark:bg-amber-500/20 flex items-center gap-1.5 px-2 text-amber-600 dark:text-amber-400">
+                              <FileText size={18} className="shrink-0" />
+                              <div className="min-w-0">
+                                <span className="block text-[9px] font-extrabold truncate max-w-[55px] text-gray-800 dark:text-gray-200" title={media.fileName}>
+                                  {media.fileName || "Document"}
+                                </span>
+                                <span className="block text-[8px] text-gray-500 dark:text-gray-400">
+                                  {media.fileSize || "Prêt"}
+                                </span>
+                              </div>
+                            </div>
                           ) : (
                             <div className="w-16 h-12 bg-gray-100 dark:bg-gray-800 flex items-center justify-center text-[9px] text-emerald-600 dark:text-teal-400 font-bold">🎵 AUDIO</div>
                           )}
                           <button
                             type="button"
                             onClick={() => setAttachedMedias((prev) => prev.filter((_, i) => i !== idx))}
-                            className="absolute top-0.5 right-0.5 bg-red-500 text-white rounded-full p-0.5 hover:bg-red-600 transition-colors shadow-sm cursor-pointer"
-                            style={{ width: "14px", height: "14px" }}
+                            className="absolute top-0.5 right-0.5 bg-red-500 text-white rounded-full p-0.5 hover:bg-red-600 transition-colors shadow-sm cursor-pointer z-10"
+                            style={{ width: "16px", height: "16px" }}
                           >
-                            <X size={8} />
+                            <X size={10} />
                           </button>
                         </div>
                       ))}
@@ -3465,19 +3681,23 @@ export const Community: React.FC = () => {
                 <div className="flex gap-1.5 overflow-x-auto max-w-[150px] no-scrollbar shrink-0 select-none bg-black/5 dark:bg-white/5 p-1 rounded-xl">
                   {attachedMedias.map((media, idx) => (
                     <div key={`attached-media-bar-${media.url || idx}-${idx}`} className="relative shrink-0">
-                      {media.type === "image" ? (
+                      {media.isUploading ? (
+                        <div className="w-7 h-7 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                          <Loader2 size={12} className="text-amber-500 animate-spin text-amber-600" />
+                        </div>
+                      ) : media.type === "image" ? (
                         <img src={media.url} className="w-7 h-7 rounded-lg object-cover" />
                       ) : media.type === "video" ? (
                         <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xs font-bold">🎥</div>
                       ) : media.type === "audio" ? (
                         <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xs font-bold">🎵</div>
                       ) : (
-                        <div className="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center text-xs font-bold">📄</div>
+                        <div className="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center text-xs font-bold" title={media.fileName}>📄</div>
                       )}
                       <button
                         type="button"
                         onClick={() => setAttachedMedias((prev) => prev.filter((_, i) => i !== idx))}
-                        className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 flex items-center justify-center cursor-pointer hover:bg-red-600 transition-colors"
+                        className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 flex items-center justify-center cursor-pointer hover:bg-red-600 transition-colors z-10"
                         style={{ width: "12px", height: "12px" }}
                       >
                         <X size={8} />
@@ -3511,7 +3731,7 @@ export const Community: React.FC = () => {
                         animate={{ opacity: 1, y: 0, scale: 1 }}
                         exit={{ opacity: 0, y: 15, scale: 0.92 }}
                         transition={{ type: "spring", stiffness: 450, damping: 25 }}
-                        className="absolute bottom-12 right-0 sm:-right-12 z-50 bg-white/95 dark:bg-[#182533]/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-200/80 dark:border-gray-700/80 p-3 w-72 sm:w-80"
+                        className="absolute bottom-12 right-0 sm:-right-8 z-50 bg-white/95 dark:bg-[#182533]/95 backdrop-blur-md rounded-2xl shadow-2xl border border-gray-200/80 dark:border-gray-700/80 p-3 w-72 sm:w-80 max-h-[calc(100dvh-5.5rem)] overflow-y-auto no-scrollbar max-w-[calc(100vw-1.5rem)]"
                       >
                         <div className="flex items-center justify-between pb-2 mb-2 border-b border-gray-100 dark:border-gray-800">
                           <span className="text-[11px] font-black text-gray-700 dark:text-gray-200 uppercase tracking-wider flex items-center gap-1.5">
@@ -3748,11 +3968,20 @@ export const Community: React.FC = () => {
             ) : messageText.trim() || attachedMedias.length > 0 || recordedAudio ? (
               <button
                 type="button"
+                disabled={isUploadingMedia || attachedMedias.some((m) => m.isUploading)}
                 onClick={() => handleSendMessage()}
-                className="w-11 h-11 bg-[#2481cc] hover:bg-[#2071b3] text-white rounded-full flex items-center justify-center shadow-md shadow-blue-500/15 active:scale-95 cursor-pointer transition-all shrink-0"
-                title={tLocal("sendMsg")}
+                className={`w-11 h-11 text-white rounded-full flex items-center justify-center shadow-md shadow-blue-500/15 active:scale-95 transition-all shrink-0 ${
+                  isUploadingMedia || attachedMedias.some((m) => m.isUploading)
+                    ? "bg-gray-400 cursor-not-allowed opacity-80"
+                    : "bg-[#2481cc] hover:bg-[#2071b3] cursor-pointer"
+                }`}
+                title={isUploadingMedia || attachedMedias.some((m) => m.isUploading) ? "Téléversement du fichier en cours..." : tLocal("sendMsg")}
               >
-                <Send size={18} className="ml-0.5" />
+                {isUploadingMedia || attachedMedias.some((m) => m.isUploading) ? (
+                  <Loader2 size={18} className="animate-spin text-white" />
+                ) : (
+                  <Send size={18} className="ml-0.5" />
+                )}
               </button>
             ) : (
               <button
@@ -3789,7 +4018,7 @@ export const Community: React.FC = () => {
         {sidebarOpen && (
           <div 
             onClick={() => setSidebarOpen(false)}
-            className="fixed inset-0 top-[60px] sm:top-[68px] bottom-[56px] sm:bottom-0 z-[45] md:relative md:top-auto md:bottom-auto md:inset-auto md:z-auto bg-black/60 md:bg-transparent backdrop-blur-xs md:backdrop-blur-none flex justify-end"
+            className="fixed inset-0 top-[60px] sm:top-[68px] bottom-0 z-[45] md:relative md:top-auto md:bottom-auto md:inset-auto md:z-auto bg-black/60 md:bg-transparent backdrop-blur-xs md:backdrop-blur-none flex justify-end pb-[env(safe-area-inset-bottom)]"
           >
             <div 
               onClick={(e) => e.stopPropagation()}
@@ -3966,7 +4195,7 @@ export const Community: React.FC = () => {
                       .flatMap((p) => p.attachments!)
                       .slice(0, 12)
                       .map((att, i) => (
-                        <div key={`shared-att-${att.url}-${i}`} className="relative group/side-img rounded-lg overflow-hidden h-16 bg-black/5 dark:bg-black/30">
+                        <div key={`shared-att-${att.url || i}-${i}`} className="relative group/side-img rounded-lg overflow-hidden h-16 bg-black/5 dark:bg-black/30">
                           <img
                             src={att.url}
                             alt="Shared attachment"
@@ -4053,146 +4282,171 @@ export const Community: React.FC = () => {
         {activeContextMenuPostId && contextMenuCoords && (
           <>
             {/* Backdrop cover overlay */}
-            <div onClick={() => setActiveContextMenuPostId(null)} className="fixed inset-0 z-40" />
+            <div onClick={() => setActiveContextMenuPostId(null)} className="fixed inset-0 z-40 bg-black/25 backdrop-blur-[2px]" />
 
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: -10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: -10 }}
-              className="fixed bg-white dark:bg-gray-800 border border-gray-150 dark:border-gray-700/80 rounded-2xl shadow-2xl p-2.5 z-50 w-56 text-left"
-              style={{
-                top: `${Math.min(contextMenuCoords.y, window.innerHeight - 250)}px`,
-                left: `${Math.min(contextMenuCoords.x, window.innerWidth - 240)}px`
-              }}
-            >
-              {/* Emojis list reaction bar */}
-              <div className="flex items-center gap-1 pb-2 border-b border-gray-100 dark:border-gray-700/50 mb-2 justify-around">
-                {[
-                  { icon: "👍", type: "like" },
-                  { icon: "❤️", type: "love" },
-                  { icon: "😂", type: "haha" },
-                  { icon: "😮", type: "wow" },
-                  { icon: "😢", type: "sad" },
-                  { icon: "😡", type: "angry" }
-                ].map((item, itIdx) => (
-                  <button
-                    key={`ctx-reaction-${item.type}-${itIdx}`}
-                    onClick={() => handleAddReaction(activeContextMenuPostId, item.type as any)}
-                    className="hover:scale-125 text-base cursor-pointer active:scale-95 transition-transform"
-                  >
-                    {item.icon}
-                  </button>
-                ))}
-              </div>
+            {(() => {
+              const isMobile = typeof window !== "undefined" && window.innerWidth < 640;
+              const menuHeight = 390;
+              const menuWidth = 240;
 
-              {/* Action operations lists */}
-              <div className="space-y-1">
-                <button
-                  onClick={() => {
-                    if (activeContextMenuPostId) {
-                      setActiveCommentPostId((prev) => (prev === activeContextMenuPostId ? null : activeContextMenuPostId));
-                    }
-                    setActiveContextMenuPostId(null);
-                  }}
-                  className="w-full text-left px-2.5 py-1.5 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-lg text-[11px] sm:text-xs font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-2 cursor-pointer"
+              let top = contextMenuCoords.y;
+              let left = contextMenuCoords.x;
+
+              if (typeof window !== "undefined") {
+                if (top + menuHeight > window.innerHeight - 16) {
+                  top = Math.max(16, window.innerHeight - menuHeight - 16);
+                }
+                left = Math.max(12, Math.min(left, window.innerWidth - menuWidth - 16));
+              }
+
+              return (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: isMobile ? 25 : -10 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: isMobile ? 25 : -10 }}
+                  transition={{ type: "spring", stiffness: 450, damping: 28 }}
+                  className={`fixed bg-white dark:bg-[#182533] border border-gray-200/90 dark:border-gray-700/90 rounded-3xl shadow-2xl p-3 z-50 text-left max-h-[calc(100dvh-2.5rem)] overflow-y-auto no-scrollbar ${
+                    isMobile
+                      ? "inset-x-3 bottom-3 w-auto max-w-sm mx-auto"
+                      : "w-60"
+                  }`}
+                  style={isMobile ? undefined : { top: `${top}px`, left: `${left}px` }}
                 >
-                  <MessageSquare size={13} /> {tLocal("commentsAndReplies")}
-                </button>
+                  {/* Drag indicator bar for mobile bottom sheet */}
+                  {isMobile && (
+                    <div className="w-10 h-1 bg-gray-300 dark:bg-gray-600 rounded-full mx-auto mb-2.5 shrink-0" />
+                  )}
 
-                <button
-                  onClick={() => {
-                    const post = posts.find((p) => p.id === activeContextMenuPostId);
-                    if (post && post.authorId !== user?.uid) {
-                      setDmRecipient({ id: post.authorId, name: post.authorName });
-                      setIsDMOpen(true);
-                    }
-                    setActiveContextMenuPostId(null);
-                  }}
-                  className="w-full text-left px-2.5 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg text-[11px] sm:text-xs font-bold text-gray-700 dark:text-gray-200 flex items-center gap-2 cursor-pointer"
-                >
-                  <MessageCircle size={13} /> {tLocal("privateMessageDirect")} (DM)
-                </button>
+                  {/* Emojis list reaction bar */}
+                  <div className="flex items-center gap-1 pb-2 border-b border-gray-100 dark:border-gray-700/50 mb-2 justify-around">
+                    {[
+                      { icon: "👍", type: "like" },
+                      { icon: "❤️", type: "love" },
+                      { icon: "😂", type: "haha" },
+                      { icon: "😮", type: "wow" },
+                      { icon: "😢", type: "sad" },
+                      { icon: "😡", type: "angry" }
+                    ].map((item, itIdx) => (
+                      <button
+                        key={`ctx-reaction-${item.type}-${itIdx}`}
+                        onClick={() => handleAddReaction(activeContextMenuPostId, item.type as any)}
+                        className="hover:scale-125 text-base cursor-pointer active:scale-95 transition-transform"
+                      >
+                        {item.icon}
+                      </button>
+                    ))}
+                  </div>
 
-                <button
-                  onClick={() => {
-                    const post = posts.find((p) => p.id === activeContextMenuPostId);
-                    if (post) setReplyToPost(post);
-                    setActiveContextMenuPostId(null);
-                  }}
-                  className="w-full text-left px-2.5 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg text-[11px] sm:text-xs font-bold text-gray-700 dark:text-gray-200 flex items-center gap-2 cursor-pointer"
-                >
-                  <CornerUpLeft size={13} /> {tLocal("replyingTo")}
-                </button>
+                  {/* Action operations lists */}
+                  <div className="space-y-1">
+                    <button
+                      onClick={() => {
+                        if (activeContextMenuPostId) {
+                          setActiveCommentPostId((prev) => (prev === activeContextMenuPostId ? null : activeContextMenuPostId));
+                        }
+                        setActiveContextMenuPostId(null);
+                      }}
+                      className="w-full text-left px-2.5 py-1.5 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-lg text-[11px] sm:text-xs font-bold text-emerald-700 dark:text-emerald-400 flex items-center gap-2 cursor-pointer"
+                    >
+                      <MessageSquare size={13} /> {tLocal("commentsAndReplies")}
+                    </button>
 
-                <button
-                  onClick={() => {
-                    const post = posts.find((p) => p.id === activeContextMenuPostId);
-                    if (post) handlePinPost(post.id, !!post.isPinned);
-                  }}
-                  className="w-full text-left px-2.5 py-1.5 hover:bg-amber-50 dark:hover:bg-amber-950/30 rounded-lg text-[11px] sm:text-xs font-bold text-amber-700 dark:text-amber-400 flex items-center gap-2 cursor-pointer"
-                >
-                  <Pin size={13} /> {posts.find((p) => p.id === activeContextMenuPostId)?.isPinned ? "Désépingler" : "Épingler le message"}
-                </button>
+                    <button
+                      onClick={() => {
+                        const post = posts.find((p) => p.id === activeContextMenuPostId);
+                        if (post && post.authorId !== user?.uid) {
+                          setDmRecipient({ id: post.authorId, name: post.authorName });
+                          setIsDMOpen(true);
+                        }
+                        setActiveContextMenuPostId(null);
+                      }}
+                      className="w-full text-left px-2.5 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg text-[11px] sm:text-xs font-bold text-gray-700 dark:text-gray-200 flex items-center gap-2 cursor-pointer"
+                    >
+                      <MessageCircle size={13} /> {tLocal("privateMessageDirect")} (DM)
+                    </button>
 
-                <button
-                  onClick={() => {
-                    const post = posts.find((p) => p.id === activeContextMenuPostId);
-                    setIsSelectionMode(true);
-                    if (post && canUserDeletePost(post, user)) {
-                      setSelectedPostIds([post.id]);
-                    }
-                    setActiveContextMenuPostId(null);
-                  }}
-                  className="w-full text-left px-2.5 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg text-[11px] sm:text-xs font-bold text-gray-700 dark:text-gray-200 flex items-center gap-2 cursor-pointer"
-                >
-                  <CheckSquare size={13} /> Sélectionner
-                </button>
+                    <button
+                      onClick={() => {
+                        const post = posts.find((p) => p.id === activeContextMenuPostId);
+                        if (post) setReplyToPost(post);
+                        setActiveContextMenuPostId(null);
+                      }}
+                      className="w-full text-left px-2.5 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg text-[11px] sm:text-xs font-bold text-gray-700 dark:text-gray-200 flex items-center gap-2 cursor-pointer"
+                    >
+                      <CornerUpLeft size={13} /> {tLocal("replyingTo")}
+                    </button>
 
-                {(() => {
-                  const currentPost = posts.find((p) => p.id === activeContextMenuPostId);
-                  if (!currentPost) return null;
-                  const canModify = canUserModifyPost(currentPost, user, messageEditDeleteLimitMinutes);
-                  const canDelete = canUserDeletePost(currentPost, user);
-                  const isAuthor = currentPost.authorId === user?.uid;
-                  const isAdmin = checkIsAdmin(user);
+                    <button
+                      onClick={() => {
+                        const post = posts.find((p) => p.id === activeContextMenuPostId);
+                        if (post) handlePinPost(post.id, !!post.isPinned);
+                      }}
+                      className="w-full text-left px-2.5 py-1.5 hover:bg-amber-50 dark:hover:bg-amber-950/30 rounded-lg text-[11px] sm:text-xs font-bold text-amber-700 dark:text-amber-400 flex items-center gap-2 cursor-pointer"
+                    >
+                      <Pin size={13} /> {posts.find((p) => p.id === activeContextMenuPostId)?.isPinned ? "Désépingler" : "Épingler le message"}
+                    </button>
 
-                  return (
-                    <>
-                      {canModify && (
-                        <button
-                          onClick={() => {
-                            setEditingPostId(currentPost.id);
-                            setEditPostContent(currentPost.content || "");
-                            setActiveContextMenuPostId(null);
-                          }}
-                          className="w-full text-left px-2.5 py-1.5 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-lg text-[11px] sm:text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-2 cursor-pointer"
-                        >
-                          <Edit3 size={13} /> {tLocal("editPostBtn") || "Modifier"}
-                        </button>
-                      )}
+                    <button
+                      onClick={() => {
+                        const post = posts.find((p) => p.id === activeContextMenuPostId);
+                        setIsSelectionMode(true);
+                        if (post && canUserDeletePost(post, user)) {
+                          setSelectedPostIds([post.id]);
+                        }
+                        setActiveContextMenuPostId(null);
+                      }}
+                      className="w-full text-left px-2.5 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-lg text-[11px] sm:text-xs font-bold text-gray-700 dark:text-gray-200 flex items-center gap-2 cursor-pointer"
+                    >
+                      <CheckSquare size={13} /> Sélectionner
+                    </button>
 
-                      {canDelete && (
-                        <button
-                          onClick={() => {
-                            handleDeletePost(currentPost.id);
-                            setActiveContextMenuPostId(null);
-                          }}
-                          className="w-full text-left px-2.5 py-1.5 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg text-[11px] sm:text-xs font-bold text-red-600 dark:text-red-400 flex items-center gap-2 cursor-pointer"
-                        >
-                          <Trash2 size={13} /> {tLocal("deletePostBtn") || "Supprimer"}
-                        </button>
-                      )}
+                    {(() => {
+                      const currentPost = posts.find((p) => p.id === activeContextMenuPostId);
+                      if (!currentPost) return null;
+                      const canModify = canUserModifyPost(currentPost, user, messageEditDeleteLimitMinutes);
+                      const canDelete = canUserDeletePost(currentPost, user);
+                      const isAuthor = currentPost.authorId === user?.uid;
+                      const isAdmin = checkIsAdmin(user);
 
-                      {isAuthor && !canModify && !isAdmin && (
-                        <div className="px-2.5 py-1.5 text-[10px] italic text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 rounded-lg font-medium">
-                          ⏱️ Modification expirée (&gt; {formatLimitText(messageEditDeleteLimitMinutes)})
-                        </div>
-                      )}
-                    </>
-                  );
-                })()}
-              </div>
-            </motion.div>
+                      return (
+                        <>
+                          {canModify && (
+                            <button
+                              onClick={() => {
+                                setEditingPostId(currentPost.id);
+                                setEditPostContent(currentPost.content || "");
+                                setActiveContextMenuPostId(null);
+                              }}
+                              className="w-full text-left px-2.5 py-1.5 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-lg text-[11px] sm:text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-2 cursor-pointer"
+                            >
+                              <Edit3 size={13} /> {tLocal("editPostBtn") || "Modifier"}
+                            </button>
+                          )}
+
+                          {canDelete && (
+                            <button
+                              onClick={() => {
+                                handleDeletePost(currentPost.id);
+                                setActiveContextMenuPostId(null);
+                              }}
+                              className="w-full text-left px-2.5 py-1.5 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-lg text-[11px] sm:text-xs font-bold text-red-600 dark:text-red-400 flex items-center gap-2 cursor-pointer"
+                            >
+                              <Trash2 size={13} /> {tLocal("deletePostBtn") || "Supprimer"}
+                            </button>
+                          )}
+
+                          {isAuthor && !canModify && !isAdmin && (
+                            <div className="px-2.5 py-1.5 text-[10px] italic text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 rounded-lg font-medium">
+                              ⏱️ Modification expirée (&gt; {formatLimitText(messageEditDeleteLimitMinutes)})
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
+                  </div>
+                </motion.div>
+              );
+            })()}
           </>
         )}
       </AnimatePresence>
@@ -5108,6 +5362,122 @@ export const Community: React.FC = () => {
                         </div>
                         <audio src={docViewerFile.url} controls className="w-full" />
                       </div>
+                    ) : (docViewerFile.fileName || "").match(/\.(doc|docx|odt|rtf|xls|xlsx|csv|ppt|pptx)$/i) ? (
+                      /* 4.5. OFFICE / WORD / EXCEL INTERACTIVE DOCUMENT VIEWER */
+                      <div className="w-full h-full flex flex-col items-center justify-start p-2 sm:p-4 overflow-hidden">
+                        {(() => {
+                          const directFileUrl = docViewerFile.url.startsWith("http")
+                            ? docViewerFile.url
+                            : typeof window !== "undefined"
+                            ? `${window.location.origin}${docViewerFile.url.startsWith("/") ? "" : "/"}${docViewerFile.url}`
+                            : getApiUrl(docViewerFile.url);
+                          const isLocalUrl = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" || directFileUrl.includes("localhost") || directFileUrl.includes("127.0.0.1") || docViewerFile.url.startsWith("data:"));
+                          const googleDocsUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(directFileUrl)}&embedded=true`;
+                          const isWord = (docViewerFile.fileName || "").match(/\.(doc|docx|odt|rtf)$/i);
+                          const isExcel = (docViewerFile.fileName || "").match(/\.(xls|xlsx|csv)$/i);
+                          const isPpt = (docViewerFile.fileName || "").match(/\.(ppt|pptx)$/i);
+                          const badgeColor = isWord ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20" : isExcel ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20" : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20";
+                          const label = isWord ? "Document Word" : isExcel ? "Tableur Excel" : isPpt ? "Présentation PowerPoint" : "Document Office";
+                          const downloadHref = docViewerFile.url.includes("/api/community/file/") ? `${docViewerFile.url}/download` : docViewerFile.url;
+
+                          return (
+                            <div className="w-full h-full flex flex-col items-center justify-between gap-3">
+                              {/* Quick Actions Top Bar */}
+                              <div className="w-full flex flex-wrap items-center justify-between gap-2 px-3 py-2 bg-white dark:bg-[#1c2a38] rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm shrink-0">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <div className={`p-1.5 rounded-lg ${isWord ? "bg-blue-500/10 text-blue-500" : "bg-emerald-500/10 text-emerald-500"}`}>
+                                    <FileText size={16} />
+                                  </div>
+                                  <span className="text-xs font-bold text-gray-800 dark:text-gray-200 truncate max-w-[160px] sm:max-w-xs" title={docViewerFile.fileName}>
+                                    {docViewerFile.fileName || "Document"}
+                                  </span>
+                                  <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${badgeColor}`}>
+                                    {label}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-2 shrink-0">
+                                  <a
+                                    href={downloadHref}
+                                    download={docViewerFile.fileName || "document"}
+                                    className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                                  >
+                                    <Download size={13} />
+                                    <span>Télécharger</span>
+                                  </a>
+                                  {!isLocalUrl ? (
+                                    <a
+                                      href={googleDocsUrl}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                                    >
+                                      <ExternalLink size={13} />
+                                      <span>Google Docs</span>
+                                    </a>
+                                  ) : (
+                                    <a
+                                      href={docViewerFile.url.startsWith("http") ? docViewerFile.url : getApiUrl(docViewerFile.url)}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs flex items-center gap-1.5 cursor-pointer"
+                                    >
+                                      <ExternalLink size={13} />
+                                      <span>Ouvrir dans l'onglet</span>
+                                    </a>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Interactive Office Viewer Container */}
+                              <div className="w-full flex-1 min-h-0 bg-white dark:bg-[#15202b] rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-lg relative flex flex-col items-center justify-center p-4">
+                                {!isLocalUrl ? (
+                                  <iframe
+                                    src={googleDocsUrl}
+                                    className="w-full h-full border-0 rounded-2xl bg-white"
+                                    title={docViewerFile.fileName || "Aperçu Office"}
+                                  />
+                                ) : (
+                                  <div className="w-full max-w-md bg-gray-50 dark:bg-[#1c2a38] rounded-3xl p-6 text-center space-y-4 shadow-md border border-gray-200 dark:border-gray-700">
+                                    <div className="w-20 h-20 mx-auto rounded-3xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shadow-sm">
+                                      <FileText size={40} />
+                                    </div>
+                                    <div>
+                                      <h4 className="font-extrabold text-sm sm:text-base text-gray-900 dark:text-white truncate">
+                                        {docViewerFile.fileName || "Document Office"}
+                                      </h4>
+                                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                        {docViewerFile.fileSize || "Format bureautique"} • {label}
+                                      </p>
+                                    </div>
+                                    <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl text-xs text-blue-700 dark:text-blue-300 font-medium leading-relaxed">
+                                      Ce document est sécurisé et prêt. Cliquez ci-dessous pour le télécharger ou l'ouvrir directement avec votre application (Word, Excel ou LibreOffice).
+                                    </div>
+                                    <div className="flex flex-col sm:flex-row gap-2.5 justify-center">
+                                      <a
+                                        href={downloadHref}
+                                        download={docViewerFile.fileName || "document"}
+                                        className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
+                                      >
+                                        <Download size={14} />
+                                        <span>Télécharger le Fichier</span>
+                                      </a>
+                                      <a
+                                        href={docViewerFile.url.startsWith("http") ? docViewerFile.url : getApiUrl(docViewerFile.url)}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer"
+                                      >
+                                        <ExternalLink size={14} />
+                                        <span>Ouvrir Fichier</span>
+                                      </a>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </div>
                     ) : docViewerTextContent ? (
                       /* 5. TEXT / CODE FILE */
                       <div className="w-full h-full max-w-4xl bg-[#1e1e1e] rounded-2xl p-4 shadow-2xl overflow-auto border border-gray-800 text-left font-mono text-xs sm:text-sm text-emerald-400 leading-relaxed">
@@ -5132,24 +5502,22 @@ export const Community: React.FC = () => {
                         </div>
                         <div className="flex flex-col sm:flex-row gap-3 justify-center">
                           <a
-                            href={docViewerFile.url}
+                            href={docViewerFile.url.includes("/api/community/file/") ? `${docViewerFile.url}/download` : docViewerFile.url}
                             download={docViewerFile.fileName || "document"}
                             className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-2xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 text-xs uppercase tracking-wider"
                           >
                             <Download size={16} />
                             Télécharger le Fichier
                           </a>
-                          {docViewerFile.url.startsWith("http") && (
-                            <a
-                              href={`https://docs.google.com/gview?url=${encodeURIComponent(docViewerFile.url)}&embedded=true`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-2xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 text-xs uppercase tracking-wider"
-                            >
-                              <ExternalLink size={16} />
-                              Google Docs Viewer
-                            </a>
-                          )}
+                          <a
+                            href={docViewerFile.url.startsWith("http") ? docViewerFile.url : getApiUrl(docViewerFile.url)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold rounded-2xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2 text-xs uppercase tracking-wider"
+                          >
+                            <ExternalLink size={16} />
+                            Ouvrir dans un Onglet
+                          </a>
                         </div>
                       </div>
                     )}
@@ -5322,17 +5690,40 @@ export const Community: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {/* Delete Feedback Toast */}
-      <AnimatePresence>
+      {/* Action / Download / Delete Feedback Notification Card */}
+      <AnimatePresence mode="wait">
         {deleteToast && (
           <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 bg-gray-900/95 dark:bg-black/90 text-white text-xs sm:text-sm font-semibold px-4 py-2.5 rounded-full shadow-2xl backdrop-blur-md flex items-center gap-2 border border-white/10"
+            key={`comm-toast-wrap-${deleteToast}`}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[120] flex items-center justify-center p-4 pointer-events-none"
           >
-            <Check size={16} className="text-emerald-400" />
-            <span>{deleteToast}</span>
+            <div
+              onClick={() => setDeleteToast(null)}
+              className="absolute inset-0 bg-black/40 backdrop-blur-[2px] pointer-events-auto"
+            />
+            <motion.div
+              key={`comm-toast-card-${deleteToast}`}
+              initial={{ opacity: 0, scale: 0.92, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.92, y: 10 }}
+              transition={{ type: "spring", stiffness: 450, damping: 28 }}
+              className="relative z-10 bg-slate-900/98 dark:bg-slate-950/98 text-white px-6 py-4 rounded-2xl shadow-2xl border border-emerald-500/40 ring-1 ring-white/10 flex items-center gap-3.5 max-w-sm pointer-events-auto text-left"
+            >
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shrink-0 shadow-sm">
+                <Check size={20} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-[11px] font-bold text-emerald-400 uppercase tracking-wider">
+                  Notification
+                </p>
+                <p className="text-xs sm:text-sm font-semibold text-white mt-0.5 break-words">
+                  {deleteToast}
+                </p>
+              </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -5409,14 +5800,17 @@ const PdfSinglePageItem: React.FC<{
         const baseScale = 1.3;
         const scale = baseScale * (zoom / 100);
         const viewport = page.getViewport({ scale });
+        const dpr = window.devicePixelRatio || 1;
 
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
+        canvas.width = Math.floor(viewport.width * dpr);
+        canvas.height = Math.floor(viewport.height * dpr);
+        canvas.style.width = `${Math.floor(viewport.width)}px`;
+        canvas.style.height = `${Math.floor(viewport.height)}px`;
 
         const renderContext: any = {
           canvasContext: ctx,
-          viewport: viewport,
-          canvas: canvas
+          transform: dpr !== 1 ? [dpr, 0, 0, dpr, 0, 0] : undefined,
+          viewport: viewport
         };
 
         const task = page.render(renderContext);
@@ -5544,96 +5938,103 @@ const PdfCanvasViewer: React.FC<PdfCanvasViewerProps> = ({
     touchStartYRef.current = null;
   };
 
-  useEffect(() => {
-    let isMounted = true;
-    setLoading(true);
-    setError(null);
-    setPdfDoc(null);
-    setUseFallbackIframe(false);
+  const loadPdf = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      setPdfDoc(null);
 
-    // 2.5 second fallback timer: if PDF.js takes too long, switch to native iframe / object
-    const fallbackTimer = setTimeout(() => {
-      if (isMounted && loading) {
-        console.warn("PDF.js loading timeout - switching to iframe viewer fallback");
-        setUseFallbackIframe(true);
-        setLoading(false);
-      }
-    }, 2500);
-
-    const loadPdf = async () => {
+      const pdfjsLib = await import("pdfjs-dist");
       try {
-        const pdfjsLib = await import("pdfjs-dist");
+        pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+      } catch (_) {
         try {
-          pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version || "4.0.379"}/build/pdf.worker.min.mjs`;
-        } catch (_) {}
-
-        let loadingTask;
-        if (url.startsWith("data:")) {
-          const parts = url.split(";base64,");
-          const b64 = parts.length > 1 ? parts[1] : parts[0];
-          const binaryString = atob(b64);
-          const len = binaryString.length;
-          const bytes = new Uint8Array(len);
-          for (let i = 0; i < len; i++) {
-            bytes[i] = binaryString.charCodeAt(i);
-          }
-          loadingTask = pdfjsLib.getDocument({ data: bytes });
-        } else {
-          loadingTask = pdfjsLib.getDocument({ url } as any);
-        }
-
-        const doc = await loadingTask.promise;
-        clearTimeout(fallbackTimer);
-        if (!isMounted) return;
-
-        setPdfDoc(doc);
-        setNumPages(doc.numPages);
-        setCurrentPage(1);
-        setLoading(false);
-
-        // Extract text asynchronously in background to not block rendering
-        if (onExtractText) {
-          setTimeout(async () => {
-            try {
-              const pagesText: string[] = [];
-              const maxPagesToScan = Math.min(doc.numPages, 20);
-              for (let pageNum = 1; pageNum <= maxPagesToScan; pageNum++) {
-                if (!isMounted) break;
-                const page = await doc.getPage(pageNum);
-                const content = await page.getTextContent();
-                const pageStrings = content.items.map((item: any) => item.str).join(" ");
-                if (pageStrings.trim()) {
-                  pagesText.push(`=== PAGE ${pageNum} ===\n${pageStrings}`);
-                }
-              }
-              if (pagesText.length > 0 && isMounted) {
-                onExtractText(pagesText.join("\n\n"));
-              }
-            } catch (textErr) {
-              console.warn("PDF text extraction warning:", textErr);
-            }
-          }, 100);
-        }
-      } catch (err: any) {
-        clearTimeout(fallbackTimer);
-        if (!isMounted) return;
-        console.warn("PDF.js loading error - using iframe fallback:", err);
-        setUseFallbackIframe(true);
-        setLoading(false);
+          pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version || "6.3.289"}/build/pdf.worker.min.mjs`;
+        } catch (__) {}
       }
-    };
 
+      let dataBytes: Uint8Array;
+      if (url.startsWith("data:")) {
+        const parts = url.split(";base64,");
+        const b64 = parts.length > 1 ? parts[1] : parts[0];
+        const binaryString = atob(b64);
+        const len = binaryString.length;
+        dataBytes = new Uint8Array(len);
+        for (let i = 0; i < len; i++) {
+          dataBytes[i] = binaryString.charCodeAt(i);
+        }
+      } else {
+        let resolvedPdfUrl = url;
+        if (resolvedPdfUrl.startsWith("/api/") || resolvedPdfUrl.startsWith("/uploads/")) {
+          resolvedPdfUrl = getApiUrl(resolvedPdfUrl);
+        } else if (
+          (resolvedPdfUrl.startsWith("http://") || resolvedPdfUrl.startsWith("https://")) &&
+          typeof window !== "undefined" &&
+          !resolvedPdfUrl.includes(window.location.host)
+        ) {
+          // Use proxy for remote external URLs to bypass CORS
+          resolvedPdfUrl = getApiUrl(`/api/pdf/proxy?url=${encodeURIComponent(resolvedPdfUrl)}`);
+        } else {
+          resolvedPdfUrl = getApiUrl(resolvedPdfUrl);
+        }
+
+        const res = await fetch(resolvedPdfUrl);
+        if (!res.ok) {
+          throw new Error(`Erreur réseau (${res.status}): Impossible de charger le fichier PDF`);
+        }
+        const buffer = await res.arrayBuffer();
+        dataBytes = new Uint8Array(buffer);
+      }
+
+      const loadingTask = pdfjsLib.getDocument({
+        data: dataBytes,
+        cMapUrl: `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version || "6.3.289"}/cmaps/`,
+        cMapPacked: true,
+      });
+
+      const doc = await loadingTask.promise;
+
+      setPdfDoc(doc);
+      setNumPages(doc.numPages);
+      setCurrentPage(1);
+      setLoading(false);
+
+      // Extract text asynchronously in background to not block rendering
+      if (onExtractText) {
+        setTimeout(async () => {
+          try {
+            const pagesText: string[] = [];
+            const maxPagesToScan = Math.min(doc.numPages, 20);
+            for (let pageNum = 1; pageNum <= maxPagesToScan; pageNum++) {
+              const page = await doc.getPage(pageNum);
+              const content = await page.getTextContent();
+              const pageStrings = content.items.map((item: any) => item.str).join(" ");
+              if (pageStrings.trim()) {
+                pagesText.push(`=== PAGE ${pageNum} ===\n${pageStrings}`);
+              }
+            }
+            if (pagesText.length > 0) {
+              onExtractText(pagesText.join("\n\n"));
+            }
+          } catch (textErr) {
+            console.warn("PDF text extraction warning:", textErr);
+          }
+        }, 100);
+      }
+    } catch (err: any) {
+      console.error("PDF.js loading error:", err);
+      setError(err?.message || "Impossible d'afficher le document dans le lecteur intégré.");
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     loadPdf();
-
-    return () => {
-      isMounted = false;
-      clearTimeout(fallbackTimer);
-    };
   }, [url]);
 
   // Render single page when activeMode === "single"
   useEffect(() => {
-    if (!pdfDoc || !singleCanvasRef.current || useFallbackIframe || activeMode !== "single") return;
+    if (!pdfDoc || !singleCanvasRef.current || activeMode !== "single") return;
     let isCancelled = false;
 
     const renderPage = async () => {
@@ -5655,14 +6056,17 @@ const PdfCanvasViewer: React.FC<PdfCanvasViewerProps> = ({
         const baseScale = 1.3;
         const scale = baseScale * (zoom / 100);
         const viewport = page.getViewport({ scale });
+        const dpr = window.devicePixelRatio || 1;
 
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
+        canvas.width = Math.floor(viewport.width * dpr);
+        canvas.height = Math.floor(viewport.height * dpr);
+        canvas.style.width = `${Math.floor(viewport.width)}px`;
+        canvas.style.height = `${Math.floor(viewport.height)}px`;
 
         const renderContext: any = {
           canvasContext: ctx,
-          viewport: viewport,
-          canvas: canvas
+          transform: dpr !== 1 ? [dpr, 0, 0, dpr, 0, 0] : undefined,
+          viewport: viewport
         };
 
         const task = page.render(renderContext);
@@ -5685,16 +6089,91 @@ const PdfCanvasViewer: React.FC<PdfCanvasViewerProps> = ({
         } catch (_) {}
       }
     };
-  }, [pdfDoc, currentPage, zoom, useFallbackIframe, activeMode]);
+  }, [pdfDoc, currentPage, zoom, activeMode]);
 
   if (useFallbackIframe) {
+    const directViewUrl = url.startsWith("http")
+      ? url
+      : typeof window !== "undefined"
+      ? `${window.location.origin}${url.startsWith("/") ? "" : "/"}${url}`
+      : getApiUrl(url);
+
     return (
-      <div className="w-full h-full flex flex-col items-center justify-center p-1 sm:p-3">
+      <div className="w-full h-full flex flex-col bg-gray-50 dark:bg-[#111923] overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-2 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 text-xs shrink-0">
+          <span className="font-bold text-gray-700 dark:text-gray-300">Lecteur PDF Navigateur</span>
+          <button
+            onClick={() => setUseFallbackIframe(false)}
+            className="px-2.5 py-1 bg-emerald-500 text-white rounded-lg text-xs font-bold hover:bg-emerald-600 transition-colors cursor-pointer"
+          >
+            Mode Studio HD
+          </button>
+        </div>
         <iframe
-          src={url}
-          className="w-full h-full rounded-2xl border border-gray-200 dark:border-gray-800 shadow-xl bg-white"
-          title="Lecteur PDF Standard"
+          src={directViewUrl}
+          className="w-full h-full border-0 bg-white"
+          title="Aperçu PDF Direct"
         />
+      </div>
+    );
+  }
+
+  if (error) {
+    const directDownloadUrl = url.includes("/api/community/file/") ? `${url}/download` : url;
+    const directViewUrl = url.startsWith("http")
+      ? url
+      : typeof window !== "undefined"
+      ? `${window.location.origin}${url.startsWith("/") ? "" : "/"}${url}`
+      : getApiUrl(url);
+    const isLocalUrl = typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1" || directViewUrl.includes("localhost") || directViewUrl.includes("127.0.0.1") || url.startsWith("data:"));
+    const googleDocsViewerUrl = `https://docs.google.com/viewer?url=${encodeURIComponent(directViewUrl)}&embedded=true`;
+
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-between p-3 sm:p-5 text-center bg-gray-50 dark:bg-[#111923] overflow-y-auto">
+        <div className="w-full flex items-center justify-between gap-2 p-2 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm shrink-0">
+          <div className="flex items-center gap-2 text-xs font-bold text-gray-800 dark:text-white">
+            <FileText size={18} className="text-red-500" />
+            <span>Document PDF</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <a
+              href={directDownloadUrl}
+              download="document.pdf"
+              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+            >
+              <Download size={13} />
+              <span>Télécharger</span>
+            </a>
+            {!isLocalUrl && (
+              <a
+                href={googleDocsViewerUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+              >
+                <ExternalLink size={13} />
+                <span>Google Docs</span>
+              </a>
+            )}
+            <button
+              type="button"
+              onClick={() => loadPdf()}
+              className="px-2.5 py-1.5 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-xl font-bold text-xs flex items-center gap-1 transition-colors cursor-pointer"
+            >
+              <RotateCw size={13} />
+              <span>Réessayer</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Embedded Native Browser PDF view as guaranteed fallback */}
+        <div className="w-full flex-1 min-h-[300px] mt-3 rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-800 shadow-md bg-white">
+          <iframe
+            src={directViewUrl}
+            className="w-full h-full border-0 bg-white"
+            title="Aperçu PDF Navigateur"
+          />
+        </div>
       </div>
     );
   }
@@ -5773,6 +6252,15 @@ const PdfCanvasViewer: React.FC<PdfCanvasViewerProps> = ({
               <BookOpen size={13} />
               <span className="hidden sm:inline">Page par page</span>
               <span className="sm:hidden">1 Page</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setUseFallbackIframe(true)}
+              className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] font-bold text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-all cursor-pointer"
+              title="Afficher avec le lecteur natif du navigateur"
+            >
+              <ExternalLink size={13} />
+              <span className="hidden sm:inline">Lecteur Web</span>
             </button>
           </div>
         </div>

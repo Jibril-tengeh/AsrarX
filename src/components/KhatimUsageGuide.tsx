@@ -272,12 +272,12 @@ export const KhatimUsageGuide: React.FC<KhatimUsageGuideProps> = ({
                 { id: 3, label: "4. Ordre Traçage", icon: Compass },
                 { id: 4, label: "5. Zikr & Souffle", icon: Flame },
                 { id: 5, label: "6. Port & Protection", icon: Shield }
-              ].map((tab) => {
+              ].map((tab, tabIdx) => {
                 const IconComp = tab.icon;
                 const isActive = activeStep === tab.id;
                 return (
                   <button
-                    key={tab.id}
+                    key={`khatim-tab-${tab.id}-${tabIdx}`}
                     onClick={() => setActiveStep(tab.id)}
                     className={`p-2.5 rounded-xl border text-xs font-bold transition-all flex flex-col items-center justify-center gap-1 cursor-pointer ${
                       isActive 

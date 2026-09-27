@@ -38,8 +38,6 @@ export const UpdateVideoCardModal: React.FC<UpdateVideoCardModalProps> = ({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [refreshStep, setRefreshStep] = useState<string | null>(null);
 
-  if (!isOpen) return null;
-
   // Selected theme is strictly defined by Admin in targetRelease or fallback to default
   const selectedThemeId: VideoCardThemeId = targetRelease.videoCardTheme || initialThemeId || 'cyber-emerald';
   const currentPreset = getPresetById(selectedThemeId);
@@ -72,17 +70,23 @@ export const UpdateVideoCardModal: React.FC<UpdateVideoCardModalProps> = ({
 
   return (
     <AnimatePresence>
-      <div 
-        id="asrarhub-video-update-popup-overlay"
-        className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-5 bg-black/85 backdrop-blur-md overflow-y-auto"
-      >
-        <motion.div
-          initial={{ opacity: 0, scale: 0.92, y: 30 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.92, y: 30 }}
-          transition={{ type: 'spring', damping: 26, stiffness: 280 }}
-          className="relative w-full max-w-xl my-auto flex flex-col items-center"
+      {isOpen && (
+        <motion.div 
+          key="asrarhub-video-update-popup-overlay"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          id="asrarhub-video-update-popup-overlay"
+          className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-5 bg-black/85 backdrop-blur-md overflow-y-auto"
         >
+          <motion.div
+            key="asrarhub-video-update-card-container"
+            initial={{ opacity: 0, scale: 0.92, y: 30 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.92, y: 30 }}
+            transition={{ type: 'spring', damping: 26, stiffness: 280 }}
+            className="relative w-full max-w-xl my-auto flex flex-col items-center"
+          >
           {/* Top Bar with Close button if not forced */}
           {!isForceUpdate && (
             <div className="w-full flex items-center justify-end mb-2">
@@ -134,7 +138,8 @@ export const UpdateVideoCardModal: React.FC<UpdateVideoCardModalProps> = ({
             )}
           </div>
         </motion.div>
-      </div>
+      </motion.div>
+      )}
     </AnimatePresence>
   );
 };

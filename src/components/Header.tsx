@@ -59,7 +59,7 @@ export const Header: React.FC = () => {
       setShowLoginSuccessNotification(true);
       const timer = setTimeout(() => {
         setShowLoginSuccessNotification(false);
-      }, 2000);
+      }, 3500);
       return () => clearTimeout(timer);
     }
     prevUserRef.current = user;
@@ -288,6 +288,7 @@ export const Header: React.FC = () => {
                 <AnimatePresence>
                   {notifMenuOpen && (
                     <motion.div 
+                      key="header-notif-menu-dropdown"
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: 10 }}
@@ -346,6 +347,7 @@ export const Header: React.FC = () => {
               <AnimatePresence>
                 {langMenuOpen && (
                   <motion.div 
+                    key="header-lang-menu-dropdown"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: 10 }}
@@ -420,6 +422,7 @@ export const Header: React.FC = () => {
       <AnimatePresence>
         {announcementOpen && (
           <motion.div
+            key="header-announcement-card"
             initial={{ opacity: 0, y: -50, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -50, scale: 0.95 }}
@@ -457,6 +460,7 @@ export const Header: React.FC = () => {
       <AnimatePresence>
         {showEnableNotifPopup && (
           <motion.div
+            key="header-enable-notif-modal"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
@@ -515,25 +519,38 @@ export const Header: React.FC = () => {
         )}
       </AnimatePresence>
 
-      <AnimatePresence>
+      <AnimatePresence mode="wait">
         {showLoginSuccessNotification && (
           <motion.div
-            initial={{ opacity: 0, y: 35, scale: 0.92, x: '-50%' }}
-            animate={{ opacity: 1, y: 0, scale: 1, x: '-50%' }}
-            exit={{ opacity: 0, y: 20, scale: 0.92, x: '-50%' }}
-            className="fixed bottom-24 left-1/2 z-[150] w-auto max-w-[92vw] sm:max-w-md pointer-events-auto"
+            key="login-success-card-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[150] flex items-center justify-center p-4 pointer-events-none"
           >
-            <div className="bg-emerald-600 dark:bg-emerald-700 text-white px-5 py-3.5 rounded-2xl shadow-2xl border border-emerald-400/30 flex items-center justify-center text-center gap-3">
-              <span className="text-xl shrink-0">🎉</span>
-              <div className="text-center">
-                <p className="text-[11px] font-black uppercase tracking-wider text-emerald-100">
-                  {language === "en" ? "Connection Established" : language === "ha" ? "An haɗa lami lafiya" : "Connexion établie"}
-                </p>
-                <p className="text-xs font-bold text-white mt-0.5">
-                  {language === "en" ? `Welcome back, ${(user as any)?.displayName || user?.name || "Member"}!` : language === "ha" ? `Barka da dawowa, ${(user as any)?.displayName || user?.name || "Mamba"}!` : `Bon retour, ${(user as any)?.displayName || user?.name || "Membre"} !`}
-                </p>
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px]" />
+            <motion.div
+              key="login-success-card"
+              initial={{ opacity: 0, scale: 0.92, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.92, y: 15 }}
+              transition={{ type: "spring", stiffness: 450, damping: 28 }}
+              className="relative z-10 w-full max-w-sm sm:max-w-md pointer-events-auto"
+            >
+              <div className="bg-slate-900/98 dark:bg-slate-950/98 text-white p-5 rounded-2xl shadow-2xl border border-emerald-500/40 ring-1 ring-emerald-500/20 flex items-center gap-4 text-left">
+                <div className="w-12 h-12 rounded-xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-2xl shrink-0 shadow-sm">
+                  🎉
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[11px] font-black uppercase tracking-wider text-emerald-400">
+                    {language === "en" ? "Connection Established" : language === "ha" ? "An haɗa lami lafiya" : "Connexion établie"}
+                  </p>
+                  <p className="text-xs sm:text-sm font-bold text-white mt-0.5 truncate">
+                    {language === "en" ? `Welcome back, ${(user as any)?.displayName || user?.name || "Member"}!` : language === "ha" ? `Barka da dawowa, ${(user as any)?.displayName || user?.name || "Mamba"}!` : `Bon retour, ${(user as any)?.displayName || user?.name || "Membre"} !`}
+                  </p>
+                </div>
               </div>
-            </div>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>

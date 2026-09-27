@@ -57,4 +57,18 @@ export interface AsrarItem {
   content_fr?: string;
   hook_fr?: string;
   hasManualTranslation?: boolean;
+  secrets?: ArticleSecretItem[];
+}
+
+export interface ArticleSecretItem {
+  id: string;
+  title: string;
+  title_en?: string;
+  title_ha?: string;
+  objectif?: string;
+  exemple?: string;
+  anniyya?: string;
+  effet?: string;
+  methodesRouqya?: string;
+  additionalContent?: string;
 }

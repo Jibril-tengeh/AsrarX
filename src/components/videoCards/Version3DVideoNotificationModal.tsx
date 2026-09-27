@@ -206,28 +206,32 @@ export const Version3DVideoNotificationModal: React.FC<Version3DVideoNotificatio
     onDismiss();
   };
 
-  if (!isOpen) return null;
-
   return (
     <>
       <AnimatePresence>
-        <div 
-          id="asrarhub-version-3d-video-popup-overlay"
-          className="fixed inset-0 z-[100000] flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-xl overflow-y-auto select-none"
-          onClick={(e) => {
-            // If forced, do not dismiss on backdrop click
-            if (!isForced && e.target === e.currentTarget) {
-              handleDismiss();
-            }
-          }}
-        >
-          {/* 3D Perspective Container */}
-          <div 
-            className="w-full max-w-lg my-auto py-2"
-            style={{ perspective: 1200 }}
+        {isOpen && (
+          <motion.div 
+            key="asrarhub-version-3d-video-popup-overlay"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            id="asrarhub-version-3d-video-popup-overlay"
+            className="fixed inset-0 z-[100000] flex items-center justify-center p-3 sm:p-6 bg-black/85 backdrop-blur-xl overflow-y-auto select-none"
+            onClick={(e) => {
+              // If forced, do not dismiss on backdrop click
+              if (!isForced && e.target === e.currentTarget) {
+                handleDismiss();
+              }
+            }}
           >
-            <motion.div
-              ref={cardRef}
+            {/* 3D Perspective Container */}
+            <div 
+              className="w-full max-w-lg my-auto py-2"
+              style={{ perspective: 1200 }}
+            >
+              <motion.div
+                key="version-3d-card"
+                ref={cardRef}
               onMouseMove={handleMouseMove}
               onMouseLeave={handleMouseLeave}
               initial={{ opacity: 0, scale: 0.88, y: 40, rotateX: 15 }}
@@ -480,7 +484,8 @@ export const Version3DVideoNotificationModal: React.FC<Version3DVideoNotificatio
               </div>
             </motion.div>
           </div>
-        </div>
+        </motion.div>
+        )}
       </AnimatePresence>
 
       {/* Changelog detailed modal */}

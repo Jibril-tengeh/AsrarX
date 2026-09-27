@@ -553,6 +553,7 @@ const Store = lazyWithRetry(() => import('./pages/user/Store'));
 const FaqPage = lazyWithRetry(() => import('./pages/FaqPage'));
 const ReferralPage = lazyWithRetry(() => import('./pages/user/ReferralPage'));
 const PdfLibraryPage = lazyWithRetry(() => import('./pages/user/PdfLibraryPage').then(m => ({ default: m.PdfLibraryPage })));
+const ApiDocsPage = lazyWithRetry(() => import('./pages/ApiDocsPage').then(m => ({ default: m.ApiDocsPage })));
 
 const PlaceholderPage = ({ title }: { title: string }) => (
   <div className="flex items-center justify-center h-full min-h-[50vh]">
@@ -1537,6 +1538,9 @@ export default function App() {
                 </Route>
                 <Route path="/admin" element={<AdminDashboard />} />
                 <Route path="/faq" element={<FaqPage />} />
+                <Route path="/api-docs" element={<ApiDocsPage />} />
+                <Route path="/docs/api" element={<ApiDocsPage />} />
+                <Route path="/developer" element={<ApiDocsPage />} />
                 <Route path="*" element={<Navigate to="/user/dashboard" replace />} />
               </Routes>
             </motion.div>
@@ -1552,6 +1556,7 @@ export default function App() {
         <AnimatePresence>
           {globalIsPlaying && currentTrack?.isQuranVerse && location.pathname !== '/tools/quran' && (
             <motion.div 
+              key="global-quran-repeat-bubble"
               initial={{ opacity: 0, scale: 0.8, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.8, y: 15 }}
@@ -1598,31 +1603,11 @@ export default function App() {
         {/* Collapsible Floating App-Wide Quick Widget */}
         <CollapsibleFloatingWidget />
 
-        {/* Connection success notification */}
-        <AnimatePresence>
-          {showConnectedToast && (
-            <motion.div
-              initial={{ opacity: 0, y: -50, scale: 0.9 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: -20, scale: 0.9 }}
-              className="fixed top-24 left-1/2 -translate-x-1/2 z-50 px-5 py-3 rounded-full bg-emerald-500 text-white shadow-xl flex items-center gap-2.5 border border-emerald-400/20"
-            >
-              <div className="w-2 h-2 rounded-full bg-white animate-ping" />
-              <span className="text-xs sm:text-sm font-bold tracking-tight">
-                {language === 'fr' 
-                  ? `Utilisateur connecté avec succès : ${toastUserName} !` 
-                  : language === 'ha'
-                  ? `An haɗa mai amfani cikin nasara: ${toastUserName} !`
-                  : `User connected successfully: ${toastUserName}!`}
-              </span>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
         {/* Back button exit app confirmation toast */}
         <AnimatePresence>
           {backExitToast && (
             <motion.div
+              key="back-exit-toast-msg"
               initial={{ opacity: 0, y: 40, scale: 0.9 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 20, scale: 0.9 }}

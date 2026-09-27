@@ -24,6 +24,7 @@ import { useBackButton } from '../../hooks/useBackButton';
 import { getArticleImageUrl } from '../../utils/articleImageUtils';
 import { useNetworkStatus } from '../../hooks/useNetworkStatus';
 import { OfflineArticlesPopup } from '../../components/OfflineArticlesPopup';
+import { MultiSecretArticleContent } from '../../components/article/MultiSecretArticleContent';
 
 export const ExploreDashboard: React.FC = () => {
   const { t, language } = useLanguage();
@@ -937,8 +938,12 @@ export const ExploreDashboard: React.FC = () => {
                             <h1 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white">{selectedArticle.title}</h1>
                           </div>
                         )}
-                        <div className="p-6 md:p-10 prose prose-emerald dark:prose-invert max-w-none article-content">
-                          <div dangerouslySetInnerHTML={{ __html: selectedArticle.content || '' }} />
+                        <div className="p-4 sm:p-8 max-w-none article-content">
+                          <MultiSecretArticleContent
+                            content={selectedArticle.content || ''}
+                            secrets={selectedArticle.secrets}
+                            articleTitle={selectedArticle.title}
+                          />
                         </div>
                       </PremiumWrapper>
                     ) : (
@@ -957,8 +962,12 @@ export const ExploreDashboard: React.FC = () => {
                             <h1 className="text-2xl md:text-3xl font-black text-gray-900 dark:text-white">{selectedArticle.title}</h1>
                           </div>
                         )}
-                        <div className="p-6 md:p-10 prose prose-emerald dark:prose-invert max-w-none article-content">
-                          <div dangerouslySetInnerHTML={{ __html: selectedArticle.content || '' }} />
+                        <div className="p-4 sm:p-8 max-w-none article-content">
+                          <MultiSecretArticleContent
+                            content={selectedArticle.content || ''}
+                            secrets={selectedArticle.secrets}
+                            articleTitle={selectedArticle.title}
+                          />
                         </div>
                       </>
                     )}

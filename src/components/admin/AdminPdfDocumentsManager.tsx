@@ -58,6 +58,7 @@ import { detectPdfMetadata, formatPdfFileSize } from '../../utils/pdfMetadataHel
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '../../lib/firebase';
 import { set as setIdb } from 'idb-keyval';
+import { getApiUrl } from '../../lib/api';
 
 export interface ActionNotification {
   type: 'success' | 'error' | 'info';
@@ -179,34 +180,94 @@ export const AdminPdfDocumentsManager: React.FC = () => {
     }
   };
 
-  // Subscribe to Firestore PDF collection
+  // Subscribe to Firestore PDF collection + Server fallback
   useEffect(() => {
     let unsubscribe: (() => void) | null = null;
-    try {
-      const q = query(collection(db, 'pdf_documents'), orderBy('publishedAt', 'desc'));
-      unsubscribe = onSnapshot(q, (snapshot) => {
-        if (!snapshot.empty) {
-          const docs = snapshot.docs.map((d) => ({
-            id: d.id,
-            ...d.data(),
-          })) as PdfDocument[];
-          setPdfs(docs);
-        } else {
-          // If Firestore collection is empty, seed with default documents
-          setPdfs(DEFAULT_PDF_DOCUMENTS);
+    let isMounted = true;
+
+    const fetchServerAndFirestore = async () => {
+      let serverCustoms: PdfDocument[] = [];
+      try {
+        const srvRes = await fetch(getApiUrl('/api/pdf/custom-list'));
+        if (srvRes.ok) {
+          const json = await srvRes.json();
+          if (json.pdfs && Array.isArray(json.pdfs)) {
+            serverCustoms = json.pdfs;
+          }
         }
-        setLoading(false);
-      }, (err) => {
-        console.warn('Firestore pdf subscription note:', err);
-        setPdfs(DEFAULT_PDF_DOCUMENTS);
-        setLoading(false);
-      });
-    } catch (e) {
-      setPdfs(DEFAULT_PDF_DOCUMENTS);
-      setLoading(false);
-    }
+      } catch (_) {}
+
+      try {
+        const q = query(collection(db, 'pdf_documents'));
+        unsubscribe = onSnapshot(q, (snapshot) => {
+          if (!isMounted) return;
+          const fsDocs = !snapshot.empty 
+            ? (snapshot.docs.map((d) => ({ id: d.id, ...d.data() })) as PdfDocument[])
+            : [];
+
+          // Merge Firestore docs, server custom docs, and default docs
+          const seen = new Set<string>();
+          const merged: PdfDocument[] = [];
+
+          // Priority 1: Firestore
+          for (const d of fsDocs) {
+            if (!seen.has(d.id)) {
+              seen.add(d.id);
+              merged.push(d);
+            }
+          }
+
+          // Priority 2: Server Customs
+          for (const d of serverCustoms) {
+            if (!seen.has(d.id)) {
+              seen.add(d.id);
+              merged.push(d);
+            }
+          }
+
+          // Priority 3: Defaults
+          for (const d of DEFAULT_PDF_DOCUMENTS) {
+            if (!seen.has(d.id)) {
+              seen.add(d.id);
+              merged.push(d);
+            }
+          }
+
+          merged.sort((a, b) => {
+            const dateA = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+            const dateB = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+            return dateB - dateA;
+          });
+
+          setPdfs(merged);
+          setLoading(false);
+        }, (err) => {
+          console.warn('Firestore pdf subscription note:', err);
+          if (isMounted) {
+            const defaultsAndServer = [...serverCustoms, ...DEFAULT_PDF_DOCUMENTS.filter(d => !serverCustoms.some(s => s.id === d.id))];
+            setPdfs(defaultsAndServer.length > 0 ? defaultsAndServer : DEFAULT_PDF_DOCUMENTS);
+            setLoading(false);
+          }
+        });
+      } catch (e) {
+        if (isMounted) {
+          const defaultsAndServer = [...serverCustoms, ...DEFAULT_PDF_DOCUMENTS.filter(d => !serverCustoms.some(s => s.id === d.id))];
+          setPdfs(defaultsAndServer.length > 0 ? defaultsAndServer : DEFAULT_PDF_DOCUMENTS);
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchServerAndFirestore();
+
+    // Safety timeout: ensure loader never blocks the screen
+    const safetyTimer = setTimeout(() => {
+      if (isMounted) setLoading(false);
+    }, 3500);
 
     return () => {
+      isMounted = false;
+      clearTimeout(safetyTimer);
       if (unsubscribe) unsubscribe();
     };
   }, []);
@@ -242,6 +303,14 @@ export const AdminPdfDocumentsManager: React.FC = () => {
   const handleDelete = async (pdf: PdfDocument) => {
     if (!window.confirm(`Supprimer définitivement le PDF "${pdf.title}" ?`)) return;
     try {
+      try {
+        await fetch(getApiUrl('/api/admin/pdf/delete'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: pdf.id }),
+        });
+      } catch (_) {}
+
       await deleteDoc(doc(db, 'pdf_documents', pdf.id));
       await deletePdfDownloadLink(pdf.id);
       setPdfs((prev) => prev.filter((p) => p.id !== pdf.id));
@@ -499,48 +568,66 @@ export const AdminPdfDocumentsManager: React.FC = () => {
       const id = editingPdf ? editingPdf.id : `pdf_${Date.now()}`;
       let resolvedPdfUrl = (formData.pdfUrl || '').trim();
 
-      // If a local file was selected, upload or store robustly
+      // If a local file was selected, upload and store robustly
       if (selectedPdfFile) {
-        setSaveProgressMessage('Téléversement sécurisé du fichier PDF...');
+        setSaveProgressMessage('Préparation du fichier PDF...');
         const safeFileName = selectedPdfFile.name.replace(/[^a-zA-Z0-9.-]/g, '_');
-        const storagePath = `pdf_documents/${id}_${safeFileName}`;
+        let uploadedUrl = '';
 
-        let cloudUrl = '';
-        // 1. Attempt upload to Firebase Storage
+        // 1. Immediately store in local IndexedDB vault on this device (instant, never lost)
         try {
-          const fileRef = ref(storage, storagePath);
-          await uploadBytes(fileRef, selectedPdfFile);
-          cloudUrl = await getDownloadURL(fileRef);
-        } catch (storageErr) {
-          console.warn('[Firebase Storage] Upload failed or unconfigured, proceeding with local vault:', storageErr);
+          await setIdb(`asrar_pdf_blob_${id}`, selectedPdfFile);
+        } catch (idbErr) {
+          console.warn('IDB storage notice:', idbErr);
         }
 
-        if (cloudUrl) {
-          resolvedPdfUrl = cloudUrl;
-        } else {
-          // 2. Storage fallback: Save to local IndexedDB vault to bypass Firestore's 1MB limit
-          setSaveProgressMessage('Sauvegarde sécurisée dans le stockage local...');
-          try {
-            await setIdb(`asrar_pdf_blob_${id}`, selectedPdfFile);
-            // If file size is under 600 KB, base64 data URL is also safe in Firestore
-            if (selectedPdfFile.size < 600000) {
-              const base64Data = await new Promise<string>((resolve) => {
-                const reader = new FileReader();
-                reader.onload = (ev) => resolve((ev.target?.result as string) || '');
-                reader.onerror = () => resolve('');
-                reader.readAsDataURL(selectedPdfFile);
-              });
-              if (base64Data) {
-                resolvedPdfUrl = base64Data;
+        // 2. Direct binary streaming upload with real-time percentage progress (no memory bloat)
+        try {
+          setSaveProgressMessage('Démarrage du téléversement...');
+          uploadedUrl = await new Promise<string>((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', getApiUrl('/api/pdf/upload-binary'), true);
+            xhr.setRequestHeader('X-File-Name', encodeURIComponent(`${id}_${safeFileName}`));
+            xhr.setRequestHeader('Content-Type', 'application/pdf');
+
+            xhr.upload.onprogress = (e) => {
+              if (e.lengthComputable && e.total > 0) {
+                const percent = Math.round((e.loaded / e.total) * 100);
+                const loadedMb = (e.loaded / (1024 * 1024)).toFixed(1);
+                const totalMb = (e.total / (1024 * 1024)).toFixed(1);
+                setSaveProgressMessage(`Téléversement : ${percent}% (${loadedMb}/${totalMb} Mo)...`);
               } else {
-                resolvedPdfUrl = `idb:asrar_pdf_blob_${id}`;
+                setSaveProgressMessage('Téléversement en cours...');
               }
-            } else {
-              resolvedPdfUrl = `idb:asrar_pdf_blob_${id}`;
-            }
-          } catch (idbErr) {
-            console.warn('IDB storage error:', idbErr);
-          }
+            };
+
+            xhr.onload = () => {
+              if (xhr.status >= 200 && xhr.status < 300) {
+                try {
+                  const resp = JSON.parse(xhr.responseText);
+                  resolve(resp.url || '');
+                } catch {
+                  resolve('');
+                }
+              } else {
+                reject(new Error(`HTTP ${xhr.status}: ${xhr.statusText || 'Échec du téléversement'}`));
+              }
+            };
+
+            xhr.onerror = () => reject(new Error('Erreur de connexion réseau lors du téléversement'));
+            xhr.ontimeout = () => reject(new Error('Délai d attente dépassé'));
+            xhr.timeout = 180000; // 3 full minutes for large files over mobile network
+
+            xhr.send(selectedPdfFile);
+          });
+        } catch (uploadErr: any) {
+          console.warn('[Direct Binary Upload Notice]:', uploadErr?.message);
+        }
+
+        if (uploadedUrl) {
+          resolvedPdfUrl = uploadedUrl;
+        } else {
+          resolvedPdfUrl = `idb:asrar_pdf_blob_${id}`;
         }
       }
 
@@ -583,19 +670,48 @@ export const AdminPdfDocumentsManager: React.FC = () => {
         featured: !!formData.featured,
       };
 
-      // Firestore save
-      const docRef = doc(db, 'pdf_documents', id);
-      await setDoc(docRef, newRecord, { merge: true });
-
-      // Save secured download link in protected collection enforced by Firestore Security Rules
-      if (resolvedPdfUrl) {
-        await savePdfDownloadLink(id, resolvedPdfUrl, {
-          title: newRecord.title,
-          isPremium: newRecord.isPremium,
-          isForSale: newRecord.isForSale,
-          freeForVip: newRecord.freeForVip,
-          price: newRecord.price,
+      // 1. Server Save (Bypasses rules, writes to disk & Admin Firestore)
+      let serverSaved = false;
+      try {
+        const srvRes = await fetch(getApiUrl('/api/admin/pdf/save'), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            pdfData: newRecord,
+            downloadUrl: resolvedPdfUrl,
+          }),
         });
+        if (srvRes.ok) {
+          serverSaved = true;
+        }
+      } catch (srvErr) {
+        console.warn('Server save fallback notice:', srvErr);
+      }
+
+      // 2. Direct Firestore save (clean record without oversized data)
+      try {
+        const docRef = doc(db, 'pdf_documents', id);
+        const cleanFirestoreRecord = { ...newRecord };
+        if (cleanFirestoreRecord.pdfUrl && cleanFirestoreRecord.pdfUrl.startsWith('data:') && cleanFirestoreRecord.pdfUrl.length > 300000) {
+          cleanFirestoreRecord.pdfUrl = `idb:asrar_pdf_blob_${id}`;
+        }
+        await setDoc(docRef, cleanFirestoreRecord, { merge: true });
+
+        // Save secured download link in protected collection enforced by Firestore Security Rules
+        if (resolvedPdfUrl) {
+          await savePdfDownloadLink(id, resolvedPdfUrl, {
+            title: newRecord.title,
+            isPremium: newRecord.isPremium,
+            isForSale: newRecord.isForSale,
+            freeForVip: newRecord.freeForVip,
+            price: newRecord.price,
+          });
+        }
+      } catch (fsErr: any) {
+        console.warn('Firestore direct write notice:', fsErr);
+        if (!serverSaved) {
+          throw fsErr;
+        }
       }
 
       setPdfs((prev) => {
